@@ -3,6 +3,14 @@
     {{heading}}
   </div>
 {{/if}}
-<div class="panel-body">
-  {{yield}}
-</div>
+
+{{#if this.isMultiline}}
+  <textarea class="panel-body">
+    {{yield}}
+  </textarea>
+  {{else}}
+  <div class="panel-body">
+    {{yield}}
+  </div>
+{{/if}}
+

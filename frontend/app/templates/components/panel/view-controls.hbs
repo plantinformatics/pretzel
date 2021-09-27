@@ -171,14 +171,39 @@
       />
       <label>Show Zoom/Reset buttons</label>
     </li>
+
     <li class="list-group-item">
-      <input type="checkbox" 
-       id="checkbox-toggleShowAll" 
-       name="toggleShowAll" 
-       checked="checked"
-      />
-      <label>Show All</label>
+      <label>Show Features which</label>
+      <span class="filter-group-col">
+        {{input type="checkbox" name="featureIntervalOverlap" checked=featureIntervalOverlap
+          input=(action featureIntervalOverlapChanged preventDefault=false) }}
+        <label>overlap</label>
+      </span>
+      <span class="filter-group-col">
+        {{input type="checkbox" name="featureIntervalContain" checked=featureIntervalContain
+          input=(action featureIntervalContainChanged preventDefault=false)  }}
+        <label>contain</label>
+      </span>
+      <label>the zoom or brush scope.</label>
     </li>
+
+    <li class="list-group-item">
+      <label style="display:inline">When only 1 end of alignment path is within zoom, show :</label>
+      {{radio-button value='tick' groupValue=tickOrPath
+        changed=(action tickOrPathChanged preventDefault=false)
+      }}
+      tick &nbsp;&nbsp;
+      {{radio-button value='path' groupValue=tickOrPath
+        changed=(action tickOrPathChanged preventDefault=false)
+      }}
+      path &nbsp;&nbsp;
+      {{radio-button value='nothing' groupValue=tickOrPath
+        changed=(action tickOrPathChanged preventDefault=false)
+      }}
+      nothing
+
+    </li>
+
     <li class="list-group-item">
       <input type="checkbox" 
        id="checkbox-toggleShowSelectedFeatures" 
@@ -237,14 +262,33 @@
 
     <li class="list-group-item">
       <div>
-        <label>Synteny Block Size Threshold</label>
-        <span class="sub-label"> : <span>{{ sbSizeThreshold }}</span></span>
+        <label>Graph Text Size</label>
+        <span class="sub-label">{{ titleTextSize }}</span>
       </div>
-      <input type="range" 
+      <input type="range"
+       value=4
+       oninput={{action this.titleTextSizeInput}}
+       min="0" max="9"
+      />
+    </li>
+
+    <li class="list-group-item">
+      <div>
+        <label>Synteny Block Size Threshold</label>
+        <span class="sub-label">
+        {{input
+          type="text"
+          value=sbSizeThresholdText
+          enter=(action sbSizeThresholdTextChanged value=target.value)
+          id="sbSizeThresholdText"
+        }}
+        </span>
+      </div>
+      <input type="range"
        id="range-sbSizeThreshold" 
-       name="sbSizeThreshold" 
        min="0" max="50"
-       value="9"
+       value={{sbSizeThresholdLinear}}
+       oninput={{action sbSizeThresholdLinearChanged value="target.value"}}
       />
     </li>
 

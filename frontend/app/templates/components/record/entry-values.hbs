@@ -63,7 +63,8 @@
 {{else if valuesIsObject }}
   {{!-- log 'each-in' --}}
 
-  {{#each-in values as |key value|}}
+  {{#each keyValuesSorted as |keyValue|}}
+   {{#let keyValue.key keyValue.value as |key value|}}
     {{#with (compute (action 'levelComponentEach' value)) as |subComponent|}}
       {{!-- log  'key' key 'value' value 'subComponent' subComponent --}}
       {{component subComponent levelMeta=levelMeta name=key values=value
@@ -75,6 +76,7 @@
         selectDataset=(action 'selectDataset')
       }}
     {{/with}}
-  {{/each-in}}
+   {{/let}}
+  {{/each}}
 
 {{/if}}

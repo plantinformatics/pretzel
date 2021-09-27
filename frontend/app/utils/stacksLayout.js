@@ -64,10 +64,11 @@ function updateRange(y, ys, vc, a)
     dLog("updateRange", a.axisName, a.position, a.portion, myRange, vc.yRange, 'yRange');
     ys[a.axisName].range([0, myRange]);
     /** a.yRange() incorporates axisGap; this can be factored to a similar function. */
-    y[a.axisName].range([0, vc.yRange - axisGap]);
+    let yRange = vc.yRange - axisGap;
+    y[a.axisName].range([0, yRange]);
 
     y[axisName].brush
-      .extent([[-8,0],[8, vc.yRange /* not myRange */]]);
+      .extent([[-8,0],[8, yRange /* not myRange */]]);
   }
 }
 

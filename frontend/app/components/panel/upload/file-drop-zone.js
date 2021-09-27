@@ -99,12 +99,15 @@ export default UploadBase.extend({
   unviewDataset(datasetName) {
     let
     store = this.get('apiServers').get('primaryServer').get('store'),
-    replacedDataset = store.peekRecord('dataset', datasetName),
-    viewedBlocks = replacedDataset.get('blocks').toArray().filterBy('isViewed'),
-    blockService = this.get('blockService'),
-    blockIds = viewedBlocks.map((b) => b.id);
-    dLog('unviewDataset', datasetName, blockIds);
-    blockService.setViewed(blockIds, false);
+    replacedDataset = store.peekRecord('dataset', datasetName);
+    if (replacedDataset) {
+      let
+      viewedBlocks = replacedDataset.get('blocks').toArray().filterBy('isViewed'),
+      blockService = this.get('blockService'),
+      blockIds = viewedBlocks.map((b) => b.id);
+      dLog('unviewDataset', datasetName, blockIds);
+      blockService.setViewed(blockIds, false);
+    }
   }
 
 });

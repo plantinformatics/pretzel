@@ -1,5 +1,6 @@
 'use strict';
 
+/* global module */
 /* global require */
 /* global process */
 
@@ -27,19 +28,25 @@ function sessionIndex(sessionId) {
 /*----------------------------------------------------------------------------*/
 
 module.exports = function(Feature) {
-  Feature.search = function(filter, options, cb) {
+  /** Search for Features matching the given list of Feature names in filter[].
+   * If blockId is given, only search within that block.
+   */
+  Feature.search = function(blockId, filter, options, cb) {
+    let where = {
+          "name":
+          {
+            "inq": filter
+          }
+        };
+    if (blockId) {
+      where.blockId = blockId;
+    }
     Feature.find({
         "include": 
         {
           "block": "dataset"
         },
-        "where":
-        {
-          "name":
-          {
-            "inq": filter
-          }
-        }
+        where
     }, options).then(function(features) {
       // filter out the features for which the user doesn't have access to the dataset
       features = features.filter(function(feature) {
@@ -70,7 +77,7 @@ module.exports = function(Feature) {
 
   /**
    * @param data contains :
-   * @param dnaSequence FASTA format for Blast; text string input for other searchType-s, e.g. string "actg..."
+   * @param dnaSequence FASTA format for Blast; text string input for other searchType-s, e.g. string "atgcn..."
    * @param parent  datasetId of parent / reference of the blast db which is to be searched
    * @param searchType 'blast'
    * @param resultRows
@@ -104,7 +111,7 @@ module.exports = function(Feature) {
       if (! chunk) {
         cb(null, []);
       } else
-      if (chunk.asciiSlice(0,6) === 'Error:') {
+      if (chunk && (chunk.length >= 6) && (chunk.asciiSlice(0,6) === 'Error:')) {
         cb(new Error(chunk.toString()));
       } else {
         const
@@ -150,6 +157,7 @@ module.exports = function(Feature) {
 
   Feature.remoteMethod('search', {
     accepts: [
+      {arg: 'blockId', type: 'string', required: false},
       {arg: 'filter', type: 'array', required: true},
       {arg: "options", type: "object", http: "optionsFromRequest"}
     ],

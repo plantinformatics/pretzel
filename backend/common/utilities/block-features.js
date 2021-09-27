@@ -181,6 +181,14 @@ exports.blockFeaturesCounts = function(db, blockId, interval, nBins = 10, isZoom
    * This requires interval; if it is not passed, $bucketAuto is used, without granularity.
    */
   useBucketAuto = useBucketAuto || ! (interval && interval.length === 2);
+  if (interval && interval.length === 2) {
+    if (interval[0] > interval[1]) {
+      console.warn('blockFeaturesCount', 'reverse interval', interval, blockId);
+      let swap = interval[0];
+      interval[0] = interval[1];
+      interval[1] = swap;
+    }
+  }
   if (trace_block)
     console.log('blockFeaturesCounts', blockId, interval, nBins, isZoomed, useBucketAuto);
   let ObjectId = ObjectID;

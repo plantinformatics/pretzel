@@ -27,7 +27,7 @@ import {
   featuresCountsResultsTidy,
  } from '../utils/draw/featuresCountsResults';
 
-import { featureCountDataProperties } from '../utils/data-types';
+import { fcsProperties } from '../utils/data-types';
 
 import { stacks } from '../utils/stacks';
 
@@ -53,6 +53,7 @@ export default Model.extend({
   pathsP : service('data/paths-progressive'), // for getBlockFeaturesInterval()
   blockService : service('data/block'),
   trait : service('data/trait'),
+  dataView : service('data/view'),
   auth: service('auth'),
   apiServers: service(),
   datasetService : service('data/dataset'),
@@ -295,8 +296,10 @@ export default Model.extend({
     let isSNP = this.hasTag('SNP');
     return isSNP;
   }),
-  isQTL : computed('datasetId.tags', function () {
-    let isQTL = this.get('datasetId._meta.type') === 'QTL';
+  isQTL : computed('datasetId.tags', 'datasetId._meta.type', function () {
+    /* currently the QTL datasets created by uploadSpreadsheet.bash : qtlList()
+     * have both tag QTL and meta.type : QTL */
+    let isQTL =  this.hasTag('QTL') || this.get('datasetId._meta.type') === 'QTL';
     return isQTL;
   }),
   isHighDensity : computed('datasetId.tags', function () {
@@ -427,6 +430,18 @@ export default Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** This will be different to referenceBlock if the parent has a parent.
+   * I.e. referenceBlock corresponds to the axis, and parentBlock is the list of
+   * features which this blocks feature.value.flankingMarkers[] refer to
+   */
+  parentBlock : computed('parentName', function () {
+    let
+    parent = this.get('datasetId.parent'),
+    blocks = parent?.get('blocks'),
+    pb = blocks && blocks.findBy('scope', this.scope);
+    return pb;
+  }),
+
   /** If the dataset of this block has a parent, return the name of that parent (reference dataset).
    * @return the reference dataset name or undefined if none
    */
@@ -497,6 +512,16 @@ export default Model.extend({
     /** reference dataset */
     parent = dataset && dataset.get('parent'),
     parentName = parent && parent.get('name');  // e.g. "myGenome"
+    /* If the parent has a parent, then use that name instead; referenceBlock
+     * corresponds to the axis, i.e. the ultimate parent. */
+    if (parent?.parentName) {
+      dLog('referenceBlockSameServer', this.id, dataset.get('id'), parentName, parent.parentName);
+      parentName = parent.parentName;
+      /* could instead change mapBlocksByReferenceAndScope() which currently
+       * does not  blocks[0] = block  if block.parentName.  */
+    }
+
+
     /** filter out self if parentName is defined, as in viewedReferenceBlocks() */
     let blockId = this.get('datasetId.parentName') && this.get('id');
 
@@ -601,6 +626,12 @@ export default Model.extend({
     scope = this.get('scope'),
     /** filter out self if parentName is defined */
     blockId = this.get('datasetId.parentName') && this.get('id');
+    /** Handle blocks whose dataset.parent has a .parent */
+    let parent = this.get('datasetId.parent');
+    if (parent && parent.parentName) {
+      dLog('viewedReferenceBlocks', blockId, datasetName, parent.parentName);
+      datasetName = parent.parentName;
+    }
 
     if (datasetName) {
       let mapByDataset = this.get('blockService.viewedBlocksByReferenceAndScope');
@@ -742,6 +773,19 @@ export default Model.extend({
     dLog('referenceBlocksAllServers', original, parentName, scope, blocks);
     return blocks;
   },
+  /** If this block has a parent which has a parent, return them in an array, otherwise undefined.
+   */
+  parentAndGP() {
+    /** Use this function when this.referenceBlock is undefined.  */
+    let referenceBlocks = this.referenceBlocksAllServers(false);
+    let parents;
+    if (referenceBlocks.length) {
+      let parent = referenceBlocks.find((b) => b.referenceBlock);
+      parents = parent && [parent, parent.referenceBlock];
+      dLog('parentAndGP', (parents ? [this, ...parents] : [this]).mapBy('datasetId.id'));
+    }
+    return parents || [];
+  },
   childBlocks : computed('blockService.blocksByReference', function () {
     let blocksByReference = this.get('blockService.blocksByReference'),
     childBlocks = blocksByReference && blocksByReference.get(this);
@@ -762,6 +806,11 @@ export default Model.extend({
     let viewedChildBlocks = this.get('viewedChildBlocks');
     if (viewedChildBlocks.length)
       this.get('blockService').setViewed(viewedChildBlocks, false);
+    let viewedFor = this.get('dataView').unviewFor(this);
+    if (viewedFor) {
+      dLog('unViewChildBlocks', this.id, viewedFor.id);
+      this.get('blockService').setViewed(viewedFor, false);
+    }
   },
 
 
@@ -937,15 +986,16 @@ export default Model.extend({
    * @param domain	[start,end] or if undefined then the whole count of all bins are summed.
    */
   featureCountResultInZoom(fcs, domain) {
-    let count = 
-    fcs.result.reduce( (sum, fc, i) => {
+    let
+    properties = fcsProperties(fcs),
+    count = fcs.result.reduce( (sum, fc, i) => {
       /** an interval parameter is passed to getBlockFeaturesCounts(), so result
        * type of the request is featureCountDataProperties.
        */
       let
-      binInterval = featureCountDataProperties.datum2Location(fc),
+      binInterval = properties.datum2Location(fc),
       /** count within bin */
-      binCount = featureCountDataProperties.datum2Value(fc);
+      binCount = properties.datum2Value(fc);
       if (domain) {
         let
         overlap = intervalOverlap([binInterval, domain]);
@@ -995,11 +1045,19 @@ export default Model.extend({
       (result, fcs) => {
         if (fcs.domain && overlapFn(interval, fcs.domain)) {
           let
+          properties = fcsProperties(fcs),
           filtered = Object.assign({}, fcs);
           filtered.result = fcs.result.filter(
             (fc) => {
-              let loc = featureCountDataProperties.datum2Location(fc);
-              return overlapInterval(loc, interval); }),
+              /** empty result is : _id: { min: null, max: null } (no idWidth[]).  */
+              let emptyResult = (fc._id.min === null) && (fc._id.max === null);
+              let ok = ! emptyResult;
+              if (ok) {
+                let loc = properties.datum2Location(fc);
+                ok = overlapInterval(loc, interval);
+              }
+              return ok;
+            }),
           result.push(filtered);
         }
         return result;
@@ -1148,8 +1206,8 @@ export default Model.extend({
    * This enables calculation of the .value[] of the QTL features.
    */
   loadRequiredData : computed(function () {
-    // possibly generalise the tag to : 'valueComputed'
-    if (this.hasTag('QTL')) {
+    // possibly generalise the tag from 'QTL' to : 'valueComputed'
+    if (this.get('isQTL')) {
       let
       /** make the 2 requests in serial because of .drop() on getBlockFeaturesIntervalTask()
        */
@@ -1157,17 +1215,18 @@ export default Model.extend({
         .then((f) => {
           if (! f) {
             dLog('loadRequiredData', this.id, this.get('datasetId.id'),
-                 this.get('datasetId.parent.id'), this.get('referenceBlock.datasetId.id'));
+                 this.get('datasetId.parent.id'), this.get('parentBlock.datasetId.id'));
           } else {
             f.forEach((fi) => fi.value.forEach((fii) => this.get('trait').traitAddQtl(fii)));
           }
-          return [f, this.get('referenceBlock.allFeatures')];})
+          return [f, this.get('referencedFeatures')];})
       // parentBlockFeatures = ;
       // parentBlockFeatures // allSettled([features, parentBlockFeatures])
         .then((ps) => {
-          return ps[1].then((pf) => {
-            // requestBlockFeaturesInterval() returns an array of promises, one per blockId
-            return this.valueCompute(ps[0][0].value, pf[0].value);
+          let parentFeatures = ps[1];
+          return parentFeatures && parentFeatures.then((pf) => {
+            // referencedFeatures() yields an array of Features
+            return this.valueCompute(ps[0][0].value, pf);
           });
         });
     }
@@ -1180,6 +1239,39 @@ export default Model.extend({
     features = pathsP.getBlockFeaturesInterval(this.id, /*all*/true);
     return features;
   }),
+
+  /** Request all features of the parent of this block which are referred to by
+   * this block, via .values.flankingMarkers [].
+   * @return a Promise yielding an array of Features
+   */
+  referencedFeatures : computed('parentBlock', function () {
+    let
+    featureNames = this.get('features')
+      .filterBy('values.flankingMarkers')
+      .mapBy('values.flankingMarkers')
+      .flat();
+
+    /** Send the request to the server of .parentBlock.
+     * The featureNames are not server-specific, unlike blockId.
+     * Comment on similar lookup .servers[ .store.name] in referenceBlockSameServer()
+     */
+    let parentBlock = this.get('parentBlock');
+    let blockTask;
+    if (parentBlock) {
+      let apiServer = this.get('apiServers').servers[parentBlock.store.name];
+
+      let taskGet = this.get('blockService').get('getBlocksOfFeatures');
+
+      blockTask = taskGet.perform(apiServer, parentBlock.id, featureNames);
+      blockTask
+        .then((features) => {
+          dLog('referencedFeatures', featureNames[0], featureNames.length, features.length);
+        });
+    }
+    return blockTask;
+  }),
+
+
 
   /** Calculate the value / location of the 
    * @param features of this block

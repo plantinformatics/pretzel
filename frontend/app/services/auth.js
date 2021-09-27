@@ -269,16 +269,19 @@ export default Service.extend({
     return this._ajax('Blocks/blockFeaturesInterval', 'GET', {blocks, intervals, options}, true);
   },
 
-  /** 
+  /** Search for Features matching the given list of Feature names in featureNames[].
+   * If blockId is given, only search within that block.
+   * @param blockId undefined or string DB ObjectId
+   * @param featureNames  array of Feature name strings
    */
-  featureSearch(apiServer, featureNames, options) {
+  featureSearch(apiServer, blockId, featureNames, options) {
     if (trace_paths)
-      dLog('services/auth featureSearch', featureNames, options);
-    return this._ajax('Features/search', 'GET', {server : apiServer, filter : featureNames, options}, true);
+      dLog('services/auth featureSearch', blockId, featureNames, options);
+    return this._ajax('Features/search', 'GET', {server : apiServer, blockId, filter : featureNames, options}, true);
   },
 
   /** Request DNA sequence search (Blast).
-   * @param dnaSequence string "actg..."
+   * @param dnaSequence string "atgcn..."
    * @param parent  datasetId of parent / reference of the blast db which is to be searched
    * @param searchType 'blast'
    * @param resultRows  limit rows in result 
@@ -293,6 +296,12 @@ export default Service.extend({
     options
   ) {
     dLog('services/auth featureSearch', dnaSequence.length, parent, searchType, resultRows, addDataset, datasetName, options);
+    /** allow longer for blast search; the server timeout for blast
+     * search is defined in backend/scripts/blastn_request.bash
+     */
+    if (options.timeout === undefined) {
+      options.timeout = 2 * 60 * 1000;
+    }
     /** Attach .server to JSON string, instead of using
      * requestServerAttr (.session.requestServer)
      * (this can be unwound after adding apiServer as param to ._ajax(),

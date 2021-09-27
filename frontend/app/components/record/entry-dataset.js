@@ -2,6 +2,9 @@ import { on } from '@ember/object/evented';
 import { computed } from '@ember/object';
 import EntryBase from './entry-base';
 
+/* note also : naturalSort() from javascript-natural-sort/ which is a dependency of ember-jsoneditor / jsoneditor */
+import { alphanum } from '@cablanchard/koelle-sort';
+
 export default EntryBase.extend({
   initSteps: on('init', function() {
     let layout = {
@@ -11,7 +14,8 @@ export default EntryBase.extend({
   }),
   data: computed('entry.blocks', 'filter', function() {
     return this.get('entry.blocks')
-      .filter((block) => !block.get('isCopy'));
+      .filter((block) => !block.get('isCopy'))
+      .sort((a,b) => alphanum(a.get('name'), b.get('name')) );
   }),
   dataEmpty: computed('data', function() {
     let availableBlocks = this.get('data')

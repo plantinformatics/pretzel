@@ -145,16 +145,14 @@ function storeFeature2(oa, flowsService, feature, f, axisID) {
     if (trace_feature > 1)
       console.log('storeFeature', arguments);
 
-    /* copied from chrData(), replacing feature. with f. */
-    let value = f.get('value'), range = f.get('range'),
-    value0 = (value && value.length ? value[0] : value),
-    featurePosition = (value0 !== undefined) ? value0 : range && range[0];
+    /* until 1140ecbc, feature.location was calculated here based on .value_0 or .value[].
+     * Not required now because it is done by models/feature.js : get location(), since b919b947.
+     */
 
-    f.set('location', featurePosition);
     // f.aliases = [];
     // f.id is already set.
     if (trace_feature > 1)
-      console.log('storeFeature', axisID, feature, featurePosition, f._internalModel.__data, f, oa.z[axisID]);
+      console.log('storeFeature', axisID, feature, f._internalModel.__data, f, oa.z[axisID]);
 
     oa.z[axisID][feature] = f;
   }

@@ -595,7 +595,7 @@ Stacked.prototype.yOffset = function ()
 Stacked.prototype.yRange = function ()
 {
   // dLog('yRange', stacks.vc.yRange, this.portion,  axisGap);
-  return stacks.vc.yRange * this.portion - axisGap;
+  return (stacks.vc.yRange - axisGap) * this.portion;
 };
 /** @return range of axis in pixels relative to 0 - the end of the stack */
 Stacked.prototype.yRange2 = function ()
@@ -1734,9 +1734,15 @@ Stack.prototype.calculatePositions = function ()
   this.axes.forEach(
     function (a, index)
     {
-      /** the gap is removed from position[1]; and not from portion.   */
+      /** patham() uses yRange2() which uses .position, when filtering out paths
+       * outside the zoomed scope (could instead use zoomedDomain); reducing
+       * position[1] by axisGapPortion causes it to filter out paths which
+       * should be in, so axisGapPortion is not applied.
+       * If the gap is applied here, it would be removed from position[1]; and
+       * not from portion.
+       */
       let nextPosition = sumPortion + a.portion;
-      a.position = [sumPortion,  nextPosition - axisGapPortion];
+      a.position = [sumPortion,  nextPosition /*- axisGapPortion*/];
       sumPortion = nextPosition;
     });
   oa.eventBus.send('stackPositionsChanged', this);

@@ -174,7 +174,11 @@ export default Component.extend({
          * HandsOnTable-s of Features and Paths tables, when switching from
          * Features to Paths.
          */
-        later(() => this.set('table', this.createHoTable(this.get('tableData'))));
+        later(() => {
+          if (! this.get('table')) {
+            this.set('table', this.createHoTable(this.get('tableData')));
+          }
+        });
       }
       if (! visible && table) {
         this.destroyHoTable();

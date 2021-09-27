@@ -1,0 +1,67 @@
+---
+cff-version: 1.2.0
+message: If you use this software, please cite it using these metadata.
+
+title: Integrating past, present and future wheat research with Pretzel
+
+abstract: Motivation Major advances have been made in the assembly of complex genomes such as wheat. Remaining challenges include linking these new resources to legacy research, as well as lowering the bar to entry for members of the research community who may lack specific bioinformatics skills.  Results Pretzel aims to solve these problems by providing an interactive, online environment for data visualisation and analysis which, when loaded with appropriately curated data, can enable researchers with no bioinformatics training to exploit the latest genomic resources. We demonstrate that Pretzel can be used to answer common questions asked by researchers as well as for advanced curation of pseudomolecule structure.  Availability Pretzel is implemented in JavaScript and is freely available under a GPLv3 license online at https://github.com/plantinformatics/pretzel.  Contact gabriel.keeble-gagnere{at}agriculture.vic.gov.au
+
+authors:
+
+  - family-names: Keeble-Gagnère
+    given-names: Gabriel
+    orcid: "https://orcid.org/0000-0002-9165-0724"
+
+  - family-names: Isdale
+    given-names: Don
+    orcid: "https://orcid.org/0000-0002-6553-0075"
+
+  - family-names: Suchecki
+    given-names: Rados-ław
+    orcid: "https://orcid.org/0000-0003-4992-9497"
+
+  - family-names: Kruger
+    given-names: Alex
+
+  - family-names: Lomas
+    given-names: Kieran
+
+  - family-names: Carroll
+    given-names: David
+
+  - family-names: Li
+    given-names: Sean
+
+  - family-names: Whan
+    given-names: Alex
+    orcid: "https://orcid.org/0000-0002-6839-2915"
+
+  - family-names: Hayden
+    given-names: Matthew
+    affiliation: AgriBio Centre for AgriBioscience
+
+  - family-names: Tibbits
+    given-names: Josquin
+    orcid: "https://orcid.org/0000-0002-4951-7540"
+
+contact:
+  email : gabriel.keeble-gagnere{at}agriculture.vic.gov.au
+
+version: 2.10.0
+date-released: "2021-08-25"
+identifiers:
+  - description: This paper introduces the bioinformatics web application Pretzel.
+    type: doi
+    value: "10.1101/517953"
+
+
+license: GPL-3.0-only
+repository-code: "https://github.com/plantinformatics/pretzel"
+
+
+date-published : "2019/01/01"
+keywords :
+  - genomics
+  - bioinformatics
+  - visualisation
+  - web application

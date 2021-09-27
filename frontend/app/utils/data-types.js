@@ -85,6 +85,17 @@ function blockDataConfig(chart) {
 
 /*----------------------------------------------------------------------------*/
 
+/** Inspect fcs to determine if it is a result of a useBucketAuto===true request..
+ * frontend passes useBucketAuto===undefined, but if no interval then useBucketAuto===true (blockFeaturesCounts() - backend/common/utilities/block-features.js)
+ */
+function fcsProperties(fcs) {
+  let
+  isAuto = fcs?.result?.length && ! fcs?.result[0]?.idWidth,
+  properties = isAuto ? featureCountAutoDataProperties : featureCountDataProperties;
+  return properties;
+}
+
+
 
 /** example element of array f :
  * result of $bucketAuto - it defines _id.{min,max}
@@ -239,4 +250,4 @@ function blockHoverName(block) {
 
 
 
-export { featureCountAutoDataProperties, featureCountDataProperties, dataConfigs, DataConfig, blockDataConfig, blockData, parsedData, hoverTextFn, middle, scaleMaybeInterval, datum2LocationWithBlock };
+export { featureCountAutoDataProperties, featureCountDataProperties, fcsProperties, dataConfigs, DataConfig, blockDataConfig, blockData, parsedData, hoverTextFn, middle, scaleMaybeInterval, datum2LocationWithBlock };

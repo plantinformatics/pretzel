@@ -108,6 +108,8 @@ function convertSearchResults2Json()
 #-------------------------------------------------------------------------------
 
 datasetId=$parent
+# Sanitize datasetId. Allow only alphanumeric and -._ and space.
+datasetId=$(echo "$datasetId" | sed 's/[^-A-Za-z0-9._ ]/_/g')
 
 #echo ">BobWhite_c10015_641
 # AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" | 
@@ -119,7 +121,11 @@ fi
 
 function datasetId2dbName()
 {
-  if [ $inContainer -eq 0 ]
+  if [ ! -f "$datasetId".dbName ]
+  then
+    dbName="$datasetId"
+    echo 1>&4 'Warning:' "no file '$datasetId.dbName', using '$datasetId'"
+  elif [ $inContainer -eq 0 ]
   then
     dbName=$(cat "$datasetId".dbName)
   else
@@ -134,6 +140,7 @@ if [ -d ../../pretzel.A1 ]
 then
   # sleep 10
   # FJ039903.1, DQ146423.1
+  # test : dbName=$(datasetId2dbName "$datasetId")
   dev_blastResult "$datasetId" |	\
       ( [ "$addDataset" = true ] && convertSearchResults2Json || cat) |	\
       ( [ -n "$resultRows" ] && head -n $resultRows || cat)

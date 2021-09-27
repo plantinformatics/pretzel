@@ -1,13 +1,30 @@
 import Component from '@ember/component';
+import { computed } from '@ember/object';
+import { alias } from '@ember/object/computed';
+import { inject as service } from '@ember/service';
 
 import { htmlSafe } from '@ember/template';
 
 /* global CSS */
 
 export default Component.extend({
+  apiServers: service(),
+
   style: htmlSafe(CSS.escape('height:100%')),
   attributeBindings: ['style:style'],
   view: 'mapview',
+
+  /** Return a list of datasets, with their included blocks, for the currently-selected
+   * API server tab
+   *
+   * This has the essentials from panel/manage-explorer.js : datasetsBlocks(),
+   * and can probably replace it; left-panel can pass this value to manage-explorer.
+   */
+  serverSelected_datasetsBlocks : computed(
+    'apiServers.serverSelected.datasetsBlocks.[]',
+    function () {
+      return this.get('apiServers.serverSelected.datasetsBlocks') || [];
+    }),
 
   actions: {
     toggleLeftPanel() {
