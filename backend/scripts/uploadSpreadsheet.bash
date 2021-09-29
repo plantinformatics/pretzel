@@ -74,7 +74,11 @@ function splitMetadata()
     # Skip columns with empty dataset name.
     [ "$diN" = 'empty_datasetName' ] && continue;
     datasetMeta="$fileDir"/"$diN".Metadata.csv
-    < "$fileDir"/Metadata.csv sed '/^#/d;/^"#/d' | cut -d, -f 1,$(($di+2)) | tail -n +2  > "$datasetMeta" ;
+    # original didn't handle comma in quoted cell value : cut -d, -f 1,$(($di+2)) | 
+    datasetColumn=$(($di+1))
+    < "$fileDir"/Metadata.csv sed '/^#/d;/^"#/d' | \
+        perl -e 'use Text::ParseWords; while (<>) { chomp; my @a =  parse_line(",", 0, $_); print "\"$a[0]\",\"$a['$datasetColumn']\"\n"; }'	| \
+        tail -n +2  > "$datasetMeta" ;
   done
 }
 

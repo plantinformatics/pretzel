@@ -407,15 +407,22 @@ sub setupMeta()
     {
       while(<FH>){
         chomp;
-        my ($fieldName, $value) = split(/,/, $_);
-        $value = trimOutsideQuotesAndSpaces($value);
-        if (! ($fieldName =~ m/commonName|parentName|platform|shortName/)) {
-          $meta{$fieldName} = $value;
-        }
-        if ($fieldName eq 'parentName')
-        {
-          $metaParentName = $value;
-        }
+        my ($fieldName, $value) = parse_line($fieldSeparator, 0, $_);
+        if (! defined($fieldName) || ! defined($value)
+            || ! ($value = trimOutsideQuotesAndSpaces($value)))
+          {
+            print STDERR "setupMeta() fieldName=", defined($fieldName) && $fieldName, ", value=", defined($value) && $value, ", $_\n";
+          }
+        else
+          {
+            if (! ($fieldName =~ m/commonName|parentName|platform|shortName/)) {
+              $meta{$fieldName} = $value;
+              }
+            if ($fieldName eq 'parentName')
+              {
+                $metaParentName = $value;
+              }
+          }
       }
       close(FH);
     }
