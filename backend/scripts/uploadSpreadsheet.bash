@@ -469,9 +469,7 @@ case $fileName in
             status=$?
             ;;
           "$fileName".*QTL'|'*csv)
-	    # Disabled until these are resolved : parent undefined;  punctuation in citation in Metadata.
-            # qtlList
-            echo "Warning: '$i' : QTL upload not enabled yet."
+            qtlList
             status=$?
             ;;
           # Later : Genome, etc
