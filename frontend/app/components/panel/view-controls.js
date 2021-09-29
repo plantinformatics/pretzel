@@ -14,7 +14,7 @@ import { toBool } from '../../utils/common/strings';
 
 import { stacks } from '../../utils/stacks';
 
-import { subInterval, overlapInterval } from '../../utils/draw/zoomPanCalcs';
+import { subInterval, overlapInterval, inRange } from '../../utils/draw/zoomPanCalcs';
 
 
 /* global d3 */
@@ -154,9 +154,20 @@ export default Component.extend({
     overlap = this.get('featureIntervalOverlap'),
     contain = this.get('featureIntervalContain'),
     fn = (value, interval) => {
-      let ok = (overlap ? overlapInterval : subInterval)(value, interval)
+      let ok;
+      if (! value.length) {
+        /* easy to support non-array value atm; may not be required;
+         * for typescript may declare value as array.
+         */
+        ok = (typeof value === "number") && inRange(value, interval);
+      } else if (value.length == 1) {
+        /** for .length === 1 : overlap and contain don't apply, and subInterval() works. */
+        ok = subInterval(value, interval);
+      } else {
+        ok = (overlap ? overlapInterval : subInterval)(value, interval)
           && (contain || ! subInterval(interval, value));
-      ok ||= ((! overlap && contain) && subInterval(interval, value));
+        ok ||= ((! overlap && contain) && subInterval(interval, value));
+      };
       return ok;
     };
     return fn;
