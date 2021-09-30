@@ -57,11 +57,11 @@
     </span>
     <label>Match</label>
     <XToggle
-      @onLabel='any'
-      @offLabel='all'
+      @onLabel='all'
+      @offLabel='any'
       @theme='flip'
-      @value={{this.searchFilterAny}}
-      @onToggle={{fn (mut this.searchFilterAny)}}
+      @value={{this.searchFilterAll}}
+      @onToggle={{fn (mut this.searchFilterAll)}}
     />
   </div>
 

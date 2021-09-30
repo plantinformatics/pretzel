@@ -104,7 +104,7 @@ export default ManageBase.extend({
    *   false : any
    *  of the search key-words match.
    */
-  searchFilterAny : true,
+  searchFilterAll : true,
 
   /** filter/sort for  Recent / Favourites
    *
@@ -302,12 +302,12 @@ export default ManageBase.extend({
       nameFilter.split(/[ \t]/);
     return array;
   }),
-  /* The two dependencies caseInsensitive and searchFilterAny impact on
+  /* The two dependencies caseInsensitive and searchFilterAll impact on
    * datasetOrBlockMatch(), called by dataPre, so they could be moved downstream
    * to dataPre (it would have to change from filter to computed to add those
    * dependencies).
    */
-  dataPre2 : computed('dataPreHistory.[]', 'nameFilterArray', 'caseInsensitive', 'searchFilterAny', function () {
+  dataPre2 : computed('dataPreHistory.[]', 'nameFilterArray', 'caseInsensitive', 'searchFilterAll', function () {
     return this.get('dataPreHistory');
   }),
   dataPre: filter('dataPre2', function(dataset, index, array) {
@@ -329,7 +329,7 @@ export default ManageBase.extend({
   datasetOrBlockMatch(dataset, nameFilters) {
     const maybeLC  = this.caseInsensitive ? (string) => string.toLowerCase() : (string) => string; 
     let
-    multiFnName = this.searchFilterAny ? 'any' : 'every';
+    multiFnName = this.searchFilterAll ? 'every' : 'any';
     if (this.caseInsensitive) {
       nameFilters = nameFilters.map((n) => n.toLowerCase());
     }
