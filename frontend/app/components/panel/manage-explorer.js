@@ -109,8 +109,8 @@ export default ManageBase.extend({
   /** filter/sort for  Recent / Favourites
    *
    * controls :
-   * radio buttons : Normal / Recent / Favourites, (disable when Normal)
-   * toggle : Block / Dataset
+   * . historyView : radio buttons : Normal / Recent / Favourites, (disable when Normal)
+   * . historyBlocks : toggle : Block / Dataset
    *
    * tabs
    * - All Datasets : filter : if previously viewed
@@ -120,12 +120,17 @@ export default ManageBase.extend({
    * - Genome, etc : same : sort by Dataset (based on views of their Blocks), filter : if previously viewed
    */
   historyView : 'Normal',
-  // historyByBlock : false,
   /** user has clicked Normal/Recent/Favourites radio. */
   historyViewChanged(value) {
     dLog('historyViewChanged', value);
   },
-
+  /** true means shown only the viewed Blocks of the datasets, otherwise show
+   * all Blocks. This applies when historyView is not 'Normal'.
+   */
+  historyBlocks : false,
+  historyBlocksChanged(value) {
+    dLog('historyBlocksChanged', value);
+  },
 
   /*--------------------------------------------------------------------------*/
 
@@ -287,9 +292,6 @@ export default ManageBase.extend({
       const view = this.get('viewHistory'),
        recent = this.historyView !== 'Recent';
       data = view.datasetsFilterSortViewed(data, recent);
-      data.forEach((d) => {
-        d.blocksFilterSortViewed = () => recent ? d.blocksRecent : d.blocksFavourite;
-      });
     }
     return data;
   }),
