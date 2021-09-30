@@ -62,6 +62,7 @@ const selectorExplorer = 'div#left-panel-explorer';
 export default ManageBase.extend({
   apiServers: service(),
   controls : service(),
+  viewHistory : service('data/view'),
 
   init() {
     this._super();
@@ -104,6 +105,27 @@ export default ManageBase.extend({
    *  of the search key-words match.
    */
   searchFilterAny : true,
+
+  /** filter/sort for  Recent / Favourites
+   *
+   * controls :
+   * radio buttons : Normal / Recent / Favourites, (disable when Normal)
+   * toggle : Block / Dataset
+   *
+   * tabs
+   * - All Datasets : filter : if previously viewed
+   *   - Recent : sort (descending) by last view time of Block or most recently viewed Block of Dataset
+   *   - Favourites : sort (descending) by count of views of Block or most commonly viewed Block of Dataset
+   * - GM : same as All Datasets
+   * - Genome, etc : same : sort by Dataset (based on views of their Blocks), filter : if previously viewed
+   */
+  historyView : 'Normal',
+  // historyByBlock : false,
+  /** user has clicked Normal/Recent/Favourites radio. */
+  historyViewChanged(value) {
+    dLog('historyViewChanged', value);
+  },
+
 
   /*--------------------------------------------------------------------------*/
 
@@ -257,6 +279,20 @@ export default ManageBase.extend({
       return availableMaps;
     }
   }),
+  dataPreHistory : computed('dataPre1.[]', 'historyView', function () {
+    let data = this.get('dataPre1');
+    let match;
+    if (this.historyView !== 'Normal') {
+      // this.historyView === 'Recent'
+      const view = this.get('viewHistory'),
+       recent = this.historyView !== 'Recent';
+      data = view.datasetsFilterSortViewed(data, recent);
+      data.forEach((d) => {
+        d.blocksFilterSortViewed = () => recent ? d.blocksRecent : d.blocksFavourite;
+      });
+    }
+    return data;
+  }),
   nameFilterArray : computed('nameFilter', function () {
     let
     nameFilter = this.get('nameFilter'),
@@ -269,8 +305,8 @@ export default ManageBase.extend({
    * to dataPre (it would have to change from filter to computed to add those
    * dependencies).
    */
-  dataPre2 : computed('dataPre1.[]', 'nameFilterArray', 'caseInsensitive', 'searchFilterAny', function () {
-    return this.get('dataPre1');
+  dataPre2 : computed('dataPreHistory.[]', 'nameFilterArray', 'caseInsensitive', 'searchFilterAny', function () {
+    return this.get('dataPreHistory');
   }),
   dataPre: filter('dataPre2', function(dataset, index, array) {
     let

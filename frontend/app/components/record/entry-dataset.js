@@ -13,9 +13,15 @@ export default EntryBase.extend({
     this.set('entryLayout',layout);
   }),
   data: computed('entry.blocks', 'filter', function() {
-    return this.get('entry.blocks')
+    let
+    dataset = this.get('entry'),
+    data =
+      dataset.blocksFilterSortViewed ? dataset.blocksFilterSortViewed() :
+      this.get('entry.blocks');
+    data = data
       .filter((block) => !block.get('isCopy'))
       .sort((a,b) => alphanum(a.get('name'), b.get('name')) );
+    return data;
   }),
   dataEmpty: computed('data', function() {
     let availableBlocks = this.get('data')

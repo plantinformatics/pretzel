@@ -10,6 +10,24 @@
 
   {{#if panelContainer.showComponent}}
 
+    <li class="list-group-item">
+      <label style="display:inline">filter / sort :</label>
+      {{radio-button value='Normal' groupValue=historyView
+        changed=(action historyViewChanged preventDefault=false)
+      }}
+      Normal &nbsp;&nbsp;
+      {{radio-button value='Recent' groupValue=historyView
+        changed=(action historyViewChanged preventDefault=false)
+      }}
+      Recent &nbsp;&nbsp;
+      {{radio-button value='Favourites' groupValue=historyView
+        changed=(action historyViewChanged preventDefault=false)
+      }}
+      Favourites
+
+    </li>
+
+
   <div class="textInput">
     <i class="glyphicon glyphicon-filter"></i>
     {{!-- there is no suitable autocomplete, so may change to  =off --}}

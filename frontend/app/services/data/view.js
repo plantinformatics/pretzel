@@ -58,6 +58,8 @@ export default Service.extend({
     let related = [];
     if (! block.get('isViewed')) {
       toView.push(block);
+      /** record the viewed event in history */
+      this.setViewed(block);
     }
     let referenceBlock = block.get('referenceBlock');
     if (referenceBlock && (referenceBlock !== block)) {
@@ -74,6 +76,7 @@ export default Service.extend({
         related.push(parentBlock);
         toView.push(parentBlock);
         this.setViewedFor(block, parentBlock);
+        this.setViewed(parentBlock);
       }
     }
     if (toView.length) {
@@ -82,5 +85,118 @@ export default Service.extend({
 
     return related;
   },
+
+
+  /** Map by block : counter / timestamp
+   * Used to filter/sort for Dataset Explorer : Recent / Favourites
+   */
+  viewed : new Map(),
+  setViewed(block) {
+    let
+    map = this.get('viewed'),
+    entry = map.get(block),
+    now = Date.now();
+    if (entry) {
+      entry.counter++;
+    } else {
+      entry = {counter : 1};
+      map.set(block, entry);
+    }
+    entry.timestamp = now;
+  },
+  /** @return true if the block has view history. */
+  blockViewed(block) {
+    return this.viewed.get(block);
+  },
+  /** Sort (descending) the given array of blocks.
+   * @param recent  true / false for recent / favourite,
+   * i.e. true means sort by .timestamp, false means sort by .counter.
+   */
+  blocksFilterSortViewed(blocks, recent) {
+    let
+    keyName = recent ? 'timestamp' : 'counter',
+    /** descending : bv2 - bv1  */
+    blocksSorted = blocks
+      .map((b) => [b, this.viewed.get(b)])
+      .filter((bv) => bv[1])
+      .sort((bv1, bv2) => (bv2[1][keyName] - bv1[1][keyName]))
+      .map((bv) => bv[0]);
+    return blocksSorted;
+  },
+  /** Sort (descending) the given array of datasets.
+   * Sort by the datasets' blocks, based on their viewed history.
+   * @param recent  true / false for recent / favourite,
+   * i.e. true means sort by .timestamp, false means sort by .counter.
+   */
+  datasetsFilterSortViewed(datasets, recent) {
+    let
+    keyName = recent ? 'timestamp' : 'counter',
+    /** descending : dv2 - dv1  */
+    datasetsSorted = datasets
+      .map((d) => [d, this.datasetMaxViewed(d, recent)])
+      .filter((dv) => dv[1])
+      .sort((dv1, dv2) => (dv2[1][keyName] - dv1[1][keyName]))
+      .map((dv) => dv[0]);
+    return datasetsSorted;
+  },
+  /** @return the max viewedHistoryEntry of dataset's blocks,
+   * or undefined if none have been viewed.
+   */
+  datasetMaxViewed(dataset, recent) {
+    let
+    blockEntries = this.datasetBlocksViewed(dataset),
+    /** viewedHistoryEntry */
+    max = this.maxViewed(blockEntries, recent);
+    return max;
+  },           
+  /** Given an array of viewedHistoryEntry,
+   * where viewedHistoryEntry is : {counter, timestamp} of that block,
+   * find the entry with the maximum value of viewedHistoryEntry.counter or .timestamp
+   * @param recent  true / false for recent / favourite,
+   * i.e. true means select the max .timestamp, false means select the max .counter.
+   * @return the max viewedHistoryEntry
+   * or undefined if blockEntries is []
+   */
+  maxViewed(blockEntries, recent) {
+    let
+    keyName = recent ? 'timestamp' : 'counter',
+    blockEntryMax = blockEntries.length ? blockEntries
+      .reduce(
+        (maxEntry, entry) => (maxEntry[keyName] > entry[keyName]) ? maxEntry : entry,
+        blockEntries[0])
+      : undefined;
+    return blockEntryMax;
+  },
+  /** @return the block entry of this dataset, if any, which is most recent or favourite,
+   * or if recent is null just return true / false if any block of this dataset
+   * has a viewed history entry.
+   */
+  datasetHistory(dataset, recent) {
+    let
+    entry,
+    datasetEntries = this.datasetBlocksViewed(dataset),
+    blocks = dataset.get('blocks');
+    if (recent === null) {
+      entry = blocks.any((b) => this.viewed.get(b));
+    }
+    blocks.filter((b) => this.viewed.get(b));
+    return ;
+  },
+  /** @return  true if any blocks of this dataset have been viewed.
+   */
+  datasetViewed(dataset) {
+    return dataset.get('blocks').any((b) => this.viewed.get(b));
+  },
+  /** @return the view history entries of the blocks of this dataset
+   */
+  datasetBlocksViewed(dataset) {
+    let
+    entries = 
+      dataset.get('blocks').reduce((es, b) => {
+        let e = this.viewed.get(b);
+        if (e) { es.push(e); };
+        return es; }, []);
+    return entries;
+  }
 
 });
