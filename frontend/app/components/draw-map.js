@@ -6487,7 +6487,7 @@ export default Component.extend(Evented, {
     changed = ! isEqual(previous, now);
     if (changed) {
       console.log('stacksWidthChanged', previous, now);
-      this.set('previousRender', now);
+      later(() => this.set('previousRender', now));
     }
     return changed;
   },
