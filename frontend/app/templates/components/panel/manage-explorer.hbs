@@ -11,24 +11,30 @@
   {{#if panelContainer.showComponent}}
 
     <li class="list-group-item">
-      <label style="display:inline">filter / sort :</label>
-      {{radio-button value='Normal' groupValue=historyView
-        changed=(action historyViewChanged preventDefault=false)
-      }}
-      Normal &nbsp;&nbsp;
-      {{radio-button value='Recent' groupValue=historyView
-        changed=(action historyViewChanged preventDefault=false)
-      }}
-      Recent &nbsp;&nbsp;
-      {{radio-button value='Favourites' groupValue=historyView
-        changed=(action historyViewChanged preventDefault=false)
-      }}
-      Favourites
+      <label style="display:inline"></label>
+      {{#radio-button value='Normal' groupValue=historyView
+        changed=(action historyViewChanged preventDefault=false) }}
+      <span>All</span>
+      {{/radio-button}}
+       &nbsp;&nbsp;
 
+      {{#radio-button value='Recent' groupValue=historyView
+        changed=(action historyViewChanged preventDefault=false) }}
+      <span>Recent</span>
+      {{/radio-button}}
+       &nbsp;&nbsp;
+
+      {{#radio-button value='Favourites' groupValue=historyView
+        changed=(action historyViewChanged preventDefault=false) }}
+      <span>Favourites</span>
+      {{/radio-button}}
+
+      <span style="display: inline-block;">
         {{input type="checkbox" name="historyBlocks" checked=historyBlocks
           input=(action historyBlocksChanged preventDefault=false)
           id="checkbox-historyBlocks" }}
         <label for="checkbox-historyBlocks">Viewed Chromosomes</label>
+      </span>
 
     </li>
 
