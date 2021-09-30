@@ -939,6 +939,15 @@ li.dropdown-submenu > ul.dropdown-menu {
   flex-grow: 1;
   overflow-x: auto;
 }
+/** in combination with type=search, on Chrome this enables display of a clear /
+ * cancel button in the text input field, while there contains text and the
+ * focus.  Not effect in Firefox, not supported.
+ */
+input#nameFilter::-webkit-search-cancel-button
+{
+  -webkit-appearance: searchfield-cancel-button;
+}
+
 .textInput > i.glyphicon
 {
   display: none;
