@@ -1,5 +1,8 @@
 import Service, { inject as service } from '@ember/service';
 import { later } from '@ember/runloop';
+import { alias } from '@ember/object/computed';
+
+import { storageFor } from 'ember-local-storage';
 
 
 /*----------------------------------------------------------------------------*/
@@ -19,6 +22,8 @@ const dLog = console.debug;
  */
 export default Service.extend({
   block : service('data/block'),
+
+  blockViewHistory: storageFor('blockViewHistory'),
 
   /** When a block is viewed, its .referenceBlock is viewed, which provides the
    * axis, and if it has a .parentBlock which is different, that is viewed also;
@@ -90,23 +95,33 @@ export default Service.extend({
   /** Map by block : counter / timestamp
    * Used to filter/sort for Dataset Explorer : Recent / Favourites
    */
-  viewed : new Map(),
+  /** map Block.id -> {counter, timestamp}. singleton map. */
+  viewed : alias('blockViewHistory.viewed'),
+  viewedClear() {
+    dLog('viewedClear', this.viewed);
+    this.blockViewHistory.set('viewed', {});
+  },
+
   setViewed(block) {
     let
-    map = this.get('viewed'),
-    entry = map.get(block),
+    map = this.get('viewed') || this.set('viewed', {}),
+    key = block.id,
+    entry = map[key],
     now = Date.now();
     if (entry) {
       entry.counter++;
     } else {
       entry = {counter : 1};
-      map.set(block, entry);
+      map[key] = entry;
     }
     entry.timestamp = now;
+
+    // update blockViewHistory to cause export to localStorage
+    this.blockViewHistory.set('viewed', this.viewed);
   },
   /** @return true if the block has view history. */
   blockViewed(block) {
-    return this.viewed.get(block);
+    return this.viewed[block.id];
   },
   /** Sort (descending) the given array of blocks.
    * @param recent  true / false for recent / favourite,
@@ -117,7 +132,7 @@ export default Service.extend({
     keyName = recent ? 'timestamp' : 'counter',
     /** descending : bv2 - bv1  */
     blocksSorted = blocks
-      .map((b) => [b, this.viewed.get(b)])
+      .map((b) => [b, this.blockViewed(b)])
       .filter((bv) => bv[1])
       .sort((bv1, bv2) => (bv2[1][keyName] - bv1[1][keyName]))
       .map((bv) => bv[0]);
@@ -177,15 +192,15 @@ export default Service.extend({
     datasetEntries = this.datasetBlocksViewed(dataset),
     blocks = dataset.get('blocks');
     if (recent === null) {
-      entry = blocks.any((b) => this.viewed.get(b));
+      entry = blocks.any((b) => this.blockViewed(b));
     }
-    blocks.filter((b) => this.viewed.get(b));
+    blocks.filter((b) => this.blockViewed(b));
     return ;
   },
   /** @return  true if any blocks of this dataset have been viewed.
    */
   datasetViewed(dataset) {
-    return dataset.get('blocks').any((b) => this.viewed.get(b));
+    return dataset.get('blocks').any((b) => this.blockViewed(b));
   },
   /** @return the view history entries of the blocks of this dataset
    */
@@ -193,7 +208,7 @@ export default Service.extend({
     let
     entries = 
       dataset.get('blocks').reduce((es, b) => {
-        let e = this.viewed.get(b);
+        let e = this.blockViewed(b);
         if (e) { es.push(e); };
         return es; }, []);
     return entries;
