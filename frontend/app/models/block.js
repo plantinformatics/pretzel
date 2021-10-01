@@ -1202,6 +1202,33 @@ export default Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** @return Set() of trait names of Features of this block.
+   * undefined if block is not a QTL, and hence is not expected to have
+   * features[*].values.Trait.
+   */
+  traitSet : computed('features.[]', function () {
+    let traitSet;
+    if (this.get('isQTL')) {
+      traitSet = 
+        this.get('features')
+        .reduce((ts, feature) => {
+          let name = feature.get('values.Trait');
+          if (name) { ts.add(name); }
+          return ts;
+        }, new Set());
+    }
+    return traitSet;
+  }),
+  /** @return undefined or array of trait names from this.traitSet */
+  traits : computed('traitSet', function () {
+    let
+    traitSet = this.get('traitSet'),
+    traits = traitSet && Array.from(traitSet.values());
+    dLog('traits', traits, this.id);
+    return traits;
+  }),
+
+
   /** If this block contains QTLs, request all features of this block and its parent block.
    * This enables calculation of the .value[] of the QTL features.
    */

@@ -47,8 +47,30 @@ const Trait = EmberObject.extend({
  * similar groupings in addition to Trait.
  */
 export default Service.extend({
+  block : service('data/block'),
+
   /** array of {name, visible, features} */
   traits : A(),
+
+  /** @return this.traits, filtered to the traits of currently-viewed blocks
+   */
+  traitsInView : computed('traits.[]', 'block.viewed', function () {
+    /** another approach would be :
+     *    this.traits.filter((t) => t.features.any((f) => f.blockId.isViewed))
+     * Block.traitSet is constant, whereas trait[*].features[*] is constantly
+     * changing, and larger-scale (although number of QTLs is probably not large).
+     */
+    let 
+    traitSets = this.get('block.viewed').reduce((ts, b) => {
+      let traitSet = b.get('traitSet');
+      if (traitSet) { ts.push(traitSet); }
+      return ts;
+    }, []);
+    let union = setsUnion(traitSets),
+        traits = union && this.traits.filter((t) => union.has(t.name));
+    dLog('traitsInView', traits);
+    return traits;
+  }),
 
   //groupAddFeature
   traitAddQtl(feature) {
@@ -85,7 +107,7 @@ export default Service.extend({
    */
   featureFilter(groupName = 'traits', feature) {
     const
-    fnName = 'traitVisible',
+    fnName = 'featureFilter',
     group = this.get(groupName),
     traitName = feature.get('values.Trait'),
     trait = traitName && group && group.findBy('name', traitName),
@@ -95,3 +117,25 @@ export default Service.extend({
   },
 
 });
+
+/*----------------------------------------------------------------------------*/
+
+
+/** combine an array of Set()
+ * @return undefined if sets is []
+ */
+function setsUnion(sets) {
+  let union;
+  if (sets.length) {
+    union = new Set(sets.shift());
+    union = sets.reduce((u, ts) => {
+      for (let trait of ts) {
+        u.add(trait);
+      }
+      return u;
+    }, union);
+  }
+  return union;
+}
+
+/*----------------------------------------------------------------------------*/
