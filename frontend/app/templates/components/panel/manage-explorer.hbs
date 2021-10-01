@@ -10,10 +10,39 @@
 
   {{#if panelContainer.showComponent}}
 
+    <li class="list-group-item">
+      <label style="display:inline"></label>
+      {{#radio-button value='Normal' groupValue=this.controlOptions.historyView
+        changed=(action historyViewChanged preventDefault=false) }}
+      <span>All</span>
+      {{/radio-button}}
+       &nbsp;&nbsp;
+
+      {{#radio-button value='Recent' groupValue=this.controlOptions.historyView
+        changed=(action historyViewChanged preventDefault=false) }}
+      <span>Recent</span>
+      {{/radio-button}}
+       &nbsp;&nbsp;
+
+      {{#radio-button value='Favourites' groupValue=this.controlOptions.historyView
+        changed=(action historyViewChanged preventDefault=false) }}
+      <span>Favourites</span>
+      {{/radio-button}}
+
+      <span style="display: inline-block;">
+        {{input type="checkbox" name="this.controlOptions.historyBlocks" checked=this.controlOptions.historyBlocks
+          input=(action historyBlocksChanged preventDefault=false)
+          id="checkbox-historyBlocks" }}
+        <label for="checkbox-historyBlocks">Viewed Chromosomes</label>
+      </span>
+
+    </li>
+
+
   <div class="textInput">
     <i class="glyphicon glyphicon-filter"></i>
     {{!-- there is no suitable autocomplete, so may change to  =off --}}
-    {{input id="nameFilter" type="text" value=nameFilter placeholder="Search All Datasets" autocomplete="dataset-name" }}
+    {{input id="nameFilter" type="search" value=nameFilter placeholder="Search All Datasets" autocomplete="dataset-name" }}
   </div>
   <div class="button-row">
     <label>Case</label>
@@ -28,11 +57,11 @@
     </span>
     <label>Match</label>
     <XToggle
-      @onLabel='any'
-      @offLabel='all'
+      @onLabel='all'
+      @offLabel='any'
       @theme='flip'
-      @value={{this.searchFilterAny}}
-      @onToggle={{fn (mut this.searchFilterAny)}}
+      @value={{this.searchFilterAll}}
+      @onToggle={{fn (mut this.searchFilterAll)}}
     />
   </div>
 
@@ -118,6 +147,7 @@
             name=tabTypeName
             values=tabData
             levelMeta=levelMeta
+            controlOptions=controlOptions
             loadBlock="loadBlock"
             selectBlock="selectBlock"
             selectedBlock=selectedBlock
@@ -132,6 +162,7 @@
             name=(concat tabTypeName '2')
             values=tabData
             levelMeta=levelMeta
+            controlOptions=controlOptions
             loadBlock="loadBlock"
             selectBlock="selectBlock"
             selectedBlock=selectedBlock
@@ -144,6 +175,7 @@
         <tab.pane @id="tab-explorer-parent" @title="by Parent">
           <ul class="list-group borderless">
             {{record/entry-values values=dataTree levelMeta=levelMeta
+              controlOptions=controlOptions
               loadBlock="loadBlock"
               selectBlock="selectBlock"
               selectedBlock=selectedBlock
@@ -187,8 +219,8 @@
 
           <li 
               class="list-group-item list-group-item-info"
-	      style="margin-top: 4ex;" >
-	      {{!-- margin-top provides room for the pull-down of the last dataset above. --}}
+              style="margin-top: 4ex;" >
+              {{!-- margin-top provides room for the pull-down of the last dataset above. --}}
             {{elem/icon-base name='cloud-upload'}} &nbsp;Upload new data
             <span class="pull-right">
               {{elem/button-base
@@ -202,6 +234,7 @@
           {{#each dataPre as |dataset|}}
             {{record/entry-dataset
               filter=filter
+              controlOptions=controlOptions
               entry=dataset
               selectedBlock=selectedBlock
               selectBlock="selectBlock"

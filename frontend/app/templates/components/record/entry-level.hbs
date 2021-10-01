@@ -4,9 +4,10 @@
 
     {{!-- log 'entry-level' name values --}}
     <ul>
-      {{record/entry-values values=values levelMeta=levelMeta
+      {{record/entry-values values=valuesFiltered levelMeta=levelMeta
         name=name
         parentDone=true
+        controlOptions=controlOptions
         loadBlock="loadBlock"
         selectBlock="selectBlock"
         selectedBlock=selectedBlock

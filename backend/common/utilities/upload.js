@@ -296,7 +296,7 @@ exports.handleJson = function(msg, uploadParsed, cb) {
             datasetParentContainsNamedFeatures(models, jsonMap, options, cb)
               .then((errorMsg) => {
                 if (errorMsg) {
-                  cb(Error(`Dataset name "${jsonMap.name}" error :` + errorMsg));
+                  cb(Error(`Dataset name "${jsonMap.name}" error : ` + errorMsg));
                 } else {
                   // Should be good to process saving of data
                   exports.uploadDataset(jsonMap, models, options, cb);

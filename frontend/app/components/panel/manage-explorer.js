@@ -62,6 +62,7 @@ const selectorExplorer = 'div#left-panel-explorer';
 export default ManageBase.extend({
   apiServers: service(),
   controls : service(),
+  viewHistory : service('data/view'),
 
   init() {
     this._super();
@@ -103,7 +104,38 @@ export default ManageBase.extend({
    *   false : any
    *  of the search key-words match.
    */
-  searchFilterAny : true,
+  searchFilterAll : true,
+
+  /** filter/sort for  Recent / Favourites
+   *
+   * controls :
+   * . historyView : radio buttons : Normal / Recent / Favourites, (disable when Normal)
+   * . historyBlocks : toggle : Block / Dataset
+   *
+   * tabs
+   * - All Datasets : filter : if previously viewed
+   *   - Recent : sort (descending) by last view time of Block or most recently viewed Block of Dataset
+   *   - Favourites : sort (descending) by count of views of Block or most commonly viewed Block of Dataset
+   * - GM : same as All Datasets
+   * - Genome, etc : same : sort by Dataset (based on views of their Blocks), filter : if previously viewed
+   */
+  controlOptions : {
+    historyView : 'Normal',
+  /** true means shown only the viewed Blocks of the datasets, otherwise show
+   * all Blocks. This applies when historyView is not 'Normal'.
+   */
+    historyBlocks : false,
+  },
+  historyView : alias('controlOptions.historyView'),
+  historyBlocks : alias('controlOptions.historyBlocks'),
+
+  /** user has clicked Normal/Recent/Favourites radio. */
+  historyViewChanged(value) {
+    dLog('historyViewChanged', value);
+  },
+  historyBlocksChanged(value) {
+    dLog('historyBlocksChanged', value);
+  },
 
   /*--------------------------------------------------------------------------*/
 
@@ -257,6 +289,17 @@ export default ManageBase.extend({
       return availableMaps;
     }
   }),
+  dataPreHistory : computed('dataPre1.[]', 'historyView', function () {
+    let data = this.get('dataPre1');
+    let match;
+    if (this.historyView !== 'Normal') {
+      // this.historyView === 'Recent'
+      const view = this.get('viewHistory'),
+       recent = this.historyView === 'Recent';
+      data = thenOrNow(data, (d) => view.datasetsFilterSortViewed(d, recent));
+    }
+    return data;
+  }),
   nameFilterArray : computed('nameFilter', function () {
     let
     nameFilter = this.get('nameFilter'),
@@ -264,13 +307,13 @@ export default ManageBase.extend({
       nameFilter.split(/[ \t]/);
     return array;
   }),
-  /* The two dependencies caseInsensitive and searchFilterAny impact on
+  /* The two dependencies caseInsensitive and searchFilterAll impact on
    * datasetOrBlockMatch(), called by dataPre, so they could be moved downstream
    * to dataPre (it would have to change from filter to computed to add those
    * dependencies).
    */
-  dataPre2 : computed('dataPre1.[]', 'nameFilterArray', 'caseInsensitive', 'searchFilterAny', function () {
-    return this.get('dataPre1');
+  dataPre2 : computed('dataPreHistory.[]', 'nameFilterArray', 'caseInsensitive', 'searchFilterAll', function () {
+    return this.get('dataPreHistory');
   }),
   dataPre: filter('dataPre2', function(dataset, index, array) {
     let
@@ -291,7 +334,7 @@ export default ManageBase.extend({
   datasetOrBlockMatch(dataset, nameFilters) {
     const maybeLC  = this.caseInsensitive ? (string) => string.toLowerCase() : (string) => string; 
     let
-    multiFnName = this.searchFilterAny ? 'any' : 'every';
+    multiFnName = this.searchFilterAll ? 'every' : 'any';
     if (this.caseInsensitive) {
       nameFilters = nameFilters.map((n) => n.toLowerCase());
     }
