@@ -1,5 +1,5 @@
 <ul>
-  {{#each data as |block|}}
+  {{#each dataFiltered as |block|}}
     {{#record/entry-selectable node=block nodeName=block.name
        extraClasses="d-inline-block"
        selectedNode=selectedBlock

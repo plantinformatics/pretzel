@@ -14,9 +14,10 @@ export default EntryBase.extend({
     historyBlocks = this.controlOptions.historyBlocks;
 
     if ((this.levelMeta.get(values) === 'Blocks') && (historyView !== 'Normal') && this.controlOptions.historyBlocks ) {
-      /* Could sort by this.viewHistory.blockViewed(b)[(historyView === 'Recent') ? 'timestamp' : 'counter']
+      /* Could sort by this.viewHistory.blockViewed(b)[(historyView === 'Recent') ? 'timestamp' : 'counter'], i.e. use viewHistory.blocksFilterSortViewed()
        * The blocks (chromosomes) typically fit in a small grid (3 x 7 max for
        * wheat), so the default numeric sort is probably more ergonomic.
+       * Similar : entry-values.js : keyValuesSorted().
        */
       values = values.filter((b) => this.get('viewHistory').blockViewed(b));
     }

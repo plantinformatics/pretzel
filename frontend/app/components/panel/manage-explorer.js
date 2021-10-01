@@ -295,7 +295,7 @@ export default ManageBase.extend({
     if (this.historyView !== 'Normal') {
       // this.historyView === 'Recent'
       const view = this.get('viewHistory'),
-       recent = this.historyView !== 'Recent';
+       recent = this.historyView === 'Recent';
       data = thenOrNow(data, (d) => view.datasetsFilterSortViewed(d, recent));
     }
     return data;
