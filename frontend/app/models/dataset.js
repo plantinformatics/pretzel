@@ -10,6 +10,8 @@ const trace = 1;
 
 export default Record.extend({
   apiServers : service(),
+  blockService : service('data/block'),
+  view : service('data/view'),
 
   name: attr('string'),
 
@@ -121,6 +123,23 @@ export default Record.extend({
     has = tags && tags.length && (tags.indexOf(tag) >= 0);
     return has;
   },
+
+  /*--------------------------------------------------------------------------*/
+
+  blocksViewed : computed('blocks.@each.isViewed', function () {
+    /**  depending on 'blockService.viewed.[]' may be more efficent. */
+    let blocks = this.get('blocks').filter((b) => this.get('view').blockViewed(b));
+    return blocks;
+  }),
+  blocksRecent : computed('blocksViewed.[]', function () {
+    /** This repeats the filtering; could pass this.get('blocks'). */
+    let blocks = this.get('view').blocksFilterSortViewed(this.get('blocksViewed'), true);
+    return blocks;
+  }),
+  blocksFavourite : computed('blocksViewed.[]', function () {
+    let blocks = this.get('view').blocksFilterSortViewed(this.get('blocksViewed'), false);
+    return blocks;
+  }),
 
   /*--------------------------------------------------------------------------*/
 

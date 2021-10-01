@@ -1,5 +1,7 @@
 import { isArray } from '@ember/array';
 import { computed } from '@ember/object';
+import { inject as service } from '@ember/service';
+
 import EntryBase from './entry-base';
 
 import DS from 'ember-data';
@@ -35,6 +37,8 @@ const trace_entryValues = 0;
  * @param selectDataset
  */
 export default EntryBase.extend({
+  viewHistory : service('data/view'),
+
   tagName: '',
 
   actions: {
@@ -167,11 +171,33 @@ export default EntryBase.extend({
   /** The template uses this to display the values sorted in key order.
    * (Using {{#each-in values as |key value|}} doesn't sort by key.)
    * This could also support valuesIsMap.
+   *
+   * Added : filter by view history if enabled by controlOptions.{historyView,historyBlocks}.
    */
-  keyValuesSorted : computed('valuesIsObject', function () {
+  keyValuesSorted : computed('valuesIsObject', 'controlOptions.{historyView,historyBlocks}', function () {
     let array;
     if (this.get('valuesIsObject')) {
       let values = this.get('values');
+      let o = this.controlOptions,
+          recent = o.historyView === 'Recent',
+          levelMeta = this.levelMeta;
+
+      if ((levelMeta.get(values) === 'Parent')
+          && o.historyBlocks
+          && (o.historyView !== 'Normal')) {
+        let scopes = Object.keys(values);
+            values = scopes.reduce((vs, s) => {
+              let blocks = values[s],
+                  // this.levelMeta.get(blocks) is 'Scope'
+              blocksFiltered = this.get('viewHistory').blocksFilterSortViewed(blocks, recent);
+              if (blocksFiltered.length) {
+                vs[s] = blocksFiltered;
+                // this.levelMeta.get(blocks[0]) is 'Blocks'
+                levelMeta.set(blocksFiltered, levelMeta.get(blocks));
+              }
+              return vs;
+            }, {});
+      }
       array = Object.keys(values)
         .sort(alphanum)
         .map((key) => ({key, value : values[key]}));
