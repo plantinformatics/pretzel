@@ -24,6 +24,7 @@
   {{component values_levelComponent levelMeta=levelMeta name=(or name values.name) values=values
     data=values
     parentDone=true
+    controlOptions=controlOptions
     loadBlock="loadBlock"
     selectBlock="selectBlock"
     selectedBlock=selectedBlock
@@ -38,6 +39,7 @@
     {{record/entry-values values=value levelMeta=levelMeta
       parentName=name
       loadBlock="loadBlock"
+      controlOptions=controlOptions
       selectBlock="selectBlock"
       selectedBlock=selectedBlock
       selectDataset=(action 'selectDataset')}}
@@ -52,6 +54,7 @@
       {{component subComponent levelMeta=levelMeta name=key values=value
         data=value
         parentName=name
+        controlOptions=controlOptions
         loadBlock="loadBlock"
         selectBlock="selectBlock"
         selectedBlock=selectedBlock
@@ -70,6 +73,7 @@
       {{component subComponent levelMeta=levelMeta name=key values=value
         data=value
         parentName=name
+        controlOptions=controlOptions
         loadBlock="loadBlock"
         selectBlock="selectBlock"
         selectedBlock=selectedBlock

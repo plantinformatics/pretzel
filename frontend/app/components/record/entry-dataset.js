@@ -12,12 +12,12 @@ export default EntryBase.extend({
     }
     this.set('entryLayout',layout);
   }),
-  data: computed('entry.blocks', 'filters.{historyView,historyBlocks}', function() {
-    /*  filters.filter is provided by filterOptions, available until d33fb802 */
+  data: computed('entry.blocks', 'controlOptions.{historyView,historyBlocks}', function() {
+    /*  this.filter is provided by filterOptions, available until d33fb802 */
     let
     dataset = this.get('entry'),
-    historyView = this.filters.historyView,
-    data = (historyView === 'Normal') || ! this.filters.historyBlocks ? this.get('entry.blocks') :
+    historyView = this.controlOptions.historyView,
+    data = (historyView === 'Normal') || ! this.controlOptions.historyBlocks ? this.get('entry.blocks') :
       (historyView === 'Recent') ? dataset.blocksRecent : dataset.blocksFavourite;
     data = data
       .filter((block) => !block.get('isCopy'))

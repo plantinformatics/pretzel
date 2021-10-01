@@ -70,6 +70,7 @@ export default Service.extend({
     if (referenceBlock && (referenceBlock !== block)) {
       toView.push(referenceBlock);
       related.push(referenceBlock);
+      this.setViewed(referenceBlock);
     }
     /** Also view the parent, if that is different from the reference.
      * In this case block and referenceBlock are already covered,

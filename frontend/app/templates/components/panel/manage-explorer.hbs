@@ -12,25 +12,25 @@
 
     <li class="list-group-item">
       <label style="display:inline"></label>
-      {{#radio-button value='Normal' groupValue=historyView
+      {{#radio-button value='Normal' groupValue=this.controlOptions.historyView
         changed=(action historyViewChanged preventDefault=false) }}
       <span>All</span>
       {{/radio-button}}
        &nbsp;&nbsp;
 
-      {{#radio-button value='Recent' groupValue=historyView
+      {{#radio-button value='Recent' groupValue=this.controlOptions.historyView
         changed=(action historyViewChanged preventDefault=false) }}
       <span>Recent</span>
       {{/radio-button}}
        &nbsp;&nbsp;
 
-      {{#radio-button value='Favourites' groupValue=historyView
+      {{#radio-button value='Favourites' groupValue=this.controlOptions.historyView
         changed=(action historyViewChanged preventDefault=false) }}
       <span>Favourites</span>
       {{/radio-button}}
 
       <span style="display: inline-block;">
-        {{input type="checkbox" name="historyBlocks" checked=historyBlocks
+        {{input type="checkbox" name="this.controlOptions.historyBlocks" checked=this.controlOptions.historyBlocks
           input=(action historyBlocksChanged preventDefault=false)
           id="checkbox-historyBlocks" }}
         <label for="checkbox-historyBlocks">Viewed Chromosomes</label>
@@ -147,6 +147,7 @@
             name=tabTypeName
             values=tabData
             levelMeta=levelMeta
+            controlOptions=controlOptions
             loadBlock="loadBlock"
             selectBlock="selectBlock"
             selectedBlock=selectedBlock
@@ -161,6 +162,7 @@
             name=(concat tabTypeName '2')
             values=tabData
             levelMeta=levelMeta
+            controlOptions=controlOptions
             loadBlock="loadBlock"
             selectBlock="selectBlock"
             selectedBlock=selectedBlock
@@ -173,6 +175,7 @@
         <tab.pane @id="tab-explorer-parent" @title="by Parent">
           <ul class="list-group borderless">
             {{record/entry-values values=dataTree levelMeta=levelMeta
+              controlOptions=controlOptions
               loadBlock="loadBlock"
               selectBlock="selectBlock"
               selectedBlock=selectedBlock
@@ -230,7 +233,8 @@
   
           {{#each dataPre as |dataset|}}
             {{record/entry-dataset
-              filters=(hash filter=filter historyView=historyView historyBlocks=historyBlocks)
+              filter=filter
+              controlOptions=controlOptions
               entry=dataset
               selectedBlock=selectedBlock
               selectBlock="selectBlock"
