@@ -30,6 +30,7 @@ export default Service.extend({
   init() {
     this._super(...arguments);
 
+    /** If there is no view history yet in this browser, initialise it. */
     if (! this.get('viewed')) {
       this.set('viewed', {});
       /* this does not set .blockViewHistory, that will be done if data is added */      
