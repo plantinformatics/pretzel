@@ -25,6 +25,21 @@ export default Service.extend({
 
   blockViewHistory: storageFor('blockViewHistory'),
 
+  /*--------------------------------------------------------------------------*/
+
+  init() {
+    this._super(...arguments);
+
+    /** If there is no view history yet in this browser, initialise it. */
+    if (! this.get('viewed')) {
+      this.set('viewed', {});
+      /* this does not set .blockViewHistory, that will be done if data is added */      
+    }
+  },
+
+  /*--------------------------------------------------------------------------*/
+  
+
   /** When a block is viewed, its .referenceBlock is viewed, which provides the
    * axis, and if it has a .parentBlock which is different, that is viewed also;
    * this is a user requirement not a functional requirement.
@@ -92,6 +107,7 @@ export default Service.extend({
     return related;
   },
 
+  /*--------------------------------------------------------------------------*/
 
   /** Map by block : counter / timestamp
    * Used to filter/sort for Dataset Explorer : Recent / Favourites
@@ -214,5 +230,7 @@ export default Service.extend({
         return es; }, []);
     return entries;
   }
+
+  /*--------------------------------------------------------------------------*/
 
 });

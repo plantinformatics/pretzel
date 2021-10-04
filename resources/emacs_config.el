@@ -56,6 +56,7 @@
        (js2-basic-offset . 2)
        (js2-bounce-indent-p . t)
        (js2-pretty-multiline-declarations . nil)
+       (fill-column . 80)
        ))
    )
  )
