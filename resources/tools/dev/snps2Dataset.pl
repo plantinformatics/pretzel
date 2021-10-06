@@ -129,14 +129,16 @@ my $line1IsHeader = $options{H};
 
 #-------------------------------------------------------------------------------
 
+columnConfig();
 if ($arrayColumnName)
 {
-  columnConfig();
   $c_arrayColumnName = defined($columnsKeyLookup{$arrayColumnName}) ? $columnsKeyLookup{$arrayColumnName} : undef;
   # print join(';', keys(%columnsKeyLookup)), ',',  $columnsKeyLookup{'end'}, ',', $arrayColumnName, ', ', $c_arrayColumnName || 'undef', "\n";
 }
 
 my $c_Trait = defined($columnsKeyLookup{'Trait'}) ? $columnsKeyLookup{'Trait'} : undef;
+my $c_FlankingMarkers = defined($columnsKeyLookup{'Flanking Markers'}) ? $columnsKeyLookup{'Flanking Markers'} :
+  defined($columnsKeyLookup{'Flanking_Markers'}) ? $columnsKeyLookup{'Flanking_Markers'} : undef;
 
 #-------------------------------------------------------------------------------
 
@@ -642,7 +644,7 @@ sub snpLine($)
 
   # Skip blank lines
   if (! $a[c_name] && ! $a[c_chr]
-      && ! (defined($columnsKeyLookup{'Flanking Markers'}) && $a[$columnsKeyLookup{'Flanking Markers'}])
+      && ! (defined($c_FlankingMarkers) && $a[$c_FlankingMarkers])
 )
   {
     # Could output a warning if the line is not blank, i.e. not /^,,,/, or $a[c_pos]
@@ -798,12 +800,12 @@ sub snpLine($)
         }
     }
 
-  my $valuesOpen = defined($columnsKeyLookup{'Flanking Markers'});
+  my $valuesOpen = defined($c_FlankingMarkers);
   # also $c_Trait
-  if (! $a[c_name] && defined($columnsKeyLookup{'Flanking Markers'}) && $a[$columnsKeyLookup{'Flanking Markers'}])
+  if (! $a[c_name] && defined($c_FlankingMarkers) && $a[$c_FlankingMarkers])
     {
       # The first flanking marker is output by printFeature(); prepend this one with ','
-       print ", \"$a[$columnsKeyLookup{'Flanking Markers'}]\"";
+       print ", \"$a[$c_FlankingMarkers]\"";
     }
   else
     {
@@ -846,7 +848,7 @@ sub trimOutsideQuotesAndSpaces($) {
 # Prefix with SNP_ if not present, to make all consistent.
 sub markerPrefix($) {
   my ($name) = @_;
-  if ($name =~ m/^[1234]000/)
+  if (defined($name) && ($name =~ m/^[1234]000/))
   {
     $name = "SNP_" . $name;
   }
@@ -934,7 +936,7 @@ sub printFeature($@)
       # print $ci, ', columnHeader:', $columnHeader, ",", $a[$ci], "\n";
       if (($ci != c_name) && ($ci != c_chr) && ($ci != $c_pos)
           && (! defined($c_endPos) || ($ci != $c_endPos))
-          && (! defined($columnsKeyLookup{'Flanking Markers'}) || ($ci != $columnsKeyLookup{'Flanking Markers'}))
+          && (! defined($c_FlankingMarkers) || ($ci != $c_FlankingMarkers))
           && $a[$ci] && ($ci <= $#columnHeaders) && $columnHeader && ! isComment($columnHeader))
       {
         # equivalent : ($ci == $c_arrayColumnName)
@@ -994,7 +996,7 @@ sub printFeature($@)
   my $name = eval '$ak[c_name]';
 
   # for QTL : allow blank Start/End fields, if flanking marker field is defined
-  my $hasFlankingMarkers = defined($columnsKeyLookup{'Flanking Markers'}) && ($a[$columnsKeyLookup{'Flanking Markers'}] ne '');
+  my $hasFlankingMarkers = defined($c_FlankingMarkers) && ($a[$c_FlankingMarkers] ne '');
   # This error message is not yet displayed in the frontend GUI.
   if (($#value == -1) && ! $hasFlankingMarkers)
     {
@@ -1006,7 +1008,7 @@ sub printFeature($@)
     {
       $valuesString =~ s/}//;
       $valuesString .= ($haveValues ? ",\n$valueIndent" : '')
-        . '"flankingMarkers" : [' . splitAndQuote($a[$columnsKeyLookup{'Flanking Markers'}]);
+        . '"flankingMarkers" : [' . splitAndQuote($a[$c_FlankingMarkers]);
       $endFeature = "] } }\n";
     }
   my $closingBrace = $valuesOpen ? '' : '}';
