@@ -1,0 +1,4 @@
+allow _ in column heading : Flanking_Markers.
+
+snps2Dataset.pl : define c_FlankingMarkers from columnsKeyLookup{Flanking Markers}, call columnConfig() before that;  allow _ : Flanking_Markers.
+markerPrefix() : handle undefined name
