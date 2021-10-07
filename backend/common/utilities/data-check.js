@@ -50,7 +50,7 @@ exports.datasetParentContainsNamedFeatures = function(models, dataset, options, 
             featuresP,
             parentBlock = parent.blocks().find((b) => b.scope === block.scope);
             if (! parentBlock) {
-              errorMsg = 'Block ' + block.name + 'has scope' + block.scope + 'not matched in parent' + dataset.parent + ' scopes : ' + parent.blocks().map((b) => b.scope);
+              errorMsg = 'Block ' + block.name + 'has scope' + block.scope + ' not matched in parent ' + dataset.parent + ' scopes : ' + parent.blocks().map((b) => b.scope);
               if (trace) { console.log(fnName, errorMsg); }
               featuresP = Promise.resolve(errorMsg);
             } else {

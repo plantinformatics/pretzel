@@ -156,8 +156,8 @@ my $blockHeader;
 my $blockFooter;
 my $datasetFooter;
 my $datasetHeaderGM;
-# true after startDataset()
-my $startedDataset = 0;
+# defined by startDataset(), undefined by endDataset()
+my $startedDataset = undef;
 # string to close the current Feature
 # When within Feature.values.flankingMarkers, this is "] } }\n"
 my $endFeature;
@@ -538,7 +538,7 @@ sub createDataset()
 
   if (! $outputDir)
   {
-    print $datasetHeader;
+    startDataset();
   }
 
   convertInput();
@@ -549,12 +549,13 @@ sub createDataset()
 sub startDataset()
 {
   print $datasetHeader;
-  $startedDataset = 1;
+  $startedDataset = $datasetName;
 }
 sub endDataset()
 {
   optionalBlockFooter();
   print $datasetFooter;
+  $startedDataset = undef;
 }
 sub appendToBlock()
 {
@@ -721,8 +722,9 @@ sub snpLine($)
         $datasetName = "$options{d} - $parentName";
       }
       makeTemplates();
-      if ($startedDataset)
+      if (defined($startedDataset) && ($startedDataset ne $datasetName))
       {
+        print STDERR "startedDataset=$startedDataset, datasetName=$datasetName, parentName=$parentName\n";
         # end of Feature .values.flankingMarkers[]
         optionalEndFeature();
         endDataset();
@@ -736,7 +738,10 @@ sub snpLine($)
         open(my $oldStdout, ">&STDOUT")     or die "Can't dup STDOUT: $!";
         open(STDOUT, '>', $datasetOutFile) or die "Can't redirect STDOUT to '$datasetOutFile': $!";
       }
-      startDataset();
+      if (! defined($startedDataset) || ($startedDataset ne $datasetName))
+      {
+        startDataset();
+      }
     }
   }
 
