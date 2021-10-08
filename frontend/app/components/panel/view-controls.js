@@ -160,6 +160,9 @@ export default Component.extend({
          * for typescript may declare value as array.
          */
         ok = (typeof value === "number") && inRange(value, interval);
+      } else if (interval.length !== 2) {
+        dLog('valueInInterval', 'invalid interval', interval);
+        ok = false;
       } else if (value.length == 1) {
         /** for .length === 1 : overlap and contain don't apply, and subInterval() works. */
         ok = subInterval(value, interval);
