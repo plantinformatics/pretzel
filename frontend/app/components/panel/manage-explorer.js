@@ -188,7 +188,8 @@ export default ManageBase.extend({
   ids2Blocks(blockIdsTraits) {
     let store = this.get('apiServers').get('primaryServer.store');
     let blocksTraits = store && blockIdsTraits.map((blockIdTraits) => ({
-      block: store.peekRecord('block', blockIdTraits._id), Traits : blockIdTraits.Traits}));
+      block: store.peekRecord('block', blockIdTraits._id), Traits : blockIdTraits.Traits}))
+        .filter((bt) => bt.block);
     return blocksTraits;
   },
 
