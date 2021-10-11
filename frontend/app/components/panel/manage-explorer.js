@@ -158,33 +158,85 @@ export default ManageBase.extend({
       let proxy = ObjectPromiseProxy.create({ promise: resolve(valueP) });
       return proxy;
     }),
-  blockFeatureTraitsTree : computed(
-    'blocksService.blockFeatureTraits',
+
+  /** map ._id to .block */
+  blockFeatureTraitsBlocks : computed(
     'apiServers.primaryServer.datasetsBlocks.[]',
+    function () {
+      // 'blockFeatureTraits'
+      let blocksTraitsP = this.get('blocksService.blockFeatureTraits');
+      /** ids2Blocks() depends on this result. */
+      if (! this.get('apiServers.primaryServer.datasetsBlocks')) {
+        blocksTraitsP = Promise.resolve([]);
+      } else {
+        blocksTraitsP = blocksTraitsP
+          .then((blocksTraits) => {
+            blocksTraits = this.ids2Blocks(blocksTraits);
+            return blocksTraits;
+          });
+      }
+      return blocksTraitsP;
+    }),
+
+  blockFeatureTraitsHistory : computed(
+    'blockFeatureTraitsBlocks', 'historyView',
+    function () {
+      let blocksTraitsP = this.get('blockFeatureTraitsBlocks');
+      if (this.historyView !== 'Normal') {
+        blocksTraitsP = blocksTraitsP
+          .then((blocksTraits) => {
+            const
+            recent = this.historyView === 'Recent',
+            /** map blocks -> Traits, so that the sorted blocks can be mapped -> blocksTraits  */
+            blocksTraitsMap = blocksTraits.reduce((btm, bt) => btm.set(bt.block, bt.Traits), new Map()),
+            blocks = blocksTraits.map((bt) => bt.block),
+            /** sorted blocks */
+            blocksS = this.get('viewHistory').blocksFilterSortViewed(blocks, recent);
+            blocksTraits = blocksS.map((b) => ({block : b, Traits : blocksTraitsMap.get(b)}));
+            return blocksTraits;
+          });
+      }
+      return blocksTraitsP;
+    }),
+
+  blockFeatureTraitsName : computed(
+    'blockFeatureTraitsHistory.[]',
     'nameFilterArray', 'caseInsensitive', 'searchFilterAll',
     function () {
-      let proxy;
-      if (this.get('apiServers.primaryServer.datasetsBlocks')) {
+      let
+      nameFilters = this.get('nameFilterArray'),
+      blocksTraitsP = this.get('blockFeatureTraitsHistory');
+      if (nameFilters.length) {
+        blocksTraitsP = blocksTraitsP
+          .then((blocksTraits) => {
+            blocksTraits = blocksTraits
+              .map((blockTraits) => this.blockTraitsFilter(blockTraits, nameFilters))
+              .filter((blockTraits) => blockTraits.Traits.length);
+            return blocksTraits;
+          });
+      }
+      return blocksTraitsP;
+    }),
+
+
+  blockFeatureTraitsTree : computed(
+    'blockFeatureTraitsName',
+    function () {
       let ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
 
-      let valueP = this.get('blocksService.blockFeatureTraits')
+      let valueP = this.get('blockFeatureTraitsName')
           .then((blocksTraits) => {
             let
-            nameFilters = this.get('nameFilterArray');
-            if (nameFilters.length) {
-              blocksTraits = blocksTraits
-                .map((blockTraits) => this.blockTraitsFilter(blockTraits, nameFilters))
-                .filter((blockTraits) => blockTraits.Traits.length);
-            }
-            let
-            blocksTraitsTree = blocksParentAndScope(this.get('levelMeta'), this.ids2Blocks(blocksTraits));
+            blocksTraitsTree = blocksParentAndScope(this.get('levelMeta'), blocksTraits);
             this.set('blockFeatureTraitsTreeKeyLength', Object.keys(blocksTraitsTree).length);
             return blocksTraitsTree;
           });
-        proxy = ObjectPromiseProxy.create({ promise: resolve(valueP) });
-      }
+      let proxy = ObjectPromiseProxy.create({ promise: resolve(valueP) });
+
       return proxy;
     }),
+  /** map blockIdsTraits[] from {_id, Traits} to {block, Traits}
+   */
   ids2Blocks(blockIdsTraits) {
     let store = this.get('apiServers').get('primaryServer.store');
     let blocksTraits = store && blockIdsTraits.map((blockIdTraits) => ({
@@ -192,6 +244,7 @@ export default ManageBase.extend({
         .filter((bt) => bt.block);
     return blocksTraits;
   },
+
 
   /*--------------------------------------------------------------------------*/
 
