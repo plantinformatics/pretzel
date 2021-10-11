@@ -16,6 +16,7 @@ import { after } from 'lodash/function';
 /* global EventSource */
 
 const trace_paths = 0;
+const trace = 0;
 const dLog = console.debug;
 
 /** This value is used in SSE packet event id to signify the end of the cursor in pathsViaStream. */
@@ -261,6 +262,12 @@ export default Service.extend({
     if (trace_paths)
       dLog('services/auth getBlockFeatureLimits', block, options);
     return this._ajax('Blocks/blockFeatureLimits', 'GET', {block, options}, true);
+  },
+
+  getBlockFeatureTraits(options) {
+    if (trace)
+      dLog('services/auth getBlockFeatureTraits', options);
+    return this._ajax('Blocks/blockFeatureTraits', 'GET', {options}, true);
   },
 
   getBlockFeaturesInterval(blocks, intervals, options) {

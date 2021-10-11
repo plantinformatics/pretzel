@@ -21,7 +21,7 @@ const dLog = console.debug;
 /** For use when debugging via web inspector console. */
 var levelMeta;
 
-const trace_entryValues = 0;
+const trace_entryValues = 1;
 
 /*----------------------------------------------------------------------------*/
 

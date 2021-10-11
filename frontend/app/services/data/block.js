@@ -214,6 +214,32 @@ export default Service.extend(Evented, {
 
   /*--------------------------------------------------------------------------*/
 
+  /** Perform taskGetTraits once when first requested.
+   * @return promise yielding :
+   * [... ,
+   * { "_id" : ObjectId(...), "Traits" : [ "Plant height", "Rust resistance" ] },
+   * ...]
+   */
+  get blockFeatureTraits() {
+    return this.blockFeatureTraitsP ||
+      (this.blockFeatureTraitsP = this.get('taskGetTraits').perform());
+  },
+  /** Call getTraits() in a task - yield the block traits result.
+   */
+  taskGetTraits: task(function * () {
+    dLog("block taskGetTraits");
+    let blockP =
+      this.get('auth').getBlockFeatureTraits(/*options*/{});
+    let blockTraits = yield blockP;
+
+    if (trace_block)
+      dLog('taskGetTraits', this, valueOrLength(blockTraits));
+    
+    return blockTraits;
+  }).drop(),
+
+  /*--------------------------------------------------------------------------*/
+
 
   /** Call getSummary() in a task - yield the block result.
    * Signal that receipt with receivedBlock([{id, obj:block}]).

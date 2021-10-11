@@ -322,3 +322,56 @@ exports.blockFeatureLimits = function(db, blockId) {
 
 
 /*----------------------------------------------------------------------------*/
+
+/** For Blocks of Datasets with the given tag ('QTL'), collate Feature.values.Trait
+ * for all Features of those blocks, and group the results by blockId.
+ * This is used to present a tree of Trait (Ontology) : parent : block (dataset)
+ * in the dataset explorer.  This can be parameterised to support also :
+ * Feature.values.Ontology, and other values.
+ *
+ * @param db connected dataSource
+ * @return promise yielding cursor	: 
+ * ...
+ * { "_id" : ObjectId(...), "Traits" : [ "Plant height", "Rust resistance" ] }
+ * ...
+ */
+exports.blockFeatureTraits = function(db) {
+  /** $group : _id : 0, i.e. don't group, combine into a single array.
+   */
+  let
+  cursorP =
+    db.collection('Dataset').aggregate([
+      {$match : {tags : {$exists: true}}},
+      {$match : {$expr : {$in : ['QTL', '$tags']}}},
+      {
+        $group: {
+          _id: null,
+          'ids': { $push: '$_id' }
+        }
+      }]).toArray()
+    .then((datasets) => {
+      let
+      datasetIds = datasets[0].ids,
+      blocks =
+        db.collection('Block').aggregate([
+          {$match : {datasetId : {$in : datasetIds}}},
+          {
+            $group: {
+              _id: null,
+              'ids': { $push: '$_id' }
+            }
+          }]).toArray();
+      return blocks;
+    })
+    .then((blocks) => {
+      let
+      blockIds = blocks[0].ids,
+      cursor =
+        db.collection('Feature').aggregate([
+          {$match : {blockId : {$in : blockIds}}},
+          {$group : {_id : '$blockId', Traits: {$push : '$values.Trait'}}}]);
+      return cursor;
+    });
+
+  return cursorP;
+}

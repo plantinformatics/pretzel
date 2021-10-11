@@ -19,8 +19,13 @@ import {
   readOnly
 } from '@ember/object/computed';
 
+import ObjectProxy from '@ember/object/proxy';
+import PromiseProxyMixin from '@ember/object/promise-proxy-mixin';
+
+
 import { task } from 'ember-concurrency';
 
+/*----------------------------------------------------------------------------*/
 
 
 import { tab_explorer_prefix, text2EltId } from '../../utils/explorer-tabId';
@@ -28,9 +33,12 @@ import { parseOptions } from '../../utils/common/strings';
 import { thenOrNow } from '../../utils/common/promises';
 
 import { mapHash, justUnmatched, logV } from '../../utils/value-tree';
+import { blocksParentAndScope } from '../../utils/data/grouping';
 
 
 import ManageBase from './manage-base'
+
+/*----------------------------------------------------------------------------*/
 
 /* global d3 */
 
@@ -63,6 +71,7 @@ export default ManageBase.extend({
   apiServers: service(),
   controls : service(),
   viewHistory : service('data/view'),
+  blocksService : service('data/block'),
 
   init() {
     this._super();
@@ -135,6 +144,37 @@ export default ManageBase.extend({
   },
   historyBlocksChanged(value) {
     dLog('historyBlocksChanged', value);
+  },
+
+  /*--------------------------------------------------------------------------*/
+
+  blockFeatureTraits : computed(
+    'blocksService.blockFeatureTraits',
+    'apiServers.primaryServer.datasetsBlocks.[]',
+    function () {
+      let ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
+
+      let valueP = this.get('blocksService.blockFeatureTraits');
+      let proxy = ObjectPromiseProxy.create({ promise: resolve(valueP) });
+      return proxy;
+    }),
+  blockFeatureTraitsTree : computed(
+    'blocksService.blockFeatureTraits',
+    'apiServers.primaryServer.datasetsBlocks.[]',
+    function () {
+      let ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
+
+      let valueP = this.get('blocksService.blockFeatureTraits')
+          .then((blocksTraits) => blocksParentAndScope(this.get('levelMeta'), this.ids2Blocks(blocksTraits)));
+      let proxy = ObjectPromiseProxy.create({ promise: resolve(valueP) });
+      return proxy;
+    }),
+
+  ids2Blocks(blockIdsTraits) {
+    let store = this.get('apiServers').get('primaryServer.store');
+    let blocksTraits = store && blockIdsTraits.map((blockIdTraits) => ({
+      block: store.peekRecord('block', blockIdTraits._id), Traits : blockIdTraits.Traits}));
+    return blocksTraits;
   },
 
   /*--------------------------------------------------------------------------*/
