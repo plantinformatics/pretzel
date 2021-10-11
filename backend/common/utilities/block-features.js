@@ -369,7 +369,7 @@ exports.blockFeatureTraits = function(db) {
       cursor =
         db.collection('Feature').aggregate([
           {$match : {blockId : {$in : blockIds}}},
-          {$group : {_id : '$blockId', Traits: {$push : '$values.Trait'}}}]);
+          {$group : {_id : '$blockId', Traits: {$addToSet : '$values.Trait'}}}]);
       return cursor;
     });
 
