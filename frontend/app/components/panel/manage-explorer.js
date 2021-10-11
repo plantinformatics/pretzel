@@ -178,13 +178,13 @@ export default ManageBase.extend({
             }
             let
             blocksTraitsTree = blocksParentAndScope(this.get('levelMeta'), this.ids2Blocks(blocksTraits));
+            this.set('blockFeatureTraitsTreeKeyLength', Object.keys(blocksTraitsTree).length);
             return blocksTraitsTree;
           });
         proxy = ObjectPromiseProxy.create({ promise: resolve(valueP) });
       }
       return proxy;
     }),
-
   ids2Blocks(blockIdsTraits) {
     let store = this.get('apiServers').get('primaryServer.store');
     let blocksTraits = store && blockIdsTraits.map((blockIdTraits) => ({

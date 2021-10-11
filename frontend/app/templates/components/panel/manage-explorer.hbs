@@ -105,7 +105,7 @@ blockFeatureTraits {{ blockFeatureTraits.length}}
         {{#let 'Trait' as |tabTypeName|}}
           {{#let (compute (action "datasetTypeTabId" tabTypeName)) as |tabId|}}
             <nav.item class="active-detail" @active={{bs-eq tab.activeId tabId}}><a href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
-              <div>{{compute (action 'keysLength' blockFeatureTraitsTree)}}</div>
+              <div>{{blockFeatureTraitsTreeKeyLength}}</div>
             </nav.item>
           {{/let}}
         {{/let}}
