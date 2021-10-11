@@ -161,12 +161,27 @@ export default ManageBase.extend({
   blockFeatureTraitsTree : computed(
     'blocksService.blockFeatureTraits',
     'apiServers.primaryServer.datasetsBlocks.[]',
+    'nameFilterArray', 'caseInsensitive', 'searchFilterAll',
     function () {
+      let proxy;
+      if (this.get('apiServers.primaryServer.datasetsBlocks')) {
       let ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
 
       let valueP = this.get('blocksService.blockFeatureTraits')
-          .then((blocksTraits) => blocksParentAndScope(this.get('levelMeta'), this.ids2Blocks(blocksTraits)));
-      let proxy = ObjectPromiseProxy.create({ promise: resolve(valueP) });
+          .then((blocksTraits) => {
+            let
+            nameFilters = this.get('nameFilterArray');
+            if (nameFilters.length) {
+              blocksTraits = blocksTraits
+                .map((blockTraits) => this.blockTraitsFilter(blockTraits, nameFilters))
+                .filter((blockTraits) => blockTraits.Traits.length);
+            }
+            let
+            blocksTraitsTree = blocksParentAndScope(this.get('levelMeta'), this.ids2Blocks(blocksTraits));
+            return blocksTraitsTree;
+          });
+        proxy = ObjectPromiseProxy.create({ promise: resolve(valueP) });
+      }
       return proxy;
     }),
 
@@ -367,7 +382,7 @@ export default ManageBase.extend({
     return match;
   }),
   /**
-   * @return true if each of the name keys matches either the dataset or one of its blocks
+   * @return true if each / any of the name keys matches either the dataset or one of its blocks
    * @param dataset
    * @param nameFilters array of text to match against names of datasets / blocks
    */
@@ -389,6 +404,35 @@ export default ManageBase.extend({
       return match;
     });
     return matchAll;
+  },
+  /**
+   * @return true if each / any of the name keys matches name
+   * @param name  text name of e.g. Trait
+   * @param nameFilters array of text to match against name
+   */
+  nameMatch(name, nameFilters) {
+    const maybeLC  = this.caseInsensitive ? (string) => string.toLowerCase() : (string) => string; 
+    let
+    multiFnName = this.searchFilterAll ? 'every' : 'any';
+    if (this.caseInsensitive) {
+      /** this can be factored out a couple of levels. */
+      nameFilters = nameFilters.map((n) => n.toLowerCase());
+    }
+    let
+    matchAll = nameFilters[multiFnName]((nameFilter) => {
+      let
+      match = maybeLC(name).includes(nameFilter);
+      return match;
+    });
+    return matchAll;
+  },
+  /** Filter blockTraits.Traits by nameFilters */
+  blockTraitsFilter(blockTraits, nameFilters) {
+    let
+    {Traits, ...copy} = blockTraits,
+    tf = Traits.filter((t) => this.nameMatch(t, nameFilters));
+    copy.Traits = tf;
+    return copy;
   },
   /** @return the filterGroup if there is one, and it has a pattern. */
   definedFilterGroups : computed(
