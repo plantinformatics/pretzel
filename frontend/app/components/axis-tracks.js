@@ -1401,7 +1401,7 @@ export default InAxis.extend({
           blockTrackColourI;
 
       rm
-      .attr('stroke', blockTrackColourI)
+      .attr('stroke', featureColour)  // or blockTrackColourI, for border showing block colour
       .attr('fill', featureColour)
       ;
 
