@@ -22,7 +22,7 @@ import {
   axisEltIdClipPath2d,
   trackBlockEltIdPrefix,
   axisTitleColour,
-  traitColour
+  featureTraitColour,
 } from '../utils/draw/axis';
 import { ensureSvgDefs } from '../utils/draw/d3-svg';
 
@@ -1394,10 +1394,10 @@ export default InAxis.extend({
         }
       }
       let featureColour =
-          (block.get('datasetId._meta.type') === 'QTL') ?
+          block.get('useTraitColour') ?
           (interval) => {
             let feature = thisAt.featureData2Feature.get(interval);
-            return traitColour(feature.get('values.Trait')); } :
+            return featureTraitColour(feature); } :
           blockTrackColourI;
 
       rm

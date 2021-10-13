@@ -302,6 +302,7 @@ export default Model.extend({
     let isQTL =  this.hasTag('QTL') || this.get('datasetId._meta.type') === 'QTL';
     return isQTL;
   }),
+  useTraitColour : alias('isQTL'),
   isHighDensity : computed('datasetId.tags', function () {
     let isHighDensity = this.hasTag('HighDensity');
     return isHighDensity;
