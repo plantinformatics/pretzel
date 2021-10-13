@@ -104,6 +104,35 @@ function yAxisTicksScale(/*d, i, g*/)
   scaleText = yAxisTextScale.apply(gp, arguments);
   return scaleText;
 }
+/** Configure the d3 axis object for the y axis.
+ * Configure :
+ * - tickFormat, based on yScale.domain()
+ */
+function axisConfig(yAxis, yScale)
+{
+  /** if domain covers a small interval relative to the endpoints, then use
+   * the default tickFormat which will show all digits.
+   */
+  let
+  formatString,
+  domain = yScale.domain();
+  if (domain && (domain.length === 2)) {
+    let
+    domainLength = Math.abs(domain[1] - domain[0]),
+    domainMax = Math.max.apply(undefined, domain),
+    ratio = domainLength && (domainMax / domainLength);
+    if (ratio) {
+      let
+      /** round up, and add 1 because 10 ticks. */
+      digits = Math.trunc(Math.log10(ratio)) + 1 + 1;
+      formatString = (digits > 6) ? ',' : '.' + digits + 's';
+    }
+  }
+  formatString ||= '';
+  let
+  format = d3.format(formatString);
+  yAxis.tickFormat(format);
+}
 /**
  * @param gAxis has __data__ which is axisName; may be g.axis-all or g.btn
  */
@@ -329,6 +358,7 @@ export {
   Axes, maybeFlip, maybeFlipExtent, noDomain,
   ensureYscaleDomain,
   yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform,
+  axisConfig,
   eltId, axisEltId, eltIdAll, axisEltIdTitle, axisEltIdClipPath, axisEltIdClipPath2d,
   selectAxisOuter, selectAxisUse, eltIdGpRef,
   highlightId,

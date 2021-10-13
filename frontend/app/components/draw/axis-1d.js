@@ -1263,7 +1263,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     axisS = this.get('axisS'),
     yScale = axisS && axisS.y;
     if (yScale) {
-      let yAxis = axisS.axisSide() (yScale).ticks(axisTicks * axisS.portion);
+      let yAxis = axisS.axisSide(yScale).ticks(axisTicks * axisS.portion);
+
       /** axisSelect is the g.axis-outer.  structure within that is :
        *                id prefix  prefix function
        * g.axis-outer   id         eltId()
