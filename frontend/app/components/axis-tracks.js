@@ -685,12 +685,15 @@ export default InAxis.extend({
   configureClick2() {
     let thisAt = this;
     return function (selection) {
-      selection.on('click', function (d, i, g) {
-        if (thisAt.controls.noGuiModeFilter()) {
-          /* clickTrack() does not yet use element this. */
-          clickTrack.apply(this, [thisAt.selected, thisAt.featureData2Feature, d]);
-        }
-      });
+      /** selection.on('click' ) gets "unknown type: click" if selection.empty(). */
+      if (! selection.empty()) {
+        selection.on('click', function (d, i, g) {
+          if (thisAt.controls.noGuiModeFilter()) {
+            /* clickTrack() does not yet use element this. */
+            clickTrack.apply(this, [thisAt.selected, thisAt.featureData2Feature, d]);
+          }
+        });
+      }
     };
   },
 
