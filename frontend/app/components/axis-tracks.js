@@ -547,6 +547,7 @@ export default InAxis.extend({
   axisZoom: service('data/axis-zoom'),
   trait : service('data/trait'),
 
+  controlsView : alias('controls.controls.view'),
 
 
   className : "tracks",
@@ -1305,8 +1306,9 @@ export default InAxis.extend({
               g[i] = swapTag('rect', 'path', g[i], attributesForReplace);
               let x = xPosnS(subElements).apply(this, [d, i, g]);
               const
+              diamondWidth = width * (thisAt.controlsView.diamondWidth || 1),
               pathDFn = useDiamond ? 
-                (d,i,g) => diamondPath(y, d, width, x) :
+                (d,i,g) => diamondPath(y, d, diamondWidth, x) :
                 (d,i,g) => rectTrianglePath(y, d, width, x);
               d3.select(g[i])
                 .attr('d', pathDFn);
@@ -2128,6 +2130,7 @@ export default InAxis.extend({
     /** .yDomain is available; for the dependency -Throttled is used */
     'axis1d.currentPosition.yDomain.{0,1}',	// Throttled
     'axis1d.zoomed', 'axis1d.extended', // 'axis1d.featureLength',
+    'controlsView.diamondWidth',
     function() {
       let tracks = this.get('tracksTree');
       let

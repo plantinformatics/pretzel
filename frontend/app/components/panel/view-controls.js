@@ -374,6 +374,13 @@ export default Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** factor to increase QTL diamond width from base track width.
+   * This initial default value is coordinated with hbs : <input ... value=20 ... diamondWidthInput >
+   */
+  diamondWidth : 2,
+
+  /*--------------------------------------------------------------------------*/
+
   didInsertElement() {
     dLog("components/draw-controls didInsertElement()", this.drawActions);
     this._super(...arguments);
@@ -463,6 +470,14 @@ export default Component.extend({
     setCssVariable(varName, value);
     // not used.
     this.set('axisWidth', value);
+  },
+  diamondWidthInput(event) {
+    /** default is 2 * factor : value=20 in hbs */
+    /** input range is [0,100];  desired output values are [0, 10].  */
+    const factor = 100 / 10;
+    let value = event.target.value / factor;
+    // dLog('diamondWidthInput', varName, value, event.target.value);
+    this.set('diamondWidth', value);
   },
   titleTextSizeInput(event) {
     const attrName = 'font-size';
