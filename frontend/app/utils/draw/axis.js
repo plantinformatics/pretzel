@@ -120,11 +120,17 @@ function axisConfig(yAxis, yScale)
     let
     domainLength = Math.abs(domain[1] - domain[0]),
     domainMax = Math.max.apply(undefined, domain),
-    ratio = domainLength && (domainMax / domainLength);
+    /** draw-map has axisTicks = 10;  the number of ticks drawn varies 7 - 12. */
+    axisTicks = 10,
+    ratio = domainLength && (domainMax / domainLength * axisTicks);
     if (ratio) {
       let
-      /** round up, and add 1 because 10 ticks. */
-      digits = Math.trunc(Math.log10(ratio)) + 1 + 1;
+      /** trunc(x + 1) to round up.
+       * add some bias to allow for variation in number of ticks, and perhaps
+       * allow for the 3-digit steps of SI, i.e. 200M has 3 digits left of decimal point.
+       */
+      digits = Math.trunc(Math.log10(ratio) + 1 + 0.8);
+      // dLog('axisConfig', domainLength, domainMax, ratio, digits);
       formatString = (digits > 6) ? ',' : '.' + digits + 's';
     }
   }
