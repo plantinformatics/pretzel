@@ -3,6 +3,7 @@ import $ from 'jquery';
 import Component from '@ember/component';
 import { observer } from '@ember/object';
 import { computed } from '@ember/object';
+import { inject as service } from '@ember/service';
 
 
 import { eltClassName } from '../utils/domElements';
@@ -35,6 +36,7 @@ const featureValuesWidths = {
 
 
 export default Component.extend({
+  ontology : service('data/ontology'),
 
   actions : {
 
@@ -139,6 +141,10 @@ export default Component.extend({
           values = feature.values;
       if (values) {
         Object.keys(values).forEach((valueName) => rest[valueName] = values[valueName]);
+        let o = rest.Ontology, name;
+        if (o && (name = this.get('ontology').getName(o))) {
+          rest.Ontology += ' : ' + name;
+        }
       }
       if (feature.value && (feature.value.length > 1)) {
         // .Position is .value[0]
