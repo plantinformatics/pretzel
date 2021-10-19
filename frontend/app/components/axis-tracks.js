@@ -166,8 +166,8 @@ function I(d) { return d; }
 /** Make the description unique in case there are multiple
  * positions for the same feature name.
  */
-function intervalUniqueName(description, interval) {
-  return description + "_" + interval[0];
+function intervalUniqueName(description, interval, featureId) {
+  return description + "_" + interval[0] + '_' + featureId;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -739,7 +739,7 @@ export default InAxis.extend({
           }
         }
         interval.description = description;
-        interval.udescription = intervalUniqueName(description, interval);
+        interval.udescription = intervalUniqueName(description, interval, ''+ic);
 
         // let axisName = mapChrName2Axis(mapChrName);
         if (intervals[axisName] === undefined)
@@ -1120,7 +1120,7 @@ export default InAxis.extend({
 
     function trackKeyFn(featureData) {
       // Make description unique when multiple features with same name.
-      return featureData.description+"_"+featureData[0];
+      return featureData.udescription;
     }
     /** Add the <rect>s and/or <path>s, or sub-elements, within <g clip-path...>  */
     let
@@ -1894,7 +1894,7 @@ export default InAxis.extend({
               interval[1] = swap;
             }
             interval.description = feature.get('name');
-            interval.udescription = intervalUniqueName(interval.description, interval);
+            interval.udescription = intervalUniqueName(interval.description, interval, feature.id);
             /* for datasets with tag 'SNP', feature .values.{ref,alt} is reference / alternate,
              * e.g. "A/G", "T/C" etc */
             let values = feature.get('blockId.isSNP') && feature.get('values');
