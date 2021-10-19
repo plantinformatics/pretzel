@@ -12,7 +12,7 @@ const trace = 1;
 /*----------------------------------------------------------------------------*/
 
 const
-protocol = "http://",
+protocol = "https://",
 apiURL = 'www.cropontology.org';
 
 
