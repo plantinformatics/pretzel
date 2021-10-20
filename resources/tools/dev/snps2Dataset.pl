@@ -251,7 +251,7 @@ sub columnConfig() {
   #
   # $columnsKeyString is space-separated, not comma.
   # column header names which contain spaces are wrapped with "".
-  my @a1 = split(/"([^\"]*)"|  */, $columnsKeyString );
+  my @a1 = parse_line(' ', 0, $columnsKeyString);
   my @columnsKeyValues = grep { $_  } @a1;
   # print 'columnsKeyValues : ', join(':', @columnsKeyValues), "\n";
 
@@ -265,13 +265,6 @@ sub columnConfig() {
 BEGIN
 {
   columnConfig();
-  $columnsKeyPrefixed = $columnsKeyString
-    =~ s/,/ /rg
-    =~ s/^/c_/r
-    =~ s/ / c_/rg;
-  # print 'columnsKeyPrefixed : ', $columnsKeyPrefixed, "\n";
-  # my @a2 = split(' ', $columnsKeyPrefixed);
-  # print 'a2 : ', join(':', @a2), "\n";
 
   # These columns are identified using variables, (e.g. $c_endPos),
   # because the corresponding enum (e.g. c_endPos) can't have a conditional value.
@@ -280,7 +273,7 @@ BEGIN
   # so define $c_pos.
   $c_pos = defined($columnsKeyLookup{'pos'}) ? $columnsKeyLookup{'pos'} : $columnsKeyLookup{'start'};
 }
-use constant ColumnsEnum => split(' ', $columnsKeyPrefixed);
+use constant ColumnsEnum => (map {'c_' . $_ }  parse_line(' ', 0, $columnsKeyString));
 BEGIN
 {
   eval "use constant (ColumnsEnum)[$_] => $_;" foreach 0..(ColumnsEnum)-1;
@@ -677,6 +670,8 @@ sub snpLine($)
   if (! %chromosomeRenames)
   {
     $a[c_chr] =~ s/^chr//;
+    # Convention for Chromosome names in Pretzel is upper case; could map lower case to upper here.
+    # $a[c_chr] = uc $a[c_chr];
     $a[c_chr] = $chrOutputPrefix . $a[c_chr];
   }
   else

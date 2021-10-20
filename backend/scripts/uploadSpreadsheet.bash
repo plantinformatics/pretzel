@@ -143,6 +143,16 @@ columnFullName['pos']=Position
 columnFullName['end']=Position_End
 set -x
 
+
+# Trim spaces outside "" in headings, e.g. : "Sr_No ",Name,...
+read -r -d '' trimOutsideSpaces_sed <<\EOF
+s/  *",/",/;
+s/  *"$/"/;
+s/^"  */"/;
+EOF
+
+
+
 # Handle some variation in the recognised column header names.
 # Prepate columnsKeyString, which is used in snps2Dataset.pl
 # @param worksheetFileName	name of .csv output for 1 worksheet
@@ -151,7 +161,7 @@ columnsKeyStringPrepare()
   worksheetFileName=$1
   head -1 "$worksheetFileName" >> uploadSpreadsheet.log
   # There may not be a comma after Position and End.
-  export columnsKeyString=$(head -1 "$worksheetFileName" | sed "s/Marker,/name,/i;s/Name,/name,/g;s/Chromosome,/chr,/;
+  export columnsKeyString=$(head -1 "$worksheetFileName" | sed "$trimOutsideSpaces_sed" | sed "s/Marker,/name,/i;s/Name,/name,/g;s/Chromosome,/chr,/;
 s/,Qs,/,pos,/;s/,Qe/,end/;
 s/,Start,/,pos,/i;s/,End/,end/i;
 s/,Position/,pos/i;
@@ -159,9 +169,9 @@ s/,/ /g;
 ")
   echo columnsKeyString="$columnsKeyString"  >> uploadSpreadsheet.log
 
-  # sanitize input
-  clean=$(echo -n "$columnsKeyString" | tr -cd '[:alnum:] [:space:]')
-  eval columnsKeyStringArray=($clean)
+  # sanitize input (column headers)
+  eval declare  -a columnsKeyStringArray=($(echo -n "$columnsKeyString" | tr -cd '"[:alnum:] [:space:]'))
+
   # filter out the column headings containing space to avoid space in array index.
   # Use < <( ) instead of | so that columnsNum is not confined within sub-shell created by |.
   declare -A columnsNum
@@ -299,6 +309,7 @@ function qtlList()
        perl -p -e 's/[^[:ascii:]]+//g;s/"([-A-Za-z0-9_.]+)"/\1/g'  | \
        chrOmit |
        perl -e 'use Text::ParseWords; while (<>) { chomp; my @a =  parse_line(",", 0, $_); foreach $k (split(/ /, "'"${sortKeys[*]}"'")) { print "\"$a[$k-1]\"<";}; print "<ENDofSortKey<$_\n"; }'	| \
+       tee tmp/"$i".sorting |
        sort -t'<' $sortKeys2 ) |
        sed "s/.*<ENDofSortKey<//" |
        tee tmp/"$i".sorted | \
