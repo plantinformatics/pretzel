@@ -6,12 +6,16 @@ import { alias } from '@ember/object/computed';
 import { A as array_A } from '@ember/array';
 import { task, didCancel } from 'ember-concurrency';
 
+import $ from 'jquery';
 
 import sequenceSearchData from '../../utils/data/sequence-search-data';
 
 /*----------------------------------------------------------------------------*/
 
 const dLog = console.debug;
+
+function logArray(a) { return a.length > 4 ? a.length : a; }
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -189,6 +193,49 @@ export default Component.extend({
   text2Area() {
     this.get('text$').val(this.get('text'));
   },
+
+  fromSelectedFeatures() {
+    const fnName = 'fromSelectedFeatures';
+
+    let
+    selectedFeatures = this.get('selectedFeatures');
+    /** copied from feature-list.js, this could be factored. */
+    let selectedFeaturesEmpty = ! selectedFeatures.length ||
+        ((selectedFeatures.length === 1) && (selectedFeatures[0].Feature === undefined));
+    if (! selectedFeaturesEmpty) {
+      let
+      /** if selectedFeatures contains QTLs which have Feature.values.Sequence
+       * then map the first one into a FASTA format for the search string.
+       */
+      selectedFeaturesSequence = selectedFeatures
+        .filter(
+          (sf) => 
+            {
+              let f = sf.feature;
+              return f.values && f.values.Sequence;
+            });
+      dLog('fromSelectedFeatures', logArray(selectedFeaturesSequence));
+      if (selectedFeaturesSequence.length) {
+        let selectedFeaturesFasta = selectedFeaturesSequence
+            .slice(0, 1)
+            .map(function (sf) {
+              let f = sf.feature;
+              return '>' + sf.feature.name + '\n' + f.values.Sequence;
+            });
+
+        let text = selectedFeaturesFasta[0];
+        this.set('text', text);
+        this.get('text$').val(text);
+
+        let warningMessage = this.checkTextInput(text);
+        if (warningMessage) {
+          this.set('warningMessage', warningMessage);
+        }
+      }
+    }
+
+  },
+
 
   /*--------------------------------------------------------------------------*/
 
