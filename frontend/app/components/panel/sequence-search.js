@@ -16,6 +16,21 @@ const dLog = console.debug;
 
 function logArray(a) { return a.length > 4 ? a.length : a; }
 
+/** From :
+ * https://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Web&PAGE_TYPE=BlastDocs&DOC_TYPE=BlastHelp
+ * 
+Blank lines are not allowed in the middle of FASTA input.
+
+Sequences are expected to be represented in the standard IUB/IUPAC amino acid and nucleic acid codes, with these exceptions: lower-case letters are accepted and are mapped into upper-case; a single hyphen or dash can be used to represent a gap of indeterminate length; and in amino acid sequences, U and * are acceptable letters (see below). Before submitting a request, any numerical digits in the query sequence should either be removed or replaced by appropriate letter codes (e.g., N for unknown nucleic acid residue or X for unknown amino acid residue). The nucleic acid codes supported are: 
+		A  adenosine          C  cytidine             G  guanine
+		T  thymidine          N  A/G/C/T (any)        U  uridine 
+		K  G/T (keto)         S  G/C (strong)         Y  T/C (pyrimidine) 
+		M  A/C (amino)        W  A/T (weak)           R  G/A (purine)        
+		B  G/T/C              D  G/A/T                H  A/C/T      
+		V  G/C/A              -  gap of indeterminate length
+		
+ */
+const validSequenceChars = 'ACGTUMRWSYKVHDBN';
 
 /*----------------------------------------------------------------------------*/
 
@@ -294,7 +309,7 @@ export default Component.extend({
     let
     lines = rawText.split('\n'),
     notBases = lines
-      .filter((l) => ! l.match(/^[ATGCN]+$/i)),
+      .filter((l) => ! l.match('^[' + validSequenceChars + ']+$', 'i')),
     keys = notBases
       .filter((maybeKey) => maybeKey.match(/^>[^\n]+$/)),
     other = notBases
@@ -310,13 +325,13 @@ export default Component.extend({
       warningMessages.push('Limit is 1 FASTA search');
       break;
     }
-    let regexpIterator = rawText.matchAll(/\n[ATGCN]+/ig),
+    let regexpIterator = rawText.matchAll('\n[' + validSequenceChars + ']+', 'ig'),
         sequenceLinesLength = Array.from(regexpIterator).length;
     if (sequenceLinesLength === 0) {
-      warningMessages.push('DNA text is required : e.g. ATGCNatgcn...');
+      warningMessages.push('DNA text is required : e.g. ' + validSequenceChars + '..., either case.');
     }
     if (other.length) {
-      warningMessages.push('Input should be either >MarkerName or DNA text e.g. ATGCNatgcn...; this input not valid :' + other[0]);
+      warningMessages.push('Input should be either >MarkerName or DNA text e.g. ' + validSequenceChars + '..., either case; this input not valid :' + other[0]);
     }
 
     if (rawText.length > this.searchStringMaxLength) {
