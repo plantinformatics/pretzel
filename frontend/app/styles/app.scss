@@ -1406,10 +1406,12 @@ div#goto-feature > div
   margin-right : 1em;
 }
 /* -------------------------------------------------------------------------- */
-.tooltip-inner  /*.ember-popover*/
+/* .tooltip-inner is within .ember-popover or .ember-tooltip */
+.tooltip-inner
 {
-  background-color : #f2f2f2;
-  color: #000;
+  /* need !important to gain precedence over ember-bootstrap/bootstrap/_tooltip.scss.  */
+  background-color : #f2f2f2 !important;
+  color: #000 !important;
 }
 .ember-tooltip {
   background: #337ab7a0;
