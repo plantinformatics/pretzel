@@ -60,12 +60,9 @@ function alternateBasesToAmbiguityCodes(seq) {
 function isValidAlternateBasesOrAmbiguityCodes(sequence) {
   const
   validREString = '^' +
-    '(?:' +
-    '[' + validSequenceChars + ']*' + '|' +
-    '\\[' + '[' + validBaseChars + ']' +
-      '(?:' + '/' + '[' + validBaseChars  + ']' + ')*' +
-    '\\]' +
-    ')*' +
+
+    '[' + '-' + validSequenceChars + '/' + '\\[' + '\\]' + ']+' +
+
     '$',
   r = new RegExp(validREString, 'ig'),
   ok = r.test(sequence);

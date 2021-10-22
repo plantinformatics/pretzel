@@ -242,7 +242,10 @@ function collateData()
 
           /** fas is undefined now that featureContainsAliases is false.  */
           let feature_ = za[feature], fas = feature_.aliases;
-          feature_.name = feature;
+          // no longer required, as feature_ is now models/feature
+          if (! feature_.get && (feature_.name !== feature)) {
+            feature_.name = feature;
+          }
           if (fas && fas.length)
           {
             /** Include feature's own name in the name of the group of its

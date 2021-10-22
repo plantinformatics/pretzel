@@ -300,6 +300,7 @@ function qtlList()
 
     # Place the column header row first, don't sort it.
     columnHeaderFile=tmp/out/columnHeaders.csv
+    # qtlList() is not in tmp, so use cd to access path tmp/$chrOmitSed
     <tmp/"$i" filterOutComments | head -1 > $columnHeaderFile
     # 1st perl :
     # Remove non-ascii and quotes around alphanumeric, to handle chr with &nbsp wrapped in quotes, which impairs sorting.
@@ -307,7 +308,7 @@ function qtlList()
     (cat $columnHeaderFile; \
      <tmp/"$i" filterOutComments | tail -n +2 | \
        perl -p -e 's/[^[:ascii:]]+//g;s/"([-A-Za-z0-9_.]+)"/\1/g'  | \
-       chrOmit |
+       ( cd tmp; chrOmit; cd ..) |
        perl -e 'use Text::ParseWords; while (<>) { chomp; my @a =  parse_line(",", 0, $_); foreach $k (split(/ /, "'"${sortKeys[*]}"'")) { print "\"$a[$k-1]\"<";}; print "<ENDofSortKey<$_\n"; }'	| \
        tee tmp/"$i".sorting |
        sort -t'<' $sortKeys2 ) |

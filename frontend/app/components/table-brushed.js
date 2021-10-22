@@ -26,6 +26,7 @@ const featureValuesTypes = {
 const featureValuesColumnsAttributes = {
   ref : { className: "htCenter"},
   alt : { className: "htCenter"},
+  Reference : {className : 'htNoWrap' },
 };
 /** Provide default widths for feature .values fields
  */
