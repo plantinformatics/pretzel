@@ -9,6 +9,7 @@ import { task, didCancel } from 'ember-concurrency';
 import $ from 'jquery';
 
 import sequenceSearchData from '../../utils/data/sequence-search-data';
+import { isValidAlternateBasesOrAmbiguityCodes, alternateBasesToAmbiguityCodes } from '../../utils/data/sequenceChars';
 
 /*----------------------------------------------------------------------------*/
 
@@ -309,7 +310,7 @@ export default Component.extend({
     let
     lines = rawText.split('\n'),
     notBases = lines
-      .filter((l) => ! l.match('^[' + validSequenceChars + ']+$', 'i')),
+      .filter((l) => ! isValidAlternateBasesOrAmbiguityCodes(l)),
     keys = notBases
       .filter((maybeKey) => maybeKey.match(/^>[^\n]+$/)),
     other = notBases
@@ -325,8 +326,8 @@ export default Component.extend({
       warningMessages.push('Limit is 1 FASTA search');
       break;
     }
-    let regexpIterator = rawText.matchAll('\n[' + validSequenceChars + ']+', 'ig'),
-        sequenceLinesLength = Array.from(regexpIterator).length;
+    let
+      sequenceLinesLength = lines.length - notBases.length;
     if (sequenceLinesLength === 0) {
       warningMessages.push('DNA text is required : e.g. ' + validSequenceChars + '..., either case.');
     }
@@ -359,7 +360,8 @@ export default Component.extend({
     if ((warningMessage = this.checkTextInput(rawText))) {
       this.set('warningMessage', warningMessage);
     } else {
-      let taskInstance = this.get('sendRequest').perform(rawText);
+      let converted = alternateBasesToAmbiguityCodes(rawText);
+      let taskInstance = this.get('sendRequest').perform(converted);
     }
   },
   sendRequest : task(function* (rawText) {
