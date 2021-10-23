@@ -38,6 +38,7 @@ const featureValuesWidths = {
 
 export default Component.extend({
   ontology : service('data/ontology'),
+  controls : service(),
 
   actions : {
 
@@ -236,6 +237,7 @@ export default Component.extend({
         /* see comment re. handsOnTableLicenseKey in frontend/config/environment.js */
         licenseKey: config.handsOnTableLicenseKey,
         afterSelection,
+        outsideClickDeselects: false
       });
       that.set('table', table);
       $("#table-brushed").on('mouseleave', function(e) {
@@ -274,6 +276,7 @@ export default Component.extend({
     dLog('afterSelection', features, table, row, col);
     this.set('tableSelectedFeatures', features);
     this.highlightFeature(features);
+    this.get('controls').set('tableSelectedFeatures', features);
   },
 
   onSelectionChange: observer('dataForHoTable', function () {

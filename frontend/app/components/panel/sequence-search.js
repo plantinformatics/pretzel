@@ -38,6 +38,7 @@ const validSequenceChars = 'ACGTUMRWSYKVHDBN';
 export default Component.extend({
   auth: service(),
   queryParams: service('query-params'),
+  controls : service(),
 
   urlOptions : alias('queryParams.urlOptions'),
 
@@ -214,10 +215,15 @@ export default Component.extend({
     const fnName = 'fromSelectedFeatures';
 
     let
-    selectedFeatures = this.get('selectedFeatures');
+    tableSelectedFeatures = this.get('controls').get('tableSelectedFeatures'),
+    selectedFeatures = tableSelectedFeatures?.length ? tableSelectedFeatures : this.get('selectedFeatures');
     /** copied from feature-list.js, this could be factored. */
     let selectedFeaturesEmpty = ! selectedFeatures.length ||
         ((selectedFeatures.length === 1) && (selectedFeatures[0].Feature === undefined));
+
+    /** allow several rows if user has sub-selected in table with rectangle select. */
+    const subSelection = !! tableSelectedFeatures?.length;
+    this.set('subSelection', subSelection);
     if (! selectedFeaturesEmpty) {
       let
       /** if selectedFeatures contains QTLs which have Feature.values.Sequence
@@ -233,13 +239,13 @@ export default Component.extend({
       dLog('fromSelectedFeatures', logArray(selectedFeaturesSequence));
       if (selectedFeaturesSequence.length) {
         let selectedFeaturesFasta = selectedFeaturesSequence
-            .slice(0, 1)
+            .slice(0, subSelection ? 3 : 1)
             .map(function (sf) {
               let f = sf.feature;
               return '>' + sf.feature.name + '\n' + f.values.Sequence;
             });
 
-        let text = selectedFeaturesFasta[0];
+        let text = selectedFeaturesFasta.join('\n');
         this.set('text', text);
         this.get('text$').val(text);
 
@@ -323,7 +329,9 @@ export default Component.extend({
     case 1:
       break;
     default:
-      warningMessages.push('Limit is 1 FASTA search');
+      if (! this.get('subSelection')) {
+        warningMessages.push('Limit is 1 FASTA search');
+      }
       break;
     }
     let
