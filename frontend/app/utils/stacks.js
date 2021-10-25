@@ -17,6 +17,7 @@ import {
   noDomain,
   yAxisTextScale,
   yAxisTicksScale,
+  axisConfig,
   yAxisBtnScale,
   yAxisTitleTransform,
   eltId,
@@ -1244,7 +1245,12 @@ Stack.prototype.sideClasses = function ()
   let classes = (i == 0) ? "leftmost" : ((i == n-1) ? "rightmost" : "");
   return classes;
 };
-Stacked.prototype.axisSide = function () {
+/** @return a d3 axis for this axis, either d3. axisRight or axisLeft depending
+ * on the axis position on the page, to place the ticks on the outside of the
+ * graph area.
+ * Configure the axis tickFormat to suit scale.domain().
+ */
+Stacked.prototype.axisSide = function (scale) {
   let stackClass = this.stack.sideClasses(),
   extended = get(this, 'axis1d.extended'),
   /** use of d3.axisLeft() / axisRight() does not seem to update
@@ -1254,7 +1260,11 @@ Stacked.prototype.axisSide = function () {
   right = ((stackClass === 'rightmost') && ! extended),
   axisFn = right ? d3.axisRight : d3.axisLeft;
   dLog('axisSide', stackClass, extended, right, this);
-  return axisFn;
+
+  let axis = axisFn(scale);
+  axisConfig(axis, scale);
+  // possibly move this config into here (or axisConfig) : .ticks(axisTicks * axisS.portion)
+  return axis;
 };
 
 /** Find stack of axisID and return the index of that stack within stacks.

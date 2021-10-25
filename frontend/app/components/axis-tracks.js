@@ -22,7 +22,7 @@ import {
   axisEltIdClipPath2d,
   trackBlockEltIdPrefix,
   axisTitleColour,
-  traitColour
+  featureTraitColour,
 } from '../utils/draw/axis';
 import { ensureSvgDefs } from '../utils/draw/d3-svg';
 
@@ -166,8 +166,8 @@ function I(d) { return d; }
 /** Make the description unique in case there are multiple
  * positions for the same feature name.
  */
-function intervalUniqueName(description, interval) {
-  return description + "_" + interval[0];
+function intervalUniqueName(description, interval, featureId) {
+  return description + "_" + interval[0] + '_' + featureId;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -547,6 +547,7 @@ export default InAxis.extend({
   axisZoom: service('data/axis-zoom'),
   trait : service('data/trait'),
 
+  controlsView : alias('controls.controls.view'),
 
 
   className : "tracks",
@@ -684,12 +685,15 @@ export default InAxis.extend({
   configureClick2() {
     let thisAt = this;
     return function (selection) {
-      selection.on('click', function (d, i, g) {
-        if (thisAt.controls.noGuiModeFilter()) {
-          /* clickTrack() does not yet use element this. */
-          clickTrack.apply(this, [thisAt.selected, thisAt.featureData2Feature, d]);
-        }
-      });
+      /** selection.on('click' ) gets "unknown type: click" if selection.empty(). */
+      if (! selection.empty()) {
+        selection.on('click', function (d, i, g) {
+          if (thisAt.controls.noGuiModeFilter()) {
+            /* clickTrack() does not yet use element this. */
+            clickTrack.apply(this, [thisAt.selected, thisAt.featureData2Feature, d]);
+          }
+        });
+      }
     };
   },
 
@@ -735,7 +739,7 @@ export default InAxis.extend({
           }
         }
         interval.description = description;
-        interval.udescription = intervalUniqueName(description, interval);
+        interval.udescription = intervalUniqueName(description, interval, ''+ic);
 
         // let axisName = mapChrName2Axis(mapChrName);
         if (intervals[axisName] === undefined)
@@ -1116,7 +1120,7 @@ export default InAxis.extend({
 
     function trackKeyFn(featureData) {
       // Make description unique when multiple features with same name.
-      return featureData.description+"_"+featureData[0];
+      return featureData.udescription;
     }
     /** Add the <rect>s and/or <path>s, or sub-elements, within <g clip-path...>  */
     let
@@ -1305,8 +1309,9 @@ export default InAxis.extend({
               g[i] = swapTag('rect', 'path', g[i], attributesForReplace);
               let x = xPosnS(subElements).apply(this, [d, i, g]);
               const
+              diamondWidth = width * (thisAt.controlsView.diamondWidth || 1),
               pathDFn = useDiamond ? 
-                (d,i,g) => diamondPath(y, d, width, x) :
+                (d,i,g) => diamondPath(y, d, diamondWidth, x) :
                 (d,i,g) => rectTrianglePath(y, d, width, x);
               d3.select(g[i])
                 .attr('d', pathDFn);
@@ -1392,14 +1397,14 @@ export default InAxis.extend({
         }
       }
       let featureColour =
-          (block.get('datasetId._meta.type') === 'QTL') ?
+          block.get('useTraitColour') ?
           (interval) => {
             let feature = thisAt.featureData2Feature.get(interval);
-            return traitColour(feature.get('values.Trait')); } :
+            return featureTraitColour(feature); } :
           blockTrackColourI;
 
       rm
-      .attr('stroke', blockTrackColourI)
+      .attr('stroke', featureColour)  // or blockTrackColourI, for border showing block colour
       .attr('fill', featureColour)
       ;
 
@@ -1889,7 +1894,7 @@ export default InAxis.extend({
               interval[1] = swap;
             }
             interval.description = feature.get('name');
-            interval.udescription = intervalUniqueName(interval.description, interval);
+            interval.udescription = intervalUniqueName(interval.description, interval, feature.id);
             /* for datasets with tag 'SNP', feature .values.{ref,alt} is reference / alternate,
              * e.g. "A/G", "T/C" etc */
             let values = feature.get('blockId.isSNP') && feature.get('values');
@@ -2128,6 +2133,7 @@ export default InAxis.extend({
     /** .yDomain is available; for the dependency -Throttled is used */
     'axis1d.currentPosition.yDomain.{0,1}',	// Throttled
     'axis1d.zoomed', 'axis1d.extended', // 'axis1d.featureLength',
+    'controlsView.diamondWidth',
     function() {
       let tracks = this.get('tracksTree');
       let

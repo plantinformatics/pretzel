@@ -19,8 +19,13 @@ import {
   readOnly
 } from '@ember/object/computed';
 
+import ObjectProxy from '@ember/object/proxy';
+import PromiseProxyMixin from '@ember/object/promise-proxy-mixin';
+
+
 import { task } from 'ember-concurrency';
 
+/*----------------------------------------------------------------------------*/
 
 
 import { tab_explorer_prefix, text2EltId } from '../../utils/explorer-tabId';
@@ -28,9 +33,12 @@ import { parseOptions } from '../../utils/common/strings';
 import { thenOrNow } from '../../utils/common/promises';
 
 import { mapHash, justUnmatched, logV } from '../../utils/value-tree';
+import { blocksParentAndScope } from '../../utils/data/grouping';
 
 
 import ManageBase from './manage-base'
+
+/*----------------------------------------------------------------------------*/
 
 /* global d3 */
 
@@ -63,6 +71,7 @@ export default ManageBase.extend({
   apiServers: service(),
   controls : service(),
   viewHistory : service('data/view'),
+  blocksService : service('data/block'),
 
   init() {
     this._super();
@@ -136,6 +145,106 @@ export default ManageBase.extend({
   historyBlocksChanged(value) {
     dLog('historyBlocksChanged', value);
   },
+
+  /*--------------------------------------------------------------------------*/
+
+  blockFeatureTraits : computed(
+    'blocksService.blockFeatureTraits',
+    'apiServers.primaryServer.datasetsBlocks.[]',
+    function () {
+      let ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
+
+      let valueP = this.get('blocksService.blockFeatureTraits');
+      let proxy = ObjectPromiseProxy.create({ promise: resolve(valueP) });
+      return proxy;
+    }),
+
+  /** map ._id to .block */
+  blockFeatureTraitsBlocks : computed(
+    'apiServers.primaryServer.datasetsBlocks.[]',
+    function () {
+      // 'blockFeatureTraits'
+      let blocksTraitsP = this.get('blocksService.blockFeatureTraits');
+      /** ids2Blocks() depends on this result. */
+      if (! this.get('apiServers.primaryServer.datasetsBlocks')) {
+        blocksTraitsP = Promise.resolve([]);
+      } else {
+        blocksTraitsP = blocksTraitsP
+          .then((blocksTraits) => {
+            blocksTraits = this.ids2Blocks(blocksTraits);
+            return blocksTraits;
+          });
+      }
+      return blocksTraitsP;
+    }),
+
+  blockFeatureTraitsHistory : computed(
+    'blockFeatureTraitsBlocks', 'historyView',
+    function () {
+      let blocksTraitsP = this.get('blockFeatureTraitsBlocks');
+      if (this.historyView !== 'Normal') {
+        blocksTraitsP = blocksTraitsP
+          .then((blocksTraits) => {
+            const
+            recent = this.historyView === 'Recent',
+            /** map blocks -> Traits, so that the sorted blocks can be mapped -> blocksTraits  */
+            blocksTraitsMap = blocksTraits.reduce((btm, bt) => btm.set(bt.block, bt.Traits), new Map()),
+            blocks = blocksTraits.map((bt) => bt.block),
+            /** sorted blocks */
+            blocksS = this.get('viewHistory').blocksFilterSortViewed(blocks, recent);
+            blocksTraits = blocksS.map((b) => ({block : b, Traits : blocksTraitsMap.get(b)}));
+            return blocksTraits;
+          });
+      }
+      return blocksTraitsP;
+    }),
+
+  blockFeatureTraitsName : computed(
+    'blockFeatureTraitsHistory.[]',
+    'nameFilterArray', 'caseInsensitive', 'searchFilterAll',
+    function () {
+      let
+      nameFilters = this.get('nameFilterArray'),
+      blocksTraitsP = this.get('blockFeatureTraitsHistory');
+      if (nameFilters.length) {
+        blocksTraitsP = blocksTraitsP
+          .then((blocksTraits) => {
+            blocksTraits = blocksTraits
+              .map((blockTraits) => this.blockTraitsFilter(blockTraits, nameFilters))
+              .filter((blockTraits) => blockTraits.Traits.length);
+            return blocksTraits;
+          });
+      }
+      return blocksTraitsP;
+    }),
+
+
+  blockFeatureTraitsTree : computed(
+    'blockFeatureTraitsName',
+    function () {
+      let ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
+
+      let valueP = this.get('blockFeatureTraitsName')
+          .then((blocksTraits) => {
+            let
+            blocksTraitsTree = blocksParentAndScope(this.get('levelMeta'), blocksTraits);
+            this.set('blockFeatureTraitsTreeKeyLength', Object.keys(blocksTraitsTree).length);
+            return blocksTraitsTree;
+          });
+      let proxy = ObjectPromiseProxy.create({ promise: resolve(valueP) });
+
+      return proxy;
+    }),
+  /** map blockIdsTraits[] from {_id, Traits} to {block, Traits}
+   */
+  ids2Blocks(blockIdsTraits) {
+    let store = this.get('apiServers').get('primaryServer.store');
+    let blocksTraits = store && blockIdsTraits.map((blockIdTraits) => ({
+      block: store.peekRecord('block', blockIdTraits._id), Traits : blockIdTraits.Traits}))
+        .filter((bt) => bt.block);
+    return blocksTraits;
+  },
+
 
   /*--------------------------------------------------------------------------*/
 
@@ -327,7 +436,7 @@ export default ManageBase.extend({
     return match;
   }),
   /**
-   * @return true if each of the name keys matches either the dataset or one of its blocks
+   * @return true if each / any of the name keys matches either the dataset or one of its blocks
    * @param dataset
    * @param nameFilters array of text to match against names of datasets / blocks
    */
@@ -349,6 +458,35 @@ export default ManageBase.extend({
       return match;
     });
     return matchAll;
+  },
+  /**
+   * @return true if each / any of the name keys matches name
+   * @param name  text name of e.g. Trait
+   * @param nameFilters array of text to match against name
+   */
+  nameMatch(name, nameFilters) {
+    const maybeLC  = this.caseInsensitive ? (string) => string.toLowerCase() : (string) => string; 
+    let
+    multiFnName = this.searchFilterAll ? 'every' : 'any';
+    if (this.caseInsensitive) {
+      /** this can be factored out a couple of levels. */
+      nameFilters = nameFilters.map((n) => n.toLowerCase());
+    }
+    let
+    matchAll = nameFilters[multiFnName]((nameFilter) => {
+      let
+      match = maybeLC(name).includes(nameFilter);
+      return match;
+    });
+    return matchAll;
+  },
+  /** Filter blockTraits.Traits by nameFilters */
+  blockTraitsFilter(blockTraits, nameFilters) {
+    let
+    {Traits, ...copy} = blockTraits,
+    tf = Traits.filter((t) => this.nameMatch(t, nameFilters));
+    copy.Traits = tf;
+    return copy;
   },
   /** @return the filterGroup if there is one, and it has a pattern. */
   definedFilterGroups : computed(

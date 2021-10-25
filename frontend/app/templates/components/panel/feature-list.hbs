@@ -10,7 +10,12 @@
     {{!--       Can re-enable this later, not needed yet.  Also the arrows have been swapped, based on a suggestion that it would be clearer to users.
     <div class="from-input" style="position: absolute;"><a >{{elem/icon-base name="arrow-right" click=(action "toSelectedFeatures") }}</a></div>
     --}}
-    <div style="padding-top: 13px;padding-left: 7px;"><a >{{elem/icon-base name="arrow-left"  click=(action "fromSelectedFeatures") }}</a></div>
+    <div style="padding-top: 13px;padding-left: 7px;">
+      <a >{{elem/icon-base name="arrow-left"  click=(action "fromSelectedFeatures") }}</a>
+      {{#ember-tooltip side="right" delay=500}}
+        Copy Names from the Selected Features
+      {{/ember-tooltip}}
+    </div>
   </div>
 
 </div>

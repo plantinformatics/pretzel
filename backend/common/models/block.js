@@ -784,6 +784,38 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
 
   /*--------------------------------------------------------------------------*/
 
+  /** Send a database request to collate feature values.Traits for all blocks of QTL datasets.
+   */
+  Block.blockFeatureTraits = function(options, res, cb) {
+    let
+    fnName = 'blockFeatureTraits',
+    cacheId = fnName,
+    result; //  = cache.get(cacheId);
+    if (result) {
+      if (trace_block > 1) {
+        console.log(fnName, cacheId, 'get', result[0] || result);
+      }
+      cb(null, result);
+    } else {
+
+    let db = this.dataSource.connector;
+    blockFeatures.blockFeatureTraits(db)
+    .then((cursor) => cursor.toArray())
+    .then(function(traits) {
+      if (trace_block > 1) {
+        console.log(fnName, cacheId, 'put', traits[0] || traits);
+      }
+      cache.put(cacheId, traits);
+      cb(null, traits);
+    }).catch(function(err) {
+      cb(err);
+    });
+    }
+  };
+
+
+  /*--------------------------------------------------------------------------*/
+
   /** Collate from the database a list of features within the given block, which
    * meet the optional interval domain constraint.
    *
@@ -944,6 +976,18 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     returns: {type: 'array', root: true},
     description: "Returns an array of blocks with their min&max Feature values."
   });
+
+  Block.remoteMethod('blockFeatureTraits', {
+    accepts: [
+      // could add optional param blocks
+      {arg: "options", type: "object", http: "optionsFromRequest"},
+      {arg: 'res', type: 'object', 'http': {source: 'res'}},
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'array', root: true},
+    description: "Returns an array of blocks of QTL datasets, with their Feature Trait values."
+  });
+
 
   Block.remoteMethod('blockFeaturesInterval', {
     accepts: [
