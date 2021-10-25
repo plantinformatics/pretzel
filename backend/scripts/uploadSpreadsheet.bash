@@ -161,12 +161,13 @@ columnsKeyStringPrepare()
   worksheetFileName=$1
   head -1 "$worksheetFileName" >> uploadSpreadsheet.log
   # There may not be a comma after Position and End.
-  export columnsKeyString=$(head -1 "$worksheetFileName" | sed "$trimOutsideSpaces_sed" | sed "s/Marker,/name,/i;s/Name,/name,/g;s/Chromosome,/chr,/;
+  export columnsKeyString=$(head -1 "$worksheetFileName" | sed "$trimOutsideSpaces_sed" | sed 's/Marker,/name,/i;s/Name,/name,/g;s/Chromosome,/chr,/;
+s/Marker$/name/i;s/Name$/name/g;s/Chromosome$/chr/;
 s/,Qs,/,pos,/;s/,Qe/,end/;
 s/,Start,/,pos,/i;s/,End/,end/i;
 s/,Position/,pos/i;
 s/,/ /g;
-")
+')
   echo columnsKeyString="$columnsKeyString"  >> uploadSpreadsheet.log
 
   # sanitize input (column headers)
@@ -204,7 +205,7 @@ function linkageMap()
     columnsKeyStringPrepare "$i" || return $?
     # ../ because of cd tmp
     out=out_json/"$i".json
-    <"$i"  chrOmit |  ../$sp "${optionalArgs[@]}" -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g  >  "$out" ;
+    <"$i" filterOutComments | chrOmit |  ../$sp "${optionalArgs[@]}" -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g  >  "$out" ;
     ll "$out"  >> uploadSpreadsheet.log;
     # upload() will read these files
     echo "tmp/$out;$datasetName"
