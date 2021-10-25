@@ -1464,7 +1464,7 @@ export default Model.extend({
         (fc) => {
           let found =
               // if the domains are equal, that is considered a match.
-              (lengthRounded === fc.binSize) && subInterval(domain, fc.domain);
+              (lengthRounded === fc.binSize) && fc.domain && subInterval(domain, fc.domain);
           if (found) {
             if (trace_block > 1)
               dLog('featuresCountsResultsSearch', domain.toArray(), nBins, fc.domain.toArray());
