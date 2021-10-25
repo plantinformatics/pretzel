@@ -93,6 +93,7 @@ module.exports = function(app) {
       context.property == 'blockFeaturesCount' ||
       context.property == 'blockFeaturesCounts' ||
       context.property == 'blockFeatureLimits' ||
+      context.property == 'blockFeatureTraits' ||
       context.property == 'blockFeaturesInterval' ||
       context.property == 'pathsByReference' ||
       context.property == 'pathsViaStream' ||

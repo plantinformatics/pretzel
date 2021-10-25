@@ -35,6 +35,18 @@
                 {{elem/icon-base name="asterisk"}} &nbsp;{{trait.features.length}}
             </span> &nbsp;
             </p>
+
+            {{#ember-popover side="auto" popperContainer="body"}}
+            <ul class='feature-found'>
+              {{#each trait.features as |feature|}}
+              <li>
+                {{feature.name}}
+              </li>
+              {{/each}}
+            </ul>
+            {{/ember-popover }}
+
+
         </li>
         {{/each}}
     </ul>

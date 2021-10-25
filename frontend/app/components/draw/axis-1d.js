@@ -30,6 +30,7 @@ import {
   axisEltIdClipPath,
   axisTitleColour,
   eltId,
+  featureTraitColour,
 } from '../../utils/draw/axis';
 import {
   DragTransition,
@@ -152,8 +153,19 @@ FeatureTicks.prototype.featuresOfBlock = function (featuresOfBlockLookup) {
     };
 };
 
+/** Determine the colour for the feature, either traitColour() if
+ * feature.blockId is a QTL, or otherwise blockColourValue().
+ */
 FeatureTicks.prototype.featureColour = function (feature) {
-  return this.blockColourValue(contentOf(feature.get('blockId')));
+  /** Similar @see featurePathStroke() */
+  let colour;
+  let block = feature.get('blockId');
+  if (block.get('useTraitColour')) {
+    colour = featureTraitColour(feature);
+  } else {
+    colour = this.blockColourValue(contentOf(block));
+  }
+  return colour;
 };
 
 function blockTickEltId(groupName) {
@@ -223,14 +235,22 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
        * @desc Calling signature : `this` is the DOM element to be coloured,  from d3 .attr() `this`
        */
       function featurePathStroke (feature, i2) {
-        let block = this.parentElement.__data__,
-            blockId = block.getId(),
-            /** Add 1 to i because it is the elt index, not the
-             * index within axis.blocks[], i.e. the reference block is not included. */
-            i = blockIndex[blockId];
-        if (i2 < 2)
-          dLog(this, 'stroke', blockId, i);
-        return axisTitleColour(blockId, i+1) || 'black';
+        /** Similar : FeatureTicks.prototype.featureColour() */
+        let colour;
+        let block = this.parentElement.__data__;
+        if (block.block.get('useTraitColour')) {
+          colour = featureTraitColour(feature);
+        } else {
+          let
+          blockId = block.getId(),
+          /** Add 1 to i because it is the elt index, not the
+           * index within axis.blocks[], i.e. the reference block is not included. */
+          i = blockIndex[blockId];
+          if (i2 < 2)
+            dLog(this, 'stroke', blockId, i);
+          colour = axisTitleColour(blockId, i+1) || 'black';
+        }
+        return colour;
       }
 
       if (setupHover === true)
@@ -1243,7 +1263,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     axisS = this.get('axisS'),
     yScale = axisS && axisS.y;
     if (yScale) {
-      let yAxis = axisS.axisSide() (yScale).ticks(axisTicks * axisS.portion);
+      let yAxis = axisS.axisSide(yScale).ticks(axisTicks * axisS.portion);
+
       /** axisSelect is the g.axis-outer.  structure within that is :
        *                id prefix  prefix function
        * g.axis-outer   id         eltId()

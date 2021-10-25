@@ -122,7 +122,8 @@ export default Service.extend({
   setViewed(block) {
     let
     map = this.get('viewed') || this.set('viewed', {}),
-    key = block.id,
+    /** use .get() because block may be a Proxy (Feature search). */
+    key = block.get('id'),
     entry = map[key],
     now = Date.now();
     if (entry) {

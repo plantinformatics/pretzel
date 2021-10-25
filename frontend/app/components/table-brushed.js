@@ -3,6 +3,7 @@ import $ from 'jquery';
 import Component from '@ember/component';
 import { observer } from '@ember/object';
 import { computed } from '@ember/object';
+import { inject as service } from '@ember/service';
 
 
 import { eltClassName } from '../utils/domElements';
@@ -25,6 +26,7 @@ const featureValuesTypes = {
 const featureValuesColumnsAttributes = {
   ref : { className: "htCenter"},
   alt : { className: "htCenter"},
+  Reference : {className : 'htNoWrap' },
 };
 /** Provide default widths for feature .values fields
  */
@@ -35,6 +37,8 @@ const featureValuesWidths = {
 
 
 export default Component.extend({
+  ontology : service('data/ontology'),
+  controls : service(),
 
   actions : {
 
@@ -139,6 +143,10 @@ export default Component.extend({
           values = feature.values;
       if (values) {
         Object.keys(values).forEach((valueName) => rest[valueName] = values[valueName]);
+        let o = rest.Ontology, name;
+        if (o && (name = this.get('ontology').getName(o))) {
+          rest.Ontology += ' : ' + name;
+        }
       }
       if (feature.value && (feature.value.length > 1)) {
         // .Position is .value[0]
@@ -198,6 +206,11 @@ export default Component.extend({
     }
     addColumns(this.get('extraColumns'), this.get('extraColumnsHeaders'), this.get('extraColumnsWidths'));
 
+    let me = this;
+    function afterSelection(row, col) {
+      me.afterSelection(this, row, col);
+    }
+
       var table = new Handsontable(tableDiv, {
         data: this.get('dataForHoTable') || [['', '', '']],
         minRows: 1,
@@ -222,7 +235,9 @@ export default Component.extend({
           sortOrder: true
         },
         /* see comment re. handsOnTableLicenseKey in frontend/config/environment.js */
-        licenseKey: config.handsOnTableLicenseKey
+        licenseKey: config.handsOnTableLicenseKey,
+        afterSelection,
+        outsideClickDeselects: false
       });
       that.set('table', table);
       $("#table-brushed").on('mouseleave', function(e) {
@@ -242,6 +257,27 @@ export default Component.extend({
       });
   },
 
+  afterSelection(table, row, col) {
+    const
+    ranges = table.selection?.selectedRange?.ranges,
+    data = this.get('data'),
+    features = ranges && ranges.reduce((fs, r) => {
+      /** from,to are in the order selected by the user's click & drag.
+       * ^A can select row -1.
+       */
+      dLog('afterSelection', r.from.row, r.to.row);
+      let ft = [r.from.row, r.to.row].sort();
+      for (let i = Math.max(0, ft[0]); i <= ft[1]; i++) {
+        let f = data[i];
+        fs.push(f);
+      }
+      return fs;
+    }, []);
+    dLog('afterSelection', features, table, row, col);
+    this.set('tableSelectedFeatures', features);
+    this.highlightFeature(features);
+    this.get('controls').set('tableSelectedFeatures', features);
+  },
 
   onSelectionChange: observer('dataForHoTable', function () {
     let data = this.get('dataForHoTable'),
@@ -256,6 +292,8 @@ export default Component.extend({
     }
   }),
 
+  /** @param feature may be name of one feature, or an array of features.
+   */
   highlightFeature: function(feature) {
     d3.selection.prototype.moveToFront = function() {
       return this.each(function(){
@@ -267,14 +305,23 @@ export default Component.extend({
       .style("fill", "red")
       .style("stroke", "red");
     if (feature) {
+      if (Array.isArray(feature)) {
+        feature.forEach((f) => this.highlightFeature1(f.Feature)); // equiv .feature.name
+      } else {
+        this.highlightFeature1(feature);
+      }
+    }
+  },
+  /** Highlight 1 feature, given feature .name */
+  highlightFeature1: function(featureName) {
       /** see also handleFeatureCircleMouseOver(). */
-      d3.selectAll("g.axis-outer > circle." + eltClassName(feature))
+      d3.selectAll("g.axis-outer > circle." + eltClassName(featureName))
         .attr("r", 5)
         .style("fill", "yellow")
         .style("stroke", "black")
         .moveToFront();
-    }
-  }
+  },
+
 
 
 });

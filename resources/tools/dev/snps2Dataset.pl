@@ -129,14 +129,16 @@ my $line1IsHeader = $options{H};
 
 #-------------------------------------------------------------------------------
 
+columnConfig();
 if ($arrayColumnName)
 {
-  columnConfig();
   $c_arrayColumnName = defined($columnsKeyLookup{$arrayColumnName}) ? $columnsKeyLookup{$arrayColumnName} : undef;
   # print join(';', keys(%columnsKeyLookup)), ',',  $columnsKeyLookup{'end'}, ',', $arrayColumnName, ', ', $c_arrayColumnName || 'undef', "\n";
 }
 
 my $c_Trait = defined($columnsKeyLookup{'Trait'}) ? $columnsKeyLookup{'Trait'} : undef;
+my $c_FlankingMarkers = defined($columnsKeyLookup{'Flanking Markers'}) ? $columnsKeyLookup{'Flanking Markers'} :
+  defined($columnsKeyLookup{'Flanking_Markers'}) ? $columnsKeyLookup{'Flanking_Markers'} : undef;
 
 #-------------------------------------------------------------------------------
 
@@ -154,8 +156,8 @@ my $blockHeader;
 my $blockFooter;
 my $datasetFooter;
 my $datasetHeaderGM;
-# true after startDataset()
-my $startedDataset = 0;
+# defined by startDataset(), undefined by endDataset()
+my $startedDataset = undef;
 # string to close the current Feature
 # When within Feature.values.flankingMarkers, this is "] } }\n"
 my $endFeature;
@@ -249,7 +251,7 @@ sub columnConfig() {
   #
   # $columnsKeyString is space-separated, not comma.
   # column header names which contain spaces are wrapped with "".
-  my @a1 = split(/"([^\"]*)"|  */, $columnsKeyString );
+  my @a1 = parse_line(' ', 0, $columnsKeyString);
   my @columnsKeyValues = grep { $_  } @a1;
   # print 'columnsKeyValues : ', join(':', @columnsKeyValues), "\n";
 
@@ -263,13 +265,6 @@ sub columnConfig() {
 BEGIN
 {
   columnConfig();
-  $columnsKeyPrefixed = $columnsKeyString
-    =~ s/,/ /rg
-    =~ s/^/c_/r
-    =~ s/ / c_/rg;
-  # print 'columnsKeyPrefixed : ', $columnsKeyPrefixed, "\n";
-  # my @a2 = split(' ', $columnsKeyPrefixed);
-  # print 'a2 : ', join(':', @a2), "\n";
 
   # These columns are identified using variables, (e.g. $c_endPos),
   # because the corresponding enum (e.g. c_endPos) can't have a conditional value.
@@ -278,7 +273,7 @@ BEGIN
   # so define $c_pos.
   $c_pos = defined($columnsKeyLookup{'pos'}) ? $columnsKeyLookup{'pos'} : $columnsKeyLookup{'start'};
 }
-use constant ColumnsEnum => split(' ', $columnsKeyPrefixed);
+use constant ColumnsEnum => (map {'c_' . $_ }  parse_line(' ', 0, $columnsKeyString));
 BEGIN
 {
   eval "use constant (ColumnsEnum)[$_] => $_;" foreach 0..(ColumnsEnum)-1;
@@ -536,7 +531,7 @@ sub createDataset()
 
   if (! $outputDir)
   {
-    print $datasetHeader;
+    startDataset();
   }
 
   convertInput();
@@ -547,12 +542,13 @@ sub createDataset()
 sub startDataset()
 {
   print $datasetHeader;
-  $startedDataset = 1;
+  $startedDataset = $datasetName;
 }
 sub endDataset()
 {
   optionalBlockFooter();
   print $datasetFooter;
+  $startedDataset = undef;
 }
 sub appendToBlock()
 {
@@ -642,7 +638,7 @@ sub snpLine($)
 
   # Skip blank lines
   if (! $a[c_name] && ! $a[c_chr]
-      && ! (defined($columnsKeyLookup{'Flanking Markers'}) && $a[$columnsKeyLookup{'Flanking Markers'}])
+      && ! (defined($c_FlankingMarkers) && $a[$c_FlankingMarkers])
 )
   {
     # Could output a warning if the line is not blank, i.e. not /^,,,/, or $a[c_pos]
@@ -674,6 +670,8 @@ sub snpLine($)
   if (! %chromosomeRenames)
   {
     $a[c_chr] =~ s/^chr//;
+    # Convention for Chromosome names in Pretzel is upper case; could map lower case to upper here.
+    # $a[c_chr] = uc $a[c_chr];
     $a[c_chr] = $chrOutputPrefix . $a[c_chr];
   }
   else
@@ -719,8 +717,9 @@ sub snpLine($)
         $datasetName = "$options{d} - $parentName";
       }
       makeTemplates();
-      if ($startedDataset)
+      if (defined($startedDataset) && ($startedDataset ne $datasetName))
       {
+        print STDERR "startedDataset=$startedDataset, datasetName=$datasetName, parentName=$parentName\n";
         # end of Feature .values.flankingMarkers[]
         optionalEndFeature();
         endDataset();
@@ -734,7 +733,10 @@ sub snpLine($)
         open(my $oldStdout, ">&STDOUT")     or die "Can't dup STDOUT: $!";
         open(STDOUT, '>', $datasetOutFile) or die "Can't redirect STDOUT to '$datasetOutFile': $!";
       }
-      startDataset();
+      if (! defined($startedDataset) || ($startedDataset ne $datasetName))
+      {
+        startDataset();
+      }
     }
   }
 
@@ -798,12 +800,12 @@ sub snpLine($)
         }
     }
 
-  my $valuesOpen = defined($columnsKeyLookup{'Flanking Markers'});
+  my $valuesOpen = defined($c_FlankingMarkers);
   # also $c_Trait
-  if (! $a[c_name] && defined($columnsKeyLookup{'Flanking Markers'}) && $a[$columnsKeyLookup{'Flanking Markers'}])
+  if (! $a[c_name] && defined($c_FlankingMarkers) && $a[$c_FlankingMarkers])
     {
       # The first flanking marker is output by printFeature(); prepend this one with ','
-       print ", \"$a[$columnsKeyLookup{'Flanking Markers'}]\"";
+       print ", \"$a[$c_FlankingMarkers]\"";
     }
   else
     {
@@ -846,7 +848,7 @@ sub trimOutsideQuotesAndSpaces($) {
 # Prefix with SNP_ if not present, to make all consistent.
 sub markerPrefix($) {
   my ($name) = @_;
-  if ($name =~ m/^[1234]000/)
+  if (defined($name) && ($name =~ m/^[1234]000/))
   {
     $name = "SNP_" . $name;
   }
@@ -934,7 +936,7 @@ sub printFeature($@)
       # print $ci, ', columnHeader:', $columnHeader, ",", $a[$ci], "\n";
       if (($ci != c_name) && ($ci != c_chr) && ($ci != $c_pos)
           && (! defined($c_endPos) || ($ci != $c_endPos))
-          && (! defined($columnsKeyLookup{'Flanking Markers'}) || ($ci != $columnsKeyLookup{'Flanking Markers'}))
+          && (! defined($c_FlankingMarkers) || ($ci != $c_FlankingMarkers))
           && $a[$ci] && ($ci <= $#columnHeaders) && $columnHeader && ! isComment($columnHeader))
       {
         # equivalent : ($ci == $c_arrayColumnName)
@@ -994,7 +996,7 @@ sub printFeature($@)
   my $name = eval '$ak[c_name]';
 
   # for QTL : allow blank Start/End fields, if flanking marker field is defined
-  my $hasFlankingMarkers = defined($columnsKeyLookup{'Flanking Markers'}) && ($a[$columnsKeyLookup{'Flanking Markers'}] ne '');
+  my $hasFlankingMarkers = defined($c_FlankingMarkers) && ($a[$c_FlankingMarkers] ne '');
   # This error message is not yet displayed in the frontend GUI.
   if (($#value == -1) && ! $hasFlankingMarkers)
     {
@@ -1006,7 +1008,7 @@ sub printFeature($@)
     {
       $valuesString =~ s/}//;
       $valuesString .= ($haveValues ? ",\n$valueIndent" : '')
-        . '"flankingMarkers" : [' . splitAndQuote($a[$columnsKeyLookup{'Flanking Markers'}]);
+        . '"flankingMarkers" : [' . splitAndQuote($a[$c_FlankingMarkers]);
       $endFeature = "] } }\n";
     }
   my $closingBrace = $valuesOpen ? '' : '}';

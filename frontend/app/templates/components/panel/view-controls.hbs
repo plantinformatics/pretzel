@@ -261,6 +261,15 @@
     </li>
 
     <li class="list-group-item">
+      <label>QTL Diamond Size</label>
+      <input type="range"
+       value=20
+       oninput={{action this.diamondWidthInput}}
+       min="0" max="100"
+      />
+    </li>
+
+    <li class="list-group-item">
       <div>
         <label>Graph Text Size</label>
         <span class="sub-label">{{ titleTextSize }}</span>

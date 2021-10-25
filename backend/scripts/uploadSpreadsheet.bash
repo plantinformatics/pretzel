@@ -143,6 +143,16 @@ columnFullName['pos']=Position
 columnFullName['end']=Position_End
 set -x
 
+
+# Trim spaces outside "" in headings, e.g. : "Sr_No ",Name,...
+read -r -d '' trimOutsideSpaces_sed <<\EOF
+s/  *",/",/;
+s/  *"$/"/;
+s/^"  */"/;
+EOF
+
+
+
 # Handle some variation in the recognised column header names.
 # Prepate columnsKeyString, which is used in snps2Dataset.pl
 # @param worksheetFileName	name of .csv output for 1 worksheet
@@ -151,17 +161,18 @@ columnsKeyStringPrepare()
   worksheetFileName=$1
   head -1 "$worksheetFileName" >> uploadSpreadsheet.log
   # There may not be a comma after Position and End.
-  export columnsKeyString=$(head -1 "$worksheetFileName" | sed "s/Marker,/name,/i;s/Name,/name,/g;s/Chromosome,/chr,/;
+  export columnsKeyString=$(head -1 "$worksheetFileName" | sed "$trimOutsideSpaces_sed" | sed 's/Marker,/name,/i;s/Name,/name,/g;s/Chromosome,/chr,/;
+s/Marker$/name/i;s/Name$/name/g;s/Chromosome$/chr/;
 s/,Qs,/,pos,/;s/,Qe/,end/;
 s/,Start,/,pos,/i;s/,End/,end/i;
 s/,Position/,pos/i;
 s/,/ /g;
-")
+')
   echo columnsKeyString="$columnsKeyString"  >> uploadSpreadsheet.log
 
-  # sanitize input
-  clean=$(echo -n "$columnsKeyString" | tr -cd '[:alnum:] [:space:]')
-  eval columnsKeyStringArray=($clean)
+  # sanitize input (column headers)
+  eval declare  -a columnsKeyStringArray=($(echo -n "$columnsKeyString" | tr -cd '"[:alnum:] [:space:]'))
+
   # filter out the column headings containing space to avoid space in array index.
   # Use < <( ) instead of | so that columnsNum is not confined within sub-shell created by |.
   declare -A columnsNum
@@ -194,7 +205,7 @@ function linkageMap()
     columnsKeyStringPrepare "$i" || return $?
     # ../ because of cd tmp
     out=out_json/"$i".json
-    <"$i"  chrOmit |  ../$sp "${optionalArgs[@]}" -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g  >  "$out" ;
+    <"$i" filterOutComments | chrOmit |  ../$sp "${optionalArgs[@]}" -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g  >  "$out" ;
     ll "$out"  >> uploadSpreadsheet.log;
     # upload() will read these files
     echo "tmp/$out;$datasetName"
@@ -276,20 +287,34 @@ function qtlList()
     # (-A is not required now - have added support for all Flanking Markers in a single row/cell, which is the preference)
     # 
     # Sort by parentName (if defined) then chr column
-    sortKeys=(-k $columnNum_chr,$columnNum_chr)
+    #
+    # originally : sortKeys was -k $columnNum_chr,..., but now using perl to prefix the sort
+    # values, so sortKeys is now the sort key column numbers, rather than the
+    # sort(1) key param
+    sortKeys=($columnNum_chr)
+    sortkeys2=-k1
     if [ -n "$columnNum_parentName" ]
     then
-      sortKeys=(-k $columnNum_parentName,$columnNum_parentName  "${sortKeys[@]}")
+      sortKeys=($columnNum_parentName  "${sortKeys[@]}")
+      sortKeys2=-k1,2
     fi
 
     # Place the column header row first, don't sort it.
     columnHeaderFile=tmp/out/columnHeaders.csv
+    # qtlList() is not in tmp, so use cd to access path tmp/$chrOmitSed
     <tmp/"$i" filterOutComments | head -1 > $columnHeaderFile
+    # 1st perl :
     # Remove non-ascii and quotes around alphanumeric, to handle chr with &nbsp wrapped in quotes, which impairs sorting.
+    # 2nd perl prepends sort key, in place of : #  sort -t, "${sortKeys[@]}" ) |
     (cat $columnHeaderFile; \
      <tmp/"$i" filterOutComments | tail -n +2 | \
        perl -p -e 's/[^[:ascii:]]+//g;s/"([-A-Za-z0-9_.]+)"/\1/g'  | \
-       chrOmit |  sort -t, "${sortKeys[@]}" ) | tee tmp/"$i".sorted | \
+       ( cd tmp; chrOmit; cd ..) |
+       perl -e 'use Text::ParseWords; while (<>) { chomp; my @a =  parse_line(",", 0, $_); foreach $k (split(/ /, "'"${sortKeys[*]}"'")) { print "\"$a[$k-1]\"<";}; print "<ENDofSortKey<$_\n"; }'	| \
+       tee tmp/"$i".sorting |
+       sort -t'<' $sortKeys2 ) |
+       sed "s/.*<ENDofSortKey<//" |
+       tee tmp/"$i".sorted | \
        $sp "${prefixedArgs[@]}" -d "$datasetName"  -n "$namespace" -c "$commonName" -g  "${localArgs[@]}" -t QTL -D "$outDir" ;
     # ll "$out"  >> uploadSpreadsheet.log;
     # upload() will read these files

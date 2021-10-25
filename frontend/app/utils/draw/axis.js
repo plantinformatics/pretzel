@@ -104,6 +104,41 @@ function yAxisTicksScale(/*d, i, g*/)
   scaleText = yAxisTextScale.apply(gp, arguments);
   return scaleText;
 }
+/** Configure the d3 axis object for the y axis.
+ * Configure :
+ * - tickFormat, based on yScale.domain()
+ */
+function axisConfig(yAxis, yScale)
+{
+  /** if domain covers a small interval relative to the endpoints, then use
+   * the default tickFormat which will show all digits.
+   */
+  let
+  formatString,
+  domain = yScale.domain();
+  if (domain && (domain.length === 2)) {
+    let
+    domainLength = Math.abs(domain[1] - domain[0]),
+    domainMax = Math.max.apply(undefined, domain),
+    /** draw-map has axisTicks = 10;  the number of ticks drawn varies 7 - 12. */
+    axisTicks = 10,
+    ratio = domainLength && (domainMax / domainLength * axisTicks);
+    if (ratio) {
+      let
+      /** trunc(x + 1) to round up.
+       * add some bias to allow for variation in number of ticks, and perhaps
+       * allow for the 3-digit steps of SI, i.e. 200M has 3 digits left of decimal point.
+       */
+      digits = Math.trunc(Math.log10(ratio) + 1 + 0.8);
+      // dLog('axisConfig', domainLength, domainMax, ratio, digits);
+      formatString = (digits > 6) ? ',' : '.' + digits + 's';
+    }
+  }
+  formatString ||= '';
+  let
+  format = d3.format(formatString);
+  yAxis.tickFormat(format);
+}
 /**
  * @param gAxis has __data__ which is axisName; may be g.axis-all or g.btn
  */
@@ -317,17 +352,25 @@ function traitColour(traitName) {
   return trait_colour_scale(traitName);
 }
 
+function featureTraitColour(feature) {
+  let traitName = feature.get('values.Trait'),
+      colour = traitColour(traitName);
+  return colour;
+}
+
 /*----------------------------------------------------------------------------*/
 
 export {
   Axes, maybeFlip, maybeFlipExtent, noDomain,
   ensureYscaleDomain,
   yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform,
+  axisConfig,
   eltId, axisEltId, eltIdAll, axisEltIdTitle, axisEltIdClipPath, axisEltIdClipPath2d,
   selectAxisOuter, selectAxisUse, eltIdGpRef,
   highlightId,
   trackBlockEltIdPrefix,
   axisFeatureCircles_selectAll,
   axisTitleColour,
-  traitColour
+  traitColour,
+  featureTraitColour,
 };

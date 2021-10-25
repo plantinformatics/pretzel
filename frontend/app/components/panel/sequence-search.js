@@ -6,18 +6,39 @@ import { alias } from '@ember/object/computed';
 import { A as array_A } from '@ember/array';
 import { task, didCancel } from 'ember-concurrency';
 
+import $ from 'jquery';
 
 import sequenceSearchData from '../../utils/data/sequence-search-data';
+import { isValidAlternateBasesOrAmbiguityCodes, alternateBasesToAmbiguityCodes } from '../../utils/data/sequenceChars';
 
 /*----------------------------------------------------------------------------*/
 
 const dLog = console.debug;
+
+function logArray(a) { return a.length > 4 ? a.length : a; }
+
+/** From :
+ * https://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Web&PAGE_TYPE=BlastDocs&DOC_TYPE=BlastHelp
+ * 
+Blank lines are not allowed in the middle of FASTA input.
+
+Sequences are expected to be represented in the standard IUB/IUPAC amino acid and nucleic acid codes, with these exceptions: lower-case letters are accepted and are mapped into upper-case; a single hyphen or dash can be used to represent a gap of indeterminate length; and in amino acid sequences, U and * are acceptable letters (see below). Before submitting a request, any numerical digits in the query sequence should either be removed or replaced by appropriate letter codes (e.g., N for unknown nucleic acid residue or X for unknown amino acid residue). The nucleic acid codes supported are: 
+		A  adenosine          C  cytidine             G  guanine
+		T  thymidine          N  A/G/C/T (any)        U  uridine 
+		K  G/T (keto)         S  G/C (strong)         Y  T/C (pyrimidine) 
+		M  A/C (amino)        W  A/T (weak)           R  G/A (purine)        
+		B  G/T/C              D  G/A/T                H  A/C/T      
+		V  G/C/A              -  gap of indeterminate length
+		
+ */
+const validSequenceChars = 'ACGTUMRWSYKVHDBN';
 
 /*----------------------------------------------------------------------------*/
 
 export default Component.extend({
   auth: service(),
   queryParams: service('query-params'),
+  controls : service(),
 
   urlOptions : alias('queryParams.urlOptions'),
 
@@ -190,6 +211,54 @@ export default Component.extend({
     this.get('text$').val(this.get('text'));
   },
 
+  fromSelectedFeatures() {
+    const fnName = 'fromSelectedFeatures';
+
+    let
+    tableSelectedFeatures = this.get('controls').get('tableSelectedFeatures'),
+    selectedFeatures = tableSelectedFeatures?.length ? tableSelectedFeatures : this.get('selectedFeatures');
+    /** copied from feature-list.js, this could be factored. */
+    let selectedFeaturesEmpty = ! selectedFeatures.length ||
+        ((selectedFeatures.length === 1) && (selectedFeatures[0].Feature === undefined));
+
+    /** allow several rows if user has sub-selected in table with rectangle select. */
+    const subSelection = !! tableSelectedFeatures?.length;
+    this.set('subSelection', subSelection);
+    if (! selectedFeaturesEmpty) {
+      let
+      /** if selectedFeatures contains QTLs which have Feature.values.Sequence
+       * then map the first one into a FASTA format for the search string.
+       */
+      selectedFeaturesSequence = selectedFeatures
+        .filter(
+          (sf) => 
+            {
+              let f = sf.feature;
+              return f.values && f.values.Sequence;
+            });
+      dLog('fromSelectedFeatures', logArray(selectedFeaturesSequence));
+      if (selectedFeaturesSequence.length) {
+        let selectedFeaturesFasta = selectedFeaturesSequence
+            .slice(0, subSelection ? 3 : 1)
+            .map(function (sf) {
+              let f = sf.feature;
+              return '>' + sf.feature.name + '\n' + f.values.Sequence;
+            });
+
+        let text = selectedFeaturesFasta.join('\n');
+        this.set('text', text);
+        this.get('text$').val(text);
+
+        let warningMessage = this.checkTextInput(text);
+        if (warningMessage) {
+          this.set('warningMessage', warningMessage);
+        }
+      }
+    }
+
+  },
+
+
   /*--------------------------------------------------------------------------*/
 
   /** Check GUI inputs which are parameters for addDataset :
@@ -247,7 +316,7 @@ export default Component.extend({
     let
     lines = rawText.split('\n'),
     notBases = lines
-      .filter((l) => ! l.match(/^[ATGCN]+$/i)),
+      .filter((l) => ! isValidAlternateBasesOrAmbiguityCodes(l)),
     keys = notBases
       .filter((maybeKey) => maybeKey.match(/^>[^\n]+$/)),
     other = notBases
@@ -260,16 +329,18 @@ export default Component.extend({
     case 1:
       break;
     default:
-      warningMessages.push('Limit is 1 FASTA search');
+      if (! this.get('subSelection')) {
+        warningMessages.push('Limit is 1 FASTA search');
+      }
       break;
     }
-    let regexpIterator = rawText.matchAll(/\n[ATGCN]+/ig),
-        sequenceLinesLength = Array.from(regexpIterator).length;
+    let
+      sequenceLinesLength = lines.length - notBases.length;
     if (sequenceLinesLength === 0) {
-      warningMessages.push('DNA text is required : e.g. ATGCNatgcn...');
+      warningMessages.push('DNA text is required : e.g. ' + validSequenceChars + '..., either case.');
     }
     if (other.length) {
-      warningMessages.push('Input should be either >MarkerName or DNA text e.g. ATGCNatgcn...; this input not valid :' + other[0]);
+      warningMessages.push('Input should be either >MarkerName or DNA text e.g. ' + validSequenceChars + '..., either case; this input not valid :' + other[0]);
     }
 
     if (rawText.length > this.searchStringMaxLength) {
@@ -297,7 +368,8 @@ export default Component.extend({
     if ((warningMessage = this.checkTextInput(rawText))) {
       this.set('warningMessage', warningMessage);
     } else {
-      let taskInstance = this.get('sendRequest').perform(rawText);
+      let converted = alternateBasesToAmbiguityCodes(rawText);
+      let taskInstance = this.get('sendRequest').perform(converted);
     }
   },
   sendRequest : task(function* (rawText) {

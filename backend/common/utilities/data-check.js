@@ -50,7 +50,7 @@ exports.datasetParentContainsNamedFeatures = function(models, dataset, options, 
             featuresP,
             parentBlock = parent.blocks().find((b) => b.scope === block.scope);
             if (! parentBlock) {
-              errorMsg = 'Block ' + block.name + 'has scope' + block.scope + 'not matched in parent' + dataset.parent + ' scopes : ' + parent.blocks().map((b) => b.scope);
+              errorMsg = 'Block ' + block.name + 'has scope' + block.scope + ' not matched in parent ' + dataset.parent + ' scopes : ' + parent.blocks().map((b) => b.scope);
               if (trace) { console.log(fnName, errorMsg); }
               featuresP = Promise.resolve(errorMsg);
             } else {
@@ -73,6 +73,12 @@ exports.datasetParentContainsNamedFeatures = function(models, dataset, options, 
                       if (! okF) {
                         /** Whether to require all FMs to be in parent. */
                         const requireAllFMs = true;
+                        const loadOptions = dataset.meta.loadOptions;
+                        if (loadOptions && loadOptions.includes('handleUnmatchedFMs')) {
+                          /** modifying param dataset - this is just to load some test data (so far).  */
+                          f.values.flankingMarkers = fms.filter((f) => (parentBlockFeatureNames.indexOf(f) !== -1));
+                          f.values.unmatchedFMs = unmatchedFMs;
+                        } else
                         if (requireAllFMs || ! f.value[0]) {
                           errorMsg = 'Block ' + block.name + ' Feature ' + f.name + ' Flanking Markers ' + unmatchedFMs.join(',') + ' are not in parent ' + dataset.parent + ' scope ' + block.scope;
                           if (trace) { console.log(fnName, errorMsg); }
