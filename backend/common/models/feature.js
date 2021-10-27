@@ -1,5 +1,9 @@
 'use strict';
 
+const Queue = require('promise-queue');
+
+/*----------------------------------------------------------------------------*/
+
 /* global module */
 /* global require */
 /* global process */
@@ -8,6 +12,10 @@ var acl = require('../utilities/acl')
 const { childProcess } = require('../utilities/child-process');
 var upload = require('../utilities/upload');
 var { filterBlastResults } = require('../utilities/sequence-search');
+
+/*----------------------------------------------------------------------------*/
+
+const sequenceSearchQueue = new Queue(/*concurrency:*/ 1);
 
 /*----------------------------------------------------------------------------*/
 
@@ -144,10 +152,24 @@ module.exports = function(Feature) {
       }
     };
 
+    /* For development, disable this to use dev_blastResult. there is also
+     * dev_blastResult() in dnaSequenceSearch.bash. */
     if (true) {
-    let child = childProcess(
-      'dnaSequenceSearch.bash',
-      dnaSequence, true, queryStringFileName, [parent, searchType, resultRows, addDataset, datasetName], searchDataOut, cb, /*progressive*/ false);
+      function qLog(status) {
+        console.log(fnName, status, 'sequenceSearchQueue', sequenceSearchQueue.getPendingLength(), sequenceSearchQueue.getQueueLength());
+      }
+      sequenceSearchQueue.add(searchP);
+      function searchP() {
+        let promise = new Promise(
+          function (resolve, reject) {
+            let cbWrap = function () { qLog('complete:' + queryStringFileName); resolve(); cb.apply(this, arguments); };
+            qLog('starting:' + queryStringFileName);
+            let child = childProcess(
+              'dnaSequenceSearch.bash',
+              dnaSequence, true, queryStringFileName, [parent, searchType, resultRows, addDataset, datasetName], searchDataOut, cbWrap, /*progressive*/ false);
+          }
+        );
+      }
     } else {
       let features = dev_blastResult;
       cb(null, features);
