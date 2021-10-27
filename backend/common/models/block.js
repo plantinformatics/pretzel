@@ -787,8 +787,13 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
   /** Send a database request to collate feature values.Traits for all blocks of QTL datasets.
    */
   Block.blockFeatureTraits = function(options, res, cb) {
+    return Block.blockValues('Trait', options, res, cb);
+  };
+  /** Send a database request to collate feature values.Traits for all blocks of QTL datasets.
+   */
+  Block.blockValues = function(fieldName, options, res, cb) {
     let
-    fnName = 'blockFeatureTraits',
+    fnName = 'blockValues',
     cacheId = fnName,
     result; //  = cache.get(cacheId);
     if (result) {
@@ -799,7 +804,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     } else {
 
     let db = this.dataSource.connector;
-    blockFeatures.blockFeatureTraits(db)
+    blockFeatures.blockValues(db, fieldName)
     .then((cursor) => cursor.toArray())
     .then(function(traits) {
       if (trace_block > 1) {
