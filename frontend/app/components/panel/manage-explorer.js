@@ -66,6 +66,121 @@ const selectorExplorer = 'div#left-panel-explorer';
 
 /*----------------------------------------------------------------------------*/
 
+/**
+ * CP : blockFeatureTraits
+ * @param fieldName Traits or Ontologies
+ */
+function blockValues(fieldName) {
+  let ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
+
+  let valueP = this.get('blocksService.blockFeature' + fieldName);
+  let proxy = ObjectPromiseProxy.create({ promise: resolve(valueP) });
+  return proxy;
+}
+
+/** map ._id to .block
+ * CP : blockFeatureTraitsBlocks
+ * @param fieldName Traits or Ontologies
+ */
+function blockValuesBlocks(fieldName) {
+  // 'blockFeatureTraits'
+  let blocksTraitsP = this.get('blocksService.blockFeature' + fieldName);
+  let store = this.get('primaryServerStore');
+  /** ids2Blocks() depends on this result. */
+  if (! this.get('apiServers.primaryServer.datasetsBlocks')) {
+    blocksTraitsP = Promise.resolve([]);
+  } else {
+    blocksTraitsP = blocksTraitsP
+      .then((blocksTraits) => {
+        blocksTraits = ids2Blocks(store, blocksTraits);
+        return blocksTraits;
+      });
+  }
+  return blocksTraitsP;
+}
+
+/**
+ * CP : blockFeatureTraitsHistory
+ */
+function blockValuesHistory (fieldName) {
+  let blocksTraitsP = this.get('blockFeature' + fieldName + 'Blocks');
+  if (this.historyView !== 'Normal') {
+    blocksTraitsP = blocksTraitsP
+      .then((blocksTraits) => {
+        const
+        recent = this.historyView === 'Recent',
+        /** map blocks -> Traits, so that the sorted blocks can be mapped -> blocksTraits  */
+        blocksTraitsMap = blocksTraits.reduce((btm, bt) => btm.set(bt.block, bt.Traits), new Map()),
+        blocks = blocksTraits.map((bt) => bt.block),
+        /** sorted blocks */
+        blocksS = this.get('viewHistory').blocksFilterSortViewed(blocks, recent);
+        blocksTraits = blocksS.map((b) => addField({block : b}, fieldName, blocksTraitsMap.get(b)));
+        return blocksTraits;
+      });
+  }
+  return blocksTraitsP;
+}
+
+
+function addField(object, fieldName, value) {
+  object[fieldName] = value;
+  return object;
+}
+
+/**
+ * CP : blockFeatureTraitsName
+ */
+function blockValuesNameFiltered (fieldName) {
+  let
+  nameFilters = this.get('nameFilterArray'),
+  blocksTraitsP = this.get('blockFeature' + fieldName + 'History');
+  if (nameFilters.length) {
+    blocksTraitsP = blocksTraitsP
+      .then((blocksTraits) => {
+        blocksTraits = blocksTraits
+          .map((blockTraits) => this.blockTraitsFilter(blockTraits, nameFilters))
+          .filter((blockTraits) => blockTraits[fieldName].length);
+        return blocksTraits;
+      });
+  }
+  return blocksTraitsP;
+}
+
+/*
+ * CP : blockFeatureTraitsTree
+ */
+function blockValuesTree (fieldName) {
+  let ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
+
+  let
+  valueP = this.get('blockFeature' + fieldName + 'Name')
+    .then((blocksTraits) => {
+      let
+      blocksTraitsTree = blocksParentAndScope(this.get('levelMeta'), blocksTraits);
+      this.set('blockFeature' + fieldName + 'TreeKeyLength', Object.keys(blocksTraitsTree).length);
+      return blocksTraitsTree;
+    });
+  let proxy = ObjectPromiseProxy.create({ promise: resolve(valueP) });
+
+  return proxy;
+}
+
+/** map blockIdsTraits[]
+ * from {_id, Traits} to {block, Traits}
+ * or from {_id, Ontologies} to {block, Ontologies}
+ */
+function ids2Blocks(store, blockIdsTraits) {
+  let
+  blocksTraits = store && blockIdsTraits
+    .map(({_id, ...rest}) => (rest.block = store.peekRecord('block', _id), rest))
+    .filter((bt) => bt.block);
+  return blocksTraits;
+}
+
+
+
+/*----------------------------------------------------------------------------*/
+
 
 export default ManageBase.extend({
   apiServers: service(),
@@ -148,102 +263,37 @@ export default ManageBase.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** Implement Trait tab : map from blocksService.blockFeatureTraits, through
+   * history filter/sort and name filter, grouping into blockFeatureTraitsTree.
+   */
+
   blockFeatureTraits : computed(
     'blocksService.blockFeatureTraits',
     'apiServers.primaryServer.datasetsBlocks.[]',
-    function () {
-      let ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
-
-      let valueP = this.get('blocksService.blockFeatureTraits');
-      let proxy = ObjectPromiseProxy.create({ promise: resolve(valueP) });
-      return proxy;
-    }),
+    function () { return blockValues.apply(this, ['Traits']); }),
 
   /** map ._id to .block */
   blockFeatureTraitsBlocks : computed(
     'apiServers.primaryServer.datasetsBlocks.[]',
-    function () {
-      // 'blockFeatureTraits'
-      let blocksTraitsP = this.get('blocksService.blockFeatureTraits');
-      /** ids2Blocks() depends on this result. */
-      if (! this.get('apiServers.primaryServer.datasetsBlocks')) {
-        blocksTraitsP = Promise.resolve([]);
-      } else {
-        blocksTraitsP = blocksTraitsP
-          .then((blocksTraits) => {
-            blocksTraits = this.ids2Blocks(blocksTraits);
-            return blocksTraits;
-          });
-      }
-      return blocksTraitsP;
-    }),
+    function () { return blockValuesBlocks.apply(this, ['Traits']); }),
 
   blockFeatureTraitsHistory : computed(
     'blockFeatureTraitsBlocks', 'historyView',
-    function () {
-      let blocksTraitsP = this.get('blockFeatureTraitsBlocks');
-      if (this.historyView !== 'Normal') {
-        blocksTraitsP = blocksTraitsP
-          .then((blocksTraits) => {
-            const
-            recent = this.historyView === 'Recent',
-            /** map blocks -> Traits, so that the sorted blocks can be mapped -> blocksTraits  */
-            blocksTraitsMap = blocksTraits.reduce((btm, bt) => btm.set(bt.block, bt.Traits), new Map()),
-            blocks = blocksTraits.map((bt) => bt.block),
-            /** sorted blocks */
-            blocksS = this.get('viewHistory').blocksFilterSortViewed(blocks, recent);
-            blocksTraits = blocksS.map((b) => ({block : b, Traits : blocksTraitsMap.get(b)}));
-            return blocksTraits;
-          });
-      }
-      return blocksTraitsP;
-    }),
+    function () { return blockValuesHistory.apply(this, ['Traits']); }),
 
   blockFeatureTraitsName : computed(
     'blockFeatureTraitsHistory.[]',
     'nameFilterArray', 'caseInsensitive', 'searchFilterAll',
-    function () {
-      let
-      nameFilters = this.get('nameFilterArray'),
-      blocksTraitsP = this.get('blockFeatureTraitsHistory');
-      if (nameFilters.length) {
-        blocksTraitsP = blocksTraitsP
-          .then((blocksTraits) => {
-            blocksTraits = blocksTraits
-              .map((blockTraits) => this.blockTraitsFilter(blockTraits, nameFilters))
-              .filter((blockTraits) => blockTraits.Traits.length);
-            return blocksTraits;
-          });
-      }
-      return blocksTraitsP;
-    }),
-
+    function () { return blockValuesNameFiltered.apply(this, ['Traits']); }),
 
   blockFeatureTraitsTree : computed(
     'blockFeatureTraitsName',
-    function () {
-      let ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
+    function () { return blockValuesTree.apply(this, ['Traits']); }),
 
-      let valueP = this.get('blockFeatureTraitsName')
-          .then((blocksTraits) => {
-            let
-            blocksTraitsTree = blocksParentAndScope(this.get('levelMeta'), blocksTraits);
-            this.set('blockFeatureTraitsTreeKeyLength', Object.keys(blocksTraitsTree).length);
-            return blocksTraitsTree;
-          });
-      let proxy = ObjectPromiseProxy.create({ promise: resolve(valueP) });
 
-      return proxy;
-    }),
-  /** map blockIdsTraits[] from {_id, Traits} to {block, Traits}
-   */
-  ids2Blocks(blockIdsTraits) {
-    let store = this.get('apiServers').get('primaryServer.store');
-    let blocksTraits = store && blockIdsTraits.map((blockIdTraits) => ({
-      block: store.peekRecord('block', blockIdTraits._id), Traits : blockIdTraits.Traits}))
-        .filter((bt) => bt.block);
-    return blocksTraits;
-  },
+  primaryServerStore : computed(function () {
+    return this.get('apiServers').get('primaryServer.store');
+  }),
 
 
   /*--------------------------------------------------------------------------*/
