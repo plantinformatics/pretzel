@@ -373,10 +373,11 @@ exports.blockValues = function(db, fieldName) {
     .then((blocks) => {
       let
       blockIds = blocks[0].ids,
+      fieldNamePlural = (fieldName === 'Ontology') ? 'Ontologies' : fieldName + 's',
       cursor =
         db.collection('Feature').aggregate([
           {$match : {blockId : {$in : blockIds}}},
-          {$group : addField({_id : '$blockId'}, fieldName + 's', {$addToSet : '$values.' + fieldName})}]);
+          {$group : addField({_id : '$blockId'}, fieldNamePlural, {$addToSet : '$values.' + fieldName})}]);
       return cursor;
     });
 

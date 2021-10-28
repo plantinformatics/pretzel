@@ -214,29 +214,40 @@ export default Service.extend(Evented, {
 
   /*--------------------------------------------------------------------------*/
 
-  /** Perform taskGetTraits once when first requested.
+  get blockFeatureTraits() {
+    return this.blockFeatureValues('Trait');
+  },
+  get blockFeatureOntologies() {
+    return this.blockFeatureValues('Ontology');
+  },
+  /** Perform taskGetValues once when first requested.
+   * @param fieldName 'Trait' or 'Ontology'
    * @return promise yielding :
    * [... ,
    * { "_id" : ObjectId(...), "Traits" : [ "Plant height", "Rust resistance" ] },
    * ...]
    */
-  get blockFeatureTraits() {
-    return this.blockFeatureTraitsP ||
-      (this.blockFeatureTraitsP = this.get('taskGetTraits').perform());
+  blockFeatureValues(fieldName) {
+    const
+    pName = 'blockFeature' + fieldName + 'P',
+    promise = this[pName] || 
+      (this[pName] = this.get('taskGetValues').perform(fieldName));
+    return promise;
   },
-  /** Call getTraits() in a task - yield the block traits result.
+  /** Call getBlockValues() in a task - yield the block Traits or Ontologys result.
    */
-  taskGetTraits: task(function * () {
-    dLog("block taskGetTraits");
+  taskGetValues: task(function * (fieldName) {
+    const fnName = 'taskGetValues';
+    dLog("block", fnName);
     let blockP =
-      this.get('auth').getBlockFeatureTraits(/*options*/{});
-    let blockTraits = yield blockP;
+        this.get('auth').getBlockValues(fieldName, /*options*/{});
+    let blockValues = yield blockP;
 
     if (trace_block)
-      dLog('taskGetTraits', this, valueOrLength(blockTraits));
+      dLog(fnName, this, valueOrLength(blockValues));
     
-    return blockTraits;
-  }).drop(),
+    return blockValues;
+  }), // .drop(),
 
   /*--------------------------------------------------------------------------*/
 

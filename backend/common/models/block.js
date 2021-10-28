@@ -785,17 +785,28 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
   /*--------------------------------------------------------------------------*/
 
   /** Send a database request to collate feature values.Traits for all blocks of QTL datasets.
-   */
-  Block.blockFeatureTraits = function(options, res, cb) {
-    return Block.blockValues('Trait', options, res, cb);
-  };
-  /** Send a database request to collate feature values.Traits for all blocks of QTL datasets.
+   * @param fieldName 'Trait' or 'Ontology'
    */
   Block.blockValues = function(fieldName, options, res, cb) {
     let
     fnName = 'blockValues',
+    paramError;
+    switch (fieldName) {
+      case 'Trait' :
+      case 'Ontology' :
+      break;
+    default : 
+      paramError = 'invalid fieldName'; //  "' + fieldName + '"';
+      fieldName = null;
+      break;
+    }
+
+    let
     cacheId = fnName,
     result; //  = cache.get(cacheId);
+    if (paramError) {
+      cb(paramError);
+    } else
     if (result) {
       if (trace_block > 1) {
         console.log(fnName, cacheId, 'get', result[0] || result);
@@ -982,9 +993,10 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     description: "Returns an array of blocks with their min&max Feature values."
   });
 
-  Block.remoteMethod('blockFeatureTraits', {
+  Block.remoteMethod('blockValues', {
     accepts: [
       // could add optional param blocks
+      {arg: 'fieldName', type: 'string', required: true},
       {arg: "options", type: "object", http: "optionsFromRequest"},
       {arg: 'res', type: 'object', 'http': {source: 'res'}},
     ],

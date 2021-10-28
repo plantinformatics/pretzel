@@ -264,10 +264,10 @@ export default Service.extend({
     return this._ajax('Blocks/blockFeatureLimits', 'GET', {block, options}, true);
   },
 
-  getBlockFeatureTraits(options) {
+  getBlockValues(fieldName, options) {
     if (trace)
-      dLog('services/auth getBlockFeatureTraits', options);
-    return this._ajax('Blocks/blockFeatureTraits', 'GET', {options}, true);
+      dLog('services/auth getBlockValues', fieldName, options);
+    return this._ajax('Blocks/blockValues', 'GET', {fieldName, options}, true);
   },
 
   getBlockFeaturesInterval(blocks, intervals, options) {

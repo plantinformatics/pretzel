@@ -13,11 +13,12 @@ const dLog = console.debug;
 /** Given an array [ { block, Traits: [ "DSB", ...]}, ...]
  * Group the blocks by : Trait / block.datasetId.parentName / block.scope
  * Trait could be any value; in the current use case it Traits is the union of block.features[*].values.Trait
+ * @param fieldName 'Traits' or 'Ontologies'
  * @return a value-tree
  * @desc
  * related : manage-explorer :  parentAndScope(), addParentAndScopeLevels().
  */
-function blocksParentAndScope(levelMeta, blocksTraits) {
+function blocksParentAndScope(levelMeta, fieldName, blocksTraits) {
 
   let
   /** convert : [ { block, Traits: [ ...]}, ...]
@@ -25,7 +26,7 @@ function blocksParentAndScope(levelMeta, blocksTraits) {
    */
   byTrait = 
     blocksTraits.reduce((result, blockTraits) => {
-      blockTraits.Traits.forEach((trait) => {
+      blockTraits[fieldName].forEach((trait) => {
         (result[trait] ||= []).push(blockTraits.block);
       });
       return result;

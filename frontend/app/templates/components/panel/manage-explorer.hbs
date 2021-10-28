@@ -109,6 +109,16 @@
         {{/let}}
       {{/if}}
         
+      {{#if blockFeatureOntologies.length}}
+        {{#let 'Ontology' as |tabTypeName|}}
+          {{#let (compute (action "datasetTypeTabId" tabTypeName)) as |tabId|}}
+            <nav.item class="active-detail" @active={{bs-eq tab.activeId tabId}}><a href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
+              <div>{{blockFeatureOntologiesTreeKeyLength}}</div>
+            </nav.item>
+          {{/let}}
+        {{/let}}
+      {{/if}}
+        
 
       {{#unless enable_parentBeforeFilter}}
         {{#each-in dataTypedTreeFG as |tabTypeName tabData|}}
@@ -161,6 +171,20 @@
             selectedBlock=selectedBlock
             selectDataset="selectDataset"}}
       {{/if}}
+
+      {{#if blockFeatureOntologies.length}}
+          {{record/entry-tab 
+            tab=tab
+            name='Ontology'
+            values=blockFeatureOntologiesTree.content
+            levelMeta=levelMeta
+            controlOptions=controlOptions
+            loadBlock="loadBlock"
+            selectBlock="selectBlock"
+            selectedBlock=selectedBlock
+            selectDataset="selectDataset"}}
+      {{/if}}
+
 
       {{#unless enable_parentBeforeFilter}}
         {{!-- log 'dataTypedTreeFG' dataTypedTreeFG --}}

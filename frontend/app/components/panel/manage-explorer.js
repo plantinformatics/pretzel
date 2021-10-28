@@ -68,7 +68,7 @@ const selectorExplorer = 'div#left-panel-explorer';
 
 /**
  * CP : blockFeatureTraits
- * @param fieldName Traits or Ontologies
+ * @param fieldName 'Traits' or 'Ontologies'
  */
 function blockValues(fieldName) {
   let ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
@@ -80,7 +80,7 @@ function blockValues(fieldName) {
 
 /** map ._id to .block
  * CP : blockFeatureTraitsBlocks
- * @param fieldName Traits or Ontologies
+ * @param fieldName 'Traits' or 'Ontologies'
  */
 function blockValuesBlocks(fieldName) {
   // 'blockFeatureTraits'
@@ -156,7 +156,7 @@ function blockValuesTree (fieldName) {
   valueP = this.get('blockFeature' + fieldName + 'Name')
     .then((blocksTraits) => {
       let
-      blocksTraitsTree = blocksParentAndScope(this.get('levelMeta'), blocksTraits);
+      blocksTraitsTree = blocksParentAndScope(this.get('levelMeta'), fieldName, blocksTraits);
       this.set('blockFeature' + fieldName + 'TreeKeyLength', Object.keys(blocksTraitsTree).length);
       return blocksTraitsTree;
     });
@@ -290,6 +290,35 @@ export default ManageBase.extend({
     'blockFeatureTraitsName',
     function () { return blockValuesTree.apply(this, ['Traits']); }),
 
+
+  /*--------------------------------------------------------------------------*/
+  /** Implement Ontology tab, as for Trait tab */
+
+  blockFeatureOntologies : computed(
+    'blocksService.blockFeatureOntologies',
+    'apiServers.primaryServer.datasetsBlocks.[]',
+    function () { return blockValues.apply(this, ['Ontologies']); }),
+
+  /** map ._id to .block */
+  blockFeatureOntologiesBlocks : computed(
+    'apiServers.primaryServer.datasetsBlocks.[]',
+    function () { return blockValuesBlocks.apply(this, ['Ontologies']); }),
+
+  blockFeatureOntologiesHistory : computed(
+    'blockFeatureOntologiesBlocks', 'historyView',
+    function () { return blockValuesHistory.apply(this, ['Ontologies']); }),
+
+  blockFeatureOntologiesName : computed(
+    'blockFeatureOntologiesHistory.[]',
+    'nameFilterArray', 'caseInsensitive', 'searchFilterAll',
+    function () { return blockValuesNameFiltered.apply(this, ['Ontologies']); }),
+
+  blockFeatureOntologiesTree : computed(
+    'blockFeatureOntologiesName',
+    function () { return blockValuesTree.apply(this, ['Ontologies']); }),
+
+
+  /*--------------------------------------------------------------------------*/
 
   primaryServerStore : computed(function () {
     return this.get('apiServers').get('primaryServer.store');
