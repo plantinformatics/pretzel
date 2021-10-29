@@ -265,6 +265,7 @@ function qtlList()
     datasetName=$(echo "$i" | fileName2DatasetName);
     echo "fileName=$fileName, datasetName=$datasetName" >> uploadSpreadsheet.log;
     columnsKeyStringPrepare "$i" || return $?
+    server_tmp="$PWD"
     cd ..
     # out=out_json/"$i".json
     outDir=tmp/"$fileDir"/out_json
@@ -325,6 +326,7 @@ function qtlList()
       datasetName=$(echo "$datasetFile" | sed 's/.json$//')
       echo "$outDir/$datasetFile;$datasetName"
     done
+    cd "$server_tmp"
 }
 
 # Prefix tmp/ to the paths in $optionalArgs
