@@ -138,7 +138,7 @@ function blockValuesNameFiltered (fieldName) {
     blocksTraitsP = blocksTraitsP
       .then((blocksTraits) => {
         blocksTraits = blocksTraits
-          .map((blockTraits) => this.blockTraitsFilter(blockTraits, nameFilters))
+          .map((blockTraits) => this.blockTraitsFilter(fieldName, blockTraits, nameFilters))
           .filter((blockTraits) => blockTraits[fieldName].length);
         return blocksTraits;
       });
@@ -559,12 +559,14 @@ export default ManageBase.extend({
     });
     return matchAll;
   },
-  /** Filter blockTraits.Traits by nameFilters */
-  blockTraitsFilter(blockTraits, nameFilters) {
+  /** Filter blockTraits.Traits by nameFilters
+   * @param fieldName 'Traits' or 'Ontologies'
+   */
+  blockTraitsFilter(fieldName, blockTraits, nameFilters) {
     let
-    {Traits, ...copy} = blockTraits,
-    tf = Traits.filter((t) => this.nameMatch(t, nameFilters));
-    copy.Traits = tf;
+    copy = Object.assign({}, blockTraits);
+    copy[fieldName] = copy[fieldName]
+      .filter((t) => this.nameMatch(t, nameFilters));
     return copy;
   },
   /** @return the filterGroup if there is one, and it has a pattern. */
