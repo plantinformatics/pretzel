@@ -102,6 +102,8 @@ module.exports = function(app) {
       context.property == 'namespacesAliases' ||
         // Configuration
       context.property === 'runtimeConfig' ||
+        // Ontology
+      context.property === 'getTree' ||
         // Dataset
       context.property === 'cacheClear' ||
       context.property === 'cacheClearRequests'
