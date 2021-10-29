@@ -1019,8 +1019,13 @@ export default InAxis.extend({
            * equivalent, but maybe not updated : thisAt.get('allocatedWidths.centre.1')
            */
           let rightEdge = thisAt.axis1d.get('axis2d.allocatedWidthsMax.centre');
-          if (rightEdge !== undefined) {
+          let side = thisAt.axis1d.axisS.stack.sideClasses();
+          if (thisAt.axis1d.get('extended') && (rightEdge !== undefined)) {
+            dLog('blockOffset', rightEdge, xOffset, widthSum, side);
             xOffset += rightEdge;
+          } else if (side === 'rightmost') {
+            /** axis tick text is on right side if ! extended and rightmost.  */
+            xOffset += 25;
           }
         }
       }
