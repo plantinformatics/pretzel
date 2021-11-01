@@ -1564,6 +1564,17 @@ ul.view-controls > li > div > .sub-label > span {
   text-align: end;
 }
 
+/* 2 elements adjacent horizontally. */
+.list-group-item.horiz-2
+{
+  display : flex;
+  gap : 7%;
+  & div
+  {
+    width : 50%;
+  }
+}
+
 /*------------------------------------*/
 
 /* used for #left-panel-upload > div > .panel

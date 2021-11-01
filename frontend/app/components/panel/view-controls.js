@@ -378,6 +378,10 @@ export default Component.extend({
    * This initial default value is coordinated with hbs : <input ... value=20 ... diamondWidthInput >
    */
   diamondWidth : 2,
+  /** Horizontal pixel offset for QTL diamond.
+   * This initial default value is coordinated with hbs : <input ... value=0 ... diamondOffsetInput >
+   */
+  diamondOffset : 0,
 
   /*--------------------------------------------------------------------------*/
 
@@ -473,11 +477,21 @@ export default Component.extend({
   },
   diamondWidthInput(event) {
     /** default is 2 * factor : value=20 in hbs */
-    /** input range is [0,100];  desired output values are [0, 10].  */
+    /** input range is [0,100];  desired output values are [0, 10].
+     * event.target.value is a string; / converts to a number.
+     */
     const factor = 100 / 10;
     let value = event.target.value / factor;
     // dLog('diamondWidthInput', varName, value, event.target.value);
     this.set('diamondWidth', value);
+  },
+  diamondOffsetInput(event) {
+    /** default is 0 + xOffset : value=0 in hbs
+     * event.target.value is a string; convert to a number.
+     */
+    let value = +event.target.value;
+    // dLog('diamondOffsetInput', value, event.target.value);
+    this.set('diamondOffset', value);
   },
   titleTextSizeInput(event) {
     const attrName = 'font-size';

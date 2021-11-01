@@ -1027,6 +1027,8 @@ export default InAxis.extend({
             /** axis tick text is on right side if ! extended and rightmost.  */
             xOffset += 25;
           }
+          // dLog('blockOffset', 'diamondOffset', thisAt.controlsView.diamondOffset);
+          xOffset += thisAt.controlsView.diamondOffset;
         }
       }
       if (xOffset === undefined)
@@ -2139,6 +2141,7 @@ export default InAxis.extend({
     'axis1d.currentPosition.yDomain.{0,1}',	// Throttled
     'axis1d.zoomed', 'axis1d.extended', // 'axis1d.featureLength',
     'controlsView.diamondWidth',
+    'controlsView.diamondOffset',
     function() {
       let tracks = this.get('tracksTree');
       let
