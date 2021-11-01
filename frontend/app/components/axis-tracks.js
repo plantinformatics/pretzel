@@ -2072,7 +2072,7 @@ export default InAxis.extend({
   }),
 
   /** @return widths of diamond in qtlBlocks : dataBlocks which contain QTLs */
-  qtlWidths : computed('axis1d.dataBlocks.[]', 'blockComps.[]', function () {
+  qtlWidths : computed('axis1d.dataBlocks.[]', 'blockComps.[]', 'controlsView.diamondWidth', function () {
     let
     qtlBlocks = this.get('qtlBlocks'),
     widths = qtlBlocks.map((block) => {
@@ -2086,7 +2086,7 @@ export default InAxis.extend({
     return widths;
   }),
   /** @return undefined if no qtlBlocks, otherwise max of qtlWidths. */
-  maxQtlWidth : computed('axis1d.dataBlocks.[]', 'blockComps.[]', function () {
+  maxQtlWidth : computed('axis1d.dataBlocks.[]', 'blockComps.[]', 'qtlWidths', function () {
     let
     widths = this.get('qtlWidths'),
     sorted = widths.sort((a,b) => Math.sign(b-a)),
