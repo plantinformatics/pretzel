@@ -1,7 +1,7 @@
 import { isArray } from '@ember/array';
 import { throttle, next, later } from '@ember/runloop';
 import EmberObject, { computed } from '@ember/object';
-import { alias, filter } from '@ember/object/computed';
+import { alias, filter, filterBy } from '@ember/object/computed';
 import $ from 'jquery';
 import { inject as service } from '@ember/service';
 
@@ -647,6 +647,14 @@ export default InAxis.extend({
   /** Number of data blocks shown by this axis-tracks. */
   nTrackBlocks : alias('trackBlocksR.length'),
 
+  /** @return true if any of dataBlocks are QTL. */
+  haveQtlBlocks : computed('axis1d.dataBlocks.[]', function haveQtlBlocks() {
+    let haveQtl = this.axis1d.dataBlocks.any((b) => b.isQTL);
+    return haveQtl;
+  }),
+  /** @return dataBlocks which contain QTLs */
+  qtlBlocks : filterBy('axis1d.dataBlocks', 'isQTL'),
+
   /*--------------------------------------------------------------------------*/
 
   /** currently not called because (quoting from axis-2d comment) : axis-2d
@@ -1107,10 +1115,14 @@ export default InAxis.extend({
       bbox.x = 0;
     /* seems like bbox.x is the left edge of the left-most tracks (i.e. bbox
      * contains the children of gAxis), so use 0 instead. */
-    bbox.y = yrange[0] ;
+    let clipTop = yrange[0];
+    if (thisAt.get('haveQtlBlocks')) {
+      clipTop -= thisAt.get('maxQtlWidth');
+    }
+    bbox.y = clipTop;
     /** + trackWidth for spacing. */
     bbox.width = this.get('combinedWidth') + trackWidth;
-    bbox.height = yrange[1] - yrange[0];
+    bbox.height = yrange[1] - clipTop;
     clipRect
       .attr("x", 0 /*bbox.x*/);
     clipRectA
@@ -2058,6 +2070,32 @@ export default InAxis.extend({
     dLog('blockLayoutWidthSum', widths, blockIds.length, blockIds2.length, this.get('blockComps.length'));
     return widths;
   }),
+
+  /** @return widths of diamond in qtlBlocks : dataBlocks which contain QTLs */
+  qtlWidths : computed('axis1d.dataBlocks.[]', 'blockComps.[]', function () {
+    let
+    qtlBlocks = this.get('qtlBlocks'),
+    widths = qtlBlocks.map((block) => {
+      let
+      blockId = block.id,
+      blockC = this.lookupAxisTracksBlock(blockId),
+      trackWidth = blockC.get('trackWidth') || this.get('trackWidth'),
+      diamondWidth = trackWidth * (this.controlsView.diamondWidth || 1);
+      return diamondWidth;
+    });
+    return widths;
+  }),
+  /** @return undefined if no qtlBlocks, otherwise max of qtlWidths. */
+  maxQtlWidth : computed('axis1d.dataBlocks.[]', 'blockComps.[]', function () {
+    let
+    widths = this.get('qtlWidths'),
+    sorted = widths.sort((a,b) => Math.sign(b-a)),
+    maxWidth = sorted[0];
+    dLog('maxQtlWidth', widths, sorted, maxWidth);
+    return maxWidth;
+  }),
+
+
   /** trackBlocksR are shown using fixed-width space allocated by axis-blocks,
    * except for isSubElements, which use variable width.
    */
