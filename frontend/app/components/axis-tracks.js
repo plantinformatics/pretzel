@@ -1114,15 +1114,20 @@ export default InAxis.extend({
     if (bbox.x < 0)
       bbox.x = 0;
     /* seems like bbox.x is the left edge of the left-most tracks (i.e. bbox
-     * contains the children of gAxis), so use 0 instead. */
-    let clipTop = yrange[0];
+     * contains the children of gAxis), so use 0 instead.
+     */
+    let clip = yrange.slice();
+     /** clip[] is [top, bottom], parallel to yrange[]. */
+    const i_top = 0, i_bottom = 1;
+    const maxQtlWidth = thisAt.get('maxQtlWidth');
     if (thisAt.get('haveQtlBlocks')) {
-      clipTop -= thisAt.get('maxQtlWidth');
+      clip[i_top]    -= maxQtlWidth;
+      clip[i_bottom] += maxQtlWidth;
     }
-    bbox.y = clipTop;
+    bbox.y = clip[i_top];
     /** + trackWidth for spacing. */
     bbox.width = this.get('combinedWidth') + trackWidth;
-    bbox.height = yrange[1] - clipTop;
+    bbox.height = clip[i_bottom] - clip[i_top];
     clipRect
       .attr("x", 0 /*bbox.x*/);
     clipRectA
