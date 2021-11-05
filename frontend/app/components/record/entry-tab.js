@@ -4,7 +4,7 @@ import Evented from '@ember/object/evented';
 import Component from '@ember/component';
 
 import { tab_explorer_prefix, text2EltId } from '../../utils/explorer-tabId';
-import { leafCount } from '../../utils/value-tree';
+import { leafCount, leafCountOntologyTab } from '../../utils/value-tree';
 
 const dLog = console.debug;
 
@@ -31,8 +31,13 @@ export default Component.extend(Evented, {
   autoAllActive : computed('values', function () {
     let values = this.get('values');
     let levelMeta = this.get('levelMeta');
-    /** Walk the value tree and count leaves (blocks). */
-    let count = leafCount(levelMeta, values);
+    let count;
+    if (this.get('name') === 'Ontology') {
+      count = leafCountOntologyTab(levelMeta, values);
+    } else {
+      /** Walk the value tree and count leaves (blocks). */
+      count = leafCount(levelMeta, values);
+    }
     let autoAllActive = count < 50;
     dLog('autoAllActive', this.get('name'), values, autoAllActive, count);
     /* only set when values change; this provides an initial default state which

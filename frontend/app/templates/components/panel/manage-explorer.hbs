@@ -177,7 +177,7 @@
           {{#record/entry-tab 
             tab=tab
             name='Ontology'
-            values=ontologiesTree
+            values=ontologiesTree.content
             levelMeta=levelMeta
             controlOptions=controlOptions
             loadBlock="loadBlock"
@@ -185,12 +185,12 @@
             selectedBlock=selectedBlock
             selectDataset="selectDataset"}}
 
-	    <span style="display: inline-block; margin-left: 3em;">
-	      {{input type="checkbox" name="this.controlOptions.showHierarchy" checked=this.controlOptions.showHierarchy
-		input=(action showHierarchyChanged preventDefault=false)
-		id="checkbox-showHierarchy" }}
-	      <label for="checkbox-showHierarchy"><i class="glyphicon glyphicon-tree-conifer"></i></label>
-	    </span>
+            <span style="display: inline-block; margin-left: 3em;">
+              {{input type="checkbox" name="this.controlOptions.showHierarchy" checked=this.controlOptions.showHierarchy
+                input=(action showHierarchyChanged preventDefault=false)
+                id="checkbox-showHierarchy" }}
+              <label for="checkbox-showHierarchy"><i class="glyphicon glyphicon-tree-conifer"></i></label>
+            </span>
 
           {{/record/entry-tab}}
         {{/if}}

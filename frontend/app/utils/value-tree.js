@@ -75,6 +75,32 @@ function reduceHash(h, fn, result) {
 }
 
 
+/** Similar to reduceHash(); this is specific to the tree returned by
+ * services/data/ontology.js : getTree(), and copied by manage-explorer.js :
+ * mapTree() and treeFor().
+ * The API of the tree used by this function is {id, children : []}.
+ * Analogous to Array .reduce(), call function for each key:value pair of the
+ * input hash, passing & returning result.
+ * @param tree  input tree (object : {id, children : [], .. }
+ * @param fn function(result, parentKey, index, value) -> result
+ * @param result
+ */
+function reduceIdChildrenTree(tree, fn, result) {
+  const fnName = 'reduceIdChildrenTree';
+  // based on mapTree0().
+  dLog(fnName, tree, result);
+  result = tree.children.reduce((result1, childNode, i) => {
+    result1 = fn(result1, tree.id, i, childNode);
+    if (Ember.isArray(childNode.children)) {
+      result1 = reduceIdChildrenTree(childNode, fn, result1);
+    }
+    return result1;
+  }, result);
+
+  return result;
+}
+
+
 /*============================================================================*/
 
 /* global d3 */
@@ -191,4 +217,41 @@ function leafCount(levelMeta, values) {
 
 /*----------------------------------------------------------------------------*/
 
-export { mapHash, forEachHash, reduceHash, justUnmatched, logV, leafCount };
+
+/** Count blocks in Ontology tree.
+ */
+function leafCountIdChildrenTree(levelMeta, tree) {
+  function addCount(result1, parentKey, index, value) {
+    if (value.node) {
+      result1 = value.node.reduce((result2, parentGroup) => result2 += leafCount(levelMeta, parentGroup), result1);
+    }
+    return result1;
+  };
+  let result = reduceIdChildrenTree(tree, addCount, 0);
+  return result;
+}
+
+
+function leafCountOntologyTab(levelMeta, values) {
+  let count;
+  let dataTypeName = levelMeta.get(values);
+  switch (dataTypeName) {
+  case 'Groups' :
+    count = reduceHash(
+      values,
+      (result, key, value) => result += leafCount(levelMeta, value),
+      0);
+    break;
+  case 'term' : count = leafCountIdChildrenTree(levelMeta, values);
+    break;
+  default :
+    dLog('autoAllActive', dataTypeName, values);
+    break;
+  }
+  return count;
+}
+
+
+/*----------------------------------------------------------------------------*/
+
+export { mapHash, forEachHash, reduceHash, reduceIdChildrenTree, justUnmatched, logV, leafCount, leafCountOntologyTab };
