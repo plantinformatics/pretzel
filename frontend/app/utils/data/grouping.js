@@ -65,7 +65,9 @@ function blocksParentAndScope2(levelMeta, blocks) {
     .key(scopeOfBlock)
     .entries(blocks);
   let parentObjects = fromNestedParentAndScope(levelMeta, nested);
-  dLog('blocksParentAndScope2', nested, parentObjects);
+  if (trace_values > 1) {
+    dLog('blocksParentAndScope2', nested, parentObjects);
+  }
   return parentObjects;
 }
 

@@ -53,12 +53,34 @@ function forEachHash(h, fn) {
 }
 
 
+/** Analogous to Array .reduce(), call function for each key:value pair of the
+ * input hash, passing & returning result.
+ * Similar to mapHash().
+ * @param h  input hash (object)
+ * @param fn function(result, key, value) -> result
+ * @param result
+ */
+function reduceHash(h, fn, result) {
+  const fnName = 'reduceHash';
+  // based on mapHash().
+  dLog(fnName, h, result);
+  for (var key in h) {
+    if (h.hasOwnProperty(key)) {
+      let value = h[key];
+      dLog(fnName, key, value, result);
+      result = fn(result, key, value);
+    }
+  }
+  return result;
+}
+
+
 /*============================================================================*/
 
 /* global d3 */
 
 /**
- * @return true if value is just {unmatched : ... }, i.e. it is an objet with
+ * @return true if value is just {unmatched : ... }, i.e. it is an object with
  * only 1 key, and that key is 'unmatched'.
  */
 function justUnmatched(value) {
@@ -169,4 +191,4 @@ function leafCount(levelMeta, values) {
 
 /*----------------------------------------------------------------------------*/
 
-export { mapHash, forEachHash, justUnmatched, logV, leafCount };
+export { mapHash, forEachHash, reduceHash, justUnmatched, logV, leafCount };

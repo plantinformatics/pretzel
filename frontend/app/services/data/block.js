@@ -774,7 +774,7 @@ export default Service.extend(Evented, {
     const fnName = 'getBlocksLimits';
     let taskGet = this.get('taskGetLimits');
     console.log("getBlocksLimits", blockId);
-      let p =  new Promise(function(resolve, reject){
+      let p =  new Promise((resolve, reject) => {
         later(() => {
           let
           blocksTask = taskGet.perform(blockId)

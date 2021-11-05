@@ -327,6 +327,14 @@ export default Service.extend({
     return this._ajax('Datasets', 'POST', JSON.stringify({name: name}), true)
   },
 
+  /*--------------------------------------------------------------------------*/
+
+  ontologyGetTree(options) {
+    return this._ajax('Ontologies/getTree', 'GET', {options}, true);
+  },
+
+  /*--------------------------------------------------------------------------*/
+
   checkError(data, mapper) {
     // dLog('checkError')
     try {

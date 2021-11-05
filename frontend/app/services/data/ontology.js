@@ -33,7 +33,8 @@ function urlFor(apiName, param) {
  * ontologies such as www.cropOntology.org.
  */
 export default Service.extend({
-  ajax: service(),
+  ajax : service(),
+  auth : service(),
 
   /** object [ontologyId] -> json */
   ontologies : EmberObject.create(),
@@ -122,7 +123,26 @@ export default Service.extend({
       });
 
     return p;
-  }
+  },
+
+  /*--------------------------------------------------------------------------*/
+
+  getTree() {
+    const fnName = 'getTree';
+
+    let tree = this.get('tree');
+    if (! tree) {
+      dLog(fnName);
+      let
+      promise =
+        this.get('auth').ontologyGetTree(/*options*/{});
+      promise.then((t) => (trace > 1) && dLog(fnName, tree));
+      tree = promise;
+    }
+    return tree;
+  },
+
+  /*--------------------------------------------------------------------------*/
 
 });
 

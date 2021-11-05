@@ -7,6 +7,9 @@
     Expand the tree of datasets displayed in the explorer, showing all the results of the filter / grouping.
   {{/ember-tooltip}}
 {{/elem/icon-toggle}}
+
+{{yield}}
+
 <ul class="list-group borderless">
   {{record/entry-values values=values levelMeta=levelMeta
     controlOptions=controlOptions

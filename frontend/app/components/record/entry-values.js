@@ -168,6 +168,22 @@ export default EntryBase.extend({
     return isMap;
   }),
 
+  /*--------------------------------------------------------------------------*/
+
+  valuesIsOntologyTree : computed('values', function () {
+    // this.levelMeta.get(values) === "term" or "trait"
+    function isOntologyTreeFn (values) {
+      return values && 
+      values.hasOwnProperty('id') && (typeof values.id === 'string') &&
+      values.hasOwnProperty('type') && (typeof values.type === 'string') && 
+      values.hasOwnProperty('children') && ((typeof values.children === 'boolean') || Ember.isArray(values.children));
+    };
+    let is = this.valuesIs(isOntologyTreeFn);
+    return is;
+  }),
+
+  /*--------------------------------------------------------------------------*/
+
   /** The template uses this to display the values sorted in key order.
    * (Using {{#each-in values as |key value|}} doesn't sort by key.)
    * This could also support valuesIsMap.
@@ -176,8 +192,11 @@ export default EntryBase.extend({
    */
   keyValuesSorted : computed('valuesIsObject', 'controlOptions.{historyView,historyBlocks}', function () {
     let array;
+    let values = this.get('values');
+    if (values.then && ! (values = values._result || values.content)) {
+      dLog('keyValuesSorted', this.get('values'));
+    } else
     if (this.get('valuesIsObject')) {
-      let values = this.get('values');
       let o = this.controlOptions,
           recent = o.historyView === 'Recent',
           levelMeta = this.levelMeta;
@@ -273,8 +292,10 @@ export default EntryBase.extend({
       (dataTypeName === 'Scopes') ? 'record/entry-values' :
       (dataTypeName === 'Groups') ? 'record/entry-values' :
       (dataTypeName === 'Group') ? 'record/entry-values' :
+      (dataTypeName === 'term') ? 'record/entry-level' :
+      (dataTypeName === 'trait') ? 'record/entry-node' :
       undefined;
-    if (trace_entryValues)
+    if (trace_entryValues > 1)
       console.log('levelComponent', values, isMap, dataTypeName, component);
     return component;
   },

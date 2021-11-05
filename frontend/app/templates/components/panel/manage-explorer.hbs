@@ -113,7 +113,7 @@
         {{#let 'Ontology' as |tabTypeName|}}
           {{#let (compute (action "datasetTypeTabId" tabTypeName)) as |tabId|}}
             <nav.item class="active-detail" @active={{bs-eq tab.activeId tabId}}><a href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
-              <div>{{blockFeatureOntologiesTreeKeyLength}}</div>
+              <div>{{ontologiesTreeKeyLength}}</div>
             </nav.item>
           {{/let}}
         {{/let}}
@@ -173,16 +173,27 @@
       {{/if}}
 
       {{#if blockFeatureOntologies.length}}
-          {{record/entry-tab 
+        {{#if ontologiesTree.isFulfilled}}
+          {{#record/entry-tab 
             tab=tab
             name='Ontology'
-            values=blockFeatureOntologiesTree.content
+            values=ontologiesTree
             levelMeta=levelMeta
             controlOptions=controlOptions
             loadBlock="loadBlock"
             selectBlock="selectBlock"
             selectedBlock=selectedBlock
             selectDataset="selectDataset"}}
+
+	    <span style="display: inline-block; margin-left: 3em;">
+	      {{input type="checkbox" name="this.controlOptions.showHierarchy" checked=this.controlOptions.showHierarchy
+		input=(action showHierarchyChanged preventDefault=false)
+		id="checkbox-showHierarchy" }}
+	      <label for="checkbox-showHierarchy"><i class="glyphicon glyphicon-tree-conifer"></i></label>
+	    </span>
+
+          {{/record/entry-tab}}
+        {{/if}}
       {{/if}}
 
 

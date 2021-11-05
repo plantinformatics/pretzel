@@ -51,7 +51,11 @@ exports.ontologyGetChildren = async function ontologyGetChildren(o) {
     }
     if (result.children.length) {
       let co = [];
-      for (let i=0; i <= 1 /*result.children.length*/; i++) {
+      // use 2 instead of .length for a small result for development.
+      for (let i=0; i < result.children.length; i++) {
+        if (! result.children[i]) {
+          console.log(fnName, result, result.children.length, i, result.children);
+        }
         let c1 = result.children[i],
           c2 = await ontologyGetChildren(c1);
         co.push(c2);

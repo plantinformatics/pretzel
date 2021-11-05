@@ -63,6 +63,20 @@
     {{/with}}
   {{/each}}
 
+{{else if valuesIsOntologyTree}}
+  {{!-- log 'valuesIsOntologyTree:each' --}}
+
+  {{#each values.children as |value index|}}
+    {{!-- log  'value' value 'index' index 'levelComponent' values_levelComponent --}}
+    {{record/entry-values values=value levelMeta=levelMeta
+      parentName=values.id
+      loadBlock="loadBlock"
+      controlOptions=controlOptions
+      selectBlock="selectBlock"
+      selectedBlock=selectedBlock
+      selectDataset=(action 'selectDataset')}}
+  {{/each}}
+
 {{else if valuesIsObject }}
   {{!-- log 'each-in' --}}
 

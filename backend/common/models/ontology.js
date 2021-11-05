@@ -8,18 +8,52 @@ var { ontologyGetTree } = require('../utilities/get-ontology');
 /* global require */
 /* global module */
 
+const cacheLibraryName = '../utilities/results-cache'; // or 'memory-cache' (same API)
+var cache = require(cacheLibraryName);
+
+/*----------------------------------------------------------------------------*/
+
+const trace = 1;
+
+/*----------------------------------------------------------------------------*/
+
+
 module.exports = function(Ontology) {
 
   /*--------------------------------------------------------------------------*/
 
   Ontology.getTree = function (cb) {
-    const fnName = 'getTree';
-    var ontologyTreeP = ontologyGetTree();
-    ontologyTreeP.then((ontologyTree) => {
-      console.log(fnName, ontologyTree);
-      cb(null, ontologyTree);
-    })
-      .catch((err) => cb(err));
+    const
+    fnName = 'getTree',
+    /** param root (or species name) will be added, to support other species.  */
+    root = "CO_321",
+    paramError = ! root.match(/^CO_[0-9]{3}$/),
+    cacheId = fnName, // + root
+    /** define refreshCache true to replace the cached result. */
+    refreshCache = false,
+    result = ! refreshCache && cache.get(cacheId);
+    if (paramError) {
+      cb(paramError);
+    } else
+      if (result) {
+        if (trace /*> 1*/) {
+          console.log(fnName, cacheId, 'get', result[0] || result);
+        }
+        cb(null, result);
+      } else {
+        let
+        ontologyTreeP = ontologyGetTree();
+        ontologyTreeP.then((ontologyTree) => {
+          console.log(fnName, ontologyTree);
+          if (trace /*> 1*/) {
+            console.log(fnName, cacheId, 'put', ontologyTree);
+          }
+          cache.put(cacheId, ontologyTree);
+          cb(null, ontologyTree);
+        })
+        // signature of .catch() error function matches cb : (err)
+          .catch(cb);
+      }
   };
 
   /*--------------------------------------------------------------------------*/
