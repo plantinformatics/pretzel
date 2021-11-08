@@ -90,7 +90,10 @@ export default Component.extend({
             this.set('aliases', aliasFeatureNames);
           }
           dLog("getBlocksOfFeatures", selectedFeatureNames[0], features);
+
           
+          let featuresAliases = this.features2Aliases(selectedFeatureNames, features, result.aliases);
+          this.set('featuresAliases', featuresAliases);
 
           /** copy feature search results to the list of clicked features,
            * for which triangles are displayed.  */
@@ -150,6 +153,34 @@ export default Component.extend({
 
         });
   },
+
+  /*------------------------------------------------------------------------------*/
+
+  /** Given the features and aliases resulting from featureAliasSearch(),
+   * determine which features were the result of an alias match.
+   * @param featureNames  selectedFeatureNames
+   */
+  features2Aliases(featureNames, features, aliases) {
+    let
+    searchNames = featureNames.reduce((result, name) => { result.add(name); return result;}, new Set()),
+    aliasesOfName = aliases.reduce((result, alias) => {
+      (result[alias.string1] ||= []).push(alias.string2);
+      (result[alias.string2] ||= []).push(alias.string1);
+      return result;
+    }, {}),
+    featureNamesSource = features.reduce((result, f) => {
+      let name = f.name, aliasA;
+      /** multiple features may have the same name, and hence the same aliases. */
+      if (! searchNames.has(name) && ! result[name] && (aliasA = aliasesOfName[name])) {
+        result[name] = aliasA; }
+      return result;
+    }, {});
+    dLog('features2Aliases', featureNamesSource, featureNames, features, aliases, searchNames, aliasesOfName);
+    return featureNamesSource;
+  },
+
+  /*------------------------------------------------------------------------------*/
+
 
   /** didRender() is called in this component and in the child component
    * feature-list for each keypress in {{input value=featureNameList}} in the

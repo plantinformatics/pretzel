@@ -21,6 +21,11 @@
     {{#each features as |feature|}}
     <li>
       {{feature.name}}
+      {{#with (compute (action this.featureHasAliases feature.name) ) as |featureAliases| }}
+        {{#if featureAliases}}
+          [&nbsp;{{featureAliases}} ]
+        {{/if}}
+      {{/with}}
     </li>
     {{/each}}
   </ul>
