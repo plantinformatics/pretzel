@@ -158,7 +158,13 @@ export default Component.extend({
 
   /** Given the features and aliases resulting from featureAliasSearch(),
    * determine which features were the result of an alias match.
+   * Calculate the mapping from feature name to aliases for both :
+   * . search: the search input feature names, and
+   * . result: the result features which are not in the the search input feature names
    * @param featureNames  selectedFeatureNames
+   * @return {search, result} : 2 objects mapping from search input feature names
+   * and result feature names, respectively,
+   * to matched aliases (names)
    */
   features2Aliases(featureNames, features, aliases) {
     let
@@ -168,15 +174,18 @@ export default Component.extend({
       (result[alias.string2] ||= []).push(alias.string1);
       return result;
     }, {}),
-    featureNamesSource = features.reduce((result, f) => {
-      let name = f.name, aliasA;
+    searchAliases = featureNames.reduce(collateAliasesOfNames, {}),
+    featureNamesSource = features.reduce((result, f) => collateAliasesOfNames(result, f.name), {});
+    function collateAliasesOfNames(result, name) {
+      let aliasA;
       /** multiple features may have the same name, and hence the same aliases. */
-      if (! searchNames.has(name) && ! result[name] && (aliasA = aliasesOfName[name])) {
+      if (! result[name] && (aliasA = aliasesOfName[name])) {
         result[name] = aliasA; }
       return result;
-    }, {});
-    dLog('features2Aliases', featureNamesSource, featureNames, features, aliases, searchNames, aliasesOfName);
-    return featureNamesSource;
+    };
+    let results = {search : searchAliases, result : featureNamesSource};
+    dLog('features2Aliases', results, featureNames, features, aliases, searchNames, aliasesOfName);
+    return results;
   },
 
   /*------------------------------------------------------------------------------*/

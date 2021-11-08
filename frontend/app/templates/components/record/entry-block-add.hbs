@@ -25,7 +25,7 @@
       {{feature.name}}
       {{#with (compute (action this.featureHasAliases feature.name) ) as |featureAliases| }}
         {{#if featureAliases}}
-          [&nbsp;{{featureAliases}} ]
+          (&nbsp;{{featureAliases}} )
         {{/if}}
       {{/with}}
     </li>

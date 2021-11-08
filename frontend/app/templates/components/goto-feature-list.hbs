@@ -25,11 +25,11 @@
 
   {{#if this.matchAliases }}
     <div>
-      <span>Aliases</span>
+      <span>Aliases found :</span>
       <ul style="list-style:none">
-        {{#each this.aliases as |alias|}}
-          <li>{{alias}}</li>
-        {{/each}}
+        {{#each-in featuresAliases.search as |aliasedFeature aliases|}}
+          <li>{{aliasedFeature}} ( {{aliases}} )</li>
+        {{/each-in}}
       </ul>
     </div>
   {{/if}}
@@ -68,7 +68,7 @@
 
   {{!-- →	&#8594;	&rarr;	RIGHTWARDS ARROW --}}
 
-  <div style="clear:both">
+  <div style="clear:both; margin-top : 4ex;">
     {{#if blocksOfFeatures.length}}
       <span class="badge">
         {{blocksOfFeatures.length}}
@@ -83,7 +83,7 @@
       {{record/entry-block-add
         entry=block.key.record
         features=block.values
-        featuresAliases=this.featuresAliases
+        featuresAliases=this.featuresAliases.result
         loadBlock="loadBlock"
       }}
     </li>
