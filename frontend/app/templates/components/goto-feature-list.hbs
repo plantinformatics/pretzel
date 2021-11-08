@@ -7,13 +7,13 @@
   {{#if false}}	{{!-- debug trace --}}
     <div>
       <ul class="list-group">
-	{{#each selectedFeatures key="Feature" as |feature|}}
-	  <li class="list-group-item">
+        {{#each selectedFeatures key="Feature" as |feature|}}
+          <li class="list-group-item">
             {{ feature.Chromosome }}
             {{ feature.Feature }}
             {{ feature.Position }}
-	  </li>
-	{{/each}}
+          </li>
+        {{/each}}
       </ul>
     </div>
   {{/if}}
@@ -22,6 +22,24 @@
   {{#if serverTabSelected }}
     <div>Search Server: {{ serverTabSelected }} </div>
   {{/if}}
+
+  {{#if this.matchAliases }}
+    <div>
+      <span>Aliases</span>
+      <ul style="list-style:none">
+        {{#each this.aliases as |alias|}}
+          <li>{{alias}}</li>
+        {{/each}}
+      </ul>
+    </div>
+  {{/if}}
+
+  <span style="display: inline-block;">
+    {{input type="checkbox" name="this.matchAliases" checked=this.matchAliases
+      input=(action matchAliasesChanged preventDefault=false)
+      id="checkbox-matchAliases" }}
+    <label for="checkbox-matchAliases">Match aliases</label>
+  </span>
 
 
   {{!-- same icon as button-refresh, but override colour.
@@ -50,13 +68,13 @@
 
   {{!-- →	&#8594;	&rarr;	RIGHTWARDS ARROW --}}
 
-  {{#if blocksOfFeatures.length}}
-    <span class="badge">
-      {{blocksOfFeatures.length}}
-    </span>
-  {{/if}}
-
-  <div style="clear:both; height:1em"></div>
+  <div style="clear:both">
+    {{#if blocksOfFeatures.length}}
+      <span class="badge">
+        {{blocksOfFeatures.length}}
+      </span>
+    {{/if}}
+  </div>
 </div>
 
 <ul class="list-group blocks-found">
@@ -64,7 +82,7 @@
     <li class="list-group-item">
       {{record/entry-block-add
         entry=block.key.record
-	features=block.values
+        features=block.values
         loadBlock="loadBlock"
       }}
     </li>

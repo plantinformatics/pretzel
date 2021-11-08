@@ -1,5 +1,7 @@
 'use strict';
 
+/*----------------------------------------------------------------------------*/
+
 const Queue = require('promise-queue');
 
 /*----------------------------------------------------------------------------*/
@@ -12,6 +14,11 @@ var acl = require('../utilities/acl')
 const { childProcess } = require('../utilities/child-process');
 var upload = require('../utilities/upload');
 var { filterBlastResults } = require('../utilities/sequence-search');
+
+/*----------------------------------------------------------------------------*/
+
+const trace = 1;
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -32,6 +39,7 @@ function sessionIndex(sessionId) {
   }
   return index;
 }
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -64,6 +72,38 @@ module.exports = function(Feature) {
     })
   };
 
+  /*--------------------------------------------------------------------------*/
+
+  /** Search for Aliases matching the given list of Feature names,
+   * then search for Features matching the Feature names or Aliases.
+   */
+  Feature.aliasSearch = function(featureNames, options, cb) {
+    const fnName = 'aliasSearch';
+    let aliasesP = Feature.app.models.Alias.stringSearch(featureNames);
+    aliasesP
+      .toArray()
+      .then((aliases) => {
+      let aliasNames = aliases.reduce((result, a) => {
+        result.push(a.string1);
+        result.push(a.string2);
+        return result;
+      }, []);
+      let aliasAndFeatureNames = featureNames.concat(aliasNames);
+        let featuresP = Feature.search(/*blockId*/undefined, aliasAndFeatureNames, options, searchCb);
+        function searchCb(err, features) {
+          if (err) {
+            console.log(fnName, 'ERROR', err, featureNames.length || featureNames);
+            cb(err);
+          } else {
+            let fa = {aliases, features};
+            cb(null, fa);
+          }
+        };
+      });
+  };
+
+  /*--------------------------------------------------------------------------*/
+
   Feature.depthSearch = function(blockId, depth, options, cb) {
     let include_n_level_features = function(includes, n) {
       if (n < 1) {
@@ -82,6 +122,8 @@ module.exports = function(Feature) {
       return process.nextTick(() => cb(null, features));
     });
   };
+
+  /*--------------------------------------------------------------------------*/
 
   /**
    * @param data contains :
@@ -186,6 +228,16 @@ module.exports = function(Feature) {
     http: {verb: 'get'},
     returns: {arg: 'features', type: 'array'},
     description: "Returns features and their datasets given an array of feature names"
+  });
+
+  Feature.remoteMethod('aliasSearch', {
+    accepts: [
+      {arg: 'featureNames', type: 'array', required: true},
+      {arg: "options", type: "object", http: "optionsFromRequest"}
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'object', root: true},
+    description: "Given an array of feature names, returns matching aliases and features matching the aliases"
   });
 
   Feature.remoteMethod('depthSearch', {

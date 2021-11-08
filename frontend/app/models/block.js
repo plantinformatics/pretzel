@@ -1290,7 +1290,7 @@ export default Model.extend({
 
       let taskGet = this.get('blockService').get('getBlocksOfFeatures');
 
-      blockTask = taskGet.perform(apiServer, parentBlock.id, featureNames);
+      blockTask = taskGet.perform(apiServer, /*matchAliases*/true, parentBlock.id, featureNames);
       blockTask
         .then((features) => {
           dLog('referencedFeatures', featureNames[0], featureNames.length, features.length);

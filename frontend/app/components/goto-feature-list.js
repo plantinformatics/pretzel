@@ -18,6 +18,8 @@ export default Component.extend({
 
   serverTabSelected : alias('controls.serverTabSelected'),
 
+  matchAliases : true,
+
   /*----------------------------------------------------------------------------*/
   actions : {
     loadBlock(block) {
@@ -49,6 +51,13 @@ export default Component.extend({
     }
   }, // actions
 
+  matchAliasesChanged(value) {
+    dLog('matchAliasesChanged', value, this.matchAliases);
+  },
+
+
+  /*------------------------------------------------------------------------------*/
+
   /** From the result of feature search, group by block.
    * The result is expressed in 2 forms, for different presentations :
    * . set in .blocksOfFeatures for display in goto-feature-list.hbs
@@ -64,9 +73,24 @@ export default Component.extend({
       apiServer = serverTabSelected || this.get('apiServers.primaryServer');
 
       let taskGet = this.get('taskGet'); // blockService.get('getBlocksOfFeatures');
-      let blockTask = taskGet.perform(apiServer, /*blockId*/ undefined, selectedFeatureNames)
-        .then((features) => {
+      let matchAliases = this.matchAliases;
+      let blockTask = taskGet.perform(apiServer, matchAliases, /*blockId*/ undefined, selectedFeatureNames)
+        .then((result) => {
+          /** result is : matchAliases ? {features, aliases} : [feature, ...] */
+          let features = matchAliases ? result.features : result;
+          if (matchAliases) {
+            let
+            aliasFeatureNamesSet = result.aliases
+              .reduce((result, a) => {
+                result.add(a.string1);
+                result.add(a.string2);
+                return result;
+              }, new Set()),
+            aliasFeatureNames = Array.from(aliasFeatureNamesSet);
+            this.set('aliases', aliasFeatureNames);
+          }
           dLog("getBlocksOfFeatures", selectedFeatureNames[0], features);
+          
 
           /** copy feature search results to the list of clicked features,
            * for which triangles are displayed.  */

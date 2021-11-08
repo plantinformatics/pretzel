@@ -287,6 +287,16 @@ export default Service.extend({
     return this._ajax('Features/search', 'GET', {server : apiServer, blockId, filter : featureNames, options}, true);
   },
 
+  /** Search for Aliases matching the given list of Feature names in featureNames[],
+   * and search for Features matching the Aliases or Feature names.
+   * @param featureNames  array of Feature name strings
+   */
+  featureAliasSearch(apiServer, featureNames, options) {
+    if (trace_paths)
+      dLog('services/auth featureAliasSearch', featureNames, options);
+    return this._ajax('Features/aliasSearch', 'GET', {server : apiServer, featureNames, options}, true);
+  },
+
   /** Request DNA sequence search (Blast).
    * @param dnaSequence string "atgcn..."
    * @param parent  datasetId of parent / reference of the blast db which is to be searched
