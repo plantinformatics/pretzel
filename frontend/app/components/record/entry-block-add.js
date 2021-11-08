@@ -1,3 +1,7 @@
+import { computed } from '@ember/object';
+
+/*----------------------------------------------------------------------------*/
+
 import EntryBase from './entry-base';
 
 /*----------------------------------------------------------------------------*/
@@ -17,6 +21,27 @@ export default EntryBase.extend({
   }, // actions
   /*--------------------------------------------------------------------------*/
 
+  
+  clicked : false,
+  toggleClicked() {
+    this.toggleProperty('clicked');
+    /** click off forces close, regardless of hover. */
+    if (! this.clicked) {
+      this.set('hovered', false);
+    }
+  },
+  hovered : false,
+  enter() {
+    this.set('hovered', true);
+  },
+  leave() {
+    this.set('hovered', false);
+  },
+  showToggleablePopover : computed('clicked', 'hovered', function () {
+    return this.clicked || this.hovered;
+  }),
+
+
   featureHasAliases(featureName) {
     /** array of aliases which mapped to this feature name. */
     let
@@ -27,6 +52,7 @@ export default EntryBase.extend({
     dLog('featureHasAliases', aliases, featureName /*, aliasNames*/);
     return aliasNames;
   },
+
 
 
 });

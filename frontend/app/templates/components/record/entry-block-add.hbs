@@ -12,11 +12,13 @@
 {{!-- namespace is often too long; maybe fold it;  omit for now. --}}
 {{!-- entry.namespace --}}
 <span>
-  <span class="badge" style="background-color: #999;">
+  <button class="badge btn btn-xs" style="background-color: #999;"
+    onClick={{action this.toggleClicked}}
+    onmouseover={{action this.enter}} onmouseout={{action this.leave}} >
     {{entry.count}}
-  </span>
+  </button>
 
-  {{#ember-popover side="auto" popperContainer="body"}}
+  {{#ember-popover side="auto" popperContainer="body" isShown=this.showToggleablePopover event="none" }}
   <ul class='feature-found'>
     {{#each features as |feature|}}
     <li>
