@@ -15,9 +15,12 @@ import {
          storePath
        } from "../../utils/draw/collate-paths";
 
-let trace_pathsP = 0;
-
 import { blockAdjKeyFn } from '../../utils/draw/stacksAxes';
+import { promiseText } from '../../utils/ember-devel';
+
+/*----------------------------------------------------------------------------*/
+
+let trace_pathsP = 0;
 
 /* global Promise */
 
@@ -54,12 +57,6 @@ function verifyFeatureRecord(fr, f) {
   return same;
 }
 
-/** Used when result paths is a promise;  simply shows 'pending'.
- */
-function promiseText(promise) {
-  // Some types of promise used may have not .state().
-  return (promise.state && promise.state()) || promise;
-}
 
 //------------------------------------------------------------------------------
 
@@ -609,7 +606,9 @@ export default Service.extend({
       dLog(fnName, ' not found:', blockId);
     }
     else {
-      let t = this.get('getBlockFeaturesIntervalTask');
+      /** blockId === block.id. so param blockId might be dropped, having moved
+       * getBlockFeaturesIntervalTask() from this service to models/block.js */
+      let t = block.get('getBlockFeaturesIntervalTask');
       features = t.perform(blockId, all)
         .catch((error) => {
           let lastResult;
@@ -636,20 +635,6 @@ export default Service.extend({
     }
     return features;
   },
-
-  getBlockFeaturesIntervalTask : task(function* (blockId, all) {
-    let
-      fnName = 'getBlockFeaturesIntervalTask',
-      features = yield this.requestBlockFeaturesInterval(blockId, all);
-      if (trace_pathsP)
-        dLog(fnName, blockId, all, promiseText(features));
-    return features;
-    /* tried .enqueue().maxConcurrency(3), but got 2 identical requests, so .drop() instead;
-     * Perhaps later: split requestBlockFeaturesInterval() into parameter gathering and request;
-     * the latter function becomes the task; store last request params with the corresponding task;
-     * check request params against last and if match then return that task perform result.
-     */
-  }).drop(),
 
 
 
