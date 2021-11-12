@@ -4,8 +4,10 @@ import Component from '@ember/component';
 import { observer } from '@ember/object';
 import { computed } from '@ember/object';
 import { inject as service } from '@ember/service';
+import { later } from '@ember/runloop';
 
 
+import { featureEdit } from '../components/form/feature-edit';
 import { eltClassName } from '../utils/domElements';
 
 import config from '../config/environment';
@@ -13,8 +15,60 @@ import config from '../config/environment';
 /* global d3 */
 /* global Handsontable */
 
+/*----------------------------------------------------------------------------*/
+
 const trace = 0;
 const dLog = console.debug;
+
+/*----------------------------------------------------------------------------*/
+
+let formFeatureEditEnable;
+
+class FeatureEditor extends Handsontable.editors.BaseEditor {
+  createElements() {
+    super.createElements();
+
+    this.wrapperDiv = this.hot.rootDocument.createElement('div');
+    dLog('featureEdit', featureEdit, this.wrapperDiv);
+    this.wrapperDiv.setAttribute('id', 'formFeatureEditTarget');
+
+    this.wrapperDiv.setAttribute('data-hot-input', true); // Makes the element recognizable by HOT as its own component's element.
+    this.wrapperdivStyle = this.WRAPPERDIV.style;
+    this.wrapperdivStyle.width = 0;
+    this.wrapperdivStyle.height = 0;
+
+    Handsontable.dom.empty(this.WRAPPERDIV_PARENT);
+    this.WRAPPERDIV_PARENT.appendChild(this.WRAPPERDIV);
+  }
+  init() {
+    dLog('init');
+  }
+  beginEditing(newInitialValue, event) {
+    dLog('beginEditing', newInitialValue, event);
+    super.beginEditing(newInitialValue, event);
+    formFeatureEditEnable(this);
+  }
+  getValue() {
+    dLog('getValue');
+  }
+  setValue(newValue /* Mixed*/) {
+    dLog('setValue', newValue);
+  }
+  open() {
+    dLog('open', this, this.TD);
+    formFeatureEditEnable(this);
+  }
+  close() {
+    dLog('close', this);
+    formFeatureEditEnable(undefined);
+  }
+  focus() {
+    dLog('focus');
+  }
+
+}
+
+/*----------------------------------------------------------------------------*/
 
 /** Provide default types for feature .values fields
  */
@@ -27,6 +81,8 @@ const featureValuesColumnsAttributes = {
   ref : { className: "htCenter"},
   alt : { className: "htCenter"},
   Reference : {className : 'htNoWrap' },
+  Ontology : { editor : FeatureEditor },
+  Trait : { editor : FeatureEditor },
 };
 /** Provide default widths for feature .values fields
  */
@@ -34,6 +90,11 @@ const featureValuesWidths = {
   ref : 40,
   alt : 40,
 };
+
+
+
+/*----------------------------------------------------------------------------*/
+
 
 
 export default Component.extend({
@@ -61,9 +122,13 @@ export default Component.extend({
 
   },
 
+  formFeatureEditEnable : false,
 
   didInsertElement() {
+    this._super(...arguments);
     dLog("components/table-brushed.js: didInsertElement");
+
+    formFeatureEditEnable = (enable) => later(() => this.set('formFeatureEditEnable', enable));
   },
 
   /** Destroy the HandsOnTable so that it does not clash with the HandsOnTable
@@ -82,6 +147,8 @@ export default Component.extend({
 
 
   didRender() {
+    this._super(...arguments);
+
     dLog("components/table-brushed.js: didRender");
     let table = this.get('table');
     if (table === undefined)
@@ -211,8 +278,9 @@ export default Component.extend({
       me.afterSelection(this, row, col);
     }
 
+      let data = this.get('dataForHoTable');
       var table = new Handsontable(tableDiv, {
-        data: this.get('dataForHoTable') || [['', '', '']],
+        data: data || [['', '', '']],
         minRows: 1,
         rowHeaders: true,
         columns,
@@ -240,6 +308,8 @@ export default Component.extend({
         outsideClickDeselects: false
       });
       that.set('table', table);
+      this.setRowAttributes(table);
+
       $("#table-brushed").on('mouseleave', function(e) {
         that.highlightFeature();
       }).on("mouseover", function(e) {
@@ -255,6 +325,17 @@ export default Component.extend({
         }
         that.highlightFeature();
       });
+  },
+
+  /** Assign Feature reference to each row. */
+  setRowAttributes(table) {
+    let data = this.get('data');
+    // table.countRows()
+    data.forEach((feature, row) => {
+      let cell = table.getCell(row, 0),
+          tr = cell?.parentElement;
+      tr.__dataPretzelFeature__ = feature.feature;
+    });
   },
 
   afterSelection(table, row, col) {
@@ -325,3 +406,5 @@ export default Component.extend({
 
 
 });
+
+/*----------------------------------------------------------------------------*/
