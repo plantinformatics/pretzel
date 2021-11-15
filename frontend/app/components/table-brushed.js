@@ -50,6 +50,7 @@ class FeatureEditor extends Handsontable.editors.BaseEditor {
   }
   getValue() {
     dLog('getValue');
+    return this.originalValue;
   }
   setValue(newValue /* Mixed*/) {
     dLog('setValue', newValue);
@@ -60,7 +61,7 @@ class FeatureEditor extends Handsontable.editors.BaseEditor {
   }
   close() {
     dLog('close', this);
-    formFeatureEditEnable(undefined);
+    /* This is called when user clicks into the feature-edit dialog;  no action required. */
   }
   focus() {
     dLog('focus');
@@ -82,7 +83,6 @@ const featureValuesColumnsAttributes = {
   alt : { className: "htCenter"},
   Reference : {className : 'htNoWrap' },
   Ontology : { editor : FeatureEditor },
-  Trait : { editor : FeatureEditor },
 };
 /** Provide default widths for feature .values fields
  */
@@ -342,7 +342,7 @@ export default Component.extend({
     const
     ranges = table.selection?.selectedRange?.ranges,
     data = this.get('data'),
-    features = ranges && ranges.reduce((fs, r) => {
+    features = data?.length && ranges && ranges.reduce((fs, r) => {
       /** from,to are in the order selected by the user's click & drag.
        * ^A can select row -1.
        */
@@ -403,7 +403,10 @@ export default Component.extend({
         .moveToFront();
   },
 
-
+  closeFeatureEdit() {
+    dLog('closeFeatureEdit', this);
+    this.set('formFeatureEditEnable', null);
+  },
 
 });
 

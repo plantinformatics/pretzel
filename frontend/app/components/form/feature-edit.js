@@ -26,6 +26,7 @@ export default Component.extend({
     this._super(...arguments);
 
     dLog("form/feature-edit.js: didInsertElement", this);
+    this.set('editOntology', this.ontology);
   },
   columnIndexes : computed('cell', function columnIndexes () {
     let
@@ -91,6 +92,51 @@ export default Component.extend({
     return ontology;
   }),
 
+  setFeatureOntology() {
+    dLog('inputOntology', this.editOntology);
+    this.feature.set('values.Ontology', this.editOntology);
+    this.saveFeature();
+    // .then().catch()
+  },
+  saveFeature() {
+    let promise = this.feature.save();
+    promise
+      .then((feature) => {
+        dLog('saveFeature', feature, this, this.cell);
+        this.cell.editedValue = this.editOntology;
+        this.displayValue(this.editOntology);
+        // can be used for finishEditing(, callback), but not required - no validity checking configured.
+        // let afterCheckCallback = (valid) => dLog('saveFeature', 'afterCheckCallback', valid, arguments); ;
+        this.cell.finishEditing(/*restoreOriginalValue*/false, /*ctrlDown*/false, /*callback*/undefined);
+        this.close();
+      })
+      .catch((err) => {
+        dLog('saveFeature', 'err', err, this, arguments);
+        this.set('errorMessage', err);
+      });
+    return promise;
+  },
+  cancel() {
+    this.cell.finishEditing(/*restoreOriginalValue*/true, /*ctrlDown*/false, undefined);
+    this.selectCell();
+    this.close();
+  },
+  selectCell() {
+    let
+    p = this.cell.cellProperties,
+    hot = this.cell.hot;
+    hot.selectCell(p.row, p.col);
+  },
+  /** Display value in the cell which opened this feature-edit. */
+  displayValue(value) {
+    let
+    p = this.cell.cellProperties,
+    hot = this.cell.hot;
+    hot.setDataAtCell(p.row, p.col, value /*,default source is 'edit'*/);
+    // or elt = ... .getCell(p.row, p.col);     elt.textContent = value;
+
+    hot.selectCell(p.row, p.col);
+  }
 });
 
 /*----------------------------------------------------------------------------*/

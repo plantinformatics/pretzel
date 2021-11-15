@@ -3,11 +3,16 @@
     Name : {{feature.name}}
   </li>
   <li>
-    Ontology : {{ontology}}
-  </li>
-  <li>
     Trait : {{trait}}
   </li>
+  <li>
+    Ontology : <Input @value={{this.editOntology}} />
+  </li>
 </ul>
+
+<button onclick={{action this.setFeatureOntology}}>OK</button>
+<button onclick={{action this.cancel}}>Cancel</button>
+
+<div>{{this.errorMessage}}</div>
 
 {{yield}}
