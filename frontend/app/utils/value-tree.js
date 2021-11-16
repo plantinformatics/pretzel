@@ -78,6 +78,8 @@ function reduceHash(h, fn, result) {
 /** Similar to reduceHash(); this is specific to the tree returned by
  * services/data/ontology.js : getTree(), and copied by manage-explorer.js :
  * mapTree() and treeFor().
+ * Similar to walkTree() (manage-explorer.js);  difference : this passes parentKey, index to fn;
+ * and does not apply fn to the root :   result = fn(result, undefined, 0, tree);
  * The API of the tree used by this function is {id, children : []}.
  * Analogous to Array .reduce(), call function for each key:value pair of the
  * input hash, passing & returning result.
@@ -222,6 +224,9 @@ function leafCount(levelMeta, values) {
  */
 function leafCountIdChildrenTree(levelMeta, tree) {
   function addCount(result1, parentKey, index, value) {
+    /** value.node[] is an array of parents (blocks grouped by parent / scope),
+     * added by manage-explorer : mapTree()
+     */
     if (value.node) {
       result1 = value.node.reduce((result2, parentGroup) => result2 += leafCount(levelMeta, parentGroup), result1);
     }
@@ -251,7 +256,24 @@ function leafCountOntologyTab(levelMeta, values) {
   return count;
 }
 
+/*----------------------------------------------------------------------------*/
+
+function typeMetaIdChildrenTree(levelMeta, tree) {
+  function storeType(result, parentKey, index, value) {
+    levelMeta.set(value, value.type);
+  };
+  /** reduceIdChildrenTree() does not apply fn to root tree. */
+  storeType(undefined, undefined, 0, tree);
+  reduceIdChildrenTree(tree, storeType, undefined);
+  return levelMeta;
+}
+
 
 /*----------------------------------------------------------------------------*/
 
-export { mapHash, forEachHash, reduceHash, reduceIdChildrenTree, justUnmatched, logV, leafCount, leafCountOntologyTab };
+export {
+  mapHash, forEachHash, reduceHash, reduceIdChildrenTree,
+  justUnmatched, logV,
+  leafCount, leafCountOntologyTab,
+  typeMetaIdChildrenTree
+};

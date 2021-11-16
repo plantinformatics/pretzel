@@ -26,6 +26,7 @@
     parentDone=true
     controlOptions=controlOptions
     loadBlock="loadBlock"
+    selectExpander=selectExpander
     selectBlock="selectBlock"
     selectedBlock=selectedBlock
     selectDataset=(action 'selectDataset')
@@ -69,9 +70,11 @@
   {{#each values.children as |value index|}}
     {{!-- log  'value' value 'index' index 'levelComponent' values_levelComponent --}}
     {{record/entry-values values=value levelMeta=levelMeta
+      name=value.id
       parentName=values.id
       loadBlock="loadBlock"
       controlOptions=controlOptions
+      selectExpander=selectExpander
       selectBlock="selectBlock"
       selectedBlock=selectedBlock
       selectDataset=(action 'selectDataset')}}

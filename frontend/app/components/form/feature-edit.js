@@ -1,6 +1,12 @@
 import Component from '@ember/component';
 import { computed } from '@ember/object';
+import { inject as service } from '@ember/service';
 
+import ObjectProxy from '@ember/object/proxy';
+import PromiseProxyMixin from '@ember/object/promise-proxy-mixin';
+import { resolve, all } from 'rsvp';
+
+import { typeMetaIdChildrenTree  } from '../../utils/value-tree';
 
 /* global d3 */
 /* global Handsontable */
@@ -21,6 +27,18 @@ h.countSourceCols()
 /*----------------------------------------------------------------------------*/
 
 export default Component.extend({
+  ontologyService : service('data/ontology'),
+
+
+  browseTreeEnable : false,
+
+  controlOptions : {
+    /** comment in manage-explorer.js */
+    showHierarchy : true,
+  },
+  levelMeta : new WeakMap(),
+
+  /*--------------------------------------------------------------------------*/
 
   didInsertElement() {
     this._super(...arguments);
@@ -28,6 +46,9 @@ export default Component.extend({
     dLog("form/feature-edit.js: didInsertElement", this);
     this.set('editOntology', this.ontology);
   },
+
+  /*--------------------------------------------------------------------------*/
+
   columnIndexes : computed('cell', function columnIndexes () {
     let
     hot = this.get('cell.hot'),
@@ -92,29 +113,34 @@ export default Component.extend({
     return ontology;
   }),
 
+  /*--------------------------------------------------------------------------*/
+
   setFeatureOntology() {
     dLog('inputOntology', this.editOntology);
     this.feature.set('values.Ontology', this.editOntology);
-    this.saveFeature();
+    this.saveFeature(this.editOntology);
     // .then().catch()
   },
-  saveFeature() {
+  saveFeature(editOntology) {
     let promise = this.feature.save();
     promise
       .then((feature) => {
         dLog('saveFeature', feature, this, this.cell);
-        this.cell.editedValue = this.editOntology;
-        this.displayValue(this.editOntology);
-        // can be used for finishEditing(, callback), but not required - no validity checking configured.
-        // let afterCheckCallback = (valid) => dLog('saveFeature', 'afterCheckCallback', valid, arguments); ;
-        this.cell.finishEditing(/*restoreOriginalValue*/false, /*ctrlDown*/false, /*callback*/undefined);
-        this.close();
+        this.finishEditing(editOntology);
       })
       .catch((err) => {
         dLog('saveFeature', 'err', err, this, arguments);
         this.set('errorMessage', err);
       });
     return promise;
+  },
+  finishEditing(editOntology) {
+    this.cell.editedValue = editOntology;
+    this.displayValue(editOntology);
+    // can be used for finishEditing(, callback), but not required - no validity checking configured.
+    // let afterCheckCallback = (valid) => dLog('saveFeature', 'afterCheckCallback', valid, arguments); ;
+    this.cell.finishEditing(/*restoreOriginalValue*/false, /*ctrlDown*/false, /*callback*/undefined);
+    this.close();
   },
   cancel() {
     this.cell.finishEditing(/*restoreOriginalValue*/true, /*ctrlDown*/false, undefined);
@@ -136,7 +162,39 @@ export default Component.extend({
     // or elt = ... .getCell(p.row, p.col);     elt.textContent = value;
 
     hot.selectCell(p.row, p.col);
-  }
+  },
+  showBrowseTree() {
+    dLog('showBrowseTree');
+    this.set('browseTreeEnable', true);
+  },
+
+  /*--------------------------------------------------------------------------*/
+
+  selectExpander(nodeName) {
+    dLog('selectExpander', nodeName);
+    this.set('browseTreeEnable', false);
+    this.feature.set('values.Ontology', nodeName);
+    this.saveFeature(nodeName);
+  },
+
+  ontologyTree : computed(function () {
+    let
+    treeP = this.get('ontologyService').getTree()
+      .then((tree) => {
+        typeMetaIdChildrenTree(this.levelMeta, tree);
+        return tree;
+      });
+
+    let ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
+    let proxy = ObjectPromiseProxy.create({ promise: resolve(treeP) });
+
+    return proxy;
+  }),
+
+
+
+  /*--------------------------------------------------------------------------*/
+
 });
 
 /*----------------------------------------------------------------------------*/

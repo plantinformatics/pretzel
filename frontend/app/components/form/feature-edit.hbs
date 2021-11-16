@@ -6,7 +6,9 @@
     Trait : {{trait}}
   </li>
   <li>
-    Ontology : <Input @value={{this.editOntology}} />
+    Ontology :
+    <Input @value={{this.editOntology}} />
+    <button onclick={{action this.showBrowseTree}} class="btn btn-xs"><i class="glyphicon glyphicon-tree-conifer"></i></button>
   </li>
 </ul>
 
@@ -16,3 +18,15 @@
 <div>{{this.errorMessage}}</div>
 
 {{yield}}
+
+{{#if this.browseTreeEnable}}
+  {{#if this.ontologyTree.isFulfilled}}
+    {{#ember-modal-dialog modal-id="browse-tree-modal" title="Browse Ontology Tree" header-icon='edit'}}
+      {{record/browse-ontology-tree
+        values=this.ontologyTree levelMeta=this.levelMeta
+        controlOptions=this.controlOptions
+        selectExpander=(action this.selectExpander)
+        }}
+    {{/ember-modal-dialog}}
+  {{/if}}
+{{/if}}

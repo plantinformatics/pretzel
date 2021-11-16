@@ -1081,6 +1081,19 @@ li.filter-group > div > span:last-child {
   padding-left: 5px;    /* reduced from 15px */
 }
 
+.browse-ontology-tree {
+  overflow: auto;
+  height: 40ex;
+  width: 20em;
+}
+.browse-ontology-tree > div > li > ul {
+  padding-left : 1em;
+}
+.browse-ontology-tree > div > li > ul > div > li {
+  padding-top : 4px;
+  padding-bottom : 0px;
+}
+
 li > span.blockInScope
 {
   display: none;
