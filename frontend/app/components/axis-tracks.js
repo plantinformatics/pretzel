@@ -41,6 +41,9 @@ let featureTrackTransitionTime = 750;
  * If true, the <rect>s are made proportionally narrower instead.
  */
 const fixedBlockWidth = true;
+/** true to move region['right'] (QTL diamond / rect) right to avoid tick text of rightmost axis.
+ */
+const offsetForRightmostTickText = false;
 /** To allow axis-tracks to share the same (fixed-width) horizontal space
  * allocation as axis-charts featuresCounts, use axisBlocks to allocate the
  * space, under the label 'trackCharts'.
@@ -1033,7 +1036,9 @@ export default InAxis.extend({
             xOffset += rightEdge;
           } else if (side === 'rightmost') {
             /** axis tick text is on right side if ! extended and rightmost.  */
-            xOffset += 25;
+            if (offsetForRightmostTickText) {
+              xOffset += 25;
+            }
           }
           // dLog('blockOffset', 'diamondOffset', thisAt.controlsView.diamondOffset);
           xOffset += thisAt.controlsView.diamondOffset;
