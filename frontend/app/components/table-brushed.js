@@ -372,6 +372,7 @@ export default Component.extend({
         dLog("table-brushed.js", "onSelectionChange", table, data.length);
       me.send('showData', data);
       table.updateSettings({data:data});
+      this.setRowAttributes(table);
     }
   }),
 

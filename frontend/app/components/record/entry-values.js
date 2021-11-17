@@ -322,6 +322,23 @@ export default EntryBase.extend({
   },
 
   /*--------------------------------------------------------------------------*/
+
+  /** Display .text and OntologyId of Ontology node
+   * Used in .hbs : name=(compute (action 'ontologyNameId' value))
+   * @return Ontology ".text [.id]"
+   * @param value .type === "term" or "trait"
+   */
+  ontologyNameId(value) {
+    let
+    text =
+      (value.type === 'term') ? value.text :
+      (value.type === 'trait') ? ('[' + value.id + ']  ' + value.text) :
+      value.id;
+    return text;
+  },
+
+  
+  /*--------------------------------------------------------------------------*/
   /** Devel functions, useful in web inspector console, e.g. use Ember tab to
    * select the Ember entry-values Component, export $E to the console and
    * $E.log3(), etc.

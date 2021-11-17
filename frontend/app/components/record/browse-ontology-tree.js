@@ -1,5 +1,12 @@
+import { computed } from '@ember/object';
+
+import ObjectProxy from '@ember/object/proxy';
+import PromiseProxyMixin from '@ember/object/promise-proxy-mixin';
+import { resolve, all } from 'rsvp';
 
 import EntryBase from './entry-base';
+
+import { thenOrNow } from '../../utils/common/promises';
 
 /*----------------------------------------------------------------------------*/
 
@@ -24,6 +31,23 @@ export default EntryBase.extend({
     dLog('noAction');
   },
 
+  /*--------------------------------------------------------------------------*/
+
+  /**
+   * @param value .type === "term", value is a root of an Ontology tree.
+   */
+  rootOntologyNameId : computed('values', function () {
+    let
+    valuesP = this.values,
+    text = thenOrNow(valuesP, (values) => ('[' + values.id + ']  ' + values.text));
+
+    let ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
+    let proxy = ObjectPromiseProxy.create({ promise: resolve(text) });
+
+    return proxy;
+  }),
+
+  /*--------------------------------------------------------------------------*/
 
 });
 

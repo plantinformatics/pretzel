@@ -70,7 +70,7 @@
   {{#each values.children as |value index|}}
     {{!-- log  'value' value 'index' index 'levelComponent' values_levelComponent --}}
     {{record/entry-values values=value levelMeta=levelMeta
-      name=value.id
+      name=(compute (action this.ontologyNameId value))
       parentName=values.id
       loadBlock="loadBlock"
       controlOptions=controlOptions

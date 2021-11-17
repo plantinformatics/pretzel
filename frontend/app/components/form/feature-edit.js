@@ -122,7 +122,7 @@ export default Component.extend({
     if (o && (name = this.get('ontologyService').getNameViaPretzelServer(o))) {
       if (name && name.then) {
         let ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
-        let proxy = ObjectPromiseProxy.create({ promise: name });
+        let proxy = ObjectPromiseProxy.create({ promise: resolve(name) });
         name = proxy;
       }
     }
@@ -140,7 +140,8 @@ export default Component.extend({
     promise
       .then((feature) => {
         dLog('saveFeature', feature, this, this.cell);
-        this.finishEditing(editOntology);
+        let textP = this.get('ontologyText');
+        thenOrNow(textP, (text) => this.finishEditing(editOntology + ' : ' + text));
       })
       .catch((err) => {
         dLog('saveFeature', 'err', err, this, arguments);
@@ -149,7 +150,7 @@ export default Component.extend({
     return promise;
   },
   finishEditing(editOntology) {
-    this.cell.editedValue = editOntology;
+    // this.cell.editedValue = editOntology;
     this.displayValue(editOntology);
     // can be used for finishEditing(, callback), but not required - no validity checking configured.
     // let afterCheckCallback = (valid) => dLog('saveFeature', 'afterCheckCallback', valid, arguments); ;
@@ -186,8 +187,17 @@ export default Component.extend({
 
   selectExpander(nodeName) {
     dLog('selectExpander', nodeName);
+    /** nodeName is e.g. "[CO_321:0001489]  Booting initiation thermal time"
+     * trim to just the OntologyId
+     */
+    let match = nodeName.match(/^\[(CO_[0-9]{3}:[0-9]{7})\]/);
+    if (match) {
+      nodeName = match[1];
+    }
     this.set('browseTreeEnable', false);
     this.feature.set('values.Ontology', nodeName);
+    /* ontologyText depends on .editOntology. for setFeatureOntology() it is set by <input>. */
+    this.set('editOntology', nodeName);
     this.saveFeature(nodeName);
   },
 
