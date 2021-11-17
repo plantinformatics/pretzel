@@ -206,7 +206,7 @@ function walkTree(result, reduceNode, tree) {
 function mapTree0(levelMeta, result, tree) {
   let value = result[tree.id] = {};
   levelMeta.set(value, tree.type);
-  tree.children.forEach((c) => mapTree0(value, c));
+  tree.children.forEach((c) => mapTree0(levelMeta, value, c));
   return result;
 };
 /** Map the Ontology tree to a value-tree, with nodes containing :

@@ -339,8 +339,11 @@ export default Service.extend({
 
   /*--------------------------------------------------------------------------*/
 
-  ontologyGetTree(options) {
-    return this._ajax('Ontologies/getTree', 'GET', {options}, true);
+  /**
+   * @param rootId  e.g. 'CO_321'
+   */
+  ontologyGetTree(rootId, options) {
+    return this._ajax('Ontologies/getTree', 'GET', {rootId, options}, true);
   },
 
   /*--------------------------------------------------------------------------*/

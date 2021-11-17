@@ -7,6 +7,7 @@ import PromiseProxyMixin from '@ember/object/promise-proxy-mixin';
 import { resolve, all } from 'rsvp';
 
 import { typeMetaIdChildrenTree  } from '../../utils/value-tree';
+import { thenOrNow } from '../../utils/common/promises';
 
 /* global d3 */
 /* global Handsontable */
@@ -115,6 +116,19 @@ export default Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  ontologyText : computed('editOntology', function () {
+    let name;
+    let o = this.editOntology;
+    if (o && (name = this.get('ontologyService').getNameViaPretzelServer(o))) {
+      if (name && name.then) {
+        let ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
+        let proxy = ObjectPromiseProxy.create({ promise: resolve(name) });
+        name = proxy;
+      }
+    }
+    return name;
+  }),
+
   setFeatureOntology() {
     dLog('inputOntology', this.editOntology);
     this.feature.set('values.Ontology', this.editOntology);
@@ -179,8 +193,11 @@ export default Component.extend({
 
   ontologyTree : computed(function () {
     let
-    treeP = this.get('ontologyService').getTree()
-      .then((tree) => {
+    // rootId = ... this.ontology, @see rootIdMatch
+    treeP = this.get('ontologyService').getTree(undefined /*rootId*/);
+    treeP = thenOrNow(
+      treeP,
+      (tree) => {
         typeMetaIdChildrenTree(this.levelMeta, tree);
         return tree;
       });

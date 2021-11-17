@@ -211,8 +211,10 @@ export default Component.extend({
       if (values) {
         Object.keys(values).forEach((valueName) => rest[valueName] = values[valueName]);
         let o = rest.Ontology, name;
-        if (o && (name = this.get('ontology').getName(o))) {
-          rest.Ontology += ' : ' + name;
+        if (o && (name = this.get('ontology').getNameViaPretzelServer(o))) {
+          if (name && ! name.then) {
+            rest.Ontology += ' : ' + name;
+          }
         }
       }
       if (feature.value && (feature.value.length > 1)) {

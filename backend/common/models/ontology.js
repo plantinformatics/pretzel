@@ -22,13 +22,13 @@ module.exports = function(Ontology) {
 
   /*--------------------------------------------------------------------------*/
 
-  Ontology.getTree = function (cb) {
+  Ontology.getTree = function (root, cb) {
     const
     fnName = 'getTree',
     /** param root (or species name) will be added, to support other species.  */
-    root = "CO_321",
+    // root = "CO_321",
     paramError = ! root.match(/^CO_[0-9]{3}$/),
-    cacheId = fnName, // + root
+    cacheId = fnName + root,
     /** define refreshCache true to replace the cached result. */
     refreshCache = false,
     result = ! refreshCache && cache.get(cacheId);
@@ -37,7 +37,7 @@ module.exports = function(Ontology) {
     } else
       if (result) {
         if (trace /*> 1*/) {
-          console.log(fnName, cacheId, 'get', result[0] || result);
+          console.log(fnName, root, cacheId, 'get', result[0] || result);
         }
         cb(null, result);
       } else {
@@ -46,7 +46,7 @@ module.exports = function(Ontology) {
         ontologyTreeP.then((ontologyTree) => {
           console.log(fnName, ontologyTree);
           if (trace /*> 1*/) {
-            console.log(fnName, cacheId, 'put', ontologyTree);
+            console.log(fnName, root, cacheId, 'put', ontologyTree);
           }
           cache.put(cacheId, ontologyTree);
           cb(null, ontologyTree);
@@ -60,6 +60,7 @@ module.exports = function(Ontology) {
 
   Ontology.remoteMethod('getTree', {
     accepts: [
+      {arg: 'rootId', type: 'string', required: true},
     ],
     returns: {type: 'array', root: true},
     description: "Request ontology tree of Ontology API source"

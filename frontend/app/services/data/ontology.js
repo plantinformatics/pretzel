@@ -2,6 +2,8 @@ import EmberObject, { computed } from '@ember/object';
 import Service, { inject as service } from '@ember/service';
 import { A } from '@ember/array';
 
+import { thenOrNow } from '../../utils/common/promises';
+import { reduceIdChildrenTree } from '../../utils/value-tree';
 
 /*----------------------------------------------------------------------------*/
 
@@ -36,9 +38,19 @@ export default Service.extend({
   ajax : service(),
   auth : service(),
 
+  /*--------------------------------------------------------------------------*/
+  // results from direct requests to CropOntology.org API
   /** object [ontologyId] -> json */
   ontologies : EmberObject.create(),
   attributes : EmberObject.create(),
+
+  // results from requests via Pretzel backend server, which caches results from CropOntology.org API.
+  /** trees[rootId] is the result of getTree(rootId) */
+  trees : EmberObject.create(),
+  /** byId[rootId][ontologyId] references into trees[rootId] children, by ontologyId */
+  byId :  EmberObject.create(),
+
+  /*--------------------------------------------------------------------------*/
 
   setOntology(ontologyId, json) {
     this.ontologies.set(ontologyId, json);
@@ -125,18 +137,74 @@ export default Service.extend({
     return p;
   },
 
+
   /*--------------------------------------------------------------------------*/
 
-  getTree() {
+  getNameViaPretzelServer(ontologyId) {
+    /** From ontologyId, determine the root ID, and use that result or request it.
+     */
+    let
+    rootIdMatch = ontologyId.match(/^(CO_[0-9]+):/),
+    rootId = rootIdMatch && rootIdMatch[0],
+    tree, name;
+    if (! rootId) {
+      dLog('getNameViaPretzelServer', 'not a CropOntology ID:', ontologyId);
+    } else if ((tree = this.trees.get(rootId) || this.getTree(rootId))) {
+      name = thenOrNow(tree, (t) => this.nameLookup(rootId, ontologyId));
+    }
+    return name;
+  },
+  nameLookup(rootId, ontologyId) {
+    let
+    tree = this.byId[rootId],
+    value = tree && tree[ontologyId],
+    name = value?.text;
+    return name;
+  },
+  tree2ids(rootId, tree) {
+    function addId(result, parentKey, index, value) {
+      result[value.id] = value;
+      return result;
+    };
+    let byId = EmberObject.create();
+    /** reduceIdChildrenTree() does not apply fn to root tree. */
+    addId(byId, undefined, 0, tree);
+    /** result is === byId */
+    reduceIdChildrenTree(tree, addId, byId);
+    dLog('tree2ids', rootId, tree, byId);
+    return byId;
+  },
+
+
+
+  /*--------------------------------------------------------------------------*/
+
+  /**
+   * @return tree value if already received, otherwise promise.
+   */
+  getTree(rootId) {
     const fnName = 'getTree';
 
-    let tree = this.get('tree');
+    if (! rootId) {
+      /** used in get-ontology.js : ontologyGetNode() : base */
+      rootId = 'CO_321';  // full ID has appended :ROOT
+    }
+    let trees = this.get('trees'),
+        tree = trees.get(rootId);
     if (! tree) {
-      dLog(fnName);
+      dLog(fnName, rootId);
       let
       promise =
-        this.get('auth').ontologyGetTree(/*options*/{});
-      promise.then((t) => (trace > 1) && dLog(fnName, tree));
+        this.get('auth').ontologyGetTree(rootId, /*options*/{});
+      // placeholder to prevent repeated request
+      trees.set(rootId, promise);
+
+      promise.then((treeValue) => {
+        (trace > 1) && dLog(fnName, treeValue);
+        trees.set(rootId, treeValue);
+        this.byId[rootId] = this.tree2ids(rootId, treeValue);
+      });
+
       tree = promise;
     }
     return tree;
