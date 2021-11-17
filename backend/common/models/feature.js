@@ -15,6 +15,9 @@ const { childProcess } = require('../utilities/child-process');
 var upload = require('../utilities/upload');
 var { filterBlastResults } = require('../utilities/sequence-search');
 
+const cacheLibraryName = '../utilities/results-cache';
+var cache = require(cacheLibraryName);
+
 /*----------------------------------------------------------------------------*/
 
 const trace = 1;
@@ -44,6 +47,29 @@ function sessionIndex(sessionId) {
 /*----------------------------------------------------------------------------*/
 
 module.exports = function(Feature) {
+
+  /*--------------------------------------------------------------------------*/
+
+  /** Clear result cache entries which may be invalidated by the save.
+   */
+  Feature.observe('after save', function(ctx, next) {
+    if (ctx.instance) {
+      const apiName = 'blockFeaturesInterval';
+      const blockIds = [ctx.instance.blockId],
+            cacheId = apiName + '_' + blockIds.join('_');
+      let value = cache.get(cacheId);
+      if (value) {
+        console.log('Feature', 'after save', apiName, 'remove from cache', cacheId, ctx.instance.id, ctx.instance.name, value.length || value);
+        cache.put(cacheId, undefined);
+      }
+    }
+    next();
+  });
+
+  /*--------------------------------------------------------------------------*/
+
+
+
   /** Search for Features matching the given list of Feature names in filter[].
    * If blockId is given, only search within that block.
    */
