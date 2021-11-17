@@ -1308,7 +1308,7 @@ export default Model.extend({
      */
     let parentBlock = this.get('parentBlock');
     let blockTask;
-    if (parentBlock) {
+    if (featureNames.length && parentBlock) {
       let apiServer = this.get('apiServers').servers[parentBlock.store.name];
 
       let taskGet = this.get('blockService').get('getBlocksOfFeatures');
