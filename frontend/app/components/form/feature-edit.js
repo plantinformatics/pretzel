@@ -122,7 +122,7 @@ export default Component.extend({
     if (o && (name = this.get('ontologyService').getNameViaPretzelServer(o))) {
       if (name && name.then) {
         let ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
-        let proxy = ObjectPromiseProxy.create({ promise: resolve(name) });
+        let proxy = ObjectPromiseProxy.create({ promise: name });
         name = proxy;
       }
     }

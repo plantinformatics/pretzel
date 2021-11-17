@@ -145,7 +145,7 @@ export default Service.extend({
      */
     let
     rootIdMatch = ontologyId.match(/^(CO_[0-9]+):/),
-    rootId = rootIdMatch && rootIdMatch[0],
+    rootId = rootIdMatch && rootIdMatch[1],
     tree, name;
     if (! rootId) {
       dLog('getNameViaPretzelServer', 'not a CropOntology ID:', ontologyId);
