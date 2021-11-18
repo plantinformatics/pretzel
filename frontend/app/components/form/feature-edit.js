@@ -29,6 +29,7 @@ h.countSourceCols()
 
 export default Component.extend({
   ontologyService : service('data/ontology'),
+  block : service('data/block'),
 
 
   browseTreeEnable : false,
@@ -139,6 +140,17 @@ export default Component.extend({
     let promise = this.feature.save();
     promise
       .then((feature) => {
+        /* The API result blocksService.blockFeatureOntologies is invalidated by
+         * this save, so clear the result promise to trigger a new request.
+         * The dependency on blocksService.blockFeatureOntologies in
+         * manage-explorer.js doesn't seem to detect that change, so the signal
+         * featureUpdateCount is added.
+         */
+        let fieldName = 'Ontology',
+            pName = 'blockFeature' + fieldName + 'P';
+        this.get('block').set(pName, null);
+        this.get('block'). incrementProperty('featureUpdateCount');
+
         dLog('saveFeature', feature, this, this.cell);
         let textP = this.get('ontologyText');
         thenOrNow(textP, (text) => this.finishEditing(editOntology + ' : ' + text));

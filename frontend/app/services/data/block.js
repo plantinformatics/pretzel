@@ -106,6 +106,15 @@ export default Service.extend(Evented, {
 
   summaryTask : {},
 
+  /** Indicate a Feature update which affects Block properties,
+
+   * e.g. feature-edit saves change to Feature.values.Ontology, so
+   * blockFeatureOntologies should be requested, and manage-explorer should
+   * update the CPs which depend on that
+   * (blockFeatureOntologies{,Blocks,History,Name,Tree,TreeGrouped,TreeEmbedded}
+   * ontologiesTree{,KeyLength} ontologyId2{Blocks,DatasetNodes,Node} ).
+   */
+  featureUpdateCount : 0,
 
   /** Not required because findRecord() is used;
    * might later want this for other requests or calculation results, but can
@@ -244,7 +253,7 @@ export default Service.extend(Evented, {
     let blockValues = yield blockP;
 
     if (trace_block)
-      dLog(fnName, this, valueOrLength(blockValues));
+      dLog(fnName, this, fieldName, valueOrLength(blockValues));
     
     return blockValues;
   }), // .drop(),

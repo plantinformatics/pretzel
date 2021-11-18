@@ -427,11 +427,15 @@ export default ManageBase.extend({
   blockFeatureOntologies : computed(
     'blocksService.blockFeatureOntologies',
     'apiServers.primaryServer.datasetsBlocks.[]',
+    /** comment in feature-edit.js : saveFeature() */
+    'blocksService.featureUpdateCount',
     function () { return blockValues.apply(this, ['Ontologies']); }),
 
   /** map ._id to .block */
   blockFeatureOntologiesBlocks : computed(
+    'blocksService.blockFeatureOntologies',
     'apiServers.primaryServer.datasetsBlocks.[]',
+    'blocksService.featureUpdateCount',
     function () { return blockValuesBlocks.apply(this, ['Ontologies']); }),
 
   blockFeatureOntologiesHistory : computed(
