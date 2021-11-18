@@ -107,7 +107,6 @@ export default Service.extend(Evented, {
   summaryTask : {},
 
   /** Indicate a Feature update which affects Block properties,
-
    * e.g. feature-edit saves change to Feature.values.Ontology, so
    * blockFeatureOntologies should be requested, and manage-explorer should
    * update the CPs which depend on that
@@ -257,6 +256,21 @@ export default Service.extend(Evented, {
     
     return blockValues;
   }), // .drop(),
+
+  /*--------------------------------------------------------------------------*/
+
+  featureSaved() {
+    /* The API result blocksService.blockFeatureOntologies is invalidated by
+     * this save, so clear the result promise to trigger a new request.
+     * The dependency on blocksService.blockFeatureOntologies in
+     * manage-explorer.js doesn't seem to detect that change, so the signal
+     * featureUpdateCount is added.
+     */
+    let fieldName = 'Ontology',
+        pName = 'blockFeature' + fieldName + 'P';
+    this.set(pName, null);
+    this.incrementProperty('featureUpdateCount');
+  },
 
   /*--------------------------------------------------------------------------*/
 
