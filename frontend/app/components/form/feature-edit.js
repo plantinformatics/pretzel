@@ -6,7 +6,6 @@ import ObjectProxy from '@ember/object/proxy';
 import PromiseProxyMixin from '@ember/object/promise-proxy-mixin';
 import { resolve, all } from 'rsvp';
 
-import { typeMetaIdChildrenTree  } from '../../utils/value-tree';
 import { thenOrNow } from '../../utils/common/promises';
 
 /* global d3 */
@@ -38,7 +37,6 @@ export default Component.extend({
     /** comment in manage-explorer.js */
     showHierarchy : true,
   },
-  levelMeta : new WeakMap(),
 
   /*--------------------------------------------------------------------------*/
 
@@ -202,23 +200,6 @@ export default Component.extend({
     this.set('editOntology', nodeName);
     this.saveFeature(nodeName);
   },
-
-  ontologyTree : computed(function () {
-    let
-    // rootId = ... this.ontology, @see rootIdMatch
-    treeP = this.get('ontologyService').getTree(undefined /*rootId*/);
-    treeP = thenOrNow(
-      treeP,
-      (tree) => {
-        typeMetaIdChildrenTree(this.levelMeta, tree);
-        return tree;
-      });
-
-    let ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
-    let proxy = ObjectPromiseProxy.create({ promise: resolve(treeP) });
-
-    return proxy;
-  }),
 
 
 

@@ -22,27 +22,37 @@ module.exports = function(Ontology) {
 
   /*--------------------------------------------------------------------------*/
 
+  /**
+   * @param root  root ID of an Ontology  e.g. "CO_321" (CropOntology)
+   */
   Ontology.getTree = function (root, cb) {
     const
     fnName = 'getTree',
     /** param root (or species name) will be added, to support other species.  */
-    // root = "CO_321",
     paramError = ! root.match(/^CO_[0-9]{3}$/),
-    cacheId = fnName + root,
+    cacheId = fnName + '_' + root,
     /** define refreshCache true to replace the cached result. */
-    refreshCache = false,
-    result = ! refreshCache && cache.get(cacheId);
+    refreshCache = false;
+    let result = ! refreshCache && cache.get(cacheId);
+    if (! result) {
+      let cacheIdOld = fnName + root;
+      result = cache.get(cacheIdOld);
+      if (result) {
+        console.log(fnName, 'copy result from', cacheIdOld, 'to', cacheId);
+        cache.put(cacheId, result);
+      }
+    }
     if (paramError) {
       cb(paramError);
     } else
       if (result) {
-        if (trace /*> 1*/) {
+        if (trace > 1) {
           console.log(fnName, root, cacheId, 'get', result[0] || result);
         }
         cb(null, result);
       } else {
         let
-        ontologyTreeP = ontologyGetTree();
+        ontologyTreeP = ontologyGetTree(root);
         ontologyTreeP.then((ontologyTree) => {
           console.log(fnName, ontologyTree);
           if (trace /*> 1*/) {

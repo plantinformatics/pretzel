@@ -27,8 +27,8 @@ exports.ontologyGetTree = function (id) {
   console.log(fnName, id);
 
   let
-  promise = exports.ontologyGetNode(id)
-    .then((o) => exports.ontologyGetChildren(o));
+  promise = exports.ontologyGetNode(/*rootId*/ id, /*id*/undefined)
+    .then((o) => exports.ontologyGetChildren(id, o));
   return promise;
 };
 
@@ -38,15 +38,15 @@ exports.ontologyGetTree = function (id) {
  * @return undefined if no children to get, otherwise a promise which yields
  * result when child results are complete
  */
-exports.ontologyGetChildren = async function ontologyGetChildren(o) {
+exports.ontologyGetChildren = async function ontologyGetChildren(rootId, o) {
   const fnName = 'ontologyGetChildren';
-  console.log(fnName, o.id);
+  console.log(fnName, rootId, o.id);
 
   let {icon, ...result} = o;
 
   if ((o.type === 'term') && ((o.children === true) || (o.children && o.children.length))) {
     if (o.children === true) {
-      let r = await exports.ontologyGetNode(o.id);
+      let r = await exports.ontologyGetNode(rootId, o.id);
       result.children = r;
     }
     if (result.children.length) {
@@ -54,10 +54,10 @@ exports.ontologyGetChildren = async function ontologyGetChildren(o) {
       // use 2 instead of .length for a small result for development.
       for (let i=0; i < result.children.length; i++) {
         if (! result.children[i]) {
-          console.log(fnName, result, result.children.length, i, result.children);
+          console.log(fnName, rootId, result, result.children.length, i, result.children);
         }
         let c1 = result.children[i],
-          c2 = await ontologyGetChildren(c1);
+          c2 = await ontologyGetChildren(rootId, c1);
         co.push(c2);
       }
       result.children = co;
@@ -66,22 +66,26 @@ exports.ontologyGetChildren = async function ontologyGetChildren(o) {
   return result;
 };
 
-exports.ontologyGetNode = function (id) {
+/**
+ * @param rootId  an ontology root ID
+ * @param id  may be undefined, in which case the rootId only is used and ?id= query param is not given.
+ */
+exports.ontologyGetNode = function (rootId, id) {
   const fnName = 'ontologyGetNode';
-  console.log(fnName, id);
+  console.log(fnName, rootId, id);
 
   const
-  /** CO_321 : Wheat Traits */
-  base = 'CO_321:ROOT';
+  /** e.g. CO_321:ROOT : Wheat Traits */
+  base = rootId + ':ROOT';
 
-  /** CO_321:ROOT?id=CO_321%3A0000304 */
+  /** e.g. CO_321:ROOT?id=CO_321%3A0000304 */
   let
   queryParams = id && param({id}),
   queryParamsText = queryParams ? '?' + queryParams : '',
   endPoint = '/tree',
   url = endPoint + '/' + base + queryParamsText;
 
-  console.log(fnName, host, endPoint, id, url);
+  console.log(fnName, host, endPoint, rootId, id, url);
 
   let promise =
     getJSON(url /*, body, headers */)
@@ -90,7 +94,7 @@ exports.ontologyGetNode = function (id) {
       .catch(function (err) {
         console.log(fnName, endPoint, id, queryParams, err);
       });
-  promise.then((ontologies) => console.log(fnName, ontologies.length));
+  promise.then((ontologies) => console.log(fnName, ontologies && ontologies.length));
   return promise;
 };
 

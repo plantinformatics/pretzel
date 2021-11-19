@@ -21,13 +21,12 @@
 {{yield}}
 
 {{#if this.browseTreeEnable}}
-  {{#if this.ontologyTree.isFulfilled}}
     {{#ember-modal-dialog modal-id="browse-tree-modal" title="Browse Ontology Tree" header-icon='edit'}}
       {{record/browse-ontology-tree
-        values=this.ontologyTree levelMeta=this.levelMeta
+        ontology=this.editOntology
         controlOptions=this.controlOptions
         selectExpander=(action this.selectExpander)
+        cancel=(action (mut this.browseTreeEnable) false)
         }}
     {{/ember-modal-dialog}}
-  {{/if}}
 {{/if}}
