@@ -59,7 +59,10 @@ module.exports = function(Feature) {
             cacheId = apiName + '_' + blockIds.join('_');
       let value = cache.get(cacheId);
       if (value) {
-        console.log('Feature', 'after save', apiName, 'remove from cache', cacheId, ctx.instance.id, ctx.instance.name, value.length || value);
+        // this will trace for each feature when e.g. adding a dataset with table/csv upload
+        if (trace > 3) {
+          console.log('Feature', 'after save', apiName, 'remove from cache', cacheId, ctx.instance.id, ctx.instance.name, value.length || value);
+        }
         cache.put(cacheId, undefined);
       }
     }
