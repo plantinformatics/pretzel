@@ -1094,6 +1094,15 @@ li.filter-group > div > span:last-child {
   padding-bottom : 0px;
 }
 
+#formFeatureEdit {
+  padding-left: 0px;
+}
+#formFeatureEdit > li {
+  margin-bottom : 1ex;
+  & div {
+    margin-top : 1ex;
+  }
+}
 li > span.blockInScope
 {
   display: none;
