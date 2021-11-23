@@ -3,6 +3,7 @@ import { later, next } from '@ember/runloop';
 import { resolve, all } from 'rsvp';
 import { A } from '@ember/array';
 import { inject as service } from '@ember/service';
+import { isArray } from '@ember/array';
 
 import DS from 'ember-data';
 
@@ -32,7 +33,7 @@ import { tab_explorer_prefix, text2EltId } from '../../utils/explorer-tabId';
 import { parseOptions } from '../../utils/common/strings';
 import { thenOrNow } from '../../utils/common/promises';
 
-import { mapHash, reduceHash, justUnmatched, logV } from '../../utils/value-tree';
+import { mapHash, reduceHash, reduceIdChildrenTree, justUnmatched, logV } from '../../utils/value-tree';
 import { blocksParentAndScope } from '../../utils/data/grouping';
 
 
@@ -181,6 +182,8 @@ function ids2Blocks(store, blockIdsTraits) {
 /** reduce a tree to a result.
  * Used for Ontology tree, result of ontology service getTree();
  * each tree node has .id and .children.
+ * Added : incorporate multiple roots into a single tree, so the top level in
+ * that case will be an object { <rootId> : tree, ... }.
  * Similar signature to Array.reduce().
  * @param result
  * @param reduceNode Add a node to a result function reduceNode(result, node) -> result;
@@ -190,7 +193,7 @@ function walkTree(result, reduceNode, tree) {
   const fnName = 'walkTree';
   result = reduceNode(result, tree);
   let children = tree.children;
-  if (Ember.isArray(children)) {
+  if (isArray(children)) {
     result = children.reduce((result, node) => {
       result = walkTree(result, reduceNode, node);
       return result;
@@ -218,7 +221,10 @@ function mapTree0(levelMeta, result, tree) {
  */
 function mapTree(levelMeta, id2Node, tree) {
   let
-  value = Object.assign({}, tree),
+  /** used by copyNode() to lookup a value for .parent */
+  id2nc = {},
+  value = copyNode(levelMeta, id2nc, tree),
+
   node = id2Node[tree.id];
   if (node) {
     value.node = node;
@@ -227,14 +233,26 @@ function mapTree(levelMeta, id2Node, tree) {
   if (value.text || value.id) {
     value.name = value.text + ' [' + value.id + ']';
   }
-  levelMeta.set(value, tree.type);
-  if (Ember.isArray(value.children)) {
-    value.children = value.children.map((c) => {
+
+  if (tree.children === undefined) {
+    /* copyNode copies attributes for node with .id & .children, but not for plain object. */
+    /* optional : id2nc[value.name] = value;
+     * copyNode() does id2nc[n.id] = c, i.e. id2nc[value.id] = value, but value.id is undefined
+     */
+    Object.entries(tree)
+      .reduce((result, e) => {
+        result[e[0]] = mapTree(levelMeta, id2Node, e[1]);
+        return result;
+      }, value);
+  } else
+  if (isArray(value.children)) {
+    value.children = tree.children.map((c) => {
       /** copy of c */
       let cc = mapTree(levelMeta, id2Node, c);
       cc.parent = value;
       return cc; });
   }
+
   return value;
 };
 
@@ -266,14 +284,21 @@ function treeFor(levelMeta, tree, id2n, id2Pn) {
 };
 /** Copy just 1 node. */
 function copyNode(levelMeta, id2nc, n) {
-  let c = Object.assign({}, n);
-  if (typeof n.children !== 'boolean') {
-    c.children = [];
+  /** copy of node n */
+  let c;
+  if (n.children === undefined) {
+    dLog('copyNode', 'roots', n);
+    c = {};
+  } else {
+    c = Object.assign({}, n);
+    if (typeof n.children !== 'boolean') {
+      c.children = [];
+    }
   }
   levelMeta.set(c, n.type);
   id2nc[n.id] = c;
-  if (c.parent) {
-    c.parent = id2nc[c.parent.id];
+  if (n.parent) {
+    c.parent = id2nc[n.parent.id];
   }
   return c;
 }
@@ -291,13 +316,27 @@ function addNode(levelMeta, id2nc, on) {
     }
     onc = copyNode(levelMeta, id2nc, on);
     if (parent) {
-      parent.children.push(onc);
+      if (parent.children) {
+        parent.children.push(onc);
+      } else {
+        parent[onc.id] = onc;
+      }
     }
   }
   return onc;
 }
 
+/*----------------------------------------------------------------------------*/
 
+/** @return a count of the children at the top level, or 2nd level if valueTree is multiple roots.
+ * @desc possibly displaying the leaf count would be more useful.
+ */
+function treesChildrenCount(valueTree) {
+  let count = valueTree.children ?
+      valueTree.children.length :
+      Object.values(valueTree).reduce((result, vt) => result += vt.children.length, 0);
+  return count;
+}
 /*----------------------------------------------------------------------------*/
 
 
@@ -472,8 +511,9 @@ export default ManageBase.extend({
         dLog(fnName, tree, id2n, 'id2Pn', id2Pn);
         let
         valueTree = treeFor(this.get('levelMeta'), tree, id2n, id2Pn);
+        this.levelMeta.set(valueTree, 'term');
 
-        let keyLength = valueTree.children.length;
+        let keyLength = treesChildrenCount(valueTree);
         this.set('blockFeatureOntologiesTreeGroupedKeyLength', keyLength);
 
         dLog('blockFeatureOntologiesTreeGrouped', valueTree);
@@ -487,19 +527,26 @@ export default ManageBase.extend({
   /** Similar to blockFeatureOntologiesTreeGrouped() which shows only the
    * branches containing datasets, whereas this shows the whole ontology.
    */
-  blockFeatureOntologiesTreeEmbedded : computed('ontologyTree', 'ontologyId2DatasetNodes', function () {
+  blockFeatureOntologiesTreeEmbedded : computed('treesForData', 'ontologyId2DatasetNodes', function () {
     let
     fnName = 'blockFeatureOntologiesTreeEmbedded',
-    treeP = this.get('ontologyTree'),
+    treeP = this.get('treesForData'), // single-root : ontologyTree
     id2PnP = this.get('ontologyId2DatasetNodes'),
     promise = Promise.all([treeP, id2PnP]).then(([tree, id2Pn]) => {
       dLog(fnName, 'id2Pn', id2Pn);
       let
       valueTree = mapTree(this.get('levelMeta'), id2Pn, tree);
+      this.levelMeta.set(valueTree, 'term');
 
       /** valueTree is the root, e.g.  "CO_321:ROOT" : "Wheat traits", so count the children. */
-      let keyLength = valueTree.children.length;
+      let keyLength = treesChildrenCount(valueTree);
       this.set('blockFeatureOntologiesTreeEmbeddedKeyLength', keyLength);  // perhaps rename both to keysLength.
+
+      Object.values(valueTree).forEach((t) => t.parent = valueTree);
+      /*
+      let childNames = Object.keys(valueTree);
+      valueTree.name = childNames.length ? childNames[0].slice(0,2) : 'CropOntology';
+      */
 
       dLog('blockFeatureOntologiesTreeEmbedded', valueTree);
       return valueTree;
@@ -584,6 +631,7 @@ export default ManageBase.extend({
   }),
 
 
+  treesForData : alias('ontology.treesForData'),
   ontologyTree : computed(function () {
     let treeP = this.get('ontology').getTree();
     return treeP;
@@ -592,7 +640,7 @@ export default ManageBase.extend({
     /** use blockFeatureOntologiesTreeEmbedded in place of ontologyTree, to have .parent. */
     let treeP = this.get('blockFeatureOntologiesTreeEmbedded');
     /** Add a node to a result. */
-    function reduceNode(result, node) {
+    function reduceNode(result, parentKey, index, node) {
       let id = node.id;
       if (id) {
         result[id] = node;
@@ -600,7 +648,7 @@ export default ManageBase.extend({
       return result;
     }
     let
-    id2node = treeP.then((tree) => walkTree({}, reduceNode, tree));
+    id2node = treeP.then((tree) => reduceIdChildrenTree(tree, reduceNode, {}));
     return id2node;
   }),
 

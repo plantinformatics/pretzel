@@ -32,9 +32,10 @@ module.exports = function(Ontology) {
     paramError = ! root.match(/^CO_[0-9]{3}$/),
     cacheId = fnName + '_' + root,
     /** define refreshCache true to replace the cached result. */
-    refreshCache = false;
+    refreshCache = false;  // e.g. root === 'CO_338'; // 
     let result = ! refreshCache && cache.get(cacheId);
-    if (! result) {
+    // enable this to copy results from previous cacheId (without _)
+    if (! result && false) {
       let cacheIdOld = fnName + root;
       result = cache.get(cacheIdOld);
       if (result) {

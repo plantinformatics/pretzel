@@ -79,7 +79,6 @@ function reduceHash(h, fn, result) {
  * services/data/ontology.js : getTree(), and copied by manage-explorer.js :
  * mapTree() and treeFor().
  * Similar to walkTree() (manage-explorer.js);  difference : this passes parentKey, index to fn;
- * and does not apply fn to the root :   result = fn(result, undefined, 0, tree);
  * The API of the tree used by this function is {id, children : []}.
  * Analogous to Array .reduce(), call function for each key:value pair of the
  * input hash, passing & returning result.
@@ -89,15 +88,26 @@ function reduceHash(h, fn, result) {
  */
 function reduceIdChildrenTree(tree, fn, result) {
   const fnName = 'reduceIdChildrenTree';
-  // based on mapTree0().
   dLog(fnName, tree, result);
-  result = tree.children.reduce((result1, childNode, i) => {
-    result1 = fn(result1, tree.id, i, childNode);
-    if (Ember.isArray(childNode.children)) {
-      result1 = reduceIdChildrenTree(childNode, fn, result1);
-    }
-    return result1;
-  }, result);
+  return reduceIdChildrenTreeR(tree, /*parentKey*/undefined, /*index*/-1, fn, result);
+}
+/** The recursive part of reduceIdChildrenTree().
+ */
+function reduceIdChildrenTreeR(tree, parentKey, index, fn, result) {
+  // based on mapTree0().
+
+  result = fn(result, parentKey, index, tree);
+
+  let children = tree.children;
+  if (children === undefined) {
+    result = Object.entries(tree).reduce(
+      (result2, e) => reduceIdChildrenTreeR(e[1], tree.id, e[0], fn, result2), result);
+  } else if (isArray(children)) {
+    result = children.reduce((result1, childNode, i) => {
+        result1 = reduceIdChildrenTreeR(childNode, tree.id, i, fn, result1);
+        return result1;
+      }, result);
+  }
 
   return result;
 }
@@ -262,8 +272,6 @@ function typeMetaIdChildrenTree(levelMeta, tree) {
   function storeType(result, parentKey, index, value) {
     levelMeta.set(value, value.type);
   };
-  /** reduceIdChildrenTree() does not apply fn to root tree. */
-  storeType(undefined, undefined, 0, tree);
   reduceIdChildrenTree(tree, storeType, undefined);
   return levelMeta;
 }

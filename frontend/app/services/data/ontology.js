@@ -37,6 +37,7 @@ function urlFor(apiName, param) {
 export default Service.extend({
   ajax : service(),
   auth : service(),
+  block : service('data/block'),
 
   /*--------------------------------------------------------------------------*/
   // results from direct requests to CropOntology.org API
@@ -49,6 +50,29 @@ export default Service.extend({
   trees : EmberObject.create(),
   /** byId[rootId][ontologyId] references into trees[rootId] children, by ontologyId */
   byId :  EmberObject.create(),
+
+  /*--------------------------------------------------------------------------*/
+
+  treesForData : computed('block.ontologyRoots', function () {
+    let
+    treesP = this.get('block.ontologyRoots').then((roots) => {
+      let 
+      treePs = roots.map((rootId) => this.getTree(rootId));
+      // dLog('treesForData', treePs);
+      /** multi-root tree */
+      let
+      mtreeP = Promise.all(treePs)
+        .then(
+          (trees) => {
+            /** [[rootId, tree], ...] */
+            let idTrees = trees.map((t, i) => [roots[i], t]),
+                multiTree = Object.fromEntries(idTrees);
+            return multiTree;
+          });
+      return mtreeP;
+    });
+    return treesP;
+  }),
 
   /*--------------------------------------------------------------------------*/
 
@@ -167,8 +191,6 @@ export default Service.extend({
       return result;
     };
     let byId = EmberObject.create();
-    /** reduceIdChildrenTree() does not apply fn to root tree. */
-    addId(byId, undefined, 0, tree);
     /** result is === byId */
     reduceIdChildrenTree(tree, addId, byId);
     dLog('tree2ids', rootId, tree, byId);

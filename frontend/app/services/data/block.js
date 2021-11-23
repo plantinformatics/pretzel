@@ -259,6 +259,46 @@ export default Service.extend(Evented, {
 
   /*--------------------------------------------------------------------------*/
 
+  ontologyIds : computed('blockFeatureOntologies', function () {
+    let
+    idsP = this.get('blockFeatureOntologies').then((bos) => {
+      let
+      idsSet = bos.reduce((result, bo) => {
+        bo.Ontologies.forEach((o) => result.add(o));
+        return result;
+      }, new Set()),
+      ids = Array.from(idsSet.keys());
+      dLog('ontologyIds', bos, idsSet, ids);
+      return ids;
+    });
+    return idsP;
+  }),
+
+  ontologyRoots : computed('ontologyIds', function () {
+    let
+    rootsP = this.get('ontologyIds').then((ois) => {
+      let
+      rootsSet = ois.reduce((result, ontologyId) => {
+        let
+        rootIdMatch = ontologyId.match(/^(CO_[0-9]+):/),
+        rootId = rootIdMatch && rootIdMatch[1];
+        if (rootId) {
+          result.add(rootId);
+        }
+        return result;
+      }, new Set()),
+      roots = Array.from(rootsSet.keys());
+      dLog('ontologyRoots', ois, rootsSet, roots);
+      return roots;
+    });
+    return rootsP;
+  }),
+
+
+
+
+  /*--------------------------------------------------------------------------*/
+
   featureSaved() {
     /* The API result blocksService.blockFeatureOntologies is invalidated by
      * this save, so clear the result promise to trigger a new request.
