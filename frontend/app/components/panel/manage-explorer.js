@@ -231,7 +231,8 @@ function mapTree(levelMeta, id2Node, tree) {
     dLog('mapTree', value, node);
   }
   if (value.text || value.id) {
-    value.name = value.text + ' [' + value.id + ']';
+    /** same format as ontologyNameId(), rootOntologyNameId()     */
+    value.name = '[' + value.id + ']  ' + value.text;
   }
 
   if (tree.children === undefined) {
@@ -244,13 +245,19 @@ function mapTree(levelMeta, id2Node, tree) {
         result[e[0]] = mapTree(levelMeta, id2Node, e[1]);
         return result;
       }, value);
-  } else
-  if (isArray(value.children)) {
-    value.children = tree.children.map((c) => {
-      /** copy of c */
-      let cc = mapTree(levelMeta, id2Node, c);
-      cc.parent = value;
-      return cc; });
+  } else {
+    let children = tree.children;
+    if (isArray(children)) {
+      value.children = children.map((c) => {
+        /** copy of c */
+        let cc = mapTree(levelMeta, id2Node, c);
+        cc.parent = value;
+        return cc; });
+    } else if (children.children && children.id && children.text && children.type)
+    {
+      dLog('mapTree', 'value', value, 'tree', tree);      
+      tree.children = [tree.children];
+    }
   }
 
   return value;
