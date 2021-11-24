@@ -46,6 +46,25 @@ class FeatureEditor extends Handsontable.editors.BaseEditor {
   beginEditing(newInitialValue, event) {
     dLog('beginEditing', newInitialValue, event);
     super.beginEditing(newInitialValue, event);
+
+    /** This works, and if beginEditing() is called in all cases this could be a
+     * basis for an alternative to setRowAttribute() and tableData : send an
+     * action to table-brushed component with feature, setting an attribute
+     * which can take the role of formFeatureEditEnable.
+     * A WeakMap or Symbol can be used in place of .rootElement.__PretzelTableBrushed__
+     */
+    if (false) {
+    let
+    td = this.TD,
+    tr = td?.parentElement,
+    row = tr?.rowIndex,
+    table = this.hot,
+    tableBrushed = table.rootElement.__PretzelTableBrushed__;
+    // td.cellIndex
+    let feature = tableBrushed.data[row];
+    tableBrushed.setRowAttribute(table, row, feature);
+    }
+
     formFeatureEditEnable(this);
   }
   getValue() {
@@ -281,6 +300,10 @@ export default Component.extend({
     }
 
       let data = this.get('dataForHoTable');
+      /** if data is [], Handsontable appends {} to it, so pass it a new empty array instead of the CP result. */
+      if (data.length === 0) {
+        data = [];
+      }
       var table = new Handsontable(tableDiv, {
         data: data || [['', '', '']],
         minRows: 1,
@@ -310,7 +333,10 @@ export default Component.extend({
         outsideClickDeselects: false
       });
       that.set('table', table);
-      this.setRowAttributes(table);
+      this.setRowAttributes(table, this.data);
+      /** application client data : this component */
+      table.rootElement.__PretzelTableBrushed__ = this;
+
 
       $("#table-brushed").on('mouseleave', function(e) {
         that.highlightFeature();
@@ -330,14 +356,38 @@ export default Component.extend({
   },
 
   /** Assign Feature reference to each row. */
-  setRowAttributes(table) {
-    let data = this.get('data');
+  setRowAttributes(table, data) {
     // table.countRows()
     data.forEach((feature, row) => {
-      let cell = table.getCell(row, 0),
-          tr = cell?.parentElement;
-      tr.__dataPretzelFeature__ = feature.feature;
+      this.setRowAttribute(table, row, feature) ;
     });
+  },
+  /** Assign Feature reference to row. */
+  setRowAttribute(table, row, feature) {
+    let data = this.get('data');
+      let cell = table.getCell(row, 0);
+    /** cell and <tr> may not be rendered when setRowAttributes() is called, so
+     * this is also called from afterSelection(). */
+    let tr;
+    /** cell will be null if column 0 is not rendered, in which case use getRowTrElement(). */
+    if (cell) {
+      tr = cell.parentElement;
+    } else {
+      tr = this.getRowTrElement(table, row);
+    }
+    if (tr) {
+      tr.__dataPretzelFeature__ = feature.feature;
+    }
+  },
+  /** @return the <tr> element for row in table
+   */
+  getRowTrElement(table, row) {
+    let td;
+    /** Use getCellMetaAtRow() to list the cells of the row which are currently rendered. */
+    let cells = table.getCellMetaAtRow(row);
+    cells.any((cell) => (td = table.getCell(row, cell.col)));
+    let tr = td?.parentElement;
+    return tr;
   },
 
   afterSelection(table, row, col) {
@@ -360,6 +410,9 @@ export default Component.extend({
     this.set('tableSelectedFeatures', features);
     this.highlightFeature(features);
     this.get('controls').set('tableSelectedFeatures', features);
+
+    let feature = this.data[row];
+    this.setRowAttribute(table, row, feature);
   },
 
   onSelectionChange: observer('dataForHoTable', function () {
@@ -372,7 +425,7 @@ export default Component.extend({
         dLog("table-brushed.js", "onSelectionChange", table, data.length);
       me.send('showData', data);
       table.updateSettings({data:data});
-      this.setRowAttributes(table);
+      this.setRowAttributes(table, this.data);
     }
   }),
 

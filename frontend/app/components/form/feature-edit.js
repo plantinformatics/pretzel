@@ -18,6 +18,11 @@ const dLog = console.debug;
 
 /*----------------------------------------------------------------------------*/
 
+/** result of getSelected() is [selection_rect], where selection_rect is :
+ *  [start_row, start_col, end_row, end_col], e.g. [ 3, 12, 3, 12 ] for [3,12] - [3,12]
+ */
+const s_start_row = 0, s_start_col = 1, s_end_row = 2, s_end_col = 3;
+
 function findPropColumn(hot, row, propName) {
 h.getCellMeta(0,6)
 h.countSourceCols()
@@ -98,14 +103,38 @@ export default Component.extend({
     /** similar to setRowAttributes() */
     cell = hot?.getCell(row, 0);
     if (! cell && hot) {
+      /** getCell(row, 0) may be undefined if column 0 is not in view (scrolled
+       * sideways); in this case use hot.getSelected() because the selected
+       * columns are likely to be in view, and only the row <tr> is required
+       * here (in fact the selected column (s_{start,end}_column) are the column
+       * of the OntologyId which is being edited, unless the user has used
+       * multiple selections."
+       * See also following comment re. this.tableData
+       */
       let
       selected = hot.getSelected();
       // result is in cell
-      selected.any((rect) => (cell = hot.getCell(row, rect[0]) || hot.getCell(row, rect[1])));
+      selected.any((rect) => (cell = hot.getCell(row, rect[s_start_col]) || hot.getCell(row, rect[s_end_col])));
     }
-    let
-    tr = cell?.parentElement,
-    feature = tr?.__dataPretzelFeature__;
+    let tr, feature;
+    if (cell) {
+      tr = cell.parentElement;
+      feature = tr?.__dataPretzelFeature__;
+    }
+    if (! feature && ! (feature = hot.getDataAtRowProp(row, 'dataPretzelFeature')))  {
+      /** association of feature with the <tr> via setRowAttributes() is not
+       * reliable because of partial rendering - the rows out of view may not be
+       * rendered and setRowAttributes() is not called.
+       * Associating the feature with the <tr> seems preferable to passing in
+       * tableData from the parent component table-brushed, but there may not be
+       * a simple way to ensure it is always available - setRowAttribute() and
+       * getRowTrElement() seem to ensure that connection in testing so far, but
+       * it's a complex solution compared to simply passing in tableData.
+       */
+      let
+      rowData = this.tableData[row];
+      feature = rowData?.feature;
+    }
     dLog('feature', feature, row, hot, cell, tr);
     return feature;
   }), 
