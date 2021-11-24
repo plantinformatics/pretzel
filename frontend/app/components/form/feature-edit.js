@@ -96,7 +96,14 @@ export default Component.extend({
     row = this.get('row'),
     hot = this.get('cell.hot'),    
     /** similar to setRowAttributes() */
-    cell = hot?.getCell(row, 0),
+    cell = hot?.getCell(row, 0);
+    if (! cell && hot) {
+      let
+      selected = hot.getSelected();
+      // result is in cell
+      selected.any((rect) => (cell = hot.getCell(row, rect[0]) || hot.getCell(row, rect[1])));
+    }
+    let
     tr = cell?.parentElement,
     feature = tr?.__dataPretzelFeature__;
     dLog('feature', feature, row, hot, cell, tr);
