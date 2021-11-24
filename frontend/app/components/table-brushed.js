@@ -191,6 +191,9 @@ export default Component.extend({
         if (feature.values) {
           Object.keys(feature.values).forEach((n) => result.add(n));
         }
+        if (feature.get('blockId.isQTL')) {
+          result.add('Ontology');
+        }
         return result;
       },
       new Set()),
