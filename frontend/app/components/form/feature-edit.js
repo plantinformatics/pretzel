@@ -1,6 +1,8 @@
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { inject as service } from '@ember/service';
+import { alias } from '@ember/object/computed';
+
 
 import ObjectProxy from '@ember/object/proxy';
 import PromiseProxyMixin from '@ember/object/promise-proxy-mixin';
@@ -137,7 +139,8 @@ export default Component.extend({
     }
     dLog('feature', feature, row, hot, cell, tr);
     return feature;
-  }), 
+  }),
+  owner : alias('feature.blockId.datasetId.owner'),
   trait : computed('feature', function trait() {
     let feature = this.get('feature'),
         trait = feature?.values.Trait;
