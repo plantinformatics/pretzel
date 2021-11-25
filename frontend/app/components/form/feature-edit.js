@@ -61,7 +61,7 @@ export default Component.extend({
     range = Array.from({length}, (v,k) => k + 1);
     return range;
   }),
-  row : computed('cell', function columnIndexes () {
+  row : computed('cell', function row () {
     let
     cell = this.get('cell'),
     row = cell.cellProperties.row;

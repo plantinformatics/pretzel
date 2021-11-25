@@ -32,13 +32,15 @@ export default Component.extend(Evented, {
     let values = this.get('values');
     let levelMeta = this.get('levelMeta');
     let count;
+    let threshold = 50;
     if (this.get('name') === 'Ontology') {
       count = leafCountOntologyTab(levelMeta, values);
+      threshold = 2;
     } else {
       /** Walk the value tree and count leaves (blocks). */
       count = leafCount(levelMeta, values);
     }
-    let autoAllActive = count < 50;
+    let autoAllActive = count <= threshold;
     dLog('autoAllActive', this.get('name'), values, autoAllActive, count);
     /* only set when values change; this provides an initial default state which
      * the user can toggle. */
