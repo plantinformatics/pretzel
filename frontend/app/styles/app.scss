@@ -1189,9 +1189,13 @@ div#tab-explorer-datasets > ul.list-group > div
 }
  */
 
-div#tab-explorer-Ontology  .list-group-item
+/* limit this using .list-group-item-info so it doesn't apply to the leaf (white rectangle) */
+div#tab-explorer-Ontology  .list-group-item.list-group-item-info
 {
     padding-right: 0px;
+}
+div#tab-explorer-Ontology  .list-group-item
+{
     padding-left: 10px;
 }
 
