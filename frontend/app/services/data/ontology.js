@@ -50,6 +50,8 @@ export default Service.extend({
   trees : EmberObject.create(),
   /** byId[rootId][ontologyId] references into trees[rootId] children, by ontologyId */
   byId :  EmberObject.create(),
+  /** List of Ontology Root IDs received. */
+  rootsReceived : Ember.A(),
 
   /*--------------------------------------------------------------------------*/
 
@@ -122,6 +124,7 @@ export default Service.extend({
     return name;
   },
   /** If the given string ontologyId is a valid cropOntology Ontology ID;
+   * return the .text description of the Ontology (if available),
    * if not return undefined.
    * If the Ontology description has already been requested from cropOntology
    * API and is cached, use the name, otherwise request it and return undefined.
@@ -225,6 +228,7 @@ export default Service.extend({
         (trace > 1) && dLog(fnName, treeValue);
         trees.set(rootId, treeValue);
         this.byId[rootId] = this.tree2ids(rootId, treeValue);
+        this.rootsReceived.pushObject(rootId);
       });
 
       tree = promise;

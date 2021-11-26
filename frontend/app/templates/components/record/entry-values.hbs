@@ -21,7 +21,7 @@
 
 {{else if (or valuesModelName (and values_levelComponent (not-eq values_levelComponent 'record/entry-values') (not parentDone) ) ) }}
   {{!-- log  'values' values 'levelComponent' values_levelComponent --}}
-  {{component values_levelComponent levelMeta=levelMeta name=(or name values.name) values=values
+  {{component values_levelComponent levelMeta=levelMeta name=(or name values.name values_dataName) values=values
     data=values
     parentDone=true
     controlOptions=controlOptions

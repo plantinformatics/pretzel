@@ -8,6 +8,25 @@ const dLog = console.debug;
 
 
 /*----------------------------------------------------------------------------*/
+
+/** levelMeta.get(value) is simply the data type name, except in the case of
+ * the multi-root of the ontology tree, which also has a name attribute,
+ * i.e. {typeName : 'term', name : 'CO'}
+ * This addition might lead to other values in the meta, perhaps a class with
+ * access functions.
+ * This function accesses the data type name, irrespective of whether the meta is
+ * just the type name (string) or an object containing .typeName
+ */
+function valueGetType(levelMeta, value) {
+  let valueType = levelMeta.get(value);
+  if (valueType?.typeName) {
+    valueType = valueType.typeName;
+  }
+  return valueType;
+}
+
+
+/*----------------------------------------------------------------------------*/
 /* Functional programming utilities.
  * Lodash is already included by various packages, so may use that, or possibly Ramda.
  */
@@ -195,7 +214,7 @@ function leafCount(levelMeta, values) {
        * blocks array of each.
        * Ember.isArray(scopes) could instead be used to discern these 2 cases.
        */
-      valueType = levelMeta.get(value);
+      valueType = valueGetType(levelMeta, value);
       if (valueType == "Blocks") {
         count1 += value.length;
       }
@@ -249,7 +268,8 @@ function leafCountIdChildrenTree(levelMeta, tree) {
 
 function leafCountOntologyTab(levelMeta, values) {
   let count;
-  let dataTypeName = levelMeta.get(values);
+  let dataTypeName = valueGetType(levelMeta, values);
+
   switch (dataTypeName) {
   case 'Groups' :
     count = reduceHash(
@@ -279,9 +299,28 @@ function typeMetaIdChildrenTree(levelMeta, tree) {
 
 /*----------------------------------------------------------------------------*/
 
+/** if the OntologyId has been augmented with its text description, then parse
+ * out the ID.
+ * @param oid either e.g. "CO_338:0000017" or "[CO_338:0000017] Flower color"
+ * @return just the ID, e.g. "CO_338:0000017" etc  (regexp handles :ROOT, or :Term Name)
+ */
+function ontologyIdFromIdText(oid) {
+  if (oid.startsWith('[')) {
+    let
+    ontologyIdMatch = oid.match(/^\[(CO_[0-9]+.*)\]/);
+    oid = ontologyIdMatch && ontologyIdMatch[1];
+  }
+  return oid;
+}
+
+
+/*----------------------------------------------------------------------------*/
+
 export {
+  valueGetType,
   mapHash, forEachHash, reduceHash, reduceIdChildrenTree,
   justUnmatched, logV,
   leafCount, leafCountOntologyTab,
-  typeMetaIdChildrenTree
+  typeMetaIdChildrenTree,
+  ontologyIdFromIdText,
 };

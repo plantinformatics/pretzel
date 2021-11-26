@@ -33,7 +33,8 @@ import { tab_explorer_prefix, text2EltId } from '../../utils/explorer-tabId';
 import { parseOptions } from '../../utils/common/strings';
 import { thenOrNow } from '../../utils/common/promises';
 
-import { mapHash, reduceHash, reduceIdChildrenTree, justUnmatched, logV } from '../../utils/value-tree';
+import { valueGetType, mapHash, reduceHash, reduceIdChildrenTree, justUnmatched,
+         logV, ontologyIdFromIdText } from '../../utils/value-tree';
 import { blocksParentAndScope } from '../../utils/data/grouping';
 
 
@@ -129,12 +130,40 @@ function addField(object, fieldName, value) {
 }
 
 /**
+ * Used as a pre-process for (fieldName === 'Ontologies')
+ * in blockValuesNameFiltered (CP : blockFeatureOntologiesName)
+ * @param me  manage-explorer
+ */
+function blockValuesIdText(me, blocksTraits) {
+  blocksTraits.forEach((bt) => {
+    bt.Ontologies = bt.Ontologies.map((oid)=> {
+      let result = oid;
+      if (! oid.startsWith('[')) {
+        let name = me.get('ontology').getNameViaPretzelServer(oid);
+        if (typeof name === 'string') {
+          result = '[' + oid + '] ' + name;
+        }
+      }
+      return result;
+    });
+  });
+  return blocksTraits;
+}
+
+
+/**
  * CP : blockFeatureTraitsName
  */
 function blockValuesNameFiltered (fieldName) {
   let
   nameFilters = this.get('nameFilterArray'),
   blocksTraitsP = this.get('blockFeature' + fieldName + 'History');
+
+  if (fieldName === 'Ontologies') {
+    blocksTraitsP = blocksTraitsP
+      .then((bts) => blockValuesIdText(this, bts) );
+  }
+
   if (nameFilters.length) {
     blocksTraitsP = blocksTraitsP
       .then((blocksTraits) => {
@@ -280,6 +309,7 @@ function treeFor(levelMeta, tree, id2n, id2Pn) {
    * or filterHash() | mapHash() (will that add the root ok ?).
    */
   /*treeCopy =*/ reduceHash(id2Pn, (t, oid, p) => {
+    oid = ontologyIdFromIdText(oid);
     let on = id2n[oid];
     if (! on) {
       dLog('treeCopy', oid, 'not present in', id2n);
@@ -491,7 +521,8 @@ export default ManageBase.extend({
   blockFeatureOntologiesName : computed(
     'blockFeatureOntologiesHistory.[]',
     'nameFilterArray', 'caseInsensitive', 'searchFilterAll',
-    //  - don't filter here if this.showHierarchy
+    'ontology.rootsReceived.[]',
+    //  - don't filter here if this.showHierarchy ?
     function () { return blockValuesNameFiltered.apply(this, ['Ontologies']); }),
 
   blockFeatureOntologiesTree : computed(
@@ -518,7 +549,7 @@ export default ManageBase.extend({
         dLog(fnName, tree, id2n, 'id2Pn', id2Pn);
         let
         valueTree = treeFor(this.get('levelMeta'), tree, id2n, id2Pn);
-        this.levelMeta.set(valueTree, 'term');
+        this.levelMeta.set(valueTree, {typeName : 'term', name : 'CO'});
 
         let keyLength = treesChildrenCount(valueTree);
         this.set('blockFeatureOntologiesTreeGroupedKeyLength', keyLength);
@@ -627,6 +658,7 @@ export default ManageBase.extend({
       let id2n = reduceHash(
         bot,
         (result, key, value) => {
+          key = ontologyIdFromIdText(key);
           (result[key] ||= []).push(value);
           return result;
         },
@@ -1216,7 +1248,7 @@ export default ManageBase.extend({
                * is a parent, but in that case d is the Dataset object, whereas key
                * is the _meta.type (if a parent does not have _meta.type it does not have a tab named by type).
                */
-              valueType = me.levelMeta.get(value),
+              valueType = valueGetType(me.levelMeta, value),
             isParentType = parentsTypes.indexOf(key) >= 0,  // i.e. !== -1
             valueIsParent =  value.length && value[0].get('children.length'),
             isParent =  (valueType === 'Parent') || isParentType || valueIsParent;
@@ -1233,7 +1265,7 @@ export default ManageBase.extend({
             }
             return value;
           };
-          let resultValue, dataTypeName = me.levelMeta.get(value),
+          let resultValue, dataTypeName = valueGetType(me.levelMeta, value),
           isGrouping = dataTypeName === 'Groups';
           if (isGrouping) {
             resultValue = mapHash(value, ps);

@@ -10,7 +10,7 @@ import DS from 'ember-data';
 import { alphanum } from '@cablanchard/koelle-sort';
 
 
-import { logV } from '../../utils/value-tree';
+import { valueGetType, logV } from '../../utils/value-tree';
 
 import { parentOfType, elt0 } from '../../utils/ember-devel';
 
@@ -99,11 +99,21 @@ export default EntryBase.extend({
     let
       levelMeta = this.get('levelMeta'),
     values = this.get('values'),  // values.then ...
-    dataTypeName = values && (levelMeta.get(values) || this.get('valuesModelName'));
+    dataTypeName = values && (valueGetType(levelMeta, values) || this.get('valuesModelName'));
     if (trace_entryValues)
       console.log('dataTypeName', dataTypeName, values);
     return dataTypeName;
   }),
+
+  values_dataName : computed('values',  function () {
+    let
+    levelMeta = this.get('levelMeta'),
+    values = this.get('values'),
+    meta = levelMeta.get(values),
+    name = meta?.name;
+    return name;
+  }),
+
   valuesModelName : computed('values',  function () {
     let values = this.get('values'),
     modelName = this.modelName2(values);
@@ -171,8 +181,9 @@ export default EntryBase.extend({
   /*--------------------------------------------------------------------------*/
 
   valuesIsOntologyTree : computed('values', function () {
-    // this.levelMeta.get(values) === "term" or "trait"
+    // let levelMeta = this.levelMeta;
     function isOntologyTreeFn (values) {
+      /* possibly : ["term", "trait"].includes(valueGetType(levelMeta, values)) */
       return values && 
       values.hasOwnProperty('id') && (typeof values.id === 'string') &&
       values.hasOwnProperty('type') && (typeof values.type === 'string') && 
@@ -201,7 +212,7 @@ export default EntryBase.extend({
           recent = o.historyView === 'Recent',
           levelMeta = this.levelMeta;
 
-      if ((levelMeta.get(values) === 'Parent')
+      if ((valueGetType(levelMeta, values) === 'Parent')
           && o.historyBlocks
           && (o.historyView !== 'Normal')) {
         let scopes = Object.keys(values);
@@ -233,7 +244,7 @@ export default EntryBase.extend({
   dataTypeName (value) {
     let
       levelMeta = this.get('levelMeta'),
-    dataTypeName = levelMeta.get(value)
+    dataTypeName = valueGetType(levelMeta, value)
     ;
     return dataTypeName;
   },
