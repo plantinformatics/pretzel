@@ -1,8 +1,7 @@
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { inject as service } from '@ember/service';
-import { alias } from '@ember/object/computed';
-
+import { alias, and } from '@ember/object/computed';
 
 import ObjectProxy from '@ember/object/proxy';
 import PromiseProxyMixin from '@ember/object/promise-proxy-mixin';
@@ -141,14 +140,22 @@ export default Component.extend({
     return feature;
   }),
   owner : alias('feature.blockId.datasetId.owner'),
+  editable : and('owner', 'feature.blockId.isQTL'),
+  notEditableMessage : computed('editable', function () {
+    let message = 
+        (! this.owner) ? 'Edit is available only to the owner of this dataset' :
+        (! this.editable) ? 'Ontology ID edit is available only for QTL datasets' :
+        null;
+    return message;
+  }),
   trait : computed('feature', function trait() {
     let feature = this.get('feature'),
-        trait = feature?.values.Trait;
+        trait = feature?.values?.Trait;
     return trait;
   }),
   ontology : computed('feature', function ontology() {
     let feature = this.get('feature'),
-        ontology = feature?.values.Ontology;
+        ontology = feature?.values?.Ontology;
     return ontology;
   }),
 

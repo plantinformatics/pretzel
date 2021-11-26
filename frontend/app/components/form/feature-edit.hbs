@@ -7,7 +7,7 @@
   </li>
   <li>
     Ontology :
-    {{#if this.owner}}
+    {{#if this.editable}}
     <Input @value={{this.editOntology}} />
     <button onclick={{action this.showBrowseTree}} class="btn btn-xs"><i class="glyphicon glyphicon-tree-conifer"></i></button>
     {{else}}
@@ -17,10 +17,10 @@
   </li>
 </ul>
 
-{{#if this.owner}}
-<button onclick={{action this.setFeatureOntology}} sensitive={{this.owner}}>OK</button>
+{{#if this.notEditableMessage}}
+<div style="margin:1em">{{this.notEditableMessage}}</div>
 {{else}}
-<div style="margin:1em">Edit is available only to the owner of this dataset</div>
+<button onclick={{action this.setFeatureOntology}} sensitive={{this.owner}}>OK</button>
 {{/if}}
 <button onclick={{action this.cancel}}>Cancel</button>
 
