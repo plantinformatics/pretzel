@@ -101,7 +101,7 @@ const featureValuesColumnsAttributes = {
   ref : { className: "htCenter"},
   alt : { className: "htCenter"},
   Reference : {className : 'htNoWrap' },
-  Ontology : { editor : FeatureEditor },
+  Ontology : { editor : FeatureEditor, className : 'editDialog' },
 };
 /** Provide default widths for feature .values fields
  */

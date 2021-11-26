@@ -1764,6 +1764,18 @@ div.metaeditor-panel div.jsoneditor-tree button.jsoneditor-contextmenu-button {
 
 /* -------------------------------------------------------------------------- */
 
+/* div#table-brushed.handsontable */
+
+table.htCore > tbody > tr > td.editDialog {
+  cursor : context-menu;
+}
+table.htCore > tbody > tr > td.editDialog:hover {
+  /* text-shadow: #337ab730 5px 0 10px; */
+  text-decoration: overline dotted #337ab7;
+}
+
+/* -------------------------------------------------------------------------- */
+
 .paths-table .optionControls {
   display: flex;
   margin-bottom: 1em;
