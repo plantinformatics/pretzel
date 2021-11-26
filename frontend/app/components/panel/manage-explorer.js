@@ -412,6 +412,14 @@ export default ManageBase.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** set by onChangeTab(), used to provide activeId to BsTab in .hbs
+   * during re-render, which occurs after .nameFilter (search input) change etc
+   * Initial tab is 'tab-explorer-datasets' : 'All Datasets'.
+   */
+  activeId : 'tab-explorer-datasets',
+
+  /*--------------------------------------------------------------------------*/
+
   /** true if Search Filter is case insensitive.
    * Default x-toggle colours are green / red for true / false respectively,
    * so representing caseInsensitive instead of caseSensitive looks right.
@@ -1944,6 +1952,21 @@ export default ManageBase.extend({
     }
 
   },  // actions
+
+  //----------------------------------------------------------------------------
+
+  onChangeTab(id, previous) {
+    dLog('onChangeTab', this, id, previous, arguments);
+    /** The values entered by the user in the search filter are fairly specific
+     * to each tab since the tabs each display different types of data. e.g. the
+     * Ontology tab filters on ([OntologyId] + text).
+     * Clearing the nameFilter avoids user confusion because the search filter
+     * for another tab is likely to match nothing, resulting in an empty
+     * display.
+     */
+    this.set('nameFilter', '');
+    this.set('activeId', id);
+  },
 
   //----------------------------------------------------------------------------
 

@@ -95,7 +95,7 @@
   </BsTab>
 
 
-  <BsTab @customTabs={{true}} as |tab|>
+  <BsTab @customTabs={{true}} @onChange={{action this.onChangeTab}} @activeId={{this.activeId}} as |tab|>
     <BsNav @type="tabs" as |nav|>
     <ul class="nav nav-tabs li-active-extra counts">
 
