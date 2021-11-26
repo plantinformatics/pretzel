@@ -1189,6 +1189,13 @@ div#tab-explorer-datasets > ul.list-group > div
 }
  */
 
+div#tab-explorer-Ontology  .list-group-item
+{
+    padding-right: 0px;
+    padding-left: 10px;
+}
+
+
 
 /* .panel-primary defines a blue (#337ab7) border which is being eclipsed by
  * child elements, in particular the div.tab-explorer-datasets.  Defining some
