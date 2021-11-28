@@ -174,6 +174,17 @@ export default Component.extend({
     return name;
   }),
 
+  /** @return url for user to view details of Ontology on the cropOntology.org web site.
+   */
+  ontologyUrl : computed('editOntology', function () {
+    let url;
+    let o = this.editOntology;
+    if (o) {
+      url = 'https://cropontology.org/term/' + o;
+    }
+    return url;
+  }),
+
   setFeatureOntology() {
     dLog('inputOntology', this.editOntology);
     this.feature.set('values.Ontology', this.editOntology);

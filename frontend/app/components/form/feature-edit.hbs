@@ -5,16 +5,27 @@
   <li>
     Trait : {{trait}}
   </li>
+
   <li>
     Ontology :
+
     {{#if this.editable}}
     <Input @value={{this.editOntology}} />
     <button onclick={{action this.showBrowseTree}} class="btn btn-xs"><i class="glyphicon glyphicon-tree-conifer"></i></button>
     {{else}}
       <div>{{this.editOntology}}</div>
     {{/if}}
-    <div>{{this.ontologyText}}</div>
+
+    <div>
+    {{#if this.ontologyUrl}}
+    <a href={{this.ontologyUrl}}>{{this.ontologyText}}</a>
+    {{else}}
+      {{this.ontologyText}}
+    {{/if}}
+    </div>
+
   </li>
+
 </ul>
 
 {{#if this.notEditableMessage}}

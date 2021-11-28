@@ -136,7 +136,9 @@ function addField(object, fieldName, value) {
  */
 function blockValuesIdText(me, blocksTraits) {
   blocksTraits.forEach((bt) => {
-    bt.Ontologies = bt.Ontologies.map((oid)=> {
+    bt.Ontologies = bt.Ontologies
+      .filter((oid) => oid !== '')
+      .map((oid)=> {
       let result = oid;
       if (! oid.startsWith('[')) {
         let name = me.get('ontology').getNameViaPretzelServer(oid);
