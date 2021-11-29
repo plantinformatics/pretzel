@@ -222,12 +222,6 @@ export default Service.extend(Evented, {
 
   /*--------------------------------------------------------------------------*/
 
-  get blockFeatureTraits() {
-    return this.blockFeatureValues('Trait');
-  },
-  get blockFeatureOntologies() {
-    return this.blockFeatureValues('Ontology');
-  },
   /** Perform taskGetValues once when first requested.
    * @param fieldName 'Trait' or 'Ontology'
    * @return promise yielding :
@@ -235,11 +229,18 @@ export default Service.extend(Evented, {
    * { "_id" : ObjectId(...), "Traits" : [ "Plant height", "Rust resistance" ] },
    * ...]
    */
-  blockFeatureValues(fieldName) {
+  blockFeatureValues(apiServer, fieldName) {
     const
-    pName = 'blockFeature' + fieldName + 'P',
-    promise = this[pName] || 
-      (this[pName] = this.get('taskGetValues').perform(fieldName));
+    /** both the result and its promise are stored. */
+    name = 'blockFeature' + fieldName,
+    pName = name + 'P',
+    /** The result is a compilation from the datasets / blocks on a server, so
+     * it is an attribute of apiServer.
+     */
+    promise = apiServer[pName] || 
+      (apiServer[pName] = this.get('taskGetValues').perform(fieldName)
+       .then((values) => (apiServer[name] = values)) );
+
     return promise;
   },
   /** Call getBlockValues() in a task - yield the block Traits or Ontologys result.
@@ -255,13 +256,18 @@ export default Service.extend(Evented, {
       dLog(fnName, this, fieldName, valueOrLength(blockValues));
     
     return blockValues;
+    /* blockFeatureValues() guards against concurrent tasks for a given
+     * apiServer & fieldName, so .drop() is not required. */
   }), // .drop(),
 
   /*--------------------------------------------------------------------------*/
 
-  ontologyIds : computed('blockFeatureOntologies', function () {
+  ontologyIds : computed(
+    'controls.apiServerSelectedOrPrimary.blockFeatureOntologies',
+    'apiServers.datasetsBlocksRefresh', // as in blockValues
+  function () {
     let
-    idsP = this.get('blockFeatureOntologies').then((bos) => {
+    idsP = this.get('controls.apiServerSelectedOrPrimary.blockFeatureOntologies').then((bos) => {
       let
       idsSet = bos.reduce((result, bo) => {
         bo.Ontologies.forEach((o) => result.add(o));

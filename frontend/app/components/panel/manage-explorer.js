@@ -75,7 +75,7 @@ const selectorExplorer = 'div#left-panel-explorer';
 function blockValues(fieldName) {
   let ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
 
-  let valueP = this.get('blocksService.blockFeature' + fieldName);
+  let valueP = this.get('apiServerSelectedOrPrimary.blockFeature' + fieldName);
   let proxy = ObjectPromiseProxy.create({ promise: resolve(valueP) });
   return proxy;
 }
@@ -86,10 +86,11 @@ function blockValues(fieldName) {
  */
 function blockValuesBlocks(fieldName) {
   // 'blockFeatureTraits'
-  let blocksTraitsP = this.get('blocksService.blockFeature' + fieldName);
-  let store = this.get('primaryServerStore');
+  let apiServer = this.get('apiServerSelectedOrPrimary');
+  let blocksTraitsP = apiServer.get('blockFeature' + fieldName);
+  let store = apiServer.get('store');
   /** ids2Blocks() depends on this result. */
-  if (! this.get('apiServers.primaryServer.datasetsBlocks')) {
+  if (! apiServer.get('datasetsBlocks')) {
     blocksTraitsP = Promise.resolve([]);
   } else {
     blocksTraitsP = blocksTraitsP
@@ -479,12 +480,12 @@ export default ManageBase.extend({
 
   /*--------------------------------------------------------------------------*/
 
-  /** Implement Trait tab : map from blocksService.blockFeatureTraits, through
+  /** Implement Trait tab : map from apiServerSelectedOrPrimary.blockFeatureTraits, through
    * history filter/sort and name filter, grouping into blockFeatureTraitsTree.
    */
 
   blockFeatureTraits : computed(
-    'blocksService.blockFeatureTraits',
+    'apiServerSelectedOrPrimary.blockFeatureTraits',
     'apiServers.primaryServer.datasetsBlocks.[]',
     function () { return blockValues.apply(this, ['Traits']); }),
 
@@ -511,7 +512,7 @@ export default ManageBase.extend({
   /** Implement Ontology tab, as for Trait tab */
 
   blockFeatureOntologies : computed(
-    'blocksService.blockFeatureOntologies',
+    'apiServerSelectedOrPrimary.blockFeatureOntologies',
     'apiServers.primaryServer.datasetsBlocks.[]',
     /** comment in feature-edit.js : saveFeature() */
     'blocksService.featureUpdateCount',
@@ -519,7 +520,7 @@ export default ManageBase.extend({
 
   /** map ._id to .block */
   blockFeatureOntologiesBlocks : computed(
-    'blocksService.blockFeatureOntologies',
+    'apiServerSelectedOrPrimary.blockFeatureOntologies',
     'apiServers.primaryServer.datasetsBlocks.[]',
     'blocksService.featureUpdateCount',
     function () { return blockValuesBlocks.apply(this, ['Ontologies']); }),
@@ -835,6 +836,7 @@ export default ManageBase.extend({
   // datasets: [],
 
   servers : alias('apiServers.servers'),
+  apiServerSelectedOrPrimary : alias('controls.apiServerSelectedOrPrimary'),
 
   data: computed('filteredData', function() {
     let

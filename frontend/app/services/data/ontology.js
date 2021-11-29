@@ -38,6 +38,7 @@ export default Service.extend({
   ajax : service(),
   auth : service(),
   block : service('data/block'),
+  controls : service(),
 
   /*--------------------------------------------------------------------------*/
   // results from direct requests to CropOntology.org API
@@ -219,8 +220,10 @@ export default Service.extend({
     if (! tree) {
       dLog(fnName, rootId);
       let
+      /** based on serverTabSelected or primary */
+      apiServer = this.get('controls.apiServerSelectedOrPrimary'),
       promise =
-        this.get('auth').ontologyGetTree(rootId, /*options*/{});
+        this.get('auth').ontologyGetTree(apiServer, rootId, /*options*/{});
       // placeholder to prevent repeated request
       trees.set(rootId, promise);
 
