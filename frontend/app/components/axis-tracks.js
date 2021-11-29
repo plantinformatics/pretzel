@@ -1338,7 +1338,11 @@ export default InAxis.extend({
               g[i] = swapTag('rect', 'path', g[i], attributesForReplace);
               let x = xPosnS(subElements).apply(this, [d, i, g]);
               const
-              diamondWidth = width * (thisAt.controlsView.diamondWidth || 1),
+              /** by using minQtlWidth instead of width, all QTL diamonds are
+               * shown at the same size, i.e. the size of the smallest width as
+               * required by layering. */
+              minWidth = thisAt.get('minQtlWidth'),
+              diamondWidth = minWidth /*width*/ * (thisAt.controlsView.diamondWidth || 1),
               pathDFn = useDiamond ? 
                 (d,i,g) => diamondPath(y, d, diamondWidth, x) :
                 (d,i,g) => rectTrianglePath(y, d, width, x);
@@ -2095,15 +2099,17 @@ export default InAxis.extend({
     });
     return widths;
   }),
-  /** @return undefined if no qtlBlocks, otherwise max of qtlWidths. */
-  maxQtlWidth : computed('axis1d.dataBlocks.[]', 'blockComps.[]', 'qtlWidths', function () {
+  /** @return [] if no qtlBlocks, otherwise [min,max] of qtlWidths. */
+  qtlWidthRange : computed('axis1d.dataBlocks.[]', 'blockComps.[]', 'qtlWidths', function () {
     let
     widths = this.get('qtlWidths'),
     sorted = widths.sort((a,b) => Math.sign(b-a)),
-    maxWidth = sorted[0];
-    dLog('maxQtlWidth', widths, sorted, maxWidth);
-    return maxWidth;
+    range = sorted.length ? [sorted[0], sorted[sorted.length-1]] : [];
+    dLog('qtlWidthRange', widths, sorted, range);
+    return range;
   }),
+  maxQtlWidth : alias('qtlWidthRange.0'),
+  minQtlWidth : alias('qtlWidthRange.1'),
 
 
   /** trackBlocksR are shown using fixed-width space allocated by axis-blocks,
