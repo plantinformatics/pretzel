@@ -1248,7 +1248,7 @@ export default Model.extend({
             dLog('loadRequiredData', this.id, this.get('datasetId.id'),
                  this.get('datasetId.parent.id'), this.get('parentBlock.datasetId.id'));
           } else {
-            f.forEach((fi) => fi.value.forEach((fii) => this.get('trait').traitAddQtl(fii)));
+            f.forEach((fi) => fi?.value?.forEach((fii) => this.get('trait').traitAddQtl(fii)));
           }
           return [f, this.get('referencedFeatures')];})
       // parentBlockFeatures = ;

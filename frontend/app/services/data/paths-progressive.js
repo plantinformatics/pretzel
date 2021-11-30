@@ -733,7 +733,7 @@ export default Service.extend({
           // if (pathsViaStream)
           //  dLog(apiName, ' request', 'pathsViaStream', blockA, me, err, status);
           // else
-            dLog(apiName, ' request', blockA, me, err.responseJSON[status] /* .error.message*/, status);
+            dLog(apiName, ' request', blockA, me, err?.responseJSON[status] /* .error.message*/, status);
         });
       return promise;
     });
