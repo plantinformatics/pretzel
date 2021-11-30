@@ -84,6 +84,11 @@ export default Component.extend({
    */
   showAxisText : true,
 
+  /** if true, axis title text and axis ticks and text are shown on the right
+   * side of the axis for the rightmost axis.
+   */
+  axisTicksOutside : true,
+
   /*--------------------------------------------------------------------------*/
 
   /** Toggle axis-charts / Chart1 between showing the ChartLine-s as <rect> bars or lines   */

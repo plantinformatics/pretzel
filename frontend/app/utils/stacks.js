@@ -1235,14 +1235,18 @@ Stack.prototype.keyFunction = function (stack, i, group)
  * Use : the classes are used in css selectors to determine text-anchor.
  * If the stack is at the left or right edge of the diagram, then the titles
  * of Axes in the stack will be displayed on the outside edge, so that paths
- * between Axes (in .foreground) won't obscure the title.
+ * between Axes (in .foreground) won't obscure the title and axis ticks.
+ * With the addition of QTL display (on the right of the axis by default), it is
+ * sometimes preferred to place all axis ticks on the left, so this is enabled
+ * by GUI checkbox axisTicksOutside.
  *
  * @return "leftmost" or "rightmost" or "" (just one class)
  */
 Stack.prototype.sideClasses = function ()
 {
   let i = this.stackIndex(), n = stacks.length;
-  let classes = (i == 0) ? "leftmost" : ((i == n-1) ? "rightmost" : "");
+  let axisTicksOutside = oa.drawOptions?.controls?.view?.axisTicksOutside;
+  let classes = (i == 0) || ! axisTicksOutside ? "leftmost" : ((i == n-1) ? "rightmost" : "");
   return classes;
 };
 /** @return a d3 axis for this axis, either d3. axisRight or axisLeft depending

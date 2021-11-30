@@ -6323,6 +6323,20 @@ export default Component.extend(Evented, {
 
   //----------------------------------------------------------------------------
 
+  /** Redraw all stacks.
+   * Used when change of axisTicksOutside.
+   */
+  stacksRedraw()
+  {
+    dLog('stacksRedraw');
+    if (this.oa.svgContainer) {
+      let t = this.oa.svgContainer.transition().duration(750);
+      this.oa.stacks.forEach(function (s) { s.redraw(t); });
+    }
+  },
+
+//--------------------------------------------------------------------------
+
   /** Provide a constant function value for use in .debounce(). */
   triggerZoomedAxis : function (args) {
     this.trigger("zoomedAxis", args);
@@ -6497,6 +6511,8 @@ export default Component.extend(Evented, {
     'panelLayout.right.visible',
     'leftPanelShown',
     'controls.view.showAxisText',
+    /* axisTicksOutside doesn't resize, but a redraw is required (and re-calc could be done) */
+    'controls.view.axisTicksOutside',
     function() {
       console.log("resize", this, arguments);
         /** when called via .observes(), 'this' is draw-map object.  When called
@@ -6511,6 +6527,7 @@ export default Component.extend(Evented, {
       windowResize = ! calledFromObserve,
             oa =  calledFromObserve ? this.oa : this;
       let me = calledFromObserve ? this : oa.eventBus;
+      let redrawAxes = arguments[1] === 'controls.view.axisTicksOutside';
     // logWindowDimensions('', oa.vc.w);  // defined in utils/domElements.js
     function resizeDrawing() { 
       // if (windowResize)
@@ -6536,6 +6553,9 @@ export default Component.extend(Evented, {
         console.log("oa.vc", oa.vc, arguments);
         if (oa.vc)
         {
+            if (redrawAxes) {
+              this.stacksRedraw();
+            }
             if (false && ! layoutChanged)
                 // Currently debounce-d in resizeThis(), so call directly here.
                 resizeDrawing();
