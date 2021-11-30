@@ -89,6 +89,10 @@ export default Component.extend({
    */
   axisTicksOutside : true,
 
+  /** number of ticks in y axis when axis is not stacked.  reduce this
+   * proportionately when axis is stacked. */
+  axisTicks : 10,
+
   /*--------------------------------------------------------------------------*/
 
   /** Toggle axis-charts / Chart1 between showing the ChartLine-s as <rect> bars or lines   */

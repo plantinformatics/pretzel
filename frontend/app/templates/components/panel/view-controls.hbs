@@ -258,13 +258,24 @@
       />
     </li>
 
-    <li class="list-group-item">
-      <label>Axis Width</label>
-      <input type="range"
-       value=10
-       oninput={{action this.axisWidthInput}}
-       min="0" max="100"
-      />
+    <li class="list-group-item horiz-2">
+      <div>
+        <label>Axis Width</label>
+        <input type="range"
+         value=10
+         oninput={{action this.axisWidthInput}}
+         min="0" max="100"
+        />
+      </div>
+      <div>
+        <label># Ticks</label>
+        <span class="sub-label">{{ this.axisTicks }}</span>
+        <input type="range"
+         value=10
+         oninput={{action (mut this.axisTicks) value="target.value" }}
+         min="0" max="35"
+        />
+      </div>
     </li>
 
     <li class="list-group-item horiz-2">

@@ -371,6 +371,8 @@ export default Component.extend(Evented, {
   axes1d : computed( function () { return stacks.axes1d; }),
   splitAxes: filterBy('axes1d', 'extended', true),
 
+  axisTicks : alias('controls.view.axisTicks'),
+
   /** Enable frontend collation of paths : pathUpdate_() / collate-paths.js
    * The user sets this via GUI input in panel/view-controls.
    * Same effect as me.get('urlOptions.pathsCheck'); if pathJoinClient is
@@ -702,9 +704,6 @@ export default Component.extend(Evented, {
       oa.axes2d = new Axes(oa);
 
     let
-      /** number of ticks in y axis when axis is not stacked.  reduce this
-       * proportionately when axis is stacked. */
-      axisTicks = 10,
     /** font-size of y axis ticks */
     axisFontSize = 12;
     /** default colour for paths; copied from app.css (.foreground path {
@@ -4636,12 +4635,12 @@ export default Component.extend(Evented, {
       let yp = y[p],
       axis = oa.axes[p];
       if (yp && axis) {
-        let yAxis = axis.axisSide(y[p]).ticks(axisTicks * axis.portion);
+        let yAxis = axis.axisSide(y[p]).ticks(me.axisTicks * axis.portion);
         let idName = axisEltId(p),
         axisS = svgContainer.select("#"+idName);
         if (t)
           axisS = axisS.transition(t)
-	  .duration(me.get('axisZoom.axisTransitionTime'));
+          .duration(me.get('axisZoom.axisTransitionTime'));
         axisS.call(yAxis);
         if (updatePaths)
           pathUpdate(t);
@@ -6448,7 +6447,7 @@ export default Component.extend(Evented, {
       let count = stacks.length;
       // just checking - will retire stacks.stacksCount anyway.
       if (count != stacks.stacksCount?.count)
-	console.log('stacksWidthChanges',  count, '!=', stacks.stacksCount);
+        console.log('stacksWidthChanges',  count, '!=', stacks.stacksCount);
       let leftPanelShown = this.readLeftPanelToggle(),
       current = {
         stacksCount : count,

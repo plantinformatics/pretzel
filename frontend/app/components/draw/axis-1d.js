@@ -623,6 +623,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   oa : alias('drawMap.oa'),
   axisApi : alias('oa.axisApi'),
 
+  axisTicks : alias('controlsView.axisTicks'),
+
   featuresCountsThreshold : alias('controls.view.featuresCountsThreshold'),
 
   /** flipRegion implies paths' positions should be updated.  The region is
@@ -1276,7 +1278,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   drawTicks() {
     /** based on extract from axisScaleChanged() */
     let
-      axisTicks = 10,
+      axisTicks = this.axisTicks,
     axisId = this.get('axis.id'),
     axisS = this.get('axisS'),
     yScale = axisS && axisS.y;
@@ -1307,6 +1309,9 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
         .on('mouseout', showText.bind(this, ''));
     }
   },
+  drawTicksEffect : computed('controlsView.axisTicks', function () {
+    later(() => this.drawTicks());
+  }),
 
   ensureAxis : computed('viewedBlocks', function () {
     let viewedBlocks = this.get('viewedBlocks');

@@ -121,7 +121,7 @@ function axisConfig(yAxis, yScale)
     domainLength = Math.abs(domain[1] - domain[0]),
     domainMax = Math.max.apply(undefined, domain),
     /** draw-map has axisTicks = 10;  the number of ticks drawn varies 7 - 12. */
-    axisTicks = 10,
+    axisTicks = oa.drawOptions?.controls?.view?.axisTicks || 10,
     ratio = domainLength && (domainMax / domainLength * axisTicks);
     if (ratio) {
       let
