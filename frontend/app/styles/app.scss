@@ -1081,6 +1081,28 @@ li.filter-group > div > span:last-child {
   padding-left: 5px;    /* reduced from 15px */
 }
 
+.browse-ontology-tree {
+  overflow: auto;
+  height: 80vh;
+  width: 40em;
+}
+.browse-ontology-tree > div > li > ul {
+  padding-left : 1em;
+}
+.browse-ontology-tree > div > li > ul > div > li {
+  padding-top : 4px;
+  padding-bottom : 0px;
+}
+
+#formFeatureEdit {
+  padding-left: 0px;
+}
+#formFeatureEdit > li {
+  margin-bottom : 1ex;
+  & div {
+    margin-top : 1ex;
+  }
+}
 li > span.blockInScope
 {
   display: none;
@@ -1166,6 +1188,17 @@ div#tab-explorer-datasets > ul.list-group > div
   display: table;
 }
  */
+
+/* limit this using .list-group-item-info so it doesn't apply to the leaf (white rectangle) */
+div#tab-explorer-Ontology  .list-group-item.list-group-item-info
+{
+    padding-right: 0px;
+}
+div#tab-explorer-Ontology  .list-group-item
+{
+    padding-left: 10px;
+}
+
 
 
 /* .panel-primary defines a blue (#337ab7) border which is being eclipsed by
@@ -1564,6 +1597,17 @@ ul.view-controls > li > div > .sub-label > span {
   text-align: end;
 }
 
+/* 2 elements adjacent horizontally. */
+.list-group-item.horiz-2
+{
+  display : flex;
+  gap : 7%;
+  & div
+  {
+    width : 50%;
+  }
+}
+
 /*------------------------------------*/
 
 /* used for #left-panel-upload > div > .panel
@@ -1716,6 +1760,18 @@ div.metaeditor-panel div.jsoneditor-tree button.jsoneditor-contextmenu-button {
 .axis-brushes table {
   border-collapse: initial;
   border-spacing: 1em;
+}
+
+/* -------------------------------------------------------------------------- */
+
+/* div#table-brushed.handsontable */
+
+table.htCore > tbody > tr > td.editDialog {
+  cursor : context-menu;
+}
+table.htCore > tbody > tr > td.editDialog:hover {
+  /* text-shadow: #337ab730 5px 0 10px; */
+  text-decoration: overline dotted #337ab7;
 }
 
 /* -------------------------------------------------------------------------- */

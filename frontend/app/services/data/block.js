@@ -106,6 +106,14 @@ export default Service.extend(Evented, {
 
   summaryTask : {},
 
+  /** Indicate a Feature update which affects Block properties,
+   * e.g. feature-edit saves change to Feature.values.Ontology, so
+   * blockFeatureOntologies should be requested, and manage-explorer should
+   * update the CPs which depend on that
+   * (blockFeatureOntologies{,Blocks,History,Name,Tree,TreeGrouped,TreeEmbedded}
+   * ontologiesTree{,KeyLength} ontologyId2{Blocks,DatasetNodes,Node} ).
+   */
+  featureUpdateCount : 0,
 
   /** Not required because findRecord() is used;
    * might later want this for other requests or calculation results, but can
@@ -214,29 +222,101 @@ export default Service.extend(Evented, {
 
   /*--------------------------------------------------------------------------*/
 
-  /** Perform taskGetTraits once when first requested.
+  /** Perform taskGetValues once when first requested.
+   * @param fieldName 'Trait' or 'Ontology'
    * @return promise yielding :
    * [... ,
    * { "_id" : ObjectId(...), "Traits" : [ "Plant height", "Rust resistance" ] },
    * ...]
    */
-  get blockFeatureTraits() {
-    return this.blockFeatureTraitsP ||
-      (this.blockFeatureTraitsP = this.get('taskGetTraits').perform());
+  blockFeatureValues(apiServer, fieldName) {
+    const
+    /** both the result and its promise are stored. */
+    name = 'blockFeature' + fieldName,
+    pName = name + 'P',
+    /** The result is a compilation from the datasets / blocks on a server, so
+     * it is an attribute of apiServer.
+     */
+    promise = apiServer[pName] || 
+      (apiServer[pName] = this.get('taskGetValues').perform(fieldName)
+       .then((values) => (apiServer[name] = values)) );
+
+    return promise;
   },
-  /** Call getTraits() in a task - yield the block traits result.
+  /** Call getBlockValues() in a task - yield the block Traits or Ontologys result.
    */
-  taskGetTraits: task(function * () {
-    dLog("block taskGetTraits");
+  taskGetValues: task(function * (fieldName) {
+    const fnName = 'taskGetValues';
+    dLog("block", fnName);
     let blockP =
-      this.get('auth').getBlockFeatureTraits(/*options*/{});
-    let blockTraits = yield blockP;
+        this.get('auth').getBlockValues(fieldName, /*options*/{});
+    let blockValues = yield blockP;
 
     if (trace_block)
-      dLog('taskGetTraits', this, valueOrLength(blockTraits));
+      dLog(fnName, this, fieldName, valueOrLength(blockValues));
     
-    return blockTraits;
-  }).drop(),
+    return blockValues;
+    /* blockFeatureValues() guards against concurrent tasks for a given
+     * apiServer & fieldName, so .drop() is not required. */
+  }), // .drop(),
+
+  /*--------------------------------------------------------------------------*/
+
+  ontologyIds : computed(
+    'controls.apiServerSelectedOrPrimary.blockFeatureOntologies',
+    'apiServers.datasetsBlocksRefresh', // as in blockValues
+  function () {
+    let
+    idsP = this.get('controls.apiServerSelectedOrPrimary.blockFeatureOntologies').then((bos) => {
+      let
+      idsSet = bos.reduce((result, bo) => {
+        bo.Ontologies.forEach((o) => result.add(o));
+        return result;
+      }, new Set()),
+      ids = Array.from(idsSet.keys());
+      dLog('ontologyIds', bos, idsSet, ids);
+      return ids;
+    });
+    return idsP;
+  }),
+
+  ontologyRoots : computed('ontologyIds', function () {
+    let
+    rootsP = this.get('ontologyIds').then((ois) => {
+      let
+      rootsSet = ois.reduce((result, ontologyId) => {
+        let
+        rootIdMatch = ontologyId.match(/^(CO_[0-9]+):/),
+        rootId = rootIdMatch && rootIdMatch[1];
+        if (rootId) {
+          result.add(rootId);
+        }
+        return result;
+      }, new Set()),
+      roots = Array.from(rootsSet.keys());
+      dLog('ontologyRoots', ois, rootsSet, roots);
+      return roots;
+    });
+    return rootsP;
+  }),
+
+
+
+
+  /*--------------------------------------------------------------------------*/
+
+  featureSaved() {
+    /* The API result blocksService.blockFeatureOntologies is invalidated by
+     * this save, so clear the result promise to trigger a new request.
+     * The dependency on blocksService.blockFeatureOntologies in
+     * manage-explorer.js doesn't seem to detect that change, so the signal
+     * featureUpdateCount is added.
+     */
+    let fieldName = 'Ontology',
+        pName = 'blockFeature' + fieldName + 'P';
+    this.set(pName, null);
+    this.incrementProperty('featureUpdateCount');
+  },
 
   /*--------------------------------------------------------------------------*/
 
@@ -763,7 +843,7 @@ export default Service.extend(Evented, {
     const fnName = 'getBlocksLimits';
     let taskGet = this.get('taskGetLimits');
     console.log("getBlocksLimits", blockId);
-      let p =  new Promise(function(resolve, reject){
+      let p =  new Promise((resolve, reject) => {
         later(() => {
           let
           blocksTask = taskGet.perform(blockId)
@@ -1138,15 +1218,22 @@ export default Service.extend(Evented, {
 
   /** Search for the named features, and return also their blocks and datasets.
    * If blockId is given, restrict the search to that block.
+   * @param matchAliases  if true, use featureAliasSearch(), otherwise featureSearch()
    * @param blockId undefined or DB ObjectId string.
    * @param featureNames  array of Feature name strings
    * @return  features (store object references)
+   * If matchAliases, result is {features, aliases}
    */
-  getBlocksOfFeatures : task(function* (apiServer, blockId, featureNames) {
-    let me = this, featureResults =
-      yield this.get('auth').featureSearch(apiServer, blockId, featureNames, /*options*/{});
+  getBlocksOfFeatures : task(function* (apiServer, matchAliases, blockId, featureNames) {
+    let
+    auth = this.get('auth'),
+    featureResults =
+      matchAliases ?
+      yield auth.featureAliasSearch(apiServer, featureNames, /*options*/{}) :
+      yield auth.featureSearch(apiServer, blockId, featureNames, /*options*/{});
     let features = this.pushFeatureSearchResults(apiServer, featureResults.features);
-    return features;
+    let result = matchAliases ? Object.assign(featureResults, {features}) : features;
+    return result;
   }),
 
   /** map the given feature JSON values to store object references.

@@ -1,0 +1,26 @@
+
+  <select onchange={{action (mut root) value="target.value"}}>
+    {{#each roots as |rootChoice|}}
+      <option value={{rootChoice.id}} selected={{eq root rootChoice.id}}>{{rootChoice.id}} : {{rootChoice.name}}</option>
+    {{/each}}
+  </select>
+
+<div style="margin-top:1em; margin-bottom:1em;">{{rootOntologyNameId.content}}</div>
+
+{{#if this.ontologyTree.isFulfilled}}
+
+<ul class="list-group borderless browse-ontology-tree">
+  {{record/entry-values
+    values=this.ontologyTree
+    levelMeta=levelMeta
+    controlOptions=controlOptions
+    loadBlock=this.noAction
+    selectExpander=selectExpander
+    selectBlock=this.noAction
+    selectedBlock=this.noAction
+    selectDataset=this.noAction}}
+</ul>
+{{/if}}
+
+
+<button onclick={{action @cancel}}>Cancel</button>

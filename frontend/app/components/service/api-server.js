@@ -107,11 +107,22 @@ export default EmberObject.extend({
 
   /** value is an array of datasets, including blocks, returned from the api host. */
   datasetsBlocks : undefined,
-  
+  /** results from services/data/block.js : blockFeatureValues() : blockFeature{Trait,Ontology}{P,} */
+
   actions: {
 
   },
 
+  /*--------------------------------------------------------------------------*/
+
+  get blockFeatureTraits() {
+    return this.get('block').blockFeatureValues(this, 'Trait');
+  },
+  get blockFeatureOntologies() {
+    return this.get('block').blockFeatureValues(this, 'Ontology');
+  },
+
+  /*--------------------------------------------------------------------------*/
 
   /** Get the list of datasets, including their blocks, from this API server.
    *

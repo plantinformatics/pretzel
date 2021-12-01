@@ -89,6 +89,7 @@ export default UploadBase.extend({
         let datasetName = res.status;
         this.unviewDataset(datasetName);
         this.setSuccess("Dataset '" + datasetName + "' " +  this.successMessage);
+        this.get('blockService').featureSaved();
       });
     });
 

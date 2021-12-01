@@ -1,5 +1,11 @@
 'use strict';
 
+/*----------------------------------------------------------------------------*/
+
+const Queue = require('promise-queue');
+
+/*----------------------------------------------------------------------------*/
+
 /* global module */
 /* global require */
 /* global process */
@@ -8,6 +14,18 @@ var acl = require('../utilities/acl')
 const { childProcess } = require('../utilities/child-process');
 var upload = require('../utilities/upload');
 var { filterBlastResults } = require('../utilities/sequence-search');
+
+const cacheLibraryName = '../utilities/results-cache';
+var cache = require(cacheLibraryName);
+
+/*----------------------------------------------------------------------------*/
+
+const trace = 1;
+
+
+/*----------------------------------------------------------------------------*/
+
+const sequenceSearchQueue = new Queue(/*concurrency:*/ 1);
 
 /*----------------------------------------------------------------------------*/
 
@@ -25,9 +43,36 @@ function sessionIndex(sessionId) {
   return index;
 }
 
+
 /*----------------------------------------------------------------------------*/
 
 module.exports = function(Feature) {
+
+  /*--------------------------------------------------------------------------*/
+
+  /** Clear result cache entries which may be invalidated by the save.
+   */
+  Feature.observe('after save', function(ctx, next) {
+    if (ctx.instance) {
+      const apiName = 'blockFeaturesInterval';
+      const blockIds = [ctx.instance.blockId],
+            cacheId = apiName + '_' + blockIds.join('_');
+      let value = cache.get(cacheId);
+      if (value) {
+        // this will trace for each feature when e.g. adding a dataset with table/csv upload
+        if (trace > 3) {
+          console.log('Feature', 'after save', apiName, 'remove from cache', cacheId, ctx.instance.id, ctx.instance.name, value.length || value);
+        }
+        cache.put(cacheId, undefined);
+      }
+    }
+    next();
+  });
+
+  /*--------------------------------------------------------------------------*/
+
+
+
   /** Search for Features matching the given list of Feature names in filter[].
    * If blockId is given, only search within that block.
    */
@@ -56,6 +101,38 @@ module.exports = function(Feature) {
     })
   };
 
+  /*--------------------------------------------------------------------------*/
+
+  /** Search for Aliases matching the given list of Feature names,
+   * then search for Features matching the Feature names or Aliases.
+   */
+  Feature.aliasSearch = function(featureNames, options, cb) {
+    const fnName = 'aliasSearch';
+    let aliasesP = Feature.app.models.Alias.stringSearch(featureNames);
+    aliasesP
+      .toArray()
+      .then((aliases) => {
+      let aliasNames = aliases.reduce((result, a) => {
+        result.push(a.string1);
+        result.push(a.string2);
+        return result;
+      }, []);
+      let aliasAndFeatureNames = featureNames.concat(aliasNames);
+        let featuresP = Feature.search(/*blockId*/undefined, aliasAndFeatureNames, options, searchCb);
+        function searchCb(err, features) {
+          if (err) {
+            console.log(fnName, 'ERROR', err, featureNames.length || featureNames);
+            cb(err);
+          } else {
+            let fa = {aliases, features};
+            cb(null, fa);
+          }
+        };
+      });
+  };
+
+  /*--------------------------------------------------------------------------*/
+
   Feature.depthSearch = function(blockId, depth, options, cb) {
     let include_n_level_features = function(includes, n) {
       if (n < 1) {
@@ -74,6 +151,8 @@ module.exports = function(Feature) {
       return process.nextTick(() => cb(null, features));
     });
   };
+
+  /*--------------------------------------------------------------------------*/
 
   /**
    * @param data contains :
@@ -144,10 +223,24 @@ module.exports = function(Feature) {
       }
     };
 
+    /* For development, disable this to use dev_blastResult. there is also
+     * dev_blastResult() in dnaSequenceSearch.bash. */
     if (true) {
-    let child = childProcess(
-      'dnaSequenceSearch.bash',
-      dnaSequence, true, queryStringFileName, [parent, searchType, resultRows, addDataset, datasetName], searchDataOut, cb, /*progressive*/ false);
+      function qLog(status) {
+        console.log(fnName, status, 'sequenceSearchQueue', sequenceSearchQueue.getPendingLength(), sequenceSearchQueue.getQueueLength());
+      }
+      sequenceSearchQueue.add(searchP);
+      function searchP() {
+        let promise = new Promise(
+          function (resolve, reject) {
+            let cbWrap = function () { qLog('complete:' + queryStringFileName); resolve(); cb.apply(this, arguments); };
+            qLog('starting:' + queryStringFileName);
+            let child = childProcess(
+              'dnaSequenceSearch.bash',
+              dnaSequence, true, queryStringFileName, [parent, searchType, resultRows, addDataset, datasetName], searchDataOut, cbWrap, /*progressive*/ false);
+          }
+        );
+      }
     } else {
       let features = dev_blastResult;
       cb(null, features);
@@ -164,6 +257,16 @@ module.exports = function(Feature) {
     http: {verb: 'get'},
     returns: {arg: 'features', type: 'array'},
     description: "Returns features and their datasets given an array of feature names"
+  });
+
+  Feature.remoteMethod('aliasSearch', {
+    accepts: [
+      {arg: 'featureNames', type: 'array', required: true},
+      {arg: "options", type: "object", http: "optionsFromRequest"}
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'object', root: true},
+    description: "Given an array of feature names, returns matching aliases and features matching the aliases"
   });
 
   Feature.remoteMethod('depthSearch', {

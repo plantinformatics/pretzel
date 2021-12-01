@@ -164,6 +164,13 @@
     </li>
 
     <li class="list-group-item">
+      <input type="checkbox"
+        checked="checked"
+        oninput={{action (mut this.axisTicksOutside) value="target.checked"}}  >
+      <label>Axis Ticks on Outer side</label>
+    </li>
+
+    <li class="list-group-item">
       <input type="checkbox" 
              id="checkbox-toggleModePublish" 
              name="toggleCheckbox" 
@@ -251,22 +258,43 @@
       />
     </li>
 
-    <li class="list-group-item">
-      <label>Axis Width</label>
-      <input type="range"
-       value=10
-       oninput={{action this.axisWidthInput}}
-       min="0" max="100"
-      />
+    <li class="list-group-item horiz-2">
+      <div>
+        <label>Axis Width</label>
+        <input type="range"
+         value=10
+         oninput={{action this.axisWidthInput}}
+         min="0" max="100"
+        />
+      </div>
+      <div>
+        <label># Ticks</label>
+        <span class="sub-label">{{ this.axisTicks }}</span>
+        <input type="range"
+         value=10
+         oninput={{action (mut this.axisTicks) value="target.value" }}
+         min="0" max="35"
+        />
+      </div>
     </li>
 
-    <li class="list-group-item">
-      <label>QTL Diamond Size</label>
-      <input type="range"
-       value=20
-       oninput={{action this.diamondWidthInput}}
-       min="0" max="100"
-      />
+    <li class="list-group-item horiz-2">
+      <div>
+        <label>QTL : Diamond Size</label>
+        <input type="range"
+         value=20
+         oninput={{action this.diamondWidthInput}}
+         min="0" max="100"
+        />
+      </div>
+      <div>
+        <label>Offset</label>
+        <input type="range"
+         value=0
+         oninput={{action this.diamondOffsetInput}}
+         min="-100" max="50"
+        />
+      </div>
     </li>
 
     <li class="list-group-item">

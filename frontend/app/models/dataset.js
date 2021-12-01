@@ -126,6 +126,13 @@ export default Record.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  isViewed : computed('blocks.[]', 'blockService.viewed.[]', function () {
+    let viewed = this.get('blocks').any((b) => b.isViewed);
+    return viewed;
+  }),
+
+  /*--------------------------------------------------------------------------*/
+
   blocksViewed : computed('blocks.@each.isViewed', function () {
     /**  depending on 'blockService.viewed.[]' may be more efficent. */
     let blocks = this.get('blocks').filter((b) => this.get('view').blockViewed(b));

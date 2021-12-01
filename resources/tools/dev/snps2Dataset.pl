@@ -273,7 +273,7 @@ BEGIN
   # so define $c_pos.
   $c_pos = defined($columnsKeyLookup{'pos'}) ? $columnsKeyLookup{'pos'} : $columnsKeyLookup{'start'};
 }
-use constant ColumnsEnum => (map {'c_' . $_ }  parse_line(' ', 0, $columnsKeyString));
+use constant ColumnsEnum => (map {'c_' . $_ }  (grep { defined($_) && ($_ ne '') } parse_line(' ', 0, $columnsKeyString)));
 BEGIN
 {
   eval "use constant (ColumnsEnum)[$_] => $_;" foreach 0..(ColumnsEnum)-1;
@@ -802,6 +802,13 @@ sub snpLine($)
 
   my $valuesOpen = defined($c_FlankingMarkers);
   # also $c_Trait
+  # If name is blank, use S_No, or line number.
+  my $c_serial_number = $columnsKeyLookup{'S_No'};
+  my $serial_number = defined($c_serial_number) ? $a[$c_serial_number] : $.;
+  if (! $a[c_name] && $serial_number)
+  {
+    $a[c_name] = $serial_number;
+  }
   if (! $a[c_name] && defined($c_FlankingMarkers) && $a[$c_FlankingMarkers])
     {
       # The first flanking marker is output by printFeature(); prepend this one with ','

@@ -32,6 +32,7 @@
     "morgan": "^1.9.1",
     "node": "^14.2.0",
     "passport-ldapauth": "2.0.0",
+    "promise-queue": "^2.2.5",
     "serve-favicon": "^2.5.0",
     "strong-error-handler": "^2.0.0"
   },

@@ -82,6 +82,7 @@ module.exports = function(app) {
       context.property == 'createComplete' ||
         // Feature
       context.property == 'search' ||
+      context.property == 'aliasSearch' ||
       context.property == 'depthSearch' ||
       context.property == 'dnaSequenceSearch' ||
         // Alias
@@ -93,7 +94,7 @@ module.exports = function(app) {
       context.property == 'blockFeaturesCount' ||
       context.property == 'blockFeaturesCounts' ||
       context.property == 'blockFeatureLimits' ||
-      context.property == 'blockFeatureTraits' ||
+      context.property == 'blockValues' ||
       context.property == 'blockFeaturesInterval' ||
       context.property == 'pathsByReference' ||
       context.property == 'pathsViaStream' ||
@@ -102,6 +103,8 @@ module.exports = function(app) {
       context.property == 'namespacesAliases' ||
         // Configuration
       context.property === 'runtimeConfig' ||
+        // Ontology
+      context.property === 'getTree' ||
         // Dataset
       context.property === 'cacheClear' ||
       context.property === 'cacheClearRequests'

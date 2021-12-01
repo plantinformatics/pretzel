@@ -1,4 +1,4 @@
-import { scheduleOnce } from '@ember/runloop';
+import { later, scheduleOnce } from '@ember/runloop';
 import { computed } from '@ember/object';
 import Component from '@ember/component';
 
@@ -26,6 +26,16 @@ export default Component.extend({
     {
       parent = parent.parentView;
     }
+    /** The topmost entry-expander in the Ontology tab, set active to true.
+     * The immediate hierarchy is : entry-tab : bs-tab/pane : entry-values : entry-level : entry-expander
+     */
+    let immediateParent = this.parentView.parentView.parentView.parentView;
+    if ((immediateParent._debugContainerKey === "component:record/entry-tab") &&
+        (immediateParent.name === 'Ontology') && this.controlOptions.showHierarchy) {
+      later(() => !this.isDestroying && this.set('active', true));
+    }
+
+
     return parent;
   }),
   allActive : computed('entryTab', 'entryTab.allActive', 'entryTab.autoAllActive', function () {

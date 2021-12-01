@@ -323,6 +323,12 @@ exports.blockFeatureLimits = function(db, blockId) {
 
 /*----------------------------------------------------------------------------*/
 
+function addField(object, fieldName, value) {
+  object[fieldName] = value;
+  return object;
+}
+
+
 /** For Blocks of Datasets with the given tag ('QTL'), collate Feature.values.Trait
  * for all Features of those blocks, and group the results by blockId.
  * This is used to present a tree of Trait (Ontology) : parent : block (dataset)
@@ -330,12 +336,13 @@ exports.blockFeatureLimits = function(db, blockId) {
  * Feature.values.Ontology, and other values.
  *
  * @param db connected dataSource
+ * @param fieldName 'Trait' or 'Ontology'
  * @return promise yielding cursor	: 
  * ...
  * { "_id" : ObjectId(...), "Traits" : [ "Plant height", "Rust resistance" ] }
  * ...
  */
-exports.blockFeatureTraits = function(db) {
+exports.blockValues = function(db, fieldName) {
   /** $group : _id : 0, i.e. don't group, combine into a single array.
    */
   let
@@ -366,12 +373,13 @@ exports.blockFeatureTraits = function(db) {
     .then((blocks) => {
       let
       blockIds = blocks[0].ids,
+      fieldNamePlural = (fieldName === 'Ontology') ? 'Ontologies' : fieldName + 's',
       cursor =
         db.collection('Feature').aggregate([
           {$match : {blockId : {$in : blockIds}}},
-          {$group : {_id : '$blockId', Traits: {$addToSet : '$values.Trait'}}}]);
+          {$group : addField({_id : '$blockId'}, fieldNamePlural, {$addToSet : '$values.' + fieldName})}]);
       return cursor;
     });
 
   return cursorP;
-}
+};

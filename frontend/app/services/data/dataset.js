@@ -131,7 +131,7 @@ export default Service.extend(Evented, {
   ,
 
   /** @return dataset records */
-  values: computed(function() {
+  values: computed('apiServers.primaryServer.datasetsBlocks.[]', function() {
     let 
     server = this.get('primaryServer'),
     store = server.store,

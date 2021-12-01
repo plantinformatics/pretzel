@@ -21,8 +21,9 @@ exports.bufferSlice = function(bufferData, position) {
   const
   /** [start,end] of slice */
   slice = [
-    position - sliceContextLength/2,
-    position + sliceContextLength/2], // position is integer, not a string
+    Math.max(position - sliceContextLength/2, 0),
+    Math.min(position + sliceContextLength/2, bufferData.length)], // position is integer, not a string
+    sliceLength = slice[1] - slice[0],
   e0 = bufferData.asciiSlice(slice[0], position),
   e0m = e0.match(/(.*\n)(.*)/ms),
   e1 = bufferData.asciiSlice(position, slice[1]),
