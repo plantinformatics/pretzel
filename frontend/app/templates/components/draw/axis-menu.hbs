@@ -29,7 +29,11 @@
       </button>
       <button onClick={{action this.blockVisible blockS}}>
         {{!-- "&#x1F441;", Unicode Character 'EYE', glyphicon-eye-close --}}
-        <span class="glyphicon glyphicon-eye-close"></span>
+        {{#if blockS.block.visible}}
+          <span class="glyphicon glyphicon-eye-open"></span>
+        {{else}}
+          <span class="glyphicon glyphicon-eye-close"></span>
+        {{/if}}
       </button>
 
       {{!-- result is text title --}}

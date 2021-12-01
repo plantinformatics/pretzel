@@ -1,6 +1,7 @@
 /*----------------------------------------------------------------------------*/
 
 /*global d3 */
+/* global CSS */
 
 /*----------------------------------------------------------------------------*/
 
@@ -285,7 +286,52 @@ function axisFeatureCircles_selectAll() {
   selection = oa.svgContainer.selectAll(selector);
   return selection;
 }
-
+/**
+ * @param chrName db id of the axis reference block
+ */
+function axisFeatureCircles_selectOne(chrName, featureName) {
+  let
+  /** the feature name has 1 level of CSS.escape().
+   * <circle id="fc_615e4ab7f1083287627cf21d_ab_2009\\/ab_QTL1" class="ab_2009\\/ab_QTL1" >
+   * the param to d3.selectAll() needs 2 :
+   *  "circle#fc_615e4ab7f1083287627cf21d_ab_2009\\\\\\/ab_QTL1"
+   */
+  selector = "g.axis-outer#" + eltId(chrName) + " > circle." + CSS.escape(CSS.escape(featureName)),
+  /* alternative : "circle#fc_" + datablockId + '_' + CSS.escape(CSS.escape(featureName))
+   * The blockId in the circle id is the feature.blockId, not block.referenceBlockOrSelf.id
+   */
+  circleS = d3.selectAll(selector);
+  return circleS;
+}
+/** Select the circles of axes which have no viewed blocks.
+ */
+function axisFeatureCircles_selectUnviewed() {
+  let
+  selector = "g.axis-outer" + " > circle",
+  circleS = d3.selectAll(selector)
+    .filter((axisName) => ! oa.axes[axisName]?.blocks.any((b) => b.block.isViewed));
+  return circleS;
+}
+/** Remove features of chrName from selectedFeatures and from the axisFeatureCircles.
+ * @param chrName i.e. mapChrName, blockR.brushName
+ */
+function axisFeatureCircles_removeBlock(selectedFeatures, mapChrName) {
+  const fnName = 'axisFeatureCircles_removeBlock';
+  // the caller, selectedFeatures_removeAxis(), does delete selectedFeatures[mapChrName]
+  selectedFeatures[mapChrName]
+    ?.forEach((f) => {
+      /* moving the circles into a <g> identified by the blockId would enable
+       * all circles of features of a block to be removed in a single
+       * operation.
+       */
+      let
+      // similar to mapview.js: removeUnviewedBlockFeaturesFromSelected()
+      chrName = f.get('blockId.referenceBlockOrSelf.id'),
+      featureName = f.name,
+      circleS = axisFeatureCircles_selectOne(chrName, featureName);
+      circleS.remove();
+    });
+}
 
 /*----------------------------------------------------------------------------*/
 
@@ -370,6 +416,9 @@ export {
   highlightId,
   trackBlockEltIdPrefix,
   axisFeatureCircles_selectAll,
+  axisFeatureCircles_selectOne,
+  axisFeatureCircles_selectUnviewed,
+  axisFeatureCircles_removeBlock,
   axisTitleColour,
   traitColour,
   featureTraitColour,

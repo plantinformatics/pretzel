@@ -394,6 +394,9 @@ export default Component.extend({
   },
 
   afterSelection(table, row, col) {
+    // ^A (Select All) causes row===-1, col===-1
+    if (row === -1) { return; }
+
     const
     ranges = table.selection?.selectedRange?.ranges,
     data = this.get('data'),
@@ -415,7 +418,9 @@ export default Component.extend({
     this.get('controls').set('tableSelectedFeatures', features);
 
     let feature = this.data[row];
-    this.setRowAttribute(table, row, feature);
+    if (feature) {
+      this.setRowAttribute(table, row, feature);
+    }
   },
 
   onSelectionChange: observer('dataForHoTable', function () {

@@ -9,6 +9,10 @@ import DS from 'ember-data';
 
 /* global d3 */
 
+import { axisFeatureCircles_selectOne, axisFeatureCircles_selectUnviewed } from '../utils/draw/axis';
+
+/*----------------------------------------------------------------------------*/
+
 const dLog = console.debug;
 
 dLog("controllers/mapview.js");
@@ -117,7 +121,7 @@ export default Controller.extend(Evented, {
       else {
         block.unViewChildBlocks();
         block.set('isViewed', false);
-        later(() => this.removeUnviewedBlockFeaturesFromSelected(), 500);
+        this.removeUnviewedBlockFeaturesFromSelected();
       }
     },
     /** Change the state of the named block to not-viewed.
@@ -419,11 +423,23 @@ export default Controller.extend(Evented, {
   /*--------------------------------------------------------------------------*/
 
   removeUnviewedBlockFeaturesFromSelected() {
+    const fnName = 'removeUnviewedBlockFeaturesFromSelected';
     // 'blockService.viewed'
     let f = this.selectedFeatures;
     dLog('removeUnviewedBlockFeaturesFromSelected', f?.length);
     this.selectedFeatures = this.selectedFeatures
-      .filter((f) => f.feature.get('blockId.isViewed'));
+      .filter((f) => {
+        let isViewed = f.feature.get('blockId.isViewed');
+        if (! isViewed) {
+          let
+          // datablockId is f.feature.get('blockId.id'),
+          chrName = f.feature.get('blockId.referenceBlockOrSelf.id'),
+          featureName = f.Feature,
+          circleS = axisFeatureCircles_selectOne(chrName, featureName);
+          circleS.remove();
+        }
+        return isViewed;
+      });
   },
 
   /*--------------------------------------------------------------------------*/

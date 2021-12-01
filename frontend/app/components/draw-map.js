@@ -74,7 +74,8 @@ import {  Axes, maybeFlip, maybeFlipExtent,
           ensureYscaleDomain,
           /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform,
           eltId, axisEltId, eltIdAll, axisEltIdTitle,
-          axisFeatureCircles_selectAll
+          axisFeatureCircles_selectAll,
+          axisFeatureCircles_removeBlock,
           /*, axisTitleColour*/  }  from '../utils/draw/axis';
 import { stacksAxesDomVerify }  from '../utils/draw/stacksAxes';
 import {
@@ -1138,14 +1139,25 @@ export default Component.extend(Evented, {
      * quicker, and may be useful.
      * Possibly versions of the app did not update selectedAxes in some cases, e.g. when zooms are reset.
      */
-    function selectedFeatures_removeAxis(axisName)
+    function selectedFeatures_removeAxis(axisName, mapChrName)
     {
       selectedAxes.removeObject(axisName);
-      let p = axisName; // based on brushHelper()
-      d3.keys(oa.z[p]).forEach(function(f) {
-        if (! isOtherField[f])
-          delete selectedFeatures[p];
-      });
+      axisFeatureCircles_removeBlock(selectedFeatures, mapChrName);
+      let p = mapChrName; // based on brushHelper()
+      delete selectedFeatures[p];
+    }
+    /** @param blockS stacks Block */
+    function selectedFeatures_removeBlock(blockS)
+    {
+      let
+      mapChrName = blockS?.block?.brushName;
+      axisFeatureCircles_removeBlock(selectedFeatures, mapChrName);
+      /** axisFeatureCircles_removeBlock() uses selectedFeatures[mapChrName], so
+       * call it before the following which filters that.  */
+      if (selectedFeatures[mapChrName]) {
+        selectedFeatures[mapChrName] = selectedFeatures[mapChrName]
+          .filter((f) => f.get('blockId.id') !== blockS.block.id);
+      }
     }
 
     collateData();
@@ -1333,6 +1345,7 @@ export default Component.extend(Evented, {
            */
           try {
             dBlock.set('view', sBlock);
+            dBlock.set('visible', sBlock.visible);
           }
           catch (exc) {
             console.log('ensureAxis', d, dBlock, sBlock, addedBlock, view, oa.stacks.blocks, exc.stack || exc);
@@ -5703,7 +5716,8 @@ export default Component.extend(Evented, {
       // already done, removeMap() triggers blockIsUnviewed()  : me.send('mapsToViewDelete', axisName);
 
       // filter axisName out of selectedFeatures and selectedAxes
-      selectedFeatures_removeAxis(axisName);
+      let mapChrName = axis.blocks[0]?.block?.brushName;
+      selectedFeatures_removeAxis(axisName, mapChrName);
       sendUpdatedSelectedFeatures();
       }
       else
@@ -5865,7 +5879,7 @@ export default Component.extend(Evented, {
               removeAxisMaybeStack(axisName, stackID, stack);
               me.send('removeBlock', axisName);
               // filter axisName out of selectedFeatures and selectedAxes
-              selectedFeatures_removeAxis(axisName);
+              selectedFeatures_removeAxis(axisName, sBlock?.block?.brushName);
               sendUpdatedSelectedFeatures();
             }
       /*
@@ -6019,13 +6033,20 @@ export default Component.extend(Evented, {
     function blockVisible (block) {
               console.log("blockVisible (VisibleAxis), visible", block.visible, block.longName(), this);
               block.visible = ! block.visible;
+              /* copy to Ember Block object, for axis-menu to use as dependency in if. */
+              block?.block?.set('visible', block.visible);
 
               updateAxisTitles();
               updateAxisTitleSize(undefined);
               collateStacks();  // does filterPaths();
 
-              selectedFeatures_removeAxis(block.axisName);
-              sendUpdatedSelectedFeatures();
+              if (! block.visible) {
+                selectedFeatures_removeBlock(block);
+              } else {
+                let ab = oa.axisApi?.axisFeatureCirclesBrushed;
+                ab && ab();
+              }
+                sendUpdatedSelectedFeatures();
 
               pathUpdate(undefined);
     }
