@@ -1,15 +1,16 @@
 
 <li class="list-group-item list-group-item-info" >
-  {{#record/entry-expander nodeName=name controlOptions=controlOptions}}
+  {{#record/entry-expander nodeName=name
+      selectExpander=selectExpander
+    }}
 
-    {{!-- log 'entry-level' name values --}}
+    {{!-- log 'entry-node' name values --}}
     <ul>
-      {{record/entry-values values=valuesFiltered levelMeta=levelMeta
+      {{record/entry-values values=values.node levelMeta=levelMeta
         name=name
         parentDone=true
         controlOptions=controlOptions
         loadBlock="loadBlock"
-        selectExpander=selectExpander
         selectBlock="selectBlock"
         selectedBlock=selectedBlock
         selectDataset="selectDataset"}}

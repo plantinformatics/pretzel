@@ -63,7 +63,23 @@ const dLog = console.debug;
  */
 const axisTickTransitionTime = 750;
 
+/** if true, assign colours to block.get('dataset'), otherwise block. */
+const colourByDataset = true;
 
+/*------------------------------------------------------------------------*/
+
+function blockColourObj(block) {
+  let obj;
+  if (colourByDataset) {
+    obj = block.get('datasetId');
+    if (obj?.content) {
+      obj = obj.content;
+    }
+  } else {
+    obj = block;
+  }
+  return obj;
+}
 
 function blockKeyFn(block) { return block.axisName; }
 
@@ -607,6 +623,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   oa : alias('drawMap.oa'),
   axisApi : alias('oa.axisApi'),
 
+  axisTicks : alias('controlsView.axisTicks'),
+
   featuresCountsThreshold : alias('controls.view.featuresCountsThreshold'),
 
   /** flipRegion implies paths' positions should be updated.  The region is
@@ -830,12 +848,14 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     dataBlocks.forEach((b) => {
       if (b.get('isViewed') && (this.blockColour(b) < 0)) {
         let free = used.findIndex(function (bi, i) {
+          /** bi is block or dataset, @see blockColourObj(). */
           return !bi || !bi.get('isViewed');
         });
+        const obj = blockColourObj(b);
         if (free > 0)
-          used[free] = b;
+          used[free] = obj;
         else
-          used.push(b);
+          used.push(obj);
       }
     } );
     colourSlots = used;
@@ -854,7 +874,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
    */
   blockColour(block) {
     let used = this.get('colourSlotsUsed'),
-    i = used.indexOf(block);
+    i = used.indexOf(blockColourObj(block));
     if ((trace_stack > 1) && (i === -1) && block.isData) {
       dLog('blockColour', i, block.mapName, block, used, this,
            this.viewedBlocks, this.viewedBlocks.map((b) => [b.mapName, b.isData, b.id]));
@@ -1258,7 +1278,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   drawTicks() {
     /** based on extract from axisScaleChanged() */
     let
-      axisTicks = 10,
+      axisTicks = this.axisTicks,
     axisId = this.get('axis.id'),
     axisS = this.get('axisS'),
     yScale = axisS && axisS.y;
@@ -1289,6 +1309,9 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
         .on('mouseout', showText.bind(this, ''));
     }
   },
+  drawTicksEffect : computed('controlsView.axisTicks', function () {
+    later(() => this.drawTicks());
+  }),
 
   ensureAxis : computed('viewedBlocks', function () {
     let viewedBlocks = this.get('viewedBlocks');

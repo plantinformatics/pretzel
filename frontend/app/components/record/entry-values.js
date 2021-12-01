@@ -10,7 +10,7 @@ import DS from 'ember-data';
 import { alphanum } from '@cablanchard/koelle-sort';
 
 
-import { logV } from '../../utils/value-tree';
+import { valueGetType, logV } from '../../utils/value-tree';
 
 import { parentOfType, elt0 } from '../../utils/ember-devel';
 
@@ -99,11 +99,21 @@ export default EntryBase.extend({
     let
       levelMeta = this.get('levelMeta'),
     values = this.get('values'),  // values.then ...
-    dataTypeName = values && (levelMeta.get(values) || this.get('valuesModelName'));
+    dataTypeName = values && (valueGetType(levelMeta, values) || this.get('valuesModelName'));
     if (trace_entryValues)
       console.log('dataTypeName', dataTypeName, values);
     return dataTypeName;
   }),
+
+  values_dataName : computed('values',  function () {
+    let
+    levelMeta = this.get('levelMeta'),
+    values = this.get('values'),
+    meta = levelMeta.get(values),
+    name = meta?.name;
+    return name;
+  }),
+
   valuesModelName : computed('values',  function () {
     let values = this.get('values'),
     modelName = this.modelName2(values);
@@ -168,6 +178,23 @@ export default EntryBase.extend({
     return isMap;
   }),
 
+  /*--------------------------------------------------------------------------*/
+
+  valuesIsOntologyTree : computed('values', function () {
+    // let levelMeta = this.levelMeta;
+    function isOntologyTreeFn (values) {
+      /* possibly : ["term", "trait"].includes(valueGetType(levelMeta, values)) */
+      return values && 
+      values.hasOwnProperty('id') && (typeof values.id === 'string') &&
+      values.hasOwnProperty('type') && (typeof values.type === 'string') && 
+      values.hasOwnProperty('children') && ((typeof values.children === 'boolean') || Ember.isArray(values.children));
+    };
+    let is = this.valuesIs(isOntologyTreeFn);
+    return is;
+  }),
+
+  /*--------------------------------------------------------------------------*/
+
   /** The template uses this to display the values sorted in key order.
    * (Using {{#each-in values as |key value|}} doesn't sort by key.)
    * This could also support valuesIsMap.
@@ -176,13 +203,16 @@ export default EntryBase.extend({
    */
   keyValuesSorted : computed('valuesIsObject', 'controlOptions.{historyView,historyBlocks}', function () {
     let array;
+    let values = this.get('values');
+    if (values.then && ! (values = values._result || values.content)) {
+      dLog('keyValuesSorted', this.get('values'));
+    } else
     if (this.get('valuesIsObject')) {
-      let values = this.get('values');
       let o = this.controlOptions,
           recent = o.historyView === 'Recent',
           levelMeta = this.levelMeta;
 
-      if ((levelMeta.get(values) === 'Parent')
+      if ((valueGetType(levelMeta, values) === 'Parent')
           && o.historyBlocks
           && (o.historyView !== 'Normal')) {
         let scopes = Object.keys(values);
@@ -214,7 +244,7 @@ export default EntryBase.extend({
   dataTypeName (value) {
     let
       levelMeta = this.get('levelMeta'),
-    dataTypeName = levelMeta.get(value)
+    dataTypeName = valueGetType(levelMeta, value)
     ;
     return dataTypeName;
   },
@@ -273,8 +303,10 @@ export default EntryBase.extend({
       (dataTypeName === 'Scopes') ? 'record/entry-values' :
       (dataTypeName === 'Groups') ? 'record/entry-values' :
       (dataTypeName === 'Group') ? 'record/entry-values' :
+      (dataTypeName === 'term') ? 'record/entry-level' :
+      (dataTypeName === 'trait') ? 'record/entry-node' :
       undefined;
-    if (trace_entryValues)
+    if (trace_entryValues > 1)
       console.log('levelComponent', values, isMap, dataTypeName, component);
     return component;
   },
@@ -300,6 +332,23 @@ export default EntryBase.extend({
     return component;
   },
 
+  /*--------------------------------------------------------------------------*/
+
+  /** Display .text and OntologyId of Ontology node
+   * Used in .hbs : name=(compute (action 'ontologyNameId' value))
+   * @return Ontology ".text [.id]"
+   * @param value .type === "term" or "trait"
+   */
+  ontologyNameId(value) {
+    let
+    text =
+      (value.type === 'term') ? value.text :
+      (value.type === 'trait') ? ('[' + value.id + ']  ' + value.text) :
+      value.id;
+    return text;
+  },
+
+  
   /*--------------------------------------------------------------------------*/
   /** Devel functions, useful in web inspector console, e.g. use Ember tab to
    * select the Ember entry-values Component, export $E to the console and

@@ -21,11 +21,12 @@
 
 {{else if (or valuesModelName (and values_levelComponent (not-eq values_levelComponent 'record/entry-values') (not parentDone) ) ) }}
   {{!-- log  'values' values 'levelComponent' values_levelComponent --}}
-  {{component values_levelComponent levelMeta=levelMeta name=(or name values.name) values=values
+  {{component values_levelComponent levelMeta=levelMeta name=(or name values.name values_dataName) values=values
     data=values
     parentDone=true
     controlOptions=controlOptions
     loadBlock="loadBlock"
+    selectExpander=selectExpander
     selectBlock="selectBlock"
     selectedBlock=selectedBlock
     selectDataset=(action 'selectDataset')
@@ -63,6 +64,22 @@
     {{/with}}
   {{/each}}
 
+{{else if valuesIsOntologyTree}}
+  {{!-- log 'valuesIsOntologyTree:each' --}}
+
+  {{#each values.children as |value index|}}
+    {{!-- log  'value' value 'index' index 'levelComponent' values_levelComponent --}}
+    {{record/entry-values values=value levelMeta=levelMeta
+      name=(compute (action this.ontologyNameId value))
+      parentName=values.id
+      loadBlock="loadBlock"
+      controlOptions=controlOptions
+      selectExpander=selectExpander
+      selectBlock="selectBlock"
+      selectedBlock=selectedBlock
+      selectDataset=(action 'selectDataset')}}
+  {{/each}}
+
 {{else if valuesIsObject }}
   {{!-- log 'each-in' --}}
 
@@ -70,7 +87,7 @@
    {{#let keyValue.key keyValue.value as |key value|}}
     {{#with (compute (action 'levelComponentEach' value)) as |subComponent|}}
       {{!-- log  'key' key 'value' value 'subComponent' subComponent --}}
-      {{component subComponent levelMeta=levelMeta name=key values=value
+      {{component subComponent levelMeta=levelMeta name=(or value.name key) values=value
         data=value
         parentName=name
         controlOptions=controlOptions

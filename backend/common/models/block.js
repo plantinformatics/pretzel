@@ -785,12 +785,28 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
   /*--------------------------------------------------------------------------*/
 
   /** Send a database request to collate feature values.Traits for all blocks of QTL datasets.
+   * @param fieldName 'Trait' or 'Ontology'
    */
-  Block.blockFeatureTraits = function(options, res, cb) {
+  Block.blockValues = function(fieldName, options, res, cb) {
     let
-    fnName = 'blockFeatureTraits',
+    fnName = 'blockValues',
+    paramError;
+    switch (fieldName) {
+      case 'Trait' :
+      case 'Ontology' :
+      break;
+    default : 
+      paramError = 'invalid fieldName'; //  "' + fieldName + '"';
+      fieldName = null;
+      break;
+    }
+
+    let
     cacheId = fnName,
     result; //  = cache.get(cacheId);
+    if (paramError) {
+      cb(paramError);
+    } else
     if (result) {
       if (trace_block > 1) {
         console.log(fnName, cacheId, 'get', result[0] || result);
@@ -799,7 +815,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     } else {
 
     let db = this.dataSource.connector;
-    blockFeatures.blockFeatureTraits(db)
+    blockFeatures.blockValues(db, fieldName)
     .then((cursor) => cursor.toArray())
     .then(function(traits) {
       if (trace_block > 1) {
@@ -828,8 +844,8 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
 
       let db = this.dataSource.connector;
     const apiName = 'blockFeaturesInterval';
-    console.log(apiName, /*db,*/ blockIds, intervals /*, options, cb*/);
-    let cacheId = blockIds.join('_'),
+    console.log(apiName, /*db,*/ blockIds, intervals, intervals.dbPathFilter /*, options, cb*/);
+    let cacheId = apiName + '_' + blockIds.join('_'),
     /** If intervals.dbPathFilter, we could append the location filter to cacheId,
      * but it is not clear yet whether that would perform better.
      * e.g. filterId = intervals.dbPathFilter ? '_' + intervals.axes[0].domain[0] + '_' + ... : ''
@@ -838,6 +854,9 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     useCache = ! intervals.dbPathFilter,
     cached = cache.get(cacheId);
     if (useCache && cached) {
+      if (trace_block > 1) {
+        console.log(apiName, cacheId, 'get', cached.length || cached);
+      }
       let filteredData = pathsFilter.filterFeatures(cached, intervals);
       cb(null, filteredData);
     }
@@ -847,8 +866,13 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       cursor.toArray()
         .then(function(data) {
           console.log(apiName, ' then', (data.length > 10) ? data.length : data);
-          if (useCache)
+          if (useCache) {
             cache.put(cacheId, data);
+            if (trace_block > 1) {
+              console.log(apiName, cacheId, 'put', data.length || data);
+            }
+          }
+
           let filteredData;
           // no filter required when user has nominated nSamples.
           if (intervals.nSamples)
@@ -880,6 +904,8 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
   
   /*--------------------------------------------------------------------------*/
 
+  /** If Block instance does not have a .name, set it from either .scope or .namespace.
+   */
   Block.observe('before save', function(ctx, next) {
     if (ctx.instance) {
       if (!ctx.instance.name) {
@@ -926,6 +952,23 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
 
     next()
   })
+
+  /** Clear result cache entries which may be invalidated by the save.
+   */
+  Block.observe('after save', function(ctx, next) {
+    if (ctx.instance) {
+      const apiName = 'blockFeaturesInterval';
+      const blockIds = [ctx.instance.id],
+            cacheId = apiName + '_' + blockIds.join('_');
+      let value = cache.get(cacheId);
+      if (value) {
+        console.log('Block', 'after save', apiName, 'remove from cache', ctx.instance.id, ctx.instance.name, value);
+      }
+      cache.put(cacheId, undefined);
+    }
+    next();
+  });
+
 
   //----------------------------------------------------------------------------
   // When adding a API .remoteMethod() here, also add the route name to backend/server/boot/access.js : genericResolver()
@@ -977,9 +1020,10 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     description: "Returns an array of blocks with their min&max Feature values."
   });
 
-  Block.remoteMethod('blockFeatureTraits', {
+  Block.remoteMethod('blockValues', {
     accepts: [
       // could add optional param blocks
+      {arg: 'fieldName', type: 'string', required: true},
       {arg: "options", type: "object", http: "optionsFromRequest"},
       {arg: 'res', type: 'object', 'http': {source: 'res'}},
     ],

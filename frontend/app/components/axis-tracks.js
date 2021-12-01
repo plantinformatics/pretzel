@@ -1,9 +1,10 @@
 import { isArray } from '@ember/array';
 import { throttle, next, later } from '@ember/runloop';
 import EmberObject, { computed } from '@ember/object';
-import { alias, filter } from '@ember/object/computed';
+import { alias, filter, filterBy } from '@ember/object/computed';
 import $ from 'jquery';
 import { inject as service } from '@ember/service';
+import { A } from '@ember/array';
 
 import { isEqual } from 'lodash/lang';
 
@@ -41,6 +42,9 @@ let featureTrackTransitionTime = 750;
  * If true, the <rect>s are made proportionally narrower instead.
  */
 const fixedBlockWidth = true;
+/** true to move region['right'] (QTL diamond / rect) right to avoid tick text of rightmost axis.
+ */
+const offsetForRightmostTickText = false;
 /** To allow axis-tracks to share the same (fixed-width) horizontal space
  * allocation as axis-charts featuresCounts, use axisBlocks to allocate the
  * space, under the label 'trackCharts'.
@@ -536,6 +540,53 @@ const MaximumIntervalWithDiamond	= 3;
 
 /*----------------------------------------------------------------------------*/
 
+/** Shared between axis-tracks of all axes.
+ * Provide a mechanism to co-ordinate axisTracks.@each.minQtlWidth so that all
+ * QTL diamonds will have the same width, and all will fit, i.e. the smallest
+ * width required by layering is used.
+ * Because QTLs are shown outside the axis, increasing space between axes would
+ * allow a constant size to be used, regardless of layering.
+ */
+let SharedProperties = EmberObject.extend({
+  axisTracks : A(),
+
+  /** This depends on qtlWidths, which as noted in blockCompsTrackWidths, does not update.
+   * This might be an alternative if the dependencies can be made to work, when
+   * blockComps becomes a Component or via use of Tracked Properties.
+   */
+  minQtlWidth : computed('axisTracks.@each.minQtlWidth', function () {
+    let
+    minQtlWidths = this.axisTracks.mapBy('minQtlWidth'),
+    minQtlWidth = Math.min.apply(undefined, minQtlWidths);
+    dLog('sharedproperties minQtlWidth', minQtlWidth, minQtlWidths, this);
+    return minQtlWidth;
+  }),
+  /** same as above, working around limitations of CP dependencies */
+  getMinQtlWidth() {
+    let
+    blockComps = this.axisTracks.map(
+      (at) => Object.keys(at.blocks).reduce((result, blockId) => {
+        let block = at.lookupBlock(blockId);
+        if (block.isQTL) { 
+          let blockState = at.lookupAxisTracksBlock(blockId);
+          result.push(blockState);
+        }
+        return result;
+      }, []))
+      .flat(),
+    // minQtlWidths, minQtlWidth
+    blockCompsTrackWidths = blockComps.mapBy('trackWidth'),
+    minWidth = blockCompsTrackWidths.length && Math.min.apply(undefined, blockCompsTrackWidths);
+    // dLog('getMinQtlWidth', minWidth, blockComps, blockCompsTrackWidths, 'qtlWidths');
+    return minWidth;
+  },
+
+});
+let sharedProperties = SharedProperties.create();
+
+
+/*----------------------------------------------------------------------------*/
+
 /* global d3 */
 
 export default InAxis.extend({
@@ -603,11 +654,13 @@ export default InAxis.extend({
 
     let svg = d3.selectAll('svg.FeatureMapViewer');
     ensureSvgDefs(svg);
+    sharedProperties.axisTracks.addObject(this);
   },
 
   willDestroyElement() {
     this._super(...arguments);
     console.log("components/axis-tracks willDestroyElement()");
+    sharedProperties.axisTracks.removeObject(this);
   },
 
   didRender() {
@@ -646,6 +699,14 @@ export default InAxis.extend({
   }),
   /** Number of data blocks shown by this axis-tracks. */
   nTrackBlocks : alias('trackBlocksR.length'),
+
+  /** @return true if any of dataBlocks are QTL. */
+  haveQtlBlocks : computed('axis1d.dataBlocks.[]', function haveQtlBlocks() {
+    let haveQtl = this.axis1d.dataBlocks.any((b) => b.isQTL);
+    return haveQtl;
+  }),
+  /** @return dataBlocks which contain QTLs */
+  qtlBlocks : filterBy('axis1d.dataBlocks', 'isQTL'),
 
   /*--------------------------------------------------------------------------*/
 
@@ -1019,9 +1080,18 @@ export default InAxis.extend({
            * equivalent, but maybe not updated : thisAt.get('allocatedWidths.centre.1')
            */
           let rightEdge = thisAt.axis1d.get('axis2d.allocatedWidthsMax.centre');
-          if (rightEdge !== undefined) {
+          let side = thisAt.axis1d.axisS.stack.sideClasses();
+          if (thisAt.axis1d.get('extended') && (rightEdge !== undefined)) {
+            dLog('blockOffset', rightEdge, xOffset, widthSum, side);
             xOffset += rightEdge;
+          } else if (side === 'rightmost') {
+            /** axis tick text is on right side if ! extended and rightmost.  */
+            if (offsetForRightmostTickText) {
+              xOffset += 25;
+            }
           }
+          // dLog('blockOffset', 'diamondOffset', thisAt.controlsView.diamondOffset);
+          xOffset += thisAt.controlsView.diamondOffset;
         }
       }
       if (xOffset === undefined)
@@ -1099,11 +1169,20 @@ export default InAxis.extend({
     if (bbox.x < 0)
       bbox.x = 0;
     /* seems like bbox.x is the left edge of the left-most tracks (i.e. bbox
-     * contains the children of gAxis), so use 0 instead. */
-    bbox.y = yrange[0] ;
+     * contains the children of gAxis), so use 0 instead.
+     */
+    let clip = yrange.slice();
+     /** clip[] is [top, bottom], parallel to yrange[]. */
+    const i_top = 0, i_bottom = 1;
+    const maxQtlWidth = thisAt.get('maxQtlWidth');
+    if (thisAt.get('haveQtlBlocks')) {
+      clip[i_top]    -= maxQtlWidth;
+      clip[i_bottom] += maxQtlWidth;
+    }
+    bbox.y = clip[i_top];
     /** + trackWidth for spacing. */
     bbox.width = this.get('combinedWidth') + trackWidth;
-    bbox.height = yrange[1] - yrange[0];
+    bbox.height = clip[i_bottom] - clip[i_top];
     clipRect
       .attr("x", 0 /*bbox.x*/);
     clipRectA
@@ -1301,6 +1380,11 @@ export default InAxis.extend({
           .attr('d', (d,i,g) => rectTrianglePath(y, d, width, xPosnFn.apply(this, [d, i, g])));
       }
       else {
+        /** by using sharedProperties.minQtlWidth instead of width, all QTL diamonds are
+         * shown at the same size, i.e. the size of the smallest width as
+         * required by layering. */
+        const minWidth = sharedProperties.getMinQtlWidth();
+
       rm
       // .transition().duration(featureTrackTransitionTime)
         .each(
@@ -1309,7 +1393,7 @@ export default InAxis.extend({
               g[i] = swapTag('rect', 'path', g[i], attributesForReplace);
               let x = xPosnS(subElements).apply(this, [d, i, g]);
               const
-              diamondWidth = width * (thisAt.controlsView.diamondWidth || 1),
+              diamondWidth = minWidth /*width*/ * (thisAt.controlsView.diamondWidth || 1),
               pathDFn = useDiamond ? 
                 (d,i,g) => diamondPath(y, d, diamondWidth, x) :
                 (d,i,g) => rectTrianglePath(y, d, width, x);
@@ -2051,6 +2135,50 @@ export default InAxis.extend({
     dLog('blockLayoutWidthSum', widths, blockIds.length, blockIds2.length, this.get('blockComps.length'));
     return widths;
   }),
+
+  /** qtlWidths has a dependency on blockComps.[], but that would need to be
+   * blockComps.@each.trackWidth, which seems not to work; it may be possible
+   * via intermediate values (possibly changed to Tracked Properties) such as
+   * these, which could be used as dependencies of qtlWidths,
+   * i.e. 'blockCompsTrackWidths.[]', 'blockCompsMinWidth',
+   */
+  blockCompsTrackWidths : computed('blockComps.@each.trackWidth', function () {
+    return this.get('blockComps').mapBy('trackWidth');
+  }),
+  blockCompsMinWidth : computed('blockComps.@each.trackWidth', function () {
+    let minWidth = Math.min.apply(undefined, this.get('blockCompsTrackWidths'));
+    dLog('blockCompsMinWidth', minWidth, 'qtlWidths');
+    return minWidth;
+  }),
+  /** @return widths of diamond in qtlBlocks : dataBlocks which contain QTLs */
+  qtlWidths : computed('axis1d.dataBlocks.[]', 'blockComps.[]', 'controlsView.diamondWidth', function () {
+    let
+    qtlBlocks = this.get('qtlBlocks'),
+    widths = qtlBlocks.map((block) => {
+      let
+      blockId = block.id,
+      blockC = this.lookupAxisTracksBlock(blockId),
+      trackWidth = blockC.get('trackWidth') || this.get('trackWidth'),
+      diamondWidth = trackWidth * (this.controlsView.diamondWidth || 1);
+      // dLog('qtlWidths', blockId, blockC.trackWidth, trackWidth, diamondWidth);
+      return diamondWidth;
+    });
+    return widths;
+  }),
+  /** @return [] if no qtlBlocks, otherwise [min,max] of qtlWidths. */
+  qtlWidthRange : computed('axis1d.dataBlocks.[]', 'blockComps.[]', 'qtlWidths', function () {
+    let
+    widths = this.get('qtlWidths'),
+    sorted = widths.sort((a,b) => Math.sign(b-a)),
+    range = sorted.length ? [sorted[0], sorted[sorted.length-1]] : [];
+    // dLog('qtlWidthRange', widths, sorted, range);
+    return range;
+  }),
+  /** qtlWidths() does not update in response to layering (blockComps.@each.trackWidth). */
+  maxQtlWidth : alias('qtlWidthRange.0'),
+  minQtlWidth : alias('qtlWidthRange.1'),
+
+
   /** trackBlocksR are shown using fixed-width space allocated by axis-blocks,
    * except for isSubElements, which use variable width.
    */
@@ -2134,6 +2262,10 @@ export default InAxis.extend({
     'axis1d.currentPosition.yDomain.{0,1}',	// Throttled
     'axis1d.zoomed', 'axis1d.extended', // 'axis1d.featureLength',
     'controlsView.diamondWidth',
+    'controlsView.diamondOffset',
+    /* this would be a dependency if getMinQtlWidth() was a CP; currently as a
+     * CP the dependencies don't have the desired effect. */
+    // 'sharedProperties.minQtlWidth',
     function() {
       let tracks = this.get('tracksTree');
       let

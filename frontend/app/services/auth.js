@@ -264,10 +264,10 @@ export default Service.extend({
     return this._ajax('Blocks/blockFeatureLimits', 'GET', {block, options}, true);
   },
 
-  getBlockFeatureTraits(options) {
+  getBlockValues(fieldName, options) {
     if (trace)
-      dLog('services/auth getBlockFeatureTraits', options);
-    return this._ajax('Blocks/blockFeatureTraits', 'GET', {options}, true);
+      dLog('services/auth getBlockValues', fieldName, options);
+    return this._ajax('Blocks/blockValues', 'GET', {fieldName, options}, true);
   },
 
   getBlockFeaturesInterval(blocks, intervals, options) {
@@ -285,6 +285,16 @@ export default Service.extend({
     if (trace_paths)
       dLog('services/auth featureSearch', blockId, featureNames, options);
     return this._ajax('Features/search', 'GET', {server : apiServer, blockId, filter : featureNames, options}, true);
+  },
+
+  /** Search for Aliases matching the given list of Feature names in featureNames[],
+   * and search for Features matching the Aliases or Feature names.
+   * @param featureNames  array of Feature name strings
+   */
+  featureAliasSearch(apiServer, featureNames, options) {
+    if (trace_paths)
+      dLog('services/auth featureAliasSearch', featureNames, options);
+    return this._ajax('Features/aliasSearch', 'GET', {server : apiServer, featureNames, options}, true);
   },
 
   /** Request DNA sequence search (Blast).
@@ -326,6 +336,17 @@ export default Service.extend({
   createDataset(name) {
     return this._ajax('Datasets', 'POST', JSON.stringify({name: name}), true)
   },
+
+  /*--------------------------------------------------------------------------*/
+
+  /**
+   * @param rootId  e.g. 'CO_321'
+   */
+  ontologyGetTree(server, rootId, options) {
+    return this._ajax('Ontologies/getTree', 'GET', {server, rootId, options}, true);
+  },
+
+  /*--------------------------------------------------------------------------*/
 
   checkError(data, mapper) {
     // dLog('checkError')

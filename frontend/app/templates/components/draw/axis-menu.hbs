@@ -21,19 +21,23 @@
 
 
   <ul class="list-unstyled dataBlocks">
-    {{#each dataBlocks as |blockS|}}
+    {{#each dataBlocks as |dBlockS|}}
     <li>
-      <button onClick={{action this.blockUnview blockS}}>
+      <button onClick={{action this.blockUnview dBlockS}}>
        {{!--  "&#x2573;", glyphicon-sound-7-1, glyphicon-remove-sign --}}
        ╳
       </button>
-      <button onClick={{action this.blockVisible blockS}}>
+      <button onClick={{action this.blockVisible dBlockS}}>
         {{!-- "&#x1F441;", Unicode Character 'EYE', glyphicon-eye-close --}}
-        <span class="glyphicon glyphicon-eye-close"></span>
+        {{#if dBlockS.block.visible}}
+          <span class="glyphicon glyphicon-eye-open"></span>
+        {{else}}
+          <span class="glyphicon glyphicon-eye-close"></span>
+        {{/if}}
       </button>
 
       {{!-- result is text title --}}
-      {{compute (action this.dataBlockText blockS)}}
+      {{compute (action this.dataBlockText dBlockS)}}
     </li>
     {{/each}}
   </ul>

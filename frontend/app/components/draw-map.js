@@ -74,7 +74,8 @@ import {  Axes, maybeFlip, maybeFlipExtent,
           ensureYscaleDomain,
           /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform,
           eltId, axisEltId, eltIdAll, axisEltIdTitle,
-          axisFeatureCircles_selectAll
+          axisFeatureCircles_selectAll,
+          axisFeatureCircles_removeBlock,
           /*, axisTitleColour*/  }  from '../utils/draw/axis';
 import { stacksAxesDomVerify }  from '../utils/draw/stacksAxes';
 import {
@@ -370,6 +371,8 @@ export default Component.extend(Evented, {
 
   axes1d : computed( function () { return stacks.axes1d; }),
   splitAxes: filterBy('axes1d', 'extended', true),
+
+  axisTicks : alias('controls.view.axisTicks'),
 
   /** Enable frontend collation of paths : pathUpdate_() / collate-paths.js
    * The user sets this via GUI input in panel/view-controls.
@@ -702,9 +705,6 @@ export default Component.extend(Evented, {
       oa.axes2d = new Axes(oa);
 
     let
-      /** number of ticks in y axis when axis is not stacked.  reduce this
-       * proportionately when axis is stacked. */
-      axisTicks = 10,
     /** font-size of y axis ticks */
     axisFontSize = 12;
     /** default colour for paths; copied from app.css (.foreground path {
@@ -1139,14 +1139,25 @@ export default Component.extend(Evented, {
      * quicker, and may be useful.
      * Possibly versions of the app did not update selectedAxes in some cases, e.g. when zooms are reset.
      */
-    function selectedFeatures_removeAxis(axisName)
+    function selectedFeatures_removeAxis(axisName, mapChrName)
     {
       selectedAxes.removeObject(axisName);
-      let p = axisName; // based on brushHelper()
-      d3.keys(oa.z[p]).forEach(function(f) {
-        if (! isOtherField[f])
-          delete selectedFeatures[p];
-      });
+      axisFeatureCircles_removeBlock(selectedFeatures, mapChrName);
+      let p = mapChrName; // based on brushHelper()
+      delete selectedFeatures[p];
+    }
+    /** @param blockS stacks Block */
+    function selectedFeatures_removeBlock(blockS)
+    {
+      let
+      mapChrName = blockS?.block?.brushName;
+      axisFeatureCircles_removeBlock(selectedFeatures, mapChrName);
+      /** axisFeatureCircles_removeBlock() uses selectedFeatures[mapChrName], so
+       * call it before the following which filters that.  */
+      if (selectedFeatures[mapChrName]) {
+        selectedFeatures[mapChrName] = selectedFeatures[mapChrName]
+          .filter((f) => f.get('blockId.id') !== blockS.block.id);
+      }
     }
 
     collateData();
@@ -1334,6 +1345,7 @@ export default Component.extend(Evented, {
            */
           try {
             dBlock.set('view', sBlock);
+            dBlock.set('visible', sBlock.visible);
           }
           catch (exc) {
             console.log('ensureAxis', d, dBlock, sBlock, addedBlock, view, oa.stacks.blocks, exc.stack || exc);
@@ -4636,12 +4648,12 @@ export default Component.extend(Evented, {
       let yp = y[p],
       axis = oa.axes[p];
       if (yp && axis) {
-        let yAxis = axis.axisSide(y[p]).ticks(axisTicks * axis.portion);
+        let yAxis = axis.axisSide(y[p]).ticks(me.axisTicks * axis.portion);
         let idName = axisEltId(p),
         axisS = svgContainer.select("#"+idName);
         if (t)
           axisS = axisS.transition(t)
-	  .duration(me.get('axisZoom.axisTransitionTime'));
+          .duration(me.get('axisZoom.axisTransitionTime'));
         axisS.call(yAxis);
         if (updatePaths)
           pathUpdate(t);
@@ -5704,7 +5716,8 @@ export default Component.extend(Evented, {
       // already done, removeMap() triggers blockIsUnviewed()  : me.send('mapsToViewDelete', axisName);
 
       // filter axisName out of selectedFeatures and selectedAxes
-      selectedFeatures_removeAxis(axisName);
+      let mapChrName = axis.blocks[0]?.block?.brushName;
+      selectedFeatures_removeAxis(axisName, mapChrName);
       sendUpdatedSelectedFeatures();
       }
       else
@@ -5866,7 +5879,7 @@ export default Component.extend(Evented, {
               removeAxisMaybeStack(axisName, stackID, stack);
               me.send('removeBlock', axisName);
               // filter axisName out of selectedFeatures and selectedAxes
-              selectedFeatures_removeAxis(axisName);
+              selectedFeatures_removeAxis(axisName, sBlock?.block?.brushName);
               sendUpdatedSelectedFeatures();
             }
       /*
@@ -6020,13 +6033,20 @@ export default Component.extend(Evented, {
     function blockVisible (block) {
               console.log("blockVisible (VisibleAxis), visible", block.visible, block.longName(), this);
               block.visible = ! block.visible;
+              /* copy to Ember Block object, for axis-menu to use as dependency in if. */
+              block?.block?.set('visible', block.visible);
 
               updateAxisTitles();
               updateAxisTitleSize(undefined);
               collateStacks();  // does filterPaths();
 
-              selectedFeatures_removeAxis(block.axisName);
-              sendUpdatedSelectedFeatures();
+              if (! block.visible) {
+                selectedFeatures_removeBlock(block);
+              } else {
+                let ab = oa.axisApi?.axisFeatureCirclesBrushed;
+                ab && ab();
+              }
+                sendUpdatedSelectedFeatures();
 
               pathUpdate(undefined);
     }
@@ -6323,6 +6343,20 @@ export default Component.extend(Evented, {
 
   //----------------------------------------------------------------------------
 
+  /** Redraw all stacks.
+   * Used when change of axisTicksOutside.
+   */
+  stacksRedraw()
+  {
+    dLog('stacksRedraw');
+    if (this.oa.svgContainer) {
+      let t = this.oa.svgContainer.transition().duration(750);
+      this.oa.stacks.forEach(function (s) { s.redraw(t); });
+    }
+  },
+
+//--------------------------------------------------------------------------
+
   /** Provide a constant function value for use in .debounce(). */
   triggerZoomedAxis : function (args) {
     this.trigger("zoomedAxis", args);
@@ -6434,7 +6468,7 @@ export default Component.extend(Evented, {
       let count = stacks.length;
       // just checking - will retire stacks.stacksCount anyway.
       if (count != stacks.stacksCount?.count)
-	console.log('stacksWidthChanges',  count, '!=', stacks.stacksCount);
+        console.log('stacksWidthChanges',  count, '!=', stacks.stacksCount);
       let leftPanelShown = this.readLeftPanelToggle(),
       current = {
         stacksCount : count,
@@ -6497,6 +6531,8 @@ export default Component.extend(Evented, {
     'panelLayout.right.visible',
     'leftPanelShown',
     'controls.view.showAxisText',
+    /* axisTicksOutside doesn't resize, but a redraw is required (and re-calc could be done) */
+    'controls.view.axisTicksOutside',
     function() {
       console.log("resize", this, arguments);
         /** when called via .observes(), 'this' is draw-map object.  When called
@@ -6511,6 +6547,7 @@ export default Component.extend(Evented, {
       windowResize = ! calledFromObserve,
             oa =  calledFromObserve ? this.oa : this;
       let me = calledFromObserve ? this : oa.eventBus;
+      let redrawAxes = arguments[1] === 'controls.view.axisTicksOutside';
     // logWindowDimensions('', oa.vc.w);  // defined in utils/domElements.js
     function resizeDrawing() { 
       // if (windowResize)
@@ -6536,6 +6573,9 @@ export default Component.extend(Evented, {
         console.log("oa.vc", oa.vc, arguments);
         if (oa.vc)
         {
+            if (redrawAxes) {
+              this.stacksRedraw();
+            }
             if (false && ! layoutChanged)
                 // Currently debounce-d in resizeThis(), so call directly here.
                 resizeDrawing();

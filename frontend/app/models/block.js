@@ -31,6 +31,9 @@ import { fcsProperties } from '../utils/data-types';
 
 import { stacks } from '../utils/stacks';
 
+import { promiseText } from '../utils/ember-devel';
+
+
 /* global d3 */
 
 /*----------------------------------------------------------------------------*/
@@ -1245,7 +1248,7 @@ export default Model.extend({
             dLog('loadRequiredData', this.id, this.get('datasetId.id'),
                  this.get('datasetId.parent.id'), this.get('parentBlock.datasetId.id'));
           } else {
-            f.forEach((fi) => fi.value.forEach((fii) => this.get('trait').traitAddQtl(fii)));
+            f.forEach((fi) => fi?.value?.forEach((fii) => this.get('trait').traitAddQtl(fii)));
           }
           return [f, this.get('referencedFeatures')];})
       // parentBlockFeatures = ;
@@ -1268,6 +1271,26 @@ export default Model.extend({
     return features;
   }),
 
+  /** Request features for blockId, within the interval which
+   * requestBlockFeaturesInterval() derives from axisDimensions(blockId).
+   *
+   * Moved here from services/data/paths-progressive.js, to enable a request per block, in parallel.
+   */
+  getBlockFeaturesIntervalTask : task(function* (blockId, all) {
+    let
+      fnName = 'getBlockFeaturesIntervalTask',
+      features = yield this.get('pathsP').requestBlockFeaturesInterval(blockId, all);
+      if (trace_block)
+        dLog(fnName, blockId, all, promiseText(features));
+    return features;
+    /* tried .enqueue().maxConcurrency(3), but got 2 identical requests, so .drop() instead;
+     * Perhaps later: split requestBlockFeaturesInterval() into parameter gathering and request;
+     * the latter function becomes the task; store last request params with the corresponding task;
+     * check request params against last and if match then return that task perform result.
+     */
+  }).drop(),
+
+
   /** Request all features of the parent of this block which are referred to by
    * this block, via .values.flankingMarkers [].
    * @return a Promise yielding an array of Features
@@ -1285,12 +1308,16 @@ export default Model.extend({
      */
     let parentBlock = this.get('parentBlock');
     let blockTask;
-    if (parentBlock) {
+    if (featureNames.length && parentBlock) {
       let apiServer = this.get('apiServers').servers[parentBlock.store.name];
 
       let taskGet = this.get('blockService').get('getBlocksOfFeatures');
 
-      blockTask = taskGet.perform(apiServer, parentBlock.id, featureNames);
+      /** referencedFeatures() is used by loadRequiredData() for valueCompute()
+       * for determining QTL position from QTL .values.flankingMarkers;
+       * Currently using direct feature search for this, but feature search by aliases is on the roadmap.
+       */
+      blockTask = taskGet.perform(apiServer, /*matchAliases*/false, parentBlock.id, featureNames);
       blockTask
         .then((features) => {
           dLog('referencedFeatures', featureNames[0], featureNames.length, features.length);

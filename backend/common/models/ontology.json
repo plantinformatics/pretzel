@@ -1,0 +1,16 @@
+{
+  "name": "Ontology",
+  "description": "Read ontology data from web API",
+  "properties": {
+    "tree": {
+      "type": "object",
+      "required": true
+    }
+  },
+  "validations": [],
+  "relations": {
+  },
+  "acls": [
+  ],
+  "methods": {}
+}

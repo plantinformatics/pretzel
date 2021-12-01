@@ -8,3 +8,9 @@
 }}
 -->
 <div id="table-brushed"> </div>
+
+{{#if formFeatureEditEnable}}
+  {{#ember-modal-dialog modal-id="feature-edit-modal" title="Feature Edit" header-icon='edit'}}
+      {{form/feature-edit cell=formFeatureEditEnable close=(action this.closeFeatureEdit) tableData=data}}
+  {{/ember-modal-dialog}}
+{{/if}}

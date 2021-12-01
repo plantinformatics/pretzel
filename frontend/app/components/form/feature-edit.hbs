@@ -1,0 +1,51 @@
+<ul id="formFeatureEdit" style="list-style-type: none">
+  <li>
+    Name : {{feature.name}}
+  </li>
+  <li>
+    Trait : {{trait}}
+  </li>
+
+  <li>
+    Ontology :
+
+    {{#if this.editable}}
+    <Input @value={{this.editOntology}} />
+    <button onclick={{action this.showBrowseTree}} class="btn btn-xs"><i class="glyphicon glyphicon-tree-conifer"></i></button>
+    {{else}}
+      <div>{{this.editOntology}}</div>
+    {{/if}}
+
+    <div>
+    {{#if this.ontologyUrl}}
+    <a target='_blank' href={{this.ontologyUrl}}>{{this.ontologyText}}</a>
+    {{else}}
+      {{this.ontologyText}}
+    {{/if}}
+    </div>
+
+  </li>
+
+</ul>
+
+{{#if this.notEditableMessage}}
+<div style="margin:1em">{{this.notEditableMessage}}</div>
+{{else}}
+<button onclick={{action this.setFeatureOntology}} sensitive={{this.owner}}>OK</button>
+{{/if}}
+<button onclick={{action this.cancel}}>Cancel</button>
+
+<div>{{this.errorMessage}}</div>
+
+{{yield}}
+
+{{#if this.browseTreeEnable}}
+    {{#ember-modal-dialog modal-id="browse-tree-modal" title="Browse Ontology Tree" header-icon='edit'}}
+      {{record/browse-ontology-tree
+        ontology=this.editOntology
+        controlOptions=this.controlOptions
+        selectExpander=(action this.selectExpander)
+        cancel=(action (mut this.browseTreeEnable) false)
+        }}
+    {{/ember-modal-dialog}}
+{{/if}}

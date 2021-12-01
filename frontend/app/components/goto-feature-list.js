@@ -18,6 +18,8 @@ export default Component.extend({
 
   serverTabSelected : alias('controls.serverTabSelected'),
 
+  matchAliases : true,
+
   /*----------------------------------------------------------------------------*/
   actions : {
     loadBlock(block) {
@@ -49,6 +51,13 @@ export default Component.extend({
     }
   }, // actions
 
+  matchAliasesChanged(value) {
+    dLog('matchAliasesChanged', value, this.matchAliases);
+  },
+
+
+  /*------------------------------------------------------------------------------*/
+
   /** From the result of feature search, group by block.
    * The result is expressed in 2 forms, for different presentations :
    * . set in .blocksOfFeatures for display in goto-feature-list.hbs
@@ -64,9 +73,27 @@ export default Component.extend({
       apiServer = serverTabSelected || this.get('apiServers.primaryServer');
 
       let taskGet = this.get('taskGet'); // blockService.get('getBlocksOfFeatures');
-      let blockTask = taskGet.perform(apiServer, /*blockId*/ undefined, selectedFeatureNames)
-        .then((features) => {
+      let matchAliases = this.matchAliases;
+      let blockTask = taskGet.perform(apiServer, matchAliases, /*blockId*/ undefined, selectedFeatureNames)
+        .then((result) => {
+          /** result is : matchAliases ? {features, aliases} : [feature, ...] */
+          let features = matchAliases ? result.features : result;
+          if (matchAliases) {
+            let
+            aliasFeatureNamesSet = result.aliases
+              .reduce((result, a) => {
+                result.add(a.string1);
+                result.add(a.string2);
+                return result;
+              }, new Set()),
+            aliasFeatureNames = Array.from(aliasFeatureNamesSet);
+            this.set('aliases', aliasFeatureNames);
+          }
           dLog("getBlocksOfFeatures", selectedFeatureNames[0], features);
+
+          
+          let featuresAliases = this.features2Aliases(selectedFeatureNames, features, result.aliases);
+          this.set('featuresAliases', featuresAliases);
 
           /** copy feature search results to the list of clicked features,
            * for which triangles are displayed.  */
@@ -126,6 +153,43 @@ export default Component.extend({
 
         });
   },
+
+  /*------------------------------------------------------------------------------*/
+
+  /** Given the features and aliases resulting from featureAliasSearch(),
+   * determine which features were the result of an alias match.
+   * Calculate the mapping from feature name to aliases for both :
+   * . search: the search input feature names, and
+   * . result: the result features which are not in the the search input feature names
+   * @param featureNames  selectedFeatureNames
+   * @return {search, result} : 2 objects mapping from search input feature names
+   * and result feature names, respectively,
+   * to matched aliases (names)
+   */
+  features2Aliases(featureNames, features, aliases) {
+    let
+    searchNames = featureNames.reduce((result, name) => { result.add(name); return result;}, new Set()),
+    aliasesOfName = aliases.reduce((result, alias) => {
+      (result[alias.string1] ||= []).push(alias.string2);
+      (result[alias.string2] ||= []).push(alias.string1);
+      return result;
+    }, {}),
+    searchAliases = featureNames.reduce(collateAliasesOfNames, {}),
+    featureNamesSource = features.reduce((result, f) => collateAliasesOfNames(result, f.name), {});
+    function collateAliasesOfNames(result, name) {
+      let aliasA;
+      /** multiple features may have the same name, and hence the same aliases. */
+      if (! result[name] && (aliasA = aliasesOfName[name])) {
+        result[name] = aliasA; }
+      return result;
+    };
+    let results = {search : searchAliases, result : featureNamesSource};
+    dLog('features2Aliases', results, featureNames, features, aliases, searchNames, aliasesOfName);
+    return results;
+  },
+
+  /*------------------------------------------------------------------------------*/
+
 
   /** didRender() is called in this component and in the child component
    * feature-list for each keypress in {{input value=featureNameList}} in the

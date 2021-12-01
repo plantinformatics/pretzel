@@ -292,7 +292,10 @@ export default UploadBase.extend({
             reject({r: i, c: 'val', msg: `Position must be numeric on row ${i+1}`});
             return false;
           }
-          if ((row[c_end] !== undefined) && isNaN(row[c_end])) {
+          /** if the end column is empty, row[c_end] === null; using '== null' handles undefined also. */
+          /*jshint eqnull:true */
+          const endEmpty = row[c_end] == null;
+          if (! endEmpty && isNaN(row[c_end])) {
             reject({r: i, c: 'end', msg: `End Position must be numeric on row ${i+1}`});
             return false;
           }
@@ -310,7 +313,7 @@ export default UploadBase.extend({
              // Make sure val is a number, not a string.
              val: Number(row[c_val])
           };
-          if (row[c_end] !== undefined) {
+          if (! endEmpty) {
             r.end = +row[c_end];
           }
           validatedData.push(r);

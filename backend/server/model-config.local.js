@@ -93,6 +93,10 @@ var config = {
   "Configuration": {
     "dataSource": null,
     "public": true
+  },
+  "Ontology": {
+    "dataSource": null,
+    "public": true
   }
 
 }

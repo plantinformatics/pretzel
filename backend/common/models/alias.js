@@ -7,7 +7,15 @@ var acl = require('../utilities/acl')
 
 const { getAliases, cacheClearAliases, cacheClearAliasesRequests } = require('../utilities/localise-aliases');
 
+/*----------------------------------------------------------------------------*/
+
+const trace = 1;
+
+/*----------------------------------------------------------------------------*/
+
 module.exports = function(Alias) {
+
+  /*--------------------------------------------------------------------------*/
 
   Alias.bulkCreate = function(data, options, req, cb) {
     req.setTimeout(0);
@@ -36,6 +44,8 @@ module.exports = function(Alias) {
     returns: {arg: 'count', type: 'int'},
     description: "Creates an array of aliases"
   });
+
+  /*--------------------------------------------------------------------------*/
 
   Alias.namespacesAliases = function(namespaces, limit, options, res, cb) {
     console.log('namespacesAliases', namespaces);
@@ -68,6 +78,45 @@ module.exports = function(Alias) {
   /*--------------------------------------------------------------------------*/
 
 
+  Alias.stringSearch = function(strings, options, res, cb) {
+    const fnName = 'stringSearch';
+    console.log(fnName, strings);
+
+    let pipeline = [
+      { $match:
+        {$or :
+         [{string1 : {$in : strings}},
+          {string2 : {$in : strings}}] }
+      }
+    ];
+
+    if (trace)
+      console.log(fnName, pipeline);
+    if (trace > 1)
+      console.dir(pipeline, { depth: null });
+
+    let db = this.dataSource.connector;
+    let promise = db.collection('Alias')
+        .aggregate(pipeline, {allowDiskUse: true});
+
+    return promise;
+  };
+
+  Alias.remoteMethod('stringSearch', {
+    accepts: [
+      {arg: 'strings', type: 'array', required: true},
+      {arg: "options", type: "object", http: "optionsFromRequest"},
+      {arg: 'res', type: 'object', http: {source: 'res'}}
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'array', root: true},
+    description: "Returns aliases matching any of the given strings"
+  });
+
+
+  /*--------------------------------------------------------------------------*/
+
+
   Alias.cacheClear = function(time, options, cb) {
     let db = this.dataSource.connector;
     cacheClearAliases(db, time)
@@ -87,6 +136,7 @@ module.exports = function(Alias) {
    description: "Clear cached copies of aliases from a secondary Pretzel API server."
   });
 
+  /*--------------------------------------------------------------------------*/
 
   Alias.cacheClearRequests = function(time, options, cb) {
     let db = this.dataSource.connector;

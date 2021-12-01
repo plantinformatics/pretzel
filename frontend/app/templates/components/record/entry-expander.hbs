@@ -2,9 +2,16 @@
 
 {{elem/icon-toggle state=active iconTrue='minus' iconFalse='plus' }}
 
-<span title={{hoverText}} class="truncate" style="flex: 1;">
+{{#if @selectExpander}}
+<span title={{hoverText}} class="truncate btn" style="flex: 1;"
+  {{on 'click' (fn @selectExpander nodeName) }} >
   {{nodeName}}
 </span>
+{{else}}
+<span title={{hoverText}} class="truncate" style="flex: 1;" >
+  {{nodeName}}
+</span>
+{{/if}}
 
 {{#if combinedActive}}
   {{yield}}

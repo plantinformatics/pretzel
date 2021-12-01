@@ -57,6 +57,13 @@ function nowOrLater(later, fn) {
   }
 }
 
+/** Used when result paths (or features) is a promise;  simply shows 'pending'.
+ */
+function promiseText(promise) {
+  // Some types of promise used may have not .state().
+  return (promise.state && promise.state()) || promise;
+}
+
 /*----------------------------------------------------------------------------*/
 
-export { parentOfType, elt0, getAttrOrCP, _internalModel_data, nowOrLater };
+export { parentOfType, elt0, getAttrOrCP, _internalModel_data, nowOrLater,  promiseText };
