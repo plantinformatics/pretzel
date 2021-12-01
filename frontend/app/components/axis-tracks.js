@@ -564,7 +564,17 @@ let SharedProperties = EmberObject.extend({
   /** same as above, working around limitations of CP dependencies */
   getMinQtlWidth() {
     let
-    blockComps = this.axisTracks.mapBy('blockComps').flat(), // minQtlWidths, minQtlWidth
+    blockComps = this.axisTracks.map(
+      (at) => Object.keys(at.blocks).reduce((result, blockId) => {
+        let block = at.lookupBlock(blockId);
+        if (block.isQTL) { 
+          let blockState = at.lookupAxisTracksBlock(blockId);
+          result.push(blockState);
+        }
+        return result;
+      }, []))
+      .flat(),
+    // minQtlWidths, minQtlWidth
     blockCompsTrackWidths = blockComps.mapBy('trackWidth'),
     minWidth = blockCompsTrackWidths.length && Math.min.apply(undefined, blockCompsTrackWidths);
     // dLog('getMinQtlWidth', minWidth, blockComps, blockCompsTrackWidths, 'qtlWidths');
