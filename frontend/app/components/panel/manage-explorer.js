@@ -490,12 +490,12 @@ export default ManageBase.extend({
 
   blockFeatureTraits : computed(
     'apiServerSelectedOrPrimary.blockFeatureTraits',
-    'apiServers.primaryServer.datasetsBlocks.[]',
+    'apiServerSelectedOrPrimary.datasetsBlocks.[]',
     function () { return blockValues.apply(this, ['Traits']); }),
 
   /** map ._id to .block */
   blockFeatureTraitsBlocks : computed(
-    'apiServers.primaryServer.datasetsBlocks.[]',
+    'apiServerSelectedOrPrimary.datasetsBlocks.[]',
     function () { return blockValuesBlocks.apply(this, ['Traits']); }),
 
   blockFeatureTraitsHistory : computed(
@@ -517,7 +517,7 @@ export default ManageBase.extend({
 
   blockFeatureOntologies : computed(
     'apiServerSelectedOrPrimary.blockFeatureOntologies',
-    'apiServers.primaryServer.datasetsBlocks.[]',
+    'apiServerSelectedOrPrimary.datasetsBlocks.[]',
     /** comment in feature-edit.js : saveFeature() */
     'blocksService.featureUpdateCount',
     function () { return blockValues.apply(this, ['Ontologies']); }),
@@ -525,7 +525,7 @@ export default ManageBase.extend({
   /** map ._id to .block */
   blockFeatureOntologiesBlocks : computed(
     'apiServerSelectedOrPrimary.blockFeatureOntologies',
-    'apiServers.primaryServer.datasetsBlocks.[]',
+    'apiServerSelectedOrPrimary.datasetsBlocks.[]',
     'blocksService.featureUpdateCount',
     function () { return blockValuesBlocks.apply(this, ['Ontologies']); }),
 
