@@ -75,6 +75,8 @@ const selectorExplorer = 'div#left-panel-explorer';
 function blockValues(fieldName) {
   let ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
 
+  let count = this.get('blocksService.featureUpdateCount');
+  dLog('blockValues', fieldName, count, this);
   let valueP = this.get('apiServerSelectedOrPrimary.blockFeature' + fieldName);
   let proxy = ObjectPromiseProxy.create({ promise: resolve(valueP) });
   return proxy;
@@ -396,6 +398,8 @@ export default ManageBase.extend({
 
     let me = this;
     this.get('apiServers').on('receivedDatasets', function (datasets) { console.log('receivedDatasets', datasets); me.send('receivedDatasets', datasets); });
+    /** Initialise this.blocksService so that dependency blocksService.featureUpdateCount works. */
+    let blocksService = this.get('blocksService');
   },
 
   urlOptions : computed('model.params.options', function () {

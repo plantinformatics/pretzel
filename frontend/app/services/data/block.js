@@ -236,6 +236,7 @@ export default Service.extend(Evented, {
     pName = name + 'P',
     /** The result is a compilation from the datasets / blocks on a server, so
      * it is an attribute of apiServer.
+     * featureSaved() clears .pName, to enable result refresh after feature (.values.Ontology) save.
      */
     promise = apiServer[pName] || 
       (apiServer[pName] = this.get('taskGetValues').perform(fieldName)
@@ -262,12 +263,14 @@ export default Service.extend(Evented, {
 
   /*--------------------------------------------------------------------------*/
 
+  apiServerSelectedOrPrimary : alias('controls.apiServerSelectedOrPrimary'),
+
   ontologyIds : computed(
-    'controls.apiServerSelectedOrPrimary.blockFeatureOntologies',
+    'apiServerSelectedOrPrimary.blockFeatureOntologies',
     'apiServers.datasetsBlocksRefresh', // as in blockValues
   function () {
     let
-    idsP = this.get('controls.apiServerSelectedOrPrimary.blockFeatureOntologies').then((bos) => {
+    idsP = this.get('apiServerSelectedOrPrimary.blockFeatureOntologies').then((bos) => {
       let
       idsSet = bos.reduce((result, bo) => {
         bo.Ontologies.forEach((o) => result.add(o));
@@ -308,13 +311,18 @@ export default Service.extend(Evented, {
   featureSaved() {
     /* The API result blocksService.blockFeatureOntologies is invalidated by
      * this save, so clear the result promise to trigger a new request.
-     * The dependency on blocksService.blockFeatureOntologies in
+     * The dependency on apiServerSelectedOrPrimary.blockFeatureOntologies in
      * manage-explorer.js doesn't seem to detect that change, so the signal
      * featureUpdateCount is added.
      */
     let fieldName = 'Ontology',
-        pName = 'blockFeature' + fieldName + 'P';
-    this.set(pName, null);
+        name = 'blockFeature' + fieldName,
+        pName = name + 'P';
+    /** this could be an action forwarded to api-server */
+    let server = this.get('apiServerSelectedOrPrimary');
+    dLog('featureSaved', pName, server.get(name), this.apiServers.datasetsBlocksRefresh);
+    server.set(pName, null);
+    server.set(name, null);
     this.incrementProperty('featureUpdateCount');
   },
 
