@@ -92,7 +92,7 @@ export default Component.extend({
           dLog("getBlocksOfFeatures", selectedFeatureNames[0], features);
 
           
-          let featuresAliases = this.features2Aliases(selectedFeatureNames, features, result.aliases);
+          let featuresAliases = result.aliases && this.features2Aliases(selectedFeatureNames, features, result.aliases);
           this.set('featuresAliases', featuresAliases);
 
           /** copy feature search results to the list of clicked features,
