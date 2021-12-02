@@ -968,7 +968,7 @@ export default Component.extend(Evented, AxisEvents, {
      * e.g. this.get('parentView.oa.stacks.stacksCount.axes2d.0.allocatedWidthsMax.centre').
      * but 'axes2d.@each.allocatedWidthsMax.centre' is not a valid dependency
      * because only 1 level is supported after @each.
-     * If needed an alias for allocatedWidthsMax.centre could be added to axis-2d.
+     * If needed a CP for 'axes2d.@each.allocatedWidthsMax' could be added.
      * This dependency considers only the axes2d of this block-adj :
      */
     'blockAdj.axes1d.{0,1}.axis2d.allocatedWidthsMax.centre',
