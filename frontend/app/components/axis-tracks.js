@@ -561,7 +561,9 @@ let SharedProperties = EmberObject.extend({
     dLog('sharedproperties minQtlWidth', minQtlWidth, minQtlWidths, this);
     return minQtlWidth;
   }),
-  /** same as above, working around limitations of CP dependencies */
+  /** same as above, working around limitations of CP dependencies
+   * @return 0 if there are no trackWidths yet
+ */
   getMinQtlWidth() {
     let
     blockComps = this.axisTracks.map(
@@ -575,7 +577,8 @@ let SharedProperties = EmberObject.extend({
       }, []))
       .flat(),
     // minQtlWidths, minQtlWidth
-    blockCompsTrackWidths = blockComps.mapBy('trackWidth'),
+    blockCompsTrackWidths = blockComps.mapBy('trackWidth')
+      .filter((w) => w !== undefined),
     minWidth = blockCompsTrackWidths.length && Math.min.apply(undefined, blockCompsTrackWidths);
     // dLog('getMinQtlWidth', minWidth, blockComps, blockCompsTrackWidths, 'qtlWidths');
     return minWidth;
@@ -607,8 +610,9 @@ export default InAxis.extend({
    * axis closes.  This state is likely to move to a axis-tracks-block component.
    * So far this contains only a WeakMap for the interval trees of Feature sub-elements (.subEltTree).
    * and .layoutWidth for the block.
+   * Initialised in init() so it is not shared between axes.
    */
-  blocks : {},
+  blocks : undefined,
 
   featureData2Feature : new WeakMap(),
 
@@ -617,6 +621,8 @@ export default InAxis.extend({
 
   init() {
     this._super(...arguments);
+
+    this.set('blocks', EmberObject.create());
   },
 
   /*--------------------------------------------------------------------------*/
@@ -1383,7 +1389,7 @@ export default InAxis.extend({
         /** by using sharedProperties.minQtlWidth instead of width, all QTL diamonds are
          * shown at the same size, i.e. the size of the smallest width as
          * required by layering. */
-        const minWidth = sharedProperties.getMinQtlWidth();
+        const minWidth = sharedProperties.getMinQtlWidth() || width;
 
       rm
       // .transition().duration(featureTrackTransitionTime)
@@ -1393,7 +1399,7 @@ export default InAxis.extend({
               g[i] = swapTag('rect', 'path', g[i], attributesForReplace);
               let x = xPosnS(subElements).apply(this, [d, i, g]);
               const
-              diamondWidth = minWidth /*width*/ * (thisAt.controlsView.diamondWidth || 1),
+              diamondWidth = minWidth * (thisAt.controlsView.diamondWidth || 1),
               pathDFn = useDiamond ? 
                 (d,i,g) => diamondPath(y, d, diamondWidth, x) :
                 (d,i,g) => rectTrianglePath(y, d, width, x);
