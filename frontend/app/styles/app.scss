@@ -1670,8 +1670,9 @@ textarea.panel-body
 ul.feature-found {
   list-style-type: none;
   text-align : center;
-  /* override user-agent stylesheet (Chrome) */
+  /* override user-agent stylesheet for <ul> (Chrome, Firefox) */
   -webkit-padding-start: inherit;
+  -moz-padding-start: inherit;
   /* target badge may be close to left so leave a margin for clipping.  */
   height: auto;
   max-height: 15ex;
