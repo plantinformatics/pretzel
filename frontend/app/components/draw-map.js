@@ -174,6 +174,19 @@ const syntenyBlock_2Feature = true;
 
 /*----------------------------------------------------------------------------*/
 
+/** compareFn param for compareFields */
+function compareViewport(keyName, a, b) {
+  let different;
+  if (keyName === 'viewportWidth') {
+    /** viewportWidth may cycle due to the rendering affecting the geometry (seen once, in Firefox). */
+    different = ((a === undefined) !== (b === undefined)) || Math.abs(a - b) > 5;
+  } else {
+    different = a !== b;
+  }
+  return different;
+}
+/*----------------------------------------------------------------------------*/
+
 
 
 
@@ -6445,7 +6458,7 @@ export default Component.extend(Evented, {
       this.set('resizePrev', result);
       if (prev) {
         delete result.changed;
-        let changed = compareFields(prev, result, (a,b) => a !== b);
+        let changed = compareFields(prev, result, compareViewport);
         result.changed = changed;
       }
       dLog('resizeEffect', result);
