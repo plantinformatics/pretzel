@@ -32,9 +32,9 @@
 
             <p class="list-group-item-text">
             {{!-- data-trait-id is not used yet; it contains the unmodified trait.name, so it can be used to lookup trait information --}}
-            <span type="button" class="label label-info" data-trait-id={{concat 'tqt_' trait.name}} id={{concat 'tqt_' (without-punctuation trait.name)}} {{on 'click' (action this.traitQtlsClick trait) }} >
+            <button type="button" class="btn btn-info label label-info" data-trait-id={{concat 'tqt_' trait.name}} id={{concat 'tqt_' (without-punctuation trait.name)}} {{on 'click' (action this.traitQtlsClick trait) }} >
                 {{elem/icon-base name="asterisk"}} &nbsp;{{trait.features.length}}
-            </span> &nbsp;
+            </button> &nbsp;
             </p>
 
         </li>
