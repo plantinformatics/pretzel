@@ -115,12 +115,12 @@ function blockValuesHistory (fieldName) {
         const
         recent = this.historyView === 'Recent',
         /** map blocks -> Traits, so that the sorted blocks can be mapped -> blocksTraits  */
-        blocksTraitsMap = blocksTraits.reduce((btm, bt) => btm.set(bt.block, bt.Traits), new Map()),
+        blocksTraitsMap = blocksTraits.reduce((btm, bt) => btm.set(bt.block, bt[fieldName]), new Map()),
         blocks = blocksTraits.map((bt) => bt.block),
         /** sorted blocks */
-        blocksS = this.get('viewHistory').blocksFilterSortViewed(blocks, recent);
-        blocksTraits = blocksS.map((b) => addField({block : b}, fieldName, blocksTraitsMap.get(b)));
-        return blocksTraits;
+        blocksS = this.get('viewHistory').blocksFilterSortViewed(blocks, recent),
+        blocksTraitsS = blocksS.map((b) => addField({block : b}, fieldName, blocksTraitsMap.get(b)));
+        return blocksTraitsS;
       });
   }
   return blocksTraitsP;
@@ -142,15 +142,15 @@ function blockValuesIdText(me, blocksTraits) {
     bt.Ontologies = bt.Ontologies
       .filter((oid) => oid !== '')
       .map((oid)=> {
-      let result = oid;
-      if (! oid.startsWith('[')) {
-        let name = me.get('ontology').getNameViaPretzelServer(oid);
-        if (typeof name === 'string') {
-          result = '[' + oid + '] ' + name;
+        let result = oid;
+        if (! oid.startsWith('[')) {
+          let name = me.get('ontology').getNameViaPretzelServer(oid);
+          if (typeof name === 'string') {
+            result = '[' + oid + '] ' + name;
+          }
         }
-      }
-      return result;
-    });
+        return result;
+      });
   });
   return blocksTraits;
 }
@@ -949,7 +949,7 @@ export default ManageBase.extend({
     });
     return matchAll;
   },
-  /** Filter blockTraits.Traits by nameFilters
+  /** Filter blockTraits[fieldName] (e.g. blockTraits.Traits) by nameFilters
    * @param fieldName 'Traits' or 'Ontologies'
    */
   blockTraitsFilter(fieldName, blockTraits, nameFilters) {
