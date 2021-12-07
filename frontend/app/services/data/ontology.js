@@ -5,6 +5,10 @@ import { A } from '@ember/array';
 import { thenOrNow } from '../../utils/common/promises';
 import { reduceIdChildrenTree } from '../../utils/value-tree';
 
+//------------------------------------------------------------------------------
+
+/*global d3 */
+
 /*----------------------------------------------------------------------------*/
 
 const dLog = console.debug;
@@ -241,7 +245,94 @@ export default Service.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** initially add all Ontology IDs to the colour scale
+   */
+  ontology_colour_scale : computed('ontologyCollation.ontologyId2Node',  function () {
+    /** similar : see also axis.js : trait_colour_scale */
+    let scale = d3.scaleOrdinal().range(d3.schemeCategory10);
+    return scale;
+  }),
+
+
+  /** Lookup the colour for ontologyId from the colour scale.
+   * scale uses Ontology Id - including traits and terms.
+
+   * Lookup traverses upward from the given OntologyId; if that OntologyId is
+   * not currently in the colour scale, traverse to the parent node in the
+   * Ontology, and check if that OntologyId is in the colour scale.
+   * Stop at the ROOT of the Ontology, and return undefined if the ROOT
+   * OntologyId is not in the colour scale.
+   */
+  qtlColour(ontologyId) {
+    let ontology_colour_scale = this.get('ontology_colour_scale');
+    let ids = ontology_colour_scale.domain();
+    let found;
+    let treeData = this.get('ontologyCollation'),
+        id2n = treeData.get('ontologyId2Node._result');
+    dLog('qtlColour', id2n);
+    let colour;
+    let isRoot;
+    /** after devel, can reduce this to : && id2n && (parent = id2n[ontologyId]?.parent?.id) */
+    let parent = true;
+    while (! (found = ids.includes(ontologyId)) && ! (isRoot = ontologyId.match(':ROOT')) && parent ) {
+      if (id2n) {
+        parent = id2n[ontologyId]?.parent;
+        if (parent) {
+          dLog('qtlColour', ontologyId, parent, parent.id);
+          ontologyId = parent.id;
+        }
+      }
+    }
+    if (found) {
+      colour = ontology_colour_scale(ontologyId);
+    }
+
+    return colour;
+  },
+
+
+  /**   click on tree : remove node's children from colour scale, and ensure that node is in colour scale
+   */
+  ontologyClick(ontologyId) {
+    let ontology_colour_scale = this.get('ontology_colour_scale');
+    let treeData = this.get('ontologyCollation'),
+        id2n = treeData.get('ontologyId2Node._result');
+    let ids = ontology_colour_scale.domain();
+
+    if (id2n && ids.length) {
+      let node = id2n[ontologyId];
+      let reducedIds = this.uncolourChildren(ids, node);
+      ontology_colour_scale.domain(reducedIds);
+    }
+
+    /** ensure that node is in colour scale */
+    let colour = ontology_colour_scale(ontologyId);
+    /** the caller could colour the clicked element  */
+    return colour;
+  },
+
+  /** remove node's children from colour scale */
+  uncolourChildren(domainIds, tree) {
+    function removeId(ids, parentKey, index, value) {
+      let domainIndex = ids.indexOf(value.id);
+      if (domainIndex !== -1) {
+        ids.splice(domainIndex, domainIndex + 1);
+      }
+      return ids;
+    };
+    /** result is === domainIds */
+    reduceIdChildrenTree(tree, removeId, domainIds);
+    dLog('uncolourChildren', tree, domainIds);
+    return domainIds;
+  },
+
+
+
+  //----------------------------------------------------------------------------
+
+
 });
+
 
 
 /*----------------------------------------------------------------------------*/

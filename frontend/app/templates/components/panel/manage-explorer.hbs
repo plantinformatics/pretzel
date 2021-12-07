@@ -28,6 +28,12 @@
         changed=(action historyViewChanged preventDefault=false) }}
       <span>Favourites</span>
       {{/radio-button}}
+       &nbsp;&nbsp;
+
+      {{#radio-button value='Viewed' groupValue=this.controlOptions.historyView
+        changed=(action historyViewChanged preventDefault=false) }}
+      <span>Viewed</span>
+      {{/radio-button}}
 
       <span style="display: inline-block;">
         {{input type="checkbox" name="this.controlOptions.historyBlocks" checked=this.controlOptions.historyBlocks
@@ -184,7 +190,8 @@
             loadBlock="loadBlock"
             selectBlock="selectBlock"
             selectedBlock=selectedBlock
-            selectDataset="selectDataset"}}
+            selectDataset="selectDataset"
+            selectExpander=(action this.selectOntologyNode) }}
 
             <span style="display: inline-block; margin-left: 3em;">
               {{input type="checkbox" name="this.controlOptions.showHierarchy" checked=this.controlOptions.showHierarchy
@@ -195,9 +202,9 @@
 
           {{/record/entry-tab}}
         {{else}}
-	  {{#tab.pane id='tab-explorer-Ontology' title='Ontology'}}
+          {{#tab.pane id='tab-explorer-Ontology' title='Ontology'}}
             <div>Requesting the Ontology Tree ...</div>
-	  {{/tab.pane}}
+          {{/tab.pane}}
         {{/if}}
       {{/if}}
 

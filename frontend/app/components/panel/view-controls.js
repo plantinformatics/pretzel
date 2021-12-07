@@ -392,6 +392,12 @@ export default Component.extend({
    */
   diamondOffset : 0,
 
+  /** Colour QTL diamonds & <rect>s by one of : Ontology, Trait, Block. */
+  qtlColourBy : 'Ontology',
+  qtlColourByChanged(value) {
+    dLog('qtlColourByChanged', value);
+  },
+
   /*--------------------------------------------------------------------------*/
 
   didInsertElement() {

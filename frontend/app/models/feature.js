@@ -1,11 +1,22 @@
 import { computed } from '@ember/object';
 import Model, { attr, belongsTo, hasMany } from '@ember-data/model';
 //import Fragment from 'model-fragments/fragment';
+import { inject as service } from '@ember/service';
+
+
+import { traitColour } from '../utils/draw/axis';
+
+/* global d3 */
+
+//------------------------------------------------------------------------------
 
 const dLog = console.debug;
 
-
 export default Model.extend({
+  ontology : service('data/ontology'),
+
+  //----------------------------------------------------------------------------
+
   blockId: belongsTo('block'),
   _name: attr('string'),
   /* currently have a mix of .range and .value in pretzel-data [develop];
@@ -54,8 +65,37 @@ export default Model.extend({
       value = [value[1], value[0]];
     }
     return value;
-  })
+  }),
 
   /*--------------------------------------------------------------------------*/
+
+  get traitColour() {
+    let traitName = this.get('values.Trait'),
+        colour = traitColour(traitName);
+    return colour;
+  },
+
+  get ontologyColour() {
+  // return ontology_colour_scale(ontologyId);
+  let ontologyId = this.get('values.Ontology'),
+      colour = ontologyId && this.get('ontology').qtlColour(ontologyId);
+  return colour;
+  },
+
+  colour(qtlColourBy) {
+    let colour;
+    switch (qtlColourBy) {
+    case 'Trait' : colour = this.get('traitColour');  break;
+    case 'Ontology' : colour = this.get('ontologyColour');  break;
+    default : dLog('colour', qtlColourBy); break;
+    }
+    return colour;
+  },
+
+
+
+
+  //----------------------------------------------------------------------------
+
 
 });

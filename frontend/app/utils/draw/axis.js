@@ -398,12 +398,6 @@ function traitColour(traitName) {
   return trait_colour_scale(traitName);
 }
 
-function featureTraitColour(feature) {
-  let traitName = feature.get('values.Trait'),
-      colour = traitColour(traitName);
-  return colour;
-}
-
 /*----------------------------------------------------------------------------*/
 
 export {
@@ -421,5 +415,4 @@ export {
   axisFeatureCircles_removeBlock,
   axisTitleColour,
   traitColour,
-  featureTraitColour,
 };

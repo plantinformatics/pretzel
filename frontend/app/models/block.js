@@ -305,7 +305,21 @@ export default Model.extend({
     let isQTL =  this.hasTag('QTL') || this.get('datasetId._meta.type') === 'QTL';
     return isQTL;
   }),
-  useTraitColour : alias('isQTL'),
+  /** Result indicates how axis-tracks display of features of this block should be coloured.
+   * @return
+   *  undefined for blockColour,
+   *  !== undefined for featureColour, e.g. :
+   * 'Ontology' for ontologyColour,
+   * 'Trait' for traitColour.
+   */
+  get useFeatureColour() {
+    let useColour;
+    if (this.get('isQTL')) {
+      let qtlColourBy = this.get('controls.view.qtlColourBy');
+      useColour = qtlColourBy && (qtlColourBy !== 'Block') ? qtlColourBy : undefined;
+    }
+    return useColour;
+  },
   isHighDensity : computed('datasetId.tags', function () {
     let isHighDensity = this.hasTag('HighDensity');
     return isHighDensity;

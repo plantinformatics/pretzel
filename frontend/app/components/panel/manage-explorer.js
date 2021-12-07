@@ -118,7 +118,9 @@ function blockValuesHistory (fieldName) {
         blocksTraitsMap = blocksTraits.reduce((btm, bt) => btm.set(bt.block, bt[fieldName]), new Map()),
         blocks = blocksTraits.map((bt) => bt.block),
         /** sorted blocks */
-        blocksS = this.get('viewHistory').blocksFilterSortViewed(blocks, recent),
+        blocksS = (this.historyView === 'Viewed') ?
+          blocksFilterCurrentlyViewed(blocks) :
+          this.get('viewHistory').blocksFilterSortViewed(blocks, recent),
         blocksTraitsS = blocksS.map((b) => addField({block : b}, fieldName, blocksTraitsMap.get(b)));
         return blocksTraitsS;
       });
@@ -131,6 +133,16 @@ function addField(object, fieldName, value) {
   object[fieldName] = value;
   return object;
 }
+
+/** Filter the given array of blocks to just those which are currently viewed.
+*/
+function blocksFilterCurrentlyViewed(blocks) {
+  let
+  blocksSorted = blocks
+    .filter((b) => b.isViewed);
+  return blocksSorted;
+};
+
 
 /**
  * Used as a pre-process for (fieldName === 'Ontologies')
@@ -400,6 +412,8 @@ export default ManageBase.extend({
     this.get('apiServers').on('receivedDatasets', function (datasets) { console.log('receivedDatasets', datasets); me.send('receivedDatasets', datasets); });
     /** Initialise this.blocksService so that dependency blocksService.featureUpdateCount works. */
     let blocksService = this.get('blocksService');
+
+    this.get('ontology').set('ontologyCollation', this);
   },
 
   urlOptions : computed('model.params.options', function () {
@@ -2051,8 +2065,30 @@ export default ManageBase.extend({
   },
   willDestroyElement() {
     console.log('willDestroyElement', this);
+    if (this.get('ontology.ontologyCollation') === this) {
+      this.set('ontology.ontologyCollation', undefined);
+    }
+
     this._super(...arguments);
-  }
+  },
   //----------------------------------------------------------------------------
+
+  /** user has clicked on a enter-expander in an ontology tree. */
+  selectOntologyNode(nodeText, values, event) {
+    dLog('selectOntologyNode', nodeText, values, event.target);
+    let ontologyId = values?.id;
+    if (ontologyId) {
+      let colour = this.get('ontology').ontologyClick(ontologyId);
+      let target = event?.target;
+      if (target && colour) {
+        /** probably "" or undefined */
+        let previousColour = target.style.background;
+        target.style.background = colour;
+        later(() => target.style.background = previousColour, 2 * 1000);
+      }
+    }
+  },
+
+  // ---------------------------------------------------------------------------
 
 });

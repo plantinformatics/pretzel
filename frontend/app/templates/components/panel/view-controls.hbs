@@ -298,6 +298,24 @@
     </li>
 
     <li class="list-group-item">
+      <label style="display:inline">QTL colour by :</label>
+      {{radio-button value='Ontology' groupValue=qtlColourBy
+        changed=(action qtlColourByChanged preventDefault=false)
+      }}
+      Ontology &nbsp;&nbsp;
+      {{radio-button value='Trait' groupValue=qtlColourBy
+        changed=(action qtlColourByChanged preventDefault=false)
+      }}
+      Trait &nbsp;&nbsp;
+      {{radio-button value='Block' groupValue=qtlColourBy
+        changed=(action qtlColourByChanged preventDefault=false)
+      }}
+      Block
+
+    </li>
+
+
+    <li class="list-group-item">
       <div>
         <label>Graph Text Size</label>
         <span class="sub-label">{{ titleTextSize }}</span>

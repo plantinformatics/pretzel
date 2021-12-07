@@ -4,7 +4,7 @@
 
 {{#if @selectExpander}}
 <span title={{hoverText}} class="truncate btn" style="flex: 1;"
-  {{on 'click' (fn @selectExpander nodeName) }} >
+  {{on 'click' (fn @selectExpander nodeName values) }} >
   {{nodeName}}
 </span>
 {{else}}

@@ -1486,11 +1486,12 @@ export default InAxis.extend({
           }
         }
       }
-      let featureColour =
-          block.get('useTraitColour') ?
+      let
+      qtlColourBy = block.get('useFeatureColour'),
+      featureColour = qtlColourBy ?
           (interval) => {
             let feature = thisAt.featureData2Feature.get(interval);
-            return featureTraitColour(feature); } :
+            return feature.colour(qtlColourBy); } :
           blockTrackColourI;
 
       rm
@@ -2269,6 +2270,7 @@ export default InAxis.extend({
     'axis1d.zoomed', 'axis1d.extended', // 'axis1d.featureLength',
     'controlsView.diamondWidth',
     'controlsView.diamondOffset',
+    'controlsView.qtlColourBy',
     /* this would be a dependency if getMinQtlWidth() was a CP; currently as a
      * CP the dependencies don't have the desired effect. */
     // 'sharedProperties.minQtlWidth',
