@@ -12,14 +12,10 @@ import { traitColour } from '../utils/draw/axis';
 
 const dLog = console.debug;
 
-/** many QTLs don't have .Ontology yet (so colour is undefined - black) and
- * they are obscuring those that do, so try making the black translucent.
- */
-const ontologyColourDefault = "#0003";
-
 
 export default Model.extend({
   ontology : service('data/ontology'),
+  controls : service(),
 
   //----------------------------------------------------------------------------
 
@@ -85,9 +81,20 @@ export default Model.extend({
   // return ontology_colour_scale(ontologyId);
   let ontologyId = this.get('values.Ontology'),
       colour = ontologyId ? this.get('ontology').qtlColour(ontologyId) :
-      ontologyColourDefault;
+      this.get('ontologyColourDefault');
   return colour;
   },
+
+  /** many QTLs don't have .Ontology yet (so colour is undefined - black) and
+   * they are obscuring those that do, so try making the black translucent.
+   */
+  get ontologyColourDefault() {
+    /** 4-bit alpha channel - single hex digit. */
+    let alpha = this.get('controls.view.qtlUncolouredOpacity'),
+        colour = "#000" + Number(alpha).toString(16);
+    return colour;
+  },
+
 
   colour(qtlColourBy) {
     let colour;

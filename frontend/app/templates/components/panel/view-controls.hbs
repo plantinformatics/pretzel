@@ -315,16 +315,27 @@
     </li>
 
 
-    <li class="list-group-item">
+    <li class="list-group-item horiz-2">
+    
       <div>
         <label>Graph Text Size</label>
-        <span class="sub-label">{{ titleTextSize }}</span>
-      </div>
+        <span class="sub-label" style="margin-left: 7px;">{{ titleTextSize }}</span>
       <input type="range"
        value=4
        oninput={{action this.titleTextSizeInput}}
        min="0" max="9"
       />
+      </div>
+
+      <div>
+        <label>QTL : Black Opacity</label>
+        <input type="range"
+         value=16
+         oninput={{action this.qtlUncolouredOpacityInput}}
+         min="0" max="15"
+        />
+      </div>
+
     </li>
 
     <li class="list-group-item">

@@ -508,6 +508,14 @@ export default Component.extend({
     // dLog('diamondOffsetInput', value, event.target.value);
     this.set('diamondOffset', value);
   },
+  qtlUncolouredOpacityInput(event) {
+    /** default is 100% : range [0, 15] - single hex digit : value=15 in hbs
+     * event.target.value is a string; convert to a number.
+     */
+    let value = +event.target.value;
+     dLog('qtlUncolouredOpacityInput', value, event.target.value);
+    this.set('qtlUncolouredOpacity', value);
+  },
   titleTextSizeInput(event) {
     const attrName = 'font-size';
     /** values are [0, 9] (min="0" max="9" in .hbs).  */
