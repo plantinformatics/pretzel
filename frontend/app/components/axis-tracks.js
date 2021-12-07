@@ -2274,6 +2274,7 @@ export default InAxis.extend({
     'controlsView.diamondWidth',
     'controlsView.diamondOffset',
     'controlsView.qtlColourBy',
+    'controlsView.qtlUncolouredOpacity',
     'ontology.ontologyColourScaleUpdateCount',
     /* this would be a dependency if getMinQtlWidth() was a CP; currently as a
      * CP the dependencies don't have the desired effect. */
