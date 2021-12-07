@@ -600,6 +600,7 @@ export default InAxis.extend({
   selected : service('data/selected'),
   axisZoom: service('data/axis-zoom'),
   trait : service('data/trait'),
+  ontology : service('data/ontology'),
 
   controlsView : alias('controls.controls.view'),
 
@@ -623,6 +624,8 @@ export default InAxis.extend({
     this._super(...arguments);
 
     this.set('blocks', EmberObject.create());
+    /** .ontology is used in dependency - ensure that it is initialised. */
+    this.get('ontology');
   },
 
   /*--------------------------------------------------------------------------*/
@@ -2271,6 +2274,7 @@ export default InAxis.extend({
     'controlsView.diamondWidth',
     'controlsView.diamondOffset',
     'controlsView.qtlColourBy',
+    'ontology.ontologyColourScaleUpdateCount',
     /* this would be a dependency if getMinQtlWidth() was a CP; currently as a
      * CP the dependencies don't have the desired effect. */
     // 'sharedProperties.minQtlWidth',

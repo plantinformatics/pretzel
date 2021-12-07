@@ -245,6 +245,9 @@ export default Service.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** Incremented when ontology_colour_scale is changed, for dependencies. */
+  ontologyColourScaleUpdateCount : 0,
+
   /** initially add all Ontology IDs to the colour scale
    */
   ontology_colour_scale : computed('ontologyCollation.ontologyId2Node',  function () {
@@ -307,6 +310,7 @@ export default Service.extend({
 
     /** ensure that node is in colour scale */
     let colour = ontology_colour_scale(ontologyId);
+    this.incrementProperty('ontologyColourScaleUpdateCount');
     /** the caller could colour the clicked element  */
     return colour;
   },
