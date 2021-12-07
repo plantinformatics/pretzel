@@ -318,9 +318,12 @@ export default Service.extend({
   /** remove node's children from colour scale */
   uncolourChildren(domainIds, tree) {
     function removeId(ids, parentKey, index, value) {
-      let domainIndex = ids.indexOf(value.id);
-      if (domainIndex !== -1) {
-        ids.splice(domainIndex, domainIndex + 1);
+      /** don't remove the clicked node (tree), only its children.  */
+      if (parentKey) {
+        let domainIndex = ids.indexOf(value.id);
+        if (domainIndex !== -1) {
+          ids.splice(domainIndex, domainIndex + 1);
+        }
       }
       return ids;
     };
