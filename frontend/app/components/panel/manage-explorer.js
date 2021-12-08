@@ -2084,7 +2084,14 @@ export default ManageBase.extend({
         /** probably "" or undefined */
         let previousColour = target.style.background;
         target.style.background = colour;
-        later(() => target.style.background = previousColour, 2 * 1000);
+        /** For qtlColourHierarchy() it is useful to show the clicked element
+         * colour briefly then clear it - simpler than clearing colours when
+         * another node is clicked :
+         *   later(() => target.style.background = previousColour, 2 * 1000);
+         * Now that qtlColourLevel() is used, the background-color is provided
+         * by entry-expander : valuesColour(), which clears the background-color when
+         * needed.
+         */
       }
     }
   },

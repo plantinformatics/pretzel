@@ -4,7 +4,8 @@
 
 {{#if @selectExpander}}
 <span title={{hoverText}} class="truncate btn" style="flex: 1;"
-  {{on 'click' (fn @selectExpander nodeName values) }} >
+  {{on 'click' (fn @selectExpander nodeName values) }}
+  style={{safe-style valuesColour}} >
   {{nodeName}}
 </span>
 {{else}}

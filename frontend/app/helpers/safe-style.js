@@ -8,7 +8,7 @@ import { htmlSafe } from '@ember/template';
  */
 export default helper(function safeStyle(params/*, hash*/) {
   let result;
-  if (params[0].startsWith('#')) {
+  if (params && params[0] && params[0]?.startsWith('#')) {
     /** param value e.g. "#1f77b4"
      * split off the # because CSS.escape() will map that to \#, which the browser will reject. */
     let colorHex = params[0].slice(1);

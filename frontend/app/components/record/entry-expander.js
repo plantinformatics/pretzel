@@ -1,12 +1,18 @@
 import { later, scheduleOnce } from '@ember/runloop';
 import { computed } from '@ember/object';
 import Component from '@ember/component';
+import { inject as service } from '@ember/service';
 
 import { elt0 } from '../../utils/ember-devel';
 
+// -----------------------------------------------------------------------------
+
+const dLog = console.debug;
+
 const trace_entryExpander = 1;
 
-/*----------------------------------------------------------------------------*/
+// -----------------------------------------------------------------------------
+
 
 
 /**
@@ -14,6 +20,8 @@ const trace_entryExpander = 1;
  * @param hoverText hover text
  */
 export default Component.extend({
+  ontology : service('data/ontology'),
+
   tagName: '',
 
   active: false,
@@ -94,11 +102,32 @@ export default Component.extend({
   },
   willDestroyElement() {
     // this.termTabActionBus();
-  }
+  },
 
   /** expandIcon() and actions: switch() are replaced by using icon-toggle, with
    * .active bound.
    */
+
+  // ---------------------------------------------------------------------------
+
+  valuesColour : computed('values', 'ontology.ontologyColourScaleUpdateCount', function () {
+    let
+    colour,
+    ontologyId = this.get('values.id');
+    if (ontologyId) {
+      let
+      ontology_colour_scale = this.get('ontology.ontology_colour_scale'),
+      ids = ontology_colour_scale.domain(),
+      found = ids.includes(ontologyId);
+      if (found) {
+        colour = ontology_colour_scale(ontologyId);
+        dLog('valuesColour', colour, ontologyId);
+      }
+    }
+    return colour;
+  }),
+
+  // ---------------------------------------------------------------------------
 
 
 });

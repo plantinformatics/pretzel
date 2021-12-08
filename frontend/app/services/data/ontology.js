@@ -294,9 +294,17 @@ export default Service.extend({
   },
 
 
-  /**   click on tree : remove node's children from colour scale, and ensure that node is in colour scale
+  /**   click on tree : apply the configured algorithm, which colours either the children or the siblings
    */
   ontologyClick(ontologyId) {
+    // or this.qtlColourHierarchy(ontologyId)
+    let colour = this.qtlColourLevel(ontologyId);
+    return colour;
+  },
+
+  /**   click on tree : remove node's children from colour scale, and ensure that node is in colour scale
+   */
+  qtlColourHierarchy(ontologyId) {
     let ontology_colour_scale = this.get('ontology_colour_scale');
     let treeData = this.get('ontologyCollation'),
         id2n = treeData.get('ontologyId2Node._result');
@@ -330,6 +338,37 @@ export default Service.extend({
     /** result is === domainIds */
     reduceIdChildrenTree(tree, removeId, domainIds);
     dLog('uncolourChildren', tree, domainIds);
+    return domainIds;
+  },
+
+  //----------------------------------------------------------------------------
+
+  /** Colour all children of the given node, and nodes of other Ontologies at the same level.
+   */
+  qtlColourLevel(ontologyId) {
+    let ontology_colour_scale = this.get('ontology_colour_scale');
+    let treeData = this.get('ontologyCollation'),
+        id2n = treeData.get('ontologyId2Node._result');
+    let colour;
+
+    if (id2n) {
+      let node = id2n[ontologyId];
+      let levelIds = this.colourChildren(node.parent);
+      ontology_colour_scale.domain(levelIds);
+
+      /** node is in colour scale */
+      colour = ontology_colour_scale(ontologyId);
+      this.incrementProperty('ontologyColourScaleUpdateCount');
+    }
+
+    /** may be useful in devel.   the sibling elements (nodes) need to be show their colour also. */
+    return colour;
+  },
+
+  /** replace domain of  colour scale with children of node (tree) */
+  colourChildren(tree) {
+    let domainIds = tree.children.mapBy('id');
+    dLog('colourChildren', tree, domainIds);
     return domainIds;
   },
 
