@@ -367,7 +367,15 @@ export default Service.extend({
 
   /** replace domain of  colour scale with children of node (tree) */
   colourChildren(tree) {
-    let domainIds = tree.children.mapBy('id');
+    /** tree may be an .id / .children tree, or otherwise, if the children of tree are ROOT-s, tree is just e.g.
+     * Object {
+     *   CO_338: Object { text: "Chickpea traits", id: "CO_338:ROOT", type: "term", ... },
+     *   CO_321: Object { text: "Wheat traits", id: "CO_321:ROOT", type: "term", children: Array(7) [ {...}, ...], id: "CO_321:ROOT", name: "[CO_321:ROOT]  Wheat traits", parent: (tree) },
+     *   ... }
+     */
+    let
+    children = tree.children || Object.values(tree),
+    domainIds = children.mapBy('id');
     dLog('colourChildren', tree, domainIds);
     return domainIds;
   },
