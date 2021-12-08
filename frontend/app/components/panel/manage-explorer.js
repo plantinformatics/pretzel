@@ -704,9 +704,21 @@ export default ManageBase.extend({
     let treeP = this.get('ontology').getTree();
     return treeP;
   }),
+  /** collate a mapping [OntologyId] -> tree node */
   ontologyId2Node : computed('blockFeatureOntologiesTreeEmbedded', function () {
     /** use blockFeatureOntologiesTreeEmbedded in place of ontologyTree, to have .parent. */
     let treeP = this.get('blockFeatureOntologiesTreeEmbedded');
+    let id2node = treeP.then((tree) => this.collateOntologyId2Node(tree));
+    return id2node;
+  }),
+  /** similar to ontologyId2Node, based on blockFeatureOntologiesTreeGrouped
+   * which is filtered according to explorer filter and Viewed.  */
+  ontologyId2NodeFor : computed('blockFeatureOntologiesTreeGrouped', function () {
+    let treeP = this.get('blockFeatureOntologiesTreeGrouped');
+    let id2node = treeP.then((tree) => this.collateOntologyId2Node(tree));
+    return id2node;
+  }),
+  collateOntologyId2Node(tree) {
     /** Add a node to a result. */
     function reduceNode(result, parentKey, index, node) {
       let id = node.id;
@@ -716,10 +728,9 @@ export default ManageBase.extend({
       return result;
     }
     let
-    id2node = treeP.then((tree) => reduceIdChildrenTree(tree, reduceNode, {}));
+    id2node = reduceIdChildrenTree(tree, reduceNode, {});
     return id2node;
-  }),
-
+  },
 
   /*--------------------------------------------------------------------------*/
 

@@ -1,4 +1,5 @@
 import EmberObject, { computed } from '@ember/object';
+import { alias } from '@ember/object/computed';
 import Service, { inject as service } from '@ember/service';
 import { A } from '@ember/array';
 
@@ -43,6 +44,11 @@ export default Service.extend({
   auth : service(),
   block : service('data/block'),
   controls : service(),
+  queryParams: service('query-params'),
+
+  //----------------------------------------------------------------------------
+
+  urlOptions : alias('queryParams.urlOptions'),
 
   /*--------------------------------------------------------------------------*/
   // results from direct requests to CropOntology.org API
@@ -56,7 +62,7 @@ export default Service.extend({
   /** byId[rootId][ontologyId] references into trees[rootId] children, by ontologyId */
   byId :  EmberObject.create(),
   /** List of Ontology Root IDs received. */
-  rootsReceived : Ember.A(),
+  rootsReceived : A(),
 
   /*--------------------------------------------------------------------------*/
 
@@ -297,8 +303,11 @@ export default Service.extend({
   /**   click on tree : apply the configured algorithm, which colours either the children or the siblings
    */
   ontologyClick(ontologyId) {
-    // or this.qtlColourHierarchy(ontologyId)
-    let colour = this.qtlColourLevel(ontologyId);
+    /** qtlColourHierarchy() is suited to drilling-in investigation, and
+     * qtlColourLevel() provides an overview of a level.
+     */
+    let colour = this.get('urlOptions.qtlColourHierarchy') ? this.qtlColourHierarchy(ontologyId):
+        this.qtlColourLevel(ontologyId);
     return colour;
   },
 
@@ -307,7 +316,7 @@ export default Service.extend({
   qtlColourHierarchy(ontologyId) {
     let ontology_colour_scale = this.get('ontology_colour_scale');
     let treeData = this.get('ontologyCollation'),
-        id2n = treeData.get('ontologyId2Node._result');
+        id2n = treeData.get('ontologyId2NodeFor._result');
     let ids = ontology_colour_scale.domain();
 
     if (id2n && ids.length) {
@@ -348,7 +357,7 @@ export default Service.extend({
   qtlColourLevel(ontologyId) {
     let ontology_colour_scale = this.get('ontology_colour_scale');
     let treeData = this.get('ontologyCollation'),
-        id2n = treeData.get('ontologyId2Node._result');
+        id2n = treeData.get('ontologyId2NodeFor._result');
     let colour;
 
     if (id2n) {
