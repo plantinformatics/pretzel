@@ -398,6 +398,14 @@ export default Component.extend({
     dLog('qtlColourByChanged', value);
   },
 
+  /** Click on Ontology colours either the hierarchy below the clicked node, or
+   * nodes at the same level as the clicked node. */
+  ontologyClick : 'Level',
+  ontologyClickChanged(value) {
+    dLog('ontologyClickChanged', value);
+  },
+
+
   /*--------------------------------------------------------------------------*/
 
   didInsertElement() {

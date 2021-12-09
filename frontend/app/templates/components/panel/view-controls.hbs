@@ -314,6 +314,18 @@
 
     </li>
 
+    <li class="list-group-item">
+      <label style="display:inline">Ontology click :</label>
+      {{radio-button value='Hierarchy' groupValue=ontologyClick
+        changed=(action ontologyClickChanged preventDefault=false)
+      }}
+      Hierarchy &nbsp;&nbsp;
+      {{radio-button value='Level' groupValue=ontologyClick
+        changed=(action ontologyClickChanged preventDefault=false)
+      }}
+      Level &nbsp;&nbsp;
+
+    </li>
 
     <li class="list-group-item horiz-2">
     
