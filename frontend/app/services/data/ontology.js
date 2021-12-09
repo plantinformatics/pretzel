@@ -305,6 +305,9 @@ export default Service.extend({
   ontologyClick(ontologyId) {
     /** qtlColourHierarchy() is suited to drilling-in investigation, and
      * qtlColourLevel() provides an overview of a level.
+     *
+     * qtlColourLevel() does not return colour, because of promises; ok - not
+     * required because valuesColour will update element colour.
      */
     let colour = this.get('urlOptions.qtlColourHierarchy') ? this.qtlColourHierarchy(ontologyId):
         this.qtlColourLevel(ontologyId);
@@ -356,22 +359,36 @@ export default Service.extend({
    */
   qtlColourLevel(ontologyId) {
     let ontology_colour_scale = this.get('ontology_colour_scale');
-    let treeData = this.get('ontologyCollation'),
-        id2n = treeData.get('ontologyId2NodeFor._result');
-    let colour;
+    let treeData = this.get('ontologyCollation');
+    let id2nP = treeData.get('ontologyId2NodeFor');
+    let levelIds;
 
-    if (id2n) {
+    id2nP.then((id2n) => {
       let node = id2n[ontologyId];
-      let levelIds = this.colourChildren(node.parent);
+      if (false) {
+        /** colourChildren() colours the siblings of the clicked element,
+         * whereas colourType() colours nodes at the same level in other
+         * branches / ROOTs.
+         */
+        levelIds = this.colourChildren(node.parent);
+        setScaleDomain.apply(this, [levelIds]);
+      } else {
+        let treeP = treeData.get('blockFeatureOntologiesTreeGrouped');
+        treeP.then((tree) => {
+          /** There are 2 levels with .type === 'term' : ROOTs and their children.
+           * Distinguish between these 2 levels, using the invented type 'ROOT'.  */
+          let type = node.id.match(':ROOT') ? 'ROOT' : node.type;
+          levelIds = this.colourType(tree, type);
+          setScaleDomain.apply(this, [levelIds]);
+        });
+      }
+
+      function setScaleDomain(levelIds) {
       ontology_colour_scale.domain(levelIds);
 
-      /** node is in colour scale */
-      colour = ontology_colour_scale(ontologyId);
       this.incrementProperty('ontologyColourScaleUpdateCount');
-    }
-
-    /** may be useful in devel.   the sibling elements (nodes) need to be show their colour also. */
-    return colour;
+      }
+    });
   },
 
   /** replace domain of  colour scale with children of node (tree) */
@@ -390,6 +407,30 @@ export default Service.extend({
   },
 
 
+  //----------------------------------------------------------------------------
+
+  /** replace domain of colour scale with .id of nodes at the given level of the tree */
+  colourType(tree, type) {
+
+    function addId(ids, parentKey, index, value) {
+      /** There are 2 levels with .type === 'term' : ROOTs and their children.
+       * Distinguish between these 2 levels.
+       * Level above ROOTs does not have .id / .children / .type
+       */
+      let isRoot = !!value.id?.match(':ROOT'),
+          matchType = (type === 'ROOT') ? 'term' : type;
+      /** check if (type === 'ROOT') implies isRoot  */
+      let match = (isRoot === (type === 'ROOT')) && (value.type === matchType);
+      if (match) {
+        ids.push(value.id);
+      }
+      return ids;
+    };
+
+    let domainIds = reduceIdChildrenTree(tree, addId, []);
+    dLog('colourType', type, tree, domainIds);
+    return domainIds;
+  },
 
   //----------------------------------------------------------------------------
 
