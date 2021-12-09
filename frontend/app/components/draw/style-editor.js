@@ -26,6 +26,7 @@ const SB_ID = 6;
 export default Component.extend({
   userConfData: storageFor('userConfData'),
   controls : service(),
+  selected : service('data/selected'),
 
   classNames: ['style-editor'],
   classNameBindings: ['apply'],
@@ -61,7 +62,7 @@ export default Component.extend({
     svgRootClassed('applyChange', this.apply || (value === 'apply'));
   },
 
-  selectedElements : alias('stacks.oa.selectedElements'),
+  selectedElements : alias('selected.selectedElements'),
   stacks,
   selectedElementsLength : computed('selectedElements.[]', function () {
     return this.get('selectedElements.length');

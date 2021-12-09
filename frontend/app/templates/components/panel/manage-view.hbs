@@ -54,7 +54,11 @@
   {{/if}} {{!-- showComponent --}}
 {{/elem/panel-container}}
 
+{{!-- --------------------------------------------------------------------- --}}
+
 {{panel/trait-qtl data=trait.traitsInView}}
+
+{{!-- --------------------------------------------------------------------- --}}
 
 {{#if isMapview}}
 {{#elem/panel-container state="primary" showComponent=showChartOptions as |panelContainer|}}
@@ -95,6 +99,21 @@
 
 {{/elem/panel-container}}
 
+{{!-- --------------------------------------------------------------------- --}}
+
 {{panel/view-controls controls=controls drawActions=this}}
+
+{{!-- --------------------------------------------------------------------- --}}
+
+{{#elem/panel-container state="primary" as |panelContainer|}}
+  {{#elem/panel-heading icon="option-vertical" panelContainer=panelContainer}}
+    Colour / Style Editor
+  {{/elem/panel-heading}}
+  {{#if panelContainer.showComponent}}
+    {{draw/style-editor}}
+  {{/if}} {{!-- showComponent --}}
+{{/elem/panel-container}}
+
+{{!-- --------------------------------------------------------------------- --}}
 
 {{/if}}

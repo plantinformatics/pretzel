@@ -202,6 +202,7 @@ export default Component.extend(Evented, {
   queryParamsService: service('query-params'),
   apiServers : service(),
   controlsService : service('controls'),
+  selectedService : service('data/selected'),
 
   /*--------------------------------------------------------------------------*/
   urlOptions : alias('queryParamsService.urlOptions'),
@@ -830,7 +831,7 @@ export default Component.extend(Evented, {
      * i.e. z[chr/ap/block name][feature/marker name] === featureIndex[feature/marker id] */
     oa.featureIndex || (oa.featureIndex = []);
 
-    oa.selectedElements || (oa.selectedElements = Ember_array_A());
+    oa.selectedElements || (oa.selectedElements = this.get('selectedService.selectedElements'));
 
 
     if (source === 'didRender') {

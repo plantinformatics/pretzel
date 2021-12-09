@@ -1,5 +1,5 @@
 {{!-- app/controllers/mapview.js --}}
-<div class="" style="height:100%; display:flex; flex-direction:row;">
+<div class="" style="height:100%; display:flex;">
   
   {{panel/left-panel
     displayData=block.viewed
@@ -67,14 +67,8 @@
   </div>
 
   {{#if layout.right.visible}}
-    <div class="" style="flex-basis:400px; flex-grow:1; overflow-x:scroll; display:flex;">
+    <div class="" style="flex-basis:400px; flex-grow:1; overflow-x:scroll; display:flex;  flex-direction:column">
 
-    <div {{split-view direction='vertical'
-      sizes=(array 70 30) minSize=(array 20 5)
-      gutterSize=15}}
-      class="right-split" >
-
-     <div style="overflow-y: clip">
       <ul class="nav nav-tabs">
         {{#if model.params.parsedOptions.blockTab}}
           {{#elem/button-tab
@@ -118,7 +112,7 @@
         {{/elem/button-tab}}
       </ul>
 
-      <div id="right-panel-content"  class={{rightPanelClass}} style="overflow-x:scroll;">
+      <div id="right-panel-content"  class={{rightPanelClass}} style="overflow-y: visible" >
         {{#if (compare layout.right.tab '===' 'selection')}}
           {{panel/manage-features
             selectedFeatures=selectedFeatures
@@ -153,33 +147,6 @@
           updatePathsCount=(action 'updatePathsCount')}}
 
       </div>
-     </div>
-
-
-      <div>
-
-      <ul class="nav nav-tabs">
-
-        {{#elem/button-tab
-           side="rightLower"
-           key="styleEditor"
-           state=layout.rightLower.tab onClick="setTab"}}
-          {{elem/icon-base name="edit"}}&nbsp; Colour / Style Editor
-        {{/elem/button-tab}}
-
-      </ul>
-
-      <div id="rightLower-panel-content" style="overflow-y: visible" class={{rightLowerPanelClass}}>
-
-        {{#if (compare layout.rightLower.tab '===' 'styleEditor')}}
-          {{draw/style-editor}}
-        {{/if}}
-
-      </div>
-
-
-      </div>
-    </div>
 
     </div>
   {{else}}
