@@ -64,13 +64,14 @@
         featuresInBlocks=featuresInBlocks
         selectChromById=(action 'selectBlockById')}}
     {{!-- {{/if}} --}}
+
+    <div id='middle-bottom'></div>
   </div>
 
   <div id='rightPanelTables'></div>
 
-  {{#ember-wormhole to=this.tablePanelsTargetId }} {{!-- renderInPlace=this.tablesPanelRight --}}
+  {{#ember-wormhole to=this.tablePanelsTargetId renderInPlace=this.tablesPanelRight }}
     <div>
-    {{this.tablePanelsTargetId}}
 
   {{#if layout.right.visible}}
     <div class="" style="flex-basis:400px; flex-grow:1; overflow-x:scroll; display:flex;  flex-direction:column">
