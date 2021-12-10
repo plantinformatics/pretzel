@@ -2,6 +2,7 @@ import { computed } from '@ember/object';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { htmlSafe } from '@ember/template';
+import { later } from '@ember/runloop';
 
 
 
@@ -19,7 +20,7 @@ export default Component.extend({
     if (firstTab)
     {
       console.log('didRender', firstTab, this, server.name);
-      server.set('firstTab', false);
+      later(() => server.set('firstTab', false));
       this.addClassActive();
     }
   },

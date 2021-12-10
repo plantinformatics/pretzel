@@ -6072,10 +6072,11 @@ export default Component.extend(Evented, {
      * @see resizeEffect()
      */
     function recordViewport(w, h) {
+      later(() => 
       this.setProperties({
         viewportWidth : w,
         viewportHeight : h
-      });
+      }));
     };
 
       /** Render the affect of resize on the drawing.
