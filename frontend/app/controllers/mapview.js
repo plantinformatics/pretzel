@@ -274,6 +274,14 @@ export default Controller.extend(Evented, {
       'tab': 'selection'
     },
   }),
+  /** set this to direct the right-panel (tables) to another location, e.g. below the graph */
+  tablePanelsTargetId : computed('tablesPanelRight', function () {
+    return this.tablesPanelRight ? 'rightPanelTables' : 'middle-bottom';
+  }),
+  tablesPanelRight : false,
+  toggleLayout(value) {
+    this.toggleProperty('tablesPanelRight');
+  },
 
   controls : EmberObject.create({ view : {  } }),
 

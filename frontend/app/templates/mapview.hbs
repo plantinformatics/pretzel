@@ -66,6 +66,12 @@
     {{!-- {{/if}} --}}
   </div>
 
+  <div id='rightPanelTables'></div>
+
+  {{#ember-wormhole to=this.tablePanelsTargetId }} {{!-- renderInPlace=this.tablesPanelRight --}}
+    <div>
+    {{this.tablePanelsTargetId}}
+
   {{#if layout.right.visible}}
     <div class="" style="flex-basis:400px; flex-grow:1; overflow-x:scroll; display:flex;  flex-direction:column">
 
@@ -110,6 +116,12 @@
            onClick="setVisibility"}}
           {{elem/icon-base name="remove"}}
         {{/elem/button-tab}}
+        {{#elem/button-tab
+           class="pull-right rotate45"
+           side="right"
+           onClick=(action this.toggleLayout)}}
+          {{elem/icon-base name="sort"}}
+        {{/elem/button-tab}}
       </ul>
 
       <div id="right-panel-content"  class={{rightPanelClass}} style="overflow-y: visible" >
@@ -153,7 +165,10 @@
     <button type="button" class="btn btn-default" {{action "setVisibility" "right" on='click'}}>
       <a href="#" >{{elem/icon-base name="chevron-left"}}</a>
     </button> 
-  {{/if}}
+  {{/if}}	{{!-- if layout.right.visible --}}
+    </div>
+  {{/ember-wormhole}}
+
 </div>
 
 {{outlet}}

@@ -50,7 +50,7 @@ div.app-logo {
 .draw-map-container,
 .tabbed-table-container
 {
-    float: left;
+    /* float: left; */
 }
 .draw-map-container
 {
@@ -200,8 +200,15 @@ div.app-logo {
     display : inherit;
 }
 
+/* -------------------------------------------------------------------------- */
 
-
+/** Used to make glyphicon-sort look diagonal (toggleLayout in mapview).
+ * The hover highlight appears as a rotated grey rectangle, so this is
+ * just a filler until a rotated icon is sourced.  */
+.rotate45 {
+  transform: rotate(45deg);
+  /* rotate: 45deg; */ /* also works, seems non-standard.  */
+}
 
 /* -------------------------------------------------------------------------- */
 #table-brushed

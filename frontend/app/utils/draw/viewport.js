@@ -108,7 +108,7 @@ Viewport.prototype.calc = function(oa)
   /** 	margins : top right bottom left */
   this.margins =
     // 14 was maybe for axisNameHeight, not needed
-    margins = [/*20+14*/+1, 0, 10, 0] // 10, 10, 10],
+    margins = [/*20+14*/+1, 0, 200 + 10, 0] // 10, 10, 10],
     .map(function (m, i) { return m + holderPadding[i]; });
 
   if (trace_resize)
