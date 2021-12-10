@@ -6548,6 +6548,8 @@ export default Component.extend(Evented, {
     'controls.view.showAxisText',
     /* axisTicksOutside doesn't resize, but a redraw is required (and re-calc could be done) */
     'controls.view.axisTicksOutside',
+    /** split-view : sizes of the components adjacent the resize gutter : 0: draw-map and 1 : tables panel. */
+    'componentGeometry.sizes.0',
     function() {
       console.log("resize", this, arguments);
         /** when called via .observes(), 'this' is draw-map object.  When called

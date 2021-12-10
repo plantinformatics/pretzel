@@ -82,6 +82,13 @@ div.app-logo {
 
 /* -------------------------------------------------------------------------- */
 
+.draw-map-container,
+#holder
+{
+  height: 100%;
+}
+
+
 /* #holder contains the graph (svg);  it is within .draw-map-container */
 /* Large desktop */
 @media (min-width: 1200px) {

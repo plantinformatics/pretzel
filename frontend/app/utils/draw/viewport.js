@@ -108,7 +108,7 @@ Viewport.prototype.calc = function(oa)
   /** 	margins : top right bottom left */
   this.margins =
     // 14 was maybe for axisNameHeight, not needed
-    margins = [/*20+14*/+1, 0, 200 + 10, 0] // 10, 10, 10],
+    margins = [/*20+14*/+1, 0, 10, 0] // 10, 10, 10],
     .map(function (m, i) { return m + holderPadding[i]; });
 
   if (trace_resize)
@@ -116,8 +116,18 @@ Viewport.prototype.calc = function(oa)
 
   this.viewPortPrev = this.viewPort;
   /** use width of div#holder, not document.documentElement.clientWidth because of margins L & R. */
+
+  let eltHeight;
+  let componentGeometry = oa?.eventBus?.get('componentGeometry');
+  if (componentGeometry?.sizes && ! componentGeometry.get('tablesPanelRight')) {
+    /** Height of the first element in the split-view, which contains #holder. */
+    eltHeight = divHolder.parent().parent().height();
+  } else {
+    eltHeight = document.documentElement.clientHeight;
+  }
+
   this.viewPort =
-    viewPort = {w: holderWidth, h:document.documentElement.clientHeight};
+    viewPort = {w: holderWidth, h: eltHeight};
 
   /// Width and Height.  viewport dimensions - margins.
   w = viewPort.w  - margins[marginIndex.right] - margins[marginIndex.left];

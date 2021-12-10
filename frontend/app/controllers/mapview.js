@@ -7,8 +7,6 @@ import { inject as service } from '@ember/service';
 import { readOnly } from '@ember/object/computed';
 import DS from 'ember-data';
 
-import $ from 'jquery';
-
 /* global d3 */
 
 import { axisFeatureCircles_selectOne, axisFeatureCircles_selectUnviewed } from '../utils/draw/axis';
@@ -276,31 +274,23 @@ export default Controller.extend(Evented, {
       'tab': 'selection'
     },
   }),
-  /** set this to direct the right-panel (tables) to another location, e.g. below the graph */
-  tablePanelsTargetId : computed('tablesPanelRight', function () {
-    return this.tablesPanelRight ? 'rightPanelTables' : 'middle-bottom';
+  splitViewDirection : computed('tablesPanelRight', function () {
+    let direction = this.tablesPanelRight ? 'horizontal' : 'vertical';
+    dLog('splitViewDirection', direction, this.tablesPanelRight);
+    return direction;
   }),
+  componentGeometry : EmberObject.create(),
+  onDragEnd(sizes) {
+    dLog('onDragEnd', sizes);
+    this.set('componentGeometry.sizes', sizes);
+    this.set('componentGeometry.tablesPanelRight', this.tablesPanelRight);
+  },
   tablesPanelRight : false,
   toggleLayout(value) {
     const fnName = 'toggleLayout';
-    let middle = $('#Page-Body > div > .resizable');
-    let width = middle.width();
-    dLog(fnName, value, this.tablesPanelRight, width, middle[0]);
-    if (this.tablesPanelRight) {
-      /** if the user has resized the middle, save that and remove from DOM
-       * because it will limit the width of middle after moving tablesPanel from
-       * right to middle. */
-      if (width) {
-        this.set('previousMiddleWidth', width);
-        middle.width('100%');
-      }
-    } else if ((width = this.get('previousMiddleWidth'))) {
-      /** restore previous user-adjusted width */
-      middle.width(width);
-    }
-
     this.toggleProperty('tablesPanelRight');
   },
+
 
   controls : EmberObject.create({ view : {  } }),
 

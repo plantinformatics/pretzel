@@ -25,10 +25,17 @@
     updateFeaturesInBlocks="updateFeaturesInBlocks"
   }}
   
-  <div class="resizable" style="flex-grow:20; resize:both">
-    <div class="resizer no-resizer-icon">
-      <span class="glyphicon glyphicon-resize-horizontal"></span>
-    </div>
+  {{!-- rerender : a changing value will cause split-view to update (destroy and re-create) the split.js, see ember-split-view-modifier/addon/modifiers/split-view.js : didUpdate().
+        onDragEnd : described in split.js/README.md : Documentation --}}
+  <div {{split-view direction=this.splitViewDirection
+    rerender=this.splitViewDirection
+    onDragEnd=(action this.onDragEnd)
+    sizes=(array 70 30) minSize=(array 20 5)
+    gutterSize=15}}
+    class="right-split" >
+
+
+  <div>
 
     <p class="devel-visible">
       hasData {{hasData}},
@@ -48,6 +55,7 @@
         drawActions=this
         panelLayout=layout
         controls=controls
+        componentGeometry=componentGeometry
         isShowUnique=isShowUnique
         pathColourScale=pathColourScale
         scaffolds=scaffolds
@@ -65,16 +73,12 @@
         selectChromById=(action 'selectBlockById')}}
     {{!-- {{/if}} --}}
 
-    <div id='middle-bottom'></div>
   </div>
 
-  <div id='rightPanelTables'></div>
-
-  {{#ember-wormhole to=this.tablePanelsTargetId renderInPlace=this.tablesPanelRight }}
     <div>
 
   {{#if layout.right.visible}}
-    <div class="" style="flex-basis:400px; flex-grow:1; overflow-x:scroll; display:flex;  flex-direction:column">
+    <div class="" style="overflow-x:scroll;">
 
       <ul class="nav nav-tabs">
         {{#if model.params.parsedOptions.blockTab}}
@@ -168,7 +172,9 @@
     </button> 
   {{/if}}	{{!-- if layout.right.visible --}}
     </div>
-  {{/ember-wormhole}}
+
+  </div>
+
 
 </div>
 
