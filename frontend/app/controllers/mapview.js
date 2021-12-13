@@ -4,7 +4,7 @@ import EmberObject, { computed, observer } from '@ember/object';
 import Evented from '@ember/object/evented';
 import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
-import { readOnly } from '@ember/object/computed';
+import { readOnly, alias } from '@ember/object/computed';
 import DS from 'ember-data';
 
 /* global d3 */
@@ -285,14 +285,14 @@ export default Controller.extend(Evented, {
     this.set('componentGeometry.sizes', sizes);
     this.set('componentGeometry.tablesPanelRight', this.tablesPanelRight);
   },
-  tablesPanelRight : false,
+  tablesPanelRight : alias('controls.window.tablesPanelRight'),
   toggleLayout(value) {
     const fnName = 'toggleLayout';
     this.toggleProperty('tablesPanelRight');
   },
 
 
-  controls : EmberObject.create({ view : {  } }),
+  controls : EmberObject.create({ view : {  }, window : {tablesPanelRight : false } }),
 
   queryParams: ['mapsToView'],
   mapsToView: [],

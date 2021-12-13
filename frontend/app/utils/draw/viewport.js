@@ -118,8 +118,14 @@ Viewport.prototype.calc = function(oa)
   /** use width of div#holder, not document.documentElement.clientWidth because of margins L & R. */
 
   let eltHeight;
-  let componentGeometry = oa?.eventBus?.get('componentGeometry');
-  if (componentGeometry?.sizes && ! componentGeometry.get('tablesPanelRight')) {
+  let
+  componentGeometry = oa?.eventBus?.get('componentGeometry'),
+  controls_window = this.drawOptions?.controls?.window,
+  tablesPanelRight = controls_window ? controls_window.tablesPanelRight : componentGeometry.get('tablesPanelRight');
+  /** iniiially .sizes and .tablesPanelRight are not defined; initial value of
+   * controllers/mapview : tablesPanelRight is false.
+   */
+  if (! tablesPanelRight) {
     /** Height of the first element in the split-view, which contains #holder. */
     eltHeight = divHolder.parent().parent().height();
   } else {

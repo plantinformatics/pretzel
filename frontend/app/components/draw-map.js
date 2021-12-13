@@ -6550,6 +6550,7 @@ export default Component.extend(Evented, {
     'controls.view.axisTicksOutside',
     /** split-view : sizes of the components adjacent the resize gutter : 0: draw-map and 1 : tables panel. */
     'componentGeometry.sizes.0',
+    'controls.window.tablesPanelRight',
     function() {
       console.log("resize", this, arguments);
         /** when called via .observes(), 'this' is draw-map object.  When called
