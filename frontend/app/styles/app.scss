@@ -212,7 +212,7 @@ div.app-logo {
 /** Used to make glyphicon-sort look diagonal (toggleLayout in mapview).
  * The hover highlight appears as a rotated grey rectangle, so this is
  * just a filler until a rotated icon is sourced.  */
-.rotate45 {
+.rotate45 > a > span {
   transform: rotate(45deg);
   /* rotate: 45deg; */ /* also works, seems non-standard.  */
 }
