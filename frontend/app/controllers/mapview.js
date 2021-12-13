@@ -279,11 +279,24 @@ export default Controller.extend(Evented, {
     dLog('splitViewDirection', direction, this.tablesPanelRight);
     return direction;
   }),
-  componentGeometry : EmberObject.create(),
+  /** attributes  : .sizesPrev, .sizes, .tablesPanelRight.  */
+  componentGeometry : EmberObject.create({sizesPrev : EmberObject.create({
+    true :  [70, 30],
+    false : [70, 30],
+  }) }),
   onDragEnd(sizes) {
     dLog('onDragEnd', sizes);
     this.set('componentGeometry.sizes', sizes);
+    this.set('componentGeometry.sizesPrev.' + this.tablesPanelRight, sizes);
     this.set('componentGeometry.tablesPanelRight', this.tablesPanelRight);
+  },
+  /** @return initial size, or size of this layout direction (tablesPanelRight)
+   * after last resize drag. */
+  get sizesPrev() {
+    let
+    tablesPanelRight = this.get('componentGeometry.tablesPanelRight'),
+    sizes = this.get('componentGeometry.sizesPrev.' + this.tablesPanelRight);
+    return sizes;
   },
   tablesPanelRight : alias('controls.window.tablesPanelRight'),
   toggleLayout(value) {

@@ -30,7 +30,7 @@
   <div {{split-view direction=this.splitViewDirection
     rerender=this.splitViewDirection
     onDragEnd=(action this.onDragEnd)
-    sizes=(array 70 30) minSize=(array 20 5)
+    sizes=this.sizesPrev minSize=(array 20 5)
     gutterSize=15}}
     class="right-split" >
 
