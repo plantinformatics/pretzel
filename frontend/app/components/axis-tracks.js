@@ -755,8 +755,13 @@ export default InAxis.extend({
   configureClick2() {
     let thisAt = this;
     return function (selection) {
-      /** selection.on('click' ) gets "unknown type: click" if selection.empty(). */
-      if (! selection.empty()) {
+      /** selection.on('click' ) gets "unknown type: click" if
+       * selection.empty(), or perhaps if selection is a transition, in which
+       * case on(click) is not required because the element already exists,
+       * e.g. when called from : swapTag() ..  attributesForReplace() ..
+       * configureClick2()
+       */
+      if (! selection.empty() && ! selection.duration) {
         selection.on('click', function (d, i, g) {
           if (thisAt.controls.noGuiModeFilter()) {
             /* clickTrack() does not yet use element this. */
