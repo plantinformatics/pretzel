@@ -4,7 +4,7 @@ import Component from '@ember/component';
 import { observer } from '@ember/object';
 import { computed } from '@ember/object';
 import { inject as service } from '@ember/service';
-import { later } from '@ember/runloop';
+import { later, bind } from '@ember/runloop';
 
 
 import { featureEdit } from '../components/form/feature-edit';
@@ -19,6 +19,10 @@ import config from '../config/environment';
 
 const trace = 0;
 const dLog = console.debug;
+
+/** If the longest text of a columns' values is greater than this length, don't
+ * enable auto-width on that column.  */
+const ColumnAutoWidthValueMaxLength = 40;
 
 /*----------------------------------------------------------------------------*/
 
@@ -135,7 +139,9 @@ export default Component.extend({
       {
         /** filter out empty rows in d[] */
         let data = d.filter(function(d1) { return d1.Chromosome; });
+        this.set('loadingData', true);
         table.loadData(data);
+        this.set('loadingData', false);
       }
     }
 
@@ -224,6 +230,35 @@ export default Component.extend({
      * for other columns, which may be user-defined. */
     return this.get('extraColumnsNames').map((columnName) => featureValuesWidths[columnName] || 120);
   }),
+  /** @return [columnIndex] -> boolean to indicate if auto-column-width should
+   * be enabled on that column.
+   * @desc Enable it except for columns whose longest value (represented as
+   * text) is > ColumnAutoWidthValueMaxLength
+   */
+  columnsEnableAutoWidth : computed('columnNames.[]', 'data', function () {
+    let
+    columnNames = this.get('columnNames'),
+    colDataMax = this.get('dataForHoTable').reduce((widths, f) => {
+      columnNames.forEach((name, i) => {
+        if (f[name]) {
+          /** f[name] may be e.g. an array of Flanking Marker names */
+          let l=('' + f[name]).length;
+          if ((widths[i] === undefined) || (l > widths[i])) { widths[i] = l; }
+        }
+      });
+      return widths;
+    }, []),
+    colWidthAuto = colDataMax.map((length) => length < ColumnAutoWidthValueMaxLength);
+    dLog('columnsEnableAutoWidth', 'colDataMax', colDataMax, colWidthAuto);
+    return colWidthAuto;
+  }),
+  modifyColWidth: function(width, columnIndex) {
+    let columnsEnableAutoWidth = this.get('columnsEnableAutoWidth');
+    /** If ! loadingData then this request is from user GUI adjustment of column
+     * width, via double-click or drag on header edge, so allow it.  */
+    let widthResult = columnsEnableAutoWidth[columnIndex] || ! this.loadingData ? width : 100;
+    return widthResult;
+  },
 
   dataForHoTable : computed('data', function () {
     let data = this.get('data').map((f) => {
@@ -296,6 +331,7 @@ export default Component.extend({
       );
     }
     addColumns(this.get('extraColumns'), this.get('extraColumnsHeaders'), this.get('extraColumnsWidths'));
+    this.set('columnNames', columns.mapBy('data'));
 
     let me = this;
     function afterSelection(row, col) {
@@ -314,7 +350,7 @@ export default Component.extend({
         columns,
         colHeaders,
         headerTooltips: true,
-        colWidths,
+        modifyColWidth: bind(this, this.modifyColWidth),
         height: 600,
         manualRowResize: true,
         manualColumnResize: true,
@@ -432,7 +468,9 @@ export default Component.extend({
       if (trace)
         dLog("table-brushed.js", "onSelectionChange", table, data.length);
       me.send('showData', data);
+      this.set('loadingData', true);
       table.updateSettings({data:data});
+      this.set('loadingData', false);
       this.setRowAttributes(table, this.data);
     }
   }),
