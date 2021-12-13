@@ -129,7 +129,7 @@ Viewport.prototype.calc = function(oa)
     /** Height of the first element in the split-view, which contains #holder. */
     eltHeight = divHolder.parent().parent().height();
   } else {
-    eltHeight = document.documentElement.clientHeight;
+    eltHeight = document.documentElement.clientHeight - topPanelHeight; // - bottomPanelHeight;
   }
 
   this.viewPort =
@@ -146,7 +146,6 @@ Viewport.prototype.calc = function(oa)
             w: w,
             h: h - 2 * this.dropTargetYMargin
             // - this.axisTopOffset
-            - topPanelHeight // - bottomPanelHeight
         };
   // layout has changed, no value in this :  - selectedFeaturesTextHeight
 
@@ -213,7 +212,7 @@ Viewport.prototype.viewBox = function()
     height : (this.graphDim.h + axisTitleHeight)},
   viewBoxText = "" + viewBox.min_x + " " + viewBox.min_y + " " +
     viewBox.width + " " + viewBox.height;
-  dLog('viewBox', viewBox, viewBoxText, this, shiftLeft, increaseWidth);
+  dLog('viewBox', viewBox, viewBoxText, this, shiftLeft, increaseWidth, axisTitleHeight);
   return viewBoxText;
 };
 
