@@ -124,6 +124,9 @@ export default Component.extend({
   ontology : service('data/ontology'),
   controls : service(),
 
+  /** Enable auto column width; side-effect: disables adjustment of wide columns. */
+  autoColumnWidth : true,
+
   actions : {
 
     /**
@@ -146,6 +149,24 @@ export default Component.extend({
     }
 
   },
+
+  autoColumnWidthChanged(value) {
+    const fnName = 'autoColumnWidthChanged';
+    dLog(fnName, value);
+    this.set('autoColumnWidth', value);
+    if (this.table) {
+      let settings = {
+        modifyColWidth : value ? bind(this, this.modifyColWidth) : undefined,
+        colWidths : value ? undefined : this.colWidthsSaved,
+      };
+      dLog(fnName, settings, value);
+      this.set('loadingData', true);
+      this.table.updateSettings(settings);
+      this.set('loadingData', false);
+
+    }
+  },
+
 
   formFeatureEditEnable : false,
 
@@ -332,6 +353,7 @@ export default Component.extend({
     }
     addColumns(this.get('extraColumns'), this.get('extraColumnsHeaders'), this.get('extraColumnsWidths'));
     this.set('columnNames', columns.mapBy('data'));
+    this.set('colWidthsSaved', colWidths);
 
     let me = this;
     function afterSelection(row, col) {
@@ -343,14 +365,13 @@ export default Component.extend({
       if (data.length === 0) {
         data = [];
       }
-      var table = new Handsontable(tableDiv, {
+      let tableConfig = {
         data: data || [['', '', '']],
         minRows: 1,
         rowHeaders: true,
         columns,
         colHeaders,
         headerTooltips: true,
-        modifyColWidth: bind(this, this.modifyColWidth),
         height: 600,
         manualRowResize: true,
         manualColumnResize: true,
@@ -370,7 +391,13 @@ export default Component.extend({
         licenseKey: config.handsOnTableLicenseKey,
         afterSelection,
         outsideClickDeselects: false
-      });
+      };
+      if (this.autoColumnWidth) {
+        tableConfig.modifyColWidth = bind(this, this.modifyColWidth);
+      } else {
+        tableConfig.colWidths = colWidths;
+      }
+      var table = new Handsontable(tableDiv, tableConfig);
       that.set('table', table);
       this.setRowAttributes(table, this.data);
       /** application client data : this component */
