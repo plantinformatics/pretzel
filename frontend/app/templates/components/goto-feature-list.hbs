@@ -24,14 +24,18 @@
   {{/if}}
 
   {{#if this.matchAliases }}
-    <div>
-      <span>Aliases found :</span>
-      <ul style="list-style:none">
-        {{#each-in featuresAliases.search as |aliasedFeature aliases|}}
-          <li>{{aliasedFeature}} ( {{aliases}} )</li>
-        {{/each-in}}
-      </ul>
-    </div>
+    {{#with (keys featuresAliases.search) as |featureNames|}}
+      {{#if featureNames.length }}
+        <div>
+          <span>Aliases found :</span>
+          <ul style="list-style:none">
+            {{#each-in featuresAliases.search as |aliasedFeature aliases|}}
+              <li>{{aliasedFeature}} ( {{aliases}} )</li>
+            {{/each-in}}
+          </ul>
+        </div>
+      {{/if}}
+    {{/with}}
   {{/if}}
 
   <span style="display: inline-block;">
