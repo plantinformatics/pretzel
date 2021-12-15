@@ -680,7 +680,12 @@ export default Component.extend({
       columns: this.get('columns'),
       colHeaders: this.get('colHeaders'),
       headerTooltips: true,
+      /** in table-brushed.js colWidths and stretchH are controlled by
+       * autoColumnWidth and stretchHorizontal respectively.
+       * Those values are effectively both true in paths-table.
       colWidths: this.get('colWidths'),
+      */
+      stretchH : 'all',
       height: 600,
       manualRowResize: true,
       manualColumnResize: true,
