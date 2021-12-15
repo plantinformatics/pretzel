@@ -1,0 +1,22 @@
+
+{{#elem/panel-container state="primary" as |panelContainer|}}
+  {{#elem/panel-heading icon="search" panelContainer=panelContainer}}
+    Selected Server
+  {{/elem/panel-heading}}
+
+  {{#if panelContainer.showComponent}}
+
+    <div  class="panel panel-primary selected-server">
+      <span
+	class="apiServer"
+	style={{borderStyle}} >
+	{{apiServer.tabText}}
+      </span>
+    </div>
+
+  {{/if}} {{!-- showComponent --}}
+{{/elem/panel-container}}
+
+
+
+{{yield}}

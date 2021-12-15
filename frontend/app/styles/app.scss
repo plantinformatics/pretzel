@@ -1073,6 +1073,12 @@ li.filter-group > div > span:last-child {
   margin-bottom: 2ex;
 }
 
+div.selected-server {
+  margin: 2ex;
+  border: none;
+}
+
+.selected-server > .apiServer,
 #left-panel-explorer a.apiServer {
     border : 7.5px solid;
 }
