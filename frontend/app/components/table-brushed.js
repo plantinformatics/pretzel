@@ -126,6 +126,8 @@ export default Component.extend({
 
   /** Enable auto column width; side-effect: disables adjustment of wide columns. */
   autoColumnWidth : true,
+  /** Enable stretchH:all, which stretches all columns to use the available width. */
+  stretchHorizontal : true,
 
   actions : {
 
@@ -165,6 +167,23 @@ export default Component.extend({
       this.set('loadingData', false);
 
     }
+  },
+  stretchHorizontalChanged(value) {
+    const fnName = 'stretchHorizontalChanged';
+    dLog(fnName, value);
+    this.set('stretchHorizontal', value);
+    if (this.table) {
+      let settings = {
+        stretchH : this.stretchHText
+      };
+      dLog(fnName, settings, value);
+      this.set('loadingData', true);
+      this.table.updateSettings(settings);
+      this.set('loadingData', false);
+    }
+  },
+  get stretchHText() {
+    return this.stretchHorizontal ? 'all' : 'none';
   },
 
 
@@ -390,7 +409,8 @@ export default Component.extend({
         /* see comment re. handsOnTableLicenseKey in frontend/config/environment.js */
         licenseKey: config.handsOnTableLicenseKey,
         afterSelection,
-        outsideClickDeselects: false
+        outsideClickDeselects: false,
+        stretchH : this.stretchHText,
       };
       if (this.autoColumnWidth) {
         tableConfig.modifyColWidth = bind(this, this.modifyColWidth);
