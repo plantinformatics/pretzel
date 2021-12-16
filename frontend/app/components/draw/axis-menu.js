@@ -1,6 +1,7 @@
 import Ember from 'ember';
 import { computed } from '@ember/object';
 import { next as run_next } from '@ember/runloop';
+import { htmlSafe } from '@ember/template';
 
 import { stacks  } from '../../utils/stacks';
 
@@ -115,7 +116,20 @@ export default Ember.Component.extend({
         ? (block.get('datasetId.name') || block.get('namespace')) // + ' : ' + block.get('name')
         : blockS.longName();
       return title;
-    }
+    },
+  dataBlockColour(blockS) {
+    let 
+    block = blockS.block,
+    axis1d = this.block.axis1d,
+    colour = axis1d.blockColourValue(block);
+    return colour;
+  },
+  dataBlockColourStyle(blockS) {
+    let
+    colour = this.dataBlockColour(blockS),
+    style = htmlSafe('color: ' + colour);
+    return style;
+  },
 
 });
 

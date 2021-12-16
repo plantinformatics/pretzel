@@ -1988,11 +1988,19 @@ span.glyphicon {
 }
 .axis-menu-inner > div > div,
 .axis-menu-inner > div > ul {
-    margin: auto;
-    width: fit-content;
+  margin: auto;
+  width: fit-content;
+}
+/*.axis-menu-inner > div >*/ ul.dataBlocks {
+  background-color: white;
+  padding: 0.8em;
+  border-radius: 5px;
+}
+.axis-menu-inner > div > div.name {
+  margin-bottom : 1em;
 }
 .axis-menu-inner > div > ul.dataBlocks > li:first-child {
-  margin-top : 1em;
+  /* margin-top : 1em; */
 }
 .axis-menu-inner .menu-icons > button:not(:first-child) {
   margin-left: 5px;

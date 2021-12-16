@@ -15,14 +15,14 @@
   </div>
 
 
-  <div>
+  <div class="name">
     {{block.datasetId.name}} : {{block.name}}
   </div>
 
 
   <ul class="list-unstyled dataBlocks">
     {{#each dataBlocks as |dBlockS|}}
-    <li>
+    <li style={{compute (action this.dataBlockColourStyle dBlockS)}}>
       <button onClick={{action this.blockUnview dBlockS}}>
        {{!--  "&#x2573;", glyphicon-sound-7-1, glyphicon-remove-sign --}}
        ╳
