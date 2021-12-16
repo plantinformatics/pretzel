@@ -1,4 +1,4 @@
-
+<div  class="panel-section">
 {{#elem/panel-container state="primary" as |panelContainer|}}
   {{#elem/panel-heading icon="search" panelContainer=panelContainer}}
     Selected Server
@@ -14,9 +14,10 @@
       </span>
     </div>
 
+    {{yield}}
+
   {{/if}} {{!-- showComponent --}}
 {{/elem/panel-container}}
 
 
-
-{{yield}}
+</div>

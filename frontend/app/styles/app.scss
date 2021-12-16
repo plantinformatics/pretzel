@@ -354,6 +354,21 @@ g.axis-use.hasChart > g.axis-html > .foreignObject {
 
 /* ---------------------------------- */
 
+/* col-xs-12 was used generally for the left and right panel elements containing .panel
+ * They are single-column - there is no need for grid, so bootstrap col- doesn't seem needed (flex might be applicable). 
+ * These uses of col-xs-12 are changed to panel-section.
+ * col-xs-12 set padding-{left,right}:15px, which is retained in panel-section.  It also set :
+ *    position: relative;
+ *    min-height: 1px;
+ *    float: left;
+ * which are problematic in this role and there are likely some settings in this
+ * file and elsewhere blocking those effects which are no longer needed.
+ */
+.panel-section {
+  padding-right: 10px;
+  padding-left: 10px;
+}
+
 /* in the panel layout, widen to avoid wrapping the display toggles text.  */
 .panel > .panel-body > .bordered.control-panel,
 .panel > .panel-body > .bordered.control-panel > div {

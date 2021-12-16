@@ -63,7 +63,7 @@ export default Component.extend({
   /** true means view the blocks of the dataset after it is added. */
   viewDatasetFlag : false,
 
-  // classNames: ['col-xs-12'],
+  classNames: ['panel-section'],
 
   /** array of current searches.  each one is data for blast-result component. */
   searches : undefined,

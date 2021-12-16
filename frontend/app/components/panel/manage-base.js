@@ -6,7 +6,7 @@ export default Component.extend({
   tagName: 'div',
   // attributes
   // classes
-  // classNames: ['col-xs-12'],
+  classNames: ['panel-section'],
   // actions
   actions: {
     setTab(panelSide, panelName) {

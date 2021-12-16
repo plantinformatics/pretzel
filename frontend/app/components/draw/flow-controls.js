@@ -19,7 +19,7 @@ export default Component.extend({
   flowsService: service('data/flows-collate'),
 
   tagName : '',
-  // classNames: ['col-xs-12'],
+  classNames: ['panel-section'],
 
   actions : {
     toggleVisible : function (flowName, toggle, event) {
