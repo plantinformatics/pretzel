@@ -37,7 +37,9 @@
       </button>
 
       {{!-- result is text title --}}
-      {{compute (action this.dataBlockText dBlockS)}}
+      <div class="name">{{compute (action this.dataBlockText dBlockS)}}</div>
+
+      <div class="featureCounts">{{compute (action this.dataBlockFeatureCountsText dBlockS)}}</div>
     </li>
     {{/each}}
   </ul>

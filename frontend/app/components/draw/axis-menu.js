@@ -118,7 +118,7 @@ export default Ember.Component.extend({
       return title;
     },
   dataBlockColour(blockS) {
-    let 
+    let
     block = blockS.block,
     axis1d = this.block.axis1d,
     colour = axis1d.blockColourValue(block);
@@ -129,6 +129,17 @@ export default Ember.Component.extend({
     colour = this.dataBlockColour(blockS),
     style = htmlSafe('color: ' + colour);
     return style;
+  },
+  /**
+   * based on : utils/stacks.js : Block:titleText(), without the leading ' : ' + 
+   */
+  dataBlockFeatureCountsText(blockS) {
+    let
+    block = blockS.block,
+    featureCount = block && block.get('featureCount'),
+    featureCountLoaded = block.get('featuresLength'),
+    featureCountText = (featureCount || featureCountLoaded) ? featureCountLoaded + ' / ' + featureCount : '';
+    return featureCountText;
   },
 
 });

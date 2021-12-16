@@ -2009,6 +2009,21 @@ span.glyphicon {
 div.axis-menu-inner > div > ul.dataBlocks > li > button {
   font-size: x-small;
 }
+ul.dataBlocks > li {
+  display : flex;
+}
+ul.dataBlocks > li > .name {
+  flex-basis: fit-content;
+  flex-grow : 1;
+}
+ul.dataBlocks > li > .featureCounts {
+  margin-left : 6em;
+  flex-grow: 0;
+}
+ul.dataBlocks > li > * {
+  margin-right : 1em;
+}
+
 
 
 /* -------------------------------------------------------------------------- */
