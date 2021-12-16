@@ -19,10 +19,6 @@
   {{/if}}
 
 
-  {{#if serverTabSelected }}
-    <div>Search Server: {{ serverTabSelected }} </div>
-  {{/if}}
-
   {{#if this.matchAliases }}
     {{#with (keys featuresAliases.search) as |featureNames|}}
       {{#if featureNames.length }}
