@@ -870,15 +870,13 @@ Stacked.prototype.keyFunction = function (axisID)
  */
 Block.prototype.titleText = function ()
 {
-  let axisName = this.block.get('id'),
-  cmName = oa.cmName[axisName],
-  shortName = cmName && cmName.dataset.get('_meta.shortName'),
-  name = shortName || cmName.mapName,
+  let
+  name = this.block.get('axis1d.axisTitleText'),
   featureCount = this.block && this.block.get('featureCount'),
   featureCountLoaded = this.block.get('featuresLength'),
   featureCountText = (featureCount || featureCountLoaded) ? ' : ' + featureCountLoaded + ' / ' + featureCount : '';
   // dLog('Block titleText', cmName, shortName, name, cmName.scope);
-  return name + " : " + cmName.chrName + featureCountText;
+  return name + featureCountText;
 };
 /** @return maximum length of the titles of the viewed blocks. */
 Block.titleTextMax = function (axisName)

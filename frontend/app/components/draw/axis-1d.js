@@ -1065,6 +1065,28 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     }
   },
 
+  /** Text for display in the axis title.
+   * Extracted from utils/stacks.js : Block:titleText(), which this replaces.
+   * @return '' if the name / scope are not defined yet.
+   */
+  get axisTitleText() {
+    let
+    referenceBlock = this.get('referenceBlock'),  // i.e. .axis
+    parts = [];
+    if (referenceBlock.get('axisTitleShow.name')) {
+      parts.push(referenceBlock.get('datasetId._meta.shortName'));
+    }
+    if (referenceBlock.get('axisTitleShow.scope')) {
+      /** block name is generally the same as scope, but there can be multiple
+       * blocks in a dataset with the same scope; showing their names is more
+       * useful - likely to be unique.
+       */
+      parts.push(referenceBlock.get('name'));
+    }
+    let name = parts.filter((n) => n).join(' : ');
+    return name;
+  },
+
   /** Update the display of the feature (loaded / total) count in the
    * axis title text for the data blocks.
    *
@@ -1374,6 +1396,13 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     this.axisTitleFamily();
     this.updateAxisTitleSize();
   },
+  titleEffect : computed(
+    /** dependencies of axisTitleText() */
+    'referenceBlock.axisTitleShow.{name,scope}',
+    'referenceBlock.datasetId._meta.shortName',
+    function () {
+      this.axisTitleFamily();
+    }),
 
   /*--------------------------------------------------------------------------*/
 

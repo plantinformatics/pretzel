@@ -81,6 +81,25 @@ export default Ember.Component.extend({
   },
 
 
+  /** if true then display input for this.block.datasetId._meta.shortName */
+  editShortName : false,
+
+  /** When the user edits .shortName, display only that and not the chromosome
+   * (block) scope / name.
+   */
+  editedShortName() {
+    let referenceBlock = this.get('blockS.block'),
+        axisTitleShow = referenceBlock.get('axisTitleShow');
+    dLog('editedShortName', axisTitleShow);
+    axisTitleShow.setProperties({
+      'name' : true,
+      'scope' : false});
+  },
+
+  // ---------------------------------------------------------------------------
+
+
+
   /** @return array of Blocks (i.e. stacks.js references)
    */
   dataBlocks : computed(

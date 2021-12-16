@@ -16,9 +16,20 @@
 
 
   <div class="name">
+    <button
+      style="margin-right: 1em;"
+      onClick={{action (pipe (toggle "editingShortName" this) (action this.editedShortName) )  }}>
+      <i class="glyphicon glyphicon-pencil"></i>
+    </button>
     {{block.datasetId.name}} : {{block.name}}
   </div>
 
+  {{#if editingShortName}}
+  <div>
+    {{input value=this.block.datasetId._meta.shortName
+     }}
+  </div>
+  {{/if}}
 
   <ul class="list-unstyled dataBlocks">
     {{#each dataBlocks as |dBlockS|}}

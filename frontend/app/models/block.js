@@ -2,6 +2,7 @@ import { computed } from '@ember/object';
 import { inject as service } from '@ember/service';
 import Model, { attr, belongsTo, hasMany } from '@ember-data/model';
 // import { computed, set } from '@ember/object';
+import EmberObject from '@ember/object';
 import { observer } from '@ember/object';
 import { A } from '@ember/array';
 import { and, alias } from '@ember/object/computed';
@@ -1560,5 +1561,21 @@ export default Model.extend({
       featuresCountsResults.pushObject(fcResult);
     }
   },
+
+  // ---------------------------------------------------------------------------
+  /** transient state */
+
+  /** indicate which fields will be displayed in the axis title, if this block
+   * is the reference block of an axis.
+   *  name : if true then .datasetId.shortNameOrName (e.g. ._meta.shortName)
+   *  scope : if true then .scope
+   *
+   * also @see datasetNameAndScope()
+   */
+  axisTitleShow : EmberObject.create({name : true, scope : true}),
+ 
+  // ---------------------------------------------------------------------------
+
+
 
 });
