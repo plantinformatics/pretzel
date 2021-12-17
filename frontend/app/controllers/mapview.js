@@ -281,7 +281,7 @@ export default Controller.extend(Evented, {
   }),
   /** attributes  : .sizesPrev, .sizes, .tablesPanelRight.  */
   componentGeometry : EmberObject.create({sizesPrev : EmberObject.create({
-    true :  [70, 30],
+    true :  [65, 35],
     false : [70, 30],
   }) }),
   onDragEnd(sizes) {

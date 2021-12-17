@@ -124,6 +124,8 @@ export default Component.extend({
   ontology : service('data/ontology'),
   controls : service(),
 
+  classNames : ['h-100'],
+
   /** Enable auto column width; side-effect: disables adjustment of wide columns. */
   autoColumnWidth : true,
   /** Enable stretchH:all, which stretches all columns to use the available width. */
@@ -391,7 +393,7 @@ export default Component.extend({
         columns,
         colHeaders,
         headerTooltips: true,
-        height: 600,
+        height: '100%',
         manualRowResize: true,
         manualColumnResize: true,
         manualRowMove: true,

@@ -1728,6 +1728,19 @@ body > div.ember-popover {
     width : 100%
 }
 
+#right-panel
+{
+  display : flex;
+  flex-direction : column;
+  justify-content : flex-start;
+}
+#right-panel-content
+{
+  flex-grow : 1;
+  flex-basis : calc(100% - 78px);
+  max-height : calc(100% - 78px);
+}
+
 #right-panel-content.right-panel-dataset
 {
   overflow-y: auto;
@@ -1808,6 +1821,11 @@ div.metaeditor-panel div.jsoneditor-tree button.jsoneditor-contextmenu-button {
 }
 
 /* -------------------------------------------------------------------------- */
+
+.h-100 {
+  height: 100%;
+}
+
 
 /* div#table-brushed.handsontable */
 

@@ -78,7 +78,7 @@
     <div>
 
   {{#if layout.right.visible}}
-    <div class="" style="overflow-x:scroll;">
+    <div id="right-panel" class="h-100">
 
       <ul class="nav nav-tabs">
         {{#if model.params.parsedOptions.blockTab}}
@@ -129,7 +129,7 @@
         {{/elem/button-tab}}
       </ul>
 
-      <div id="right-panel-content"  class={{rightPanelClass}} style="overflow-y: visible" >
+      <div id="right-panel-content"  class={{rightPanelClass}}>
         {{#if (compare layout.right.tab '===' 'selection')}}
           {{panel/manage-features
             selectedFeatures=selectedFeatures
