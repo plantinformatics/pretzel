@@ -156,11 +156,19 @@
       <label>Path update during drag</label>
     </li>
 
-    <li class="list-group-item">
-      <input type="checkbox"
-        checked="checked"
-        oninput={{action hideAxisTextClass}}  >
-      <label>Show Axis Text</label>
+    <li class="list-group-item  horiz-2">
+      <div>
+	<input type="checkbox"
+	  checked="checked"
+	  oninput={{action hideAxisTextClass}}  >
+	<label>Show Axis Text</label>
+      </div>
+      <div>
+	<input type="checkbox"
+	  checked={{this.axisTitleChrOnly}}
+	  oninput={{action (mut this.axisTitleChrOnly) value="target.checked"}}  >
+	<label>Only Chr in title</label>
+      </div>
     </li>
 
     <li class="list-group-item">

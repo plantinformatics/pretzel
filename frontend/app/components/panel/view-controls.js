@@ -84,6 +84,9 @@ export default Component.extend({
    */
   showAxisText : true,
 
+  /** if true, show only (reference) Block name (i.e. chromosome scope) in axis title. */
+  axisTitleChrOnly : false,
+
   /** if true, axis title text and axis ticks and text are shown on the right
    * side of the axis for the rightmost axis.
    */
