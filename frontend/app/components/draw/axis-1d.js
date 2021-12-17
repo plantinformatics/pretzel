@@ -1076,7 +1076,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     axisTitleChrOnly = this.controlsView.axisTitleChrOnly,
     showBlockName = referenceBlock.get('axisTitleShow.scope') && axisTitleChrOnly;
     if (referenceBlock.get('axisTitleShow.name')  && (! axisTitleChrOnly || ! showBlockName)) {
-      parts.push(referenceBlock.get('datasetId._meta.shortName'));
+      parts.push(referenceBlock.get('datasetId.shortNameOrName'));
     }
     /** If user edits .shortName via editedShortName then consider that to
      * override axisTitleChrOnly. */

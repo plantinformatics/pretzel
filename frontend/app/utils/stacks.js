@@ -871,7 +871,9 @@ Stacked.prototype.keyFunction = function (axisID)
 Block.prototype.titleText = function ()
 {
   let
-  name = this.block.get('axis1d.axisTitleText'),
+  axis1d = this.block.get('axis1d') || this.axis.getAxis1d(),
+  /** use '' if .axis1d not defined yet. */
+  name = axis1d ? axis1d.get('axisTitleText') : '',
   featureCount = this.block && this.block.get('featureCount'),
   featureCountLoaded = this.block.get('featuresLength'),
   featureCountText = (featureCount || featureCountLoaded) ? ' : ' + featureCountLoaded + ' / ' + featureCount : '';
