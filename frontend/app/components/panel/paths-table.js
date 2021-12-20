@@ -107,7 +107,7 @@ export default Component.extend({
   /** true filters out paths which do not have >=1 end in a brush. */
   onlyBrushedAxes : true,
 
-  classNames: ['paths-table', 'right-panel-paths'],
+  classNames: ['paths-table', 'right-panel-paths', 'h-100'],
 
   didInsertElement() {
     this._super(...arguments);
@@ -686,7 +686,7 @@ export default Component.extend({
       colWidths: this.get('colWidths'),
       */
       stretchH : 'all',
-      height: 600,
+      height: '100%',
       manualRowResize: true,
       manualColumnResize: true,
       manualRowMove: true,

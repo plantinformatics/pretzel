@@ -1740,12 +1740,18 @@ body > div.ember-popover {
   flex-basis : calc(100% - 78px);
   max-height : calc(100% - 78px);
 }
+#right-panel-content.right-panel-paths
+{
+  flex-basis : calc(100% - 220px);
+  max-height : calc(100% - 220px);
+}
 
 body.tablesPanelRight .dataset-description > h4 {
   max-width : 300px;
 }
 body:not(.tablesPanelRight) .dataset-description {
   float : left;
+  margin-right: 3em;
 }
 body:not(.tablesPanelRight) .metaeditor-panel {
   display : flow-root;
