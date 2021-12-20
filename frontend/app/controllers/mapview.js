@@ -302,6 +302,9 @@ export default Controller.extend(Evented, {
   toggleLayout(value) {
     const fnName = 'toggleLayout';
     this.toggleProperty('tablesPanelRight');
+    /** tablesPanelRight is initially false, so it is OK to set body class in toggle action. */
+    d3.select('body')
+      .classed('tablesPanelRight', this.get('tablesPanelRight'));
   },
 
 

@@ -1741,11 +1741,22 @@ body > div.ember-popover {
   max-height : calc(100% - 78px);
 }
 
+body.tablesPanelRight .dataset-description > h4 {
+  max-width : 300px;
+}
+body:not(.tablesPanelRight) .dataset-description {
+  float : left;
+}
+body:not(.tablesPanelRight) .metaeditor-panel {
+  display : flow-root;
+}
+
+
 #right-panel-content.right-panel-dataset
 {
   overflow-y: auto;
 }
-#right-panel-content.right-panel-dataset > div
+body.tablesPanelRight #right-panel-content.right-panel-dataset > div
 {
   height:650px;
 }
