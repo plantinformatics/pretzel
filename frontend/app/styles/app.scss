@@ -1109,6 +1109,7 @@ div.selected-server {
   /* no padding here because it will be white, unlike the list. */
   -webkit-padding-start: 0px;
 }
+div#display-ontologies div.tab-content ul ul,
 #left-panel-explorer div.tab-content ul ul {
   padding-left: 0px;
 }
@@ -1225,10 +1226,12 @@ div#tab-explorer-datasets > ul.list-group > div
  */
 
 /* limit this using .list-group-item-info so it doesn't apply to the leaf (white rectangle) */
+div#display-ontologies  .list-group-item.list-group-item-info,
 div#tab-explorer-Ontology  .list-group-item.list-group-item-info
 {
     padding-right: 0px;
 }
+/*div#display-ontologies  .list-group-item, */
 div#tab-explorer-Ontology  .list-group-item
 {
     padding-left: 10px;
