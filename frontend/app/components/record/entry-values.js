@@ -194,8 +194,8 @@ export default EntryBase.extend({
   }),
   /** @return true if value is an Ontology 'trait' (leaf node). */
   isOntologyLeaf(levelMeta, value) {
-    let valueType = levelMeta.get(value);
-    return valueType?.typeName === 'trait';
+    let valueType = valueGetType(levelMeta, value);
+    return valueType === 'trait';
   },
 
   /*--------------------------------------------------------------------------*/
