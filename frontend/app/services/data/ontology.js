@@ -436,6 +436,30 @@ export default Service.extend({
 
   //----------------------------------------------------------------------------
 
+  ontologyIsVisible : {},
+  ontologyIsVisibleChangeCount : 0,
+  setOntologyIsVisible(ontologyId, checked) {
+    this.ontologyIsVisible[ontologyId] = checked;
+    this.incrementProperty('ontologyIsVisibleChangeCount');
+  },
+  getOntologyIsVisible(ontologyId) {
+    return this.ontologyIsVisible[ontologyId];
+  },
+
+  /** @return true if the OntologyId of this QTL is visible.
+   * @desc similar to ./trait.js : featureFilter(), which could support this via
+   * groupName = 'ontology', but that module collates QTLs of a trait, which may
+   * not be relevant for OntologyIds
+   */
+  featureFilter(feature) {
+    const
+    fnName = 'featureFilter',
+    ontologyId = feature.get('values.Ontology'),
+    ok = ontologyId && this.getOntologyIsVisible(ontologyId);
+    dLog(fnName, ontologyId, ok);
+    return ok;
+  }
+  //----------------------------------------------------------------------------
 
 });
 

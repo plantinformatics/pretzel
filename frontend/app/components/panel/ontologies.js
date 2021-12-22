@@ -3,6 +3,7 @@ import { inject as service } from '@ember/service';
 import { alias } from '@ember/object/computed';
 import { computed } from '@ember/object';
 import { A } from '@ember/array';
+import { bind } from '@ember/runloop';
 
 import { toPromiseProxy } from '../../utils/ember-devel';
 import { unlinkDataIdChildrenTree, ontologyIdFromIdText } from '../../utils/value-tree';
@@ -80,9 +81,20 @@ export default Component.extend({
     let
     oP = this.get('blockFeatureOntologiesNameFlat'),
     omP = oP?.then(
-      (os) => os.map((o) => { o = {name : o};  this.levelMeta.set(o, 'trait'); return o; }));
+      (os) => os.map((o) => this.ontologyIdToValue(o)));
     return omP && toPromiseProxy(omP);
   }),
+  /** The leaf values of the view panel Ontology tree are OntologyIDs.
+   * To be node values in a value-tree they need to be Object not string, and have a levelMeta value.
+   * This function converts and OntologyID to an Object for use in a value-tree.
+   */
+  ontologyIdToValue(ontologyId) {
+    let
+    o = {name : ontologyId},
+    meta = {typeName : 'trait', checkboxAction : bind(this, this.toggleVisibility)};
+    this.levelMeta.set(o, meta);
+    return o;
+  },
   blockFeatureOntologiesViewedIds : computed('blockFeatureOntologiesNameFlat', function () {
     let
     oP = this.get('blockFeatureOntologiesNameFlat'),
@@ -146,6 +158,27 @@ export default Component.extend({
   },
 
   // ---------------------------------------------------------------------------
+
+  didInsertElement() {
+    this._super(...arguments);
+    dLog('didInsertElement');
+    /** If this component evaluates some CPs (e.g. ontologiesTree) in
+     * ontologyCollation (manage-explorer) before that component does, they do
+     * not gain a value, remaining simply .isFulfilled:false, .content:null.
+     * So this component delays use of those CPs; they are enabled when
+     * enableView is set by didInsertElement().
+     * This will likely not be required when these values are migrated to a
+     * shared service (data/ontology), which can be done once the requirements
+     * are settled.
+     */
+    this.set('controlOptions.enableView', true);
+  },
+
+  // ---------------------------------------------------------------------------
+
+  toggleVisibility(value) {
+    dLog('toggleVisibility', value, this, arguments);
+  },
 
   noAction(value) {
     dLog('noAction', value);

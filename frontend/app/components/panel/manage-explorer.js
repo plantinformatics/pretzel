@@ -2085,7 +2085,7 @@ export default ManageBase.extend({
   },
   //----------------------------------------------------------------------------
 
-  /** user has clicked on a enter-expander in an ontology tree. */
+  /** user has clicked on a entry-expander in an ontology tree. */
   selectOntologyNode(nodeText, values, event) {
     dLog('selectOntologyNode', nodeText, values, event.target);
     let ontologyId = values?.id;

@@ -1943,9 +1943,13 @@ export default InAxis.extend({
   /** Construct a interval tree from the track data.
    * This is used for filtering and for layering.
    */
-  tracksTree : computed('trackBlocksR.@each.featuresLength', 'trait.traits.@each.visible', function () {
+  tracksTree : computed(
+    'trackBlocksR.@each.featuresLength', 'trait.traits.@each.visible',
+    'ontology.ontologyIsVisibleChangeCount',
+    function () {
     let
     trait = this.get('trait'),
+    ontology = this.get('ontology'),
     axisID = this.get('axisID'),
     trackBlocksR = this.get('trackBlocksR'),
     featuresLengths = this.get('trackBlocksR').mapBy('featuresLength');
@@ -1958,9 +1962,17 @@ export default InAxis.extend({
       function (blockFeatures, blockR) {
         let
         blockId = blockR.get('id'),
+        isQtl = blockR.get('isQTL'),
         features = blockR.get('features')
           .toArray()  //  or ...
+          /** trait.featureFilter() defaults to true if feature does not have
+           * values.Trait whereas ontology.featureFilter() defaults to false if
+           * feature is a QTL and does not have values.Ontology.
+           * Also, this will compound the 2 filters - the requirement can be
+           * decided as the Ontology Visibility feature is trialled.
+           */
           .filter((feature) => trait.featureFilter('traits', feature))
+          .filter((feature) => ! isQtl || ontology.featureFilter(feature))
           /* filter out QTL .value which is [] and not yet computed from .values.flankingMarkers.
            * This assumes feature.value.length is defined; now there shouldn't be any Feature.range or non-array .value
            */
