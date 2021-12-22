@@ -1,0 +1,53 @@
+{{#elem/panel-container state="primary" as |panelContainer|}}
+  {{#elem/panel-heading icon="globe" panelContainer=panelContainer}}
+      Ontologies
+  {{/elem/panel-heading}}
+  {{#if panelContainer.showComponent}}
+
+    <div id="display-ontologies">
+
+      {{input type="checkbox" name="this.controlOptions.enableView" checked=this.controlOptions.enableView
+        id="checkbox-enableView" }}
+      <label for="checkbox-enableView"><i class="glyphicon glyphicon-eye-open"></i></label>
+
+
+    <div class="tab-content">
+
+      {{#if blockFeatureOntologies.length}}
+        {{log 'ontologies' ontologiesTree ontologiesTree.isFulfilled }}
+        {{#if ontologiesTree.isFulfilled}}
+
+          <span style="display: inline-block; margin-left: 3em;">
+            {{input type="checkbox"
+              name="this.controlOptions.showHierarchy"
+              checked=this.controlOptions.showHierarchy
+              input=(action showHierarchyChanged preventDefault=false)
+              id="checkbox-showHierarchyView" }}
+            <label for="checkbox-showHierarchyView"><i class="glyphicon glyphicon-tree-conifer"></i></label>
+          </span>
+
+          <ul class="list-group borderless">
+            {{record/entry-values
+              values=ontologiesTree.content
+              levelMeta=levelMeta
+              controlOptions=controlOptions
+              loadBlock=(action this.noAction)
+              selectBlock=(action this.noAction)
+              selectedBlock=(action this.noAction)
+              selectDataset=(action this.noAction)
+              selectExpander=(action this.selectOntologyNode) }}
+          </ul>
+
+        {{else}}
+            <div>Requesting the Ontology Tree ...</div>
+        {{/if}}
+      {{/if}}
+
+    </div>      {{!-- end of class="tab-content" --}}
+
+
+    </div>
+
+
+  {{/if}} {{!-- showComponent --}}
+{{/elem/panel-container}}

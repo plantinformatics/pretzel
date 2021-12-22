@@ -66,4 +66,18 @@ function promiseText(promise) {
 
 /*----------------------------------------------------------------------------*/
 
-export { parentOfType, elt0, getAttrOrCP, _internalModel_data, nowOrLater,  promiseText };
+import ObjectProxy from '@ember/object/proxy';
+import PromiseProxyMixin from '@ember/object/promise-proxy-mixin';
+import { resolve } from 'rsvp';
+
+let ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
+
+function toPromiseProxy(valueP) {
+  let proxy = ObjectPromiseProxy.create({ promise: resolve(valueP) });
+  return proxy;
+}
+
+// -----------------------------------------------------------------------------
+
+
+export { parentOfType, elt0, getAttrOrCP, _internalModel_data, nowOrLater,  promiseText, toPromiseProxy };

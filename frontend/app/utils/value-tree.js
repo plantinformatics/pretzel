@@ -248,7 +248,6 @@ function leafCount(levelMeta, values) {
 
 /*----------------------------------------------------------------------------*/
 
-
 /** Count blocks in Ontology tree.
  */
 function leafCountIdChildrenTree(levelMeta, tree) {
@@ -286,6 +285,23 @@ function leafCountOntologyTab(levelMeta, values) {
   return count;
 }
 
+// -----------------------------------------------------------------------------
+
+/** The tree created by blockFeatureOntologiesTreeEmbedded() has .node, added by mapTree().
+ * These are not required in the view panel component panel/ontologies, and are
+ * deleted by this function (this is a copy made by treeFor).
+ */
+function unlinkDataIdChildrenTree(tree) {
+  /** based on leafCountIdChildrenTree(), which comments about value.node[]. */
+  function deleteNodeAttr(result1, parentKey, index, value) {
+    if (value.node) {
+      delete value.node;
+    }
+  };
+  reduceIdChildrenTree(tree, deleteNodeAttr, 0);
+}
+
+
 /*----------------------------------------------------------------------------*/
 
 function typeMetaIdChildrenTree(levelMeta, tree) {
@@ -321,6 +337,7 @@ export {
   mapHash, forEachHash, reduceHash, reduceIdChildrenTree,
   justUnmatched, logV,
   leafCount, leafCountOntologyTab,
+  unlinkDataIdChildrenTree,
   typeMetaIdChildrenTree,
   ontologyIdFromIdText,
 };

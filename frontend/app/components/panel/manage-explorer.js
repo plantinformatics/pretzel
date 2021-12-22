@@ -413,6 +413,7 @@ export default ManageBase.extend({
     /** Initialise this.blocksService so that dependency blocksService.featureUpdateCount works. */
     let blocksService = this.get('blocksService');
 
+    this.treeFor = treeFor; // will move to utils/data/grouping.js
     this.get('ontology').set('ontologyCollation', this);
   },
 
