@@ -2088,7 +2088,7 @@ export default ManageBase.extend({
   /** user has clicked on a entry-expander in an ontology tree. */
   selectOntologyNode(nodeText, values, event) {
     dLog('selectOntologyNode', nodeText, values, event.target);
-    let ontologyId = values?.id;
+    let ontologyId = values?.id || values?.name && ontologyIdFromIdText(values.name);
     if (ontologyId) {
       let colour = this.get('ontology').ontologyClick(ontologyId);
       let target = event?.target;

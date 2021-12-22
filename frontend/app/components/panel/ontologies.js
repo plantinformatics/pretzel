@@ -189,9 +189,10 @@ export default Component.extend({
   /** user has clicked on a enter-expander in an ontology tree. */
   selectOntologyNode(nodeText, values, event) {
     dLog('selectOntologyNode', nodeText, values, event.target);
-    let ontologyId = values?.id;
-    if (ontologyId) {
-
+    /** nodeText === values.name */
+    let oc = this.ontologyCollation;
+    if (oc) {
+      oc.selectOntologyNode(nodeText, values, event);
     }
   },
 

@@ -112,18 +112,8 @@ export default Component.extend({
 
   valuesColour : computed('values', 'ontology.ontologyColourScaleUpdateCount', function () {
     let
-    colour,
-    ontologyId = this.get('values.id');
-    if (ontologyId) {
-      let
-      ontology_colour_scale = this.get('ontology.ontology_colour_scale'),
-      ids = ontology_colour_scale.domain(),
-      found = ids.includes(ontologyId);
-      if (found) {
-        colour = ontology_colour_scale(ontologyId);
-        dLog('valuesColour', colour, ontologyId);
-      }
-    }
+    ontologyId = this.get('values.id'),
+    colour = ontologyId && this.get('ontology').ontologyIdToColour(ontologyId);
     return colour;
   }),
 

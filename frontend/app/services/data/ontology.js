@@ -408,6 +408,21 @@ export default Service.extend({
     return domainIds;
   },
 
+  ontologyIdToColour(ontologyId) {
+    const fnName = 'ontologyIdToColour';
+    let colour;
+    if (ontologyId) {
+      let
+      ontology_colour_scale = this.get('ontology_colour_scale'),
+      ids = ontology_colour_scale.domain(),
+      found = ids.includes(ontologyId);
+      if (found) {
+        colour = ontology_colour_scale(ontologyId);
+        dLog(fnName, colour, ontologyId);
+      }
+    }
+    return colour;
+  },
 
   //----------------------------------------------------------------------------
 

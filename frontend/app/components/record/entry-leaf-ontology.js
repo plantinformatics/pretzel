@@ -1,5 +1,6 @@
 import Component from '@ember/component';
 import { computed } from '@ember/object';
+import { alias } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 
 import { ontologyIdFromIdText } from '../../utils/value-tree';
@@ -18,6 +19,8 @@ export default Component.extend({
   ontologyId : computed('name', function () {
     return ontologyIdFromIdText(this.name);
   }),
+
+  nodeName : alias('name'),
 
   // ---------------------------------------------------------------------------
 
@@ -43,6 +46,18 @@ export default Component.extend({
     this.set('ontologyIsVisible', checked);
     this.get('ontology').setOntologyIsVisible(ontologyId, checked);
   },
+
+  // ---------------------------------------------------------------------------
+
+  valuesColour : computed('values', 'ontology.ontologyColourScaleUpdateCount', function () {
+    let
+    /** values.id is not defined, but can also use : values?.name && ontologyIdFromIdText(values.name)
+     * as in manage-explorer : selectOntologyNode()
+     */
+    ontologyId = this.ontologyId,
+    colour = ontologyId && this.get('ontology').ontologyIdToColour(ontologyId);
+    return colour;
+  }),
 
   // ---------------------------------------------------------------------------
 

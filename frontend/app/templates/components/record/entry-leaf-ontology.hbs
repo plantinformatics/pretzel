@@ -14,11 +14,21 @@
   </span>
 
   {{!--
-   Copied from entry-expander; may also copy : selectExpander valuesColour
-   entry-expander also sets title={{hoverText}} on span, hover may not be required and hoverText is not defined yet.
+   Copied from entry-expander.
+   entry-expander also sets title={{hoverText}} on span, hover may not be required and hoverText is not defined yet, so title= has no effect.
    --}}
-  <span  class="truncate" style="flex: 1;" >
-    {{name}}
-  </span>
+
+  {{#if @selectExpander}}
+    <span title={{hoverText}} class="truncate btn" style="flex: 1;"
+      {{on 'click' (fn @selectExpander nodeName values) }}
+      style={{safe-style valuesColour}} >
+      {{nodeName}}
+    </span>
+  {{else}}
+    <span title={{hoverText}} class="truncate" style="flex: 1;" >
+      {{nodeName}}
+    </span>
+  {{/if}}
+
 
 </li>
