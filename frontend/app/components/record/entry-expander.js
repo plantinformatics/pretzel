@@ -121,7 +121,10 @@ export default Component.extend({
 
   valuesColour : computed('values', 'ontology.ontologyColourScaleUpdateCount', function () {
     let
-    ontologyId = this.get('values.id'),
+    values = this.get('values'),
+    /** if ! showHierarchy, values is e.g. {name : "[CO_321:0000020] Plant height"} */
+    ontologyId = values.id ||
+       (values.name && ontologyIdFromIdText(values.name)),
     colour = ontologyId && this.get('ontology').ontologyIdToColour(ontologyId);
     return colour;
   }),
