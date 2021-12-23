@@ -308,7 +308,6 @@ export default EntryBase.extend({
       (dataTypeName === 'Scopes') ? 'record/entry-values' :
       (dataTypeName === 'Groups') ? 'record/entry-values' :
       (dataTypeName === 'Group') ? 'record/entry-values' :
-      this.isOntologyLeaf(this.levelMeta, values) ? 'record/entry-leaf-ontology' :
       (dataTypeName === 'term') ? 'record/entry-level' :
       (dataTypeName === 'trait') ? 'record/entry-node' :
       undefined;

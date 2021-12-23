@@ -119,5 +119,25 @@ export default Component.extend({
 
   // ---------------------------------------------------------------------------
 
+  checked : computed('ontology.ontologyIsVisibleChangeCount', function () {
+    /** only called when this.checkbox is defined. */
+    let
+    ontologyId = this.get('values.id'),
+    checked = this.checkbox.checked(this.values);
+    dLog('checked', checked, ontologyId, this.values);
+    return checked;
+  }),
+
+
+  get checkbox() {
+    let checkbox;
+    if (this.levelMeta) {
+      checkbox = this.levelMeta.get(this.values)?.checkbox;
+    }
+    return checkbox;
+  }
+
+  // ---------------------------------------------------------------------------
+
 
 });

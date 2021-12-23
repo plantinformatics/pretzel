@@ -301,6 +301,21 @@ function unlinkDataIdChildrenTree(tree) {
   reduceIdChildrenTree(tree, deleteNodeAttr, 0);
 }
 
+/** Replace levelMeta matchString with a copy of value, with .typeName : matchString.
+ * @param tree   created by blockFeatureOntologiesTreeEmbedded(), has strings 'term' and 'trait' for ontology nodes.
+ * @param matchString  e.g. 'term'
+ * @param objectValue Object, copied with Object.assign({typeName : matchString}, value)
+ */
+function augmentMetaIdChildrenTree(tree, levelMeta, matchString, objectValue) {
+  function augmentMatchingNode(result1, parentKey, index, value) {
+    if (levelMeta.get(value) == matchString) {
+      let newValue = Object.assign({typeName : matchString}, objectValue);
+      levelMeta.set(value, newValue);
+    }
+  };
+  reduceIdChildrenTree(tree, augmentMatchingNode, 0);
+}
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -338,6 +353,7 @@ export {
   justUnmatched, logV,
   leafCount, leafCountOntologyTab,
   unlinkDataIdChildrenTree,
+  augmentMetaIdChildrenTree,
   typeMetaIdChildrenTree,
   ontologyIdFromIdText,
 };

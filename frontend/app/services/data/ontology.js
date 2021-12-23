@@ -453,9 +453,26 @@ export default Service.extend({
 
   ontologyIsVisible : {},
   ontologyIsVisibleChangeCount : 0,
+  isVisibleMap : new WeakMap(),
   setOntologyIsVisible(ontologyId, checked) {
     this.ontologyIsVisible[ontologyId] = checked;
+    let id2n = this.get('ontologyCollation.ontologyId2Node._result'),
+        node = id2n[ontologyId];
+    if (node) {
+      dLog('setOntologyIsVisible', node, checked);
+      this.isVisibleMap.set(node, checked);
+      this.setOntologyIsVisibleChildren(node, checked);
+    }
     this.incrementProperty('ontologyIsVisibleChangeCount');
+  },
+  /** Set visibility of children under node to checked. */
+  setOntologyIsVisibleChildren(node, checked) {
+    let ontologyIsVisible = this.ontologyIsVisible;
+    function setVisible(result, parentKey, index, value) {
+      let ontologyId = value.id;
+      ontologyIsVisible[ontologyId] = checked;
+    };
+    reduceIdChildrenTree(node, setVisible, undefined);
   },
   getOntologyIsVisible(ontologyId) {
     return this.ontologyIsVisible[ontologyId];

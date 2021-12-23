@@ -6,7 +6,7 @@ import { A } from '@ember/array';
 import { bind } from '@ember/runloop';
 
 import { toPromiseProxy } from '../../utils/ember-devel';
-import { unlinkDataIdChildrenTree, ontologyIdFromIdText } from '../../utils/value-tree';
+import { unlinkDataIdChildrenTree, augmentMetaIdChildrenTree, ontologyIdFromIdText } from '../../utils/value-tree';
 
 // -----------------------------------------------------------------------------
 
@@ -91,9 +91,21 @@ export default Component.extend({
   ontologyIdToValue(ontologyId) {
     let
     o = {name : ontologyId},
-    meta = {typeName : 'trait', checkboxAction : bind(this, this.toggleVisibility)};
+    checkbox = this.checkbox(ontologyId),
+    meta = {typeName : 'trait', checkbox};
     this.levelMeta.set(o, meta);
     return o;
+  },
+  checkbox(ontologyId) {
+    let me = this;
+    /** blockFeatureOntologiesTreeOnly() passes a constant checkbox to
+     * augmentMetaIdChildrenTree() - ontologyId is undefined. */
+    return {
+      checked : (values) => this.get('ontology').getOntologyIsVisible(ontologyId || values.id),
+      changed : function (checked) { me.toggleVisibility(checked, this.values.id); }
+    };
+      // bind(this, this.toggleVisibility)};
+    // dLog('checkbox changed', checked, this);
   },
   blockFeatureOntologiesViewedIds : computed('blockFeatureOntologiesNameFlat', function () {
     let
@@ -133,6 +145,9 @@ export default Component.extend({
         valueTree = treeFor(this.get('levelMeta'), tree, id2n, id2Pn);
         /** treeFor() makes a copy so it is not necessary for unlinkDataIdChildrenTree() to make a copy. */
         unlinkDataIdChildrenTree(valueTree);
+        let checkbox = this.checkbox(/*ontologyId*/ undefined);
+        augmentMetaIdChildrenTree(valueTree, this.levelMeta, 'term', {checkbox});
+        augmentMetaIdChildrenTree(valueTree, this.levelMeta, 'trait', {checkbox});
         this.levelMeta.set(valueTree, {typeName : 'term', name : 'CO'});
 
         dLog(fnName, valueTree);
@@ -176,8 +191,11 @@ export default Component.extend({
 
   // ---------------------------------------------------------------------------
 
-  toggleVisibility(value) {
-    dLog('toggleVisibility', value, this, arguments);
+  toggleVisibility(checked, ontologyId) {
+    dLog('toggleVisibility', checked, this, arguments);
+    if (ontologyId) {
+      this.get('ontology').setOntologyIsVisible(ontologyId, checked);
+    }
   },
 
   noAction(value) {
