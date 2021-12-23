@@ -5,6 +5,8 @@ import { inject as service } from '@ember/service';
 
 import { elt0 } from '../../utils/ember-devel';
 
+import { ontologyIdFromIdText } from '../../utils/value-tree';
+
 // -----------------------------------------------------------------------------
 
 const dLog = console.debug;
@@ -38,8 +40,10 @@ export default Component.extend({
      * The immediate hierarchy is : entry-tab : bs-tab/pane : entry-values : entry-level : entry-expander
      */
     let immediateParent = this.parentView.parentView.parentView.parentView;
-    if ((immediateParent._debugContainerKey === "component:record/entry-tab") &&
-        (immediateParent.name === 'Ontology') && this.controlOptions.showHierarchy) {
+    let viewOntology = immediateParent._debugContainerKey === 'component:panel/ontologies';
+    let explorerOntology = (immediateParent._debugContainerKey === "component:record/entry-tab") &&
+        (immediateParent.name === 'Ontology');
+    if (viewOntology || (explorerOntology && this.controlOptions.showHierarchy)) {
       later(() => !this.isDestroying && this.set('active', true));
     }
 
@@ -100,6 +104,11 @@ export default Component.extend({
     if (parent)
       parent.off('setLayoutActive');
   },
+  didInsertElement() {
+    this._super(...arguments);
+    /* initialise service used by dependencies */
+    this.get('ontology');
+  },
   willDestroyElement() {
     // this.termTabActionBus();
   },
@@ -122,9 +131,8 @@ export default Component.extend({
   checked : computed('ontology.ontologyIsVisibleChangeCount', function () {
     /** only called when this.checkbox is defined. */
     let
-    ontologyId = this.get('values.id'),
     checked = this.checkbox.checked(this.values);
-    dLog('checked', checked, ontologyId, this.values);
+    dLog('checked', checked, this.values);
     return checked;
   }),
 

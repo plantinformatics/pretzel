@@ -6,18 +6,20 @@
 
     <div id="display-ontologies">
 
-      {{input type="checkbox" name="this.controlOptions.enableView" checked=this.controlOptions.enableView
-        id="checkbox-enableView" }}
-      <label for="checkbox-enableView"><i class="glyphicon glyphicon-eye-open"></i></label>
-
-
     <div class="tab-content">
+
+      <span style="margin-left: 3em;">
+        {{input type="checkbox" name="this.allVisible" checked=this.allVisible
+          input=(action this.allVisibleChanged value='target.checked' preventDefault=false)
+          id="checkbox-allVisible" }}
+        <label for="checkbox-allVisible"><i class="glyphicon glyphicon-eye-open"></i></label>
+      </span>
 
       {{#if blockFeatureOntologies.length}}
         {{log 'ontologies' ontologiesTree ontologiesTree.isFulfilled }}
         {{#if ontologiesTree.isFulfilled}}
 
-          <span style="display: inline-block; margin-left: 3em;">
+          <span style="display: inline-block; margin-left: 8em;">
             {{input type="checkbox"
               name="this.controlOptions.showHierarchy"
               checked=this.controlOptions.showHierarchy

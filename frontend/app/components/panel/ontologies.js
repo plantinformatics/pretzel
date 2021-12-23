@@ -87,25 +87,32 @@ export default Component.extend({
   /** The leaf values of the view panel Ontology tree are OntologyIDs.
    * To be node values in a value-tree they need to be Object not string, and have a levelMeta value.
    * This function converts and OntologyID to an Object for use in a value-tree.
+   * @param ontologyId  may be "[ontologyId] description"
    */
   ontologyIdToValue(ontologyId) {
     let
     o = {name : ontologyId},
-    checkbox = this.checkbox(ontologyId),
+    checkbox = this.checkbox(ontologyIdFromIdText(ontologyId)),
     meta = {typeName : 'trait', checkbox};
     this.levelMeta.set(o, meta);
     return o;
   },
   checkbox(ontologyId) {
     let me = this;
+    let ontologyIdFromValue = this.ontologyIdFromValue;
     /** blockFeatureOntologiesTreeOnly() passes a constant checkbox to
      * augmentMetaIdChildrenTree() - ontologyId is undefined. */
     return {
-      checked : (values) => this.get('ontology').getOntologyIsVisible(ontologyId || values.id),
-      changed : function (checked) { me.toggleVisibility(checked, this.values.id); }
+      checked : (values) => this.get('ontology').getOntologyIsVisible(ontologyId || ontologyIdFromValue(values)),
+      changed : function (checked) { me.toggleVisibility(checked, ontologyIdFromValue(this.values)); }
     };
-      // bind(this, this.toggleVisibility)};
-    // dLog('checkbox changed', checked, this);
+  },
+  ontologyIdFromValue(values) {
+    let
+    /** if ! showHierarchy, values is e.g. {name : "[CO_321:0000020] Plant height"} */
+    ontologyId = values.id ||
+      (values.name && ontologyIdFromIdText(values.name));
+    return ontologyId;
   },
   blockFeatureOntologiesViewedIds : computed('blockFeatureOntologiesNameFlat', function () {
     let
@@ -197,6 +204,23 @@ export default Component.extend({
       this.get('ontology').setOntologyIsVisible(ontologyId, checked);
     }
   },
+
+  allVisible : false,
+  allVisibleChanged(checked) {
+    let
+    ontologiesTree = this.get('ontologiesTree.content'),
+    ontologyIds = this.get('controlOptions.showHierarchy') ?
+      Object.keys(ontologiesTree) :
+      ontologiesTree      
+    ?.map((o) => ontologyIdFromIdText(o.name));
+    dLog('allVisibleChanged', ontologyIds);
+    if (ontologyIds) {
+      ontologyIds.forEach((ontologyId) => {
+        this.get('ontology').setOntologyIsVisible(ontologyId, checked);
+      });
+    }
+  },
+
 
   noAction(value) {
     dLog('noAction', value);
