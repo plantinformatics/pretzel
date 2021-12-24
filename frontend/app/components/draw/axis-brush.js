@@ -46,6 +46,9 @@ export default Component.extend(Evented, AxisEvents, {
    */
   store: service(),
   pathsP : service('data/paths-progressive'),
+  controls : service(),
+  auth : service(),
+
 
   /*--------------------------------------------------------------------------*/
 
@@ -54,6 +57,8 @@ export default Component.extend(Evented, AxisEvents, {
   /** .drawMap is used by Evented : utils/draw/axis-events.js */
   drawMap : alias('oa.eventBus'),
   axisApi : alias('oa.axisApi'),
+
+  apiServerSelectedOrPrimary : alias('controls.apiServerSelectedOrPrimary'),
 
   /*--------------------------------------------------------------------------*/
 
@@ -246,8 +251,28 @@ export default Component.extend(Evented, AxisEvents, {
         dLog('zoomedAxis matched', axisID, blockId, axis);
       this.incrementProperty('zoomCounter');
     }
-  }
+  },
   /*--------------------------------------------------------------------------*/
+
+  dnaSequenceLookup() {
+    let
+    domain = this.get('block.brushedDomain'),
+    domainInteger = domain && domain.map((d) => d.toFixed(0)),
+    scope = this.get('block.block.scope'),
+    region = 'chr' + scope + ':' + domainInteger.join('-'),
+    parent = this.get('datasetName');
+
+    let sequenceTextP = this.get('auth').dnaSequenceLookup(
+      this.get('apiServerSelectedOrPrimary'), parent, region,
+      {} );
+    sequenceTextP.then(
+      (sequenceText) => {
+        dLog('dnaSequenceLookup', sequenceText);
+        this.set('sequenceText', sequenceText?.sequence);
+      });
+  },
+
+  // ---------------------------------------------------------------------------
 
   
 });

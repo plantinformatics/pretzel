@@ -1,5 +1,6 @@
 {{!-- block.block.datasetNameAndScope or datasetId.name or .id --}} 
 
+
   <tr>
     <td>{{datasetName}}</td>
     <td>{{block.block.scope}}</td>
@@ -9,6 +10,14 @@
     <td class="devel-visible">{{zoomCounter}}</td>
     <td style="display:none;"> {{features.length}} <!-- for features request. --></td>
   </tr>
+
+<div>
+  <label>DNA sequence for brushed interval</label>
+  <button onclick={{action this.dnaSequenceLookup}} class="btn btn-xs">Lookup</button>
+</div>
+<div>
+  <textarea style="width: 100%;">{{sequenceText}}</textarea>
+</div>
 
 
 

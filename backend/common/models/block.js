@@ -15,6 +15,7 @@ var pathsStream = require('../utilities/paths-stream');
 var { localiseBlocks, blockLocalId } = require('../utilities/localise-blocks');
 const { blockServer } = require('../utilities/api-server');
 const { getAliases } = require('../utilities/localise-aliases');
+const { childProcess } = require('../utilities/child-process');
 
 var ObjectId = require('mongodb').ObjectID
 
@@ -1154,6 +1155,51 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
   });
 
   /*--------------------------------------------------------------------------*/
+
+  // ---------------------------------------------------------------------------
+
+  Block.dnaSequenceLookup = function(parent, region, cb) {
+    childProcess(
+      'dnaSequenceLookup.bash',
+      /* postData */ '', 
+      /* useFile */ false,
+      /* fileName */ undefined,
+      /* moreParams */ [parent, region],
+      dataOutReply, cb, /*progressive*/ false);
+
+    let chunks = [];
+    /** Receive the results from the child process.
+     * @param chunk is a Buffer
+     * null / undefined indicates child process closed with status 0 (OK) and sent no output.
+     * @param cb is cbWrap of cb passed to dnaSequenceSearch().
+     */
+    function dataOutReply(chunk, cb) {
+      /** based on searchDataOut() */
+      if (! chunk) {
+        cb(null, chunks);
+      } else
+      if (chunk && (chunk.length >= 6) && (chunk.asciiSlice(0,6) === 'Error:')) {
+        cb(new Error(chunk.toString()));
+      } else {
+        // chunks.push(chunk)
+        cb(null, chunk.toString());
+      }
+    };
+
+  };
+
+  Block.remoteMethod('dnaSequenceLookup', {
+    accepts: [
+      {arg: 'parent', type: 'string', required: true},
+      {arg: 'region', type: 'string', required: true},
+    ],
+    http: {verb: 'get'},
+    returns: {arg: 'sequence', type: 'string'},
+    description: "DNA Sequence Lookup e.g. samtools faidx, returns nucleotide sequence output as text string"
+  });
+
+  // ---------------------------------------------------------------------------
+
 
   acl.assignRulesRecord(Block)
   acl.limitRemoteMethods(Block)
