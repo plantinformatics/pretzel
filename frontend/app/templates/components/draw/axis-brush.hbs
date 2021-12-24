@@ -13,7 +13,15 @@
 
 <div>
   <label>DNA sequence for brushed interval</label>
-  <button onclick={{action this.dnaSequenceLookup}} class="btn btn-xs">Lookup</button>
+  <span>
+    <span>{{object-at 0 this.sequenceLookupDomain}}</span>
+    <span>{{object-at 1 this.sequenceLookupDomain}}</span>
+  </span>
+  {{#if this.sequenceLookupDomain}}
+    <button onclick={{action this.dnaSequenceLookup}} class="btn btn-xs">Lookup</button>
+  {{else}}
+    <span>Lookup Region limit is 100kb</span>
+  {{/if}}
 </div>
 <div>
   <textarea style="width: 100%;">{{sequenceText}}</textarea>

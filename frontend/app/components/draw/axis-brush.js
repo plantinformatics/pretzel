@@ -21,6 +21,7 @@ import {
   foregroundSelector,
   selectBlockAdj
 } from '../../utils/draw/stacksAxes';
+import { intervalSize } from '../../utils/interval-calcs'
 
 /* global d3 */
 
@@ -254,10 +255,19 @@ export default Component.extend(Evented, AxisEvents, {
   },
   /*--------------------------------------------------------------------------*/
 
-  dnaSequenceLookup() {
+  sequenceLookupDomain: computed('block.brushedDomain', function () {
     let
     domain = this.get('block.brushedDomain'),
-    domainInteger = domain && domain.map((d) => d.toFixed(0)),
+    domainInteger = domain && 
+      (intervalSize(domain) < 100000) &&
+      domain.map((d) => d.toFixed(0));
+    return domainInteger;
+  }),
+  dnaSequenceLookup() {
+    let
+    domainInteger = this.get('sequenceLookupDomain');
+    if (domainInteger) {
+      let
     scope = this.get('block.block.scope'),
     region = 'chr' + scope + ':' + domainInteger.join('-'),
     parent = this.get('datasetName');
@@ -270,6 +280,7 @@ export default Component.extend(Evented, AxisEvents, {
         dLog('dnaSequenceLookup', sequenceText);
         this.set('sequenceText', sequenceText?.sequence);
       });
+    }
   },
 
   // ---------------------------------------------------------------------------
