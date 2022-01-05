@@ -163,6 +163,11 @@ Viewport.prototype.calc = function(oa)
   if (trace_resize)
     console.log("viewPort=", viewPort, ", w=", w, ", h=", h, ", graphDim=", graphDim, ", yRange=", yRange);
 
+  let
+  controlsView = oa.drawOptions?.controls?.view,
+  /** input range value is string */
+  extraOutsideMargin = +controlsView?.extraOutsideMargin || 0;
+
   /** axisXRange is the
    * x range of the axis centres. reserved space at left and right for
    * axisHeaderTextLen which is centred on the axis.
@@ -171,7 +176,7 @@ Viewport.prototype.calc = function(oa)
    * outsideMargin has a lower limit of 90 for the index tick text (enough for 9
    * digits with 2 commas).
    */
-  let outsideMargin = Math.max(90, this.axisHeaderTextLen/2);
+  let outsideMargin = Math.max(90, this.axisHeaderTextLen/2) + extraOutsideMargin;
   /** add some extra space on left to allow for long text selected.labelledFeatures (axis-1d : showLabels() ) */
   let extraLeftMargin = 50;
   this.axisXRange = [0 + outsideMargin + extraLeftMargin, graphDim.w - outsideMargin];

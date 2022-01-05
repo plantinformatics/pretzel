@@ -168,6 +168,12 @@ Object.filter = Object_filter;
  */
 const syntenyBlock_2Feature = true;
 
+/** enable display of multiple lines in axis title : for each data block :
+ * name, block colour, feature counts, server colour; this is moving into axis
+ * menu, replacing utils/draw/axisTitleBlocksServers{,_tspan}.js.
+ */
+const axisTitle_dataBlocks = false;
+
 /*----------------------------------------------------------------------------*/
 
 //- moved to "../utils/draw/flow-controls.js" : flowButtonsSel, configurejQueryTooltip()
@@ -2719,7 +2725,7 @@ export default Component.extend(Evented, {
     function axisName2Blocks (axisName) {
       let axis = Stacked.getAxis(axisName);
       // equiv : axis.children(true, false)
-      return axis ? axis.blocks : [];
+      return axis ? (axisTitle_dataBlocks ? axis.blocks : [axis.blocks[0]]) : [];
     }
 
 
@@ -6548,6 +6554,7 @@ export default Component.extend(Evented, {
     'controls.view.showAxisText',
     /* axisTicksOutside doesn't resize, but a redraw is required (and re-calc could be done) */
     'controls.view.axisTicksOutside',
+    'controls.view.extraOutsideMargin',
     /** split-view : sizes of the components adjacent the resize gutter : 0: draw-map and 1 : tables panel. */
     'componentGeometry.sizes.0',
     'controls.window.tablesPanelRight',

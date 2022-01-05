@@ -1074,19 +1074,21 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     referenceBlock = this.get('referenceBlock'),  // i.e. .axis
     parts = [],
     axisTitleChrOnly = this.controlsView.axisTitleChrOnly,
-    showBlockName = referenceBlock.get('axisTitleShow.scope') && axisTitleChrOnly;
-    if (referenceBlock.get('axisTitleShow.name')  && (! axisTitleChrOnly || ! showBlockName)) {
+    /** changed requirements, probably axisTitleShow is not required. */
+    showDatasetName = /*referenceBlock.get('axisTitleShow.scope') &&*/ ! axisTitleChrOnly;
+    if (/*referenceBlock.get('axisTitleShow.name')  && (! axisTitleChrOnly || ! )*/ showDatasetName) {
       parts.push(referenceBlock.get('datasetId.shortNameOrName'));
     }
+    // maybe :
     /** If user edits .shortName via editedShortName then consider that to
      * override axisTitleChrOnly. */
-    if (showBlockName) {
+
       /** block name is generally the same as scope, but there can be multiple
        * blocks in a dataset with the same scope; showing their names is more
        * useful - likely to be unique.
        */
       parts.push(referenceBlock.get('name'));
-    }
+
     let name = parts.filter((n) => n).join(' : ');
     return name;
   },
