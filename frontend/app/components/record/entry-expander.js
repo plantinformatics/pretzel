@@ -5,7 +5,7 @@ import { inject as service } from '@ember/service';
 
 import { elt0 } from '../../utils/ember-devel';
 
-import { ontologyIdFromIdText } from '../../utils/value-tree';
+import { valueGetType, ontologyIdFromIdText } from '../../utils/value-tree';
 
 // -----------------------------------------------------------------------------
 
@@ -116,6 +116,22 @@ export default Component.extend({
   /** expandIcon() and actions: switch() are replaced by using icon-toggle, with
    * .active bound.
    */
+
+  // ---------------------------------------------------------------------------
+
+  /** If node value is part of view panel Ontology tree, don't show +/- toggle
+   * for leaf nodes.
+   * Distinguish between View panel and Explorer Ontology tree, by values.node,
+   * which leaves in Explorer have but not in View panel.
+   * Could also check levelMeta.get(this.levelMeta, this.values).checkbox; which
+   * nodes in view panel have, not Explorer.
+   */
+  get showToggle() {
+    let
+    typeName = this.levelMeta && valueGetType(this.levelMeta, this.values),
+    show = ! typeName || (typeName === 'term') || (typeName !== 'trait') || this.values.node;
+    return show;
+  },
 
   // ---------------------------------------------------------------------------
 
