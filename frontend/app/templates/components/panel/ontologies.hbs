@@ -12,7 +12,8 @@
         {{input type="checkbox" name="this.allVisible" checked=this.allVisible
           input=(action this.allVisibleChanged value='target.checked' preventDefault=false)
           id="checkbox-allVisible" }}
-        <label for="checkbox-allVisible"><i class="glyphicon glyphicon-eye-open"></i></label>
+        <label for="checkbox-allVisible" title="Show QTLs with any Ontology">
+          <i class="glyphicon glyphicon-eye-open"></i></label>
       </span>
 
       {{#if blockFeatureOntologies.length}}
@@ -25,7 +26,8 @@
               checked=this.controlOptions.showHierarchy
               input=(action showHierarchyChanged preventDefault=false)
               id="checkbox-showHierarchyView" }}
-            <label for="checkbox-showHierarchyView"><i class="glyphicon glyphicon-tree-conifer"></i></label>
+            <label for="checkbox-showHierarchyView" title="Show tree of Ontologies">
+              <i class="glyphicon glyphicon-tree-conifer"></i></label>
           </span>
 
           <ul class="list-group borderless">
