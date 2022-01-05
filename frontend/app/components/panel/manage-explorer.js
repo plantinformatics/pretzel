@@ -4,6 +4,8 @@ import { resolve, all } from 'rsvp';
 import { A } from '@ember/array';
 import { inject as service } from '@ember/service';
 import { isArray } from '@ember/array';
+import { singularize, pluralize } from 'ember-inflector';
+
 
 import DS from 'ember-data';
 
@@ -70,6 +72,8 @@ const selectorExplorer = 'div#left-panel-explorer';
 
 /**
  * CP : blockFeatureTraits
+ * Used in blockFeature{Traits,Ontologies}, which are used only for checking
+ * .length in panel/{manage-explorer,ontologies}.hbs
  * @param fieldName 'Traits' or 'Ontologies'
  */
 function blockValues(fieldName) {
@@ -84,6 +88,7 @@ function blockValues(fieldName) {
 
 /** map ._id to .block
  * CP : blockFeatureTraitsBlocks
+ * Used by : blockValuesHistory()
  * @param fieldName 'Traits' or 'Ontologies'
  */
 function blockValuesBlocks(fieldName) {
@@ -98,10 +103,29 @@ function blockValuesBlocks(fieldName) {
     blocksTraitsP = blocksTraitsP
       .then((blocksTraits) => {
         blocksTraits = ids2Blocks(store, blocksTraits);
+        blocksTraits = checkPositions(blocksTraits, fieldName);
         return blocksTraits;
       });
   }
   return blocksTraitsP;
+}
+
+/** map blocksTraits : if .block has .positioned.<fieldName>
+ * use that in place of .<fieldName>
+ * @param fieldName is plural; the singular form is used for .positioned.<fieldName>
+ */
+function checkPositions(blocksTraits, fieldName) {
+  let fieldNameSingular = singularize(fieldName);
+  let bts = blocksTraits.map((bt) => {
+    let names = bt.block.get('positioned.' + fieldNameSingular);
+    if (names && (names.length !== bt[fieldName].length)) {
+      dLog('checkPositions', bt[fieldName], names);
+      bt = Object.assign({}, bt);
+      bt[fieldName] = names;
+    }
+    return bt;
+  });
+  return bts;
 }
 
 /**

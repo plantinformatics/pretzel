@@ -1271,12 +1271,47 @@ export default Model.extend({
         .then((ps) => {
           let parentFeatures = ps[1];
           return parentFeatures && parentFeatures.then((pf) => {
-            // referencedFeatures() yields an array of Features
-            return this.valueCompute(ps[0][0].value, pf);
+            /** referencedFeatures() yields an array of Features */
+            let features = ps[0][0].value,
+                /** no return value, so result is a promise yielding undefined */
+                f2 = this.valueCompute(features, pf);
+            this.collateQTLs('Trait');
+            this.collateQTLs('Ontology');
+            return f2;
           });
         });
     }
   }),
+  /** After valueCompute(), which will put positions of .values.flankingMarkers
+   * in .value[], collate the Traits and Ontology-s of QTL features of this
+   * block which have .value.length.
+   * This is a subset of the API result blockFeature{Traits,Ontologies}
+   * (components/service/api-server.js) because that collates all QTLs,
+   * regardless of whether they have .value.length.
+   *
+   * Result is an Ember array of unique names, stored in .positioned.<fieldName>
+   *
+   * @param fieldName 'Trait' or 'Ontology'
+   */
+  collateQTLs(fieldName) {
+    let
+    names = this.get('features')
+      .reduce((result, feature) => {
+        let name = feature.get('values.' + fieldName);
+        if (name) {
+          result.addObject(name);
+        }
+        return result; }, A());
+    if (names.length) {
+      dLog('collateQTLs', fieldName, names, this.id, this.get('datasetId.id'));
+    }
+    if (! this.get('positioned')) {
+      this.set('positioned', {});
+    }
+    this.set('positioned.' + fieldName, names);
+    // re-evaluate blockValuesBlocks() / checkPositions()
+    this.get('blockService').incrementProperty('featureUpdateCount');
+  },
   /** Request all features of this block.
    */
   allFeatures : computed(function () {
@@ -1381,8 +1416,10 @@ export default Model.extend({
           } else {
             value = f_value;
           }
-          if (! value.length) {
-            dLog(fnName, 'no value', f.value, f.values);
+          if (! value.length && trace_block > 1) {
+            /* this is likely a data error - either no f.values.flankingMarkers,
+             * or the FMs are not in parentFeatures[]. */
+            dLog(fnName, 'no value', f.value, f.values?.flankingMarkers);
           }
           return value;
         });
