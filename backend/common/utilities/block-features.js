@@ -343,12 +343,13 @@ function addField(object, fieldName, value) {
  * ...
  */
 exports.blockValues = function(db, fieldName) {
-  /** $group : _id : 0, i.e. don't group, combine into a single array.
+  /** $match : exclude copies (meta._origin);  require tags[] to contain 'QTL'.
+   * $group : _id : 0, i.e. don't group, combine into a single array.
    */
   let
   cursorP =
     db.collection('Dataset').aggregate([
-      {$match : {tags : {$exists: true}}},
+      {$match : {tags : {$exists: true}, 'meta._origin' : {$exists: false}}},
       {$match : {$expr : {$in : ['QTL', '$tags']}}},
       {
         $group: {
@@ -361,7 +362,7 @@ exports.blockValues = function(db, fieldName) {
       datasetIds = datasets[0].ids,
       blocks =
         db.collection('Block').aggregate([
-          {$match : {datasetId : {$in : datasetIds}}},
+          {$match : {datasetId : {$in : datasetIds}, 'meta._origin' : {$exists: false}}},
           {
             $group: {
               _id: null,
@@ -383,3 +384,26 @@ exports.blockValues = function(db, fieldName) {
 
   return cursorP;
 };
+
+// --------------------------------------------------------------------------------
+
+/** clear the blockValues API results (blockFeature{Traits,Ontologies})
+ * @see Block.blockValues()
+ */
+exports.blockFeaturesCacheClear = function blockFeaturesCacheClear(cache)
+{
+  const fnName = 'blockFeaturesCacheClear';
+  ['Trait', 'Ontology'].forEach((fieldName) => {
+    let
+    apiName = 'blockValues',
+    cacheId = apiName + '_' + fieldName;
+
+    let value = cache.get(cacheId);
+    if (value) {
+      console.log(fnName, cacheId, 'remove from cache', value.length);
+      cache.put(cacheId, undefined);
+    }
+  });
+}
+
+// --------------------------------------------------------------------------------

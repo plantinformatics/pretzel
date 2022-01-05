@@ -803,8 +803,9 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     }
 
     let
-    cacheId = fnName,
-    result; //  = cache.get(cacheId);
+    /** this cacheId is also calculated in utilities/block-features.js : blockFeaturesCacheClear() */
+    cacheId = fnName + '_' + fieldName,
+    result = cache.get(cacheId);
     if (paramError) {
       cb(paramError);
     } else
@@ -967,6 +968,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       }
       cache.put(cacheId, undefined);
     }
+    blockFeatures.blockFeaturesCacheClear(cache);
     next();
   });
 

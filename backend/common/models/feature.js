@@ -14,6 +14,7 @@ var acl = require('../utilities/acl')
 const { childProcess } = require('../utilities/child-process');
 var upload = require('../utilities/upload');
 var { filterBlastResults } = require('../utilities/sequence-search');
+var blockFeatures = require('../utilities/block-features');
 
 const cacheLibraryName = '../utilities/results-cache';
 var cache = require(cacheLibraryName);
@@ -66,6 +67,7 @@ module.exports = function(Feature) {
         cache.put(cacheId, undefined);
       }
     }
+    blockFeatures.blockFeaturesCacheClear(cache);
     next();
   });
 
