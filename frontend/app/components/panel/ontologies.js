@@ -18,6 +18,7 @@ const dLog = console.debug;
 
 export default Component.extend({
   ontology : service('data/ontology'),
+  block : service('data/block'),
 
 // alias('ontology.ontologyCollation'),
   ontologyCollation : computed('controlOptions.enableView', function () {
@@ -57,7 +58,10 @@ export default Component.extend({
    * The term 'Ontology' might be reserved for the group of OntologyIDs, i.e. the ROOT;
    * the values here are OntologyIDs.
    */
-  blockFeatureOntologiesNameFlat : computed('ontologyCollation.blockFeatureOntologiesName', function () {
+  blockFeatureOntologiesNameFlat : computed(
+    'ontologyCollation.blockFeatureOntologiesName',
+    'block.viewed.[]',
+    function () {
     const
     fieldName = 'Ontologies',
     boP = this.get('ontologyCollation.blockFeatureOntologiesName'),
