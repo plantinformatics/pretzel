@@ -104,10 +104,26 @@ function blockValuesBlocks(fieldName) {
       .then((blocksTraits) => {
         blocksTraits = ids2Blocks(store, blocksTraits);
         blocksTraits = checkPositions(blocksTraits, fieldName);
+        storeBlockAttributes(blocksTraits, fieldName);
         return blocksTraits;
       });
   }
   return blocksTraitsP;
+}
+
+/** Store the Traits / Ontologies of each block, to enable loadBlock() to make
+ * them visible.
+ * @param blocksValues is the result of checkPositions(), i.e. QTLs which will
+ * not be displayed because of lack of position / .values.<fieldName> are filtered out.
+ */
+function storeBlockAttributes(blocksValues, fieldName) {
+  blocksValues.forEach((bt) => {
+    let
+    block = bt.block,
+    values = bt[fieldName],
+    attr = block.get('attributes') || block.set('attributes', {});
+    attr[fieldName] = values;
+  });
 }
 
 /** map blocksTraits : if .block has .positioned.<fieldName>
@@ -424,6 +440,7 @@ export default ManageBase.extend({
   viewHistory : service('data/view'),
   blocksService : service('data/block'),
   ontology : service('data/ontology'),
+  trait : service('data/trait'),
 
   init() {
     this._super();
@@ -2007,9 +2024,39 @@ export default ManageBase.extend({
           }
         }
       });
+
+      this.makeValuesVisible(block);
     }
 
   },  // actions
+
+  // ---------------------------------------------------------------------------
+
+  /** if within the Traits / Ontologies tab, then make-visible the Traits /
+   * Ontologies of the block
+   */
+  makeValuesVisible(block) {
+    /** Values of doneField are made visible by action
+     * entry-block-add-button.js : loadBlock : setOntologyVisible().
+     *
+     * activeId is e.g. "tab-explorer-Trait", "tab-explorer-Ontology"
+     */
+    let doneField = this.activeId.slice(13);
+    if (! ["tab-explorer-Trait", "tab-explorer-Ontology"].includes(this.activeId))
+    {
+      /** perhaps instead of the enclosing if (), filter pluralize(doneField) out of this list.  */
+      ['Traits', 'Ontologies'].forEach((fieldName) => {
+        let
+        values = block.get('attributes.' + fieldName),
+        setVisible = (fieldName === 'Traits') ?
+          (traitName) => this.get('trait').traitVisible(traitName, true) :
+          (ontologyId) => this.get('ontology').setOntologyIsVisible(ontologyId, true);
+        dLog('loadBlock', this.activeId, fieldName, values);
+        values.forEach((value) => setVisible(value));
+      });
+    }
+  },
+
 
   //----------------------------------------------------------------------------
 
