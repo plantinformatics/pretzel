@@ -1946,6 +1946,8 @@ export default InAxis.extend({
   tracksTree : computed(
     'trackBlocksR.@each.featuresLength', 'trait.traits.@each.visible',
     'ontology.ontologyIsVisibleChangeCount',
+    'controlsView.visibleByTrait',
+    'controlsView.visibleByOntology',
     function () {
     let
     trait = this.get('trait'),

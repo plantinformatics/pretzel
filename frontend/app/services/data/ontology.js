@@ -479,6 +479,7 @@ export default Service.extend({
   },
 
   /** @return true if the OntologyId of this QTL is visible.
+   * Also true if this QTL does not have .values.Ontology.
    * @desc similar to ./trait.js : featureFilter(), which could support this via
    * groupName = 'ontology', but that module collates QTLs of a trait, which may
    * not be relevant for OntologyIds
@@ -487,7 +488,10 @@ export default Service.extend({
     const
     fnName = 'featureFilter',
     ontologyId = feature.get('values.Ontology'),
-    ok = ontologyId && this.getOntologyIsVisible(ontologyId);
+    visibleByOntology = this.get('controls.view.visibleByOntology'),
+    ok = (ontologyId === undefined) || (ontologyId === '') ?
+      ! visibleByOntology :
+      this.getOntologyIsVisible(ontologyId);
     dLog(fnName, ontologyId, ok);
     return ok;
   }

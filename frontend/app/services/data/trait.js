@@ -48,6 +48,7 @@ const Trait = EmberObject.extend({
  */
 export default Service.extend({
   block : service('data/block'),
+  controls : service(),
 
   /** array of {name, visible, features} */
   traits : A(),
@@ -110,8 +111,9 @@ export default Service.extend({
     fnName = 'featureFilter',
     group = this.get(groupName),
     traitName = feature.get('values.Trait'),
+    visibleByTrait = this.get('controls.view.visibleByTrait'),
     trait = traitName && group && group.findBy('name', traitName),
-    ok = trait ? trait.get('visible') : true;
+    ok = trait ? trait.get('visible') : ! visibleByTrait;
     dLog(fnName, traitName, ok);
     return ok;
   },

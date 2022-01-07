@@ -158,16 +158,16 @@
 
     <li class="list-group-item  horiz-2">
       <div>
-	<input type="checkbox"
-	  checked="checked"
-	  oninput={{action hideAxisTextClass}}  >
-	<label>Show Axis Text</label>
+        <input type="checkbox"
+          checked="checked"
+          oninput={{action hideAxisTextClass}}  >
+        <label>Show Axis Text</label>
       </div>
       <div>
-	<input type="checkbox"
-	  checked={{this.axisTitleChrOnly}}
-	  oninput={{action (mut this.axisTitleChrOnly) value="target.checked"}}  >
-	<label>Only Chr in title</label>
+        <input type="checkbox"
+          checked={{this.axisTitleChrOnly}}
+          oninput={{action (mut this.axisTitleChrOnly) value="target.checked"}}  >
+        <label>Only Chr in title</label>
       </div>
     </li>
 
@@ -331,6 +331,22 @@
       }}
       Block
 
+    </li>
+
+    <li class="list-group-item horiz-2">
+      <label>Visible by : </label>
+      <div style="width:30%">
+        <input type="checkbox"
+          checked={{this.visibleByOntology}}
+          oninput={{action (mut this.visibleByOntology) value="target.checked"}}  >
+        <label>Ontology</label>
+      </div>
+      <div style="width:30%">
+        <input type="checkbox"
+          checked={{this.visibleByTrait}}
+          oninput={{action (mut this.visibleByTrait) value="target.checked"}}  >
+        <label>Trait</label>
+      </div>
     </li>
 
     <li class="list-group-item">
