@@ -4,6 +4,9 @@
 
 const Queue = require('promise-queue');
 
+var { debounce, throttle }  = require('lodash/function');
+
+
 /*----------------------------------------------------------------------------*/
 
 /* global module */
@@ -53,23 +56,32 @@ module.exports = function(Feature) {
 
   /** Clear result cache entries which may be invalidated by the save.
    */
-  Feature.observe('after save', function(ctx, next) {
-    if (ctx.instance) {
+  Feature.observe(
+    'after save',
+    (ctx, next) => {
+      if (ctx.instance) {
+        let blockId = ctx.instance.blockId;
+        if (trace > 3) {
+          console.log('Feature', 'after save',  ctx.instance.id, ctx.instance.name, blockId);
+        }
+        debounce(() => featureAfterSave(blockId), 1000);
+        next();
+      }
+    });
+
+  function featureAfterSave(blockId) {
       const apiName = 'blockFeaturesInterval';
-      const blockIds = [ctx.instance.blockId],
+      const blockIds = [blockId],
             cacheId = apiName + '_' + blockIds.join('_');
       let value = cache.get(cacheId);
       if (value) {
         // this will trace for each feature when e.g. adding a dataset with table/csv upload
-        if (trace > 3) {
-          console.log('Feature', 'after save', apiName, 'remove from cache', cacheId, ctx.instance.id, ctx.instance.name, value.length || value);
-        }
+        console.log(apiName, 'remove from cache', cacheId, value.length || value);
         cache.put(cacheId, undefined);
       }
-    }
+
     blockFeatures.blockFeaturesCacheClear(cache);
-    next();
-  });
+  }
 
   /*--------------------------------------------------------------------------*/
 
