@@ -1,5 +1,7 @@
 'use strict';
 
+var { debounce }  = require('lodash/function');
+
 
 var acl = require('../utilities/acl')
 var identity = require('../utilities/identity')
@@ -37,6 +39,8 @@ const { Writable, pipeline, Readable } = require('stream');
 
 /* global process */
 
+// -----------------------------------------------------------------------------
+
 
 /** This value is used in SSE packet event id to signify the end of the cursor in pathsViaStream. */
 const SSE_EventID_EOF = -1;
@@ -55,6 +59,8 @@ const blockRemoteType = 'any';
 const use_dbLookupAliases = true;
 
 const trace_block = 2;
+
+// -----------------------------------------------------------------------------
 
 class SseWritable extends Writable {
   // this class is based on a comment by Daniel Aprahamian in https://jira.mongodb.org/browse/NODE-1408
@@ -959,18 +965,27 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
    */
   Block.observe('after save', function(ctx, next) {
     if (ctx.instance) {
+        let blockId = ctx.instance.id;
+        if (trace_block > 3) {
+          // this may trace for each feature when e.g. adding a dataset with table/csv upload
+          console.log('Block', 'after save',  ctx.instance.id, ctx.instance.name, blockId);
+        }
+        debounce(() => blockAfterSave(blockId), 2000);
+    }
+    next();
+  });
+
+  function blockAfterSave(blockId) {
       const apiName = 'blockFeaturesInterval';
-      const blockIds = [ctx.instance.id],
+      const blockIds = [blockId],
             cacheId = apiName + '_' + blockIds.join('_');
       let value = cache.get(cacheId);
       if (value) {
-        console.log('Block', 'after save', apiName, 'remove from cache', ctx.instance.id, ctx.instance.name, value);
+        console.log(apiName, 'remove from cache', cacheId, value.length || value);
+        cache.put(cacheId, undefined);
       }
-      cache.put(cacheId, undefined);
-    }
     blockFeatures.blockFeaturesCacheClear(cache);
-    next();
-  });
+  }
 
 
   //----------------------------------------------------------------------------

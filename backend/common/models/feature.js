@@ -69,13 +69,14 @@ module.exports = function(Feature) {
       }
     });
 
+  /** identical to blockAfterSave()
+   */
   function featureAfterSave(blockId) {
       const apiName = 'blockFeaturesInterval';
       const blockIds = [blockId],
             cacheId = apiName + '_' + blockIds.join('_');
       let value = cache.get(cacheId);
       if (value) {
-        // this will trace for each feature when e.g. adding a dataset with table/csv upload
         console.log(apiName, 'remove from cache', cacheId, value.length || value);
         cache.put(cacheId, undefined);
       }
