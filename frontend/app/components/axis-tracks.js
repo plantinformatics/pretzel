@@ -1967,13 +1967,15 @@ export default InAxis.extend({
         isQtl = blockR.get('isQTL'),
         features = blockR.get('features')
           .toArray()  //  or ...
-          /** trait.featureFilter() defaults to true if feature does not have
-           * values.Trait whereas ontology.featureFilter() defaults to false if
-           * feature is a QTL and does not have values.Ontology.
+          /** if feature does not have values.{Trait,Ontology}, the defaults of
+           * trait.featureFilter() and ontology.featureFilter() are
+           * ! visibleBy{Trait,Ontology}
+           * The filters are only applied if the features in this block are QTLs
+           *
            * Also, this will compound the 2 filters - the requirement can be
            * decided as the Ontology Visibility feature is trialled.
            */
-          .filter((feature) => trait.featureFilter('traits', feature))
+          .filter((feature) => ! isQtl || trait.featureFilter('traits', feature))
           .filter((feature) => ! isQtl || ontology.featureFilter(feature))
           /* filter out QTL .value which is [] and not yet computed from .values.flankingMarkers.
            * This assumes feature.value.length is defined; now there shouldn't be any Feature.range or non-array .value
