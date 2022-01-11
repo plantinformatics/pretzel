@@ -18,6 +18,7 @@ var { localiseBlocks, blockLocalId } = require('../utilities/localise-blocks');
 const { blockServer } = require('../utilities/api-server');
 const { getAliases } = require('../utilities/localise-aliases');
 const { childProcess } = require('../utilities/child-process');
+const { ArgsDebounce } = require('../utilities/debounce-args');
 
 var ObjectId = require('mongodb').ObjectID
 
@@ -188,7 +189,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     /** @param left, right are localised - just the ID string */
       .then(([left, right]) => {
     let db = this.dataSource.connector;
-	  console.log('pathsProgressive', /*db,*/ JSON.stringify(left), JSON.stringify(right), intervals /*, options, cb*/);
+    console.log('pathsProgressive', /*db,*/ JSON.stringify(left), JSON.stringify(right), intervals /*, options, cb*/);
     let cacheId = left + '_' + right,
     /** If intervals.dbPathFilter, we could append the location filter to cacheId,
      * but it is not clear yet whether that would perform better.
@@ -315,7 +316,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     let promise =  models.Block.find({where: {id: {inq: blockIds}}} /*,options*/).then(blocks => {
       return  blocks.map(blockR => {
         let block = blockR.__data;
-	// this trace can cause warning about deprecated .inspect() in node 10.
+        // this trace can cause warning about deprecated .inspect() in node 10.
         // console.log('blockGet then map', block.id || block || blockR);
         this.blockRecordsStore(block.id, block);
         return block;
@@ -961,16 +962,17 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     next()
   })
 
+  let argsDebounce = new ArgsDebounce();
   /** Clear result cache entries which may be invalidated by the save.
    */
   Block.observe('after save', function(ctx, next) {
     if (ctx.instance) {
-        let blockId = ctx.instance.id;
-        if (trace_block > 3) {
-          // this may trace for each feature when e.g. adding a dataset with table/csv upload
-          console.log('Block', 'after save',  ctx.instance.id, ctx.instance.name, blockId);
-        }
-        debounce(() => blockAfterSave(blockId), 2000);
+      let blockId = ctx.instance.id;
+      if (trace_block > 3) {
+        // this may trace for each feature when e.g. adding a dataset with table/csv upload
+        console.log('Block', 'after save',  ctx.instance.id, ctx.instance.name, blockId);
+      }
+      argsDebounce.debounced(blockAfterSave, blockId, 1000)();
     }
     next();
   });

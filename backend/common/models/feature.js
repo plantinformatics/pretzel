@@ -4,8 +4,6 @@
 
 const Queue = require('promise-queue');
 
-var { debounce, throttle }  = require('lodash/function');
-
 
 /*----------------------------------------------------------------------------*/
 
@@ -18,6 +16,7 @@ const { childProcess } = require('../utilities/child-process');
 var upload = require('../utilities/upload');
 var { filterBlastResults } = require('../utilities/sequence-search');
 var blockFeatures = require('../utilities/block-features');
+const { ArgsDebounce } = require('../utilities/debounce-args');
 
 const cacheLibraryName = '../utilities/results-cache';
 var cache = require(cacheLibraryName);
@@ -54,6 +53,8 @@ module.exports = function(Feature) {
 
   /*--------------------------------------------------------------------------*/
 
+  let argsDebounce = new ArgsDebounce();
+
   /** Clear result cache entries which may be invalidated by the save.
    */
   Feature.observe(
@@ -64,7 +65,7 @@ module.exports = function(Feature) {
         if (trace > 3) {
           console.log('Feature', 'after save',  ctx.instance.id, ctx.instance.name, blockId);
         }
-        debounce(() => featureAfterSave(blockId), 1000);
+        argsDebounce.debounced(featureAfterSave, blockId, 1000)();
         next();
       }
     });
