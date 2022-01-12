@@ -812,7 +812,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     let
     /** this cacheId is also calculated in utilities/block-features.js : blockFeaturesCacheClear() */
     cacheId = fnName + '_' + fieldName,
-    result = cache.get(cacheId);
+    result; // switch off cache - may need cache per user. //  = cache.get(cacheId);
     if (paramError) {
       cb(paramError);
     } else

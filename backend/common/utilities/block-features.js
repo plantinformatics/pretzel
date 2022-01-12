@@ -1,3 +1,5 @@
+var { flatten }  = require('lodash/array');
+
 const { blockFilterValue0 } = require('./paths-aggr');
 
 
@@ -5,6 +7,7 @@ var ObjectID = require('mongodb').ObjectID;
 
 /*----------------------------------------------------------------------------*/
 
+/* global require */
 /* global exports */
 /* global process */
 
@@ -359,7 +362,7 @@ exports.blockValues = function(db, fieldName) {
       }]).toArray()
     .then((datasets) => {
       let
-      datasetIds = datasets[0].ids,
+      datasetIds = flatten(datasets.map((d) => d.ids)),
       blocks =
         db.collection('Block').aggregate([
           {$match : {datasetId : {$in : datasetIds}, 'meta._origin' : {$exists: false}}},
@@ -373,7 +376,7 @@ exports.blockValues = function(db, fieldName) {
     })
     .then((blocks) => {
       let
-      blockIds = blocks.map((b_) => b_.ids[0]),
+      blockIds = flatten(blocks.map((b) => b.ids)),
       fieldNamePlural = (fieldName === 'Ontology') ? 'Ontologies' : fieldName + 's',
       cursor =
         db.collection('Feature').aggregate([
