@@ -5,6 +5,7 @@ var Promise = require('bluebird')
 const bent = require('bent');
 
 const { datasetParentContainsNamedFeatures } = require('./data-check');
+const { gatherClientId } = require('./identity');
 
 const load = require('./load');
 
@@ -361,15 +362,41 @@ exports.handleJson = function(msg, uploadParsed, cb) {
   /** If Dataset with given id exists, remove it.
    * If id doesn't exist, or it is removed OK, then call okCallback,
    * otherwise pass the error to the (API request) replyCb.
-   * @param if false and dataset id exists, then fail - call replyCb() with Error.
+   * @param options optionsFromRequest
+   * @param id  datasetId
+   * @param replaceDataset if false and dataset id exists, then fail - call replyCb() with Error.
    */
-  exports.removeExisting = function(models, id, replaceDataset, replyCb, okCallback) {
+  exports.removeExisting = function(models, options, id, replaceDataset, replyCb, okCallback) {
+    const fnName = 'removeExisting';
     models.Dataset.exists(id, { unfiltered: true }).then((exists) => {
-      console.log('removeExisting', "'", id, "'", exists);
+      console.log(fnName, "'", id, "'", exists);
       if (exists) {
         if (! replaceDataset) {
           replyCb(Error("Dataset '" + id + "' exists"));
         } else {
+          /** also @see utilities/identity.js : queryFilterAccessible(), 
+           * models/record.js, 
+           * boot/access.js : canWrite(), datasetPermissions()
+           */
+          let clientIdString = gatherClientId(options);
+          let clientId = options.accessToken.userId;
+          console.log(fnName, options, clientIdString, clientId, typeof clientId);
+          /** alternative : let where = {clientId: clientId, _id : id}; */
+          models.Dataset.findById(id, {}, { unfiltered: true } )
+            .then((dataset) => {
+              console.log(fnName, dataset);
+              /* if using .find( {where} )
+               * let dataset = datasets && datasets.length && datasets.find((d) => d.id === id); */
+              /** id exists, so dataset !== undefined.
+               * if using {where} then !dataset would imply it is owned by another user. */
+              if (dataset && (clientIdString !== dataset.clientId.id.hexSlice())) {
+                let error = Error('Dataset ' + id + ' is not owned by this user');
+                // .catch does replyCb(error);
+                // don't proceed to following .then()
+                throw error;
+              }
+            })
+            .then(() => {
         /* without {unfiltered: true}, the dataset was not found by destroyAll.
          * destroyAllById(id ) also did not found the dataset (callback gets info.count === 0).
          * .exists() finds it OK.
@@ -378,10 +405,14 @@ exports.handleJson = function(msg, uploadParsed, cb) {
           if (err) {
             replyCb(err);
           } else {
-            console.log('removeExisting removed', id);
+            console.log(fnName, 'removed', id);
             okCallback();
           }
         });
+            })
+            .catch((error) => {
+              replyCb(error);
+            });
         }
       } else {
         okCallback();

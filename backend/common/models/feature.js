@@ -223,7 +223,7 @@ module.exports = function(Feature) {
           /** same as convertSearchResults2Json() in dnaSequenceSearch.bash */
           let datasetNameFull=`${parent}.${datasetName}`;
           console.log('before removeExisting "', datasetNameFull, '"', '"', jsonFile, '"');
-          upload.removeExisting(models, datasetNameFull, /*replaceDataset*/true, cb, loadAfterDelete);
+          upload.removeExisting(models, options, datasetNameFull, /*replaceDataset*/true, cb, loadAfterDelete);
 
           function loadAfterDelete(err) {
             upload.loadAfterDeleteCb(
