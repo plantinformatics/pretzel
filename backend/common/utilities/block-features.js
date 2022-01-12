@@ -373,7 +373,7 @@ exports.blockValues = function(db, fieldName) {
     })
     .then((blocks) => {
       let
-      blockIds = blocks[0].ids,
+      blockIds = blocks.map((b_) => b_.ids[0]),
       fieldNamePlural = (fieldName === 'Ontology') ? 'Ontologies' : fieldName + 's',
       cursor =
         db.collection('Feature').aggregate([
