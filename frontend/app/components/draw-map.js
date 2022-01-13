@@ -2649,6 +2649,9 @@ export default Component.extend(Evented, {
     if (! oa.axisApi.axisTitleFamily)
       oa.axisApi.axisTitleFamily = axisTitleFamily;
     /** Update the axis title, including the block sub-titles.
+     * If ! axisTitle_dataBlocks, don't show the data block sub-titles, only the first line;
+     * this is selected in axisName2Blocks().
+     *
      * From the number of block sub-titles, calculate 'y' : move title up to
      * allow for more block sub-titles.
      * Create / update a <tspan> for each block, including the parent / reference block.
@@ -2658,6 +2661,7 @@ export default Component.extend(Evented, {
      * In usage, axisTitleS is a selection of either a single axis, or all axes.
      */
     function axisTitleFamily(axisTitleS) {
+      if (axisTitle_dataBlocks) {
       axisTitleS
       // .text(axisTitle /*String*/)
       // shift upwards if >1 line of text
@@ -2673,6 +2677,7 @@ export default Component.extend(Evented, {
           }
         })
       ;
+      }
 
 
 
