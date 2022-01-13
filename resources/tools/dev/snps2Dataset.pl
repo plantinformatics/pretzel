@@ -303,7 +303,7 @@ sub headerLine($$) {
 
 #-------------------------------------------------------------------------------
 
-# Sanitize input by removing punctuation other than space, comma, _, ., /, \n
+# Sanitize input by removing punctuation other than space, comma, -, _, ., /, \n
 # Commonly _ and . are present in parentName.
 # Space appears in commonName (handled in .bash).
 # , is used for splitting csv lines, and / appears in some chr names e.g. 'LG5/LG7'
@@ -311,7 +311,7 @@ sub headerLine($$) {
 sub deletePunctuation($)
 {
   my ($text) = @_;
-  $text =~ tr/_.,\/\n 0-9A-Za-z//cd;
+  $text =~ tr/-_.,\/\n 0-9A-Za-z//cd;
   return $text;
 }
 
