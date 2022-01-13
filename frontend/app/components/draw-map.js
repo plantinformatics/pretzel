@@ -2805,12 +2805,26 @@ export default Component.extend(Evented, {
 //- moved to ../utils/draw/axis.js : yAxisTextScale(),  yAxisTicksScale(),  yAxisBtnScale()
 
     // Add a brush for each axis.
+    let gBrushParent =
     allG.append("g")
-      .attr("class", "brush")
+      .attr("class", "brush");
+    /** Ensure there is clipPath & rect in gBrushParent, and set its geometry. */
+    function brushClipSize(gBrushParent) {
+      gBrushParent
       .each(function(axisID) {
         brushClip(d3.select(this), axisID)
           .each(function(d) { d3.select(this).call(oa.y[d].brush); });
       });
+    }
+    /** brushClip() uses getBBox(), so call again after the geometry has settled.
+     * If this works reliably, it might suggest splitting the append(clipPath)
+     * from the geometry setting.
+     * The 2sec call should be fine for most computers, some might take until
+     * 5sec to settle the geometry.
+     */
+    brushClipSize(gBrushParent);
+    later(() => brushClipSize(gBrushParent), 2000);
+    later(() => brushClipSize(gBrushParent), 5000);
 
 
     if (allG.nodes().length)
