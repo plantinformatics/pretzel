@@ -2692,9 +2692,11 @@ export default Component.extend(Evented, {
       .enter()
       .append("tspan")
       .attr('class', 'blockTitle');
+      if (axisTitle_dataBlocks) {
       subTitleE.each(AxisTitleBlocksServers.prototype.prependTspan);
+      }
       subTitleS.exit()
-        .each(AxisTitleBlocksServers.prototype.remove1)
+        // .each(AxisTitleBlocksServers.prototype.remove1)  // enable if axisTitle_dataBlocks
         .remove();
       let subTitleM =
       subTitleE.merge(subTitleS)
@@ -2724,7 +2726,9 @@ export default Component.extend(Evented, {
           menuActions_block();
         });
 
-      axisTitleS.call(AxisTitleBlocksServers.prototype.render.bind(axisTitleBlocksServers));
+      if (axisTitle_dataBlocks) {
+        axisTitleS.call(AxisTitleBlocksServers.prototype.render.bind(axisTitleBlocksServers));
+      }
     };
 
     function axisName2Blocks (axisName) {
@@ -2793,8 +2797,10 @@ export default Component.extend(Evented, {
         .attr("viewBox", oa.vc.viewBox.bind(oa.vc))
       ;
 
+      if (axisTitle_dataBlocks) {
       let axisTitleBlocksServers = new AxisTitleBlocksServers(oa.svgContainer, oa.axisTitleLayout, me.get('apiServers'));
       t.on('end', () => axisTitleBlocksServers.position(axisTitleS));
+      }
 
       /** showZoomResetButtonXPosn() is called in axis-1d and axis-2d,
        * ideally the call will be only in axis-1d, but for now this
