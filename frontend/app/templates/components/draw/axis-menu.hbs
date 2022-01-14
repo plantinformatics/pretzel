@@ -34,6 +34,11 @@
   <ul class="list-unstyled dataBlocks">
     {{#each dataBlocks as |dBlockS|}}
     <li style={{compute (action this.dataBlockColourStyle dBlockS)}}>
+      {{#if this.multipleServers}}
+        {{!-- circle character is unicode : (U+2B24) : Black Large Circle --}}
+        <div class="apiServer" style={{compute (action this.dataBlockServerColourStyle dBlockS)}}>⬤</div>
+      {{/if}}
+
       <button onClick={{action this.blockUnview dBlockS}}>
        {{!--  "&#x2573;", glyphicon-sound-7-1, glyphicon-remove-sign --}}
        ╳

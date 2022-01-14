@@ -1,6 +1,7 @@
 import Ember from 'ember';
 import { computed } from '@ember/object';
 import { next as run_next } from '@ember/runloop';
+import { inject as service } from '@ember/service';
 import { htmlSafe } from '@ember/template';
 
 import { stacks  } from '../../utils/stacks';
@@ -16,6 +17,8 @@ const closeAfterAction = false;
  * @param axisApi	axisApi.menuActions defines the actions for the axis menu buttons
  */
 export default Ember.Component.extend({
+  apiServers : service(),
+
 
   classNames: ['axis-menu'],
 
@@ -166,6 +169,30 @@ export default Ember.Component.extend({
     featureCountText = (featureCount || featureCountLoaded) ? featureCountLoaded + ' / ' + featureCount : '';
     return featureCountText;
   },
+
+  // ---------------------------------------------------------------------------
+
+  // using extracts (multipleServers and lookupServerName) from utils/draw/axisTitleBlocksServers_tspan.js : AxisTitleBlocksServers.prototype.render()
+  multipleServers : computed('apiServers.serversLength', function () {
+    return this.apiServers.get('serversLength') > 1;
+  }),
+
+  dataBlockServerColour(blockS) {
+    let
+    block = blockS.block,
+    colour = this.apiServers.lookupServerName(block.store.name).get('colour');
+    return colour;
+  },
+  dataBlockServerColourStyle(blockS) {
+    let
+    colour = this.dataBlockServerColour(blockS),
+    style = htmlSafe('color: ' + colour);
+    return style;
+  },
+
+
+
+  // ---------------------------------------------------------------------------
 
 });
 
