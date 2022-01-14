@@ -117,10 +117,16 @@ export default Ember.Component.extend({
         /* returning undefined is also OK, result is used in axis-menu.hbs : #each dataBlocks */
         dataBlocks = [];
       } else {
-        /** skip the reference block, which is shown above the data block list.
+        /** skip the reference block, which is shown above the data block list,
+         * if it is not a data block.  A GM (Genetic Map) is the first block of
+         * its axis and it is data.
+         *
          * This can change to use stacks-view:axesBlocks().
          */
-        dataBlocks = this.block.axis.blocks.slice(1);
+        let
+        axisBlocks = this.block.axis.blocks,
+        firstIsData = axisBlocks[0].block.isData;
+        dataBlocks = axisBlocks.slice(firstIsData ? 0 : 1);
       }
       return dataBlocks;
     }),
