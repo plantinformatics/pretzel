@@ -18,6 +18,7 @@ import { subInterval, overlapInterval, inRange } from '../../utils/draw/zoomPanC
 
 
 /* global d3 */
+/* global DocumentTimeline */
 
 /*--------------------------------------------------------------------------*/
 
@@ -122,6 +123,28 @@ export default Component.extend({
    */
   debounceTime : 400,
   throttleTime : 40,
+
+  // ---------------------------------------------------------------------------
+
+  /** time of last change by user of a GUI slider which may require redraw; if
+   * redrawing from a user adjustment such as a slider, then don't use a
+   * transition.  This gives the effect of the rendered elements moving directly
+   * with the user's adjustment.  In the other case, e.g. change of a checkbox
+   * or toggle, a transition is used.
+   */
+  sliderChangeTime : undefined,
+  aSliderHasChanged() {
+    let
+    documentTimeline = new (DocumentTimeline || window.DocumentTimeline)();
+    this.set('sliderChangeTime', documentTimeline.currentTime);
+  },
+  get timeSinceASliderHasChanged() {
+    let
+    documentTimeline = new (DocumentTimeline || window.DocumentTimeline)(),
+    sliderChangeTime = this.get('sliderChangeTime'),
+    since = sliderChangeTime && (documentTimeline.currentTime - sliderChangeTime);
+    return since;
+  },
 
   /*--------------------------------------------------------------------------*/
 
