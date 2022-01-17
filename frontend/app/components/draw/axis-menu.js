@@ -1,6 +1,7 @@
 import Ember from 'ember';
 import { computed } from '@ember/object';
-import { next as run_next } from '@ember/runloop';
+import { alias } from '@ember/object/computed';
+import { next as run_next, later } from '@ember/runloop';
 import { inject as service } from '@ember/service';
 import { htmlSafe } from '@ember/template';
 
@@ -18,6 +19,8 @@ const closeAfterAction = false;
  */
 export default Ember.Component.extend({
   apiServers : service(),
+  controls : service(),
+  controlsView : alias('controls.controls.view'),
 
 
   classNames: ['axis-menu'],
@@ -190,6 +193,27 @@ export default Ember.Component.extend({
     return style;
   },
 
+  // ---------------------------------------------------------------------------
+
+  xOffsetsEffect : computed('xOffsetsChangeCount', function () {
+    dLog('xOffsetsEffect', this.get('xOffsetsChangeCount'));
+    let tooltip = this.get('popoverTooltip');
+    if (tooltip) {
+      later(() => {
+        tooltip.hide();
+        tooltip.show();
+      });
+    }
+  }),
+
+  /** from the value of popover in .hbs <EmberPopover ...   as |popover| >,
+   * get the value of popover._tooltip.
+   */
+  get popoverTooltip () {
+    /** only 1 child, so expect that this.get('childViews.0._debugContainerKey') === "component:ember-popover" */ 
+    let tooltip = this.get('childViews.0._tooltip');
+    return tooltip;
+  },
 
 
   // ---------------------------------------------------------------------------

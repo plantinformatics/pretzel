@@ -415,6 +415,11 @@ export default Component.extend(Evented, {
 
   /*------------------------------------------------------------------------*/
 
+  xOffsets : {},
+  xOffsetsChangeCount : 0,
+
+  // ---------------------------------------------------------------------------
+
   actions: {
 //-	?
     updatedSelectedFeatures: function(selectedFeatures) {
@@ -1195,7 +1200,12 @@ export default Component.extend(Evented, {
       });
       /** scaled x value of each axis, with its axisID. */
       let offsetArray = oa.stacks.axisIDs().map((d) => ({axisId : d, xOffset : o[d]}));
-      me.set('xOffsets', offsetArray);
+      let previous = me.get('xOffsets'),
+          changed = ! isEqual(previous, offsetArray);
+      if (changed) {
+        me.set('xOffsets', offsetArray);
+        me.incrementProperty('xOffsetsChangeCount');
+      }
     }
     /** Map an Array of Block-s to their longNames(), useful in log trace. */
     function Block_list_longName(blocks) {
@@ -6136,6 +6146,7 @@ export default Component.extend(Evented, {
           500);
         updateXScale();
         collateO();
+        me.axesShowXOffsets();
         if (widthChanged)
           updateAxisTitleSize(undefined);
         let 
@@ -6400,6 +6411,14 @@ export default Component.extend(Evented, {
       this.oa.stacks.forEach(function (s) { s.redraw(t); });
     }
   },
+  /** re-apply axisTransformO(), which uses the axis x scales oa.o */
+  axesShowXOffsets() {
+    let 
+    oa = this.oa,
+    t = oa.svgContainer;
+    t.selectAll(".axis-outer").attr("transform", Stack.prototype.axisTransformO);
+  },
+
 
 //--------------------------------------------------------------------------
 
@@ -6579,7 +6598,10 @@ export default Component.extend(Evented, {
     'controls.view.showAxisText',
     /* axisTicksOutside doesn't resize, but a redraw is required (and re-calc could be done) */
     'controls.view.axisTicksOutside',
+    /* after 'controls.view.extraOutsideMargin' changes, axis x offsets are re-calculated.  related : 'oa.vc.axisXRange' */
     'controls.view.extraOutsideMargin',
+    /* ChangeCount represents 'xOffsets.@each.@each', */
+    'xOffsetsChangeCount',
     /** split-view : sizes of the components adjacent the resize gutter : 0: draw-map and 1 : tables panel. */
     'componentGeometry.sizes.0',
     'controls.window.tablesPanelRight',
