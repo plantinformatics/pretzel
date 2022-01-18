@@ -896,11 +896,12 @@ sub roundPosition($)
 }
 
 # Given a string (e.g. flanking marker cell value),
-# split at comma or space, wrap each word (marker name) with "",
+# split at comma or space/s, wrap each word (marker name) with "",
 # and join with comma space
 sub splitAndQuote($)
 {
- return   join(', ', map { '"' . $_ . '"' } split(/[, ]/, $_[0]));
+ # multiple adjacent spaces within the string are treated as a single separator.
+ return   join(', ', map { '"' . $_ . '"' } split(/,|\s+/, $_[0]));
 }
 
 
