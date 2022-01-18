@@ -9,6 +9,7 @@ import { later, bind } from '@ember/runloop';
 
 import { featureEdit } from '../components/form/feature-edit';
 import { eltClassName } from '../utils/domElements';
+import { axisFeatureCircles_selectOneInAxis } from '../utils/draw/axis';
 
 import config from '../config/environment';
 
@@ -431,10 +432,11 @@ export default Component.extend({
       }).on("mouseover", function(e) {
         if (e.target.tagName == "TD") {
           var tr = e.target.parentNode;
-          if (tr.childNodes[2]) {
-            var feature_name = $(tr.childNodes[2]).text();
-            if (feature_name.indexOf(" ") == -1) {
-              that.highlightFeature(feature_name);
+          {
+            // related : hot.getDataAtRowProp(row, 'dataPretzelFeature')
+            var feature = tr.__dataPretzelFeature__;
+            if (feature) {
+              that.highlightFeature(feature);
               return;
             }
           }
@@ -524,7 +526,13 @@ export default Component.extend({
     }
   }),
 
-  /** @param feature may be name of one feature, or an array of features.
+  /** @param feature may be name of one feature, or an array of features -
+   * selectedFeatures data : {
+   *   Chromosome: string : datasetId ':' block name (scope)
+   *   Feature: string : feature name
+   *   Position: number
+   *   feature: ember-data object
+   * }
    */
   highlightFeature: function(feature) {
     d3.selection.prototype.moveToFront = function() {
@@ -538,16 +546,16 @@ export default Component.extend({
       .style("stroke", "red");
     if (feature) {
       if (Array.isArray(feature)) {
-        feature.forEach((f) => this.highlightFeature1(f.Feature)); // equiv .feature.name
+        feature.forEach((f) => this.highlightFeature1(f.feature));
       } else {
         this.highlightFeature1(feature);
       }
     }
   },
-  /** Highlight 1 feature, given feature .name */
-  highlightFeature1: function(featureName) {
+  /** Highlight 1 feature, given feature */
+  highlightFeature1: function(feature) {
       /** see also handleFeatureCircleMouseOver(). */
-      d3.selectAll("g.axis-outer > circle." + eltClassName(featureName))
+      axisFeatureCircles_selectOneInAxis(undefined, feature)
         .attr("r", 5)
         .style("fill", "yellow")
         .style("stroke", "black")

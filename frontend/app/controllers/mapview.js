@@ -461,10 +461,10 @@ export default Controller.extend(Evented, {
         let isViewed = f.feature.get('blockId.isViewed');
         if (! isViewed) {
           let
-          // datablockId is f.feature.get('blockId.id'),
-          chrName = f.feature.get('blockId.referenceBlockOrSelf.id'),
-          featureName = f.Feature,
-          circleS = axisFeatureCircles_selectOne(chrName, featureName);
+          /** Could use axisFeatureCircles_selectOneInAxis() here, probably no benefit.
+           * Related : axisFeatureCircles_selectUnviewed(), axisFeatureCircles_removeBlock().
+           */
+          circleS = axisFeatureCircles_selectOne(f.feature);
           circleS.remove();
         }
         return isViewed;

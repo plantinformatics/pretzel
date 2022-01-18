@@ -74,7 +74,9 @@ import {  Axes, maybeFlip, maybeFlipExtent,
           ensureYscaleDomain,
           /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform,
           eltId, axisEltId, eltIdAll, axisEltIdTitle,
+          axisFeatureCircles_eltId,
           axisFeatureCircles_selectAll,
+          axisFeatureCircles_selectOneInAxis,
           axisFeatureCircles_removeBlock,
           /*, axisTitleColour*/  }  from '../utils/draw/axis';
 import { stacksAxesDomVerify }  from '../utils/draw/stacksAxes';
@@ -4269,8 +4271,10 @@ export default Component.extend(Evented, {
               /** lacking the g.block structure which would enable f to be
                * unique within its parent g, this combinedId enables transition
                * to be implemented in an improvised way.
+               * Update : originally (Genetic Maps) f.name was unique within block,
+               * now use f.id because f.name can be repeated within block.
                */
-              let combinedId = CSS.escape('fc_' + block.axisName + '_' + f),
+              let combinedId = axisFeatureCircles_eltId(feature),
               dot = axisS.selectAll('circle#' + combinedId);
               if (! dot.empty()) {
                 dot
@@ -4292,8 +4296,8 @@ export default Component.extend(Evented, {
                * @see table-brushed.js: highlightFeature() */
               }
             } else {
-              let f_ = eltClassName(f);
-              axisS.selectAll("circle." + f_).remove();
+               axisFeatureCircles_selectOneInAxis(axisS, feature)
+                .remove();
             }
             }
           });
