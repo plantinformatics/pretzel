@@ -327,6 +327,27 @@ function typeMetaIdChildrenTree(levelMeta, tree) {
   return levelMeta;
 }
 
+// -----------------------------------------------------------------------------
+
+/** Given an id/children ontology tree, collate and return an object which maps
+ * from node.id to node for all nodes of the tree.
+ * Written for Ontology trees and used in ontologyId2Node(),
+ * ontologyId2NodeFor(), this is generally applicable.
+ */
+function collateOntologyId2Node(tree) {
+  /** Add a node to a result. */
+  function reduceNode(result, parentKey, index, node) {
+    let id = node.id;
+    if (id) {
+      result[id] = node;
+    }
+    return result;
+  }
+  let
+  id2node = reduceIdChildrenTree(tree, reduceNode, {});
+  return id2node;
+}
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -345,7 +366,183 @@ function ontologyIdFromIdText(oid) {
 }
 
 
+/*============================================================================*/
+/* Moved here from components/panel/manage-explorer.js after 7f881acb
+ * These relate to trees with nodes having .id and .children
+ */
+
+/** reduce a tree to a result.
+ * Used for Ontology tree, result of ontology service getTree();
+ * each tree node has .id and .children.
+ * Added : incorporate multiple roots into a single tree, so the top level in
+ * that case will be an object { <rootId> : tree, ... }.
+ * Similar signature to Array.reduce().
+ * @param result
+ * @param reduceNode Add a node to a result function reduceNode(result, node) -> result;
+ * @param tree
+ */
+function walkTree(result, reduceNode, tree) {
+  const fnName = 'walkTree';
+  result = reduceNode(result, tree);
+  let children = tree.children;
+  if (isArray(children)) {
+    result = children.reduce((result, node) => {
+      result = walkTree(result, reduceNode, node);
+      return result;
+    }, result);
+  }
+  // dLog(fnName, result, tree);
+  return result;
+};
+
+/** Similar to mapTree(), this produces a tree of nodes which are each just {id : value},
+ * whereas mapTree() allows {id, type, node} to be included in the node.
+ */
+function mapTree0(levelMeta, result, tree) {
+  let value = result[tree.id] = {};
+  levelMeta.set(value, tree.type);
+  tree.children.forEach((c) => mapTree0(levelMeta, value, c));
+  return result;
+};
+/** Map the Ontology tree to a value-tree, with nodes containing :
+ *   {id, type, children, node : dataset_ontology}
+ * where dataset_ontology links to the corresponding node in the tree of
+ * datasets by Ontology.
+ * @param id2Node map OntologyId to {<parent> : {<scope> : [block, ...], ...}, ...}
+ * @param tree  Ontology API result
+ */
+function mapTree(levelMeta, id2Node, tree) {
+  let
+  /** used by copyNode() to lookup a value for .parent */
+  id2nc = {},
+  value = copyNode(levelMeta, id2nc, tree),
+  /** Originally tree was a single Ontology tree, now it can be multiple trees
+   * in an object, e.g. Object { CO_321: {…}, CO_323: {…}, CO_366: {…}, CO_338: {…} }
+   * in which case tree.id is not defined.
+   * (that was not reported as an error when mapTree() was defined in manage-explorer).
+   */
+  node = tree.id && id2Node[tree.id];
+  if (node) {
+    value.node = node;
+    dLog('mapTree', value, node);
+  }
+  if (value.text || value.id) {
+    /** same format as ontologyNameId(), rootOntologyNameId()     */
+    value.name = '[' + value.id + ']  ' + value.text;
+  }
+
+  if (tree.children === undefined) {
+    /* copyNode copies attributes for node with .id & .children, but not for plain object. */
+    /* optional : id2nc[value.name] = value;
+     * copyNode() does id2nc[n.id] = c, i.e. id2nc[value.id] = value, but value.id is undefined
+     */
+    Object.entries(tree)
+      .reduce((result, e) => {
+        result[e[0]] = mapTree(levelMeta, id2Node, e[1]);
+        return result;
+      }, value);
+  } else {
+    let children = tree.children;
+    if (isArray(children)) {
+      value.children = children.map((c) => {
+        /** copy of c */
+        let cc = mapTree(levelMeta, id2Node, c);
+        cc.parent = value;
+        return cc; });
+    } else if (children.children && children.id && children.text && children.type)
+    {
+      dLog('mapTree', 'value', value, 'tree', tree);      
+      tree.children = [tree.children];
+    }
+  }
+
+  return value;
+};
+
 /*----------------------------------------------------------------------------*/
+
+/** Make a copy of tree, which is addressed by id2n, with only the branches required
+ * to support id2Pn.
+ * @param levelMeta to record the node types of the output tree
+ * @param tree  ontologyTree
+ * @param id2n  ontologyId2Node : references from OntologyId into the corresponding nodes in ontologyTree
+ * @param id2Pn ontologyId2DatasetNodes : references from OntologyId into the parent nodes of blockFeatureOntologiesTree
+ */
+function treeFor(levelMeta, tree, id2n, id2Pn) {
+  let
+  id2nc = {},
+  treeCopy = copyNode(levelMeta, id2nc, tree);
+  /* could use forEachHash(), or pass {id2n, id2nc} as result in & out;
+   * or filterHash() | mapHash() (will that add the root ok ?).
+   */
+  /*treeCopy =*/ reduceHash(id2Pn, (t, oid, p) => {
+    oid = ontologyIdFromIdText(oid);
+    let on = id2n[oid];
+    if (! on) {
+      dLog('treeCopy', oid, 'not present in', id2n);
+    } else {
+      addNode(levelMeta, id2nc, on);
+    }
+  }, treeCopy);
+  return treeCopy;
+};
+/** Copy just 1 node. */
+function copyNode(levelMeta, id2nc, n) {
+  /** copy of node n */
+  let c;
+  if (n.children === undefined) {
+    dLog('copyNode', 'roots', n);
+    c = {};
+  } else {
+    c = Object.assign({}, n);
+    if (typeof n.children !== 'boolean') {
+      c.children = [];
+    }
+  }
+  levelMeta.set(c, n.type);
+  id2nc[n.id] = c;
+  if (n.parent) {
+    c.parent = id2nc[n.parent.id];
+  }
+  return c;
+}
+/** Add a copy of on to t, and supporting branch.
+ * @param id2nc index into treeCopy.
+ * @param on  node from ontologyTree
+ */
+function addNode(levelMeta, id2nc, on) {
+  let onc = id2nc[on.id];
+  if (! onc) {
+    let parent = on.parent;
+    if (parent) {
+      // change parent to refer to the copy of parent.
+      parent = addNode(levelMeta, id2nc, parent);
+    }
+    onc = copyNode(levelMeta, id2nc, on);
+    if (parent) {
+      if (parent.children) {
+        parent.children.push(onc);
+      } else {
+        parent[onc.id] = onc;
+      }
+    }
+  }
+  return onc;
+}
+
+/*----------------------------------------------------------------------------*/
+
+/** @return a count of the children at the top level, or 2nd level if valueTree is multiple roots.
+ * @desc possibly displaying the leaf count would be more useful.
+ */
+function treesChildrenCount(valueTree) {
+  let count = valueTree.children ?
+      valueTree.children.length :
+      Object.values(valueTree).reduce((result, vt) => result += vt.children.length, 0);
+  return count;
+}
+
+/*============================================================================*/
 
 export {
   valueGetType,
@@ -355,5 +552,16 @@ export {
   unlinkDataIdChildrenTree,
   augmentMetaIdChildrenTree,
   typeMetaIdChildrenTree,
+  collateOntologyId2Node,
   ontologyIdFromIdText,
+
+  walkTree,
+  mapTree,
+  treeFor,
+  /** these don't need to be exported - used only by treeFor().
+  copyNode,
+  addNode,
+  */
+  treesChildrenCount,
+
 };

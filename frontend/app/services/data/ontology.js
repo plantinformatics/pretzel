@@ -45,10 +45,14 @@ export default Service.extend({
   block : service('data/block'),
   controls : service(),
   queryParams: service('query-params'),
+  blockValues : service('data/block-values'),
 
   //----------------------------------------------------------------------------
 
   urlOptions : alias('queryParams.urlOptions'),
+
+  ontologyId2Node : alias('blockValues.ontologyId2Node'),
+  ontologyId2NodeFor : alias('blockValues.ontologyId2NodeFor'),
 
   /*--------------------------------------------------------------------------*/
   // results from direct requests to CropOntology.org API
@@ -63,6 +67,15 @@ export default Service.extend({
   byId :  EmberObject.create(),
   /** List of Ontology Root IDs received. */
   rootsReceived : A(),
+
+  // ---------------------------------------------------------------------------
+
+  init() {
+    this._super(...arguments);
+
+    /** initialise service used in dependencies. */
+    this.get('blockValues');
+  },
 
   /*--------------------------------------------------------------------------*/
 
@@ -256,7 +269,7 @@ export default Service.extend({
 
   /** initially add all Ontology IDs to the colour scale
    */
-  ontology_colour_scale : computed('ontologyCollation.ontologyId2Node',  function () {
+  ontology_colour_scale : computed('ontologyId2Node',  function () {
     /** similar : see also axis.js : trait_colour_scale */
     let scale = d3.scaleOrdinal().range(d3.schemeCategory10);
     return scale;
@@ -276,8 +289,8 @@ export default Service.extend({
     let ontology_colour_scale = this.get('ontology_colour_scale');
     let ids = ontology_colour_scale.domain();
     let found;
-    let treeData = this.get('ontologyCollation'),
-        id2n = treeData.get('ontologyId2Node._result');
+    let
+    id2n = this.get('ontologyId2Node._result');
     dLog('qtlColour', id2n);
     let colour;
     let isRoot;
@@ -320,8 +333,8 @@ export default Service.extend({
    */
   qtlColourHierarchy(ontologyId) {
     let ontology_colour_scale = this.get('ontology_colour_scale');
-    let treeData = this.get('ontologyCollation'),
-        id2n = treeData.get('ontologyId2NodeFor._result');
+    let
+    id2n = this.get('ontologyId2NodeFor._result');
     let ids = ontology_colour_scale.domain();
 
     if (id2n && ids.length) {
@@ -362,7 +375,7 @@ export default Service.extend({
   qtlColourLevel(ontologyId) {
     let ontology_colour_scale = this.get('ontology_colour_scale');
     let treeData = this.get('ontologyCollation');
-    let id2nP = treeData.get('ontologyId2NodeFor');
+    let id2nP = this.get('ontologyId2NodeFor');
     let levelIds;
 
     id2nP.then((id2n) => {
@@ -375,7 +388,7 @@ export default Service.extend({
         levelIds = this.colourChildren(node.parent);
         setScaleDomain.apply(this, [levelIds]);
       } else {
-        let treeP = treeData.get('blockFeatureOntologiesTreeGrouped');
+        let treeP = this.get('blockValues.blockFeatureOntologiesViewedEmbedded');
         treeP.then((tree) => {
           /** There are 2 levels with .type === 'term' : ROOTs and their children.
            * Distinguish between these 2 levels, using the invented type 'ROOT'.  */
@@ -456,7 +469,7 @@ export default Service.extend({
   isVisibleMap : new WeakMap(),
   setOntologyIsVisible(ontologyId, checked) {
     this.ontologyIsVisible[ontologyId] = checked;
-    let id2n = this.get('ontologyCollation.ontologyId2Node._result'),
+    let id2n = this.get('ontologyId2Node._result'),
         node = id2n[ontologyId];
     if (node) {
       dLog('setOntologyIsVisible', node, checked);

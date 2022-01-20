@@ -6,7 +6,7 @@ import { A } from '@ember/array';
 import { bind } from '@ember/runloop';
 
 import { toPromiseProxy } from '../../utils/ember-devel';
-import { unlinkDataIdChildrenTree, augmentMetaIdChildrenTree, ontologyIdFromIdText } from '../../utils/value-tree';
+import { unlinkDataIdChildrenTree, augmentMetaIdChildrenTree, ontologyIdFromIdText, treeFor } from '../../utils/value-tree';
 
 // -----------------------------------------------------------------------------
 
@@ -19,6 +19,10 @@ const dLog = console.debug;
 export default Component.extend({
   ontology : service('data/ontology'),
   block : service('data/block'),
+  blockValues : service('data/block-values'),
+
+  ontologyId2Node : alias('blockValues.ontologyId2Node'),
+  blockFeatureOntologiesTreeEmbedded : alias('blockValues.blockFeatureOntologiesTreeEmbedded'),
 
 // alias('ontology.ontologyCollation'),
   ontologyCollation : computed('controlOptions.enableView', function () {
@@ -27,13 +31,12 @@ export default Component.extend({
     dLog('ontologyCollation', oc, this.controlOptions.enableView, this);
     return oc;
   }),
-  get blockFeatureOntologies() { return this.get('ontologyCollation.blockFeatureOntologies'); },
+  get blockFeatureOntologies() { return this.get('blockValues.blockFeatureOntologies'); },
   ontologiesTree : computed(
     // 'ontologyCollation.ontologiesTree',  // has embedded datasets : parent / scope / block
     'controlOptions.enableView',
     'controlOptions.showHierarchy',
-    'ontologyCollation.blockFeatureOntologiesTreeGrouped',
-    'ontologyCollation.blockFeatureOntologiesName',
+    'blockValues.blockFeatureOntologiesBlocks',
     function () {
       let
       ot = this.controlOptions.enableView && 
@@ -45,10 +48,10 @@ export default Component.extend({
     }),
   /** Filter out blocks which have no Ontology, wrap in PromiseProxy.
    */ 
-  blockFeatureOntologiesName : computed('ontologyCollation.blockFeatureOntologiesName', function () {
+  blockFeatureOntologiesName : computed('blockValues.blockFeatureOntologiesBlocks', function () {
     const
     fieldName = 'Ontologies',
-    boP = this.get('ontologyCollation.blockFeatureOntologiesName'),
+    boP = this.get('blockValues.blockFeatureOntologiesBlocks'),
     bofP = boP?.then(
       (bos) => bos.filter((blockTraits) => blockTraits[fieldName].length));
     return bofP && toPromiseProxy(bofP);
@@ -59,12 +62,12 @@ export default Component.extend({
    * the values here are OntologyIDs.
    */
   blockFeatureOntologiesNameFlat : computed(
-    'ontologyCollation.blockFeatureOntologiesName',
+    'blockValues.blockFeatureOntologiesBlocks',
     'block.viewed.[]',
     function () {
     const
     fieldName = 'Ontologies',
-    boP = this.get('ontologyCollation.blockFeatureOntologiesName'),
+    boP = this.get('blockValues.blockFeatureOntologiesBlocks'),
     bouP = boP?.then(
       (bos) => {
         let
@@ -131,8 +134,6 @@ export default Component.extend({
     // 'ontologyId2DatasetNodes',
     'blockFeatureOntologiesViewedIds',
     function () {
-      // ontologyCollation.blockFeatureOntologiesTreeGrouped ?
-
       /** similar to blockFeatureOntologiesTreeGrouped(); only a couple of lines in common in the non-promise part.
        * That function also does treesChildrenCount().
        */
@@ -143,16 +144,14 @@ export default Component.extend({
        * the former has added .parent links
        * It also has .node, added by mapTree(); these are deleted from the copy.
        */
-      treeP = oc.get('blockFeatureOntologiesTreeEmbedded'),
-      id2nP = oc.get('ontologyId2Node'),
+      treeP = this.get('blockFeatureOntologiesTreeEmbedded'),
+      id2nP = this.get('ontologyId2Node'),
       id2PnP = this.get('blockFeatureOntologiesViewedIds'),  // was ontologyId2DatasetNodes
       promise = Promise.all([treeP, id2nP, id2PnP]).then(([tree, id2n, id2Pn]) => {
         dLog(fnName, tree, id2n, 'id2Pn', id2Pn);
         /** convert array to Object, which treeFor() expects. */
         id2Pn = id2Pn.reduce((result, oid) => {result[oid] = true; return result;}, {});
         let
-        /** treeFor() will move to utils/data/grouping.js */
-        treeFor = oc.treeFor,
         valueTree = treeFor(this.get('levelMeta'), tree, id2n, id2Pn);
         /** treeFor() makes a copy so it is not necessary for unlinkDataIdChildrenTree() to make a copy. */
         unlinkDataIdChildrenTree(valueTree);
@@ -168,9 +167,8 @@ export default Component.extend({
       let proxy = toPromiseProxy(promise);
       return proxy;
   }),
-  // blockFeatureOntologiesTree : alias('ontologyCollation.blockFeatureOntologiesTree'),
-  // blockFeatureOntologiesTreeGrouped : alias('ontologyCollation.blockFeatureOntologiesTreeGrouped'),
-  levelMeta : alias('ontologyCollation.levelMeta'),
+
+  levelMeta : alias('blockValues.levelMeta'),
 
 
   // ---------------------------------------------------------------------------
