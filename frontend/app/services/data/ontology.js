@@ -269,7 +269,16 @@ export default Service.extend({
 
   /** initially add all Ontology IDs to the colour scale
    */
-  ontology_colour_scale : computed('ontologyId2Node',  function () {
+  ontology_colour_scale : computed( function () {
+    /** No dependency; might depend on ontologyId2Node since that defines the
+     * OntologyId search space used by qtlColour(), but that depends on
+     * blockFeatureOntologiesTreeEmbedded, which depends on
+     * ontologyId2DatasetNodes which updates when blocks are un-/viewed and we
+     * don't want to discard the colour mapping when a block is viewd.
+     * Instead the scale domain could be filtered against ontologyId2Node when it changes.
+     * Also there will probably be a need to clear the scale when the user does
+     * a level click.
+     */
     /** similar : see also axis.js : trait_colour_scale */
     let scale = d3.scaleOrdinal().range(d3.schemeCategory10);
     return scale;

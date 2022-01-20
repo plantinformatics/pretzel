@@ -36,7 +36,8 @@ export default Component.extend({
     // 'ontologyCollation.ontologiesTree',  // has embedded datasets : parent / scope / block
     'controlOptions.enableView',
     'controlOptions.showHierarchy',
-    'blockValues.blockFeatureOntologiesBlocks',
+    'blockFeatureOntologiesTreeOnly',
+    'blockFeatureOntologiesNameFlatMeta',
     function () {
       let
       ot = this.controlOptions.enableView && 
