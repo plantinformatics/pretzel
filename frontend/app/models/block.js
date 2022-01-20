@@ -648,6 +648,7 @@ export default Model.extend({
     /** Handle blocks whose dataset.parent has a .parent */
     let parent = this.get('datasetId.parent');
     if (parent && parent.parentName) {
+      if (! matchParentName)
       dLog('viewedReferenceBlocks', blockId, datasetName, parent.parentName);
       datasetName = parent.parentName;
     }

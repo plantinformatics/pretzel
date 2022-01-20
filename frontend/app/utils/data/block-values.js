@@ -77,6 +77,7 @@ function blockValuesViewed(fieldName) {
   blocksTraitsP = this.get('blockFeature' + fieldName + 'Blocks')
     .then((blocksTraits) => {
       let viewed = blocksTraits.filter((bt) => bt.block.isViewed);
+      dLog('blockValuesViewed', fieldName, viewed);
       return viewed;
     });
   return blocksTraitsP;

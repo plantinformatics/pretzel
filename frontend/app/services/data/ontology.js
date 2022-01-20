@@ -296,9 +296,14 @@ export default Service.extend({
     let isRoot;
     /** after devel, can reduce this to : && id2n && (parent = id2n[ontologyId]?.parent?.id) */
     let parent = true;
-    while (! (found = ids.includes(ontologyId)) && ! (isRoot = ontologyId.match(':ROOT')) && parent ) {
-      if (id2n) {
-        parent = id2n[ontologyId]?.parent;
+    if (! ids.length) {
+      found = false;
+    } else {
+      while (
+        (ontologyId !== undefined) &&
+          ! (found = ids.includes(ontologyId)) &&
+          ! (isRoot = ontologyId.match(':ROOT')) && parent ) {
+        parent = id2n && id2n[ontologyId]?.parent;
         if (parent) {
           dLog('qtlColour', ontologyId, parent, parent.id);
           ontologyId = parent.id;
@@ -466,14 +471,14 @@ export default Service.extend({
 
   ontologyIsVisible : {},
   ontologyIsVisibleChangeCount : 0,
-  isVisibleMap : new WeakMap(),
+  // isVisibleMap : new WeakMap(),
   setOntologyIsVisible(ontologyId, checked) {
     this.ontologyIsVisible[ontologyId] = checked;
     let id2n = this.get('ontologyId2Node._result'),
         node = id2n[ontologyId];
     if (node) {
       dLog('setOntologyIsVisible', node, checked);
-      this.isVisibleMap.set(node, checked);
+      // this.isVisibleMap.set(node, checked);
       this.setOntologyIsVisibleChildren(node, checked);
     }
     this.incrementProperty('ontologyIsVisibleChangeCount');

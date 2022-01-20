@@ -37,6 +37,7 @@ import { thenOrNow } from '../../utils/common/promises';
 import {
   valueGetType, mapHash, reduceHash, reduceIdChildrenTree, justUnmatched,
   logV,
+  collateOntologyId2Node,
   ontologyIdFromIdText,
   treeFor, treesChildrenCount,
  } from '../../utils/value-tree';
@@ -255,9 +256,15 @@ export default ManageBase.extend({
        * the former has added .parent links
        */
       treeP = this.get('blockFeatureOntologiesTreeEmbedded'),
+      /** id2nP needs to refer to the above tree (local
+       * blockFeatureOntologiesTreeEmbedded), so the local version is used
+       * rather than blockValues. */
       id2nP = this.get('ontologyId2Node'),
       id2PnP = this.get('ontologyId2DatasetNodes'),
       promise = Promise.all([treeP, id2nP, id2PnP]).then(([tree, id2n, id2Pn]) => {
+        /** Alternative to ensure that id2n (ontologyId2Node) matches tree
+        let id2n = collateOntologyId2Node(tree);
+        */
         dLog(fnName, tree, id2n, 'id2Pn', id2Pn);
         let
         valueTree = treeFor(this.get('levelMeta'), tree, id2n, id2Pn);
@@ -363,7 +370,14 @@ export default ManageBase.extend({
     return treeP;
   }),
 
-  ontologyId2Node : alias('blockValues.ontologyId2Node'),
+  /** collate a mapping [OntologyId] -> tree node */
+  ontologyId2Node : computed('blockFeatureOntologiesTreeEmbedded', function () {
+    /** use blockFeatureOntologiesTreeEmbedded in place of ontologyTree, to have .parent. */
+    let treeP = this.get('blockFeatureOntologiesTreeEmbedded');
+    let id2node = treeP.then((tree) => collateOntologyId2Node(tree));
+    return id2node;
+  }),
+
   ontologyId2NodeFor : alias('blockValues.ontologyId2NodeFor'),
 
   /*--------------------------------------------------------------------------*/

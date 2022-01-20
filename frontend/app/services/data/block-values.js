@@ -69,9 +69,10 @@ export default Service.extend({
 
   // ---------------------------------------------------------------------------
 
+  /** Ontology tree of QTLs of viewed blocks. */
   blockFeatureOntologiesTree : computed(
     'blockFeatureOntologies',
-    function () { return blockValuesTree.apply(this, ['Ontologies', 'blockFeatureOntologiesBlocks']); }),
+    function () { return blockValuesTree.apply(this, ['Ontologies', 'blockFeatureOntologiesViewed']); }),
 
   // ---------------------------------------------------------------------------
 
@@ -105,7 +106,7 @@ export default Service.extend({
     return promise;
   }),
 
-
+  /** OntologyId of QTLs of viewed blocks. */
   ontologyId2DatasetNodes : computed('blockFeatureOntologiesTree.isFulfilled', function () {
     let
     blocksOntologiesTree = this.get('blockFeatureOntologiesTree'),

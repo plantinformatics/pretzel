@@ -86,7 +86,9 @@ function reduceHash(h, fn, result) {
   for (var key in h) {
     if (h.hasOwnProperty(key)) {
       let value = h[key];
-      dLog(fnName, key, value, result);
+      if (trace_values > 2) {
+        dLog(fnName, key, value, result);
+      }
       result = fn(result, key, value);
     }
   }
@@ -424,7 +426,9 @@ function mapTree(levelMeta, id2Node, tree) {
   node = tree.id && id2Node[tree.id];
   if (node) {
     value.node = node;
-    dLog('mapTree', value, node);
+    if (trace_values > 1) {
+      dLog('mapTree', value, node);
+    }
   }
   if (value.text || value.id) {
     /** same format as ontologyNameId(), rootOntologyNameId()     */
