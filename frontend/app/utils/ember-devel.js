@@ -1,9 +1,11 @@
 import { later as run_later } from '@ember/runloop';
 
-/* global Ember */
-
 /*----------------------------------------------------------------------------*/
 /* Various utility functions for development / debugging of Ember objects. */
+
+const dLog = console.debug;
+
+// -----------------------------------------------------------------------------
 
 /** Find a parent with the nominated type. */
 import $ from 'jquery';
@@ -79,5 +81,28 @@ function toPromiseProxy(valueP) {
 
 // -----------------------------------------------------------------------------
 
+let objectDependenciesCache = new WeakMap();
+/** Compare the values of an object for CP dependencies.
+ * Previous values are stored via a WeakMap, using object as key.
+ * @param object Ember Object - this of the CP
+ * @param label string to label the console.debug() output
+ * @param dependencies array of strings which identify the dependencies
+ */
+function compareDependencies(object, label, dependencies) {
+  let
+  previous = objectDependenciesCache.get(object),
+  current = dependencies.map((d) => object.get(d));
+  if (previous) {
+    let changes = dependencies.map((d, i) => (previous[i] !== current[i]) && d);
+    dLog(label, changes, previous, current);
+  }
+  objectDependenciesCache.set(object, current);
+}
 
-export { parentOfType, elt0, getAttrOrCP, _internalModel_data, nowOrLater,  promiseText, toPromiseProxy };
+// -----------------------------------------------------------------------------
+
+
+export {
+  parentOfType, elt0, getAttrOrCP, _internalModel_data, nowOrLater,  promiseText, toPromiseProxy,
+  compareDependencies,
+ };

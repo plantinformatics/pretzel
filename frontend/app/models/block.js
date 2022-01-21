@@ -7,11 +7,13 @@ import { observer } from '@ember/object';
 import { A } from '@ember/array';
 import { and, alias } from '@ember/object/computed';
 import { debounce, throttle } from '@ember/runloop';
+import { pluralize } from 'ember-inflector';
 import { allSettled } from 'rsvp';
 
 import { task } from 'ember-concurrency';
 
 import lodashMath from 'lodash/math';
+import { isEqual } from 'lodash/lang';
 
 import {
   intervalSize,
@@ -1249,7 +1251,7 @@ export default Model.extend({
   }),
 
 
-  /** If this block contains QTLs, request all features of this block and its parent block.
+  /** If this block contains QTLs, request all features of this block and the referencedFeatures of its parent block.
    * This enables calculation of the .value[] of the QTL features.
    */
   loadRequiredData : computed(function () {
@@ -1299,7 +1301,9 @@ export default Model.extend({
     names = this.get('features')
       .reduce((result, feature) => {
         let name = feature.get('values.' + fieldName);
-        if (name) {
+        /** filter out QTL features which do not have a default [start,end] or
+         * a position computed from FMs */
+        if (name && feature.get('value.length')) {
           result.addObject(name);
         }
         return result; }, A());
@@ -1309,9 +1313,37 @@ export default Model.extend({
     if (! this.get('positioned')) {
       this.set('positioned', {});
     }
-    this.set('positioned.' + fieldName, names);
-    // re-evaluate blockValuesBlocks() / checkPositions()
-    this.get('blockService').incrementProperty('featureUpdateCount');
+    let previous = this.get('positioned.' + fieldName);
+    let compare = previous;
+    if (! previous) {
+      let fieldNames = pluralize(fieldName);
+      compare = this.attributes[fieldNames];
+    }
+    /** don't increment featureUpdateCount if the names has not changed. */
+    let newOrChanged = true;
+    if (compare) {
+      let
+      compareS = compare.sort(),
+      namesS = names.sort();
+      newOrChanged = ! isEqual(compareS, namesS);
+    }
+    if (newOrChanged) {
+      this.set('positioned.' + fieldName, names);
+      /** Generally there will be an initial reduction from
+       * .attributes[fieldNames] to .positioned[fieldName] as un-positioned QTLs
+       * are filtered out.
+       * Incrementing featureUpdateCount in that case is debatable because it
+       * causes refresh of explorer Ontology tree; a solution would be an API
+       * which did valueCompute(), checkPositions() etc.
+       * After that .positioned[fieldName] will only change when flankingMarkers
+       * are edited (via re-upload), or the parent GM is edited, in which case
+       * incrementing featureUpdateCount is reasonable.
+       */
+      if (previous) {
+      // re-evaluate blockValuesBlocks() / checkPositions()
+        this.get('blockService').incrementProperty('featureUpdateCount');
+      }
+    }
   },
   /** Request all features of this block.
    */
@@ -1394,7 +1426,8 @@ export default Model.extend({
           /** currently the spreadsheet may define value start&end, could verify by checking this against calculated value. */
           let f_value = f.get('value')
               .filter((v) => (v !== undefined) && (v !== null));
-          /** Flanking Markers take precedence, if defined. */
+          /** Flanking Markers take precedence, if defined in parentFeatures and
+           * they have non-empty .value[] */
           if (true) /*(f.value[0] === null)*/ {
             let
             flankingNames = f.get('values.flankingMarkers') || [],
@@ -1409,7 +1442,9 @@ export default Model.extend({
               let
               locations = flanking.map((fm) => fm.value).flat(),
               extent = d3.extent(locations);
-              f.set('value', extent);
+              if (locations.length) {
+                f.set('value', extent);
+              }
               value = extent;
             } else {
               value = f_value;

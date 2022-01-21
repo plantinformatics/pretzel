@@ -257,7 +257,7 @@ function blockFeatureOntologiesTreeEmbeddedFn(levelMeta, tree, id2Pn) {
   valueTree.name = childNames.length ? childNames[0].slice(0,2) : 'CropOntology';
   */
 
-  dLog('blockFeatureOntologiesTreeEmbedded', valueTree);
+  dLog(fnName, valueTree);
   return valueTree;
 }
 
