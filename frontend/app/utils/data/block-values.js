@@ -1,12 +1,9 @@
 import { resolve, all } from 'rsvp';
 
-import ObjectProxy from '@ember/object/proxy';
-import PromiseProxyMixin from '@ember/object/promise-proxy-mixin';
-
 import { singularize, pluralize } from 'ember-inflector';
 
 
-import { toPromiseProxy } from '../../utils/ember-devel';
+import { toPromiseProxy, toArrayPromiseProxy } from '../../utils/ember-devel';
 
 import { blocksParentAndScope } from './grouping';
 import {
@@ -37,12 +34,10 @@ const dLog = console.debug;
  * @param fieldName 'Traits' or 'Ontologies'
  */
 function blockValues(fieldName) {
-  let ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
-
   let count = this.get('blocksService.featureUpdateCount');
   dLog('blockValues', fieldName, count, this);
   let valueP = this.get('apiServerSelectedOrPrimary.blockFeature' + fieldName);
-  let proxy = ObjectPromiseProxy.create({ promise: resolve(valueP) });
+  let proxy = toArrayPromiseProxy(valueP);
   return proxy;
 }
 
@@ -211,8 +206,6 @@ function blockValuesNameFiltered (fieldName) {
  * CP : blockFeatureTraitsTree
  */
 function blockValuesTree (fieldName, valueName) {
-  let ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
-
   let
   valueP = this.get(valueName)
     .then((blocksTraits) => {
@@ -221,7 +214,7 @@ function blockValuesTree (fieldName, valueName) {
       this.set('blockFeature' + fieldName + 'TreeKeyLength', Object.keys(blocksTraitsTree).length);
       return blocksTraitsTree;
     });
-  let proxy = ObjectPromiseProxy.create({ promise: resolve(valueP) });
+  let proxy = toPromiseProxy(valueP);
 
   return proxy;
 }

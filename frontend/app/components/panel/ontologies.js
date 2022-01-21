@@ -5,7 +5,7 @@ import { computed } from '@ember/object';
 import { A } from '@ember/array';
 import { bind } from '@ember/runloop';
 
-import { toPromiseProxy } from '../../utils/ember-devel';
+import { toPromiseProxy, toArrayPromiseProxy } from '../../utils/ember-devel';
 import { unlinkDataIdChildrenTree, augmentMetaIdChildrenTree, ontologyIdFromIdText, treeFor } from '../../utils/value-tree';
 
 // -----------------------------------------------------------------------------
@@ -63,7 +63,7 @@ export default Component.extend({
     boP = this.get('blockValues.blockFeatureOntologiesBlocks'),
     bofP = boP?.then(
       (bos) => bos.filter((blockTraits) => blockTraits[fieldName].length));
-    return bofP && toPromiseProxy(bofP);
+    return bofP && toArrayPromiseProxy(bofP);
   }),
   /** Extract the unique Ontologies as an single array.
    * Filter for blocks which are currently viewed.
@@ -98,7 +98,7 @@ export default Component.extend({
     oP = this.get('blockFeatureOntologiesNameFlat'),
     omP = oP?.then(
       (os) => os.map((o) => this.ontologyIdToValue(o)));
-    return omP && toPromiseProxy(omP);
+    return omP && toArrayPromiseProxy(omP);
   }),
   /** The leaf values of the view panel Ontology tree are OntologyIDs.
    * To be node values in a value-tree they need to be Object not string, and have a levelMeta value.

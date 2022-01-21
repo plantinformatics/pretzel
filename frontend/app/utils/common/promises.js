@@ -1,4 +1,6 @@
 
+/* related : ../ember-devel.js : nowOrLater(), promiseText(), to{,Array}PromiseProxy()  */
+
 
 /** if value is a promise then call fn(value) when the promise resolves, otherwise call it now.
  * @return a promise, yielding fn(value), if value is a promise, otherwise fn(value)

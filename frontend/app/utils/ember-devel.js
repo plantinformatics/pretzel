@@ -48,6 +48,8 @@ const _internalModel_data = '_internalModel._recordData.__data';
 
 /*----------------------------------------------------------------------------*/
 
+/* related : ./common/promises.js  */
+
 /** Run the function now or later.
  * @param later if true, then run fn in Ember.run.later()
  */
@@ -68,6 +70,8 @@ function promiseText(promise) {
 
 /*----------------------------------------------------------------------------*/
 
+/** changes for Octane : https://v5.chriskrycho.com/journal/migrating-off-of-promiseproxymixin-in-ember-octane/ */
+
 import ObjectProxy from '@ember/object/proxy';
 import PromiseProxyMixin from '@ember/object/promise-proxy-mixin';
 import { resolve } from 'rsvp';
@@ -76,6 +80,16 @@ let ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
 
 function toPromiseProxy(valueP) {
   let proxy = ObjectPromiseProxy.create({ promise: resolve(valueP) });
+  return proxy;
+}
+
+import ArrayProxy from '@ember/array/proxy';
+const ArrayPromiseProxyMixin = ArrayProxy.extend(PromiseProxyMixin);
+
+let ArrayPromiseProxy = ArrayProxy.extend(PromiseProxyMixin);
+
+function toArrayPromiseProxy(valueP) {
+  let proxy = ArrayPromiseProxy.create({ promise: resolve(valueP) });
   return proxy;
 }
 
@@ -104,5 +118,6 @@ function compareDependencies(object, label, dependencies) {
 
 export {
   parentOfType, elt0, getAttrOrCP, _internalModel_data, nowOrLater,  promiseText, toPromiseProxy,
+  toArrayPromiseProxy,
   compareDependencies,
  };

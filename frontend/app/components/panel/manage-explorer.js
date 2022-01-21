@@ -21,8 +21,6 @@ import {
   readOnly
 } from '@ember/object/computed';
 
-import ObjectProxy from '@ember/object/proxy';
-import PromiseProxyMixin from '@ember/object/promise-proxy-mixin';
 
 
 import { task } from 'ember-concurrency';
@@ -33,6 +31,7 @@ import { task } from 'ember-concurrency';
 import { tab_explorer_prefix, text2EltId } from '../../utils/explorer-tabId';
 import { parseOptions } from '../../utils/common/strings';
 import { thenOrNow } from '../../utils/common/promises';
+import { toPromiseProxy } from '../../utils/ember-devel';
 
 import {
   valueGetType, mapHash, reduceHash, reduceIdChildrenTree, justUnmatched,
@@ -249,7 +248,6 @@ export default ManageBase.extend({
     'ontologyId2Node',
     'ontologyId2DatasetNodes',
     function () {
-      let ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
       let
       fnName = 'blockFeatureOntologiesTreeGrouped',
       /** use blockFeatureOntologiesTreeEmbedded instead of ontologyTree because
@@ -277,7 +275,7 @@ export default ManageBase.extend({
         return valueTree;
       });
 
-      let proxy = ObjectPromiseProxy.create({ promise: resolve(promise) });
+      let proxy = toPromiseProxy(promise);
       return proxy;
     }),
 
