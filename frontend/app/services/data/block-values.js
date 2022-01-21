@@ -71,11 +71,12 @@ export default Service.extend({
 
   /** Ontology tree of QTLs of viewed blocks. */
   blockFeatureOntologiesTree : computed(
-    'blockFeatureOntologies',
+    'blockFeatureOntologiesViewed',
     function () { return blockValuesTree.apply(this, ['Ontologies', 'blockFeatureOntologiesViewed']); }),
 
   // ---------------------------------------------------------------------------
 
+  /** Same as blockFeatureOntologiesTreeEmbedded, except this is filtered by viewed blocks */
   blockFeatureOntologiesViewedEmbedded : computed('blockFeatureOntologiesViewed', 'ontologyId2DatasetNodes', function () {
     let
     fnName = 'blockFeatureOntologiesViewedEmbedded',

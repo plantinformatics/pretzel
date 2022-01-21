@@ -21,6 +21,14 @@ export default Component.extend({
   block : service('data/block'),
   blockValues : service('data/block-values'),
 
+  init() {
+    this._super(...arguments);
+
+    /** initialise service used in dependencies. */
+    this.get('blockValues');
+    this.get('block');
+  },
+
   ontologyId2Node : alias('blockValues.ontologyId2Node'),
   blockFeatureOntologiesTreeEmbedded : alias('blockValues.blockFeatureOntologiesTreeEmbedded'),
 
