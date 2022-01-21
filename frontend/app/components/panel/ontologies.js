@@ -34,27 +34,17 @@ export default Component.extend({
   ontologyId2Node : alias('blockValues.ontologyId2Node'),
   blockFeatureOntologiesTreeEmbedded : alias('blockValues.blockFeatureOntologiesTreeEmbedded'),
 
-// alias('ontology.ontologyCollation'),
-  ontologyCollation : computed('controlOptions.enableView', function () {
-    let
-    oc = this.controlOptions.enableView && this.get('ontology.ontologyCollation');
-    dLog('ontologyCollation', oc, this.controlOptions.enableView, this);
-    return oc;
-  }),
   get blockFeatureOntologies() { return this.get('blockValues.blockFeatureOntologies'); },
   ontologiesTree : computed(
-    // 'ontologyCollation.ontologiesTree',  // has embedded datasets : parent / scope / block
-    'controlOptions.enableView',
     'controlOptions.showHierarchy',
     'blockFeatureOntologiesTreeOnly',
     'blockFeatureOntologiesNameFlatMeta',
     function () {
       let
-      ot = this.controlOptions.enableView && 
-        (this.get('controlOptions.showHierarchy') ? 
-         this.get('blockFeatureOntologiesTreeOnly') : 
-         this.get('blockFeatureOntologiesNameFlatMeta'));
-      dLog('ontologiesTree', ot, this.ontologyCollation, this);
+      ot = this.get('controlOptions.showHierarchy') ? 
+        this.get('blockFeatureOntologiesTreeOnly') : 
+        this.get('blockFeatureOntologiesNameFlatMeta');
+      dLog('ontologiesTree', ot, this);
       return ot;
     }),
   /** Filter out blocks which have no Ontology, wrap in PromiseProxy.
@@ -150,7 +140,6 @@ export default Component.extend({
        */
       let
       fnName = 'blockFeatureOntologiesTreeOnly',
-      oc = this.ontologyCollation,
       /** use blockFeatureOntologiesTreeEmbedded instead of ontologyTree because
        * the former has added .parent links
        * It also has .node, added by mapTree(); these are deleted from the copy.
@@ -185,7 +174,6 @@ export default Component.extend({
   // ---------------------------------------------------------------------------
 
   controlOptions : {
-    enableView : false,
     showHierarchy : true,
   },
   showHierarchyChanged(value) {
@@ -194,20 +182,12 @@ export default Component.extend({
 
   // ---------------------------------------------------------------------------
 
+  /*
   didInsertElement() {
     this._super(...arguments);
     dLog('didInsertElement');
-    /** If this component evaluates some CPs (e.g. ontologiesTree) in
-     * ontologyCollation (manage-explorer) before that component does, they do
-     * not gain a value, remaining simply .isFulfilled:false, .content:null.
-     * So this component delays use of those CPs; they are enabled when
-     * enableView is set by didInsertElement().
-     * This will likely not be required when these values are migrated to a
-     * shared service (data/ontology), which can be done once the requirements
-     * are settled.
-     */
-    this.set('controlOptions.enableView', true);
   },
+  */
 
   // ---------------------------------------------------------------------------
 

@@ -202,8 +202,16 @@ function blockValuesNameFiltered (fieldName) {
   return blocksTraitsP;
 }
 
-/*
- * CP : blockFeatureTraitsTree
+/** 
+ * @return example form :
+ *
+ * "[CO_321:0000007] Heading time":
+ *    Object { "Triticum_aestivum_IWGSC_RefSeq_v1.0_90k_markers": {...} }
+ *     "Triticum_aestivum_IWGSC_RefSeq_v1.0_90k_markers": Object { 1A: (1) [...], 3A: (1) [...], 5A: (2) [...], ... }
+ *       1A: Array [ {...} ]
+ *         0: Object { store: Getter & Setter, isError: false, mapName: "GBTS_1000 - Triticum_aestivum_IWGSC_RefSeq_v1.0_90k_markers", ... }
+ *
+ * used in CPs : blockFeatureTraitsTree, blockFeatureOntologiesTree
  */
 function blockValuesTree (fieldName, valueName) {
   let
@@ -231,7 +239,10 @@ function ids2Blocks(store, blockIdsTraits) {
   return blocksTraits;
 }
 
-/**
+
+/** The result of blockValuesTree() replaces each block with
+ *  a branch : parent / scope / block
+ * and this function embeds that within the Ontology tree.
  */
 function blockFeatureOntologiesTreeEmbeddedFn(levelMeta, tree, id2Pn) {
   /* used in blockFeatureOntologiesTreeEmbedded in components/panel/manage-explorer and 

@@ -106,8 +106,6 @@ export default ManageBase.extend({
     this.get('apiServers').on('receivedDatasets', function (datasets) { console.log('receivedDatasets', datasets); me.send('receivedDatasets', datasets); });
     /** Initialise this.blocksService so that dependency blocksService.featureUpdateCount works. */
     let blocksService = this.get('blocksService');
-
-    this.get('ontology').set('ontologyCollation', this);
   },
 
   urlOptions : computed('model.params.options', function () {
@@ -1751,14 +1749,14 @@ export default ManageBase.extend({
           console.log('didRender', id, c[0], t[0], a[0]);
     }
   },
+  /*
   willDestroyElement() {
     console.log('willDestroyElement', this);
-    if (this.get('ontology.ontologyCollation') === this) {
-      this.set('ontology.ontologyCollation', undefined);
-    }
 
     this._super(...arguments);
   },
+  */
+
   //----------------------------------------------------------------------------
 
   selectOntologyNode,

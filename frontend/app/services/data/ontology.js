@@ -389,7 +389,6 @@ export default Service.extend({
   qtlColourLevel(ontologyId) {
     const fnName = 'qtlColourLevel';
     let ontology_colour_scale = this.get('ontology_colour_scale');
-    let treeData = this.get('ontologyCollation');
     let id2nP = this.get('ontologyId2NodeFor');
     let levelIds;
 
