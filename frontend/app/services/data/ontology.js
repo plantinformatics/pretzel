@@ -387,6 +387,7 @@ export default Service.extend({
   /** Colour all children of the given node, and nodes of other Ontologies at the same level.
    */
   qtlColourLevel(ontologyId) {
+    const fnName = 'qtlColourLevel';
     let ontology_colour_scale = this.get('ontology_colour_scale');
     let treeData = this.get('ontologyCollation');
     let id2nP = this.get('ontologyId2NodeFor');
@@ -394,6 +395,11 @@ export default Service.extend({
 
     id2nP.then((id2n) => {
       let node = id2n[ontologyId];
+      if (! node) {
+        let id2nFR = this.get('ontologyId2Node._result');
+        node = id2nFR && id2nFR[ontologyId];
+        dLog(fnName, ontologyId, 'seems not viewed', node);
+      } else
       if (false) {
         /** colourChildren() colours the siblings of the clicked element,
          * whereas colourType() colours nodes at the same level in other
@@ -519,7 +525,9 @@ export default Service.extend({
     ok = (ontologyId === undefined) || (ontologyId === '') ?
       ! visibleByOntology :
       this.getOntologyIsVisible(ontologyId);
-    dLog(fnName, ontologyId, ok);
+    if (trace > 2) {
+      dLog(fnName, ontologyId, ok);
+    }
     return ok;
   }
   //----------------------------------------------------------------------------
