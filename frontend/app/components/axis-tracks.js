@@ -1408,9 +1408,10 @@ export default InAxis.extend({
               let x = xPosnS(subElements).apply(this, [d, i, g]);
               const
               diamondWidth = minWidth * (thisAt.controlsView.diamondWidth || 1),
+              rectWidth = isQtl ? diamondWidth : width,
               pathDFn = useDiamond ? 
                 (d,i,g) => diamondPath(y, d, diamondWidth, x) :
-                (d,i,g) => rectTrianglePath(y, d, width, x);
+                (d,i,g) => rectTrianglePath(y, d, rectWidth, x);
               d3.select(g[i])
                 .attr('d', pathDFn);
             }.apply(this, [d, i, g]) :
