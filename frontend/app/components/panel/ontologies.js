@@ -7,6 +7,8 @@ import { bind } from '@ember/runloop';
 
 import { toPromiseProxy, toArrayPromiseProxy } from '../../utils/ember-devel';
 import { unlinkDataIdChildrenTree, augmentMetaIdChildrenTree, ontologyIdFromIdText, treeFor } from '../../utils/value-tree';
+import { selectOntologyNode } from '../../utils/data/block-values';
+
 
 // -----------------------------------------------------------------------------
 
@@ -239,15 +241,7 @@ export default Component.extend({
 
   // ---------------------------------------------------------------------------
 
-  /** user has clicked on a enter-expander in an ontology tree. */
-  selectOntologyNode(nodeText, values, event) {
-    dLog('selectOntologyNode', nodeText, values, event.target);
-    /** nodeText === values.name */
-    let oc = this.ontologyCollation;
-    if (oc) {
-      oc.selectOntologyNode(nodeText, values, event);
-    }
-  },
+  selectOntologyNode,
 
   // ---------------------------------------------------------------------------
 

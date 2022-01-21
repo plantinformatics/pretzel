@@ -272,6 +272,33 @@ function idParentNodeMap(bot) {
   return id2n;
 };
 
+// -----------------------------------------------------------------------------
+
+/** user has clicked on a entry-expander in an ontology tree.
+ * @param this component : panel/manage-explorer or panel/ontologies
+ * which defines : ontology : service('data/ontology')
+ */
+function selectOntologyNode(nodeText, values, event) {
+  dLog('selectOntologyNode', nodeText, values, event.target);
+  let ontologyId = values?.id || values?.name && ontologyIdFromIdText(values.name);
+  if (ontologyId) {
+    let colour = this.get('ontology').ontologyClick(ontologyId);
+    let target = event?.target;
+    if (target && colour) {
+      /** probably "" or undefined */
+      let previousColour = target.style.background;
+      target.style.background = colour;
+      /** For qtlColourHierarchy() it is useful to show the clicked element
+       * colour briefly then clear it - simpler than clearing colours when
+       * another node is clicked :
+       *   later(() => target.style.background = previousColour, 2 * 1000);
+       * Now that qtlColourLevel() is used, the background-color is provided
+       * by entry-expander : valuesColour(), which clears the background-color when
+       * needed.
+       */
+    }
+  }
+}
 
 // -----------------------------------------------------------------------------
 
@@ -290,6 +317,7 @@ export {
   ids2Blocks,
   blockFeatureOntologiesTreeEmbeddedFn,
   idParentNodeMap,
+  selectOntologyNode,
 }
 
 // -----------------------------------------------------------------------------
