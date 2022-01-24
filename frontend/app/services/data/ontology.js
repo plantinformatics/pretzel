@@ -386,9 +386,8 @@ export default Service.extend({
 
   /** Colour all children of the given node, and nodes of other Ontologies at the same level.
    */
-  qtlColourLevel(ontologyId) {
+  qtlColourLevelOf(ontologyId) {
     const fnName = 'qtlColourLevel';
-    let ontology_colour_scale = this.get('ontology_colour_scale');
     let id2nP = this.get('ontologyId2NodeFor');
     let levelIds;
 
@@ -405,25 +404,35 @@ export default Service.extend({
          * branches / ROOTs.
          */
         levelIds = this.colourChildren(node.parent);
-        setScaleDomain.apply(this, [levelIds]);
+        this.setScaleDomain.apply(this, [levelIds]);
       } else {
-        let treeP = this.get('blockValues.blockFeatureOntologiesViewedEmbedded');
-        treeP.then((tree) => {
           /** There are 2 levels with .type === 'term' : ROOTs and their children.
            * Distinguish between these 2 levels, using the invented type 'ROOT'.  */
           let type = node.id.match(':ROOT') ? 'ROOT' : node.type;
-          levelIds = this.colourType(tree, type);
-          setScaleDomain.apply(this, [levelIds]);
-        });
+          this.qtlColourLevel(type);
+
       }
 
-      function setScaleDomain(levelIds) {
-      ontology_colour_scale.domain(levelIds);
-
-      this.incrementProperty('ontologyColourScaleUpdateCount');
-      }
     });
   },
+
+  qtlColourLevel(type) {
+    let treeP = this.get('blockValues.blockFeatureOntologiesViewedEmbedded');
+    treeP.then((tree) => {
+      let
+      levelIds = this.colourType(tree, type);
+      this.setScaleDomain.apply(this, [levelIds]);
+    });
+  },
+
+  setScaleDomain(levelIds) {
+    let ontology_colour_scale = this.get('ontology_colour_scale');
+
+    ontology_colour_scale.domain(levelIds);
+
+    this.incrementProperty('ontologyColourScaleUpdateCount');
+  },
+
 
   /** replace domain of  colour scale with children of node (tree) */
   colourChildren(tree) {
@@ -478,7 +487,30 @@ export default Service.extend({
 
     let domainIds = reduceIdChildrenTree(tree, addId, []);
     dLog('colourType', type, tree, domainIds);
+    this.set('qtlColourByLevel', type);
     return domainIds;
+  },
+
+  //----------------------------------------------------------------------------
+
+  qtlColourByLevel : undefined,
+
+  ensureVisibleOntologiesAreColoured() {
+    let
+    qtlColourByLevel = this.qtlColourByLevel || this.set('qtlColourByLevel', 'trait'),
+    colouredIds = this.ontology_colour_scale.domain(),
+    visibleIds = [];
+    for (let ontologyId in this.ontologyIsVisible) {
+      if (this.ontologyIsVisible[ontologyId]) {
+        visibleIds.push(ontologyId);
+      }
+    };
+    let
+    visibleNotColoured = visibleIds.filter((id) => ! colouredIds.includes(id));
+    dLog('ensureVisibleOntologiesAreColoured', qtlColourByLevel, colouredIds, visibleIds, visibleNotColoured);
+    if (visibleNotColoured.length) {
+      this.qtlColourLevel(qtlColourByLevel);
+    }
   },
 
   //----------------------------------------------------------------------------

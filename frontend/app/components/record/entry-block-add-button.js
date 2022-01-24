@@ -27,6 +27,7 @@ export default EntryBase.extend({
        * action. */
       this.setTraitVisible();
       this.setOntologyVisible();
+      this.get('ontology').ensureVisibleOntologiesAreColoured();
     }
   }, // actions
   /*--------------------------------------------------------------------------*/
