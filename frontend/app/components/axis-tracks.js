@@ -1945,6 +1945,7 @@ export default InAxis.extend({
    * This is used for filtering and for layering.
    */
   tracksTree : computed(
+    'trackBlocksR.@each.visible',
     'trackBlocksR.@each.featuresLength', 'trait.traits.@each.visible',
     'ontology.ontologyIsVisibleChangeCount',
     'controlsView.visibleByTrait',
@@ -1966,7 +1967,8 @@ export default InAxis.extend({
         let
         blockId = blockR.get('id'),
         isQtl = blockR.get('isQTL'),
-        features = blockR.get('features')
+        features = ! blockR.get('visible') ? [] :
+          blockR.get('features')
           .toArray()  //  or ...
           /** if feature does not have values.{Trait,Ontology}, the defaults of
            * trait.featureFilter() and ontology.featureFilter() are
