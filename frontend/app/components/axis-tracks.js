@@ -2320,6 +2320,8 @@ export default InAxis.extend({
          } else
       */
       if (isViewed) {
+	this.get('ontology').ensureVisibleOntologiesAreColoured();
+
         let blockIds = d3.keys(tracks.intervalTree);
 
         // intersect with axis zoom region;  layer the overlapping tracks; draw tracks.
