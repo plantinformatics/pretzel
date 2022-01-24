@@ -254,8 +254,9 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
       function featurePathStroke (feature, i2) {
         /** Similar : FeatureTicks.prototype.featureColour() */
         let colour;
+        /** Stacks : Block */
         let block = this.parentElement.__data__;
-        let qtlColourBy = block.block.get('useTraitColour');
+        let qtlColourBy = block.block.get('useFeatureColour');
         if (qtlColourBy) {
           colour = feature.colour(qtlColourBy);
         } else {
