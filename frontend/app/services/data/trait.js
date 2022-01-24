@@ -125,7 +125,7 @@ export default Service.extend({
     traitName = feature.get('values.Trait'),
     visibleByTrait = this.get('controls.view.visibleByTrait'),
     trait = traitName && group && group.findBy('name', traitName),
-    ok = trait ? trait.get('visible') : ! visibleByTrait;
+    ok = ! visibleByTrait || (trait && trait.get('visible'));
     if (trace > 2) {
       dLog(fnName, traitName, ok);
     }

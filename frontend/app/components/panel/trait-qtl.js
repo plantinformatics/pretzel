@@ -25,7 +25,7 @@ export default Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
-  viewAllFlag : true,
+  viewAllFlag : false,
 
   viewAll(checked) {
     /** at this point, .viewAllFlag has not been updated from the current click;

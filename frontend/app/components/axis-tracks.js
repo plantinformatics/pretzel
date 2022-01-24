@@ -2320,7 +2320,7 @@ export default InAxis.extend({
          } else
       */
       if (isViewed) {
-	this.get('ontology').ensureVisibleOntologiesAreColoured();
+        this.get('ontology').ensureVisibleOntologiesAreColoured();
 
         let blockIds = d3.keys(tracks.intervalTree);
 
