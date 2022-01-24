@@ -339,7 +339,7 @@ export default Service.extend({
     let colour = (this.get('controls.view.ontologyClick') === 'Hierarchy') ||
         this.get('urlOptions.qtlColourHierarchy') ?
         this.qtlColourHierarchy(ontologyId):
-        this.qtlColourLevel(ontologyId);
+        this.qtlColourLevelOf(ontologyId);
     return colour;
   },
 
