@@ -91,7 +91,7 @@ export default Component.extend({
    * distinguished, but they may obscure the signal provided by defined values.
    */
   visibleByOntology : false,
-  visibleByTrait : true,
+  visibleByTrait : false,
 
   /** if false, axis title text and axis ticks and text are hidden with display : none,
    * via a class .hideAxisText added on svgContainer.FeatureMapViewer
