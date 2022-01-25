@@ -1,4 +1,5 @@
 import { inject as service } from '@ember/service';
+import { later } from '@ember/runloop';
 
 import EntryBase from './entry-base';
 
@@ -28,6 +29,7 @@ export default EntryBase.extend({
       this.setTraitVisible();
       this.setOntologyVisible();
       this.get('ontology').ensureVisibleOntologiesAreColoured();
+      later(() => this.get('ontology').ensureVisibleOntologiesAreColoured(), 3000);
     }
   }, // actions
   /*--------------------------------------------------------------------------*/

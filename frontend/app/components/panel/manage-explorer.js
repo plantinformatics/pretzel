@@ -4,6 +4,7 @@ import { resolve, all } from 'rsvp';
 import { A } from '@ember/array';
 import { inject as service } from '@ember/service';
 import { isArray } from '@ember/array';
+import { singularize } from 'ember-inflector';
 
 
 import DS from 'ember-data';
@@ -28,7 +29,7 @@ import { task } from 'ember-concurrency';
 /*----------------------------------------------------------------------------*/
 
 
-import { tab_explorer_prefix, text2EltId } from '../../utils/explorer-tabId';
+import { tab_explorer_prefix, text2EltId, keysLength } from '../../utils/explorer-tabId';
 import { parseOptions } from '../../utils/common/strings';
 import { thenOrNow } from '../../utils/common/promises';
 import { toPromiseProxy } from '../../utils/ember-devel';
@@ -1559,9 +1560,7 @@ export default ManageBase.extend({
         dLog('datasetTypeTabId', id, datasetType);
       return id;
     },
-    keysLength(object) {
-      return Object.keys(object).length;
-    },
+    keysLength,
 
     /** Triggered by refresh icon on datset list **/
     refreshAvailable() {
@@ -1650,16 +1649,41 @@ export default ManageBase.extend({
       /** perhaps instead of the enclosing if (), filter pluralize(doneField) out of this list.  */
       ['Traits', 'Ontologies'].forEach((fieldName) => {
         let
-        values = block.get('attributes.' + fieldName),
+        values = this.blockAttributes(block, fieldName),
         setVisible = (fieldName === 'Traits') ?
           (traitName) => this.get('trait').traitVisible(traitName, true) :
           (ontologyId) => this.get('ontology').setOntologyIsVisible(ontologyId, true);
         dLog('loadBlock', this.activeId, fieldName, values);
-        values.forEach((value) => setVisible(value));
+        if (values) {
+          values.forEach((value) => setVisible(value));
+        }
       });
     }
   },
 
+  //----------------------------------------------------------------------------
+
+  /** Lookup the Trait / Ontology attributes of this block,
+   * using either block.attributes (which is filtered by checkPositions()),
+   * or the raw api-server blockFeature{Trait,Ontology} from the api result.
+   * This can move to models / block, and lookup block.store.name to choose the api-server.
+   */
+  blockAttributes(block, fieldName) {
+    let 
+    /** block.attributes may be undefined. */
+    values = block.get('attributes.' + fieldName);
+    if (! values) {
+      let
+      as = this.get('apiServerSelectedOrPrimary'),
+      /** equivalent : as['blockFeature' + fieldName]._result
+       * may change this function to return a promise
+       */
+      bt = as && as['blockFeature' + singularize(fieldName)],
+      bti = bt.find((bt) => bt._id === block.id);
+      values = bti && bti[fieldName];
+    }
+    return values;
+  },
 
   //----------------------------------------------------------------------------
 

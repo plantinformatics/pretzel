@@ -1,10 +1,25 @@
 import { computed } from '@ember/object';
 import { inject as service } from '@ember/service';
 
+import { text2EltId, keysLength } from '../../utils/explorer-tabId';
+
 import ManageBase from './manage-base'
+
+// -----------------------------------------------------------------------------
+
+const dLog = console.debug;
+
+let trace = 0;
+
+const tab_view_prefix = "tab-view-";
+
+// -----------------------------------------------------------------------------
 
 export default ManageBase.extend({
   trait : service('data/trait'),
+  ontology : service('data/ontology'),
+  block : service('data/block'),
+
 
 
   showChartOptions : false,
@@ -24,6 +39,32 @@ export default ManageBase.extend({
     }
     return false;
   }),
+
+  // ---------------------------------------------------------------------------
+
+  /** comments as in manage-explorer.js */
+  activeId : 'tab-view-Ontology',
+
+  /** invoked from hbs via {{compute (action this.datasetTypeTabId datasetType ) }}
+   * @return string suitable for naming a html tab, based on datasetType name.
+   */
+  datasetTypeTabId(datasetType) {
+    let
+    id = tab_view_prefix + text2EltId(datasetType);
+    if (trace)
+      dLog('datasetTypeTabId', id, datasetType);
+    return id;
+  },
+  keysLength,
+
+  onChangeTab(id, previous) {
+    dLog('onChangeTab', this, id, previous, arguments);
+
+    this.set('activeId', id);
+  },
+
+
+  // ---------------------------------------------------------------------------
 
   actions: {
     loadBlock(block) {

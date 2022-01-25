@@ -83,6 +83,9 @@ function blockValuesViewed(fieldName) {
  * them visible.
  * @param blocksValues is the result of checkPositions(), i.e. QTLs which will
  * not be displayed because of lack of position / .values.<fieldName> are filtered out.
+ *
+ * @desc For each block, set block .attributes[fieldName], which is used by
+ * collateQTLs() and makeValuesVisible()
  */
 function storeBlockAttributes(blocksValues, fieldName) {
   blocksValues.forEach((bt) => {

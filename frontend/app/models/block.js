@@ -1317,7 +1317,7 @@ export default Model.extend({
     let compare = previous;
     if (! previous) {
       let fieldNames = pluralize(fieldName);
-      compare = this.attributes[fieldNames];
+      compare = this.attributes && this.attributes[fieldNames];
     }
     /** don't increment featureUpdateCount if the names has not changed. */
     let newOrChanged = true;
