@@ -318,7 +318,7 @@ export default Model.extend({
   get useFeatureColour() {
     let useColour;
     if (this.get('isQTL')) {
-      let qtlColourBy = this.get('controls.view.qtlColourBy');
+      let qtlColourBy = this.get('controls.viewed.qtlColourBy');
       useColour = qtlColourBy && (qtlColourBy !== 'Block') ? qtlColourBy : undefined;
     }
     return useColour;

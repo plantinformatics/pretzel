@@ -318,51 +318,6 @@
       </div>
     </li>
 
-    <li class="list-group-item">
-      <label style="display:inline">QTL colour by :</label>
-      {{radio-button value='Ontology' groupValue=qtlColourBy
-        changed=(action qtlColourByChanged preventDefault=false)
-      }}
-      Ontology &nbsp;&nbsp;
-      {{radio-button value='Trait' groupValue=qtlColourBy
-        changed=(action qtlColourByChanged preventDefault=false)
-      }}
-      Trait &nbsp;&nbsp;
-      {{radio-button value='Block' groupValue=qtlColourBy
-        changed=(action qtlColourByChanged preventDefault=false)
-      }}
-      Block
-
-    </li>
-
-    <li class="list-group-item horiz-2">
-      <label>Visible by : </label>
-      <div style="width:30%">
-        <input type="checkbox"
-          checked={{this.visibleByOntology}}
-          oninput={{action (mut this.visibleByOntology) value="target.checked"}}  >
-        <label>Ontology</label>
-      </div>
-      <div style="width:30%">
-        <input type="checkbox"
-          checked={{this.visibleByTrait}}
-          oninput={{action (mut this.visibleByTrait) value="target.checked"}}  >
-        <label>Trait</label>
-      </div>
-    </li>
-
-    <li class="list-group-item">
-      <label style="display:inline">Ontology click :</label>
-      {{radio-button value='Hierarchy' groupValue=ontologyClick
-        changed=(action ontologyClickChanged preventDefault=false)
-      }}
-      Hierarchy &nbsp;&nbsp;
-      {{radio-button value='Level' groupValue=ontologyClick
-        changed=(action ontologyClickChanged preventDefault=false)
-      }}
-      Level &nbsp;&nbsp;
-
-    </li>
 
     <li class="list-group-item horiz-2">
     

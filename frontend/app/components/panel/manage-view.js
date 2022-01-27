@@ -43,7 +43,7 @@ export default ManageBase.extend({
   // ---------------------------------------------------------------------------
 
   /** comments as in manage-explorer.js */
-  activeId : 'tab-view-Ontology',
+  activeId : 'tab-view-Blocks',
 
   /** invoked from hbs via {{compute (action this.datasetTypeTabId datasetType ) }}
    * @return string suitable for naming a html tab, based on datasetType name.
@@ -80,5 +80,15 @@ export default ManageBase.extend({
         me.send('removeBlock', displayData[i]);
       }
     }
-  }
+  },
+
+  // ---------------------------------------------------------------------------
+
+  viewedSettingsChanged(settings, changedFieldName) {
+    dLog('viewedSettingsChanged', settings, changedFieldName);
+    this.viewedSettings = settings;
+  },
+
+  // ---------------------------------------------------------------------------
+
 });

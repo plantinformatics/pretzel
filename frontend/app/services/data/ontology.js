@@ -558,7 +558,7 @@ export default Service.extend({
     const
     fnName = 'featureFilter',
     ontologyId = feature.get('values.Ontology'),
-    visibleByOntology = this.get('controls.view.visibleByOntology'),
+    visibleByOntology = this.get('controls.viewed.visibleByOntology'),
     defined = (ontologyId !== undefined) && (ontologyId !== ''),
     ok = ! visibleByOntology || (defined && this.getOntologyIsVisible(ontologyId));
     if (trace > 2) {

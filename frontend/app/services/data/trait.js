@@ -123,7 +123,7 @@ export default Service.extend({
     fnName = 'featureFilter',
     group = this.get(groupName),
     traitName = feature.get('values.Trait'),
-    visibleByTrait = this.get('controls.view.visibleByTrait'),
+    visibleByTrait = this.get('controls.viewed.visibleByTrait'),
     trait = traitName && group && group.findBy('name', traitName),
     ok = ! visibleByTrait || (trait && trait.get('visible'));
     if (trace > 2) {

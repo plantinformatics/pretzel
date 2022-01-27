@@ -603,6 +603,7 @@ export default InAxis.extend({
   ontology : service('data/ontology'),
 
   controlsView : alias('controls.controls.view'),
+  controlsViewed : alias('controls.viewed'),
 
 
   className : "tracks",
@@ -968,11 +969,14 @@ export default InAxis.extend({
       /* don't apply fixedBlockWidth if block subElements - the sub-elements
        * would be too thin to see well, and overlap is less likely.
        */
-      blockState.trackWidth = ! fixedBlockWidth || blockState.subElements ?
+      let newWidth = ! fixedBlockWidth || blockState.subElements ?
         trackWidth : (
           allocatedWidth && allocatedWidth[1] ?
             allocatedWidth[1] / 2 / thisAt.get('nTrackBlocks') / compress :
             trackWidth   / compress);
+      if (blockState.trackWidth !== newWidth) {
+        blockState.set('trackWidth', newWidth);
+      }
       dLog('trackBlocksData', blockId, data.length, (data.length == 0) ? '' : y(data[0][0]),
            blockState, allocatedWidth, compress, thisAt.get('nTrackBlocks'));
       return data;
@@ -1948,8 +1952,8 @@ export default InAxis.extend({
     'trackBlocksR.@each.visible',
     'trackBlocksR.@each.featuresLength', 'trait.traits.@each.visible',
     'ontology.ontologyIsVisibleChangeCount',
-    'controlsView.visibleByTrait',
-    'controlsView.visibleByOntology',
+    'controlsViewed.visibleByTrait',
+    'controlsViewed.visibleByOntology',
     function () {
     let
     trait = this.get('trait'),
@@ -2297,7 +2301,7 @@ export default InAxis.extend({
     'axis1d.zoomed', 'axis1d.extended', // 'axis1d.featureLength',
     'controlsView.diamondWidth',
     'controlsView.diamondOffset',
-    'controlsView.qtlColourBy',
+    'controlsViewed.qtlColourBy',
     'controlsView.qtlUncolouredOpacity',
     'ontology.ontologyColourScaleUpdateCount',
     /* this would be a dependency if getMinQtlWidth() was a CP; currently as a

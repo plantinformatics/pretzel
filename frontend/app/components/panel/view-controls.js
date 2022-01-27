@@ -80,19 +80,6 @@ export default Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
-  /** the data/ontology and data/trait services provide .featureFilter(), used
-   * by axis-tracks : tracksTree() to filter out QTLs whose
-   * .values.{Trait,Ontology} is not set to be visible.  If the value is not
-   * defined, then it is filtered out if this flag is true (otherwise it is
-   * filtered in/out according to the set visibility of the value).
-   * That is, the flag indicates if a value is required; if false then QTLS with
-   * undefined values are displayed.
-   * QTLs with undefined Trait/Ontology are not coloured, so they can be
-   * distinguished, but they may obscure the signal provided by defined values.
-   */
-  visibleByOntology : false,
-  visibleByTrait : false,
-
   /** if false, axis title text and axis ticks and text are hidden with display : none,
    * via a class .hideAxisText added on svgContainer.FeatureMapViewer
    */
@@ -430,19 +417,6 @@ export default Component.extend({
    * This initial default value is coordinated with hbs : <input ... value=0 ... diamondOffsetInput >
    */
   diamondOffset : 0,
-
-  /** Colour QTL diamonds & <rect>s by one of : Ontology, Trait, Block. */
-  qtlColourBy : 'Block',
-  qtlColourByChanged(value) {
-    dLog('qtlColourByChanged', value);
-  },
-
-  /** Click on Ontology colours either the hierarchy below the clicked node, or
-   * nodes at the same level as the clicked node. */
-  ontologyClick : 'Level',
-  ontologyClickChanged(value) {
-    dLog('ontologyClickChanged', value);
-  },
 
 
   /*--------------------------------------------------------------------------*/
