@@ -85,7 +85,7 @@ export default ManageBase.extend({
   // ---------------------------------------------------------------------------
 
   viewedSettingsChanged(settings, changedFieldName) {
-    dLog('viewedSettingsChanged', settings, changedFieldName);
+    dLog('viewedSettingsChanged', changedFieldName, changedFieldName ? settings[changedFieldName] : settings);
     this.viewedSettings = settings;
   },
 

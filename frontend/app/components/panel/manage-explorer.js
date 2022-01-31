@@ -570,7 +570,7 @@ export default ManageBase.extend({
     nameFilters = this.get('nameFilterArray'),
     match = ! nameFilters.length || 
       this.datasetOrBlockMatch(dataset, nameFilters);
-    if (match && (nameFilter !== "")) {
+    if (match && (nameFilter !== "") && (trace_dataTree > 1)) {
       dLog('dataPre', nameFilter, dataset.name);
     }
     return match;

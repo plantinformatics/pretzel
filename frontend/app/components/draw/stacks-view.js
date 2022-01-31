@@ -87,8 +87,19 @@ export default Component.extend({
     axesP = axisIDs.map((axisID) => {
       let blocks = axesBlocks[axisID],
       block;
-      if (blocks.length === 1)
-        block = blocks[0];
+      if (blocks.length === 1) {
+        /** Originally data blocks were shown on their own axis until their
+         * reference block was viewed; this will cause an axis-1d to be created
+         * briefly for them, which currently causes the block to not refer to an
+         * axis-1d.  Instead just wait for the reference to be viewed; if viewed
+         * via the GUI the reference is viewed first.
+         * Now that 2-level parent is possible, e.g. QTL block -> markers -> assembly,
+         * blocks[] may be a single block which is a reference and has a reference.
+         */
+        if (! blocks[0].referenceBlock) {
+          block = blocks[0];
+        }
+      }
       else if (blocks.length > 1) {
         let original = blocks.filter((b) => !b.get('isCopy'));
         if (original.length) {
@@ -110,7 +121,8 @@ export default Component.extend({
         }
       }
       return block;
-    });
+    })
+    .filter((b) => b);
     dLog('axesP2', axesP, axisIDs);
     return axesP;
   }),

@@ -51,8 +51,10 @@ export default Record.extend({
             /** prefer to use a dataset from its original source, rather than a copy
              * cached in primary server */
             let original = datasets.filter((d) => ! d.dataset.get('_meta._origin'));
-            if (original.length !== 1) {
-              dLog('parent', 'original count', original.length, original);
+            if (original.length) {
+              if (original.length !== 1) {
+                dLog('parent', 'original count', original.length, original);
+              }
               parent = original[0].dataset;
             }
             else {

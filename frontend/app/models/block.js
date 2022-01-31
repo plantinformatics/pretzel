@@ -535,7 +535,7 @@ export default Model.extend({
     parentName = parent && parent.get('name');  // e.g. "myGenome"
     /* If the parent has a parent, then use that name instead; referenceBlock
      * corresponds to the axis, i.e. the ultimate parent. */
-    if (parent?.parentName) {
+    if (trace_block && parent?.parentName) {
       dLog('referenceBlockSameServer', this.id, dataset.get('id'), parentName, parent.parentName);
       parentName = parent.parentName;
       /* could instead change mapBlocksByReferenceAndScope() which currently
@@ -1109,6 +1109,10 @@ export default Model.extend({
     'referencedAxis1d', 'referenceBlock.referencedAxis1d',
     function () {
       let axis1d = this.get('referencedAxis1d') || this.get('referenceBlock.referencedAxis1d');
+      if (axis1d?.isDestroying) {
+        dLog('axis1d isDestroying', axis1d);
+        axis1d = undefined;
+      }
       let a1Check = this.verify_axis1d();
       if (axis1d !== a1Check) {
         dLog('axis1d', axis1d, a1Check);
@@ -1124,7 +1128,10 @@ export default Model.extend({
     if (this.isViewed) {
       let
       axes1d = this.get('blockService.axes1d.axis1dArray');
-      axis1d = axes1d.find((a1) => !a1.isDestroying && a1.viewedBlocks.find((b) => b === this));
+      axis1d = axes1d.find(
+        (a1) => !a1.isDestroying &&
+          ((a1.get('axis') === this) || 
+           (a1.viewedBlocks.find((b) => b === this))));
       if (trace_block > 1) {
         dLog('axis1d', axis1d, axes1d, this.id, this.get('axis.axis1d'));
       }
