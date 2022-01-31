@@ -1636,6 +1636,10 @@ export default ManageBase.extend({
 
   /** if within the Traits / Ontologies tab, then make-visible the Traits /
    * Ontologies of the block
+   * and if in another tab then make-visible both;
+   * i.e. viewing a block in the Traits / Ontologies tab sets visibility of just
+   * the Trait / Ontology value/branch clicked; for other fields, make-visible
+   * all values of the block.
    */
   makeValuesVisible(block) {
     /** Values of doneField are made visible by action
@@ -1646,22 +1650,22 @@ export default ManageBase.extend({
     let doneField = this.activeId.slice(13);
     let
     fields = ['Trait', 'Ontology'],
-    doFields = fields.filter((name) => name == doneField);
+    doFields = fields.filter((name) => name != doneField);
     doFields.forEach((fieldName) => this.makeValuesVisibleField(block, pluralize(fieldName)));
   },
   /** Make all .values[singularize(fieldName)] values of block visible.
    * @param fieldName plural : 'Traits', 'Ontologies'
    */
   makeValuesVisibleField(block, fieldName) {
-        let
-        values = this.blockAttributes(block, fieldName),
-        setVisible = (fieldName === 'Traits') ?
-          (traitName) => this.get('trait').traitVisible(traitName, true) :
-          (ontologyId) => this.get('ontology').setOntologyIsVisible(ontologyId, true);
-        dLog('loadBlock', 'makeValuesVisibleField', fieldName, values);
-        if (values) {
-          values.forEach((value) => setVisible(value));
-        }
+    let
+    values = this.blockAttributes(block, fieldName),
+    setVisible = (fieldName === 'Traits') ?
+      (traitName) => this.get('trait').traitVisible(traitName, true) :
+      (ontologyId) => this.get('ontology').setOntologyIsVisible(ontologyId, true);
+    dLog('loadBlock', 'makeValuesVisibleField', fieldName, values);
+    if (values) {
+      values.forEach((value) => setVisible(value));
+    }
   },
 
   //----------------------------------------------------------------------------
