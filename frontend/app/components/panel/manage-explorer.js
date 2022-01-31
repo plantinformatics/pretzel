@@ -4,7 +4,7 @@ import { resolve, all } from 'rsvp';
 import { A } from '@ember/array';
 import { inject as service } from '@ember/service';
 import { isArray } from '@ember/array';
-import { singularize } from 'ember-inflector';
+import { singularize, pluralize } from 'ember-inflector';
 
 
 import DS from 'ember-data';
@@ -1644,21 +1644,24 @@ export default ManageBase.extend({
      * activeId is e.g. "tab-explorer-Trait", "tab-explorer-Ontology"
      */
     let doneField = this.activeId.slice(13);
-    if (! ["tab-explorer-Trait", "tab-explorer-Ontology"].includes(this.activeId))
-    {
-      /** perhaps instead of the enclosing if (), filter pluralize(doneField) out of this list.  */
-      ['Traits', 'Ontologies'].forEach((fieldName) => {
+    let
+    fields = ['Trait', 'Ontology'],
+    doFields = fields.filter((name) => name == doneField);
+    doFields.forEach((fieldName) => this.makeValuesVisibleField(block, pluralize(fieldName)));
+  },
+  /** Make all .values[singularize(fieldName)] values of block visible.
+   * @param fieldName plural : 'Traits', 'Ontologies'
+   */
+  makeValuesVisibleField(block, fieldName) {
         let
         values = this.blockAttributes(block, fieldName),
         setVisible = (fieldName === 'Traits') ?
           (traitName) => this.get('trait').traitVisible(traitName, true) :
           (ontologyId) => this.get('ontology').setOntologyIsVisible(ontologyId, true);
-        dLog('loadBlock', this.activeId, fieldName, values);
+        dLog('loadBlock', 'makeValuesVisibleField', fieldName, values);
         if (values) {
           values.forEach((value) => setVisible(value));
         }
-      });
-    }
   },
 
   //----------------------------------------------------------------------------
