@@ -22,6 +22,7 @@ RUN apk add --no-cache git \
      terminus-font	\
      curl	\
      jq	\
+     samtools	\
   && npm install bower -g
 
 # add backend to image
