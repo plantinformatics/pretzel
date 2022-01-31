@@ -1101,6 +1101,11 @@ div.selected-server {
     margin-top: 2ex;
     margin-bottom: 1ex;
 }
+/* for nodes in explorer tree with colour border - use a wide border to show the colour. */
+.wide-border.btn
+{
+  border-width : 4px;
+}
 #tab-explorer-parent  ul {
   /* there is enough indent in the li, so 0 is enough here. */
   -webkit-padding-start: 0px;

@@ -19,9 +19,9 @@
    --}}
 
   {{#if @selectExpander}}
-    <span title={{hoverText}} class="truncate btn" style="flex: 1;"
+    <span title={{hoverText}} class="truncate btn wide-border" style="flex: 1;"
       {{on 'click' (fn @selectExpander nodeName values) }}
-      style={{safe-style valuesColour}} >
+      style={{safe-style border-color=this.valuesColour}} >
       {{nodeName}}
     </span>
   {{else}}

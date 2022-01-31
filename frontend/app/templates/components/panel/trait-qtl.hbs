@@ -16,7 +16,7 @@
             class="list-group-item {{if (compare trait.id '===' selectedTrait.id) 'list-group-item-warning'}}"
             data-trait-id={{trait.id}}
             {{!-- action "selectTrait" trait on="click" --}}>
-            <span style={{safe-style trait.colour}} class="traitColourBlock"></span>
+            <span style={{safe-style background-color=trait.colour}} class="traitColourBlock"></span>
             <span title="{{trait.name}}" class="truncate" style="max-width:260px">
               {{trait.datasetId.name}} {{trait.name}}
             </span>
