@@ -219,8 +219,13 @@ export default InAxis.extend({
         /** draw() filters by axisBlocksIds, so do the same here. */
         axisBlocks=this.get('axisBlocks.blocks'),
         axisBlocksIds = axisBlocks.mapBy('id'),
-        enabledBlockIds = blockIds.filter((blockId) => axisBlocksIds.includes(blockId)),
-        /** also filter out block.isQTL. via block = this.get('blockService').id2Block(blockId) */
+        enabledBlockIds = blockIds.filter((blockId) => axisBlocksIds.includes(blockId))
+        /** QTLs are display outside axis, no featuresCounts charts shown.  */
+          .filter((blockId) => {
+            let block = this.get('blockService').id2Block(blockId),
+                ok = ! block || ! block.isQTL;
+            return ok;
+          }),
         addedCharts = enabledBlockIds.map((blockId) => {
           let chartName = dataTypeName + '_' + blockId;
           return this.addChart(dataTypeName, chartName);
