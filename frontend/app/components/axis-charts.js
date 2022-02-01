@@ -201,6 +201,7 @@ export default InAxis.extend({
   chartsArray : computed(
     'chartTypes.[]',
     'featureCountBlocks.{featureCountAutoData,featureCountData}.[]',
+    'axisBlocks.blocks.[]',
     function () {
       /* The result is roughly equivalent to Object.values(this.get('charts')),
        * but for any chartType which doesn't have an element in .charts, add
@@ -214,10 +215,17 @@ export default InAxis.extend({
         .reduce((result, dataTypeName) => { if (! dataTypeName.startsWith('featureCount')) result.push(this.addChart(dataTypeName, dataTypeName)); return result;}, []),
       charts1Block = Object.keys(typeBlockIds).map((dataTypeName) => {
         let blockIds = typeBlockIds[dataTypeName];
-        return blockIds.map((blockId) => {
+        let
+        /** draw() filters by axisBlocksIds, so do the same here. */
+        axisBlocks=this.get('axisBlocks.blocks'),
+        axisBlocksIds = axisBlocks.mapBy('id'),
+        enabledBlockIds = blockIds.filter((blockId) => axisBlocksIds.includes(blockId)),
+        /** also filter out block.isQTL. via block = this.get('blockService').id2Block(blockId) */
+        addedCharts = enabledBlockIds.map((blockId) => {
           let chartName = dataTypeName + '_' + blockId;
           return this.addChart(dataTypeName, chartName);
         });
+        return addedCharts;
       }),
       charts = [chartsAllBlocks, charts1Block].flat(2);
 
@@ -279,6 +287,7 @@ export default InAxis.extend({
      * equiv : this.axis1d.{zoomedDomainThrottled,zoomedDomainDebounced}
      */
   'axis1d.currentPosition.{yDomainDebounced,yDomainThrottled}',
+  'axis1d.extended',
   'blockViews.@each.isZoomedOut',
     /** .@each.x.y is no longer supported; if these dependencies are needed, can
      * define block.featuresCounts{,Results}Length
