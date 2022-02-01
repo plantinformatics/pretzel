@@ -21,6 +21,7 @@ export default Record.extend({
     'apiServers.datasetsBlocksRefresh',
     '_meta.referenceHost',
     function () {
+      const fnName = 'parent';
       if (this.isDestroyed || this.isDestroying || this.isDeleted)
         return undefined;
       let parentName = this.get('parentName'),
@@ -53,9 +54,12 @@ export default Record.extend({
             let original = datasets.filter((d) => ! d.dataset.get('_meta._origin'));
             if (original.length) {
               if (original.length !== 1) {
-                dLog('parent', 'original count', original.length, original);
+                dLog(fnName, 'original count', original.length, original.mapBy('store.name'), original);
               }
-              parent = original[0].dataset;
+              /** narrow to datasets which are original and primary */
+              let op = original.filterBy('server', apiServers.primaryServer);
+              dLog(fnName, 'original and primary', op.length, op.mapBy('store.name'), op);
+              parent = op.length ? op[0].dataset : original[0].dataset;
             }
             else {
               /** perhaps at this point, prefer the host/server/store which this dataset is from. */
