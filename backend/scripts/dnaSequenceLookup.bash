@@ -25,6 +25,19 @@ unused_var=${toolsDev=$resourcesDir/tools/dev}
 unused_var=${samtools=samtools}
 unused_var=${datasetIdDir=/mnt/data_blast/blast/datasetId}
 
+# Test if running within container.
+# File Handles for errors and warnings to be reported back to the user.
+# These can be 3,4 when run from backend/common/utilities/child-process.js : childProcess()
+# which opens those file handles, but when running from Flask map them to 2 - stderr.
+if [ -e /proc/self/fd/3 ]
+then
+  F_ERR=3
+  F_WARN=4
+else
+  F_ERR=2
+  F_WARN=2
+fi
+
 
 logFile=dnaSequenceLookup.log
 (pwd; date; ) >> $logFile
@@ -33,12 +46,20 @@ echo $* >> $logFile
 [ -d tmp ] || mkdir tmp
 
 set -x
-fileName=$1
-useFile=$2
-parent=$3
-region=$4
-# addDataset is 'true' or 'false'
-echo fileName="$fileName", useFile=$useFile, parent="$parent", region=$region  >> $logFile
+# If running within container then unused args fileName=$1 useFile=$2
+# are passed.  If running from Flask server they are not passed.
+if [ -e /proc/self/fd/3 ]
+then
+  fileName=$1
+  useFile=$2
+  parent=$3
+  region=$4
+  echo fileName="$fileName", useFile=$useFile, parent="$parent", region=$region  >> $logFile
+else
+  parent=$1
+  region=$(echo "$2" | sed 's/^chr//')
+  echo parent="$parent", region=$region  >> $logFile
+fi
 
 
 #-------------------------------------------------------------------------------
@@ -75,7 +96,7 @@ function datasetId2dbName()
   if [ ! -f "$datasetId".dbName ]
   then
     dbName="$datasetId"
-    echo 1>&4 'Warning:' "no file '$datasetId.dbName', using '$datasetId'"
+    echo 1>&$F_WARN 'Warning:' "no file '$datasetId.dbName', using '$datasetId'"
   elif [ $inContainer -eq 0 ]
   then
     # Can't use soft-link across container boundary, but can pass its path
@@ -97,17 +118,17 @@ then
   dev_result "$region"
   status=$?
 else 
-  # (! does not preserve $?, so if that is required, if cd ... ; then : ; else status=$?; echo 1>&3 "..."; exit $status; fi;  , and equivalent for each if. )
+  # (! does not preserve $?, so if that is required, if cd ... ; then : ; else status=$?; echo 1>&$F_ERR "..."; exit $status; fi;  , and equivalent for each if. )
   status=1
   if ! cd "$datasetIdDir"
   then
-    echo 1>&3 'Error:' "Genome Database is not configured"
+    echo 1>&$F_ERR 'Error:' "Genome Database is not configured"
   elif ! dbName=$(datasetId2dbName "$datasetId")
   then
-    echo 1>&3 'Error:' "Genome datasetId is not configured", "$datasetId"
+    echo 1>&$F_ERR 'Error:' "Genome datasetId is not configured", "$datasetId"
   elif ! time "$samtools" faidx "$dbName" "$region"
   then
-    echo 1>&3 'Error:' "Unable to run samtools faidx"
+    echo 1>&$F_ERR 'Error:' "Unable to run samtools faidx"
   else
     status=$?	# 0
   fi
