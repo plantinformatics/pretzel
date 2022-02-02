@@ -412,6 +412,7 @@ export default Component.extend({
         /* see comment re. handsOnTableLicenseKey in frontend/config/environment.js */
         licenseKey: config.handsOnTableLicenseKey,
         afterSelection,
+        afterOnCellMouseOver,
         outsideClickDeselects: false,
         stretchH : this.stretchHText,
       };
@@ -426,10 +427,33 @@ export default Component.extend({
       /** application client data : this component */
       table.rootElement.__PretzelTableBrushed__ = this;
 
+    function afterOnCellMouseOver(event, coords, TD) {
+      if (coords.row === -1) {
+        return;
+      }
+      // getDataAtCell(coords.row, coords.col)
+      // table?.getDataAtRow(coords.row);
+      let
+      table = that.table,
+      /** The meta is associated with column 0.
+       * The data is currently the selected feature, which refers to the Ember
+       * data object as .feature
+       */
+      feature = table?.getCellMeta(coords.row, 0)?.PretzelFeature?.feature;
+      dLog('afterOnCellMouseOver', coords, TD, feature?.name, feature?.value);
+      /** clears any previous highlights if feature is undefined */
+      that.highlightFeature(feature);
+    }
+    /* alternative :
+    function afterOnCellMouseOut(event, coords, TD) {
+      that.highlightFeature();
+    } */
 
       $("#table-brushed").on('mouseleave', function(e) {
         that.highlightFeature();
-      }).on("mouseover", function(e) {
+      });
+    if (false) {
+      undefined?.on("mouseover", function(e) {
         if (e.target.tagName == "TD") {
           var tr = e.target.parentNode;
           {
@@ -443,6 +467,7 @@ export default Component.extend({
         }
         that.highlightFeature();
       });
+    }
   },
 
   /** Assign Feature reference to each row. */
@@ -450,6 +475,10 @@ export default Component.extend({
     // table.countRows()
     data.forEach((feature, row) => {
       this.setRowAttribute(table, row, feature) ;
+      /* this alternative is more specific to HoT, but is less brittle than setRowAttribute() using tr.__dataPretzelFeature__
+       * Used by afterOnCellMouseOver().
+       */
+      table.setCellMeta(row, 0, 'PretzelFeature', feature);
     });
   },
   /** Assign Feature reference to row. */
