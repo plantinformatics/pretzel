@@ -578,6 +578,10 @@ export default Model.extend({
         scopes = map && map.get(parentName),
         /** blocks[0] may be undefined, e.g. when the reference is on another server which is not connected. */
         blocks = scopes && scopes.get(scope);
+        /** Expect the referenceBlock to not have data, except for the parent of
+         * a QTL, which is expected to have data.
+         */
+        let referenceHasData = this.get('isQTL');
         /** b.isData uses .referenceBlock, which may recurse to here, so use
          * direct attributes of block to indicate whether it is reference / data
          * block.
@@ -587,8 +591,9 @@ export default Model.extend({
          */
         referenceBlock = blocks && blocks.filter(
           (b) => b &&
-            (!!b.range || ! (b.featureValueCount || b.featureLimits) ||
-             ! b.get('datasetId.parent')) &&
+            (referenceHasData ? b.hasFeatures :
+             (!!b.range || ! (b.featureValueCount || b.featureLimits) ||
+              ! b.get('datasetId.parent'))) &&
             (! blockId || (b.get('id') !== blockId))
         );
       } else {

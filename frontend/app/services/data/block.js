@@ -1084,8 +1084,34 @@ export default Service.extend(Evented, {
     function() {
       return this.mapBlocksByReferenceAndScope(this.get('blockValues'));
     }),
+
+  /** For each datasetId:scope:, an array of blocks is recorded.
+   * Lookup the blocks array, and create it if it does not yet exist.
+   * blocks[0] is reserved for the reference block, so a new array is
+   * [undefined], and blocks[0] is set by the caller.
+   *
+   * @param map contains the datasetId:scope:blocks heirarchy.
+   * @param create added to indicate whether to create a map entry if it doesn't exist.
+   * The 2nd pass of mapBlocksByReferenceAndScope() passes create===false - see
+   * comment there.
+   */
+  blocksOfDatasetAndScope(map, create, datasetId, scope) {
+    /** Lookup the map for datasetId; create it if it does not yet exist. */
+    let mapByScope = map.get(datasetId);
+    if (! mapByScope && create) {
+      mapByScope = new Map();
+      map.set(datasetId, mapByScope);
+    }
+    /** Lookup the blocks[] for scope; create it if it does not yet exist. */
+    let blocks = mapByScope?.get(scope);
+    if (! blocks && create)
+      mapByScope.set(scope, blocks = [undefined]); // [0] is reference block
+    return blocks;
+  },
+
   mapBlocksByReferenceAndScope(blockValues) {
       const fnName = 'blocksByReferenceAndScope';
+
       let map = blockValues
         .reduce(
           (map, block) => {
@@ -1105,25 +1131,10 @@ export default Service.extend(Evented, {
              */
             parentName = block.get('datasetId.parentName');
 
-            /** For each datasetId:scope:, an array of blocks is recorded.
-             * Lookup the blocks array, and create it if it does not yet exist.
-             * blocks[0] is reserved for the reference block, so a new array is
-             * [undefined], and blocks[0] is set by the caller.
-             */
+            let me = this;
             function blocksOfDatasetAndScope(datasetId, scope) {
-              /** Lookup the map for datasetId; create it if it does not yet exist. */
-              let mapByScope = map.get(datasetId);
-              if (! mapByScope) {
-                mapByScope = new Map();
-                map.set(datasetId, mapByScope);
-              }
-              /** Lookup the blocks[] for scope; create it if it does not yet exist. */
-              let blocks = mapByScope.get(scope);
-              if (! blocks)
-                mapByScope.set(scope, blocks = [undefined]); // [0] is reference block
-              return blocks;
+              return me.blocksOfDatasetAndScope(map, true, datasetId, scope);
             }
-
             if (parentName) {
               /** if block.datasetId.parentName, this is a child/data block so add
                * it to the blocks of the reference.
@@ -1157,6 +1168,31 @@ export default Service.extend(Evented, {
             return map;
           },
           new Map());
+
+
+    /** Update : previously parent / child was single-level; now can have e.g. a
+     * QTL block whose dataset parent is a marker set whose dataset parent is a
+     * reference assembly.
+     * So now pass through blockValues again, checking if blocks with
+     * .datasetId.parentName are also the reference of some other blocks.
+     */
+      map = blockValues
+        .reduce(
+          (map, block) => {
+            let id = block.id,
+            scope = block.get('scope'),
+            parentName = block.get('datasetId.parentName');
+
+              let datasetName = block.get('datasetId.name');
+              /** Don't create a map entry; this pass is simply to update
+               * blocks[0] === undefined in existing map entries.  */
+              let blocks = this.blocksOfDatasetAndScope(map, false, datasetName, scope);
+              if (blocks && (blocks.length > 1) && ! blocks[0]) {
+                blocks[0] = block;
+            }
+            return map;
+          },
+          map);
 
       if (trace_block > 1)
         log_Map_Map(fnName, map);
