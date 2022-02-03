@@ -17,11 +17,13 @@
     <span>{{object-at 0 this.sequenceLookupDomain}}</span>
     <span>{{object-at 1 this.sequenceLookupDomain}}</span>
   </span>
-  {{#if this.sequenceLookupDomain}}
+  {{#unless this.datasetOkForSequenceLookup}}
+    <span style="margin-left: 4em;">Dataset does not have BlastDb set up and enabled.</span>    
+  {{else if this.sequenceLookupDomain}}
     <button onclick={{action this.dnaSequenceLookup}} class="btn btn-xs">Lookup</button>
   {{else}}
     <span>Lookup Region limit is 100kb</span>
-  {{/if}}
+  {{/unless}}
 </div>
 <div>
   <textarea style="width: 100%;">{{sequenceText}}</textarea>
