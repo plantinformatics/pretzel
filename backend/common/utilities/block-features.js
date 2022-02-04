@@ -310,12 +310,14 @@ exports.blockFeatureLimits = function(db, blockId) {
     .concat(group)
   : group;
 
-  if (trace_block)
+  if (trace_block > 1) {
     console.log('blockFeatureLimits', pipeline);
-  if (trace_block > 1)
+  }
+  if (trace_block > 2) {
     console.dir(pipeline, { depth: null });
 
-  showExplain('blockFeatureLimits', featureCollection.aggregate ( pipeline, {allowDiskUse: true} ));
+    showExplain('blockFeatureLimits', featureCollection.aggregate ( pipeline, {allowDiskUse: true} ));
+  }
   let result =
     featureCollection.aggregate ( pipeline, {allowDiskUse: true} );
 
@@ -407,6 +409,24 @@ exports.blockFeaturesCacheClear = function blockFeaturesCacheClear(cache)
       cache.put(cacheId, undefined);
     }
   });
-}
+
+  exports.blockFeatureLimitsCacheClear(cache);
+};
+
+exports.blockFeatureLimitsCacheClear = function blockFeatureLimitsCacheClear(cache)
+{
+  const fnName = 'blockFeatureLimitsCacheClear';
+  let
+  apiName = 'blockFeatureLimits',
+  blockId = undefined,
+  cacheId = apiName + '_' + blockId;
+
+  let value = cache.get(cacheId);
+  if (value) {
+    console.log(fnName, cacheId, 'remove from cache', value.length);
+    cache.put(cacheId, undefined);
+  }
+};
+
 
 // --------------------------------------------------------------------------------

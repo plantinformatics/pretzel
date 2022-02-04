@@ -362,7 +362,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       block = apiServer.datasetAndBlock(blockId.blockId)
         .then((datasetBlock) => datasetBlock.block);
     }
-    if (trace_block > 1)
+    if (trace_block > 2)
       block.then((blockR) => console.log('blockRecordLookup', blockId, blockR));
     return block;
   };
@@ -622,7 +622,9 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
   /** Logically part of reqStream(), but split out so that it can be called
    * directly or via a promise. */
   function pipeStream(sse, intervals, useCache, cacheId, filterFunction, res, cursor) {
-    console.log('pipeStream', sse, intervals, useCache, cacheId);
+      if (trace_block > 2) {
+        console.log('pipeStream', sse, intervals, useCache, cacheId);
+      }
       if (useCache)
         cursor.
         pipe(new pathsStream.CacheWritable(/*cache,*/ cacheId));

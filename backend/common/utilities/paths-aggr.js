@@ -474,7 +474,7 @@ function featuresByBlocksAndDomains(blockId0, blockId1, intervals) {
   pipeline = useDomainFilter ? filterValue : matchBlock;
 
   if (useDomainFilter) {
-    if (trace_aggr)
+    if (trace_aggr > 1)
       log_filterValue_intervals(filterValue, intervals);
   }
 

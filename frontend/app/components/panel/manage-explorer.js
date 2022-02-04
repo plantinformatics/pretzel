@@ -1686,7 +1686,7 @@ export default ManageBase.extend({
        * may change this function to return a promise
        */
       bt = as && as['blockFeature' + singularize(fieldName)],
-      bti = bt.find((bt) => bt._id === block.id);
+      bti = bt?.find((bt) => bt._id === block.id);
       values = bti && bti[fieldName];
     }
     return values;
