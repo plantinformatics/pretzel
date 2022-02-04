@@ -26,6 +26,7 @@ import { subInterval, overlapInterval } from '../utils/draw/zoomPanCalcs';
 import {
   featuresCountsResultsCheckOverlap,
   featuresCountsResultsMerge,
+  featuresCountsResultsDomain,
   featuresCountsResultsFilter,
   featuresCountsResultsTidy,
  } from '../utils/draw/featuresCountsResults';
@@ -1643,6 +1644,10 @@ export default Model.extend({
         }
       );
     if (! combined) {
+      /** fcResult.domain is set by featuresCountsResultsFilter(), called from featuresCountsResultsMerge().
+       * In this (non-merge) case, use featuresCountsResultsDomain() to set .domain.
+       */
+      featuresCountsResultsDomain(fcResult);
       featuresCountsResults.pushObject(fcResult);
     }
   },
