@@ -189,9 +189,12 @@ export default Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
-  hasFeatures : computed('featureCount', function () {
+  hasFeatures : computed('featureCount', 'featureValueCount', function () {
     /** featureValueCount > 0 implies featureCount > 0.
-     * Could also use .featuresCountsResults - if any non-zero counts then block has features.  */
+     * featureValueCount is from blockFeatureLimits, so it only updates after upload.
+     * Could also use .featuresCountsResults - if any non-zero counts then block has features.
+     * perhaps also .featureLimits
+     */
     let count = this.get('featureCount') || this.get('featureValueCount');
     return count > 0;
   }),
