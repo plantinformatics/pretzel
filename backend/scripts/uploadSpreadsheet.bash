@@ -430,7 +430,7 @@ function spreadsheetConvert()
   # installation of ssconvert (gnumeric) on centos had dependency problems, so using docker
   if [ -f /etc/system-release-cpe ]
   then
-    renameIfSpaces
+    # renameIfSpaces is done by caller, before rm.
     # if renameIfSpaces has changed $fileName, then "$2" and "$3" need to change also
     # Perhaps switch from centos and install ssconvert directly; but if renameIfSpaces
     # is needed, can refactor this to pass in $fileName perhaps.
@@ -449,6 +449,12 @@ function spreadsheetConvert()
 case $fileName in
   *.xlsx|*.xls|*.ods)
     ll -d "$fileName" >> uploadSpreadsheet.log
+    # If using docker in spreadsheetConvert(), then rename spaces to _ and
+    # change $fileName, before rm
+    if [ -f /etc/system-release-cpe ]
+    then
+      renameIfSpaces
+    fi
     echo ssconvert >> uploadSpreadsheet.log
     # Remove outputs from previous upload of $fileName
     rm -f "$fileName".*.csv
