@@ -539,8 +539,10 @@ export default Model.extend({
     parentName = parent && parent.get('name');  // e.g. "myGenome"
     /* If the parent has a parent, then use that name instead; referenceBlock
      * corresponds to the axis, i.e. the ultimate parent. */
-    if (trace_block && parent?.parentName) {
-      dLog('referenceBlockSameServer', this.id, dataset.get('id'), parentName, parent.parentName);
+    if (parent?.parentName) {
+      if (trace_block) {
+        dLog('referenceBlockSameServer', this.id, dataset.get('id'), parentName, parent.parentName);
+      }
       parentName = parent.parentName;
       /* could instead change mapBlocksByReferenceAndScope() which currently
        * does not  blocks[0] = block  if block.parentName.  */
@@ -583,9 +585,10 @@ export default Model.extend({
         /** blocks[0] may be undefined, e.g. when the reference is on another server which is not connected. */
         blocks = scopes && scopes.get(scope);
         /** Expect the referenceBlock to not have data, except for the parent of
-         * a QTL, which is expected to have data.
+         * a QTL, which may be a physical reference (no data), or a GM, which is
+         * expected to have data.
          */
-        let referenceHasData = this.get('isQTL');
+        let isQTL = this.get('isQTL');
         /** b.isData uses .referenceBlock, which may recurse to here, so use
          * direct attributes of block to indicate whether it is reference / data
          * block.
@@ -595,7 +598,7 @@ export default Model.extend({
          */
         referenceBlock = blocks && blocks.filter(
           (b) => b &&
-            (referenceHasData ? b.hasFeatures :
+            (isQTL ? true :
              (!!b.range || ! (b.featureValueCount || b.featureLimits) ||
               ! b.get('datasetId.parent'))) &&
             (! blockId || (b.get('id') !== blockId))

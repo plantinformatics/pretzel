@@ -159,7 +159,8 @@ export default Controller.extend(Evented, {
     loadBlock : function loadBlock(block) {
       dLog('loadBlock', block);
       let related = this.get('view').viewRelatedBlocks(block);
-      related.unshift(block);
+      // load related[] before block.
+      related.push(block);
       // or send('getSummaryAndData', block);
       related.forEach((block) => this.actions.getSummaryAndData.apply(this, [block]));
     },

@@ -761,17 +761,19 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   },
 
   /** @return the Stacked object corresponding to this axis. */
-  axisS : computed('axis.id', 'stacks.axesPCount', function () {
-    let
+  axisS : computed(
+    'axis.id', 'stacks.axesPCount', 'axis.view',
+    function () {
+      let
       axisName = this.get('axis.id'),
-    axisS = Stacked.getAxis(axisName);
-    if (axisS) {
-      if (axisS.axis1d === this && this.isDestroying)
-        axisS.axis1d = undefined;
-      else if (! axisS.axis1d && ! this.isDestroying) {
-        axisS.axis1d = this;
+      axisS = Stacked.getAxis(axisName) || this.get('axis.view');
+      if (axisS) {
+        if (axisS.axis1d === this && this.isDestroying)
+          axisS.axis1d = undefined;
+        else if (! axisS.axis1d && ! this.isDestroying) {
+          axisS.axis1d = this;
+        }
       }
-    }
     return axisS;
   }),
   /** @return true if an axis-2d child component is required for this

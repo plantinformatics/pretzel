@@ -63,8 +63,10 @@ export default Component.extend({
              * at block[0]) to {reference : [], data : [], both : []}; this is
              * driven by multiple servers enabling multiple reference blocks in
              * a single datasetName/scope/.
+             * This is used by axesP() before the block is viewed,
+             * so include reference which is not viewed.
              */
-            blocks = blocks.filter((b) => b.get('isViewed'));
+            blocks = blocks.filter((b) => b.get('isViewed') || ! b.get('isData'));
             mapByReferenceBlock[blocks[0].id] = blocks;
             if (true /*trace*/ )
               dLog('axesBlocks', referenceName, scope, blocks.mapBy(_internalModel_data));

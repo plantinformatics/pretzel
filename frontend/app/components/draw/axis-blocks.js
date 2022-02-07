@@ -1,6 +1,6 @@
 import { next } from '@ember/runloop';
 import { computed } from '@ember/object';
-import { alias } from '@ember/object/computed';
+import { alias, filterBy } from '@ember/object/computed';
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
 
@@ -35,6 +35,7 @@ export default Component.extend({
 
 
   blocks : alias('dataBlocks'),
+  chartBlocks : filterBy('blocks', 'isQTL', false),
 
   /** Allocate fixed-width horizontal space for each block.
    * @return [[block, startOffset, endOffset], ...],

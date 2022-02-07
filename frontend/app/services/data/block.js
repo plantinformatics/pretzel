@@ -1129,7 +1129,8 @@ export default Service.extend(Evented, {
              * useful to group by .parentName regardless of whether .parent is
              * defined.
              */
-            parentName = block.get('datasetId.parentName');
+            parentName = block.get('datasetId.parent.parentName') || 
+                block.get('datasetId.parentName');
 
             let me = this;
             function blocksOfDatasetAndScope(datasetId, scope) {

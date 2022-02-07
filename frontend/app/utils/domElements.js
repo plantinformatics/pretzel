@@ -266,6 +266,26 @@ function cssHexEncode(text)
   return html;
 }
 
+// -----------------------------------------------------------------------------
+
+/** Wrap CSS.escape() : handle leading digit (which would otherwise be escaped).
+ */
+function escapeCSS(value) {
+  let valueEsc;
+  if (typeof value != "string") {
+    value = '' + value;
+  }
+  if (value.match(/^[0-9]/)) {
+    /** prefix with alpha character so that CSS.escape() does not convert an initial digit to \hex */
+    valueEsc = CSS.escape('a' + value).slice(1);
+  } else {
+    valueEsc = CSS.escape(value);
+  }
+  return valueEsc;
+}
+  
+// -----------------------------------------------------------------------------
+
 
 
 /** recognise any punctuation in f which is not allowed for a selector matching an element class name,
@@ -424,7 +444,7 @@ export {
   eltResizeToAvailableWidth,
   logWindowDimensions, logElementDimensions, logElementDimensions2,
   shiftKeyfilter, noShiftKeyfilter, ctrlKeyfilter, noKeyfilter,
-  htmlHexEncode, cssHexEncode,
+  htmlHexEncode, cssHexEncode, escapeCSS,
   eltClassName,
   tabActive,
   inputRangeValue,

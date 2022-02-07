@@ -377,9 +377,15 @@ export default Component.extend(Evented, AxisEvents, {
    * otherwise remove them.
    */
   show() {
-    let     axisS = this.get('axis1d.axisS'),
-    axisID = this.get('axisID');
-    this.axisShowExtend(axisS, axisID, /*axisG*/ undefined);
+    let
+    axisID = this.get('axisID'),
+    axis1d = this.get('axis1d'),
+    axisS = axis1d.get('axisS'), view;
+    if (axis1d && ! axisS && (view = axis1d.get('axis.view'))) {
+      dLog('show', axisID, axis1d, view, 'axisShowExtend');
+      axisS = view;
+    }
+    this.axisShowExtend(axisS, axis1d, axisID, /*axisG*/ undefined);
   },
 
   didInsertElement() {
@@ -440,7 +446,7 @@ export default Component.extend(Evented, AxisEvents, {
       this.show();
     }
     // may trigger this differently, could be action.
-    next(() => this.get('axis1d').widthEffects());
+    next(() => ! this.get('axis1d').isDestroying && this.get('axis1d').widthEffects());
   },
   /** Update the X scale / horizontal layout of stacks
    * copied from draw-map; the x scale will likely move to stacks-view, and this will likely be dropped.
@@ -481,14 +487,17 @@ export default Component.extend(Evented, AxisEvents, {
     return axisUse;
   },
 
-  axisShowExtend(axis, axisID, axisG)
+  /**
+   * @param axis  Stacks axis, optional, used by axisShowExtended() for yRange().
+   */
+  axisShowExtend(axis, axis1d, axisID, axisG)
   {
-    dLog('axisShowExtend', axis, axisID, axisG);
+    dLog('axisShowExtend', axis, axis1d, axisID, axisG);
     /** x translation of right axis */
     let 
     /** value of .extended may be false, so || 0.  */
       initialWidth = /*50*/ this.getAxisExtendedWidth(axisID) || 0,
-    axisData = axis && Ember_get(axis, 'axis1d.is2d') ? [axisID] : [];
+    axisData = axis1d.get('is2d') ? [axisID] : [];
     let oa = this.get('oa');
     if (axisG === undefined)
       axisG = oa.svgContainer.selectAll("g.axis-outer#id" + axisID);
@@ -568,7 +577,7 @@ export default Component.extend(Evented, AxisEvents, {
       const xOffset = 25, shiftRight=5;
       let 
         tickWidth = xOffset/5,
-      edgeHeight = axis ? axis.yRange() : 0,
+      edgeHeight = axis ? axis.yRange() : vc.yRange || 0,
       line = d3.line(),
       sLine = line([
         [+tickWidth, 0],
