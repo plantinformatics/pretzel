@@ -51,6 +51,10 @@ export const isFirefox = () => typeof InstallTrigger !== 'undefined';
 const sbSizeThresholdInitial = 20;
 const sbSizeThresholdMax = 1e9;
 
+const axisLayerModulusInitial = 5;
+const axisLayerModulusMax = 100;
+
+
 /** can be replaced by Math.clamp() when that is available
  * refn : https://stackoverflow.com/questions/11409895/whats-the-most-elegant-way-to-cap-a-number-to-a-segment
  */
@@ -277,6 +281,42 @@ export default Component.extend({
      */
     this.set('sbSizeThresholdText', value);
     this.set('sbSizeThreshold', value);
+    this.updateSyntenyBlocksPosition();
+  },
+
+  // ---------------------------------------------------------------------------
+  /* copied, with sbSizeThreshold → axisLayerModulus; factor as a sub-component - no time now.
+   * sbSizeThreshold comments apply similarly here.
+   */
+  
+  axisLayerModulus : axisLayerModulusInitial,
+  axisLayerModulusLinear : expRangeInitial(axisLayerModulusInitial, expRangeBase(50, axisLayerModulusMax)),
+  axisLayerModulusText : "" + axisLayerModulusInitial,
+  axisLayerModulusTextChanged(value) {
+    /* {{input value=axisLayerModulusText ... }} sets
+     * this.axisLayerModulusText, and (action ...  value=target.value)
+     * passes the same value to this function.  */
+    if (this.axisLayerModulusText !== value) {
+      dLog('axisLayerModulusTextChanged', this.axisLayerModulusText, value);
+    }
+    /** value is a string. */
+    value = +value;
+    if ((value < 1) || (value > axisLayerModulusMax)) {
+      return;
+    }
+    if (value !== this.set('axisLayerModulus')) {
+      let linear = expRangeInitial(value, expRangeBase(50, axisLayerModulusMax));
+      dLog('axisLayerModulusTextChanged', this.axisLayerModulusText, value, linear);
+      this.set('axisLayerModulusLinear', linear);
+      this.set('axisLayerModulus', value);
+      this.updateSyntenyBlocksPosition();
+    }
+  },
+  axisLayerModulusLinearChanged(linear) {
+    let value = Math.round(expRange(+linear, 50, axisLayerModulusMax));
+    // dLog('axisLayerModulusLinearChanged', linear, value);
+    this.set('axisLayerModulusText', value);
+    this.set('axisLayerModulus', value);
     this.updateSyntenyBlocksPosition();
   },
 

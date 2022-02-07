@@ -26,6 +26,7 @@ import {
   featureTraitColour,
 } from '../utils/draw/axis';
 import { ensureSvgDefs } from '../utils/draw/d3-svg';
+import { intervalDirection } from '../utils/draw/zoomPanCalcs';
 
 import { axisRegionNames } from './axis-2d';
 
@@ -445,8 +446,9 @@ function showDiamondP(y, featureData) {
  * @param yInterval	unscaled y position (interval) of feature
  * @param xWidth	width in px of track
  * @param xPosn xOffset, incorporates layer offset
+ * @param yRowOffset in px
  */
-function rectTrianglePath(y, yInterval, xWidth, xPosn) {
+function rectTrianglePath(y, yInterval, xWidth, xPosn, yRowOffset) {
   /** related : axisApi.lineHoriz(), featureLineS(), horizTrianglePath().  */
   /**
    *   ^	- yS[1]		-
@@ -467,7 +469,7 @@ function rectTrianglePath(y, yInterval, xWidth, xPosn) {
    */
   let
   /* scaled y position (interval) of feature */
-  yS = [y(yInterval[0]), y(yInterval[1])],
+  yS = yInterval.map((yi) => y(yi) + yRowOffset),
   yLength = yS[1] - yS[0],
   yDirection = Math.sign(yLength),
   yLengthAbs = Math.abs(yLength),
@@ -505,11 +507,12 @@ function rectTrianglePath(y, yInterval, xWidth, xPosn) {
  * @param yInterval	unscaled y position (interval) of feature
  * @param xWidth	width in px of track
  * @param xPosn xOffset, incorporates layer offset
+ * @param yRowOffset in px
  */
-function diamondPath(y, yInterval, xWidth, xPosn) {
+function diamondPath(y, yInterval, xWidth, xPosn, yRowOffset) {
   let
   /* scaled y position (interval) of feature */
-  yS = [y(yInterval[0]), y(yInterval[1])],
+  yS = yInterval.map((yi) => y(yi) + yRowOffset),
 
   height = xWidth * 8/5; // px.  xWidth is normally 5px
 
@@ -916,6 +919,7 @@ export default InAxis.extend({
     bbox = gAxis.node().getBBox(),
     yrange = [bbox.y, bbox.height];
     dLog(gAxis.node());
+    let layerModulus = thisAt.controlsView.axisLayerModulus;
     /** could skip the reference block blockIds[0]. */
     let blockIds = d3.keys(tracks.intervalTree);
     let
@@ -956,7 +960,8 @@ export default InAxis.extend({
       tracksLayout = regionOfTree(t, y.domain(), sizeThreshold, abutDistance, true),
       data = tracksLayout.intervals;
       let blockState = thisAt.lookupAxisTracksBlock(blockId);
-      blockState.set('layoutWidth', tracksLayout.nLayers * trackWidth * 2);
+      let nLayers = Math.min(tracksLayout.nLayers, layerModulus);
+      blockState.set('layoutWidth', nLayers * trackWidth * 2);
       if (! blockState.hasOwnProperty('subElements')) {
         blockState.subElements = blockTagSubElements(blockId);
       }
@@ -999,9 +1004,16 @@ export default InAxis.extend({
         blockC = thisAt.lookupAxisTracksBlock(blockId),
         trackWidth = blockC.trackWidth;
         /*console.log("xPosn", d);*/
-        return ((d.layer || 1) - 1) *  trackWidth * 2;
+        return (((d.layer || 1) % layerModulus) - 1) *  trackWidth * 2;
       };
     };
+    function yRowOffset(d) {
+      let
+      row = Math.trunc((d.layer || 1) / layerModulus),
+      feature = thisAt.featureData2Feature.get(d),
+      yOffset = row * 5;
+      return yOffset;
+    }
     /** @return the position of the start of the feature interval.
      * @desc This is used in combination with heightDir().
      */
@@ -1012,10 +1024,10 @@ export default InAxis.extend({
      * This is used in combination with height(), which returns a positive value.
      */
     function yPosn(d) { /*console.log("yPosn", d);*/
-      if (y(d[0]) > y(d[1]))
-        return y(d[1]);
-      else
-        return y(d[0]);
+      let px = d.map((yi) => y(yi) + yRowOffset(d)),
+          // pxPlus = intervalDirection(px, true);
+          pxMin = Math.min.apply(undefined, px);
+      return pxMin;
     };
     /** return the end of the y scale range which d is closest to.
      * Used when transitioning in and out.
@@ -1395,7 +1407,7 @@ export default InAxis.extend({
         let xPosnFn = xPosnS(subElements);
         rm
           // maybe transition
-          .attr('d', (d,i,g) => rectTrianglePath(y, d, width, xPosnFn.apply(this, [d, i, g])));
+          .attr('d', (d,i,g) => rectTrianglePath(y, d, width, xPosnFn.apply(this, [d, i, g]), 0));
       }
       else {
         /** by using sharedProperties.minQtlWidth instead of width, all QTL diamonds are
@@ -1410,12 +1422,13 @@ export default InAxis.extend({
             function (d, i, g) {
               g[i] = swapTag('rect', 'path', g[i], attributesForReplace);
               let x = xPosnS(subElements).apply(this, [d, i, g]);
+              let yOffset = yRowOffset.apply(this, [d, i, g]);
               const
               diamondWidth = minWidth * (thisAt.controlsView.diamondWidth || 1),
               rectWidth = isQtl ? diamondWidth : width,
               pathDFn = useDiamond ? 
-                (d,i,g) => diamondPath(y, d, diamondWidth, x) :
-                (d,i,g) => rectTrianglePath(y, d, rectWidth, x);
+                (d,i,g) => diamondPath(y, d, diamondWidth, x, yOffset) :
+                (d,i,g) => rectTrianglePath(y, d, rectWidth, x, yOffset);
               d3.select(g[i])
                 .attr('d', pathDFn);
             }.apply(this, [d, i, g]) :
@@ -2303,6 +2316,7 @@ export default InAxis.extend({
     'controlsView.diamondOffset',
     'controlsViewed.qtlColourBy',
     'controlsView.qtlUncolouredOpacity',
+    'controlsView.axisLayerModulus',
     'ontology.ontologyColourScaleUpdateCount',
     /* this would be a dependency if getMinQtlWidth() was a CP; currently as a
      * CP the dependencies don't have the desired effect. */
