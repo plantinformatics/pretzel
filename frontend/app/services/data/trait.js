@@ -55,7 +55,7 @@ export default Service.extend({
 
   /** @return this.traits, filtered to the traits of currently-viewed blocks
    */
-  traitsInView : computed('traits.[]', 'block.viewed', function () {
+  traitsInView : computed('traits.[]', 'block.viewed.@each.traitSet', function () {
     /** another approach would be :
      *    this.traits.filter((t) => t.features.any((f) => f.blockId.isViewed))
      * Block.traitSet is constant, whereas trait[*].features[*] is constantly
