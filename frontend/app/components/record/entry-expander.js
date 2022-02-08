@@ -40,7 +40,7 @@ export default Component.extend({
      * The immediate hierarchy is : entry-tab : bs-tab/pane : entry-values : entry-level : entry-expander
      */
     let immediateParent = this.parentView.parentView.parentView.parentView;
-    let viewOntology = immediateParent._debugContainerKey === 'component:panel/ontologies';
+    let viewOntology = this.controlOptions?.context?.viewOntology;
     let explorerOntology = (immediateParent._debugContainerKey === "component:record/entry-tab") &&
         (immediateParent.name === 'Ontology');
     if (viewOntology || (explorerOntology && this.controlOptions.showHierarchy)) {

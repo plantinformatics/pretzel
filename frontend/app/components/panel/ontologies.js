@@ -175,6 +175,7 @@ export default Component.extend({
 
   controlOptions : {
     showHierarchy : true,
+    context : {viewOntology : true},
   },
   showHierarchyChanged(value) {
     dLog('showHierarchyChanged', value);

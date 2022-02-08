@@ -115,9 +115,46 @@ function compareDependencies(object, label, dependencies) {
 
 // -----------------------------------------------------------------------------
 
+/** Show id and type attributes of obj.
+ * @param obj Ember Object
+ */
+function logObj(obj)
+{
+  dLog(obj.id, obj._debugContainerKey);
+}
+/** Show parents of emberComponent, up to the root.
+ * @param emberComponent
+ */
+function showParents(emberComponent) {
+  let parent = emberComponent;
+  while (parent) {
+    logObj(parent);
+    parent = parent.parentView;
+  }
+  if (parent) {
+    logObj(parent);
+  }
+}
+
+/** Search upwards from emberComponent, through component .parentView links,
+ * stopping if matchFn(parent) is true 
+ * @param matchFn  matchFn(emberComponent) -> boolean
+ * matchFn may also be used to visit each component node, e.g logging component details.
+ */
+function findParent(emberComponent, matchFn) {
+  let parent = emberComponent;
+  while (parent && ! matchFn(parent)) {
+    parent = parent.parentView;
+  }
+  return parent;
+}
+
+// -----------------------------------------------------------------------------
+
 
 export {
   parentOfType, elt0, getAttrOrCP, _internalModel_data, nowOrLater,  promiseText, toPromiseProxy,
   toArrayPromiseProxy,
   compareDependencies,
+  findParent,
  };
