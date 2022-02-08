@@ -992,6 +992,8 @@ export default InAxis.extend({
       /** datum is interval array : [start, end];   with attribute .description. */
       function xPosn(d) {
         let
+        feature = thisAt.featureData2Feature.get(d),
+        isQTL = feature?.get('blockId.isQTL'),
         p = this.parentElement,
         gBlock = subElements ? p.parentElement : p,
         blockId = gBlock.__data__;
@@ -1000,9 +1002,17 @@ export default InAxis.extend({
   }
   let
         blockC = thisAt.lookupAxisTracksBlock(blockId),
-        trackWidth = blockC.trackWidth;
+        trackWidth = blockC.trackWidth,
+        /** if d.layer is not defined or 0, use 1  */
+        layer = d.layer || 1;
+        /** if isQTL, limit layer to layerModulus */
+        if (isQTL) {
+          layer = Math.min(layer, layerModulus);
+        }
+        /**  map [1,inf] to [0,inf] */
+        layer = layer - 1;
         /*console.log("xPosn", d);*/
-        return ((d.layer || 1) - 1) *  trackWidth * 2;
+        return layer *  trackWidth * 2;
       };
     };
     /** @return the position of the start of the feature interval.
