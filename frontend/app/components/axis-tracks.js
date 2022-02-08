@@ -1015,7 +1015,7 @@ export default InAxis.extend({
      * This is used in combination with height(), which returns a positive value.
      */
     function yPosn(d) { /*console.log("yPosn", d);*/
-      let px = d.map((yi) => y(yi) + yRowOffset(d)),
+      let px = d.map((yi) => y(yi)),
           // pxPlus = intervalDirection(px, true);
           pxMin = Math.min.apply(undefined, px);
       return pxMin;
