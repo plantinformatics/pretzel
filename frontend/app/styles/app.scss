@@ -354,6 +354,18 @@ g.axis-use.hasChart > g.axis-html > .foreignObject {
 
 /* ---------------------------------- */
 
+.hoverTraitColour {
+  color : var(--hoverTraitColour);
+  margin-right : 1em;
+}
+.hoverOntologyColour {
+  color : var(--hoverOntologyColour);
+  margin-right : 1em;
+}
+
+
+/* ---------------------------------- */
+
 /* col-xs-12 was used generally for the left and right panel elements containing .panel
  * They are single-column - there is no need for grid, so bootstrap col- doesn't seem needed (flex might be applicable). 
  * These uses of col-xs-12 are changed to panel-section.

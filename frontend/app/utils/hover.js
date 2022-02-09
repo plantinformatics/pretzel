@@ -1,6 +1,7 @@
 import { stacks } from './stacks';
 
 /* global Ember */
+/* global d3 */
 
 
 /*------------------------------------------------------------------------*/
@@ -72,6 +73,9 @@ function showHover(context, textFn, d, i, g) {
         // comment re. title versus content in @see draw-map.js: configureHorizTickHover() 
         content : text
       };
+      if (text.startsWith('<div>') || text.startsWith('<span>')) {
+        options.html = true;
+      }
       if (! hoverNearElement) {
         // same as default, with arrow removed : <div class="arrow"></div>
         options.template = '<div class="popover no-border" role="tooltip"> <h3 class="popover-title"></h3><div class="popover-content"></div></div>';

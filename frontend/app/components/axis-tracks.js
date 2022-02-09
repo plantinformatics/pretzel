@@ -23,6 +23,7 @@ import {
   axisEltIdClipPath2d,
   trackBlockEltIdPrefix,
   axisTitleColour,
+  traitColour,
   featureTraitColour,
 } from '../utils/draw/axis';
 import { ensureSvgDefs } from '../utils/draw/d3-svg';
@@ -150,6 +151,8 @@ function  configureSubTrackHover(interval)
 
 /*----------------------------------------------------------------------------*/
 
+/** @see configureClick2()
+ */
 function configureClick(selected, featureData2Feature) {
   return function (selection) {
     selection.on('click', function (d, i, g) { clickTrack.apply(this, [selected, featureData2Feature, d]);});
@@ -798,6 +801,58 @@ export default InAxis.extend({
     };
   },
 
+  // ---------------------------------------------------------------------------
+
+  /** @return the given location as string for display as hover text.
+   * @param d featureData, i.e. interval, based on feature.value
+   * called via text = textFn(context, d);
+   */
+  hoverQtlHtmlFn : function (thisAt, location, d, i, g) {
+    /** `this` is DOM element : g[i]. thisAt is axis-tracks object.   */
+    /** location is d.description */
+    /** based on hoverTextFn(). */
+    let feature = thisAt.featureData2Feature.get(d);
+    /** assert : feature?.get('blockId.isQTL') === true */
+
+    /** copied from models/feature.js : traitColour() */
+    let traitName = feature?.get('values.Trait'),
+        traitColour_ = traitColour(traitName);
+    let ontology = feature?.get('values.Ontology'),
+        ontologyColour = ontology && feature?.get('ontologyColour');
+    let text;
+    if (feature && (traitName || ontology)) {
+      text = `<div>${location}</div>\n`;
+      if (traitName) {
+        d3.select('body').style('--hoverTraitColour', traitColour_);
+        // style="color:${traitColour_}"
+        text += `<div><span class="hoverTraitColour">■</span>${traitName}</div>\n`;
+      }
+      if (ontology) {
+        d3.select('body').style('--hoverOntologyColour', ontologyColour);
+        // tried : style="color:${ontologyColour}"
+        text += `<div><span class="hoverOntologyColour">■</span>${ontology}</div>\n`;
+      }
+    } else {
+      text = (location == "string") ? location :  "" + location;
+    }
+    /* if (trace > 1)*/ {
+      dLog('hoverQtlHtmlFn', text, location, d, thisAt, g[i]);
+    }
+    return text;
+  },
+
+  /*----------------------------------------------------------------------------*/
+
+  /** Configure hover text for tracks. */
+  configureQtlHover: function(thisAt)
+  {
+    return function (d, i, g) {
+      let interval = d;
+      configureHover.apply(this, [interval.description, thisAt.hoverQtlHtmlFn.bind(this, thisAt) ]);
+    };
+  },
+
+
   /*--------------------------------------------------------------------------*/
 
   /** Convert input text to an interval tree.
@@ -1369,9 +1424,10 @@ export default InAxis.extend({
             (useDiamond && showDiamondP(y, d));
         return usePath;
       };
+      let configureHoverFn = isQtl ? thisAt.configureQtlHover(thisAt) : (subElements ? configureSubTrackHover : configureTrackHover);
       ra
         .attr('class', 'track')
-        .each(subElements ? configureSubTrackHover : configureTrackHover);
+        .each(configureHoverFn);
       if (! subElements) {
         ra.call(thisAt.configureClick2());
       }
@@ -1382,7 +1438,7 @@ export default InAxis.extend({
       function attributesForReplace(d, i, g) {
         let s =
         d3.select(g[i])
-        .each(subElements ? configureSubTrackHover : configureTrackHover)
+        .each(configureHoverFn)
         .transition().duration(featureTrackTransitionTime)
         .attr('width', pathOrRect(undefined, width));
         if (! subElements) {
