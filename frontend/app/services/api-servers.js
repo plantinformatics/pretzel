@@ -130,7 +130,7 @@ export default Service.extend(Evented, {
     let isPrimary = this.get('serversLength') == 0;
     if (isPrimary || ! this.get('primaryServer')) {
       this.set('primaryServer', server);
-      /* first tab gets the initial .active, via addClassActive() */
+      /* first tab gets the initial .active, via firstTabActive() */
       server.set('firstTab', true);
     }
 
