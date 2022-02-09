@@ -1652,6 +1652,11 @@ export default ManageBase.extend({
     fields = ['Trait', 'Ontology'],
     doFields = fields.filter((name) => name != doneField);
     doFields.forEach((fieldName) => this.makeValuesVisibleField(block, pluralize(fieldName)));
+
+    /** if current tab is in fields[], i.e. fields.includes(doneField) */
+    if (doFields.length < fields.length) {
+      this.colourAndVisibleBy(doneField);
+    }
   },
   /** Make all .values[singularize(fieldName)] values of block visible.
    * @param fieldName plural : 'Traits', 'Ontologies'
@@ -1665,6 +1670,27 @@ export default ManageBase.extend({
     dLog('loadBlock', 'makeValuesVisibleField', fieldName, values);
     if (values) {
       values.forEach((value) => setVisible(value));
+    }
+  },
+  /** User has viewed a block from the explorer 'Ontologies' or 'Traits' tab.
+   * That will set visibility of the Ontology / Trait in which they clicked +,
+   * and in the case of Ontology, coloured by that OntologyId.
+   *
+   * Set the viewed-settings controls for visibleBy and colourBy, corresponding
+   * to the tab.
+   *
+   * @param fieldNameSingular 'Ontology' or 'Trait'
+   */
+  colourAndVisibleBy(fieldNameSingular) {
+    let field = fieldNameSingular;
+    let viewedSettings = this.get('controls.viewed');
+    dLog('colourAndVisibleBy', field, viewedSettings);
+    if (viewedSettings) {
+    viewedSettings.setProperties({
+      visibleByOntology : field === 'Ontology',
+      visibleByTrait : field === 'Trait',
+      qtlColourBy : (field === 'Trait') ? 'Trait' : 'Ontology',
+    });
     }
   },
 

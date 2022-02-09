@@ -37,9 +37,8 @@
 
     <div class="tab-content">
 
-    {{#if (not-eq this.activeId 'tab-view-Blocks' ) }}
+    {{!-- viewed-settings is now used by manage-explorer : colourAndVisibleBy(); perhaps use CSS display:none when tab-view-Blocks  --}}
       {{panel/viewed-settings changed=(action this.viewedSettingsChanged)}}
-    {{/if}}
 
         {{#let 'Blocks' as |tabTypeName|}}
           {{#let (compute (action this.datasetTypeTabId tabTypeName)) as |tabId|}}
