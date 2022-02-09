@@ -145,6 +145,8 @@ export default Component.extend({
   },
 
   didRender() {
+    this._super.apply(this, arguments);
+
     if (trace)
       dLog(fileName + " : didRender()");
     this.manageHoTable();

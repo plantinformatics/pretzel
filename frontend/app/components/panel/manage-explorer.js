@@ -1733,6 +1733,8 @@ export default ManageBase.extend({
      this.saveActiveId();
      },
   didRender() {
+    this._super.apply(this, arguments);
+
     if (this.get('activeId') && ! this.tabAndContentActive()) {
       this.ensureActiveClass();
     }

@@ -109,9 +109,12 @@ export default Component.extend({
     /* initialise service used by dependencies */
     this.get('ontology');
   },
+  /*
   willDestroyElement() {
     // this.termTabActionBus();
+    this._super.apply(this, arguments);
   },
+  */
 
   /** expandIcon() and actions: switch() are replaced by using icon-toggle, with
    * .active bound.

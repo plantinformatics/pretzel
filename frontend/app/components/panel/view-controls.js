@@ -493,6 +493,8 @@ export default Component.extend({
   willDestroyElement() {
     dLog("components/draw-controls willDestroyElement()");
     this.drawActions.trigger("drawControlsLife", false);
+
+    this._super.apply(this, arguments);
   },
 
   actions : {

@@ -27,6 +27,8 @@ const dLog = console.debug;
 export default Component.extend({
 
   didRender() {
+    this._super.apply(this, arguments);
+
     this.draw();
   },
   draw() {

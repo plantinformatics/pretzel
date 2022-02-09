@@ -45,9 +45,12 @@ class FeatureEditor extends Handsontable.editors.BaseEditor {
     Handsontable.dom.empty(this.WRAPPERDIV_PARENT);
     this.WRAPPERDIV_PARENT.appendChild(this.WRAPPERDIV);
   }
+  /*
   init() {
+    this._super.apply(this, arguments);
     dLog('init');
   }
+  */
   beginEditing(newInitialValue, event) {
     dLog('beginEditing', newInitialValue, event);
     super.beginEditing(newInitialValue, event);

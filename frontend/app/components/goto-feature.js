@@ -38,8 +38,11 @@ export default Component.extend({
     this.drawActions.trigger("gotoFeatureLife", false);
     this._super(...arguments);
   },
+  /*
   didRender() {
+    this._super.apply(this, arguments);
   },
+  */
 
   createListener() {
     /** drawActions is an action&event bus specific to one draw-map; it is a reference

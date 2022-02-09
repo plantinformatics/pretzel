@@ -237,6 +237,8 @@ export default Component.extend({
   /*--------------------------------------------------------------------------*/
 
   didRender() {
+    this._super.apply(this, arguments);
+
     // probably not required - renders OK without this.
     if (false && this.get('table')) {
       this.shownBsTab();

@@ -75,6 +75,7 @@ export default InAxis.extend({
   },
 
   didRender() {
+    this._super.apply(this, arguments);
     dLog(CompName + " didRender()", this.get('axisID'));
 
     if (! this.drawIfG()) {

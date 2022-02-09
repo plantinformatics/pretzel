@@ -678,6 +678,8 @@ export default Component.extend(Evented, AxisEvents, {
 
 
   didRender() {
+    this._super.apply(this, arguments);
+
     let me = this;
     let prevSize,  currentSize;
     let stacks = this.get('data').stacks;
@@ -799,6 +801,8 @@ export default Component.extend(Evented, AxisEvents, {
     if (axisUse) {
       later(() => axisUse.remove(), transitionEnable * 1000 + 100);
     }
+
+    this._super.apply(this, arguments);
   }
 
 });
