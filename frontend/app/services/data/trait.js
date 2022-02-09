@@ -53,6 +53,15 @@ export default Service.extend({
   /** array of {name, visible, features} */
   traits : A(),
 
+  /** Set all known traits to not-visible. */
+  visibleClearAll() {
+    const visible = false;
+    let
+    /** group  */
+    traits = this.get(groupName);
+    traits.forEach((trait) => trait.set('visible', visible));
+  },
+
   /** @return this.traits, filtered to the traits of currently-viewed blocks
    */
   traitsInView : computed('traits.[]', 'block.viewed.@each.traitSet', function () {

@@ -19,6 +19,7 @@ export default ManageBase.extend({
   trait : service('data/trait'),
   ontology : service('data/ontology'),
   block : service('data/block'),
+  ontology : service('data/ontology'),
 
 
 
@@ -79,6 +80,9 @@ export default ManageBase.extend({
       for (let i=displayData.length-1; i >= 0; i--) {
         me.send('removeBlock', displayData[i]);
       }
+
+      this.get('ontology').ontologyIsVisibleClearAll();
+      this.get('trait').visibleClearAll();
     }
   },
 

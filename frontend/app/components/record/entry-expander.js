@@ -32,10 +32,10 @@ export default Component.extend({
     /** the parent entry-tab will be passed in as an argument; improvising to
      * trial the setLayoutActive feature. */
     let parent = this.parentView;
-    let count = 0;
+    let count = 30;
     while (
       parent &&
-        (count++ < 20) &&
+        (count-- > 0) &&
         (parent._debugContainerKey !== "component:record/entry-tab") &&
         (parent.id != 'tab-view-Ontology') &&
         (parent.id != 'tab-view-Trait')
@@ -43,8 +43,8 @@ export default Component.extend({
     {
       parent = parent.parentView;
     }
-    if (count >= 20) {
-      dLog('entryTab', count, parent, parent?._debugContainerKey, parent?.parentView, this);
+    if (count <= 0) {
+      dLog('entryTab', parent, parent?.id, parent?._debugContainerKey, parent?.parentView, this);
     }
     /** The topmost entry-expander in the Ontology tab, set active to true.
      * The immediate hierarchy is : entry-tab : bs-tab/pane : entry-values : entry-level : entry-expander

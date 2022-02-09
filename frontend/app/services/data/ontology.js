@@ -520,6 +520,9 @@ export default Service.extend({
   ontologyIsVisible : {},
   ontologyIsVisibleChangeCount : 0,
   // isVisibleMap : new WeakMap(),
+  ontologyIsVisibleClearAll() {
+    this.set('ontologyIsVisible', {});
+  },
   setOntologyIsVisible(ontologyId, checked) {
     this.ontologyIsVisible[ontologyId] = checked;
     
