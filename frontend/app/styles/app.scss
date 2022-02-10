@@ -353,6 +353,7 @@ g.axis-use.hasChart > g.axis-html > .foreignObject {
 
 
 /* ---------------------------------- */
+/** Tooltip displayed when hover over feature / QTL diamond in axis-tracks. @see hoverQtlHtmlFn() */
 
 .hoverTraitColour {
   color : var(--hoverTraitColour);
@@ -361,6 +362,17 @@ g.axis-use.hasChart > g.axis-html > .foreignObject {
 .hoverOntologyColour {
   color : var(--hoverOntologyColour);
   margin-right : 1em;
+}
+
+/* related : div.highlightFeature, div.toolTip */
+.featureHover.html {
+  text-align: left;
+  /* width: 18em; */
+}
+.featureHover.html.QTL  > div
+{
+  /* This shows the colour block as a hanging paragraph tag, with the text wrapped and indented. */
+  display: inline-flex;
 }
 
 

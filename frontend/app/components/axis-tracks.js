@@ -821,7 +821,8 @@ export default InAxis.extend({
         ontologyColour = ontology && feature?.get('ontologyColour');
     let text;
     if (feature && (traitName || ontology)) {
-      text = `<div>${location}</div>\n`;
+      text = '<div class="featureHover html QTL highlightFeature toolTip">\n' +
+        `<div>${location}</div>\n`;
       if (traitName) {
         d3.select('body').style('--hoverTraitColour', traitColour_);
         // style="color:${traitColour_}"
@@ -832,6 +833,7 @@ export default InAxis.extend({
         // tried : style="color:${ontologyColour}"
         text += `<div><span class="hoverOntologyColour">■</span>${ontology}</div>\n`;
       }
+      text += `</div>\n`;
     } else {
       text = (location == "string") ? location :  "" + location;
     }
