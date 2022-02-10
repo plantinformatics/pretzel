@@ -270,7 +270,7 @@
       <div>
         <label title="Extra space outside the left and right-most axes">Outside Axis Margin</label>
         <input type="range"
-         value=100
+         value={{this.extraOutsideMargin}}
          oninput={{action (pipe
            (action (mut this.extraOutsideMargin) value="target.value")
            (action this.aSliderHasChanged ) )}}

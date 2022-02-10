@@ -458,6 +458,8 @@ export default Component.extend({
    */
   diamondOffset : 0,
 
+  /** Outside Axis Margin : Extra space outside the left and right-most axes.   */
+  extraOutsideMargin : 160,
 
   /*--------------------------------------------------------------------------*/
 
