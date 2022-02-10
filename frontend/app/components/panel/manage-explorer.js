@@ -1627,7 +1627,9 @@ export default ManageBase.extend({
         }
       });
 
-      this.makeValuesVisible(block);
+      if (block.isQTL) {
+        this.makeValuesVisible(block);
+      }
     }
 
   },  // actions
@@ -1642,6 +1644,7 @@ export default ManageBase.extend({
    * all values of the block.
    */
   makeValuesVisible(block) {
+    const fnName = 'makeValuesVisible';
     /** Values of doneField are made visible by action
      * entry-block-add-button.js : loadBlock : setOntologyVisible().
      *
@@ -1656,6 +1659,16 @@ export default ManageBase.extend({
     /** if current tab is in fields[], i.e. fields.includes(doneField) */
     if (doFields.length < fields.length) {
       this.colourAndVisibleBy(doneField);
+    } else {
+      /** use apiServer blockFeature{Traits|Ontologies} to see if block has
+       * either, and set 'Ontology' if block has no Traits.
+       */
+      let 
+      haveField = ['Traits', 'Ontologies'].find(
+        (fieldName) => this.blockAttributes(block, fieldName)?.length),
+      useField = haveField ? singularize(haveField) : 'Block';
+      dLog(fnName, haveField, useField);
+      this.get('controls.viewed').set('qtlColourBy', useField);
     }
   },
   /** Make all .values[singularize(fieldName)] values of block visible.
@@ -1680,6 +1693,7 @@ export default ManageBase.extend({
    * to the tab.
    *
    * @param fieldNameSingular 'Ontology' or 'Trait'
+   * @param false : set only qtlColourBy; true : also set visibleBy{Ontology|Trait}
    */
   colourAndVisibleBy(fieldNameSingular) {
     let field = fieldNameSingular;
