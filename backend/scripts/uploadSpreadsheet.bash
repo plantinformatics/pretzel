@@ -156,9 +156,11 @@ EOF
 # Handle some variation in the recognised column header names.
 # Prepate columnsKeyString, which is used in snps2Dataset.pl
 # @param worksheetFileName	name of .csv output for 1 worksheet
+# @param extraColumnRegexp	if defined, also require this pattern to match
 columnsKeyStringPrepare()
 {
   worksheetFileName=$1
+  extraColumnRegexp=$2
   head -1 "$worksheetFileName" >> uploadSpreadsheet.log
   # There may not be a comma after Position and End.
   export columnsKeyString=$(head -1 "$worksheetFileName" | sed "$trimOutsideSpaces_sed" | sed 's/Marker,/name,/i;s/Name,/name,/g;s/Chromosome,/chr,/;
@@ -188,6 +190,10 @@ s/,/ /g;
   do
     echo "$columnsKeyString" | fgrep -q "$columnName" || errorMessages+="${columnFullName[$columnName]} column is required. "
   done
+  if [ -n "$extraColumnRegexp" ]
+  then
+    echo "$columnsKeyString" | egrep -q "$extraColumnRegexp" || errorMessages+="$extraColumnRegexp column is required. "
+  fi
   if [ -n "$errorMessages" ]
   then
     # Output to Error channel back to server. (maybe also to stderr?)
@@ -264,7 +270,7 @@ function qtlList()
 {
     datasetName=$(echo "$i" | fileName2DatasetName);
     echo "fileName=$fileName, datasetName=$datasetName" >> uploadSpreadsheet.log;
-    columnsKeyStringPrepare "$i" || return $?
+    columnsKeyStringPrepare "$i" "Trait|Ontology" || return $?
     server_tmp="$PWD"
     cd ..
     # out=out_json/"$i".json
