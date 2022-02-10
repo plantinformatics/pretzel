@@ -314,8 +314,14 @@ exports.handleJson = function(msg, uploadParsed, cb) {
 
   exports.uploadParsedTryCb = 
     /** Wrap uploadParsed with try { } and pass error to cb().
+     * Also report error to cb() if jsonData is not defined.
      */
     function uploadParsedTryCb(models, jsonData, options, cb) {
+      if (! jsonData) {
+        let message = 'No upload data';
+        console.log(message);
+        cb(Error(message));
+      } else
       try {
         let jsonMap = JSON.parse(jsonData);
         exports.uploadParsedCb(models, jsonMap, options, cb);

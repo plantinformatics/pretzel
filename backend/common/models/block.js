@@ -876,7 +876,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
         pathsAggr.blockFeaturesInterval(db, blockIds, intervals);
       cursor.toArray()
         .then(function(data) {
-          console.log(apiName, ' then', (data.length > 10) ? data.length : data);
+          console.log(apiName, ' then', (data.length > 2) ? data.length : data);
           if (useCache) {
             cache.put(cacheId, data);
             if (trace_block > 1) {
