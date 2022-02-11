@@ -1654,7 +1654,14 @@ export default ManageBase.extend({
     let
     fields = ['Trait', 'Ontology'],
     doFields = fields.filter((name) => name != doneField);
-    doFields.forEach((fieldName) => this.makeValuesVisibleField(block, pluralize(fieldName)));
+    /** Update : now that qtlColourBy and visibleBy{Trait,Ontology} are
+     * controlled by the user tab selection instead of viewed-settings buttons,
+     * making all the block values of the non-selected field visible is not required.
+     */
+    const makeOtherFieldVisible = false;
+    if (makeOtherFieldVisible) {
+      doFields.forEach((fieldName) => this.makeValuesVisibleField(block, pluralize(fieldName)));
+    }
 
     /** if current tab is in fields[], i.e. fields.includes(doneField) */
     if (doFields.length < fields.length) {
