@@ -102,8 +102,7 @@
 
 
   <BsTab @customTabs={{true}} @onChange={{action this.onChangeTab}} @activeId={{this.activeId}} as |tab|>
-    <BsNav @type="tabs" as |nav|>
-    <ul class="nav nav-tabs li-active-extra counts">
+    <BsNav @type="tabs"  class="li-active-extra counts" as |nav|>
 
       {{#if blockFeatureTraits.length}}
         {{#let 'Trait' as |tabTypeName|}}
@@ -156,11 +155,10 @@
         </nav.item>
 
       {{/if}}
-
       <nav.item class="active-detail" @active={{bs-eq tab.activeId "tab-explorer-datasets"}}><a href="#tab-explorer-datasets" role="tab" onclick={{action tab.select "tab-explorer-datasets"}}>All Datasets</a>
         <div>{{data.length}}</div>
       </nav.item>
-    </ul>
+
     </BsNav>
 
     <div class="tab-content">
