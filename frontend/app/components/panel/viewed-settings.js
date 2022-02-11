@@ -29,6 +29,18 @@ export default Component.extend({
     this.changed(this);
   },
 
+  /** Instead of settings being changed via the buttons in viewed-settings,
+   * the tab selection in manage-view is now used to select .qtlColourBy,
+   * .visibleByOntology, and .visibleByTrait.
+   */
+  onChangeTab(id) {
+    dLog('onChangeTab', id, this);
+    this.set('qtlColourBy', (id === 'Blocks') ? 'Block' : id);
+    this.set('visibleByOntology', id === 'Ontology');
+    this.set('visibleByTrait', id === 'Trait');
+    dLog('onChangeTab', id, this.qtlColourBy, this.visibleByOntology, this.visibleByTrait);
+  },
+
   /** Colour QTL diamonds & <rect>s by one of : Ontology, Trait, Block. */
   qtlColourBy : 'Block',
   qtlColourByChanged(value) {

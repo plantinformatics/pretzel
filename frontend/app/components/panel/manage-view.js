@@ -62,6 +62,8 @@ export default ManageBase.extend({
     dLog('onChangeTab', this, id, previous, arguments);
 
     this.set('activeId', id);
+    let name = id.replace(/^tab-view-/, '');
+    this.viewedSettings.onChangeTab(name);
   },
 
 
