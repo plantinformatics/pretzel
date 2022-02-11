@@ -338,7 +338,7 @@ export default Service.extend({
      * qtlColourLevel() does not return colour, because of promises; ok - not
      * required because valuesColour will update element colour.
      */
-    let colour = (this.get('controls.viewed.ontologyClick') === 'Hierarchy') ||
+    let colour = (this.get('controls.viewed2.ontologyClick') === 'Hierarchy') ||
         this.get('urlOptions.qtlColourHierarchy') ?
         this.qtlColourHierarchy(ontologyId):
         this.qtlColourLevelOf(ontologyId);

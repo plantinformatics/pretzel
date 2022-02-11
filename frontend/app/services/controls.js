@@ -26,6 +26,10 @@ export default Service.extend(Evented, {
   }),
   view : alias('controls.view'),
   window : alias('view.controls.window'),
+  /**
+   *    ontologyClick : string : 'Level', ''Hierarchy'
+   */
+  viewed2 : {},
 
   /** @return the api server indicated by the tab currently selected
    * by the user (serverTabSelected), or primaryServer if tab not

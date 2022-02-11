@@ -9,7 +9,6 @@ const dLog = console.debug;
  * action call signature is : changed(settings, changedFieldName) where settings contains :
  *  {
  *    qtlColourBy : string : 'Ontology', 'Trait', 'Block',
- *    ontologyClick : string : 'Level', ''Hierarchy'
  *    visibleByOntology : boolean,
  *    visibleByTrait : boolean,
  *  }
@@ -46,14 +45,6 @@ export default Component.extend({
   qtlColourByChanged(value) {
     dLog('qtlColourByChanged', value);
     this.changed(this, 'qtlColourBy');
-  },
-
-  /** Click on Ontology colours either the hierarchy below the clicked node, or
-   * nodes at the same level as the clicked node. */
-  ontologyClick : 'Level',
-  ontologyClickChanged(value) {
-    dLog('ontologyClickChanged', value);
-    this.changed(this, 'ontologyClick');
   },
 
 

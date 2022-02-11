@@ -22,6 +22,7 @@ export default Component.extend({
   ontology : service('data/ontology'),
   block : service('data/block'),
   blockValues : service('data/block-values'),
+  controls : service(),
 
   init() {
     this._super(...arguments);
@@ -215,6 +216,24 @@ export default Component.extend({
     }
   },
 
+  // ---------------------------------------------------------------------------
+
+  /** 
+   *    ontologyClick : string : 'Level', ''Hierarchy'
+   */
+
+  /** Click on Ontology colours either the hierarchy below the clicked node, or
+   * nodes at the same level as the clicked node. */
+  ontologyClick : 'Level',
+  ontologyClickChanged(value) {
+    dLog('ontologyClickChanged', value);
+    //this.changed(this, 'ontologyClick');
+    this.set('controls.viewed2.ontologyClick', value);
+  },
+
+
+
+  // ---------------------------------------------------------------------------
 
   noAction(value) {
     dLog('noAction', value);
