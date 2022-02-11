@@ -30,27 +30,46 @@ body.mapview div#Page-Body
 
 /** show bottom border for non-active tabs
  */
-#left-panel-explorer .nav-tabs > li:not(.active) > a:not(.apiServer) {
+.nav-tabs > li:not(.active) > a:not(.apiServer) {
   border-bottom-color : #ddd;
 }
 /** offset so that the border-top of the tab is distinct from elements above.
  */
-#left-panel-explorer .nav-tabs > li {
+.nav-tabs > li {
   margin-top : 10px;  
 }
+.nav-tabs > li:not(.active) {
+  background-color: #f8f8f8;
+}
+.nav-tabs > li.active + li {
+  border-bottom-left-radius: 15px;
+  /* can't do the preceding li : */
+  /* border-bottom-right-radius: 10px; */
+  border-top-left-radius: 10px;
+}
+.nav-tabs > li > a:not(.apiServer) {
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+}
+.nav-tabs > li.active + li > a:not(.apiServer) {
+  border-top-right-radius: 10px;
+  border-bottom-color : transparent;
+}
+
 
 /* this rule is duplicated in ember-bootstrap/bootstrap/_navs.scss, so get higher specificity by prefixing with body.mapview
  * Changing from active having background-color to no bottom-border
  * i.e. non-pills style, as in https://getbootstrap.com/docs/3.4/components/#nav-tabs
  * so drop this background-color.
  * If used, it should exclude : ul.api-server-tabs ... a:not(.apiServer)
-body.mapview .nav-tabs > li.active > a,
-body.mapview .nav-tabs > li.active > a:hover,
-body.mapview .nav-tabs > li.active > a:focus{
-    color: #555555;
-    background-color: lightblue;
-} 
 */
+body.mapview .nav-pills > li.active > a/*,
+body.mapview .nav-tabs > li.active > a:hover,
+body.mapview .nav-tabs > li.active > a:focus*/{
+  color: #555555;
+  /* possibly use #d9edf7, from .list-group-item-info */
+  background-color: lightblue;
+} 
 
 /* -------------------------------------------------------------------------- */
 /* Make the top (left & right) menus horizontal. */
@@ -1137,9 +1156,10 @@ div.selected-server {
 .selected-server > .apiServer,
 #left-panel-explorer a.apiServer {
   border : 7.5px solid;
-  /** matching current bootstrap : navs.scss:84 : $border-radius-base */
-  border-bottom-left-radius: 4px;
-  border-bottom-right-radius: 4px
+  /** matching current bootstrap : navs.scss:84 : $border-radius-base
+   * in .nav-tabs > li > a, the top radius is set
+   */
+  border-radius: 4px;
 }
 #left-panel-explorer ul.nav-tabs.api-server-tabs > li {
     margin-top: 2ex;
