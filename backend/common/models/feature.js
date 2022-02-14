@@ -256,6 +256,7 @@ module.exports = function(Feature) {
               dnaSequence, true, queryStringFileName, [parent, searchType, resultRows, addDataset, datasetName], searchDataOut, cbWrap, /*progressive*/ false);
           }
         );
+        return promise;
       }
     } else {
       let features = dev_blastResult;
