@@ -156,11 +156,19 @@
       <label>Path update during drag</label>
     </li>
 
-    <li class="list-group-item">
-      <input type="checkbox"
-        checked="checked"
-        oninput={{action hideAxisTextClass}}  >
-      <label>Show Axis Text</label>
+    <li class="list-group-item  horiz-2">
+      <div>
+        <input type="checkbox"
+          checked="checked"
+          oninput={{action hideAxisTextClass}}  >
+        <label>Show Axis Text</label>
+      </div>
+      <div>
+        <input type="checkbox"
+          checked={{this.axisTitleChrOnly}}
+          oninput={{action (mut this.axisTitleChrOnly) value="target.checked"}}  >
+        <label>Only Chr in title</label>
+      </div>
     </li>
 
     <li class="list-group-item">
@@ -258,6 +266,19 @@
       />
     </li>
 
+    <li class="list-group-item">
+      <div>
+        <label title="Extra space outside the left and right-most axes">Outside Axis Margin</label>
+        <input type="range"
+         value={{this.extraOutsideMargin}}
+         oninput={{action (pipe
+           (action (mut this.extraOutsideMargin) value="target.value")
+           (action this.aSliderHasChanged ) )}}
+         min="0" max="500"
+        />
+      </div>
+    </li>
+
     <li class="list-group-item horiz-2">
       <div>
         <label>Axis Width</label>
@@ -297,15 +318,47 @@
       </div>
     </li>
 
-    <li class="list-group-item">
+
+    <li class="list-group-item horiz-2">
+    
       <div>
         <label>Graph Text Size</label>
-        <span class="sub-label">{{ titleTextSize }}</span>
-      </div>
+        <span class="sub-label" style="margin-left: 7px;">{{ titleTextSize }}</span>
       <input type="range"
        value=4
        oninput={{action this.titleTextSizeInput}}
        min="0" max="9"
+      />
+      </div>
+
+      <div>
+        <label>QTL : Black Opacity</label>
+        <input type="range"
+         value=16
+         oninput={{action this.qtlUncolouredOpacityInput}}
+         min="0" max="15"
+        />
+      </div>
+
+    </li>
+
+    <li class="list-group-item">
+      <div>
+        <label>QTL layer maximum</label>
+        <span class="sub-label">
+        {{input
+          type="text"
+          value=axisLayerModulusText
+          enter=(action axisLayerModulusTextChanged value=target.value)
+          id="axisLayerModulusText"
+        }}
+        </span>
+      </div>
+      <input type="range"
+       id="range-axisLayerModulus" 
+       min="0" max="50"
+       value={{axisLayerModulusLinear}}
+       oninput={{action axisLayerModulusLinearChanged value="target.value"}}
       />
     </li>
 

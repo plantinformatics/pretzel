@@ -2,14 +2,13 @@ import { computed } from '@ember/object';
 import Service, { inject as service } from '@ember/service';
 import { alias } from '@ember/object/computed';
 
-import ObjectProxy from '@ember/object/proxy';
-import PromiseProxyMixin from '@ember/object/promise-proxy-mixin';
 import { resolve, all } from 'rsvp';
 
 import EntryBase from './entry-base';
 
 import { typeMetaIdChildrenTree  } from '../../utils/value-tree';
 import { thenOrNow } from '../../utils/common/promises';
+import { toPromiseProxy } from '../../utils/ember-devel';
 
 /*----------------------------------------------------------------------------*/
 
@@ -102,8 +101,7 @@ export default EntryBase.extend({
     valuesP = this.values,
     text = thenOrNow(valuesP, (values) => ('[' + values.id + ']  ' + values.text));
 
-    let ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
-    let proxy = ObjectPromiseProxy.create({ promise: resolve(text) });
+    let proxy = toPromiseProxy(text);
 
     return proxy;
   }),
@@ -130,8 +128,7 @@ export default EntryBase.extend({
         return tree;
       });
 
-    let ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
-    let proxy = ObjectPromiseProxy.create({ promise: resolve(treeP) });
+    let proxy = toPromiseProxy(treeP);
 
     return proxy;
   }),

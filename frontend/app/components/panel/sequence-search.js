@@ -33,6 +33,8 @@ Sequences are expected to be represented in the standard IUB/IUPAC amino acid an
  */
 const validSequenceChars = 'ACGTUMRWSYKVHDBN';
 
+const searchInputsMax = 5;
+
 /*----------------------------------------------------------------------------*/
 
 export default Component.extend({
@@ -61,7 +63,7 @@ export default Component.extend({
   /** true means view the blocks of the dataset after it is added. */
   viewDatasetFlag : false,
 
-  classNames: ['col-xs-12'],
+  classNames: ['panel-section'],
 
   /** array of current searches.  each one is data for blast-result component. */
   searches : undefined,
@@ -170,12 +172,18 @@ export default Component.extend({
       later(() => {
         let text = event && (event.target.value || event.originalEvent.target.value);
         console.log('paste', event, text.length);
-        /** Join the subsequent lines. */
+
+        /** Between each '>marker-name' line, join the subsequent lines. */
         let lines = text.split('\n');
-        if (lines[0].startsWith('>') && (lines.length > 1)) {
-          let marker = lines.shift();
-          text = marker + '\n' + lines.join('');
-        }
+        let textOut = lines.reduce((linesOut, line, i) => {
+          if (line.startsWith('>')) {
+            if (i > 0) { linesOut.push('\n'); } linesOut.push(line); linesOut.push('\n');
+          } else {
+            linesOut.push(line); }
+          return linesOut;
+        }, []);
+
+        text = textOut.join('');
         this.set('text', text);
         this.text2Area();
         // this.dnaSequenceInput(/*text*/);
@@ -326,10 +334,8 @@ export default Component.extend({
     case 0:
       warningMessages.push('Key line is required : >MarkerName ...');
       break;
-    case 1:
-      break;
     default:
-      if (! this.get('subSelection')) {
+      if (keys.length > searchInputsMax) {
         warningMessages.push('Limit is 1 FASTA search');
       }
       break;

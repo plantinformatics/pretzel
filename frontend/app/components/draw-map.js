@@ -74,7 +74,9 @@ import {  Axes, maybeFlip, maybeFlipExtent,
           ensureYscaleDomain,
           /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform,
           eltId, axisEltId, eltIdAll, axisEltIdTitle,
+          axisFeatureCircles_eltId,
           axisFeatureCircles_selectAll,
+          axisFeatureCircles_selectOneInAxis,
           axisFeatureCircles_removeBlock,
           /*, axisTitleColour*/  }  from '../utils/draw/axis';
 import { stacksAxesDomVerify }  from '../utils/draw/stacksAxes';
@@ -168,10 +170,29 @@ Object.filter = Object_filter;
  */
 const syntenyBlock_2Feature = true;
 
+/** enable display of multiple lines in axis title : for each data block :
+ * name, block colour, feature counts, server colour; this is moving into axis
+ * menu, replacing utils/draw/axisTitleBlocksServers{,_tspan}.js.
+ */
+const axisTitle_dataBlocks = false;
+
 /*----------------------------------------------------------------------------*/
 
 //- moved to "../utils/draw/flow-controls.js" : flowButtonsSel, configurejQueryTooltip()
 
+/*----------------------------------------------------------------------------*/
+
+/** compareFn param for compareFields */
+function compareViewport(keyName, a, b) {
+  let different;
+  if (keyName === 'viewportWidth') {
+    /** viewportWidth may cycle due to the rendering affecting the geometry (seen once, in Firefox). */
+    different = ((a === undefined) !== (b === undefined)) || Math.abs(a - b) > 5;
+  } else {
+    different = a !== b;
+  }
+  return different;
+}
 /*----------------------------------------------------------------------------*/
 
 
@@ -189,6 +210,7 @@ export default Component.extend(Evented, {
   queryParamsService: service('query-params'),
   apiServers : service(),
   controlsService : service('controls'),
+  selectedService : service('data/selected'),
 
   /*--------------------------------------------------------------------------*/
   urlOptions : alias('queryParamsService.urlOptions'),
@@ -394,6 +416,11 @@ export default Component.extend(Evented, {
     return this.get('controls.view.tickOrPath') === 'path'; }),
 
   /*------------------------------------------------------------------------*/
+
+  xOffsets : {},
+  xOffsetsChangeCount : 0,
+
+  // ---------------------------------------------------------------------------
 
   actions: {
 //-	?
@@ -817,7 +844,7 @@ export default Component.extend(Evented, {
      * i.e. z[chr/ap/block name][feature/marker name] === featureIndex[feature/marker id] */
     oa.featureIndex || (oa.featureIndex = []);
 
-    oa.selectedElements || (oa.selectedElements = Ember_array_A());
+    oa.selectedElements || (oa.selectedElements = this.get('selectedService.selectedElements'));
 
 
     if (source === 'didRender') {
@@ -1175,7 +1202,12 @@ export default Component.extend(Evented, {
       });
       /** scaled x value of each axis, with its axisID. */
       let offsetArray = oa.stacks.axisIDs().map((d) => ({axisId : d, xOffset : o[d]}));
-      me.set('xOffsets', offsetArray);
+      let previous = me.get('xOffsets'),
+          changed = ! isEqual(previous, offsetArray);
+      if (changed) {
+        me.set('xOffsets', offsetArray);
+        me.incrementProperty('xOffsetsChangeCount');
+      }
     }
     /** Map an Array of Block-s to their longNames(), useful in log trace. */
     function Block_list_longName(blocks) {
@@ -2629,6 +2661,9 @@ export default Component.extend(Evented, {
     if (! oa.axisApi.axisTitleFamily)
       oa.axisApi.axisTitleFamily = axisTitleFamily;
     /** Update the axis title, including the block sub-titles.
+     * If ! axisTitle_dataBlocks, don't show the data block sub-titles, only the first line;
+     * this is selected in axisName2Blocks().
+     *
      * From the number of block sub-titles, calculate 'y' : move title up to
      * allow for more block sub-titles.
      * Create / update a <tspan> for each block, including the parent / reference block.
@@ -2638,6 +2673,7 @@ export default Component.extend(Evented, {
      * In usage, axisTitleS is a selection of either a single axis, or all axes.
      */
     function axisTitleFamily(axisTitleS) {
+      if (axisTitle_dataBlocks) {
       axisTitleS
       // .text(axisTitle /*String*/)
       // shift upwards if >1 line of text
@@ -2653,6 +2689,7 @@ export default Component.extend(Evented, {
           }
         })
       ;
+      }
 
 
 
@@ -2667,9 +2704,11 @@ export default Component.extend(Evented, {
       .enter()
       .append("tspan")
       .attr('class', 'blockTitle');
+      if (axisTitle_dataBlocks) {
       subTitleE.each(AxisTitleBlocksServers.prototype.prependTspan);
+      }
       subTitleS.exit()
-        .each(AxisTitleBlocksServers.prototype.remove1)
+        // .each(AxisTitleBlocksServers.prototype.remove1)  // enable if axisTitle_dataBlocks
         .remove();
       let subTitleM =
       subTitleE.merge(subTitleS)
@@ -2699,13 +2738,15 @@ export default Component.extend(Evented, {
           menuActions_block();
         });
 
-      axisTitleS.call(AxisTitleBlocksServers.prototype.render.bind(axisTitleBlocksServers));
+      if (axisTitle_dataBlocks) {
+        axisTitleS.call(AxisTitleBlocksServers.prototype.render.bind(axisTitleBlocksServers));
+      }
     };
 
     function axisName2Blocks (axisName) {
       let axis = Stacked.getAxis(axisName);
       // equiv : axis.children(true, false)
-      return axis ? axis.blocks : [];
+      return axis ? (axisTitle_dataBlocks ? axis.blocks : [axis.blocks[0]]) : [];
     }
 
 
@@ -2768,8 +2809,10 @@ export default Component.extend(Evented, {
         .attr("viewBox", oa.vc.viewBox.bind(oa.vc))
       ;
 
+      if (axisTitle_dataBlocks) {
       let axisTitleBlocksServers = new AxisTitleBlocksServers(oa.svgContainer, oa.axisTitleLayout, me.get('apiServers'));
       t.on('end', () => axisTitleBlocksServers.position(axisTitleS));
+      }
 
       /** showZoomResetButtonXPosn() is called in axis-1d and axis-2d,
        * ideally the call will be only in axis-1d, but for now this
@@ -2785,12 +2828,26 @@ export default Component.extend(Evented, {
 //- moved to ../utils/draw/axis.js : yAxisTextScale(),  yAxisTicksScale(),  yAxisBtnScale()
 
     // Add a brush for each axis.
+    let gBrushParent =
     allG.append("g")
-      .attr("class", "brush")
+      .attr("class", "brush");
+    /** Ensure there is clipPath & rect in gBrushParent, and set its geometry. */
+    function brushClipSize(gBrushParent) {
+      gBrushParent
       .each(function(axisID) {
         brushClip(d3.select(this), axisID)
           .each(function(d) { d3.select(this).call(oa.y[d].brush); });
       });
+    }
+    /** brushClip() uses getBBox(), so call again after the geometry has settled.
+     * If this works reliably, it might suggest splitting the append(clipPath)
+     * from the geometry setting.
+     * The 2sec call should be fine for most computers, some might take until
+     * 5sec to settle the geometry.
+     */
+    brushClipSize(gBrushParent);
+    later(() => brushClipSize(gBrushParent), 2000);
+    later(() => brushClipSize(gBrushParent), 5000);
 
 
     if (allG.nodes().length)
@@ -4214,8 +4271,10 @@ export default Component.extend(Evented, {
               /** lacking the g.block structure which would enable f to be
                * unique within its parent g, this combinedId enables transition
                * to be implemented in an improvised way.
+               * Update : originally (Genetic Maps) f.name was unique within block,
+               * now use f.id because f.name can be repeated within block.
                */
-              let combinedId = CSS.escape('fc_' + block.axisName + '_' + f),
+              let combinedId = axisFeatureCircles_eltId(feature),
               dot = axisS.selectAll('circle#' + combinedId);
               if (! dot.empty()) {
                 dot
@@ -4237,8 +4296,8 @@ export default Component.extend(Evented, {
                * @see table-brushed.js: highlightFeature() */
               }
             } else {
-              let f_ = eltClassName(f);
-              axisS.selectAll("circle." + f_).remove();
+               axisFeatureCircles_selectOneInAxis(axisS, feature)
+                .remove();
             }
             }
           });
@@ -6058,10 +6117,11 @@ export default Component.extend(Evented, {
      * @see resizeEffect()
      */
     function recordViewport(w, h) {
+      later(() => 
       this.setProperties({
         viewportWidth : w,
         viewportHeight : h
-      });
+      }));
     };
 
       /** Render the affect of resize on the drawing.
@@ -6090,6 +6150,7 @@ export default Component.extend(Evented, {
           500);
         updateXScale();
         collateO();
+        me.axesShowXOffsets();
         if (widthChanged)
           updateAxisTitleSize(undefined);
         let 
@@ -6354,6 +6415,14 @@ export default Component.extend(Evented, {
       this.oa.stacks.forEach(function (s) { s.redraw(t); });
     }
   },
+  /** re-apply axisTransformO(), which uses the axis x scales oa.o */
+  axesShowXOffsets() {
+    let 
+    oa = this.oa,
+    t = oa.svgContainer;
+    t.selectAll(".axis-outer").attr("transform", Stack.prototype.axisTransformO);
+  },
+
 
 //--------------------------------------------------------------------------
 
@@ -6445,7 +6514,7 @@ export default Component.extend(Evented, {
       this.set('resizePrev', result);
       if (prev) {
         delete result.changed;
-        let changed = compareFields(prev, result, (a,b) => a !== b);
+        let changed = compareFields(prev, result, compareViewport);
         result.changed = changed;
       }
       dLog('resizeEffect', result);
@@ -6533,6 +6602,13 @@ export default Component.extend(Evented, {
     'controls.view.showAxisText',
     /* axisTicksOutside doesn't resize, but a redraw is required (and re-calc could be done) */
     'controls.view.axisTicksOutside',
+    /* after 'controls.view.extraOutsideMargin' changes, axis x offsets are re-calculated.  related : 'oa.vc.axisXRange' */
+    'controls.view.extraOutsideMargin',
+    /* ChangeCount represents 'xOffsets.@each.@each', */
+    'xOffsetsChangeCount',
+    /** split-view : sizes of the components adjacent the resize gutter : 0: draw-map and 1 : tables panel. */
+    'componentGeometry.sizes.0',
+    'controls.window.tablesPanelRight',
     function() {
       console.log("resize", this, arguments);
         /** when called via .observes(), 'this' is draw-map object.  When called

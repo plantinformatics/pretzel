@@ -1,10 +1,21 @@
 
+{{#if showToggle}}
+  {{elem/icon-toggle state=active iconTrue='minus' iconFalse='plus' }}
+{{/if}}
 
-{{elem/icon-toggle state=active iconTrue='minus' iconFalse='plus' }}
+{{#if checkbox}}
+ <span>
+    <input type="checkbox"
+      checked={{this.checked}}
+      oninput={{action checkbox.changed value="target.checked" }}  >
+    <!-- label></label -->
+  </span>
+ {{/if}}
 
 {{#if @selectExpander}}
-<span title={{hoverText}} class="truncate btn" style="flex: 1;"
-  {{on 'click' (fn @selectExpander nodeName) }} >
+<span title={{hoverText}} class="truncate btn wide-border" style="flex: 1;"
+  {{on 'click' (fn @selectExpander nodeName values) }}
+  style={{safe-style border-color=this.valuesColour}} >
   {{nodeName}}
 </span>
 {{else}}

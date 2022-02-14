@@ -23,9 +23,11 @@ import {
   axisEltIdClipPath2d,
   trackBlockEltIdPrefix,
   axisTitleColour,
+  traitColour,
   featureTraitColour,
 } from '../utils/draw/axis';
 import { ensureSvgDefs } from '../utils/draw/d3-svg';
+import { intervalDirection } from '../utils/draw/zoomPanCalcs';
 
 import { axisRegionNames } from './axis-2d';
 
@@ -149,6 +151,8 @@ function  configureSubTrackHover(interval)
 
 /*----------------------------------------------------------------------------*/
 
+/** @see configureClick2()
+ */
 function configureClick(selected, featureData2Feature) {
   return function (selection) {
     selection.on('click', function (d, i, g) { clickTrack.apply(this, [selected, featureData2Feature, d]);});
@@ -530,6 +534,30 @@ function diamondPath(y, yInterval, xWidth, xPosn) {
   return path;
 }
 
+/** Draw a vertical line segment, matching the height of diamondPath().
+ * @return attribute d value for a <path>
+ */
+function verticalLinePath(y, yInterval, xWidth, xPosn) {
+  let
+  /* scaled y position (interval) of feature */
+  yS = [y(yInterval[0]), y(yInterval[1])],
+
+  height = xWidth * 8/5; // px.  xWidth is normally 5px
+
+  let xOffset = xPosn;
+
+  let path = d3.line()([
+    // centre x, +height/2
+    [xOffset + xWidth/2, yS[0] + height/2],
+
+    // centre x, -height/2
+    [xOffset + xWidth/2, yS[1] - height/2],
+
+  ]) + 'Z';
+  return path;
+}
+
+
 /** px */
 /** interval < this size : no arrow is shown (<rect> instead of <path>). */
 const MinimumIntervalWithArrow	= 10,
@@ -600,8 +628,10 @@ export default InAxis.extend({
   selected : service('data/selected'),
   axisZoom: service('data/axis-zoom'),
   trait : service('data/trait'),
+  ontology : service('data/ontology'),
 
   controlsView : alias('controls.controls.view'),
+  controlsViewed : alias('controls.viewed'),
 
 
   className : "tracks",
@@ -623,6 +653,8 @@ export default InAxis.extend({
     this._super(...arguments);
 
     this.set('blocks', EmberObject.create());
+    /** .ontology is used in dependency - ensure that it is initialised. */
+    this.get('ontology');
   },
 
   /*--------------------------------------------------------------------------*/
@@ -752,8 +784,13 @@ export default InAxis.extend({
   configureClick2() {
     let thisAt = this;
     return function (selection) {
-      /** selection.on('click' ) gets "unknown type: click" if selection.empty(). */
-      if (! selection.empty()) {
+      /** selection.on('click' ) gets "unknown type: click" if
+       * selection.empty(), or perhaps if selection is a transition, in which
+       * case on(click) is not required because the element already exists,
+       * e.g. when called from : swapTag() ..  attributesForReplace() ..
+       * configureClick2()
+       */
+      if (! selection.empty() && ! selection.duration) {
         selection.on('click', function (d, i, g) {
           if (thisAt.controls.noGuiModeFilter()) {
             /* clickTrack() does not yet use element this. */
@@ -763,6 +800,60 @@ export default InAxis.extend({
       }
     };
   },
+
+  // ---------------------------------------------------------------------------
+
+  /** @return the given location as string for display as hover text.
+   * @param d featureData, i.e. interval, based on feature.value
+   * called via text = textFn(context, d);
+   */
+  hoverQtlHtmlFn : function (thisAt, location, d, i, g) {
+    /** `this` is DOM element : g[i]. thisAt is axis-tracks object.   */
+    /** location is d.description */
+    /** based on hoverTextFn(). */
+    let feature = thisAt.featureData2Feature.get(d);
+    /** assert : feature?.get('blockId.isQTL') === true */
+
+    /** copied from models/feature.js : traitColour() */
+    let traitName = feature?.get('values.Trait'),
+        traitColour_ = traitColour(traitName);
+    let ontology = feature?.get('values.Ontology'),
+        ontologyColour = ontology && feature?.get('ontologyColour');
+    let text;
+    if (feature && (traitName || ontology)) {
+      text = '<div class="featureHover html QTL highlightFeature toolTip">\n' +
+        `<div>${location}</div>\n`;
+      if (traitName) {
+        d3.select('body').style('--hoverTraitColour', traitColour_);
+        // style="color:${traitColour_}"
+        text += `<div><span class="hoverTraitColour">■</span>${traitName}</div>\n`;
+      }
+      if (ontology) {
+        d3.select('body').style('--hoverOntologyColour', ontologyColour);
+        // tried : style="color:${ontologyColour}"
+        text += `<div><span class="hoverOntologyColour">■</span>${ontology}</div>\n`;
+      }
+      text += `</div>\n`;
+    } else {
+      text = (location == "string") ? location :  "" + location;
+    }
+    /* if (trace > 1)*/ {
+      dLog('hoverQtlHtmlFn', text, location, d, thisAt, g[i]);
+    }
+    return text;
+  },
+
+  /*----------------------------------------------------------------------------*/
+
+  /** Configure hover text for tracks. */
+  configureQtlHover: function(thisAt)
+  {
+    return function (d, i, g) {
+      let interval = d;
+      configureHover.apply(this, [interval.description, thisAt.hoverQtlHtmlFn.bind(this, thisAt) ]);
+    };
+  },
+
 
   /*--------------------------------------------------------------------------*/
 
@@ -907,6 +998,7 @@ export default InAxis.extend({
     bbox = gAxis.node().getBBox(),
     yrange = [bbox.y, bbox.height];
     dLog(gAxis.node());
+    let layerModulus = thisAt.controlsView.axisLayerModulus;
     /** could skip the reference block blockIds[0]. */
     let blockIds = d3.keys(tracks.intervalTree);
     let
@@ -947,7 +1039,8 @@ export default InAxis.extend({
       tracksLayout = regionOfTree(t, y.domain(), sizeThreshold, abutDistance, true),
       data = tracksLayout.intervals;
       let blockState = thisAt.lookupAxisTracksBlock(blockId);
-      blockState.set('layoutWidth', tracksLayout.nLayers * trackWidth * 2);
+      let nLayers = Math.min(tracksLayout.nLayers, layerModulus);
+      blockState.set('layoutWidth', nLayers * trackWidth * 2);
       if (! blockState.hasOwnProperty('subElements')) {
         blockState.subElements = blockTagSubElements(blockId);
       }
@@ -960,11 +1053,14 @@ export default InAxis.extend({
       /* don't apply fixedBlockWidth if block subElements - the sub-elements
        * would be too thin to see well, and overlap is less likely.
        */
-      blockState.trackWidth = ! fixedBlockWidth || blockState.subElements ?
+      let newWidth = ! fixedBlockWidth || blockState.subElements ?
         trackWidth : (
           allocatedWidth && allocatedWidth[1] ?
             allocatedWidth[1] / 2 / thisAt.get('nTrackBlocks') / compress :
             trackWidth   / compress);
+      if (blockState.trackWidth !== newWidth) {
+        blockState.set('trackWidth', newWidth);
+      }
       dLog('trackBlocksData', blockId, data.length, (data.length == 0) ? '' : y(data[0][0]),
            blockState, allocatedWidth, compress, thisAt.get('nTrackBlocks'));
       return data;
@@ -977,6 +1073,8 @@ export default InAxis.extend({
       /** datum is interval array : [start, end];   with attribute .description. */
       function xPosn(d) {
         let
+        feature = thisAt.featureData2Feature.get(d),
+        isQTL = feature?.get('blockId.isQTL'),
         p = this.parentElement,
         gBlock = subElements ? p.parentElement : p,
         blockId = gBlock.__data__;
@@ -985,9 +1083,17 @@ export default InAxis.extend({
   }
   let
         blockC = thisAt.lookupAxisTracksBlock(blockId),
-        trackWidth = blockC.trackWidth;
+        trackWidth = blockC.trackWidth,
+        /** if d.layer is not defined or 0, use 1  */
+        layer = d.layer || 1;
+        /** if isQTL, limit layer to layerModulus; i.e. show | after layerModulus layers. */
+        if (isQTL) {
+          layer = Math.min(layer, layerModulus + 1);
+        }
+        /**  map [1,inf] to [0,inf] */
+        layer = layer - 1;
         /*console.log("xPosn", d);*/
-        return ((d.layer || 1) - 1) *  trackWidth * 2;
+        return layer *  trackWidth * 2;
       };
     };
     /** @return the position of the start of the feature interval.
@@ -1000,10 +1106,10 @@ export default InAxis.extend({
      * This is used in combination with height(), which returns a positive value.
      */
     function yPosn(d) { /*console.log("yPosn", d);*/
-      if (y(d[0]) > y(d[1]))
-        return y(d[1]);
-      else
-        return y(d[0]);
+      let px = d.map((yi) => y(yi)),
+          // pxPlus = intervalDirection(px, true);
+          pxMin = Math.min.apply(undefined, px);
+      return pxMin;
     };
     /** return the end of the y scale range which d is closest to.
      * Used when transitioning in and out.
@@ -1320,9 +1426,10 @@ export default InAxis.extend({
             (useDiamond && showDiamondP(y, d));
         return usePath;
       };
+      let configureHoverFn = isQtl ? thisAt.configureQtlHover(thisAt) : (subElements ? configureSubTrackHover : configureTrackHover);
       ra
         .attr('class', 'track')
-        .each(subElements ? configureSubTrackHover : configureTrackHover);
+        .each(configureHoverFn);
       if (! subElements) {
         ra.call(thisAt.configureClick2());
       }
@@ -1333,7 +1440,7 @@ export default InAxis.extend({
       function attributesForReplace(d, i, g) {
         let s =
         d3.select(g[i])
-        .each(subElements ? configureSubTrackHover : configureTrackHover)
+        .each(configureHoverFn)
         .transition().duration(featureTrackTransitionTime)
         .attr('width', pathOrRect(undefined, width));
         if (! subElements) {
@@ -1400,9 +1507,13 @@ export default InAxis.extend({
               let x = xPosnS(subElements).apply(this, [d, i, g]);
               const
               diamondWidth = minWidth * (thisAt.controlsView.diamondWidth || 1),
-              pathDFn = useDiamond ? 
-                (d,i,g) => diamondPath(y, d, diamondWidth, x) :
-                (d,i,g) => rectTrianglePath(y, d, width, x);
+              rectWidth = isQtl ? diamondWidth : width,
+              pastLayerMax = d.layer > layerModulus,
+              pathDFn = useDiamond ? (
+                pastLayerMax ?
+                  (d,i,g) => verticalLinePath(y, d, diamondWidth, x) :
+                  (d,i,g) => diamondPath(y, d, diamondWidth, x) ):
+                (d,i,g) => rectTrianglePath(y, d, rectWidth, x);
               d3.select(g[i])
                 .attr('d', pathDFn);
             }.apply(this, [d, i, g]) :
@@ -1486,11 +1597,12 @@ export default InAxis.extend({
           }
         }
       }
-      let featureColour =
-          block.get('useTraitColour') ?
+      let
+      qtlColourBy = block.get('useFeatureColour'),
+      featureColour = qtlColourBy ?
           (interval) => {
             let feature = thisAt.featureData2Feature.get(interval);
-            return featureTraitColour(feature); } :
+            return feature.colour(qtlColourBy); } :
           blockTrackColourI;
 
       rm
@@ -1934,9 +2046,16 @@ export default InAxis.extend({
   /** Construct a interval tree from the track data.
    * This is used for filtering and for layering.
    */
-  tracksTree : computed('trackBlocksR.@each.featuresLength', 'trait.traits.@each.visible', function () {
+  tracksTree : computed(
+    'trackBlocksR.@each.visible',
+    'trackBlocksR.@each.featuresLength', 'trait.traits.@each.visible',
+    'ontology.ontologyIsVisibleChangeCount',
+    'controlsViewed.visibleByTrait',
+    'controlsViewed.visibleByOntology',
+    function () {
     let
     trait = this.get('trait'),
+    ontology = this.get('ontology'),
     axisID = this.get('axisID'),
     trackBlocksR = this.get('trackBlocksR'),
     featuresLengths = this.get('trackBlocksR').mapBy('featuresLength');
@@ -1949,9 +2068,20 @@ export default InAxis.extend({
       function (blockFeatures, blockR) {
         let
         blockId = blockR.get('id'),
-        features = blockR.get('features')
+        isQtl = blockR.get('isQTL'),
+        features = ! blockR.get('visible') ? [] :
+          blockR.get('features')
           .toArray()  //  or ...
-          .filter((feature) => trait.featureFilter('traits', feature))
+          /** if feature does not have values.{Trait,Ontology}, the defaults of
+           * trait.featureFilter() and ontology.featureFilter() are
+           * ! visibleBy{Trait,Ontology}
+           * The filters are only applied if the features in this block are QTLs
+           *
+           * Also, this will compound the 2 filters - the requirement can be
+           * decided as the Ontology Visibility feature is trialled.
+           */
+          .filter((feature) => ! isQtl || trait.featureFilter('traits', feature))
+          .filter((feature) => ! isQtl || ontology.featureFilter(feature))
           /* filter out QTL .value which is [] and not yet computed from .values.flankingMarkers.
            * This assumes feature.value.length is defined; now there shouldn't be any Feature.range or non-array .value
            */
@@ -2269,6 +2399,10 @@ export default InAxis.extend({
     'axis1d.zoomed', 'axis1d.extended', // 'axis1d.featureLength',
     'controlsView.diamondWidth',
     'controlsView.diamondOffset',
+    'controlsViewed.qtlColourBy',
+    'controlsView.qtlUncolouredOpacity',
+    'controlsView.axisLayerModulus',
+    'ontology.ontologyColourScaleUpdateCount',
     /* this would be a dependency if getMinQtlWidth() was a CP; currently as a
      * CP the dependencies don't have the desired effect. */
     // 'sharedProperties.minQtlWidth',

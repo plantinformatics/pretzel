@@ -115,6 +115,16 @@ function intervalSign(interval) {
   return interval[0] < interval[1];
 }
 
+/** Ensure that the direction of the interval is direction.
+ * @param direction true === increasing interval (positive)
+ */
+function intervalDirection(interval, direction) {
+  if (intervalSign(interval) !== direction) {
+    interval = [interval[1], interval[1]];
+  }
+  return interval;
+}
+
 /*----------------------------------------------------------------------------*/
 
 /** Calculate the domain resulting from a mousewheel action (WheelEvent), which
@@ -329,5 +339,6 @@ function wheelNewDomain(axis, axisApi, inFilter) {
 export {
   inRange, inRangeEither, subInterval, overlapInterval,
   intervalSign,
+  intervalDirection,
   wheelNewDomain
 };

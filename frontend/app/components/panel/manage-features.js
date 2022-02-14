@@ -7,6 +7,8 @@ import ManageBase from './manage-base'
 export default ManageBase.extend({
   block: service('data/block'),
 
+  classNames : ['h-100'],
+
   filterOptions: {
     'all': {'formal': 'All', 'icon': 'plus'},
     'block': {'formal': 'Block', 'icon': 'globe'},

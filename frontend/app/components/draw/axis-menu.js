@@ -1,6 +1,9 @@
 import Ember from 'ember';
 import { computed } from '@ember/object';
-import { next as run_next } from '@ember/runloop';
+import { alias } from '@ember/object/computed';
+import { next as run_next, later } from '@ember/runloop';
+import { inject as service } from '@ember/service';
+import { htmlSafe } from '@ember/template';
 
 import { stacks  } from '../../utils/stacks';
 
@@ -15,6 +18,10 @@ const closeAfterAction = false;
  * @param axisApi	axisApi.menuActions defines the actions for the axis menu buttons
  */
 export default Ember.Component.extend({
+  apiServers : service(),
+  controls : service(),
+  controlsView : alias('controls.controls.view'),
+
 
   classNames: ['axis-menu'],
 
@@ -80,6 +87,25 @@ export default Ember.Component.extend({
   },
 
 
+  /** if true then display input for this.block.datasetId._meta.shortName */
+  editShortName : false,
+
+  /** When the user edits .shortName, display only that and not the chromosome
+   * (block) scope / name.
+   */
+  editedShortName() {
+    let referenceBlock = this.get('blockS.block'),
+        axisTitleShow = referenceBlock.get('axisTitleShow');
+    dLog('editedShortName', axisTitleShow);
+    axisTitleShow.setProperties({
+      'name' : true,
+      'scope' : false});
+  },
+
+  // ---------------------------------------------------------------------------
+
+
+
   /** @return array of Blocks (i.e. stacks.js references)
    */
   dataBlocks : computed(
@@ -97,10 +123,16 @@ export default Ember.Component.extend({
         /* returning undefined is also OK, result is used in axis-menu.hbs : #each dataBlocks */
         dataBlocks = [];
       } else {
-        /** skip the reference block, which is shown above the data block list.
+        /** skip the reference block, which is shown above the data block list,
+         * if it is not a data block.  A GM (Genetic Map) is the first block of
+         * its axis and it is data.
+         *
          * This can change to use stacks-view:axesBlocks().
          */
-        dataBlocks = this.block.axis.blocks.slice(1);
+        let
+        axisBlocks = this.block.axis.blocks,
+        firstIsData = axisBlocks[0].block.isData;
+        dataBlocks = axisBlocks.slice(firstIsData ? 0 : 1);
       }
       return dataBlocks;
     }),
@@ -115,7 +147,76 @@ export default Ember.Component.extend({
         ? (block.get('datasetId.name') || block.get('namespace')) // + ' : ' + block.get('name')
         : blockS.longName();
       return title;
+    },
+  dataBlockColour(blockS) {
+    let
+    block = blockS.block,
+    axis1d = this.block.axis1d,
+    colour = axis1d.blockColourValue(block);
+    return colour;
+  },
+  dataBlockColourStyle(blockS) {
+    let
+    colour = this.dataBlockColour(blockS),
+    style = htmlSafe('color: ' + colour);
+    return style;
+  },
+  /**
+   * based on : utils/stacks.js : Block:titleText(), without the leading ' : ' + 
+   */
+  dataBlockFeatureCountsText(blockS) {
+    let
+    block = blockS.block,
+    featureCount = block && block.get('featureCount'),
+    featureCountLoaded = block.get('featuresLength'),
+    featureCountText = (featureCount || featureCountLoaded) ? featureCountLoaded + ' / ' + featureCount : '';
+    return featureCountText;
+  },
+
+  // ---------------------------------------------------------------------------
+
+  // using extracts (multipleServers and lookupServerName) from utils/draw/axisTitleBlocksServers_tspan.js : AxisTitleBlocksServers.prototype.render()
+  multipleServers : computed('apiServers.serversLength', function () {
+    return this.apiServers.get('serversLength') > 1;
+  }),
+
+  dataBlockServerColour(blockS) {
+    let
+    block = blockS.block,
+    colour = this.apiServers.lookupServerName(block.store.name).get('colour');
+    return colour;
+  },
+  dataBlockServerColourStyle(blockS) {
+    let
+    colour = this.dataBlockServerColour(blockS),
+    style = htmlSafe('color: ' + colour);
+    return style;
+  },
+
+  // ---------------------------------------------------------------------------
+
+  xOffsetsEffect : computed('xOffsetsChangeCount', function () {
+    dLog('xOffsetsEffect', this.get('xOffsetsChangeCount'));
+    let tooltip = this.get('popoverTooltip');
+    if (tooltip) {
+      later(() => {
+        tooltip.hide();
+        tooltip.show();
+      });
     }
+  }),
+
+  /** from the value of popover in .hbs <EmberPopover ...   as |popover| >,
+   * get the value of popover._tooltip.
+   */
+  get popoverTooltip () {
+    /** only 1 child, so expect that this.get('childViews.0._debugContainerKey') === "component:ember-popover" */ 
+    let tooltip = this.get('childViews.0._tooltip');
+    return tooltip;
+  },
+
+
+  // ---------------------------------------------------------------------------
 
 });
 

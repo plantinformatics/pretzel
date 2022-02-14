@@ -3,10 +3,9 @@ import { computed } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { alias, and } from '@ember/object/computed';
 
-import ObjectProxy from '@ember/object/proxy';
-import PromiseProxyMixin from '@ember/object/promise-proxy-mixin';
 import { resolve, all } from 'rsvp';
 
+import { toPromiseProxy } from '../../utils/ember-devel';
 import { thenOrNow } from '../../utils/common/promises';
 
 /* global d3 */
@@ -166,8 +165,7 @@ export default Component.extend({
     let o = this.editOntology;
     if (o && (name = this.get('ontologyService').getNameViaPretzelServer(o))) {
       if (name && name.then) {
-        let ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
-        let proxy = ObjectPromiseProxy.create({ promise: resolve(name) });
+        let proxy = toPromiseProxy(name);
         name = proxy;
       }
     }

@@ -1,6 +1,8 @@
 import { computed } from '@ember/object';
 import Service, { inject as service } from '@ember/service';
 import Evented from '@ember/object/evented';
+import { A } from '@ember/array';
+
 
 import { intersection } from 'lodash/array';
 
@@ -16,24 +18,30 @@ const trace = 1;
  */
 export default Service.extend(Evented, {
 
+  // ---------------------------------------------------------------------------
+
+  selectedElements : A(),
+
+  // ---------------------------------------------------------------------------
+
   /** clicked features or the feature search results;  shown as
    * triangles.
    * features not feature names.  
    * After feature search, the feature search result is copied to .features.
    */
-  features : Ember.A(),
+  features : A(),
 
   /** shift-clicked features, i.e. triangles (.features) which have been shift-clicked on.
    * features not feature names.  
    * After feature search, .shiftClickedFeatures will be intersected with the feature search result.
    * subset of .features.
    */
-  shiftClickedFeatures : Ember.A(),
+  shiftClickedFeatures : A(),
 
   /** triangles which were clicked
    * After feature search, labelledFeatures will be intersected with the feature search result.
    */
-  labelledFeatures : Ember.A(),
+  labelledFeatures : A(),
 
   /** Called when an axis feature track or feature triangle is clicked.
    * Toggle membership of the feature in one of the arrays : .features or .labelledFeatures
@@ -119,7 +127,7 @@ export default Service.extend(Evented, {
         let key = groupFn(feature),
             a = map.get(key);
         if (! a) {
-          map.set(key, a = Ember.A());
+          map.set(key, a = A());
         }
         a.pushObject(feature);
         return map;

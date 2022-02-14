@@ -1,12 +1,20 @@
 import { later, scheduleOnce } from '@ember/runloop';
 import { computed } from '@ember/object';
 import Component from '@ember/component';
+import { inject as service } from '@ember/service';
 
 import { elt0 } from '../../utils/ember-devel';
 
+import { valueGetType, ontologyIdFromIdText } from '../../utils/value-tree';
+
+// -----------------------------------------------------------------------------
+
+const dLog = console.debug;
+
 const trace_entryExpander = 1;
 
-/*----------------------------------------------------------------------------*/
+// -----------------------------------------------------------------------------
+
 
 
 /**
@@ -14,6 +22,8 @@ const trace_entryExpander = 1;
  * @param hoverText hover text
  */
 export default Component.extend({
+  ontology : service('data/ontology'),
+
   tagName: '',
 
   active: false,
@@ -22,16 +32,28 @@ export default Component.extend({
     /** the parent entry-tab will be passed in as an argument; improvising to
      * trial the setLayoutActive feature. */
     let parent = this.parentView;
-    while (parent && (parent._debugContainerKey !== "component:record/entry-tab"))
+    let count = 30;
+    while (
+      parent &&
+        (count-- > 0) &&
+        (parent._debugContainerKey !== "component:record/entry-tab") &&
+        (parent.id != 'tab-view-Ontology') &&
+        (parent.id != 'tab-view-Trait')
+    )
     {
       parent = parent.parentView;
+    }
+    if (count <= 0) {
+      dLog('entryTab', parent, parent?.id, parent?._debugContainerKey, parent?.parentView, this);
     }
     /** The topmost entry-expander in the Ontology tab, set active to true.
      * The immediate hierarchy is : entry-tab : bs-tab/pane : entry-values : entry-level : entry-expander
      */
     let immediateParent = this.parentView.parentView.parentView.parentView;
-    if ((immediateParent._debugContainerKey === "component:record/entry-tab") &&
-        (immediateParent.name === 'Ontology') && this.controlOptions.showHierarchy) {
+    let viewOntology = this.controlOptions?.context?.viewOntology;
+    let explorerOntology = (immediateParent._debugContainerKey === "component:record/entry-tab") &&
+        (immediateParent.name === 'Ontology');
+    if (viewOntology || (explorerOntology && this.controlOptions.showHierarchy)) {
       later(() => !this.isDestroying && this.set('active', true));
     }
 
@@ -92,13 +114,70 @@ export default Component.extend({
     if (parent)
       parent.off('setLayoutActive');
   },
+  didInsertElement() {
+    this._super(...arguments);
+    /* initialise service used by dependencies */
+    this.get('ontology');
+  },
+  /*
   willDestroyElement() {
     // this.termTabActionBus();
-  }
+    this._super.apply(this, arguments);
+  },
+  */
 
   /** expandIcon() and actions: switch() are replaced by using icon-toggle, with
    * .active bound.
    */
+
+  // ---------------------------------------------------------------------------
+
+  /** If node value is part of view panel Ontology tree, don't show +/- toggle
+   * for leaf nodes.
+   * Distinguish between View panel and Explorer Ontology tree, by values.node,
+   * which leaves in Explorer have but not in View panel.
+   * Could also check levelMeta.get(this.levelMeta, this.values).checkbox; which
+   * nodes in view panel have, not Explorer.
+   */
+  get showToggle() {
+    let
+    typeName = this.levelMeta && valueGetType(this.levelMeta, this.values),
+    show = ! typeName || (typeName === 'term') || (typeName !== 'trait') || this.values.node;
+    return show;
+  },
+
+  // ---------------------------------------------------------------------------
+
+  valuesColour : computed('values', 'ontology.ontologyColourScaleUpdateCount', function () {
+    let
+    values = this.get('values'),
+    /** if ! showHierarchy, values is e.g. {name : "[CO_321:0000020] Plant height"} */
+    ontologyId = values.id ||
+       (values.name && ontologyIdFromIdText(values.name)),
+    colour = ontologyId && this.get('ontology').ontologyIdToColour(ontologyId);
+    return colour;
+  }),
+
+  // ---------------------------------------------------------------------------
+
+  checked : computed('ontology.ontologyIsVisibleChangeCount', function () {
+    /** only called when this.checkbox is defined. */
+    let
+    checked = this.checkbox.checked(this.values);
+    dLog('checked', checked, this.values);
+    return checked;
+  }),
+
+
+  get checkbox() {
+    let checkbox;
+    if (this.levelMeta) {
+      checkbox = this.levelMeta.get(this.values)?.checkbox;
+    }
+    return checkbox;
+  }
+
+  // ---------------------------------------------------------------------------
 
 
 });

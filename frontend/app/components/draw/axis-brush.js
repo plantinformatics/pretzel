@@ -21,6 +21,9 @@ import {
   foregroundSelector,
   selectBlockAdj
 } from '../../utils/draw/stacksAxes';
+import { intervalSize } from '../../utils/interval-calcs';
+import { thenOrNow } from '../../utils/common/promises';
+import { toPromiseProxy } from '../../utils/ember-devel';
 
 /* global d3 */
 
@@ -46,6 +49,9 @@ export default Component.extend(Evented, AxisEvents, {
    */
   store: service(),
   pathsP : service('data/paths-progressive'),
+  controls : service(),
+  auth : service(),
+
 
   /*--------------------------------------------------------------------------*/
 
@@ -55,6 +61,8 @@ export default Component.extend(Evented, AxisEvents, {
   drawMap : alias('oa.eventBus'),
   axisApi : alias('oa.axisApi'),
 
+  apiServerSelectedOrPrimary : alias('controls.apiServerSelectedOrPrimary'),
+
   /*--------------------------------------------------------------------------*/
 
   tagName : '',
@@ -62,6 +70,11 @@ export default Component.extend(Evented, AxisEvents, {
   zoomCounter : 0,
 
   /*--------------------------------------------------------------------------*/
+
+  referenceDataset : computed('axis', function () {
+    let dataset = this.get('axis').referenceBlock.get('datasetId');
+    return dataset;
+  }),
 
   datasetName : computed('block', 'id', function () {
     let
@@ -246,8 +259,44 @@ export default Component.extend(Evented, AxisEvents, {
         dLog('zoomedAxis matched', axisID, blockId, axis);
       this.incrementProperty('zoomCounter');
     }
-  }
+  },
   /*--------------------------------------------------------------------------*/
+
+  datasetOkForSequenceLookup : computed('referenceDataset', function () {
+    let
+    datasetP = this.get('referenceDataset'),
+    okP = toPromiseProxy(thenOrNow(datasetP, (dataset) => dataset?.hasTag('BlastDb')));
+    return okP;
+  }),
+  sequenceLookupDomain: computed('block.brushedDomain', function () {
+    let
+    domain = this.get('block.brushedDomain'),
+    domainInteger = domain && 
+      (intervalSize(domain) < 100000) &&
+      domain.map((d) => d.toFixed(0));
+    return domainInteger;
+  }),
+  dnaSequenceLookup() {
+    let
+    domainInteger = this.get('sequenceLookupDomain');
+    if (domainInteger) {
+      let
+    scope = this.get('block.block.scope'),
+    region = 'chr' + scope + ':' + domainInteger.join('-'),
+    parent = this.get('datasetName');
+
+    let sequenceTextP = this.get('auth').dnaSequenceLookup(
+      this.get('apiServerSelectedOrPrimary'), parent, region,
+      {} );
+    sequenceTextP.then(
+      (sequenceText) => {
+        dLog('dnaSequenceLookup', sequenceText);
+        this.set('sequenceText', sequenceText?.sequence);
+      });
+    }
+  },
+
+  // ---------------------------------------------------------------------------
 
   
 });

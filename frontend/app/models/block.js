@@ -2,15 +2,18 @@ import { computed } from '@ember/object';
 import { inject as service } from '@ember/service';
 import Model, { attr, belongsTo, hasMany } from '@ember-data/model';
 // import { computed, set } from '@ember/object';
+import EmberObject from '@ember/object';
 import { observer } from '@ember/object';
 import { A } from '@ember/array';
 import { and, alias } from '@ember/object/computed';
 import { debounce, throttle } from '@ember/runloop';
+import { pluralize } from 'ember-inflector';
 import { allSettled } from 'rsvp';
 
 import { task } from 'ember-concurrency';
 
 import lodashMath from 'lodash/math';
+import { isEqual } from 'lodash/lang';
 
 import {
   intervalSize,
@@ -23,6 +26,7 @@ import { subInterval, overlapInterval } from '../utils/draw/zoomPanCalcs';
 import {
   featuresCountsResultsCheckOverlap,
   featuresCountsResultsMerge,
+  featuresCountsResultsDomain,
   featuresCountsResultsFilter,
   featuresCountsResultsTidy,
  } from '../utils/draw/featuresCountsResults';
@@ -185,9 +189,12 @@ export default Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
-  hasFeatures : computed('featureCount', function () {
+  hasFeatures : computed('featureCount', 'featureValueCount', function () {
     /** featureValueCount > 0 implies featureCount > 0.
-     * Could also use .featuresCountsResults - if any non-zero counts then block has features.  */
+     * featureValueCount is from blockFeatureLimits, so it only updates after upload.
+     * Could also use .featuresCountsResults - if any non-zero counts then block has features.
+     * perhaps also .featureLimits
+     */
     let count = this.get('featureCount') || this.get('featureValueCount');
     return count > 0;
   }),
@@ -305,7 +312,21 @@ export default Model.extend({
     let isQTL =  this.hasTag('QTL') || this.get('datasetId._meta.type') === 'QTL';
     return isQTL;
   }),
-  useTraitColour : alias('isQTL'),
+  /** Result indicates how axis-tracks display of features of this block should be coloured.
+   * @return
+   *  undefined for blockColour,
+   *  !== undefined for featureColour, e.g. :
+   * 'Ontology' for ontologyColour,
+   * 'Trait' for traitColour.
+   */
+  get useFeatureColour() {
+    let useColour;
+    if (this.get('isQTL')) {
+      let qtlColourBy = this.get('controls.viewed.qtlColourBy');
+      useColour = qtlColourBy && (qtlColourBy !== 'Block') ? qtlColourBy : undefined;
+    }
+    return useColour;
+  },
   isHighDensity : computed('datasetId.tags', function () {
     let isHighDensity = this.hasTag('HighDensity');
     return isHighDensity;
@@ -519,7 +540,9 @@ export default Model.extend({
     /* If the parent has a parent, then use that name instead; referenceBlock
      * corresponds to the axis, i.e. the ultimate parent. */
     if (parent?.parentName) {
-      dLog('referenceBlockSameServer', this.id, dataset.get('id'), parentName, parent.parentName);
+      if (trace_block) {
+        dLog('referenceBlockSameServer', this.id, dataset.get('id'), parentName, parent.parentName);
+      }
       parentName = parent.parentName;
       /* could instead change mapBlocksByReferenceAndScope() which currently
        * does not  blocks[0] = block  if block.parentName.  */
@@ -561,6 +584,11 @@ export default Model.extend({
         scopes = map && map.get(parentName),
         /** blocks[0] may be undefined, e.g. when the reference is on another server which is not connected. */
         blocks = scopes && scopes.get(scope);
+        /** Expect the referenceBlock to not have data, except for the parent of
+         * a QTL, which may be a physical reference (no data), or a GM, which is
+         * expected to have data.
+         */
+        let isQTL = this.get('isQTL');
         /** b.isData uses .referenceBlock, which may recurse to here, so use
          * direct attributes of block to indicate whether it is reference / data
          * block.
@@ -570,8 +598,9 @@ export default Model.extend({
          */
         referenceBlock = blocks && blocks.filter(
           (b) => b &&
-            (!!b.range || ! (b.featureValueCount || b.featureLimits) ||
-             ! b.get('datasetId.parent')) &&
+            (isQTL ? true :
+             (!!b.range || ! (b.featureValueCount || b.featureLimits) ||
+              ! b.get('datasetId.parent'))) &&
             (! blockId || (b.get('id') !== blockId))
         );
       } else {
@@ -633,6 +662,7 @@ export default Model.extend({
     /** Handle blocks whose dataset.parent has a .parent */
     let parent = this.get('datasetId.parent');
     if (parent && parent.parentName) {
+      if (! matchParentName)
       dLog('viewedReferenceBlocks', blockId, datasetName, parent.parentName);
       datasetName = parent.parentName;
     }
@@ -1091,6 +1121,10 @@ export default Model.extend({
     'referencedAxis1d', 'referenceBlock.referencedAxis1d',
     function () {
       let axis1d = this.get('referencedAxis1d') || this.get('referenceBlock.referencedAxis1d');
+      if (axis1d?.isDestroying) {
+        dLog('axis1d isDestroying', axis1d);
+        axis1d = undefined;
+      }
       let a1Check = this.verify_axis1d();
       if (axis1d !== a1Check) {
         dLog('axis1d', axis1d, a1Check);
@@ -1106,7 +1140,10 @@ export default Model.extend({
     if (this.isViewed) {
       let
       axes1d = this.get('blockService.axes1d.axis1dArray');
-      axis1d = axes1d.find((a1) => !a1.isDestroying && a1.viewedBlocks.find((b) => b === this));
+      axis1d = axes1d.find(
+        (a1) => !a1.isDestroying &&
+          ((a1.get('axis') === this) || 
+           (a1.viewedBlocks.find((b) => b === this))));
       if (trace_block > 1) {
         dLog('axis1d', axis1d, axes1d, this.id, this.get('axis.axis1d'));
       }
@@ -1233,7 +1270,7 @@ export default Model.extend({
   }),
 
 
-  /** If this block contains QTLs, request all features of this block and its parent block.
+  /** If this block contains QTLs, request all features of this block and the referencedFeatures of its parent block.
    * This enables calculation of the .value[] of the QTL features.
    */
   loadRequiredData : computed(function () {
@@ -1256,12 +1293,77 @@ export default Model.extend({
         .then((ps) => {
           let parentFeatures = ps[1];
           return parentFeatures && parentFeatures.then((pf) => {
-            // referencedFeatures() yields an array of Features
-            return this.valueCompute(ps[0][0].value, pf);
+            /** referencedFeatures() yields an array of Features */
+            let features = ps[0][0].value,
+                /** no return value, so result is a promise yielding undefined */
+                f2 = this.valueCompute(features, pf);
+            this.collateQTLs('Trait');
+            this.collateQTLs('Ontology');
+            return f2;
           });
         });
     }
   }),
+  /** After valueCompute(), which will put positions of .values.flankingMarkers
+   * in .value[], collate the Traits and Ontology-s of QTL features of this
+   * block which have .value.length.
+   * This is a subset of the API result blockFeature{Traits,Ontologies}
+   * (components/service/api-server.js) because that collates all QTLs,
+   * regardless of whether they have .value.length.
+   *
+   * Result is an Ember array of unique names, stored in .positioned.<fieldName>
+   *
+   * @param fieldName 'Trait' or 'Ontology'
+   */
+  collateQTLs(fieldName) {
+    let
+    names = this.get('features')
+      .reduce((result, feature) => {
+        let name = feature.get('values.' + fieldName);
+        /** filter out QTL features which do not have a default [start,end] or
+         * a position computed from FMs */
+        if (name && feature.get('value.length')) {
+          result.addObject(name);
+        }
+        return result; }, A());
+    if (names.length) {
+      dLog('collateQTLs', fieldName, names, this.id, this.get('datasetId.id'));
+    }
+    if (! this.get('positioned')) {
+      this.set('positioned', {});
+    }
+    let previous = this.get('positioned.' + fieldName);
+    let compare = previous;
+    if (! previous) {
+      let fieldNames = pluralize(fieldName);
+      compare = this.attributes && this.attributes[fieldNames];
+    }
+    /** don't increment featureUpdateCount if the names has not changed. */
+    let newOrChanged = true;
+    if (compare) {
+      let
+      compareS = compare.sort(),
+      namesS = names.sort();
+      newOrChanged = ! isEqual(compareS, namesS);
+    }
+    if (newOrChanged) {
+      this.set('positioned.' + fieldName, names);
+      /** Generally there will be an initial reduction from
+       * .attributes[fieldNames] to .positioned[fieldName] as un-positioned QTLs
+       * are filtered out.
+       * Incrementing featureUpdateCount in that case is debatable because it
+       * causes refresh of explorer Ontology tree; a solution would be an API
+       * which did valueCompute(), checkPositions() etc.
+       * After that .positioned[fieldName] will only change when flankingMarkers
+       * are edited (via re-upload), or the parent GM is edited, in which case
+       * incrementing featureUpdateCount is reasonable.
+       */
+      if (previous) {
+      // re-evaluate blockValuesBlocks() / checkPositions()
+        this.get('blockService').incrementProperty('featureUpdateCount');
+      }
+    }
+  },
   /** Request all features of this block.
    */
   allFeatures : computed(function () {
@@ -1343,7 +1445,8 @@ export default Model.extend({
           /** currently the spreadsheet may define value start&end, could verify by checking this against calculated value. */
           let f_value = f.get('value')
               .filter((v) => (v !== undefined) && (v !== null));
-          /** Flanking Markers take precedence, if defined. */
+          /** Flanking Markers take precedence, if defined in parentFeatures and
+           * they have non-empty .value[] */
           if (true) /*(f.value[0] === null)*/ {
             let
             flankingNames = f.get('values.flankingMarkers') || [],
@@ -1358,7 +1461,9 @@ export default Model.extend({
               let
               locations = flanking.map((fm) => fm.value).flat(),
               extent = d3.extent(locations);
-              f.set('value', extent);
+              if (locations.length) {
+                f.set('value', extent);
+              }
               value = extent;
             } else {
               value = f_value;
@@ -1366,8 +1471,10 @@ export default Model.extend({
           } else {
             value = f_value;
           }
-          if (! value.length) {
-            dLog(fnName, 'no value', f.value, f.values);
+          if (! value.length && trace_block > 1) {
+            /* this is likely a data error - either no f.values.flankingMarkers,
+             * or the FMs are not in parentFeatures[]. */
+            dLog(fnName, 'no value', f.value, f.values?.flankingMarkers);
           }
           return value;
         });
@@ -1543,8 +1650,28 @@ export default Model.extend({
         }
       );
     if (! combined) {
+      /** fcResult.domain is set by featuresCountsResultsFilter(), called from featuresCountsResultsMerge().
+       * In this (non-merge) case, use featuresCountsResultsDomain() to set .domain.
+       */
+      featuresCountsResultsDomain(fcResult);
       featuresCountsResults.pushObject(fcResult);
     }
   },
+
+  // ---------------------------------------------------------------------------
+  /** transient state */
+
+  /** indicate which fields will be displayed in the axis title, if this block
+   * is the reference block of an axis.
+   *  name : if true then .datasetId.shortNameOrName (e.g. ._meta.shortName)
+   *  scope : if true then .scope
+   *
+   * also @see datasetNameAndScope()
+   */
+  axisTitleShow : EmberObject.create({name : true, scope : true}),
+ 
+  // ---------------------------------------------------------------------------
+
+
 
 });

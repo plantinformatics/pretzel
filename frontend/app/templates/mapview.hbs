@@ -1,5 +1,5 @@
 {{!-- app/controllers/mapview.js --}}
-<div class="" style="height:100%; display:flex; flex-direction:row;">
+<div class="" style="height:100%; display:flex;">
   
   {{panel/left-panel
     displayData=block.viewed
@@ -25,10 +25,17 @@
     updateFeaturesInBlocks="updateFeaturesInBlocks"
   }}
   
-  <div class="resizable" style="flex-grow:20; resize:both">
-    <div class="resizer no-resizer-icon">
-      <span class="glyphicon glyphicon-resize-horizontal"></span>
-    </div>
+  {{!-- rerender : a changing value will cause split-view to update (destroy and re-create) the split.js, see ember-split-view-modifier/addon/modifiers/split-view.js : didUpdate().
+        onDragEnd : described in split.js/README.md : Documentation --}}
+  <div {{split-view direction=this.splitViewDirection
+    rerender=this.splitViewDirection
+    onDragEnd=(action this.onDragEnd)
+    sizes=this.sizesPrev minSize=(array 20 5)
+    gutterSize=15}}
+    class="right-split" >
+
+
+  <div>
 
     <p class="devel-visible">
       hasData {{hasData}},
@@ -48,6 +55,7 @@
         drawActions=this
         panelLayout=layout
         controls=controls
+        componentGeometry=componentGeometry
         isShowUnique=isShowUnique
         pathColourScale=pathColourScale
         scaffolds=scaffolds
@@ -64,17 +72,14 @@
         featuresInBlocks=featuresInBlocks
         selectChromById=(action 'selectBlockById')}}
     {{!-- {{/if}} --}}
+
   </div>
 
+    <div>
+
   {{#if layout.right.visible}}
-    <div class="" style="flex-basis:400px; flex-grow:1; overflow-x:scroll; display:flex;">
+    <div id="right-panel" class="h-100">
 
-    <div {{split-view direction='vertical'
-      sizes=(array 70 30) minSize=(array 20 5)
-      gutterSize=15}}
-      class="right-split" >
-
-     <div style="overflow-y: clip">
       <ul class="nav nav-tabs">
         {{#if model.params.parsedOptions.blockTab}}
           {{#elem/button-tab
@@ -116,9 +121,15 @@
            onClick="setVisibility"}}
           {{elem/icon-base name="remove"}}
         {{/elem/button-tab}}
+        {{#elem/button-tab
+           class="pull-right rotate45"
+           side="right"
+           onClick=(action this.toggleLayout)}}
+          {{elem/icon-base name="sort"}}
+        {{/elem/button-tab}}
       </ul>
 
-      <div id="right-panel-content"  class={{rightPanelClass}} style="overflow-x:scroll;">
+      <div id="right-panel-content"  class={{rightPanelClass}}>
         {{#if (compare layout.right.tab '===' 'selection')}}
           {{panel/manage-features
             selectedFeatures=selectedFeatures
@@ -153,40 +164,18 @@
           updatePathsCount=(action 'updatePathsCount')}}
 
       </div>
-     </div>
-
-
-      <div>
-
-      <ul class="nav nav-tabs">
-
-        {{#elem/button-tab
-           side="rightLower"
-           key="styleEditor"
-           state=layout.rightLower.tab onClick="setTab"}}
-          {{elem/icon-base name="edit"}}&nbsp; Colour / Style Editor
-        {{/elem/button-tab}}
-
-      </ul>
-
-      <div id="rightLower-panel-content" style="overflow-y: visible" class={{rightLowerPanelClass}}>
-
-        {{#if (compare layout.rightLower.tab '===' 'styleEditor')}}
-          {{draw/style-editor}}
-        {{/if}}
-
-      </div>
-
-
-      </div>
-    </div>
 
     </div>
   {{else}}
     <button type="button" class="btn btn-default" {{action "setVisibility" "right" on='click'}}>
       <a href="#" >{{elem/icon-base name="chevron-left"}}</a>
     </button> 
-  {{/if}}
+  {{/if}}	{{!-- if layout.right.visible --}}
+    </div>
+
+  </div>
+
+
 </div>
 
 {{outlet}}

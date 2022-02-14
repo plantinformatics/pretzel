@@ -303,7 +303,7 @@ sub headerLine($$) {
 
 #-------------------------------------------------------------------------------
 
-# Sanitize input by removing punctuation other than space, comma, _, ., /, \n
+# Sanitize input by removing punctuation other than space, comma, -, _, ., /, \n
 # Commonly _ and . are present in parentName.
 # Space appears in commonName (handled in .bash).
 # , is used for splitting csv lines, and / appears in some chr names e.g. 'LG5/LG7'
@@ -311,7 +311,7 @@ sub headerLine($$) {
 sub deletePunctuation($)
 {
   my ($text) = @_;
-  $text =~ tr/_.,\/\n 0-9A-Za-z//cd;
+  $text =~ tr/-_.,\/\n 0-9A-Za-z//cd;
   return $text;
 }
 
@@ -896,11 +896,12 @@ sub roundPosition($)
 }
 
 # Given a string (e.g. flanking marker cell value),
-# split at comma or space, wrap each word (marker name) with "",
+# split at comma or space/s, wrap each word (marker name) with "",
 # and join with comma space
 sub splitAndQuote($)
 {
- return   join(', ', map { '"' . $_ . '"' } split(/[, ]/, $_[0]));
+ # multiple adjacent spaces within the string are treated as a single separator.
+ return   join(', ', map { '"' . $_ . '"' } split(/,|\s+/, $_[0]));
 }
 
 

@@ -187,11 +187,16 @@ export default EntryBase.extend({
       return values && 
       values.hasOwnProperty('id') && (typeof values.id === 'string') &&
       values.hasOwnProperty('type') && (typeof values.type === 'string') && 
-      values.hasOwnProperty('children') && ((typeof values.children === 'boolean') || Ember.isArray(values.children));
+      values.hasOwnProperty('children') && ((typeof values.children === 'boolean') || isArray(values.children));
     };
     let is = this.valuesIs(isOntologyTreeFn);
     return is;
   }),
+  /** @return true if value is an Ontology 'trait' (leaf node). */
+  isOntologyLeaf(levelMeta, value) {
+    let valueType = valueGetType(levelMeta, value);
+    return valueType === 'trait';
+  },
 
   /*--------------------------------------------------------------------------*/
 

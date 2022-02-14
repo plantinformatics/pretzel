@@ -1,0 +1,34 @@
+{{!--
+  This component renders a leaf node of an Ontology value-tree.
+  Based on entry-node, without entry-expander and entry-values which are not required.
+  It shows .name, and receives click checkboxAction (toggleVisible), and ontologyClick() (colour).
+ --}}
+
+<li class="list-group-item list-group-item-info" >
+
+  <span>
+    <input type="checkbox"
+      checked={{this.ontologyIsVisible}}
+      oninput={{action this.ontologyIsVisibleChanged value="target.checked" }}  >
+    <!-- label></label -->
+  </span>
+
+  {{!--
+   Copied from entry-expander.
+   entry-expander also sets title={{hoverText}} on span, hover may not be required and hoverText is not defined yet, so title= has no effect.
+   --}}
+
+  {{#if @selectExpander}}
+    <span title={{hoverText}} class="truncate btn wide-border" style="flex: 1;"
+      {{on 'click' (fn @selectExpander nodeName values) }}
+      style={{safe-style border-color=this.valuesColour}} >
+      {{nodeName}}
+    </span>
+  {{else}}
+    <span title={{hoverText}} class="truncate" style="flex: 1;" >
+      {{nodeName}}
+    </span>
+  {{/if}}
+
+
+</li>

@@ -1,3 +1,5 @@
+var { flatten }  = require('lodash/array');
+
 const { blockFilterValue0 } = require('./paths-aggr');
 
 
@@ -5,6 +7,7 @@ var ObjectID = require('mongodb').ObjectID;
 
 /*----------------------------------------------------------------------------*/
 
+/* global require */
 /* global exports */
 /* global process */
 
@@ -307,12 +310,14 @@ exports.blockFeatureLimits = function(db, blockId) {
     .concat(group)
   : group;
 
-  if (trace_block)
+  if (trace_block > 1) {
     console.log('blockFeatureLimits', pipeline);
-  if (trace_block > 1)
+  }
+  if (trace_block > 2) {
     console.dir(pipeline, { depth: null });
 
-  showExplain('blockFeatureLimits', featureCollection.aggregate ( pipeline, {allowDiskUse: true} ));
+    showExplain('blockFeatureLimits', featureCollection.aggregate ( pipeline, {allowDiskUse: true} ));
+  }
   let result =
     featureCollection.aggregate ( pipeline, {allowDiskUse: true} );
 
@@ -343,12 +348,13 @@ function addField(object, fieldName, value) {
  * ...
  */
 exports.blockValues = function(db, fieldName) {
-  /** $group : _id : 0, i.e. don't group, combine into a single array.
+  /** $match : exclude copies (meta._origin);  require tags[] to contain 'QTL'.
+   * $group : _id : 0, i.e. don't group, combine into a single array.
    */
   let
   cursorP =
     db.collection('Dataset').aggregate([
-      {$match : {tags : {$exists: true}}},
+      {$match : {tags : {$exists: true}, 'meta._origin' : {$exists: false}}},
       {$match : {$expr : {$in : ['QTL', '$tags']}}},
       {
         $group: {
@@ -358,10 +364,10 @@ exports.blockValues = function(db, fieldName) {
       }]).toArray()
     .then((datasets) => {
       let
-      datasetIds = datasets[0].ids,
+      datasetIds = flatten(datasets.map((d) => d.ids)),
       blocks =
         db.collection('Block').aggregate([
-          {$match : {datasetId : {$in : datasetIds}}},
+          {$match : {datasetId : {$in : datasetIds}, 'meta._origin' : {$exists: false}}},
           {
             $group: {
               _id: null,
@@ -372,7 +378,7 @@ exports.blockValues = function(db, fieldName) {
     })
     .then((blocks) => {
       let
-      blockIds = blocks[0].ids,
+      blockIds = flatten(blocks.map((b) => b.ids)),
       fieldNamePlural = (fieldName === 'Ontology') ? 'Ontologies' : fieldName + 's',
       cursor =
         db.collection('Feature').aggregate([
@@ -383,3 +389,44 @@ exports.blockValues = function(db, fieldName) {
 
   return cursorP;
 };
+
+// --------------------------------------------------------------------------------
+
+/** clear the blockValues API results (blockFeature{Traits,Ontologies})
+ * @see Block.blockValues()
+ */
+exports.blockFeaturesCacheClear = function blockFeaturesCacheClear(cache)
+{
+  const fnName = 'blockFeaturesCacheClear';
+  ['Trait', 'Ontology'].forEach((fieldName) => {
+    let
+    apiName = 'blockValues',
+    cacheId = apiName + '_' + fieldName;
+
+    let value = cache.get(cacheId);
+    if (value) {
+      console.log(fnName, cacheId, 'remove from cache', value.length);
+      cache.put(cacheId, undefined);
+    }
+  });
+
+  exports.blockFeatureLimitsCacheClear(cache);
+};
+
+exports.blockFeatureLimitsCacheClear = function blockFeatureLimitsCacheClear(cache)
+{
+  const fnName = 'blockFeatureLimitsCacheClear';
+  let
+  apiName = 'blockFeatureLimits',
+  blockId = undefined,
+  cacheId = apiName + '_' + blockId;
+
+  let value = cache.get(cacheId);
+  if (value) {
+    console.log(fnName, cacheId, 'remove from cache', value.length);
+    cache.put(cacheId, undefined);
+  }
+};
+
+
+// --------------------------------------------------------------------------------

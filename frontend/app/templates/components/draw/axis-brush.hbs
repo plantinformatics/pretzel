@@ -1,5 +1,6 @@
 {{!-- block.block.datasetNameAndScope or datasetId.name or .id --}} 
 
+
   <tr>
     <td>{{datasetName}}</td>
     <td>{{block.block.scope}}</td>
@@ -9,6 +10,24 @@
     <td class="devel-visible">{{zoomCounter}}</td>
     <td style="display:none;"> {{features.length}} <!-- for features request. --></td>
   </tr>
+
+<div>
+  <label>DNA sequence for brushed interval</label>
+  <span>
+    <span>{{object-at 0 this.sequenceLookupDomain}}</span>
+    <span>{{object-at 1 this.sequenceLookupDomain}}</span>
+  </span>
+  {{#unless this.datasetOkForSequenceLookup}}
+    <span style="margin-left: 4em;">Dataset does not have BlastDb set up and enabled.</span>    
+  {{else if this.sequenceLookupDomain}}
+    <button onclick={{action this.dnaSequenceLookup}} class="btn btn-xs">Lookup</button>
+  {{else}}
+    <span>Lookup Region limit is 100kb</span>
+  {{/unless}}
+</div>
+<div>
+  <textarea style="width: 100%;">{{sequenceText}}</textarea>
+</div>
 
 
 

@@ -161,13 +161,13 @@ exports.childProcess = (scriptName, postData, useFile, fileName, moreParams, dat
  */
 
 /* dataset upload */
-function factored(msg, cb) {
+function factored(msg, options, cb) {
   exports.childProcess('uploadSpreadsheet.bash', msg.data, true, msg.fileName, dataOutUpload, cb, /*progressive*/ false);
 }
 
 // msg file param from API request  {fileName, data, replaceDataset}
 
-// params needed : this (model/dataset), replaceDataset, uploadParsedTry
+// params needed : this (model/dataset), models, options (optionsFromRequest), replaceDataset, uploadParsedTry
 let dataOutUpload = (chunk, cb) => {
     // data from the standard output is here as buffers
     // Possibly multiple lines, separated by \n,
@@ -182,7 +182,7 @@ let dataOutUpload = (chunk, cb) => {
           cb(new Error(fileName + " Dataset '" + datasetName + "'"));
         } else {
           console.log('before removeExisting "', datasetName, '"', replaceDataset);
-          this.removeExisting(datasetName, replaceDataset, cb, loadAfterDelete);
+          this.removeExisting(models, /*options*/undefined, datasetName, replaceDataset, cb, loadAfterDelete);
         }
         function loadAfterDelete(err) {
           if (err) {

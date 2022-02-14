@@ -7,8 +7,27 @@
 const trace_values = 0;
 const dLog = console.debug;
 
+/*----------------------------------------------------------------------------*/
+
+/* related : utils/data/block-values.js */
 
 /*----------------------------------------------------------------------------*/
+
+/** Given an array [ { block, Traits: [ "DSB", ...]}, ...]
+ * Group the blocks by Trait
+ * @param fieldName 'Traits', 'Ontologies', etc.
+ */
+function blocksValuesUnwindAndGroup(blocksTraits, fieldName) {
+  let
+  byTrait = 
+    blocksTraits.reduce((result, blockTraits) => {
+      blockTraits[fieldName].forEach((trait) => {
+        (result[trait] ||= []).push(blockTraits.block);
+      });
+      return result;
+    }, {});
+  return byTrait;
+}
 
 /** Given an array [ { block, Traits: [ "DSB", ...]}, ...]
  * Group the blocks by : Trait / block.datasetId.parentName / block.scope
@@ -24,13 +43,7 @@ function blocksParentAndScope(levelMeta, fieldName, blocksTraits) {
   /** convert : [ { block, Traits: [ ...]}, ...]
    * to : [Trait] [block, ... ]
    */
-  byTrait = 
-    blocksTraits.reduce((result, blockTraits) => {
-      blockTraits[fieldName].forEach((trait) => {
-        (result[trait] ||= []).push(blockTraits.block);
-      });
-      return result;
-    }, {}),
+  byTrait = blocksValuesUnwindAndGroup(blocksTraits, fieldName),
   tree = Object.fromEntries(
     Object.entries(byTrait)
       .map(([key, value]) => [key, blocksParentAndScope2(levelMeta, value)]));
@@ -106,4 +119,4 @@ function fromNestedParentAndScope(levelMeta, nested) {
 /*----------------------------------------------------------------------------*/
 
 
-export { blocksParentAndScope }  
+export { blocksValuesUnwindAndGroup, blocksParentAndScope }  

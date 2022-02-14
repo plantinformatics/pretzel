@@ -279,6 +279,14 @@ const trackBlockEltIdPrefix = 'tb-';
 
 /*----------------------------------------------------------------------------*/
 
+/**
+ * @param feature provides feature.id
+ */
+function axisFeatureCircles_eltId(feature) {
+  let
+  id = 'fc_' + feature.id;
+  return id;
+}
 function axisFeatureCircles_selectAll() {
   /** see also handleFeatureCircleMouseOver(), which targets a specific feature. */
   let
@@ -287,20 +295,31 @@ function axisFeatureCircles_selectAll() {
   return selection;
 }
 /**
- * @param chrName db id of the axis reference block
+ * @param feature provides feature.id
  */
-function axisFeatureCircles_selectOne(chrName, featureName) {
+function axisFeatureCircles_selectOne(feature) {
   let
-  /** the feature name has 1 level of CSS.escape().
-   * <circle id="fc_615e4ab7f1083287627cf21d_ab_2009\\/ab_QTL1" class="ab_2009\\/ab_QTL1" >
-   * the param to d3.selectAll() needs 2 :
-   *  "circle#fc_615e4ab7f1083287627cf21d_ab_2009\\\\\\/ab_QTL1"
-   */
-  selector = "g.axis-outer#" + eltId(chrName) + " > circle." + CSS.escape(CSS.escape(featureName)),
-  /* alternative : "circle#fc_" + datablockId + '_' + CSS.escape(CSS.escape(featureName))
-   * The blockId in the circle id is the feature.blockId, not block.referenceBlockOrSelf.id
-   */
+  /** previously (until 4b47c3b5) elt id contained feature.blockId and feature.name.
+   * feature.id is unique regardless of block so blockId is not required with
+   * feature.id. */
+  selector = "g.axis-outer" + " > circle#" + axisFeatureCircles_eltId(feature),
   circleS = d3.selectAll(selector);
+  return circleS;
+}
+/**
+ * @param axisS selector of g.axis-outer containing feature circle
+ * if undefined, the axis of the feature's referenceBlock is selected.
+ * @param feature provides feature.id
+ */
+function axisFeatureCircles_selectOneInAxis(axisS, feature) {
+  if (! axisS) {
+    let
+    chrName = feature.get('blockId.referenceBlockOrSelf.id');
+    axisS = selectAxisOuter(chrName);
+  }
+  let
+  selector = "g > circle#" + axisFeatureCircles_eltId(feature),
+  circleS = axisS.selectAll(selector);
   return circleS;
 }
 /** Select the circles of axes which have no viewed blocks.
@@ -326,9 +345,7 @@ function axisFeatureCircles_removeBlock(selectedFeatures, mapChrName) {
        */
       let
       // similar to mapview.js: removeUnviewedBlockFeaturesFromSelected()
-      chrName = f.get('blockId.referenceBlockOrSelf.id'),
-      featureName = f.name,
-      circleS = axisFeatureCircles_selectOne(chrName, featureName);
+      circleS = axisFeatureCircles_selectOneInAxis(undefined, f);
       circleS.remove();
     });
 }
@@ -398,12 +415,6 @@ function traitColour(traitName) {
   return trait_colour_scale(traitName);
 }
 
-function featureTraitColour(feature) {
-  let traitName = feature.get('values.Trait'),
-      colour = traitColour(traitName);
-  return colour;
-}
-
 /*----------------------------------------------------------------------------*/
 
 export {
@@ -415,11 +426,12 @@ export {
   selectAxisOuter, selectAxisUse, eltIdGpRef,
   highlightId,
   trackBlockEltIdPrefix,
+  axisFeatureCircles_eltId,
   axisFeatureCircles_selectAll,
   axisFeatureCircles_selectOne,
+  axisFeatureCircles_selectOneInAxis,
   axisFeatureCircles_selectUnviewed,
   axisFeatureCircles_removeBlock,
   axisTitleColour,
   traitColour,
-  featureTraitColour,
 };

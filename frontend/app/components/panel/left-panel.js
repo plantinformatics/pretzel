@@ -10,7 +10,7 @@ import { htmlSafe } from '@ember/template';
 export default Component.extend({
   apiServers: service(),
 
-  style: htmlSafe(CSS.escape('height:100%')),
+  style: htmlSafe('height:100%'),
   attributeBindings: ['style:style'],
   view: 'mapview',
 

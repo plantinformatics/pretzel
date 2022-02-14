@@ -2,6 +2,7 @@ import { computed } from '@ember/object';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { htmlSafe } from '@ember/template';
+import { later } from '@ember/runloop';
 
 
 
@@ -14,25 +15,28 @@ export default Component.extend({
   tagName : '',
 
   didRender : function() {
+    this._super.apply(this, arguments);
+    this.firstTabActive();
+  },
+  firstTabActive() {
     let server = this.get('apiServer'),
+    /** app starts with 1 tab, which is given state 'active'.  */
     firstTab = server.get('firstTab');
     if (firstTab)
     {
       console.log('didRender', firstTab, this, server.name);
-      server.set('firstTab', false);
-      this.addClassActive();
+      later(() => server.set('firstTab', false));
+      // tab.select() replaces this.addClassActive();
+      let tabId = this.get('tabId');
+      dLog('didRender', this.attrs.nav.active, this.attrs.tab.activeId);
+      this.attrs.tab.select(tabId);
     }
   },
 
-  addClassActive : function()
-  {
-    /** in earlier version <li> was provided by this component
-     * (i.e. this.element), now by the <BsNav> which is the sole child. */
-    let navItem = this.childViews[0];
-    let li = navItem.element;
-    console.log('addClassActive', this.apiServerName, li, li && li.classList);
-    li.classList.add("active");
-  },
+  tabId : computed('apiServer.tabId', function () {
+    let tabId = 'tab-' + this.get('apiServer.tabId');
+    return tabId;
+  }),
 
   borderStyle : computed('apiServer.name', function() {
     let apiServerColour = this.get('apiServer').get('colour'),

@@ -107,7 +107,7 @@ export default Component.extend({
   /** true filters out paths which do not have >=1 end in a brush. */
   onlyBrushedAxes : true,
 
-  classNames: ['paths-table', 'right-panel-paths'],
+  classNames: ['paths-table', 'right-panel-paths', 'h-100'],
 
   didInsertElement() {
     this._super(...arguments);
@@ -145,6 +145,8 @@ export default Component.extend({
   },
 
   didRender() {
+    this._super.apply(this, arguments);
+
     if (trace)
       dLog(fileName + " : didRender()");
     this.manageHoTable();
@@ -680,8 +682,13 @@ export default Component.extend({
       columns: this.get('columns'),
       colHeaders: this.get('colHeaders'),
       headerTooltips: true,
+      /** in table-brushed.js colWidths and stretchH are controlled by
+       * autoColumnWidth and stretchHorizontal respectively.
+       * Those values are effectively both true in paths-table.
       colWidths: this.get('colWidths'),
-      height: 600,
+      */
+      stretchH : 'all',
+      height: '100%',
       manualRowResize: true,
       manualColumnResize: true,
       manualRowMove: true,

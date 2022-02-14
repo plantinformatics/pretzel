@@ -19,7 +19,7 @@ export default Component.extend({
   flowsService: service('data/flows-collate'),
 
   tagName : '',
-  // classNames: ['col-xs-12'],
+  classNames: ['panel-section'],
 
   actions : {
     toggleVisible : function (flowName, toggle, event) {
@@ -64,6 +64,8 @@ export default Component.extend({
     }
   },
   didRender() {
+    this._super.apply(this, arguments);
+
     console.log('flow-controls didRender');
     let flowsService = this.get('flowsService');
     let flows = this.get('flowsService.flows');

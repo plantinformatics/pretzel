@@ -1,4 +1,7 @@
 import Service from '@ember/service';
+import { inject as service } from '@ember/service';
+import { alias } from '@ember/object/computed';
+
 
 /* global d3 */
 
@@ -7,6 +10,8 @@ const dLog = console.debug;
 const axisTransitionTime = 750;
 
 export default Service.extend({
+  controls : service(),
+  controlsView : alias('controls.controls.view'),
 
   /**
    * set via e.g.
@@ -25,6 +30,14 @@ export default Service.extend({
       isCurrent = timeSince < 1000;
       // dLog('currentZoomPanIsWheel', timeSince, isCurrent);
     }
+    if (! isCurrent) {
+      let timeSinceSlider = this.get('controlsView.timeSinceASliderHasChanged');
+      isCurrent = timeSinceSlider < 1000;
+      /* if (isCurrent) {
+        dLog('currentZoomPanIsWheel', timeSinceSlider, isCurrent);
+      } */
+    }
+
     return isCurrent;
   },
   /** @return a shorter transition time while currentZoomPanIsWheel.

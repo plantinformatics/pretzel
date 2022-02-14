@@ -16,5 +16,7 @@ import ModalDialog from 'ember-modal-dialog/components/modal-dialog';
  * be solved by moving the modal to <body>; and .modal('show') is required
  * e.g. run.next( () => Ember.$('div.col-xs-12 > div > div.ember-view >
  * div.modal').appendTo("body").modal('show'); )
+ * Update : .col-xs-12 is replaced with .panel-section, so the above issue with
+ * position:relative should not apply.
  */
 export default ModalDialog.extend({});

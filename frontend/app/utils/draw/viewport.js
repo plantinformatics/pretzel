@@ -116,8 +116,24 @@ Viewport.prototype.calc = function(oa)
 
   this.viewPortPrev = this.viewPort;
   /** use width of div#holder, not document.documentElement.clientWidth because of margins L & R. */
+
+  let eltHeight;
+  let
+  componentGeometry = oa?.eventBus?.get('componentGeometry'),
+  controls_window = this.drawOptions?.controls?.window,
+  tablesPanelRight = controls_window ? controls_window.tablesPanelRight : componentGeometry.get('tablesPanelRight');
+  /** iniiially .sizes and .tablesPanelRight are not defined; initial value of
+   * controllers/mapview : tablesPanelRight is false.
+   */
+  if (! tablesPanelRight) {
+    /** Height of the first element in the split-view, which contains #holder. */
+    eltHeight = divHolder.parent().parent().height();
+  } else {
+    eltHeight = document.documentElement.clientHeight - topPanelHeight; // - bottomPanelHeight;
+  }
+
   this.viewPort =
-    viewPort = {w: holderWidth, h:document.documentElement.clientHeight};
+    viewPort = {w: holderWidth, h: eltHeight};
 
   /// Width and Height.  viewport dimensions - margins.
   w = viewPort.w  - margins[marginIndex.right] - margins[marginIndex.left];
@@ -130,7 +146,6 @@ Viewport.prototype.calc = function(oa)
             w: w,
             h: h - 2 * this.dropTargetYMargin
             // - this.axisTopOffset
-            - topPanelHeight // - bottomPanelHeight
         };
   // layout has changed, no value in this :  - selectedFeaturesTextHeight
 
@@ -148,6 +163,11 @@ Viewport.prototype.calc = function(oa)
   if (trace_resize)
     console.log("viewPort=", viewPort, ", w=", w, ", h=", h, ", graphDim=", graphDim, ", yRange=", yRange);
 
+  let
+  controlsView = oa.drawOptions?.controls?.view,
+  /** input range value is string */
+  extraOutsideMargin = +controlsView?.extraOutsideMargin || 0;
+
   /** axisXRange is the
    * x range of the axis centres. reserved space at left and right for
    * axisHeaderTextLen which is centred on the axis.
@@ -156,7 +176,7 @@ Viewport.prototype.calc = function(oa)
    * outsideMargin has a lower limit of 90 for the index tick text (enough for 9
    * digits with 2 commas).
    */
-  let outsideMargin = Math.max(90, this.axisHeaderTextLen/2);
+  let outsideMargin = Math.max(90, this.axisHeaderTextLen/2) + extraOutsideMargin;
   /** add some extra space on left to allow for long text selected.labelledFeatures (axis-1d : showLabels() ) */
   let extraLeftMargin = 50;
   this.axisXRange = [0 + outsideMargin + extraLeftMargin, graphDim.w - outsideMargin];
@@ -197,7 +217,7 @@ Viewport.prototype.viewBox = function()
     height : (this.graphDim.h + axisTitleHeight)},
   viewBoxText = "" + viewBox.min_x + " " + viewBox.min_y + " " +
     viewBox.width + " " + viewBox.height;
-  dLog('viewBox', viewBox, viewBoxText, this, shiftLeft, increaseWidth);
+  dLog('viewBox', viewBox, viewBoxText, this, shiftLeft, increaseWidth, axisTitleHeight);
   return viewBoxText;
 };
 

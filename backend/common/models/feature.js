@@ -4,6 +4,7 @@
 
 const Queue = require('promise-queue');
 
+
 /*----------------------------------------------------------------------------*/
 
 /* global module */
@@ -14,6 +15,8 @@ var acl = require('../utilities/acl')
 const { childProcess } = require('../utilities/child-process');
 var upload = require('../utilities/upload');
 var { filterBlastResults } = require('../utilities/sequence-search');
+var blockFeatures = require('../utilities/block-features');
+const { ArgsDebounce } = require('../utilities/debounce-args');
 
 const cacheLibraryName = '../utilities/results-cache';
 var cache = require(cacheLibraryName);
@@ -50,24 +53,37 @@ module.exports = function(Feature) {
 
   /*--------------------------------------------------------------------------*/
 
+  let argsDebounce = new ArgsDebounce();
+
   /** Clear result cache entries which may be invalidated by the save.
    */
-  Feature.observe('after save', function(ctx, next) {
-    if (ctx.instance) {
+  Feature.observe(
+    'after save',
+    (ctx, next) => {
+      if (ctx.instance) {
+        let blockId = ctx.instance.blockId;
+        if (trace > 3) {
+          console.log('Feature', 'after save',  ctx.instance.id, ctx.instance.name, blockId);
+        }
+        argsDebounce.debounced(featureAfterSave, blockId, 1000)();
+        next();
+      }
+    });
+
+  /** identical to blockAfterSave()
+   */
+  function featureAfterSave(blockId) {
       const apiName = 'blockFeaturesInterval';
-      const blockIds = [ctx.instance.blockId],
+      const blockIds = [blockId],
             cacheId = apiName + '_' + blockIds.join('_');
       let value = cache.get(cacheId);
       if (value) {
-        // this will trace for each feature when e.g. adding a dataset with table/csv upload
-        if (trace > 3) {
-          console.log('Feature', 'after save', apiName, 'remove from cache', cacheId, ctx.instance.id, ctx.instance.name, value.length || value);
-        }
+        console.log(apiName, 'remove from cache', cacheId, value.length || value);
         cache.put(cacheId, undefined);
       }
-    }
-    next();
-  });
+
+    blockFeatures.blockFeaturesCacheClear(cache);
+  }
 
   /*--------------------------------------------------------------------------*/
 
@@ -207,7 +223,7 @@ module.exports = function(Feature) {
           /** same as convertSearchResults2Json() in dnaSequenceSearch.bash */
           let datasetNameFull=`${parent}.${datasetName}`;
           console.log('before removeExisting "', datasetNameFull, '"', '"', jsonFile, '"');
-          upload.removeExisting(models, datasetNameFull, /*replaceDataset*/true, cb, loadAfterDelete);
+          upload.removeExisting(models, options, datasetNameFull, /*replaceDataset*/true, cb, loadAfterDelete);
 
           function loadAfterDelete(err) {
             upload.loadAfterDeleteCb(
@@ -240,6 +256,7 @@ module.exports = function(Feature) {
               dnaSequence, true, queryStringFileName, [parent, searchType, resultRows, addDataset, datasetName], searchDataOut, cbWrap, /*progressive*/ false);
           }
         );
+        return promise;
       }
     } else {
       let features = dev_blastResult;

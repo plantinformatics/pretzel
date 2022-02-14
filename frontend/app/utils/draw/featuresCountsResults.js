@@ -76,6 +76,38 @@ function featuresCountsResultsConcat(r1, r2) {
   return r;
 }
 
+/* global d3 */
+
+/** Calculate the domain of the results, from extent of the _id.{min,max}
+ */
+function featuresCountsResultsDomain(fcResult) {
+  let fr = fcResult.result;
+  if ((fcResult.domain === undefined) && fr?.length) {
+    // equivalent, could use for verification :
+    if (false) {
+      let domain = 
+          d3.extent(
+            d3.extent(fr.map((r) => r._id.min)).concat(
+              d3.extent(fr.map((r) => r._id.max))));
+    }
+    let id0 = fr[0]._id;
+    if (id0) {
+      let extent0 = [id0.min, id0.max];
+      fcResult.domain = fr.reduce((result, b) => {
+        let id = b._id;
+        if (id) {
+          if ((id.min !== undefined) && (id.min < result[0])) {
+            result[0] = id.min;
+          }
+          if ((id.max !== undefined) && (id.max > result[1])) {
+            result[1] = id.max;
+          }
+        }
+        return result;
+      }, extent0);
+    }
+  }
+}
 
 /** Copy a featuresCountsResult, within the given domain.
  * @return a copy of fcResult, with results outside of domain filtered out.
@@ -464,6 +496,7 @@ fcrsShow = function (fcrs)  { fcrs.forEach((fcr) => console.log('featuresCountsR
 export {
   featuresCountsResultsCheckOverlap,
   featuresCountsResultsMerge,
+  featuresCountsResultsDomain,
   featuresCountsResultsFilter,
   featuresCountsResultsTidy,
   featuresCountsResultsSansOverlap,

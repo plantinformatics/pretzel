@@ -23,6 +23,7 @@
   {{!-- log  'values' values 'levelComponent' values_levelComponent --}}
   {{component values_levelComponent levelMeta=levelMeta name=(or name values.name values_dataName) values=values
     data=values
+    valuesCase='parentDone'
     parentDone=true
     controlOptions=controlOptions
     loadBlock="loadBlock"
@@ -39,8 +40,10 @@
     {{!-- log  'value' value 'index' index 'levelComponent' values_levelComponent --}}
     {{record/entry-values values=value levelMeta=levelMeta
       parentName=name
-      loadBlock="loadBlock"
+      valuesCase='valueIsArray'
       controlOptions=controlOptions
+      loadBlock="loadBlock"
+      selectExpander=selectExpander
       selectBlock="selectBlock"
       selectedBlock=selectedBlock
       selectDataset=(action 'selectDataset')}}
@@ -54,6 +57,7 @@
       {{!-- log  'value' value 'key' key 'subComponent' subComponent --}}
       {{component subComponent levelMeta=levelMeta name=key values=value
         data=value
+        valuesCase='valuesIsMap'
         parentName=name
         controlOptions=controlOptions
         loadBlock="loadBlock"
@@ -88,9 +92,11 @@
     {{#with (compute (action 'levelComponentEach' value)) as |subComponent|}}
       {{!-- log  'key' key 'value' value 'subComponent' subComponent --}}
       {{component subComponent levelMeta=levelMeta name=(or value.name key) values=value
+        valuesCase='valuesIsObject'
         data=value
         parentName=name
         controlOptions=controlOptions
+        selectExpander=selectExpander
         loadBlock="loadBlock"
         selectBlock="selectBlock"
         selectedBlock=selectedBlock

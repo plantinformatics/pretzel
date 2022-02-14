@@ -85,6 +85,7 @@ module.exports = function(app) {
       context.property == 'aliasSearch' ||
       context.property == 'depthSearch' ||
       context.property == 'dnaSequenceSearch' ||
+      context.property == 'dnaSequenceLookup' ||
         // Alias
       context.property == 'bulkCreate' ||
         // Block

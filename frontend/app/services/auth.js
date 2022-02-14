@@ -297,6 +297,18 @@ export default Service.extend({
     return this._ajax('Features/aliasSearch', 'GET', {server : apiServer, featureNames, options}, true);
   },
 
+
+  /** Request DNA sequence lookup (Blast).
+   * @param parent  datasetId of parent / reference of the blast db which is to be searched
+   * @param region e.g. 'chr6A:607200000-607200000'
+   * @param options not used yet, may be for streaming result
+   */
+  dnaSequenceLookup(apiServer, parent, region, options) {
+    dLog('services/auth dnaSequenceLookup', parent, region, options);
+    return this._ajax('Blocks/dnaSequenceLookup', 'GET', {server : apiServer, parent, region, options}, true);
+  },
+
+
   /** Request DNA sequence search (Blast).
    * @param dnaSequence string "atgcn..."
    * @param parent  datasetId of parent / reference of the blast db which is to be searched
@@ -312,7 +324,7 @@ export default Service.extend({
     minLengthOfHit, minPercentIdentity, minPercentCoverage,
     options
   ) {
-    dLog('services/auth featureSearch', dnaSequence.length, parent, searchType, resultRows, addDataset, datasetName, options);
+    dLog('services/auth dnaSequenceSearch', dnaSequence.length, parent, searchType, resultRows, addDataset, datasetName, options);
     /** allow longer for blast search; the server timeout for blast
      * search is defined in backend/scripts/blastn_request.bash
      */

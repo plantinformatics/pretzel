@@ -49,10 +49,15 @@ export default Component.extend({
       .call(grid);
   },
 
+  /*
   didInsertElement() {
+    this._super.apply(this, arguments);
   },
+  */
 
   didRender() {
+    this._super.apply(this, arguments);
+
     let data = this.get('data');
 
     let grid = d3.divgrid();

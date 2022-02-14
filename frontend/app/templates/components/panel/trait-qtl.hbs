@@ -1,8 +1,3 @@
-{{#elem/panel-container state="primary" as |panelContainer|}}
-    {{#elem/panel-heading icon="globe" panelContainer=panelContainer}}
-        Traits : QTLs
-    {{/elem/panel-heading}}
-    {{#if panelContainer.showComponent}}
 
     <ul id="display-traits" class="list-group">
         {{#if displayData.length}}
@@ -21,7 +16,7 @@
             class="list-group-item {{if (compare trait.id '===' selectedTrait.id) 'list-group-item-warning'}}"
             data-trait-id={{trait.id}}
             {{!-- action "selectTrait" trait on="click" --}}>
-            <span style="background-color:{{trait.colour}}; height:2ex; width:3em; display: inline-block;"></span>
+            <span style={{safe-style background-color=trait.colour}} class="traitColourBlock"></span>
             <span title="{{trait.name}}" class="truncate" style="max-width:260px">
               {{trait.datasetId.name}} {{trait.name}}
             </span>
@@ -31,26 +26,44 @@
             </span>
 
             <p class="list-group-item-text">
-            <span class="label label-info">
+            {{!-- data-trait-id is not used yet; it contains the unmodified trait.name, so it can be used to lookup trait information --}}
+            <button type="button" class="btn btn-info label label-info" data-trait-id={{concat 'tqt_' trait.name}} id={{concat 'tqt_' (without-punctuation trait.name)}} {{on 'click' (action this.traitQtlsClick trait) }} >
                 {{elem/icon-base name="asterisk"}} &nbsp;{{trait.features.length}}
-            </span> &nbsp;
+            </button> &nbsp;
             </p>
-
-            {{#ember-popover side="auto" popperContainer="body"}}
-            <ul class='feature-found'>
-              {{#each trait.features as |feature|}}
-              <li>
-                {{feature.name}}
-              </li>
-              {{/each}}
-            </ul>
-            {{/ember-popover }}
-
 
         </li>
         {{/each}}
     </ul>
 
-  {{/if}} {{!-- showComponent --}}
-{{/elem/panel-container}}
+
+    {{#if this.showModal}}
+      {{#if this.traitQtlsTargetId}}
+        {{#if this.traitSelected}}
+          {{#ember-modal-dialog title="QTLs of trait"
+            clickOutsideToClose=true
+            onClose=(action this.closeTraitQtlsDialog)
+            tetherTarget=this.traitQtlsTargetId 
+            targetAttachment='bottom right'
+            attachment='top left'
+             }}
+            <ul class='feature-found'>
+              {{#each this.traitSelected.features as |feature|}}
+              <li>
+                {{feature.name}}
+              </li>
+              {{/each}}
+            </ul>
+            <button type="button" {{on 'click' (action this.closeTraitQtlsDialog) }} style="margin-top: 1ex;">Close</button>
+          {{/ember-modal-dialog}}
+          <!-- Placeholder -->{{!-- to prevent exception when the above element is removed :
+          Uncaught TypeError: current is null
+              clear runtime.js:131
+              reset runtime.js:1256
+          ...
+              closeTraitQtlsDialog trait-qtl.js:61
+          --}}
+        {{/if}}
+      {{/if}}
+    {{/if}}
 
