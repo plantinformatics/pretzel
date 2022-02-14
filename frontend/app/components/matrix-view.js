@@ -10,6 +10,8 @@ export default Component.extend({
   selectedBlock: null,
 
   didInsertElement() {
+    this._super.apply(this, arguments);
+
     let me = this;
 
     let tableDiv = $("#observational-table")[0];

@@ -22,7 +22,7 @@ const groupName = 'traits';
  * @param name
  */
 const Trait = EmberObject.extend({
-  visible : true,
+  visible : false,
   init() {
     this._super(...arguments);
     this.set('features',  A());
@@ -48,13 +48,23 @@ const Trait = EmberObject.extend({
  */
 export default Service.extend({
   block : service('data/block'),
+  controls : service(),
 
   /** array of {name, visible, features} */
   traits : A(),
 
+  /** Set all known traits to not-visible. */
+  visibleClearAll() {
+    const visible = false;
+    let
+    /** group  */
+    traits = this.get(groupName);
+    traits.forEach((trait) => trait.set('visible', visible));
+  },
+
   /** @return this.traits, filtered to the traits of currently-viewed blocks
    */
-  traitsInView : computed('traits.[]', 'block.viewed', function () {
+  traitsInView : computed('traits.[]', 'block.viewed.@each.traitSet', function () {
     /** another approach would be :
      *    this.traits.filter((t) => t.features.any((f) => f.blockId.isViewed))
      * Block.traitSet is constant, whereas trait[*].features[*] is constantly
@@ -72,6 +82,13 @@ export default Service.extend({
     return traits;
   }),
 
+  traitAdd(name) {
+    let
+    group = this.get(groupName),
+    trait = Trait.create({name});
+    group.pushObject(trait);
+    return trait;
+  },
   //groupAddFeature
   traitAddQtl(feature) {
     let
@@ -81,26 +98,31 @@ export default Service.extend({
       group = this.get(groupName),
       trait = group.findBy('name', name);
       if (! trait) {
-        trait = Trait.create({name});
-        group.pushObject(trait);
+        trait = this.traitAdd(name);
       }
       trait.features.addObject(feature);
     }
   },
   /** Set visibility of the given trait.
+   *
+   * If traitName is not in .trait[], add it (this is consistent with
+   * setOntologyIsVisible(), which adds new ids to ontologyIsVisible[]).
+   * In the only use of this function, adding new traitName is desirable.
+   *
    * @param traitName
    * @param visible
    */
   traitVisible(traitName, visible) {
     const
     fnName = 'traitVisible',
-    group = this.get(groupName),
+    group = this.get(groupName);
+    let
     trait = group.findBy('name', traitName);
     if (! trait) {
-      dLog(fnName, traitName, 'not found');
-    } else {
-      trait.set('visible', visible);
+      dLog(fnName, traitName, 'not found, adding');
+      trait = this.traitAdd(traitName);
     }
+    trait.set('visible', visible);
   },
   /** If the feature has values.Trait (i.e. is a QTL), then return trait.visible, otherwise true.
    * Features which are not QTLs, are not filtered out.
@@ -110,9 +132,12 @@ export default Service.extend({
     fnName = 'featureFilter',
     group = this.get(groupName),
     traitName = feature.get('values.Trait'),
+    visibleByTrait = this.get('controls.viewed.visibleByTrait'),
     trait = traitName && group && group.findBy('name', traitName),
-    ok = trait ? trait.get('visible') : true;
-    dLog(fnName, traitName, ok);
+    ok = ! visibleByTrait || (trait && trait.get('visible'));
+    if (trace > 2) {
+      dLog(fnName, traitName, ok);
+    }
     return ok;
   },
 

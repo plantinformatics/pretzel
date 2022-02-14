@@ -474,7 +474,7 @@ function featuresByBlocksAndDomains(blockId0, blockId1, intervals) {
   pipeline = useDomainFilter ? filterValue : matchBlock;
 
   if (useDomainFilter) {
-    if (trace_aggr)
+    if (trace_aggr > 1)
       log_filterValue_intervals(filterValue, intervals);
   }
 
@@ -754,12 +754,12 @@ exports.blockFeaturesInterval = function(db, blockIds, intervals) {
   else
     pipeline = matchBlock;
 
-  if (trace_aggr)
+  if (trace_aggr > 1)
     console.log('blockFeaturesInterval', pipeline);
   /* As an alternative to console.dir(), e.g. for tracing in text file can use :
    *  console.log('pipeline', JSON.stringify(pipeline));
    */
-  if (trace_aggr > 1)
+  if (trace_aggr > 2)
     console.dir(pipeline, { depth: null });
 
   if (intervals.nSamples === undefined) {

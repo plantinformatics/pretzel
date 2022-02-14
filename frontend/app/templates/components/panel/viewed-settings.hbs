@@ -1,0 +1,51 @@
+{{#elem/icon-toggle state=detailed iconTrue='collapse-down' iconFalse='expand' class="margin-1em" }}
+  {{#ember-tooltip side="right" delay=500}}
+    Toggle display of QTL colour and filtering controls.
+  {{/ember-tooltip}}
+{{/elem/icon-toggle}}
+
+{{#if detailed}}
+
+  <ul class="list-group view-controls">
+
+    <li class="list-group-item">
+      <label style="display:inline">QTL colour by :</label>
+      {{radio-button value='Ontology' groupValue=qtlColourBy
+        changed=(action qtlColourByChanged preventDefault=false)
+      }}
+      Ontology &nbsp;&nbsp;
+      {{radio-button value='Trait' groupValue=qtlColourBy
+        changed=(action qtlColourByChanged preventDefault=false)
+      }}
+      Trait &nbsp;&nbsp;
+      {{radio-button value='Block' groupValue=qtlColourBy
+        changed=(action qtlColourByChanged preventDefault=false)
+      }}
+      Block
+
+    </li>
+
+    <li class="list-group-item horiz-2">
+      <label>Visible by : </label>
+      <div style="width:30%">
+        <input type="checkbox"
+          checked={{this.visibleByOntology}}
+          oninput={{action (pipe
+            (action (mut this.visibleByOntology) value="target.checked")
+            (action @changed this 'visibleByOntology') ) }}  >
+        <label>Ontology</label>
+      </div>
+      <div style="width:30%">
+        <input type="checkbox"
+          checked={{this.visibleByTrait}}
+          oninput={{action (pipe
+            (action (mut this.visibleByTrait) value="target.checked")
+            (action @changed this 'visibleByTrait') ) }}  >
+        <label>Trait</label>
+      </div>
+    </li>
+
+
+  </ul>
+
+{{/if}}

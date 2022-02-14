@@ -4,6 +4,48 @@
     {{/elem/panel-heading}}
     {{#if panelContainer.showComponent}}
 
+  <BsTab @customTabs={{true}} @onChange={{action this.onChangeTab}} @activeId={{this.activeId}} as |tab|>
+    <BsNav @type="tabs" as |nav|>
+    <ul class="nav nav-tabs li-active-extra counts">
+
+        {{#let 'Blocks' as |tabTypeName|}}
+          {{#let (compute (action this.datasetTypeTabId tabTypeName)) as |tabId|}}
+            <nav.item class="active-detail" @active={{bs-eq tab.activeId tabId}}><a href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
+              <div>{{block.viewed.length}}</div>
+            </nav.item>
+          {{/let}}
+        {{/let}}
+
+        {{#let 'Trait' as |tabTypeName|}}
+          {{#let (compute (action this.datasetTypeTabId tabTypeName)) as |tabId|}}
+            <nav.item class="active-detail" @active={{bs-eq tab.activeId tabId}}><a href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
+              <div>{{trait.traitsInView.length}}</div>
+            </nav.item>
+          {{/let}}
+        {{/let}}
+
+        {{#let 'Ontology' as |tabTypeName|}}
+          {{#let (compute (action this.datasetTypeTabId tabTypeName)) as |tabId|}}
+            <nav.item class="active-detail" @active={{bs-eq tab.activeId tabId}}><a href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
+              <div>{{compute (action this.keysLength ontology.ontologyIsVisible)}}</div>
+            </nav.item>
+          {{/let}}
+        {{/let}}
+
+    </ul>
+    </BsNav>
+
+    <div class="tab-content">
+
+    {{!-- viewed-settings is now used by manage-explorer : colourAndVisibleBy(); perhaps use CSS display:none when tab-view-Blocks  --}}
+      {{panel/viewed-settings changed=(action this.viewedSettingsChanged)}}
+
+        {{#let 'Blocks' as |tabTypeName|}}
+          {{#let (compute (action this.datasetTypeTabId tabTypeName)) as |tabId|}}
+
+{{#tab.pane id=tabId title=tabTypeName}}
+
+    {{!--  will split this out to a separate component.  time to release. --}}
     <ul id="display-blocks" class="list-group">
         {{#if hasDisplayData}}
         <li class="list-group-item" style="min-height: 55px;" >
@@ -51,10 +93,49 @@
         {{/each}}
     </ul>
 
+
+{{/tab.pane}}
+          {{/let}}
+        {{/let}}
+
+{{!-- --------------------------------------------------------------------- --}}
+
+        {{#let 'Trait' as |tabTypeName|}}
+          {{#let (compute (action this.datasetTypeTabId tabTypeName)) as |tabId|}}
+
+{{#tab.pane id=tabId title=tabTypeName}}
+{{panel/trait-qtl data=trait.traitsInView}}
+{{/tab.pane}}
+          {{/let}}
+        {{/let}}
+
+{{!-- --------------------------------------------------------------------- --}}
+
+
+        {{#let 'Ontology' as |tabTypeName|}}
+          {{#let (compute (action this.datasetTypeTabId tabTypeName)) as |tabId|}}
+
+{{#tab.pane id=tabId title=tabTypeName}}
+{{panel/ontologies}}
+{{/tab.pane}}
+          {{/let}}
+        {{/let}}
+
+
+
+    </div>      {{!-- end of class="tab-content" --}}
+
+  </BsTab>
+
+
+
+
   {{/if}} {{!-- showComponent --}}
 {{/elem/panel-container}}
 
-{{panel/trait-qtl data=trait.traitsInView}}
+
+
+{{!-- --------------------------------------------------------------------- --}}
 
 {{#if isMapview}}
 {{#elem/panel-container state="primary" showComponent=showChartOptions as |panelContainer|}}
@@ -95,6 +176,21 @@
 
 {{/elem/panel-container}}
 
+{{!-- --------------------------------------------------------------------- --}}
+
 {{panel/view-controls controls=controls drawActions=this}}
+
+{{!-- --------------------------------------------------------------------- --}}
+
+{{#elem/panel-container state="primary" as |panelContainer|}}
+  {{#elem/panel-heading icon="option-vertical" panelContainer=panelContainer}}
+    Colour / Style Editor
+  {{/elem/panel-heading}}
+  {{#if panelContainer.showComponent}}
+    {{draw/style-editor}}
+  {{/if}} {{!-- showComponent --}}
+{{/elem/panel-container}}
+
+{{!-- --------------------------------------------------------------------- --}}
 
 {{/if}}

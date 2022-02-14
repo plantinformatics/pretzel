@@ -28,6 +28,12 @@
         changed=(action historyViewChanged preventDefault=false) }}
       <span>Favourites</span>
       {{/radio-button}}
+       &nbsp;&nbsp;
+
+      {{#radio-button value='Viewed' groupValue=this.controlOptions.historyView
+        changed=(action historyViewChanged preventDefault=false) }}
+      <span>Viewed</span>
+      {{/radio-button}}
 
       <span style="display: inline-block;">
         {{input type="checkbox" name="this.controlOptions.historyBlocks" checked=this.controlOptions.historyBlocks
@@ -96,8 +102,7 @@
 
 
   <BsTab @customTabs={{true}} @onChange={{action this.onChangeTab}} @activeId={{this.activeId}} as |tab|>
-    <BsNav @type="tabs" as |nav|>
-    <ul class="nav nav-tabs li-active-extra counts">
+    <BsNav @type="tabs"  class="li-active-extra counts" as |nav|>
 
       {{#if blockFeatureTraits.length}}
         {{#let 'Trait' as |tabTypeName|}}
@@ -150,11 +155,10 @@
         </nav.item>
 
       {{/if}}
-
       <nav.item class="active-detail" @active={{bs-eq tab.activeId "tab-explorer-datasets"}}><a href="#tab-explorer-datasets" role="tab" onclick={{action tab.select "tab-explorer-datasets"}}>All Datasets</a>
         <div>{{data.length}}</div>
       </nav.item>
-    </ul>
+
     </BsNav>
 
     <div class="tab-content">
@@ -184,7 +188,8 @@
             loadBlock="loadBlock"
             selectBlock="selectBlock"
             selectedBlock=selectedBlock
-            selectDataset="selectDataset"}}
+            selectDataset="selectDataset"
+            selectExpander=(action this.selectOntologyNode) }}
 
             <span style="display: inline-block; margin-left: 3em;">
               {{input type="checkbox" name="this.controlOptions.showHierarchy" checked=this.controlOptions.showHierarchy
@@ -195,9 +200,9 @@
 
           {{/record/entry-tab}}
         {{else}}
-	  {{#tab.pane id='tab-explorer-Ontology' title='Ontology'}}
+          {{#tab.pane id='tab-explorer-Ontology' title='Ontology'}}
             <div>Requesting the Ontology Tree ...</div>
-	  {{/tab.pane}}
+          {{/tab.pane}}
         {{/if}}
       {{/if}}
 

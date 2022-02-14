@@ -1,5 +1,5 @@
 {{!-- tagName is ''; nav.item now provides <li>  --}}
-{{#let (concat "tab-" apiServer.tabId) as |tabId|}}
+{{#let this.tabId as |tabId|}}
 
 
 <@nav.item @active={{bs-eq @tab.activeId tabId }} >

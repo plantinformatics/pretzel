@@ -1,5 +1,6 @@
 {{#if dataset}}
-  <h4 class="truncate" style="max-width:300px" title={{dataset.name}}>{{dataset.name}}</h4>
+  <div class="dataset-description">
+  <h4 class="truncate" title={{dataset.name}}>{{dataset.name}}</h4>
 
   <table class="table table-striped dataset-table">
     <tbody>
@@ -19,6 +20,7 @@
       {{/if}}
     </tbody>
   </table>
+  </div>
 
   <div class="metaeditor-panel">
 

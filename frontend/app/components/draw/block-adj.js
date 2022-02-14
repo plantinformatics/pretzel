@@ -949,8 +949,6 @@ export default Component.extend(Evented, AxisEvents, {
     // widthsSum includes changes to .extended, which impacts width of all block-adjs
     'block.stacksWidthsSum',
     'block.axesExtendedCount',
-    // width of split axes affects the path endpoint x values, even if not adjacent.
-    'block.axes2d.@each.allocatedWidthsMax.centre',
     'xOffsets.@each',
     'drawMap.stacksWidthChanges',
     'blockAdj.axes1d.0.flipRegionCounter',
@@ -965,6 +963,14 @@ export default Component.extend(Evented, AxisEvents, {
      */
     'blockAdj.axes1d.0.scaleChanged',
     'blockAdj.axes1d.1.scaleChanged',
+    /* width of split axes affects the path endpoint x values, even if not adjacent.
+     * There is a list of axes2d of all axes in stacksCount,
+     * e.g. this.get('parentView.oa.stacks.stacksCount.axes2d.0.allocatedWidthsMax.centre').
+     * but 'axes2d.@each.allocatedWidthsMax.centre' is not a valid dependency
+     * because only 1 level is supported after @each.
+     * If needed a CP for 'axes2d.@each.allocatedWidthsMax' could be added.
+     * This dependency considers only the axes2d of this block-adj :
+     */
     'blockAdj.axes1d.{0,1}.axis2d.allocatedWidthsMax.centre',
     function () {
       let count = this.get('axisStackChangedCount');

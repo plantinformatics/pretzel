@@ -48,8 +48,10 @@ AxisTitleLayout.prototype.calc = function(axisSpacing, titlePx)
    * text in the title, so the minimum value of axisNameRows is 1.
    * This can be made a configurable option, and adjusted for the actual max #
    * of rows in axis titles.
+   * Update : the blocks list in the axis title will be moved into the axis
+   * title menu, so height will only be required for the title row - 1.
    */
-  axisNameRows = 7,
+  axisNameRows = 1,
   /** approx height of text name of map+chromosome displayed above axis.
    *   *axisNameRows for parent/child; later can make that dependent on whether there are any parent/child axes.
    */

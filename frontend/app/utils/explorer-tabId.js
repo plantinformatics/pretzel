@@ -1,5 +1,7 @@
 /*----------------------------------------------------------------------------*/
-/* Shared constants / functions to provided consistent id of tabs in data explorer. */
+/* Shared constants / functions to provided consistent id of tabs in data explorer
+ * manage-explorer,  and manage-view
+ */
 
 
 const tab_explorer_prefix = "tab-explorer-";
@@ -9,6 +11,10 @@ function text2EltId(name) {
   return id;
 }
 
+function keysLength(object) {
+  return Object.keys(object).length;
+}
+
 /*----------------------------------------------------------------------------*/
 
-export {tab_explorer_prefix, text2EltId };
+export {tab_explorer_prefix, text2EltId, keysLength };

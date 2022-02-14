@@ -1,0 +1,65 @@
+
+    <div id="display-ontologies">
+
+    <div class="tab-content">
+
+      <ul class="list-group view-controls">
+        <li class="list-group-item">
+          <label style="display:inline">Ontology click :</label>
+          {{radio-button value='Hierarchy' groupValue=ontologyClick
+            changed=(action ontologyClickChanged preventDefault=false)
+          }}
+          Hierarchy &nbsp;&nbsp;
+          {{radio-button value='Level' groupValue=ontologyClick
+            changed=(action ontologyClickChanged preventDefault=false)
+          }}
+          Level &nbsp;&nbsp;
+
+        </li>
+
+      </ul>
+
+      <span style="margin-left: 3em;">
+        {{input type="checkbox" name="this.allVisible" checked=this.allVisible
+          input=(action this.allVisibleChanged value='target.checked' preventDefault=false)
+          id="checkbox-allVisible" }}
+        <label for="checkbox-allVisible" title="Show QTLs with any Ontology">
+          <i class="glyphicon glyphicon-eye-open"></i></label>
+      </span>
+
+      {{#if blockFeatureOntologies.length}}
+        {{log 'ontologies' ontologiesTree ontologiesTree.isFulfilled }}
+        {{#if ontologiesTree.isFulfilled}}
+
+          <span style="display: inline-block; margin-left: 8em;">
+            {{input type="checkbox"
+              name="this.controlOptions.showHierarchy"
+              checked=this.controlOptions.showHierarchy
+              input=(action showHierarchyChanged preventDefault=false)
+              id="checkbox-showHierarchyView" }}
+            <label for="checkbox-showHierarchyView" title="Show tree of Ontologies">
+              <i class="glyphicon glyphicon-tree-conifer"></i></label>
+          </span>
+
+          <ul class="list-group borderless">
+            {{record/entry-values
+              values=ontologiesTree.content
+              levelMeta=levelMeta
+              controlOptions=controlOptions
+              loadBlock=(action this.noAction)
+              selectBlock=(action this.noAction)
+              selectedBlock=(action this.noAction)
+              selectDataset=(action this.noAction)
+              selectExpander=(action this.selectOntologyNode) }}
+          </ul>
+
+        {{else}}
+            <div>Requesting the Ontology Tree ...</div>
+        {{/if}}
+      {{/if}}
+
+    </div>      {{!-- end of class="tab-content" --}}
+
+
+    </div>
+

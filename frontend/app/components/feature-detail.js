@@ -19,6 +19,8 @@ export default Component.extend({
   },
 
   didRender() {
+    this._super.apply(this, arguments);
+
     let data = this.get('data');
 
     let grid = d3.divgrid();

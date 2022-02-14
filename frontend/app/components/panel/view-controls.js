@@ -18,6 +18,7 @@ import { subInterval, overlapInterval, inRange } from '../../utils/draw/zoomPanC
 
 
 /* global d3 */
+/* global DocumentTimeline */
 
 /*--------------------------------------------------------------------------*/
 
@@ -49,6 +50,10 @@ export const isFirefox = () => typeof InstallTrigger !== 'undefined';
 
 const sbSizeThresholdInitial = 20;
 const sbSizeThresholdMax = 1e9;
+
+const axisLayerModulusInitial = 5;
+const axisLayerModulusMax = 100;
+
 
 /** can be replaced by Math.clamp() when that is available
  * refn : https://stackoverflow.com/questions/11409895/whats-the-most-elegant-way-to-cap-a-number-to-a-segment
@@ -84,6 +89,9 @@ export default Component.extend({
    */
   showAxisText : true,
 
+  /** if true, show only (reference) Block name (i.e. chromosome scope) in axis title. */
+  axisTitleChrOnly : false,
+
   /** if true, axis title text and axis ticks and text are shown on the right
    * side of the axis for the rightmost axis.
    */
@@ -106,6 +114,28 @@ export default Component.extend({
    */
   debounceTime : 400,
   throttleTime : 40,
+
+  // ---------------------------------------------------------------------------
+
+  /** time of last change by user of a GUI slider which may require redraw; if
+   * redrawing from a user adjustment such as a slider, then don't use a
+   * transition.  This gives the effect of the rendered elements moving directly
+   * with the user's adjustment.  In the other case, e.g. change of a checkbox
+   * or toggle, a transition is used.
+   */
+  sliderChangeTime : undefined,
+  aSliderHasChanged() {
+    let
+    documentTimeline = new (DocumentTimeline || window.DocumentTimeline)();
+    this.set('sliderChangeTime', documentTimeline.currentTime);
+  },
+  get timeSinceASliderHasChanged() {
+    let
+    documentTimeline = new (DocumentTimeline || window.DocumentTimeline)(),
+    sliderChangeTime = this.get('sliderChangeTime'),
+    since = sliderChangeTime && (documentTimeline.currentTime - sliderChangeTime);
+    return since;
+  },
 
   /*--------------------------------------------------------------------------*/
 
@@ -254,6 +284,42 @@ export default Component.extend({
     this.updateSyntenyBlocksPosition();
   },
 
+  // ---------------------------------------------------------------------------
+  /* copied, with sbSizeThreshold → axisLayerModulus; factor as a sub-component - no time now.
+   * sbSizeThreshold comments apply similarly here.
+   */
+  
+  axisLayerModulus : axisLayerModulusInitial,
+  axisLayerModulusLinear : expRangeInitial(axisLayerModulusInitial, expRangeBase(50, axisLayerModulusMax)),
+  axisLayerModulusText : "" + axisLayerModulusInitial,
+  axisLayerModulusTextChanged(value) {
+    /* {{input value=axisLayerModulusText ... }} sets
+     * this.axisLayerModulusText, and (action ...  value=target.value)
+     * passes the same value to this function.  */
+    if (this.axisLayerModulusText !== value) {
+      dLog('axisLayerModulusTextChanged', this.axisLayerModulusText, value);
+    }
+    /** value is a string. */
+    value = +value;
+    if ((value < 1) || (value > axisLayerModulusMax)) {
+      return;
+    }
+    if (value !== this.set('axisLayerModulus')) {
+      let linear = expRangeInitial(value, expRangeBase(50, axisLayerModulusMax));
+      dLog('axisLayerModulusTextChanged', this.axisLayerModulusText, value, linear);
+      this.set('axisLayerModulusLinear', linear);
+      this.set('axisLayerModulus', value);
+      this.updateSyntenyBlocksPosition();
+    }
+  },
+  axisLayerModulusLinearChanged(linear) {
+    let value = Math.round(expRange(+linear, 50, axisLayerModulusMax));
+    // dLog('axisLayerModulusLinearChanged', linear, value);
+    this.set('axisLayerModulusText', value);
+    this.set('axisLayerModulus', value);
+    this.updateSyntenyBlocksPosition();
+  },
+
 
   /*--------------------------------------------------------------------------*/
 
@@ -392,6 +458,9 @@ export default Component.extend({
    */
   diamondOffset : 0,
 
+  /** Outside Axis Margin : Extra space outside the left and right-most axes.   */
+  extraOutsideMargin : 160,
+
   /*--------------------------------------------------------------------------*/
 
   didInsertElement() {
@@ -426,6 +495,8 @@ export default Component.extend({
   willDestroyElement() {
     dLog("components/draw-controls willDestroyElement()");
     this.drawActions.trigger("drawControlsLife", false);
+
+    this._super.apply(this, arguments);
   },
 
   actions : {
@@ -501,6 +572,14 @@ export default Component.extend({
     let value = +event.target.value;
     // dLog('diamondOffsetInput', value, event.target.value);
     this.set('diamondOffset', value);
+  },
+  qtlUncolouredOpacityInput(event) {
+    /** default is 100% : range [0, 15] - single hex digit : value=15 in hbs
+     * event.target.value is a string; convert to a number.
+     */
+    let value = +event.target.value;
+     dLog('qtlUncolouredOpacityInput', value, event.target.value);
+    this.set('qtlUncolouredOpacity', value);
   },
   titleTextSizeInput(event) {
     const attrName = 'font-size';

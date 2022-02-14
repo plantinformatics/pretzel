@@ -1,3 +1,4 @@
+{{xOffsetsEffect}}
 
 <EmberPopover
   @tooltipClass="axis-menu" @innerClass="axis-menu-inner"
@@ -15,14 +16,30 @@
   </div>
 
 
-  <div>
+  <div class="name">
+    <button
+      style="margin-right: 1em;"
+      onClick={{action (pipe (toggle "editingShortName" this) (action this.editedShortName) )  }}>
+      <i class="glyphicon glyphicon-pencil"></i>
+    </button>
     {{block.datasetId.name}} : {{block.name}}
   </div>
 
+  {{#if editingShortName}}
+  <div>
+    {{input value=this.block.datasetId._meta.shortName
+     }}
+  </div>
+  {{/if}}
 
   <ul class="list-unstyled dataBlocks">
     {{#each dataBlocks as |dBlockS|}}
-    <li>
+    <li style={{compute (action this.dataBlockColourStyle dBlockS)}}>
+      {{#if this.multipleServers}}
+        {{!-- circle character is unicode : (U+2B24) : Black Large Circle --}}
+        <div class="apiServer" style={{compute (action this.dataBlockServerColourStyle dBlockS)}}>⬤</div>
+      {{/if}}
+
       <button onClick={{action this.blockUnview dBlockS}}>
        {{!--  "&#x2573;", glyphicon-sound-7-1, glyphicon-remove-sign --}}
        ╳
@@ -37,7 +54,9 @@
       </button>
 
       {{!-- result is text title --}}
-      {{compute (action this.dataBlockText dBlockS)}}
+      <div class="name">{{compute (action this.dataBlockText dBlockS)}}</div>
+
+      <div class="featureCounts">{{compute (action this.dataBlockFeatureCountsText dBlockS)}}</div>
     </li>
     {{/each}}
   </ul>

@@ -62,6 +62,8 @@ export default Component.extend(Evented, {
   willDestroyElement() {
     let stackEvents = this.get('stackEvents');
     stackEvents.off('expose');
+
+    this._super.apply(this, arguments);
   },
 
   request : function (blockA, blockB) {

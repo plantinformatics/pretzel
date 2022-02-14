@@ -1,3 +1,17 @@
+<div class="pull-right">
+  <input type="checkbox"
+    checked={{this.stretchHorizontal}}
+    oninput={{action this.stretchHorizontalChanged value="target.checked"}}  >
+  <label>Column Stretch Horizontal</label>
+  <input type="checkbox"
+    style="margin-left: 3em;"
+    checked={{this.autoColumnWidth}}
+    oninput={{action this.autoColumnWidthChanged value="target.checked"}}  >
+  <label>Auto Column Width</label>
+</div>
+<div style="clear:both"></div>
+
+
 <!--
 {{ember-table
   height=400

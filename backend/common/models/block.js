@@ -1,5 +1,7 @@
 'use strict';
 
+var { debounce }  = require('lodash/function');
+
 
 var acl = require('../utilities/acl')
 var identity = require('../utilities/identity')
@@ -15,6 +17,8 @@ var pathsStream = require('../utilities/paths-stream');
 var { localiseBlocks, blockLocalId } = require('../utilities/localise-blocks');
 const { blockServer } = require('../utilities/api-server');
 const { getAliases } = require('../utilities/localise-aliases');
+const { childProcess } = require('../utilities/child-process');
+const { ArgsDebounce } = require('../utilities/debounce-args');
 
 var ObjectId = require('mongodb').ObjectID
 
@@ -36,6 +40,8 @@ const { Writable, pipeline, Readable } = require('stream');
 
 /* global process */
 
+// -----------------------------------------------------------------------------
+
 
 /** This value is used in SSE packet event id to signify the end of the cursor in pathsViaStream. */
 const SSE_EventID_EOF = -1;
@@ -54,6 +60,8 @@ const blockRemoteType = 'any';
 const use_dbLookupAliases = true;
 
 const trace_block = 2;
+
+// -----------------------------------------------------------------------------
 
 class SseWritable extends Writable {
   // this class is based on a comment by Daniel Aprahamian in https://jira.mongodb.org/browse/NODE-1408
@@ -181,7 +189,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     /** @param left, right are localised - just the ID string */
       .then(([left, right]) => {
     let db = this.dataSource.connector;
-	  console.log('pathsProgressive', /*db,*/ JSON.stringify(left), JSON.stringify(right), intervals /*, options, cb*/);
+    console.log('pathsProgressive', /*db,*/ JSON.stringify(left), JSON.stringify(right), intervals /*, options, cb*/);
     let cacheId = left + '_' + right,
     /** If intervals.dbPathFilter, we could append the location filter to cacheId,
      * but it is not clear yet whether that would perform better.
@@ -308,7 +316,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     let promise =  models.Block.find({where: {id: {inq: blockIds}}} /*,options*/).then(blocks => {
       return  blocks.map(blockR => {
         let block = blockR.__data;
-	// this trace can cause warning about deprecated .inspect() in node 10.
+        // this trace can cause warning about deprecated .inspect() in node 10.
         // console.log('blockGet then map', block.id || block || blockR);
         this.blockRecordsStore(block.id, block);
         return block;
@@ -354,7 +362,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       block = apiServer.datasetAndBlock(blockId.blockId)
         .then((datasetBlock) => datasetBlock.block);
     }
-    if (trace_block > 1)
+    if (trace_block > 2)
       block.then((blockR) => console.log('blockRecordLookup', blockId, blockR));
     return block;
   };
@@ -614,7 +622,9 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
   /** Logically part of reqStream(), but split out so that it can be called
    * directly or via a promise. */
   function pipeStream(sse, intervals, useCache, cacheId, filterFunction, res, cursor) {
-    console.log('pipeStream', sse, intervals, useCache, cacheId);
+      if (trace_block > 2) {
+        console.log('pipeStream', sse, intervals, useCache, cacheId);
+      }
       if (useCache)
         cursor.
         pipe(new pathsStream.CacheWritable(/*cache,*/ cacheId));
@@ -802,8 +812,9 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     }
 
     let
-    cacheId = fnName,
-    result; //  = cache.get(cacheId);
+    /** this cacheId is also calculated in utilities/block-features.js : blockFeaturesCacheClear() */
+    cacheId = fnName + '_' + fieldName,
+    result; // switch off cache - may need cache per user. //  = cache.get(cacheId);
     if (paramError) {
       cb(paramError);
     } else
@@ -865,7 +876,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
         pathsAggr.blockFeaturesInterval(db, blockIds, intervals);
       cursor.toArray()
         .then(function(data) {
-          console.log(apiName, ' then', (data.length > 10) ? data.length : data);
+          console.log(apiName, ' then', (data.length > 2) ? data.length : data);
           if (useCache) {
             cache.put(cacheId, data);
             if (trace_block > 1) {
@@ -953,21 +964,32 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     next()
   })
 
+  let argsDebounce = new ArgsDebounce();
   /** Clear result cache entries which may be invalidated by the save.
    */
   Block.observe('after save', function(ctx, next) {
     if (ctx.instance) {
-      const apiName = 'blockFeaturesInterval';
-      const blockIds = [ctx.instance.id],
-            cacheId = apiName + '_' + blockIds.join('_');
-      let value = cache.get(cacheId);
-      if (value) {
-        console.log('Block', 'after save', apiName, 'remove from cache', ctx.instance.id, ctx.instance.name, value);
+      let blockId = ctx.instance.id;
+      if (trace_block > 3) {
+        // this may trace for each feature when e.g. adding a dataset with table/csv upload
+        console.log('Block', 'after save',  ctx.instance.id, ctx.instance.name, blockId);
       }
-      cache.put(cacheId, undefined);
+      argsDebounce.debounced(blockAfterSave, blockId, 1000)();
     }
     next();
   });
+
+  function blockAfterSave(blockId) {
+      const apiName = 'blockFeaturesInterval';
+      const blockIds = [blockId],
+            cacheId = apiName + '_' + blockIds.join('_');
+      let value = cache.get(cacheId);
+      if (value) {
+        console.log(apiName, 'remove from cache', cacheId, value.length || value);
+        cache.put(cacheId, undefined);
+      }
+    blockFeatures.blockFeaturesCacheClear(cache);
+  }
 
 
   //----------------------------------------------------------------------------
@@ -1154,6 +1176,51 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
   });
 
   /*--------------------------------------------------------------------------*/
+
+  // ---------------------------------------------------------------------------
+
+  Block.dnaSequenceLookup = function(parent, region, cb) {
+    childProcess(
+      'dnaSequenceLookup.bash',
+      /* postData */ '', 
+      /* useFile */ false,
+      /* fileName */ undefined,
+      /* moreParams */ [parent, region],
+      dataOutReply, cb, /*progressive*/ false);
+
+    let chunks = [];
+    /** Receive the results from the child process.
+     * @param chunk is a Buffer
+     * null / undefined indicates child process closed with status 0 (OK) and sent no output.
+     * @param cb is cbWrap of cb passed to dnaSequenceSearch().
+     */
+    function dataOutReply(chunk, cb) {
+      /** based on searchDataOut() */
+      if (! chunk) {
+        cb(null, chunks);
+      } else
+      if (chunk && (chunk.length >= 6) && (chunk.asciiSlice(0,6) === 'Error:')) {
+        cb(new Error(chunk.toString()));
+      } else {
+        // chunks.push(chunk)
+        cb(null, chunk.toString());
+      }
+    };
+
+  };
+
+  Block.remoteMethod('dnaSequenceLookup', {
+    accepts: [
+      {arg: 'parent', type: 'string', required: true},
+      {arg: 'region', type: 'string', required: true},
+    ],
+    http: {verb: 'get'},
+    returns: {arg: 'sequence', type: 'string'},
+    description: "DNA Sequence Lookup e.g. samtools faidx, returns nucleotide sequence output as text string"
+  });
+
+  // ---------------------------------------------------------------------------
+
 
   acl.assignRulesRecord(Block)
   acl.limitRemoteMethods(Block)

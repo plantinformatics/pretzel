@@ -4,11 +4,12 @@ import Component from '@ember/component';
 import { observer } from '@ember/object';
 import { computed } from '@ember/object';
 import { inject as service } from '@ember/service';
-import { later } from '@ember/runloop';
+import { later, bind } from '@ember/runloop';
 
 
 import { featureEdit } from '../components/form/feature-edit';
 import { eltClassName } from '../utils/domElements';
+import { axisFeatureCircles_selectOneInAxis } from '../utils/draw/axis';
 
 import config from '../config/environment';
 
@@ -19,6 +20,10 @@ import config from '../config/environment';
 
 const trace = 0;
 const dLog = console.debug;
+
+/** If the longest text of a columns' values is greater than this length, don't
+ * enable auto-width on that column.  */
+const ColumnAutoWidthValueMaxLength = 40;
 
 /*----------------------------------------------------------------------------*/
 
@@ -40,9 +45,12 @@ class FeatureEditor extends Handsontable.editors.BaseEditor {
     Handsontable.dom.empty(this.WRAPPERDIV_PARENT);
     this.WRAPPERDIV_PARENT.appendChild(this.WRAPPERDIV);
   }
+  /*
   init() {
+    this._super.apply(this, arguments);
     dLog('init');
   }
+  */
   beginEditing(newInitialValue, event) {
     dLog('beginEditing', newInitialValue, event);
     super.beginEditing(newInitialValue, event);
@@ -120,6 +128,13 @@ export default Component.extend({
   ontology : service('data/ontology'),
   controls : service(),
 
+  classNames : ['h-100'],
+
+  /** Enable auto column width; side-effect: disables adjustment of wide columns. */
+  autoColumnWidth : true,
+  /** Enable stretchH:all, which stretches all columns to use the available width. */
+  stretchHorizontal : true,
+
   actions : {
 
     /**
@@ -135,11 +150,48 @@ export default Component.extend({
       {
         /** filter out empty rows in d[] */
         let data = d.filter(function(d1) { return d1.Chromosome; });
+        this.set('loadingData', true);
         table.loadData(data);
+        this.set('loadingData', false);
       }
     }
 
   },
+
+  autoColumnWidthChanged(value) {
+    const fnName = 'autoColumnWidthChanged';
+    dLog(fnName, value);
+    this.set('autoColumnWidth', value);
+    if (this.table) {
+      let settings = {
+        modifyColWidth : value ? bind(this, this.modifyColWidth) : undefined,
+        colWidths : value ? undefined : this.colWidthsSaved,
+      };
+      dLog(fnName, settings, value);
+      this.set('loadingData', true);
+      this.table.updateSettings(settings);
+      this.set('loadingData', false);
+
+    }
+  },
+  stretchHorizontalChanged(value) {
+    const fnName = 'stretchHorizontalChanged';
+    dLog(fnName, value);
+    this.set('stretchHorizontal', value);
+    if (this.table) {
+      let settings = {
+        stretchH : this.stretchHText
+      };
+      dLog(fnName, settings, value);
+      this.set('loadingData', true);
+      this.table.updateSettings(settings);
+      this.set('loadingData', false);
+    }
+  },
+  get stretchHText() {
+    return this.stretchHorizontal ? 'all' : 'none';
+  },
+
 
   formFeatureEditEnable : false,
 
@@ -224,6 +276,35 @@ export default Component.extend({
      * for other columns, which may be user-defined. */
     return this.get('extraColumnsNames').map((columnName) => featureValuesWidths[columnName] || 120);
   }),
+  /** @return [columnIndex] -> boolean to indicate if auto-column-width should
+   * be enabled on that column.
+   * @desc Enable it except for columns whose longest value (represented as
+   * text) is > ColumnAutoWidthValueMaxLength
+   */
+  columnsEnableAutoWidth : computed('columnNames.[]', 'data', function () {
+    let
+    columnNames = this.get('columnNames'),
+    colDataMax = this.get('dataForHoTable').reduce((widths, f) => {
+      columnNames.forEach((name, i) => {
+        if (f[name]) {
+          /** f[name] may be e.g. an array of Flanking Marker names */
+          let l=('' + f[name]).length;
+          if ((widths[i] === undefined) || (l > widths[i])) { widths[i] = l; }
+        }
+      });
+      return widths;
+    }, []),
+    colWidthAuto = colDataMax.map((length) => length < ColumnAutoWidthValueMaxLength);
+    dLog('columnsEnableAutoWidth', 'colDataMax', colDataMax, colWidthAuto);
+    return colWidthAuto;
+  }),
+  modifyColWidth: function(width, columnIndex) {
+    let columnsEnableAutoWidth = this.get('columnsEnableAutoWidth');
+    /** If ! loadingData then this request is from user GUI adjustment of column
+     * width, via double-click or drag on header edge, so allow it.  */
+    let widthResult = columnsEnableAutoWidth[columnIndex] || ! this.loadingData ? width : 100;
+    return widthResult;
+  },
 
   dataForHoTable : computed('data', function () {
     let data = this.get('data').map((f) => {
@@ -296,6 +377,8 @@ export default Component.extend({
       );
     }
     addColumns(this.get('extraColumns'), this.get('extraColumnsHeaders'), this.get('extraColumnsWidths'));
+    this.set('columnNames', columns.mapBy('data'));
+    this.set('colWidthsSaved', colWidths);
 
     let me = this;
     function afterSelection(row, col) {
@@ -307,15 +390,14 @@ export default Component.extend({
       if (data.length === 0) {
         data = [];
       }
-      var table = new Handsontable(tableDiv, {
+      let tableConfig = {
         data: data || [['', '', '']],
         minRows: 1,
         rowHeaders: true,
         columns,
         colHeaders,
         headerTooltips: true,
-        colWidths,
-        height: 600,
+        height: '100%',
         manualRowResize: true,
         manualColumnResize: true,
         manualRowMove: true,
@@ -333,29 +415,62 @@ export default Component.extend({
         /* see comment re. handsOnTableLicenseKey in frontend/config/environment.js */
         licenseKey: config.handsOnTableLicenseKey,
         afterSelection,
-        outsideClickDeselects: false
-      });
+        afterOnCellMouseOver,
+        outsideClickDeselects: false,
+        stretchH : this.stretchHText,
+      };
+      if (this.autoColumnWidth) {
+        tableConfig.modifyColWidth = bind(this, this.modifyColWidth);
+      } else {
+        tableConfig.colWidths = colWidths;
+      }
+      var table = new Handsontable(tableDiv, tableConfig);
       that.set('table', table);
       this.setRowAttributes(table, this.data);
       /** application client data : this component */
       table.rootElement.__PretzelTableBrushed__ = this;
 
+    function afterOnCellMouseOver(event, coords, TD) {
+      if (coords.row === -1) {
+        return;
+      }
+      // getDataAtCell(coords.row, coords.col)
+      // table?.getDataAtRow(coords.row);
+      let
+      table = that.table,
+      /** The meta is associated with column 0.
+       * The data is currently the selected feature, which refers to the Ember
+       * data object as .feature
+       */
+      feature = table?.getCellMeta(coords.row, 0)?.PretzelFeature?.feature;
+      dLog('afterOnCellMouseOver', coords, TD, feature?.name, feature?.value);
+      /** clears any previous highlights if feature is undefined */
+      that.highlightFeature(feature);
+    }
+    /* alternative :
+    function afterOnCellMouseOut(event, coords, TD) {
+      that.highlightFeature();
+    } */
 
       $("#table-brushed").on('mouseleave', function(e) {
         that.highlightFeature();
-      }).on("mouseover", function(e) {
+      });
+    if (false) {
+      undefined?.on("mouseover", function(e) {
         if (e.target.tagName == "TD") {
           var tr = e.target.parentNode;
-          if (tr.childNodes[2]) {
-            var feature_name = $(tr.childNodes[2]).text();
-            if (feature_name.indexOf(" ") == -1) {
-              that.highlightFeature(feature_name);
+          {
+            // related : hot.getDataAtRowProp(row, 'dataPretzelFeature')
+            var feature = tr.__dataPretzelFeature__;
+            if (feature) {
+              that.highlightFeature(feature);
               return;
             }
           }
         }
         that.highlightFeature();
       });
+    }
   },
 
   /** Assign Feature reference to each row. */
@@ -363,6 +478,10 @@ export default Component.extend({
     // table.countRows()
     data.forEach((feature, row) => {
       this.setRowAttribute(table, row, feature) ;
+      /* this alternative is more specific to HoT, but is less brittle than setRowAttribute() using tr.__dataPretzelFeature__
+       * Used by afterOnCellMouseOver().
+       */
+      table.setCellMeta(row, 0, 'PretzelFeature', feature);
     });
   },
   /** Assign Feature reference to row. */
@@ -432,12 +551,20 @@ export default Component.extend({
       if (trace)
         dLog("table-brushed.js", "onSelectionChange", table, data.length);
       me.send('showData', data);
+      this.set('loadingData', true);
       table.updateSettings({data:data});
+      this.set('loadingData', false);
       this.setRowAttributes(table, this.data);
     }
   }),
 
-  /** @param feature may be name of one feature, or an array of features.
+  /** @param feature may be name of one feature, or an array of features -
+   * selectedFeatures data : {
+   *   Chromosome: string : datasetId ':' block name (scope)
+   *   Feature: string : feature name
+   *   Position: number
+   *   feature: ember-data object
+   * }
    */
   highlightFeature: function(feature) {
     d3.selection.prototype.moveToFront = function() {
@@ -451,16 +578,16 @@ export default Component.extend({
       .style("stroke", "red");
     if (feature) {
       if (Array.isArray(feature)) {
-        feature.forEach((f) => this.highlightFeature1(f.Feature)); // equiv .feature.name
+        feature.forEach((f) => this.highlightFeature1(f.feature));
       } else {
         this.highlightFeature1(feature);
       }
     }
   },
-  /** Highlight 1 feature, given feature .name */
-  highlightFeature1: function(featureName) {
+  /** Highlight 1 feature, given feature */
+  highlightFeature1: function(feature) {
       /** see also handleFeatureCircleMouseOver(). */
-      d3.selectAll("g.axis-outer > circle." + eltClassName(featureName))
+      axisFeatureCircles_selectOneInAxis(undefined, feature)
         .attr("r", 5)
         .style("fill", "yellow")
         .style("stroke", "black")

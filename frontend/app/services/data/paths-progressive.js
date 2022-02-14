@@ -152,7 +152,8 @@ export default Service.extend({
       intervals =
       blockAdj.map(function (blockId) {
       let axis = Stacked.getAxis(blockId);
-      return axis.axisDimensions();
+        /** intervalParams() will interpret domain : [0,0] as undefined, i.e. request from the whole domain. */
+        return axis ? axis.axisDimensions() : { domain : [0,0], /*range:,*/ zoomed : false};
       });
     return intervals;
   },

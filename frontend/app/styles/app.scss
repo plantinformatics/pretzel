@@ -27,12 +27,48 @@ body.mapview div#Page-Body
   bottom: 0;
 }
 
-/* this rule is duplicated in ember-bootstrap/bootstrap/_navs.scss, so get higher specificity by prefixing with body.mapview */
-body.mapview .nav-tabs > li.active > a,
+
+/** show bottom border for non-active tabs
+ */
+.nav-tabs > li:not(.active) > a:not(.apiServer) {
+  border-bottom-color : #ddd;
+}
+/** offset so that the border-top of the tab is distinct from elements above.
+ */
+.nav-tabs > li {
+  margin-top : 10px;  
+}
+.nav-tabs > li:not(.active) {
+  background-color: #f8f8f8;
+}
+.nav-tabs > li.active + li {
+  border-bottom-left-radius: 15px;
+  /* can't do the preceding li : */
+  /* border-bottom-right-radius: 10px; */
+  border-top-left-radius: 10px;
+}
+.nav-tabs > li > a:not(.apiServer) {
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+}
+.nav-tabs > li.active + li > a:not(.apiServer) {
+  border-top-right-radius: 10px;
+  border-bottom-color : transparent;
+}
+
+
+/* this rule is duplicated in ember-bootstrap/bootstrap/_navs.scss, so get higher specificity by prefixing with body.mapview
+ * Changing from active having background-color to no bottom-border
+ * i.e. non-pills style, as in https://getbootstrap.com/docs/3.4/components/#nav-tabs
+ * so drop this background-color.
+ * If used, it should exclude : ul.api-server-tabs ... a:not(.apiServer)
+*/
+body.mapview .nav-pills > li.active > a/*,
 body.mapview .nav-tabs > li.active > a:hover,
-body.mapview .nav-tabs > li.active > a:focus{
-    color: #555555;
-    background-color: lightblue;
+body.mapview .nav-tabs > li.active > a:focus*/{
+  color: #555555;
+  /* possibly use #d9edf7, from .list-group-item-info */
+  background-color: lightblue;
 } 
 
 /* -------------------------------------------------------------------------- */
@@ -50,7 +86,7 @@ div.app-logo {
 .draw-map-container,
 .tabbed-table-container
 {
-    float: left;
+    /* float: left; */
 }
 .draw-map-container
 {
@@ -82,12 +118,19 @@ div.app-logo {
 
 /* -------------------------------------------------------------------------- */
 
+.draw-map-container,
+#holder
+{
+  height: 100%;
+}
+
+
 /* #holder contains the graph (svg);  it is within .draw-map-container */
 /* Large desktop */
 @media (min-width: 1200px) {
 #holder
 {
-    padding : 50px;
+    /* padding : 50px; */
 }
 }
 
@@ -95,7 +138,7 @@ div.app-logo {
 @media (min-width: 768px) and (max-width: 979px) {
 #holder
 {
-    padding : 30px;
+    /* padding : 30px; */
 }
 }
 #holder
@@ -200,8 +243,15 @@ div.app-logo {
     display : inherit;
 }
 
+/* -------------------------------------------------------------------------- */
 
-
+/** Used to make glyphicon-sort look diagonal (toggleLayout in mapview).
+ * The hover highlight appears as a rotated grey rectangle, so this is
+ * just a filler until a rotated icon is sourced.  */
+.rotate45 > a > span {
+  transform: rotate(45deg);
+  /* rotate: 45deg; */ /* also works, seems non-standard.  */
+}
 
 /* -------------------------------------------------------------------------- */
 #table-brushed
@@ -339,6 +389,45 @@ g.axis-use.hasChart > g.axis-html > .foreignObject {
 
 
 /* ---------------------------------- */
+/** Tooltip displayed when hover over feature / QTL diamond in axis-tracks. @see hoverQtlHtmlFn() */
+
+.hoverTraitColour {
+  color : var(--hoverTraitColour);
+  margin-right : 1em;
+}
+.hoverOntologyColour {
+  color : var(--hoverOntologyColour);
+  margin-right : 1em;
+}
+
+/* related : div.highlightFeature, div.toolTip */
+.featureHover.html {
+  text-align: left;
+  /* width: 18em; */
+}
+.featureHover.html.QTL  > div
+{
+  /* This shows the colour block as a hanging paragraph tag, with the text wrapped and indented. */
+  display: inline-flex;
+}
+
+
+/* ---------------------------------- */
+
+/* col-xs-12 was used generally for the left and right panel elements containing .panel
+ * They are single-column - there is no need for grid, so bootstrap col- doesn't seem needed (flex might be applicable). 
+ * These uses of col-xs-12 are changed to panel-section.
+ * col-xs-12 set padding-{left,right}:15px, which is retained in panel-section.  It also set :
+ *    position: relative;
+ *    min-height: 1px;
+ *    float: left;
+ * which are problematic in this role and there are likely some settings in this
+ * file and elsewhere blocking those effects which are no longer needed.
+ */
+.panel-section {
+  padding-right: 10px;
+  padding-left: 10px;
+}
 
 /* in the panel layout, widen to avoid wrapping the display toggles text.  */
 .panel > .panel-body > .bordered.control-panel,
@@ -1059,12 +1148,30 @@ li.filter-group > div > span:last-child {
   margin-bottom: 2ex;
 }
 
+div.selected-server {
+  margin: 2ex;
+  border: none;
+}
+
+.selected-server > .apiServer,
 #left-panel-explorer a.apiServer {
-    border : 7.5px solid;
+  border : 7.5px solid;
+  /** matching current bootstrap : navs.scss:84 : $border-radius-base
+   * in .nav-tabs > li > a, the top radius is set
+   */
+  border-radius: 4px;
 }
 #left-panel-explorer ul.nav-tabs.api-server-tabs > li {
     margin-top: 2ex;
     margin-bottom: 1ex;
+}
+#left-panel-explorer ul.nav-tabs.api-server-tabs {
+  border-bottom: none;
+}
+/* for nodes in explorer tree with colour border - use a wide border to show the colour. */
+.wide-border.btn
+{
+  border-width : 4px;
 }
 #tab-explorer-parent  ul {
   /* there is enough indent in the li, so 0 is enough here. */
@@ -1074,6 +1181,7 @@ li.filter-group > div > span:last-child {
   /* no padding here because it will be white, unlike the list. */
   -webkit-padding-start: 0px;
 }
+div#display-ontologies div.tab-content ul ul,
 #left-panel-explorer div.tab-content ul ul {
   padding-left: 0px;
 }
@@ -1190,10 +1298,12 @@ div#tab-explorer-datasets > ul.list-group > div
  */
 
 /* limit this using .list-group-item-info so it doesn't apply to the leaf (white rectangle) */
+div#display-ontologies  .list-group-item.list-group-item-info,
 div#tab-explorer-Ontology  .list-group-item.list-group-item-info
 {
     padding-right: 0px;
 }
+/*div#display-ontologies  .list-group-item, */
 div#tab-explorer-Ontology  .list-group-item
 {
     padding-left: 10px;
@@ -1323,6 +1433,15 @@ input#checkbox-toggleShowAll,
 {
 }
 
+/* -------------------------------------------------------------------------- */
+
+/* View : Traits, in div#display-traits */
+
+.traitColourBlock {
+  height : 2ex;
+  width : 3em;
+  display : inline-block;
+}
 
 /* -------------------------------------------------------------------------- */
 #choose_path_colour_scale
@@ -1480,6 +1599,11 @@ div#goto-feature > div
 }
 
 /* -------------------------------------------------------------------------- */
+
+.margin-1em
+{
+  margin : 1em;
+}
 
 .panel-collapse-button {
   padding:0 5px 0 5px;
@@ -1661,8 +1785,9 @@ textarea.panel-body
 ul.feature-found {
   list-style-type: none;
   text-align : center;
-  /* override user-agent stylesheet (Chrome) */
+  /* override user-agent stylesheet for <ul> (Chrome, Firefox) */
   -webkit-padding-start: inherit;
+  -moz-padding-start: inherit;
   /* target badge may be close to left so leave a margin for clipping.  */
   height: auto;
   max-height: 15ex;
@@ -1683,11 +1808,41 @@ body > div.ember-popover {
     width : 100%
 }
 
+#right-panel
+{
+  display : flex;
+  flex-direction : column;
+  justify-content : flex-start;
+}
+#right-panel-content
+{
+  flex-grow : 1;
+  flex-basis : calc(100% - 78px);
+  max-height : calc(100% - 78px);
+}
+#right-panel-content.right-panel-paths
+{
+  flex-basis : calc(100% - 220px);
+  max-height : calc(100% - 220px);
+}
+
+body.tablesPanelRight .dataset-description > h4 {
+  max-width : 300px;
+}
+body:not(.tablesPanelRight) .dataset-description {
+  float : left;
+  margin-right: 3em;
+}
+body:not(.tablesPanelRight) .metaeditor-panel {
+  display : flow-root;
+}
+
+
 #right-panel-content.right-panel-dataset
 {
   overflow-y: auto;
 }
-#right-panel-content.right-panel-dataset > div
+body.tablesPanelRight #right-panel-content.right-panel-dataset > div
 {
   height:650px;
 }
@@ -1763,6 +1918,11 @@ div.metaeditor-panel div.jsoneditor-tree button.jsoneditor-contextmenu-button {
 }
 
 /* -------------------------------------------------------------------------- */
+
+.h-100 {
+  height: 100%;
+}
+
 
 /* div#table-brushed.handsontable */
 
@@ -1943,11 +2103,19 @@ span.glyphicon {
 }
 .axis-menu-inner > div > div,
 .axis-menu-inner > div > ul {
-    margin: auto;
-    width: fit-content;
+  margin: auto;
+  width: fit-content;
+}
+/*.axis-menu-inner > div >*/ ul.dataBlocks {
+  background-color: white;
+  padding: 0.8em;
+  border-radius: 5px;
+}
+.axis-menu-inner > div > div.name {
+  margin-bottom : 1em;
 }
 .axis-menu-inner > div > ul.dataBlocks > li:first-child {
-  margin-top : 1em;
+  /* margin-top : 1em; */
 }
 .axis-menu-inner .menu-icons > button:not(:first-child) {
   margin-left: 5px;
@@ -1956,6 +2124,21 @@ span.glyphicon {
 div.axis-menu-inner > div > ul.dataBlocks > li > button {
   font-size: x-small;
 }
+ul.dataBlocks > li {
+  display : flex;
+}
+ul.dataBlocks > li > .name {
+  flex-basis: fit-content;
+  flex-grow : 1;
+}
+ul.dataBlocks > li > .featureCounts {
+  margin-left : 6em;
+  flex-grow: 0;
+}
+ul.dataBlocks > li > * {
+  margin-right : 1em;
+}
+
 
 
 /* -------------------------------------------------------------------------- */

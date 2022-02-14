@@ -112,9 +112,12 @@ TriangleLattice.prototype.draw =  function (data)
 export default InAxis.extend({
 
 
+  /*
   didRender() {
+    this._super.apply(this, arguments);
     console.log("components/axis-ld didRender()");
   },
+  */
 
   redraw   : function(axisID, t) {
     this.set('className', className);

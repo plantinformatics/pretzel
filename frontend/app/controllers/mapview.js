@@ -4,7 +4,7 @@ import EmberObject, { computed, observer } from '@ember/object';
 import Evented from '@ember/object/evented';
 import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
-import { readOnly } from '@ember/object/computed';
+import { readOnly, alias } from '@ember/object/computed';
 import DS from 'ember-data';
 
 /* global d3 */
@@ -159,7 +159,8 @@ export default Controller.extend(Evented, {
     loadBlock : function loadBlock(block) {
       dLog('loadBlock', block);
       let related = this.get('view').viewRelatedBlocks(block);
-      related.unshift(block);
+      // load related[] before block.
+      related.push(block);
       // or send('getSummaryAndData', block);
       related.forEach((block) => this.actions.getSummaryAndData.apply(this, [block]));
     },
@@ -273,13 +274,42 @@ export default Controller.extend(Evented, {
       'visible': true,
       'tab': 'selection'
     },
-    'rightLower': {
-      'visible': true,
-      'tab': 'styleEditor'
-    }
   }),
+  splitViewDirection : computed('tablesPanelRight', function () {
+    let direction = this.tablesPanelRight ? 'horizontal' : 'vertical';
+    dLog('splitViewDirection', direction, this.tablesPanelRight);
+    return direction;
+  }),
+  /** attributes  : .sizesPrev, .sizes, .tablesPanelRight.  */
+  componentGeometry : EmberObject.create({sizesPrev : EmberObject.create({
+    true :  [65, 35],
+    false : [70, 30],
+  }) }),
+  onDragEnd(sizes) {
+    dLog('onDragEnd', sizes);
+    this.set('componentGeometry.sizes', sizes);
+    this.set('componentGeometry.sizesPrev.' + this.tablesPanelRight, sizes);
+    this.set('componentGeometry.tablesPanelRight', this.tablesPanelRight);
+  },
+  /** @return initial size, or size of this layout direction (tablesPanelRight)
+   * after last resize drag. */
+  get sizesPrev() {
+    let
+    tablesPanelRight = this.get('componentGeometry.tablesPanelRight'),
+    sizes = this.get('componentGeometry.sizesPrev.' + this.tablesPanelRight);
+    return sizes;
+  },
+  tablesPanelRight : alias('controls.window.tablesPanelRight'),
+  toggleLayout(value) {
+    const fnName = 'toggleLayout';
+    this.toggleProperty('tablesPanelRight');
+    /** tablesPanelRight is initially false, so it is OK to set body class in toggle action. */
+    d3.select('body')
+      .classed('tablesPanelRight', this.get('tablesPanelRight'));
+  },
 
-  controls : EmberObject.create({ view : {  } }),
+
+  controls : EmberObject.create({ view : {  }, window : {tablesPanelRight : false } }),
 
   queryParams: ['mapsToView'],
   mapsToView: [],
@@ -432,10 +462,10 @@ export default Controller.extend(Evented, {
         let isViewed = f.feature.get('blockId.isViewed');
         if (! isViewed) {
           let
-          // datablockId is f.feature.get('blockId.id'),
-          chrName = f.feature.get('blockId.referenceBlockOrSelf.id'),
-          featureName = f.Feature,
-          circleS = axisFeatureCircles_selectOne(chrName, featureName);
+          /** Could use axisFeatureCircles_selectOneInAxis() here, probably no benefit.
+           * Related : axisFeatureCircles_selectUnviewed(), axisFeatureCircles_removeBlock().
+           */
+          circleS = axisFeatureCircles_selectOne(f.feature);
           circleS.remove();
         }
         return isViewed;
@@ -456,11 +486,6 @@ export default Controller.extend(Evented, {
     let tab = this.get('layout.right.tab');
     dLog('rightPanelClass', tab);
     return 'right-panel-' + tab;
-  }),
-  rightLowerPanelClass : computed('layout.rightLower.tab', function () {
-    let tab = this.get('layout.rightLower.tab');
-    dLog('rightLowerPanelClass', tab);
-    return 'rightLower-panel-' + tab;
   }),
 
 });

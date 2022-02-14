@@ -1,5 +1,9 @@
 'use strict';
 
+const Queue = require('promise-queue');
+
+var { queueAppend } = require('../utilities/request-queue');
+
 var acl = require('../utilities/acl');
 
 var { ontologyGetTree } = require('../utilities/get-ontology');
@@ -14,6 +18,10 @@ var cache = require(cacheLibraryName);
 /*----------------------------------------------------------------------------*/
 
 const trace = 1;
+
+// -----------------------------------------------------------------------------
+
+const queue = new Queue(/*concurrency:*/ 1);
 
 /*----------------------------------------------------------------------------*/
 
@@ -30,7 +38,11 @@ module.exports = function(Ontology) {
     fnName = 'getTree',
     /** param root (or species name) will be added, to support other species.  */
     paramError = ! root.match(/^CO_[0-9]{3}$/),
-    cacheId = fnName + '_' + root,
+    /** normally testId is ''; give it a value to avoid overwriting good results
+     * with test results; e.g. ontologyGetChildren() : testing=true
+     */
+    testId = '', // '_test1',
+    cacheId = fnName + '_' + root + testId,
     /** define refreshCache true to replace the cached result. */
     refreshCache = false;  // e.g. root === 'CO_338'; // 
     let result = ! refreshCache && cache.get(cacheId);
@@ -52,11 +64,14 @@ module.exports = function(Ontology) {
         }
         cb(null, result);
       } else {
+        queueAppend(requestFn, queue, 'requestName', cb);
+
+        function requestFn(cb) {
         let
-        ontologyTreeP = ontologyGetTree(root);
-        ontologyTreeP.then((ontologyTree) => {
+        ontologyTreeP = ontologyGetTree(root)
+        .then((ontologyTree) => {
           console.log(fnName, ontologyTree);
-          if (trace /*> 1*/) {
+          if (trace > 1) {
             console.log(fnName, root, cacheId, 'put', ontologyTree);
           }
           cache.put(cacheId, ontologyTree);
@@ -64,6 +79,8 @@ module.exports = function(Ontology) {
         })
         // signature of .catch() error function matches cb : (err)
           .catch(cb);
+        return ontologyTreeP;
+        }
       }
   };
 

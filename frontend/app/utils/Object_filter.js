@@ -20,7 +20,8 @@ function Object_filter(obj, predicate) {
 
 /** Compare each field of a & b.
  * Recurse into sub-objects.
- * @param compareFn signature is (a, b) -> value (e.g. boolean)
+ * @param compareFn signature is (keyName, a, b) -> value (e.g. boolean)
+ * where keyName is the name of the field, allowing different comparison for different fields.
  * @return object with same keys as a & b, value of result.x is a.x === b.x
  * @desc In the primary use case, keys(a) === keys(b), so this is assumed.
  * The keys are taken from the 1st object (a).
@@ -43,7 +44,7 @@ function compareFields(a, b, compareFn) {
     else if (typeof a[k] === "object")
       result[k] = compareFields(a[k], b[k], compareFn);
     else
-      result[k] = compareFn(a[k], b[k]);
+      result[k] = compareFn(k, a[k], b[k]);
   }
   return result;
 };

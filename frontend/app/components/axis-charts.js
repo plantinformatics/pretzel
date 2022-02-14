@@ -51,6 +51,8 @@ export default InAxis.extend({
 
   className : className,
 
+  chartBlocks : alias('axisBlocks.chartBlocks'),
+
   /** blocks-view sets blocksData[blockId]. */
   blocksData : undefined,
   /** {dataTypeName : Chart1, ... } */
@@ -73,15 +75,23 @@ export default InAxis.extend({
   },
 
   didRender() {
+    this._super.apply(this, arguments);
     dLog(CompName + " didRender()", this.get('axisID'));
 
-    let axisID = this.get('axisID'),
+    if (! this.drawIfG()) {
+      later(() => this.drawIfG(), 500);
+    }
+  },
+  drawIfG() {
+    let
+    axisID = this.get('axisID'),
     axisCharts = this.get('axisCharts'),
-    gAxis = axisCharts && axisCharts.selectParentContainer(axisID);
-    if (! gAxis.empty())
+    gAxis = axisCharts && axisCharts.selectParentContainer(axisID),
+    ok = ! gAxis.empty();
+    if (ok) {
       this.draw();
-    else
-      later(() => this.draw(), 500);
+    }
+    return ok;
   },
   willDestroyElement() {
     dLog(CompName + " willDestroyElement()");
@@ -201,6 +211,7 @@ export default InAxis.extend({
   chartsArray : computed(
     'chartTypes.[]',
     'featureCountBlocks.{featureCountAutoData,featureCountData}.[]',
+    'chartBlocks.[]',
     function () {
       /* The result is roughly equivalent to Object.values(this.get('charts')),
        * but for any chartType which doesn't have an element in .charts, add
@@ -214,10 +225,22 @@ export default InAxis.extend({
         .reduce((result, dataTypeName) => { if (! dataTypeName.startsWith('featureCount')) result.push(this.addChart(dataTypeName, dataTypeName)); return result;}, []),
       charts1Block = Object.keys(typeBlockIds).map((dataTypeName) => {
         let blockIds = typeBlockIds[dataTypeName];
-        return blockIds.map((blockId) => {
+        let
+        /** draw() filters by axisBlocksIds, so do the same here. */
+        axisBlocks=this.get('chartBlocks'),
+        axisBlocksIds = axisBlocks.mapBy('id'),
+        enabledBlockIds = blockIds.filter((blockId) => axisBlocksIds.includes(blockId))
+        /** QTLs are display outside axis, no featuresCounts charts shown.  */
+          .filter((blockId) => {
+            let block = this.get('blockService').id2Block(blockId),
+                ok = ! block || ! block.isQTL;
+            return ok;
+          }),
+        addedCharts = enabledBlockIds.map((blockId) => {
           let chartName = dataTypeName + '_' + blockId;
           return this.addChart(dataTypeName, chartName);
         });
+        return addedCharts;
       }),
       charts = [chartsAllBlocks, charts1Block].flat(2);
 
@@ -279,6 +302,7 @@ export default InAxis.extend({
      * equiv : this.axis1d.{zoomedDomainThrottled,zoomedDomainDebounced}
      */
   'axis1d.currentPosition.{yDomainDebounced,yDomainThrottled}',
+  'axis1d.extended',
   'blockViews.@each.isZoomedOut',
     /** .@each.x.y is no longer supported; if these dependencies are needed, can
      * define block.featuresCounts{,Results}Length
@@ -301,7 +325,7 @@ export default InAxis.extend({
     allocatedWidthCharts = this.get('allocatedWidth'),
     /** array of [startOffset, width]. */
     blocksWidths = this.get('axisBlocks.allocatedWidth'),
-    axisBlocks=this.get('axisBlocks.blocks');
+    axisBlocks=this.get('chartBlocks');
     if (allocatedWidthCharts[1] === 0) {
       allocatedWidthCharts[1] = trackWidth * (2 + 1);
     }
@@ -603,7 +627,7 @@ export default InAxis.extend({
       axisID = this.get("axisID"),
     axisCharts = this.get('axisCharts'),
     blocks = this.get('blocks'),
-    axisBlocks=this.get('axisBlocks.blocks'),
+    axisBlocks=this.get('chartBlocks'),
     blocksAll = union(this.get('blocks'), axisBlocks),
     yAxisScale = this.get('yAxisScale'),
     dataConfig = dataConfigs[dataTypeName],

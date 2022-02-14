@@ -49,6 +49,10 @@ const dLog = console.debug;
  */
 const axisGap = 20;
 
+/** same as @see draw-map.js */
+const axisTitle_dataBlocks = false;
+
+
 /** Each stack contains 1 or more Axis Pieces (Axes).
  * stacks are numbered from 0 at the left.
  * stack[i] is an array of Stack, which contains an array of Stacked,
@@ -870,15 +874,19 @@ Stacked.prototype.keyFunction = function (axisID)
  */
 Block.prototype.titleText = function ()
 {
-  let axisName = this.block.get('id'),
-  cmName = oa.cmName[axisName],
-  shortName = cmName && cmName.dataset.get('_meta.shortName'),
-  name = shortName || cmName.mapName,
-  featureCount = this.block && this.block.get('featureCount'),
-  featureCountLoaded = this.block.get('featuresLength'),
-  featureCountText = (featureCount || featureCountLoaded) ? ' : ' + featureCountLoaded + ' / ' + featureCount : '';
+  let
+  axis1d = this.block.get('axis1d') || this.axis.getAxis1d(),
+  /** use '' if .axis1d not defined yet. */
+  name = axis1d ? axis1d.get('axisTitleText') : '';
+  if (axisTitle_dataBlocks) {
+    let
+    featureCount = this.block && this.block.get('featureCount'),
+    featureCountLoaded = this.block.get('featuresLength'),
+    featureCountText = (featureCount || featureCountLoaded) ? ' : ' + featureCountLoaded + ' / ' + featureCount : '';
+    name += featureCountText;
+  }
   // dLog('Block titleText', cmName, shortName, name, cmName.scope);
-  return name + " : " + cmName.chrName + featureCountText;
+  return name;
 };
 /** @return maximum length of the titles of the viewed blocks. */
 Block.titleTextMax = function (axisName)

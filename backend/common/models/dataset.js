@@ -30,6 +30,8 @@ module.exports = function(Dataset) {
  */
   Dataset.upload = function(msg, options, req, cb) {
     req.setTimeout(0);
+
+    const fnName = 'upload';
     var models = this.app.models;
     const uploadParsed = (jsonMap) => upload.uploadParsedCb(models, jsonMap, options, cb);
     function uploadParsedTry(jsonData) {
@@ -111,8 +113,8 @@ module.exports = function(Dataset) {
       // process.execPath is /usr/bin/node,  need /usr/bin/ for mv, mkdir, perl
       PATH = process.env.PATH + ':' + scriptsDir,
       /** file handles : stdin, stdout, stderr, output errors, output warnings. */
-      options = {env : {PATH},  stdio: ['pipe', 'pipe', process.stderr, 'pipe', 'pipe'] };
-      const child = spawn('uploadSpreadsheet.bash', [msg.fileName, useFile], options);
+      spawnOptions = {env : {PATH},  stdio: ['pipe', 'pipe', process.stderr, 'pipe', 'pipe'] };
+      const child = spawn('uploadSpreadsheet.bash', [msg.fileName, useFile], spawnOptions);
       child.on('error', (err) => {
         console.error('Failed to start subprocess.', 'uploadSpreadsheet', msg.fileName, err.toString());
         // const error = Error("Failed to start subprocess to upload xlsx file " + msg.fileName + '\n' + err.toString());
@@ -150,7 +152,7 @@ module.exports = function(Dataset) {
               cb(new Error(fileName + " Dataset '" + datasetName + "'"));
             } else {
               console.log('before removeExisting "', datasetName, '"');
-              upload.removeExisting(models, datasetName, replaceDataset, cb, loadAfterDelete);
+              upload.removeExisting(models, options, datasetName, replaceDataset, cb, loadAfterDelete);
             }
             function loadAfterDelete(err) {
               upload.loadAfterDeleteCb(

@@ -4,6 +4,8 @@ import { resolve, all } from 'rsvp';
 import { A } from '@ember/array';
 import { inject as service } from '@ember/service';
 import { isArray } from '@ember/array';
+import { singularize, pluralize } from 'ember-inflector';
+
 
 import DS from 'ember-data';
 
@@ -20,8 +22,6 @@ import {
   readOnly
 } from '@ember/object/computed';
 
-import ObjectProxy from '@ember/object/proxy';
-import PromiseProxyMixin from '@ember/object/promise-proxy-mixin';
 
 
 import { task } from 'ember-concurrency';
@@ -29,14 +29,30 @@ import { task } from 'ember-concurrency';
 /*----------------------------------------------------------------------------*/
 
 
-import { tab_explorer_prefix, text2EltId } from '../../utils/explorer-tabId';
+import { tab_explorer_prefix, text2EltId, keysLength } from '../../utils/explorer-tabId';
 import { parseOptions } from '../../utils/common/strings';
 import { thenOrNow } from '../../utils/common/promises';
+import { toPromiseProxy } from '../../utils/ember-devel';
 
-import { valueGetType, mapHash, reduceHash, reduceIdChildrenTree, justUnmatched,
-         logV, ontologyIdFromIdText } from '../../utils/value-tree';
+import {
+  valueGetType, mapHash, reduceHash, reduceIdChildrenTree, justUnmatched,
+  logV,
+  collateOntologyId2Node,
+  ontologyIdFromIdText,
+  treeFor, treesChildrenCount,
+ } from '../../utils/value-tree';
 import { blocksParentAndScope } from '../../utils/data/grouping';
 
+import {
+  blockValues,
+  blockValuesBlocks,
+  blockValuesHistory,
+  blockValuesNameFiltered,
+  blockValuesTree,
+  blockFeatureOntologiesTreeEmbeddedFn,
+  idParentNodeMap,
+  selectOntologyNode,
+} from '../../utils/data/block-values';
 
 import ManageBase from './manage-base'
 
@@ -66,319 +82,7 @@ const dLog = console.debug;
 const selectorExplorer = 'div#left-panel-explorer';
 
 
-/*----------------------------------------------------------------------------*/
 
-/**
- * CP : blockFeatureTraits
- * @param fieldName 'Traits' or 'Ontologies'
- */
-function blockValues(fieldName) {
-  let ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
-
-  let count = this.get('blocksService.featureUpdateCount');
-  dLog('blockValues', fieldName, count, this);
-  let valueP = this.get('apiServerSelectedOrPrimary.blockFeature' + fieldName);
-  let proxy = ObjectPromiseProxy.create({ promise: resolve(valueP) });
-  return proxy;
-}
-
-/** map ._id to .block
- * CP : blockFeatureTraitsBlocks
- * @param fieldName 'Traits' or 'Ontologies'
- */
-function blockValuesBlocks(fieldName) {
-  // 'blockFeatureTraits'
-  let apiServer = this.get('apiServerSelectedOrPrimary');
-  let blocksTraitsP = apiServer.get('blockFeature' + fieldName);
-  let store = apiServer.get('store');
-  /** ids2Blocks() depends on this result. */
-  if (! apiServer.get('datasetsBlocks')) {
-    blocksTraitsP = Promise.resolve([]);
-  } else {
-    blocksTraitsP = blocksTraitsP
-      .then((blocksTraits) => {
-        blocksTraits = ids2Blocks(store, blocksTraits);
-        return blocksTraits;
-      });
-  }
-  return blocksTraitsP;
-}
-
-/**
- * CP : blockFeatureTraitsHistory
- */
-function blockValuesHistory (fieldName) {
-  let blocksTraitsP = this.get('blockFeature' + fieldName + 'Blocks');
-  if (this.historyView !== 'Normal') {
-    blocksTraitsP = blocksTraitsP
-      .then((blocksTraits) => {
-        const
-        recent = this.historyView === 'Recent',
-        /** map blocks -> Traits, so that the sorted blocks can be mapped -> blocksTraits  */
-        blocksTraitsMap = blocksTraits.reduce((btm, bt) => btm.set(bt.block, bt.Traits), new Map()),
-        blocks = blocksTraits.map((bt) => bt.block),
-        /** sorted blocks */
-        blocksS = this.get('viewHistory').blocksFilterSortViewed(blocks, recent);
-        blocksTraits = blocksS.map((b) => addField({block : b}, fieldName, blocksTraitsMap.get(b)));
-        return blocksTraits;
-      });
-  }
-  return blocksTraitsP;
-}
-
-
-function addField(object, fieldName, value) {
-  object[fieldName] = value;
-  return object;
-}
-
-/**
- * Used as a pre-process for (fieldName === 'Ontologies')
- * in blockValuesNameFiltered (CP : blockFeatureOntologiesName)
- * @param me  manage-explorer
- */
-function blockValuesIdText(me, blocksTraits) {
-  blocksTraits.forEach((bt) => {
-    bt.Ontologies = bt.Ontologies
-      .filter((oid) => oid !== '')
-      .map((oid)=> {
-      let result = oid;
-      if (! oid.startsWith('[')) {
-        let name = me.get('ontology').getNameViaPretzelServer(oid);
-        if (typeof name === 'string') {
-          result = '[' + oid + '] ' + name;
-        }
-      }
-      return result;
-    });
-  });
-  return blocksTraits;
-}
-
-
-/**
- * CP : blockFeatureTraitsName
- */
-function blockValuesNameFiltered (fieldName) {
-  let
-  nameFilters = this.get('nameFilterArray'),
-  blocksTraitsP = this.get('blockFeature' + fieldName + 'History');
-
-  if (fieldName === 'Ontologies') {
-    blocksTraitsP = blocksTraitsP
-      .then((bts) => blockValuesIdText(this, bts) );
-  }
-
-  if (nameFilters.length) {
-    blocksTraitsP = blocksTraitsP
-      .then((blocksTraits) => {
-        blocksTraits = blocksTraits
-          .map((blockTraits) => this.blockTraitsFilter(fieldName, blockTraits, nameFilters))
-          .filter((blockTraits) => blockTraits[fieldName].length);
-        return blocksTraits;
-      });
-  }
-  return blocksTraitsP;
-}
-
-/*
- * CP : blockFeatureTraitsTree
- */
-function blockValuesTree (fieldName) {
-  let ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
-
-  let
-  valueP = this.get('blockFeature' + fieldName + 'Name')
-    .then((blocksTraits) => {
-      let
-      blocksTraitsTree = blocksParentAndScope(this.get('levelMeta'), fieldName, blocksTraits);
-      this.set('blockFeature' + fieldName + 'TreeKeyLength', Object.keys(blocksTraitsTree).length);
-      return blocksTraitsTree;
-    });
-  let proxy = ObjectPromiseProxy.create({ promise: resolve(valueP) });
-
-  return proxy;
-}
-
-/** map blockIdsTraits[]
- * from {_id, Traits} to {block, Traits}
- * or from {_id, Ontologies} to {block, Ontologies}
- */
-function ids2Blocks(store, blockIdsTraits) {
-  let
-  blocksTraits = store && blockIdsTraits
-    .map(({_id, ...rest}) => (rest.block = store.peekRecord('block', _id), rest))
-    .filter((bt) => bt.block);
-  return blocksTraits;
-}
-
-
-/** reduce a tree to a result.
- * Used for Ontology tree, result of ontology service getTree();
- * each tree node has .id and .children.
- * Added : incorporate multiple roots into a single tree, so the top level in
- * that case will be an object { <rootId> : tree, ... }.
- * Similar signature to Array.reduce().
- * @param result
- * @param reduceNode Add a node to a result function reduceNode(result, node) -> result;
- * @param tree
- */
-function walkTree(result, reduceNode, tree) {
-  const fnName = 'walkTree';
-  result = reduceNode(result, tree);
-  let children = tree.children;
-  if (isArray(children)) {
-    result = children.reduce((result, node) => {
-      result = walkTree(result, reduceNode, node);
-      return result;
-    }, result);
-  }
-  // dLog(fnName, result, tree);
-  return result;
-};
-
-/** Similar to mapTree(), this produces a tree of nodes which are each just {id : value},
- * whereas mapTree() allows {id, type, node} to be included in the node.
- */
-function mapTree0(levelMeta, result, tree) {
-  let value = result[tree.id] = {};
-  levelMeta.set(value, tree.type);
-  tree.children.forEach((c) => mapTree0(levelMeta, value, c));
-  return result;
-};
-/** Map the Ontology tree to a value-tree, with nodes containing :
- *   {id, type, children, node : dataset_ontology}
- * where dataset_ontology links to the corresponding node in the tree of
- * datasets by Ontology.
- * @param id2Node map OntologyId to {<parent> : {<scope> : [block, ...], ...}, ...}
- * @param tree  Ontology API result
- */
-function mapTree(levelMeta, id2Node, tree) {
-  let
-  /** used by copyNode() to lookup a value for .parent */
-  id2nc = {},
-  value = copyNode(levelMeta, id2nc, tree),
-
-  node = id2Node[tree.id];
-  if (node) {
-    value.node = node;
-    dLog('mapTree', value, node);
-  }
-  if (value.text || value.id) {
-    /** same format as ontologyNameId(), rootOntologyNameId()     */
-    value.name = '[' + value.id + ']  ' + value.text;
-  }
-
-  if (tree.children === undefined) {
-    /* copyNode copies attributes for node with .id & .children, but not for plain object. */
-    /* optional : id2nc[value.name] = value;
-     * copyNode() does id2nc[n.id] = c, i.e. id2nc[value.id] = value, but value.id is undefined
-     */
-    Object.entries(tree)
-      .reduce((result, e) => {
-        result[e[0]] = mapTree(levelMeta, id2Node, e[1]);
-        return result;
-      }, value);
-  } else {
-    let children = tree.children;
-    if (isArray(children)) {
-      value.children = children.map((c) => {
-        /** copy of c */
-        let cc = mapTree(levelMeta, id2Node, c);
-        cc.parent = value;
-        return cc; });
-    } else if (children.children && children.id && children.text && children.type)
-    {
-      dLog('mapTree', 'value', value, 'tree', tree);      
-      tree.children = [tree.children];
-    }
-  }
-
-  return value;
-};
-
-/*----------------------------------------------------------------------------*/
-
-/** Make a copy of tree, which is addressed by id2n, with only the branches required
- * to support id2Pn.
- * @param levelMeta to record the node types of the output tree
- * @param tree  ontologyTree
- * @param id2n  ontologyId2Node : references from OntologyId into the corresponding nodes in ontologyTree
- * @param id2Pn ontologyId2DatasetNodes : references from OntologyId into the parent nodes of blockFeatureOntologiesTree
- */
-function treeFor(levelMeta, tree, id2n, id2Pn) {
-  let
-  id2nc = {},
-  treeCopy = copyNode(levelMeta, id2nc, tree);
-  /* could use forEachHash(), or pass {id2n, id2nc} as result in & out;
-   * or filterHash() | mapHash() (will that add the root ok ?).
-   */
-  /*treeCopy =*/ reduceHash(id2Pn, (t, oid, p) => {
-    oid = ontologyIdFromIdText(oid);
-    let on = id2n[oid];
-    if (! on) {
-      dLog('treeCopy', oid, 'not present in', id2n);
-    } else {
-      addNode(levelMeta, id2nc, on);
-    }
-  }, treeCopy);
-  return treeCopy;
-};
-/** Copy just 1 node. */
-function copyNode(levelMeta, id2nc, n) {
-  /** copy of node n */
-  let c;
-  if (n.children === undefined) {
-    dLog('copyNode', 'roots', n);
-    c = {};
-  } else {
-    c = Object.assign({}, n);
-    if (typeof n.children !== 'boolean') {
-      c.children = [];
-    }
-  }
-  levelMeta.set(c, n.type);
-  id2nc[n.id] = c;
-  if (n.parent) {
-    c.parent = id2nc[n.parent.id];
-  }
-  return c;
-}
-/** Add a copy of on to t, and supporting branch.
- * @param id2nc index into treeCopy.
- * @param on  node from ontologyTree
- */
-function addNode(levelMeta, id2nc, on) {
-  let onc = id2nc[on.id];
-  if (! onc) {
-    let parent = on.parent;
-    if (parent) {
-      // change parent to refer to the copy of parent.
-      parent = addNode(levelMeta, id2nc, parent);
-    }
-    onc = copyNode(levelMeta, id2nc, on);
-    if (parent) {
-      if (parent.children) {
-        parent.children.push(onc);
-      } else {
-        parent[onc.id] = onc;
-      }
-    }
-  }
-  return onc;
-}
-
-/*----------------------------------------------------------------------------*/
-
-/** @return a count of the children at the top level, or 2nd level if valueTree is multiple roots.
- * @desc possibly displaying the leaf count would be more useful.
- */
-function treesChildrenCount(valueTree) {
-  let count = valueTree.children ?
-      valueTree.children.length :
-      Object.values(valueTree).reduce((result, vt) => result += vt.children.length, 0);
-  return count;
-}
 /*----------------------------------------------------------------------------*/
 
 
@@ -388,9 +92,12 @@ export default ManageBase.extend({
   viewHistory : service('data/view'),
   blocksService : service('data/block'),
   ontology : service('data/ontology'),
+  trait : service('data/trait'),
+  blockValues : service('data/block-values'),
 
   init() {
-    this._super();
+    this._super(...arguments);
+
     if (initRecursionCount++ > 5) {
       debugger;
       window.alert('initRecursionCount : ' + initRecursionCount);
@@ -500,7 +207,7 @@ export default ManageBase.extend({
 
   blockFeatureTraitsHistory : computed(
     'blockFeatureTraitsBlocks', 'historyView',
-    function () { return blockValuesHistory.apply(this, ['Traits']); }),
+    function () { return blockValuesHistory.apply(this, ['Traits', this.historyView]); }),
 
   blockFeatureTraitsName : computed(
     'blockFeatureTraitsHistory.[]',
@@ -509,29 +216,19 @@ export default ManageBase.extend({
 
   blockFeatureTraitsTree : computed(
     'blockFeatureTraitsName',
-    function () { return blockValuesTree.apply(this, ['Traits']); }),
+    function () { return blockValuesTree.apply(this, ['Traits', 'blockFeatureTraitsName']); }),
 
 
   /*--------------------------------------------------------------------------*/
   /** Implement Ontology tab, as for Trait tab */
 
-  blockFeatureOntologies : computed(
-    'apiServerSelectedOrPrimary.blockFeatureOntologies',
-    'apiServerSelectedOrPrimary.datasetsBlocks.[]',
-    /** comment in feature-edit.js : saveFeature() */
-    'blocksService.featureUpdateCount',
-    function () { return blockValues.apply(this, ['Ontologies']); }),
+  blockFeatureOntologies : alias('blockValues.blockFeatureOntologies'),
+  blockFeatureOntologiesBlocks : alias('blockValues.blockFeatureOntologiesBlocks'),
 
-  /** map ._id to .block */
-  blockFeatureOntologiesBlocks : computed(
-    'apiServerSelectedOrPrimary.blockFeatureOntologies',
-    'apiServerSelectedOrPrimary.datasetsBlocks.[]',
-    'blocksService.featureUpdateCount',
-    function () { return blockValuesBlocks.apply(this, ['Ontologies']); }),
 
   blockFeatureOntologiesHistory : computed(
     'blockFeatureOntologiesBlocks', 'historyView',
-    function () { return blockValuesHistory.apply(this, ['Ontologies']); }),
+    function () { return blockValuesHistory.apply(this, ['Ontologies', this.historyView]); }),
 
   blockFeatureOntologiesName : computed(
     'blockFeatureOntologiesHistory.[]',
@@ -542,7 +239,7 @@ export default ManageBase.extend({
 
   blockFeatureOntologiesTree : computed(
     'blockFeatureOntologiesName',
-    function () { return blockValuesTree.apply(this, ['Ontologies']); }),
+    function () { return blockValuesTree.apply(this, ['Ontologies', 'blockFeatureOntologiesName']); }),
 
   /** used when .showHierarchy === true
    */
@@ -551,16 +248,21 @@ export default ManageBase.extend({
     'ontologyId2Node',
     'ontologyId2DatasetNodes',
     function () {
-      let ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
       let
       fnName = 'blockFeatureOntologiesTreeGrouped',
       /** use blockFeatureOntologiesTreeEmbedded instead of ontologyTree because
        * the former has added .parent links
        */
       treeP = this.get('blockFeatureOntologiesTreeEmbedded'),
+      /** id2nP needs to refer to the above tree (local
+       * blockFeatureOntologiesTreeEmbedded), so the local version is used
+       * rather than blockValues. */
       id2nP = this.get('ontologyId2Node'),
       id2PnP = this.get('ontologyId2DatasetNodes'),
       promise = Promise.all([treeP, id2nP, id2PnP]).then(([tree, id2n, id2Pn]) => {
+        /** Alternative to ensure that id2n (ontologyId2Node) matches tree
+        let id2n = collateOntologyId2Node(tree);
+        */
         dLog(fnName, tree, id2n, 'id2Pn', id2Pn);
         let
         valueTree = treeFor(this.get('levelMeta'), tree, id2n, id2Pn);
@@ -573,7 +275,7 @@ export default ManageBase.extend({
         return valueTree;
       });
 
-      let proxy = ObjectPromiseProxy.create({ promise: resolve(promise) });
+      let proxy = toPromiseProxy(promise);
       return proxy;
     }),
 
@@ -586,22 +288,10 @@ export default ManageBase.extend({
     treeP = this.get('treesForData'), // single-root : ontologyTree
     id2PnP = this.get('ontologyId2DatasetNodes'),
     promise = Promise.all([treeP, id2PnP]).then(([tree, id2Pn]) => {
-      dLog(fnName, 'id2Pn', id2Pn);
-      let
-      valueTree = mapTree(this.get('levelMeta'), id2Pn, tree);
-      this.levelMeta.set(valueTree, 'term');
-
+      let valueTree = blockFeatureOntologiesTreeEmbeddedFn(this.levelMeta, tree, id2Pn);
       /** valueTree is the root, e.g.  "CO_321:ROOT" : "Wheat traits", so count the children. */
       let keyLength = treesChildrenCount(valueTree);
       this.set('blockFeatureOntologiesTreeEmbeddedKeyLength', keyLength);  // perhaps rename both to keysLength.
-
-      Object.values(valueTree).forEach((t) => t.parent = valueTree);
-      /*
-      let childNames = Object.keys(valueTree);
-      valueTree.name = childNames.length ? childNames[0].slice(0,2) : 'CropOntology';
-      */
-
-      dLog('blockFeatureOntologiesTreeEmbedded', valueTree);
       return valueTree;
     });
     return promise;
@@ -668,19 +358,6 @@ export default ManageBase.extend({
     promise = blocksOntologiesTree
       .then((bot) => idParentNodeMap(bot));
 
-    function idParentNodeMap(bot) {
-      /** traverse the parent level, add the Ontology ID Node {id, blocks} */
-      let id2n = reduceHash(
-        bot,
-        (result, key, value) => {
-          key = ontologyIdFromIdText(key);
-          (result[key] ||= []).push(value);
-          return result;
-        },
-        {});
-      return id2n;
-    };
-
     return promise;
   }),
 
@@ -690,22 +367,16 @@ export default ManageBase.extend({
     let treeP = this.get('ontology').getTree();
     return treeP;
   }),
+
+  /** collate a mapping [OntologyId] -> tree node */
   ontologyId2Node : computed('blockFeatureOntologiesTreeEmbedded', function () {
     /** use blockFeatureOntologiesTreeEmbedded in place of ontologyTree, to have .parent. */
     let treeP = this.get('blockFeatureOntologiesTreeEmbedded');
-    /** Add a node to a result. */
-    function reduceNode(result, parentKey, index, node) {
-      let id = node.id;
-      if (id) {
-        result[id] = node;
-      }
-      return result;
-    }
-    let
-    id2node = treeP.then((tree) => reduceIdChildrenTree(tree, reduceNode, {}));
+    let id2node = treeP.then((tree) => collateOntologyId2Node(tree));
     return id2node;
   }),
 
+  ontologyId2NodeFor : alias('blockValues.ontologyId2NodeFor'),
 
   /*--------------------------------------------------------------------------*/
 
@@ -899,7 +570,7 @@ export default ManageBase.extend({
     nameFilters = this.get('nameFilterArray'),
     match = ! nameFilters.length || 
       this.datasetOrBlockMatch(dataset, nameFilters);
-    if (match && (nameFilter !== "")) {
+    if (match && (nameFilter !== "") && (trace_dataTree > 1)) {
       dLog('dataPre', nameFilter, dataset.name);
     }
     return match;
@@ -949,7 +620,7 @@ export default ManageBase.extend({
     });
     return matchAll;
   },
-  /** Filter blockTraits.Traits by nameFilters
+  /** Filter blockTraits[fieldName] (e.g. blockTraits.Traits) by nameFilters
    * @param fieldName 'Traits' or 'Ontologies'
    */
   blockTraitsFilter(fieldName, blockTraits, nameFilters) {
@@ -1146,7 +817,7 @@ export default ManageBase.extend({
 
   /* ------------------------------------------------------------------------ */
 
-  levelMeta : new WeakMap(),
+  levelMeta : alias('blockValues.levelMeta'),
 
   /** group all datasets by parent type
    * add tabs for those, FG can apply, so: 
@@ -1889,9 +1560,7 @@ export default ManageBase.extend({
         dLog('datasetTypeTabId', id, datasetType);
       return id;
     },
-    keysLength(object) {
-      return Object.keys(object).length;
-    },
+    keysLength,
 
     /** Triggered by refresh icon on datset list **/
     refreshAvailable() {
@@ -1957,9 +1626,118 @@ export default ManageBase.extend({
           }
         }
       });
+
+      if (block.isQTL) {
+        this.makeValuesVisible(block);
+      }
     }
 
   },  // actions
+
+  // ---------------------------------------------------------------------------
+
+  /** if within the Traits / Ontologies tab, then make-visible the Traits /
+   * Ontologies of the block
+   * and if in another tab then make-visible both;
+   * i.e. viewing a block in the Traits / Ontologies tab sets visibility of just
+   * the Trait / Ontology value/branch clicked; for other fields, make-visible
+   * all values of the block.
+   */
+  makeValuesVisible(block) {
+    const fnName = 'makeValuesVisible';
+    /** Values of doneField are made visible by action
+     * entry-block-add-button.js : loadBlock : setOntologyVisible().
+     *
+     * activeId is e.g. "tab-explorer-Trait", "tab-explorer-Ontology"
+     */
+    let doneField = this.activeId.slice(13);
+    let
+    fields = ['Trait', 'Ontology'],
+    doFields = fields.filter((name) => name != doneField);
+    /** Update : now that qtlColourBy and visibleBy{Trait,Ontology} are
+     * controlled by the user tab selection instead of viewed-settings buttons,
+     * making all the block values of the non-selected field visible is not required.
+     */
+    const makeOtherFieldVisible = false;
+    if (makeOtherFieldVisible) {
+      doFields.forEach((fieldName) => this.makeValuesVisibleField(block, pluralize(fieldName)));
+    }
+
+    /** if current tab is in fields[], i.e. fields.includes(doneField) */
+    if (doFields.length < fields.length) {
+      this.colourAndVisibleBy(doneField);
+    } else {
+      /** use apiServer blockFeature{Traits|Ontologies} to see if block has
+       * either, and set 'Ontology' if block has no Traits.
+       */
+      let 
+      haveField = ['Traits', 'Ontologies'].find(
+        (fieldName) => this.blockAttributes(block, fieldName)?.length),
+      useField = haveField ? singularize(haveField) : 'Block';
+      dLog(fnName, haveField, useField);
+      this.get('controls.viewed').set('qtlColourBy', useField);
+    }
+  },
+  /** Make all .values[singularize(fieldName)] values of block visible.
+   * @param fieldName plural : 'Traits', 'Ontologies'
+   */
+  makeValuesVisibleField(block, fieldName) {
+    let
+    values = this.blockAttributes(block, fieldName),
+    setVisible = (fieldName === 'Traits') ?
+      (traitName) => this.get('trait').traitVisible(traitName, true) :
+      (ontologyId) => this.get('ontology').setOntologyIsVisible(ontologyId, true);
+    dLog('loadBlock', 'makeValuesVisibleField', fieldName, values);
+    if (values) {
+      values.forEach((value) => setVisible(value));
+    }
+  },
+  /** User has viewed a block from the explorer 'Ontologies' or 'Traits' tab.
+   * That will set visibility of the Ontology / Trait in which they clicked +,
+   * and in the case of Ontology, coloured by that OntologyId.
+   *
+   * Set the viewed-settings controls for visibleBy and colourBy, corresponding
+   * to the tab.
+   *
+   * @param fieldNameSingular 'Ontology' or 'Trait'
+   * @param false : set only qtlColourBy; true : also set visibleBy{Ontology|Trait}
+   */
+  colourAndVisibleBy(fieldNameSingular) {
+    let field = fieldNameSingular;
+    let viewedSettings = this.get('controls.viewed');
+    dLog('colourAndVisibleBy', field, viewedSettings);
+    if (viewedSettings) {
+    viewedSettings.setProperties({
+      visibleByOntology : field === 'Ontology',
+      visibleByTrait : field === 'Trait',
+      qtlColourBy : (field === 'Trait') ? 'Trait' : 'Ontology',
+    });
+    }
+  },
+
+  //----------------------------------------------------------------------------
+
+  /** Lookup the Trait / Ontology attributes of this block,
+   * using either block.attributes (which is filtered by checkPositions()),
+   * or the raw api-server blockFeature{Trait,Ontology} from the api result.
+   * This can move to models / block, and lookup block.store.name to choose the api-server.
+   */
+  blockAttributes(block, fieldName) {
+    let 
+    /** block.attributes may be undefined. */
+    values = block.get('attributes.' + fieldName);
+    if (! values) {
+      let
+      as = this.get('apiServerSelectedOrPrimary'),
+      /** equivalent : as['blockFeature' + fieldName]._result
+       * may change this function to return a promise
+       */
+      bt = as && as['blockFeature' + singularize(fieldName)],
+      bti = bt?.find((bt) => bt._id === block.id);
+      values = bti && bti[fieldName];
+    }
+    return values;
+  },
 
   //----------------------------------------------------------------------------
 
@@ -2002,6 +1780,8 @@ export default ManageBase.extend({
      this.saveActiveId();
      },
   didRender() {
+    this._super.apply(this, arguments);
+
     if (this.get('activeId') && ! this.tabAndContentActive()) {
       this.ensureActiveClass();
     }
@@ -2049,10 +1829,18 @@ export default ManageBase.extend({
           console.log('didRender', id, c[0], t[0], a[0]);
     }
   },
+  /*
   willDestroyElement() {
     console.log('willDestroyElement', this);
+
     this._super(...arguments);
-  }
+  },
+  */
+
   //----------------------------------------------------------------------------
+
+  selectOntologyNode,
+
+  // ---------------------------------------------------------------------------
 
 });

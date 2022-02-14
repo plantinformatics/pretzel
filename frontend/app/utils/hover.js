@@ -1,7 +1,13 @@
 import { stacks } from './stacks';
 
 /* global Ember */
+/* global d3 */
 
+// -----------------------------------------------------------------------------
+
+const dLog = console.debug;
+
+const trace = 0;
 
 /*------------------------------------------------------------------------*/
 /* copied from draw-map.js - will import when that is split */
@@ -30,6 +36,7 @@ const hoverNearElement = urlOptions && urlOptions.hoverNearElement;
  * @param context client data
  * @param textFn  given the context and hovered element datum, create text to show in the hover popover.
  * called with d3 signature : textFn.apply(this, [context, d, i, g])
+ * If result starts with <div or <span, set options.html.
  *
  * Usage e.g. (from axis-tracks)
  * function  configureTrackHover(interval)
@@ -72,6 +79,9 @@ function showHover(context, textFn, d, i, g) {
         // comment re. title versus content in @see draw-map.js: configureHorizTickHover() 
         content : text
       };
+      if (text.startsWith('<div') || text.startsWith('<span')) {
+        options.html = true;
+      }
       if (! hoverNearElement) {
         // same as default, with arrow removed : <div class="arrow"></div>
         options.template = '<div class="popover no-border" role="tooltip"> <h3 class="popover-title"></h3><div class="popover-content"></div></div>';
@@ -79,6 +89,9 @@ function showHover(context, textFn, d, i, g) {
       }
       node_
         .popover(options);
+      if (trace) {
+        dLog('showHover', text, context, textFn, d, i, g, node_.data('bs.popover'), node_.data('bs.popover').options);
+      }
     }
     node_.popover('show');
   }
@@ -86,7 +99,11 @@ function showHover(context, textFn, d, i, g) {
 function hideHover() {
   /** jQuery selection of target element to display popover near. */
   let node_ = hoverNearElement ? $(this) : $('#popoverTarget');
+  // for devel, comment this out to enable styling of popover in Web Inspector
   node_.popover('hide');
+  if (trace) {
+    dLog('hideHover', node_);
+  }
 }
 
 

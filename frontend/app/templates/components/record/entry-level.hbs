@@ -1,6 +1,10 @@
 
 <li class="list-group-item list-group-item-info" >
-  {{#record/entry-expander nodeName=name controlOptions=controlOptions}}
+  {{#record/entry-expander nodeName=name
+      controlOptions=controlOptions
+      values=values
+      levelMeta=levelMeta
+      selectExpander=selectExpander}}
 
     {{!-- log 'entry-level' name values --}}
     <ul>

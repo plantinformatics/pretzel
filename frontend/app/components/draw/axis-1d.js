@@ -176,8 +176,9 @@ FeatureTicks.prototype.featureColour = function (feature) {
   /** Similar @see featurePathStroke() */
   let colour;
   let block = feature.get('blockId');
-  if (block.get('useTraitColour')) {
-    colour = featureTraitColour(feature);
+  let qtlColourBy = block.get('useFeatureColour');
+  if (qtlColourBy) {
+    colour = feature.colour(qtlColourBy);
   } else {
     colour = this.blockColourValue(contentOf(block));
   }
@@ -253,9 +254,11 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
       function featurePathStroke (feature, i2) {
         /** Similar : FeatureTicks.prototype.featureColour() */
         let colour;
+        /** Stacks : Block */
         let block = this.parentElement.__data__;
-        if (block.block.get('useTraitColour')) {
-          colour = featureTraitColour(feature);
+        let qtlColourBy = block.block.get('useFeatureColour');
+        if (qtlColourBy) {
+          colour = feature.colour(qtlColourBy);
         } else {
           let
           blockId = block.getId(),
@@ -758,17 +761,19 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   },
 
   /** @return the Stacked object corresponding to this axis. */
-  axisS : computed('axis.id', 'stacks.axesPCount', function () {
-    let
+  axisS : computed(
+    'axis.id', 'stacks.axesPCount', 'axis.view',
+    function () {
+      let
       axisName = this.get('axis.id'),
-    axisS = Stacked.getAxis(axisName);
-    if (axisS) {
-      if (axisS.axis1d === this && this.isDestroying)
-        axisS.axis1d = undefined;
-      else if (! axisS.axis1d && ! this.isDestroying) {
-        axisS.axis1d = this;
+      axisS = Stacked.getAxis(axisName) || this.get('axis.view');
+      if (axisS) {
+        if (axisS.axis1d === this && this.isDestroying)
+          axisS.axis1d = undefined;
+        else if (! axisS.axis1d && ! this.isDestroying) {
+          axisS.axis1d = this;
+        }
       }
-    }
     return axisS;
   }),
   /** @return true if an axis-2d child component is required for this
@@ -1061,6 +1066,34 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
         gAxis = axis.selectAll();
       axisApi.updateAxisTitleSize(gAxis);
     }
+  },
+
+  /** Text for display in the axis title.
+   * Extracted from utils/stacks.js : Block:titleText(), which this replaces.
+   * @return '' if the name / scope are not defined yet.
+   */
+  get axisTitleText() {
+    let
+    referenceBlock = this.get('referenceBlock'),  // i.e. .axis
+    parts = [],
+    axisTitleChrOnly = this.controlsView.axisTitleChrOnly,
+    /** changed requirements, probably axisTitleShow is not required. */
+    showDatasetName = /*referenceBlock.get('axisTitleShow.scope') &&*/ ! axisTitleChrOnly;
+    if (/*referenceBlock.get('axisTitleShow.name')  && (! axisTitleChrOnly || ! )*/ showDatasetName) {
+      parts.push(referenceBlock.get('datasetId.shortNameOrName'));
+    }
+    // maybe :
+    /** If user edits .shortName via editedShortName then consider that to
+     * override axisTitleChrOnly. */
+
+      /** block name is generally the same as scope, but there can be multiple
+       * blocks in a dataset with the same scope; showing their names is more
+       * useful - likely to be unique.
+       */
+      parts.push(referenceBlock.get('name'));
+
+    let name = parts.filter((n) => n).join(' : ');
+    return name;
   },
 
   /** Update the display of the feature (loaded / total) count in the
@@ -1372,6 +1405,14 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     this.axisTitleFamily();
     this.updateAxisTitleSize();
   },
+  titleEffect : computed(
+    /** dependencies of axisTitleText() */
+    'referenceBlock.axisTitleShow.{name,scope}',
+    'referenceBlock.datasetId._meta.shortName',
+    'controlsView.axisTitleChrOnly',
+    function () {
+      this.axisTitleFamily();
+    }),
 
   /*--------------------------------------------------------------------------*/
 
