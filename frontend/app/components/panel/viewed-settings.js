@@ -1,7 +1,14 @@
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 
+// -----------------------------------------------------------------------------
+
 const dLog = console.debug;
+
+/** Same as in manage-view.js  */
+const tab_view_prefix = "tab-view-";
+
+// -----------------------------------------------------------------------------
 
 /**
  * args :
@@ -31,13 +38,46 @@ export default Component.extend({
   /** Instead of settings being changed via the buttons in viewed-settings,
    * the tab selection in manage-view is now used to select .qtlColourBy,
    * .visibleByOntology, and .visibleByTrait.
+   * This is enabled by .tabSetsColourByVisible
    */
   onChangeTab(id) {
     dLog('onChangeTab', id, this);
-    this.set('qtlColourBy', (id === 'Blocks') ? 'Block' : id);
-    this.set('visibleByOntology', id === 'Ontology');
-    this.set('visibleByTrait', id === 'Trait');
-    dLog('onChangeTab', id, this.qtlColourBy, this.visibleByOntology, this.visibleByTrait);
+    if (this.tabSetsColourByVisible) {
+      this.set('qtlColourBy', (id === 'Blocks') ? 'Block' : id);
+      this.set('visibleByOntology', id === 'Ontology');
+      this.set('visibleByTrait', id === 'Trait');
+      dLog('onChangeTab', id, this.qtlColourBy, this.visibleByOntology, this.visibleByTrait);
+    }
+  },
+  /** Called when the user clicks view in the Trait or Ontology tab in the
+   * dataset explorer.
+   * In addition to viewing the block (handled by manage-explorer : loadBlock),
+   * this indicates that the View panel Trait / Ontology tab should be selected,
+   * if .tabSetsColourByVisible.
+   * @param field (singular)  'Trait', 'Ontology',
+   */
+  colourAndVisibleBy(field) {
+    dLog('colourAndVisibleBy', field);
+    if (this.tabSetsColourByVisible) {
+      this.selectTab(field);
+      /** .selectTab() triggers onChangeTab(), which sets .qtlColourBy,
+       * .visibleBy{Ontology,Trait}.  (until 6fdd6ea9 this was done by
+       * manage-explorer.js : colourAndVisibleBy() : setProperties()).
+       */
+    }
+  },
+
+  /**
+   * @param name : 'Trait', 'Ontology' ('Blocks' is not used)
+   */
+  selectTab(name) {
+    let 
+    bsTab = this.parentView,
+    /** match with manage-view.js:datasetTypeTabId() */
+    tabName = tab_view_prefix + name;
+    dLog('selectTab', tabName, 'bsTab', bsTab._debugContainerKey);
+    // expect (bsTab._debugContainerKey === "component:bs-tab")
+    bsTab.select(tabName);
   },
 
   /** Colour QTL diamonds & <rect>s by one of : Ontology, Trait, Block. */
@@ -62,5 +102,9 @@ export default Component.extend({
   visibleByOntology : false,
   visibleByTrait : false,
 
+  /** if true, then user tab selection (Block / Trait / Ontology) changes the
+   * settings qtlColourBy and visibleBy{Ontology,Trait}
+   */
+  tabSetsColourByVisible : true,
 
 });

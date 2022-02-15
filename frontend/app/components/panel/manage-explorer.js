@@ -1707,11 +1707,7 @@ export default ManageBase.extend({
     let viewedSettings = this.get('controls.viewed');
     dLog('colourAndVisibleBy', field, viewedSettings);
     if (viewedSettings) {
-    viewedSettings.setProperties({
-      visibleByOntology : field === 'Ontology',
-      visibleByTrait : field === 'Trait',
-      qtlColourBy : (field === 'Trait') ? 'Trait' : 'Ontology',
-    });
+      viewedSettings.colourAndVisibleBy(fieldNameSingular);
     }
   },
 

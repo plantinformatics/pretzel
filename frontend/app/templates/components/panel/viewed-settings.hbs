@@ -1,8 +1,21 @@
-{{#elem/icon-toggle state=detailed iconTrue='collapse-down' iconFalse='expand' class="margin-1em" }}
-  {{#ember-tooltip side="right" delay=500}}
+<div style="display:flex">
+
+  <span style="margin:1em; width: 20%;">
+    {{#elem/icon-toggle state=detailed iconTrue='collapse-down' iconFalse='expand' }}
+    {{#ember-tooltip side="right" delay=500}}
     Toggle display of QTL colour and filtering controls.
-  {{/ember-tooltip}}
-{{/elem/icon-toggle}}
+    {{/ember-tooltip}}
+    {{/elem/icon-toggle}}
+  </span>
+
+  <span style="flex : 1; margin-top:1em">
+    <input type="checkbox"
+    checked={{this.tabSetsColourByVisible}}
+    oninput={{action (action (mut this.tabSetsColourByVisible) value="target.checked") }}  >
+    <label>Tab sets Colour-By and Filter-By</label>
+  </span>
+</div>
+
 
 {{#if detailed}}
 
@@ -26,7 +39,7 @@
     </li>
 
     <li class="list-group-item horiz-2">
-      <label>Visible by : </label>
+      <label>Filter by : </label>
       <div style="width:30%">
         <input type="checkbox"
           checked={{this.visibleByOntology}}
