@@ -57,8 +57,8 @@ export default Component.extend({
    * @param field (singular)  'Trait', 'Ontology',
    */
   colourAndVisibleBy(field) {
-    dLog('colourAndVisibleBy', field);
-    if (this.tabSetsColourByVisible) {
+    dLog('colourAndVisibleBy', field, this.tabSticky);
+    if (! this.tabSticky) {
       this.selectTab(field);
       /** .selectTab() triggers onChangeTab(), which sets .qtlColourBy,
        * .visibleBy{Ontology,Trait}.  (until 6fdd6ea9 this was done by
@@ -104,7 +104,11 @@ export default Component.extend({
 
   /** if true, then user tab selection (Block / Trait / Ontology) changes the
    * settings qtlColourBy and visibleBy{Ontology,Trait}
+   * This is currently unchanging.
    */
   tabSetsColourByVisible : true,
+  /** If true then colourAndVisibleBy() does not change the selected view tab
+   */
+  tabSticky : false,
 
 });
