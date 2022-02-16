@@ -1675,12 +1675,18 @@ export default ManageBase.extend({
       later(() => this.get('ontology').ensureVisibleOntologiesAreColoured(), 3000);
     }
 
+    /** if true, set .qtlColourBy to Traits or Ontologies if this block has
+     * Traits or Ontologies.
+     */
+    const colourByAttributes = false;
     /** if current tab is in fields[], i.e. fields.includes(doneField) */
     if (doFields.length < fields.length) {
       this.colourAndVisibleBy(doneField);
-    } else {
+    } else if (colourByAttributes) {
       /** use apiServer blockFeature{Traits|Ontologies} to see if block has
-       * either, and set 'Ontology' if block has no Traits.
+       * either, and set 'Ontology' if block has Ontologies and no Traits,
+       * otherwise defaulting to colour by Traits if the block has Traits, and
+       * otherwise Block.
        */
       let 
       haveField = ['Traits', 'Ontologies'].find(
