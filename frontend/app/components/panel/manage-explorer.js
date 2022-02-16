@@ -557,7 +557,7 @@ export default ManageBase.extend({
     this.get('nameFilterDebouncedLodash')();
   },
   nameFilterDebouncedLodash : computed(function () {
-    let debounced = lodash_debounce(() => this.nameFilterChangedSet(), 1000, { maxWait: 3000, leading: true });
+    let debounced = lodash_debounce(() => this.nameFilterChangedSet(), 500, { maxWait: 2000, leading: true });
     return debounced;
   }),
   nameFilterChangedSet() {
@@ -1780,6 +1780,7 @@ export default ManageBase.extend({
      * display.
      */
     this.set('nameFilter', '');
+    this.set('nameFilterDebounced', '');
     this.set('activeId', id);
   },
 
