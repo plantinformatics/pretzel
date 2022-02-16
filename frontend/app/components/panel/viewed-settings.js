@@ -48,6 +48,7 @@ export default Component.extend({
       this.set('visibleByTrait', id === 'Trait');
       dLog('onChangeTab', id, this.qtlColourBy, this.visibleByOntology, this.visibleByTrait);
     }
+    this.set('tabIsOntology', id === 'Ontology');
   },
   /** Called when the user clicks view in the Trait or Ontology tab in the
    * dataset explorer.
@@ -110,5 +111,10 @@ export default Component.extend({
   /** If true then colourAndVisibleBy() does not change the selected view tab
    */
   tabSticky : false,
+
+  /** if false, don't display QTLs without .values.Ontology when
+   * qtlColourBy == 'Ontology'
+   */
+  showQTLsWithoutOntologies : false,
 
 });

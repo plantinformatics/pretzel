@@ -17,9 +17,10 @@
 </div>
 
 
-{{#if detailed}}
 
   <ul class="list-group view-controls">
+
+{{#if detailed}}
 
     <li class="list-group-item">
       <label style="display:inline">QTL colour by :</label>
@@ -57,8 +58,20 @@
         <label>Trait</label>
       </div>
     </li>
+{{/if}}
 
+
+{{#if tabIsOntology}}
+
+  <li class="list-group-item">
+    <span>
+      <input type="checkbox"
+      checked={{this.showQTLsWithoutOntologies}}
+      oninput={{action (action (mut this.showQTLsWithoutOntologies) value="target.checked") }}  >
+      <label>Show QTLs without ontologies</label>
+    </span>
+  </li>
+
+  {{/if}}
 
   </ul>
-
-{{/if}}
