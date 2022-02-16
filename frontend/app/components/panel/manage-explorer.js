@@ -1657,10 +1657,22 @@ export default ManageBase.extend({
     /** Update : now that qtlColourBy and visibleBy{Trait,Ontology} are
      * controlled by the user tab selection instead of viewed-settings buttons,
      * making all the block values of the non-selected field visible is not required.
+
+     * Update 2 : re-enable this functionality when adding blocks from tabs
+     * other than Trait and Ontology;
+     * for the Trait and Ontology tabs : just the values related in the QTLs of this
+     * block are made visible; in record/entry-block-add-button.js @see collateOT()
      */
-    const makeOtherFieldVisible = false;
+    const makeOtherFieldVisible = doFields.length == 2;
     if (makeOtherFieldVisible) {
       doFields.forEach((fieldName) => this.makeValuesVisibleField(block, pluralize(fieldName)));
+      /** this has to wait for block.allFeatures, and also for
+       * ontology.ontologyIsVisible@each, and perhaps .setScaleDomain changes;
+       * can set up a promise to wait on once the functionality is settled;
+       * using later( 3sec) as in entry-block-add-button.js : loadBlock().
+       */
+      this.get('ontology').ensureVisibleOntologiesAreColoured();
+      later(() => this.get('ontology').ensureVisibleOntologiesAreColoured(), 3000);
     }
 
     /** if current tab is in fields[], i.e. fields.includes(doneField) */
