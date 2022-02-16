@@ -1,5 +1,6 @@
 import $ from 'jquery';
-import { later, next } from '@ember/runloop';
+import { later, next, debounce } from '@ember/runloop';
+import { debounce as lodash_debounce } from 'lodash/function';
 import { resolve, all } from 'rsvp';
 import { A } from '@ember/array';
 import { inject as service } from '@ember/service';
@@ -549,9 +550,23 @@ export default ManageBase.extend({
     }
     return data;
   }),
-  nameFilterArray : computed('nameFilter', function () {
+  nameFilterChanged(value) {
+    // dLog('nameFilterChanged', value);
+    // debounce(this, this.nameFilterChangedSet, 2000);
+    // use lodash_debounce() instead because it has option : leading
+    this.get('nameFilterDebouncedLodash')();
+  },
+  nameFilterDebouncedLodash : computed(function () {
+    let debounced = lodash_debounce(() => this.nameFilterChangedSet(), 1000, { maxWait: 3000, leading: true });
+    return debounced;
+  }),
+  nameFilterChangedSet() {
+    dLog('nameFilterChangedSet', 'set', this.nameFilter);
+    this.set('nameFilterDebounced', this.nameFilter);
+  },
+  nameFilterArray : computed('nameFilterDebounced', function () {
     let
-    nameFilter = this.get('nameFilter'),
+    nameFilter = this.get('nameFilterDebounced'),
     array = !nameFilter || (nameFilter === '') ? [] :
       nameFilter.split(/[ \t]/);
     return array;

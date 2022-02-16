@@ -48,7 +48,9 @@
   <div class="textInput">
     <i class="glyphicon glyphicon-filter"></i>
     {{!-- there is no suitable autocomplete, so may change to  =off --}}
-    {{input id="nameFilter" type="search" value=nameFilter placeholder="Search All Datasets" autocomplete="dataset-name" }}
+    {{input id="nameFilter" type="search" value=nameFilter
+      input=(action this.nameFilterChanged value="target.value")
+      placeholder="Search All Datasets" autocomplete="dataset-name" }}
   </div>
   <div class="button-row">
     <label>Case</label>
