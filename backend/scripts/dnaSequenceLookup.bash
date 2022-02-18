@@ -23,6 +23,7 @@ esac
 # Default value of toolsDev, if not set above.
 unused_var=${toolsDev=$resourcesDir/tools/dev}
 unused_var=${samtools=samtools}
+# or /faidx after blast/
 unused_var=${datasetIdDir=/mnt/data_blast/blast/datasetId}
 
 # Test if running within container.
@@ -126,7 +127,8 @@ else
   elif ! dbName=$(datasetId2dbName "$datasetId")
   then
     echo 1>&$F_ERR 'Error:' "Genome datasetId is not configured", "$datasetId"
-  elif ! time "$samtools" faidx "$dbName" "$region"
+    # Depending on .dbName and .fasta, may need to insert : .fasta chr
+  elif ! cd "$datasetIdDir" || ! time "$samtools" faidx "$dbName" "$region"
   then
     echo 1>&$F_ERR 'Error:' "Unable to run samtools faidx"
   else
