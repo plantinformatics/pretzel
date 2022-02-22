@@ -223,7 +223,7 @@ export default Component.extend(Evented, {
     /** drawActions is an action&event bus specific to one draw-map; it is a reference
      * to mapview (see map-view.hbs) but could be owned by the draw-map. */
     let drawActions = this.get('drawActions'); 
-    console.log("drawActionsListen", listen, drawActions, this);
+    console.log("drawActionsListen", listen, name, target._debugContainerKey, method, drawActions, this);
     if (drawActions === undefined)
       console.log('parent component drawActions not passed', this);
     else
@@ -260,9 +260,12 @@ export default Component.extend(Evented, {
     else
       this.set('listener', new EventedListener(
         bus,
-        [{name: 'stackPositionsChanged', target: this, method: this.stackPositionsChanged}]
+        [{name: 'stackPositionsChanged', target: this, method: /*.actions.*/this.stackPositionsChanged}]
         // this.pathUpdateFlow is set later, because it calls into the draw() closure.
       ));
+  },
+  stackPositionsChanged(stack) {
+    this.actions.stackPositionsChanged(stack);
   },
 
   /** listen to events sent by sub-components.
@@ -318,11 +321,11 @@ export default Component.extend(Evented, {
     blockService.on('receivedBlock', this, 'receivedBlock');
   }),
 
-/** addPathsToCollation() is in draw closure, otherwise would register it here
+/** addPathsToCollation() was in draw closure;  having moved it to library collate-paths.js, it could now be register here
   willInsertElement : function () {
     console.log("components/draw-map willInsertElement");
     this._super(...arguments);
-    this.on('paths', this.addPathsToCollation);
+    this.on('paths', addPathsToCollation);
   },
 */
 
@@ -337,7 +340,8 @@ export default Component.extend(Evented, {
     this.drawControlsListen(false);
     this.localBus(false);
 
-    this.off('paths');
+    /* not registered in willInsertElement(). registered in draw() : drawControlsLifeC */
+    this.off('paths', addPathsToCollation);
 
     let blockService = this.get('blockService');
     blockService.off('receivedBlock', this, 'receivedBlock');
@@ -6117,7 +6121,9 @@ export default Component.extend(Evented, {
      * @see resizeEffect()
      */
     function recordViewport(w, h) {
-      later(() => 
+      later(
+        () => 
+          ! this.isDestroying &&
       this.setProperties({
         viewportWidth : w,
         viewportHeight : h

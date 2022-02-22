@@ -1,0 +1,25 @@
+{
+  "name": "Group",
+  "description": "User Group management services",  
+  "base": "PersistedModel",
+  "idInjection": true,
+  "options": {
+    "validateUpsert": true
+  },
+  "properties": {},
+  "validations": [],
+  "relations": {
+    "client": {
+      "type": "belongsTo",
+      "model": "Client",
+      "foreignKey": "id"
+    },
+    "members": {
+      "type": "hasMany",
+      "model": "Client",
+      "foreignKey": "id"
+    }
+  },
+  "acls": [],
+  "methods": {}
+}

@@ -6,9 +6,18 @@
   "options": {
     "validateUpsert": true
   },
-  "properties": {},
+  "properties": {
+    "groupIds": {
+      "type": ["string"]
+    }
+  },
   "validations": [],
   "relations": {
+    "groups": {
+      "type": "hasMany",
+      "model": "Group",
+      "foreignKey": "clientId"
+    },
     "datasets": {
       "type": "hasMany",
       "model": "Dataset",

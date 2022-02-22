@@ -30,6 +30,11 @@
       "type": "belongsTo",
       "model": "Client",
       "foreignKey": "clientId"
+    },
+    "group": {
+      "type": "belongsTo",
+      "model": "Group",
+      "foreignKey": "groupId"
     }
   },
   "acls": [

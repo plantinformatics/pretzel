@@ -1,0 +1,32 @@
+<label>Added groups</label>
+{{#each this.model.groups as |group|}}
+  <div>
+   {{group.id}}
+   {{group.clientId}}
+   {{group.name}}
+
+   {{!-- model=group  --}}
+   {{!-- 
+    {{#link-to 'group.edit' classNames='btn btn-info pull-right' tagName='button'}}
+      Edit Group
+    {{/link-to}}
+
+    {{#link-to 'group.delete'  classNames='btn btn-info pull-right' tagName='button'}}
+      Delete Group
+    {{/link-to}}
+    --}}
+
+  </div>
+{{/each}}
+
+{{#link-to 'groups.add' classNames='btn btn-info' tagName='button'}}
+Add Group
+{{/link-to}}
+
+{{!--
+<hr>
+
+<label>Joined groups</label>
+--}}
+
+{{outlet}}

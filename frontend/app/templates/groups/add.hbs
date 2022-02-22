@@ -1,0 +1,10 @@
+<div style="display:flex; gap:1em">
+  <button type="button" class="btn btn-info" {{on 'click' (action this.addGroup) }}>Add</button>
+
+  <input
+    oninput={{action (action (mut this.newGroupName) value="target.value") }}
+    placeholder="New Group Name"   >
+</div>
+
+
+{{outlet}}

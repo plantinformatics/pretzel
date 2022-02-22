@@ -57,6 +57,12 @@ export default Service.extend({
     return this._ajax('Clients/', 'POST', JSON.stringify(data), false)
   },
 
+  groups(own) {
+    let verb = own ? 'own' : 'in';
+    dLog('groups', own);
+    return this._ajax('Groups/' + verb, 'POST', {}, true);
+  },
+
   runtimeConfig() {
     console.log('runtimeConfig');
     return this._ajax('Configurations/runtimeConfig', undefined, 'GET', true);
