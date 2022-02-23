@@ -1,5 +1,61 @@
 ﻿'use strict';
 
+/* global process */
+/* global require */
+/* global module */
+/* global __dirname */
+
+// -----------------------------------------------------------------------------
+/** Addition of dotenv for access to process.env (environment variables)
+ * If path is configured in the environment :
+ *   DOTENV_CONFIG_DEBUG=true DOTENV_CONFIG_PATH=lb3app/.env;
+ * then node -r require option can be used : -r dotenv/config
+ * as an alternative to loading .env here.
+ *
+ * To enable dotenv debug, define env variable DOTENV_CONFIG_DEBUG=true in node environment.
+ * That reports on .env file not found, and variables defined in both environment and in .env.
+ *
+ * If DB_USER and DB_PASS are defined in .env and the database is configured
+ * without authentication, they can be defined as empty strings in the
+ * environment to override those values.
+ */
+const dotenvOptions = {};
+if (! process.env['DOTENV_CONFIG_PATH']) {
+  dotenvOptions.path = 'lb3app/.env';
+}
+const dotenv = require('dotenv').config(dotenvOptions);
+
+const
+envNames =
+  [
+    'DB_USER',
+    'DB_PASS', 
+    'API_HOST',
+    'API_URL',
+    'API_PORT_EXT',
+    'DB_PORT_EXT',
+    'DB_NAME',
+    'EMAIL_FROM',
+    'EMAIL_HOST',
+    'EMAIL_PORT',
+    'EMAIL_ADMIN',
+    'EMAIL_VERIFY',
+    'AUTH',
+    'nBlockFeaturesCopy',
+
+    'DOTENV_CONFIG_DEBUG',
+    'DOTENV_CONFIG_PATH',
+  ];
+/** if name is DB_PASS, reduce value to true if defined. */
+function maskValue(name, value)
+{
+  return (name == 'DB_PASS') ? (value ? true : value) : value;
+}
+console.log(
+  __dirname, 'process.env',
+  envNames.map((n) => [n, maskValue(n, process.env[n])]));
+
+
 // validating provided environment variables
 var environment = require('./environment');
 
