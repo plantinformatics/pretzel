@@ -7,8 +7,11 @@ import {
 import {RepositoryMixin} from '@loopback/repository';
 import {RestApplication} from '@loopback/rest';
 import {ServiceMixin} from '@loopback/service-proxy';
+import {Lb3AppBooterComponent} from '@loopback/booter-lb3app';
+
 import path from 'path';
 import {MySequence} from './sequence';
+
 
 export {ApplicationConfig};
 
@@ -40,9 +43,10 @@ export class PretzelApplication extends BootMixin(
         nested: true,
       },
       lb3app: {
-	// server file is found under this path
-	path: '../../backend/server/server',
+        // server file is found under this path
+        path: '../../backend/server/server',
       },
     };
+    this.component(Lb3AppBooterComponent);
   }
 }

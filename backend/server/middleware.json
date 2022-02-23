@@ -48,19 +48,5 @@
     }
   },
   "files": {
-		"loopback#static": [{
-			"paths": ["/landingPageContent"],
-			"params": "$!../client/landingPageContent" 
-		},
-		{
-			"paths": ["/signupPageContent"],
-			"params": "$!../client/signupContent" 
-		}]
-	},
-  "final": {
-    "loopback#urlNotFound": {}
-  },
-  "final:after": {
-    "strong-error-handler": {}
-  }
+	}
 }
