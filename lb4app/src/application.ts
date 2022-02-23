@@ -44,7 +44,7 @@ export class PretzelApplication extends BootMixin(
       },
       lb3app: {
         // server file is found under this path
-        path: '../../backend/server/server',
+        // path: '../../backend/server/server',
       },
     };
     this.component(Lb3AppBooterComponent);

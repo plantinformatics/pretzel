@@ -27,9 +27,7 @@
     "helmet#hidePoweredBy": {},
     "helmet#ieNoOpen": {},
     "helmet#noSniff": {},
-    "helmet#noCache": {
-      "enabled": false
-    },
+
     "./middleware/memcache": {
       "params": {
         "duration": 3600
