@@ -3,12 +3,13 @@ import {Entity, model, property} from '@loopback/repository';
 @model({settings: {strict: false, description: 'Contains a link between two features'}})
 export class Alias extends Entity {
   @property({
-    type: 'ObjectID',
+    type: 'string',
+    mongodb: {dataType: 'ObjectID'},
     id: 1,
     generated: true,
     updateOnly: true,
   })
-  id?: ObjectID;
+  id?: string;
 
   @property({
     type: 'string',

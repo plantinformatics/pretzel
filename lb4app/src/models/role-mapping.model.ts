@@ -18,7 +18,7 @@ export class RoleMapping extends Entity {
 
   @property({
     type: 'string',
-    description: The principal type, such as USER, APPLICATION, ROLE, or user model name in case of multiple user models,
+    description: 'The principal type, such as USER, APPLICATION, ROLE, or user model name in case of multiple user models',
   })
   principalType?: string;
 

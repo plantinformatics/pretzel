@@ -23,13 +23,13 @@ export class Role extends Entity {
 
   @property({
     type: 'date',
-    defaultFn: now,
+    defaultFn: 'now',
   })
   created?: string;
 
   @property({
     type: 'date',
-    defaultFn: now,
+    defaultFn: 'now',
   })
   modified?: string;
 

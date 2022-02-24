@@ -12,27 +12,28 @@ export class AccessToken extends Entity {
     type: 'number',
     ttl: true,
     default: 1209600,
-    description: time to live in seconds (2 weeks by default),
+    description: 'time to live in seconds (2 weeks by default)',
   })
   ttl?: number;
 
   @property({
     type: 'array',
-    description: Array of scopes granted to this access token.,
+    description: 'Array of scopes granted to this access token.',
     itemType: 'string',
   })
   scopes?: string[];
 
   @property({
     type: 'date',
-    defaultFn: now,
+    defaultFn: 'now',
   })
   created?: string;
 
   @property({
-    type: 'ObjectID',
+    type: 'string',
+    mongodb: {dataType: 'ObjectID'},
   })
-  userId?: ObjectID;
+  userId?: string;
 
   // Define well-known properties here
 

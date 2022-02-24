@@ -3,10 +3,10 @@ import {Entity, model, property} from '@loopback/repository';
 @model({
   settings: {
     strict: false,
-    description: [
-      'Schema for Scope which represents the permissions that are granted',
+    description: //[
+      'Schema for Scope which represents the permissions that are granted' + ' ' + //,
       'to client applications by the resource owner'
-    ]
+    //]
   }
 })
 export class Scope extends Entity {

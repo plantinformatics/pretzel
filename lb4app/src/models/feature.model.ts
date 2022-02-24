@@ -11,12 +11,13 @@ import {Entity, model, property} from '@loopback/repository';
 })
 export class Feature extends Entity {
   @property({
-    type: 'ObjectID',
+    type: 'string',
+    mongodb: {dataType: 'ObjectID'},
     id: 1,
     generated: true,
     updateOnly: true,
   })
-  id?: ObjectID;
+  id?: string;
 
   @property({
     type: 'string',
@@ -31,14 +32,16 @@ export class Feature extends Entity {
   value: any;
 
   @property({
-    type: 'ObjectID',
+    type: 'string',
+    mongodb: {dataType: 'ObjectID'},
   })
-  blockId?: ObjectID;
+  blockId?: string;
 
   @property({
-    type: 'ObjectID',
+    type: 'string',
+    mongodb: {dataType: 'ObjectID'},
   })
-  parentId?: ObjectID;
+  parentId?: string;
 
   // Define well-known properties here
 

@@ -10,12 +10,13 @@ import {Entity, model, property} from '@loopback/repository';
 })
 export class Record extends Entity {
   @property({
-    type: 'number',
+    type: 'string',
+    mongodb: {dataType: 'ObjectID'},
     id: 1,
     generated: true,
     updateOnly: true,
   })
-  id?: number;
+  id?: string;
 
   @property({
     type: 'boolean',
@@ -31,13 +32,13 @@ export class Record extends Entity {
 
   @property({
     type: 'date',
-    default: $now,
+    default: '$now',
   })
   createdAt?: string;
 
   @property({
     type: 'date',
-    default: $now,
+    default: '$now',
   })
   updatedAt?: string;
 

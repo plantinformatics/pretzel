@@ -12,13 +12,13 @@ export class Acl extends Entity {
 
   @property({
     type: 'string',
-    description: The name of the model,
+    description: 'The name of the model',
   })
   model?: string;
 
   @property({
     type: 'string',
-    description: The name of the property, method, scope, or relation,
+    description: 'The name of the property, method, scope, or relation',
   })
   property?: string;
 

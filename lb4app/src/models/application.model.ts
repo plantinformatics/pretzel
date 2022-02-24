@@ -26,19 +26,19 @@ export class Application extends Entity {
 
   @property({
     type: 'string',
-    description: The icon image url,
+    description: 'The icon image url',
   })
   icon?: string;
 
   @property({
     type: 'string',
-    description: The user id of the developer who registers the application,
+    description: 'The user id of the developer who registers the application',
   })
   owner?: string;
 
   @property({
     type: 'array',
-    description: A list of users ids who have permissions to work on this app,
+    description: 'A list of users ids who have permissions to work on this app',
     itemType: 'string',
   })
   collaborators?: string[];
@@ -55,20 +55,20 @@ export class Application extends Entity {
 
   @property({
     type: 'string',
-    description: The application URL for OAuth 2.0,
+    description: 'The application URL for OAuth 2.0',
   })
   url?: string;
 
   @property({
     type: 'array',
-    description: OAuth 2.0 code/token callback URLs,
+    description: 'OAuth 2.0 code/token callback URLs',
     itemType: 'string',
   })
   callbackUrls?: string[];
 
   @property({
     type: 'array',
-    description: A list of permissions required by the application,
+    description: 'A list of permissions required by the application',
     itemType: 'string',
   })
   permissions?: string[];
@@ -103,7 +103,7 @@ export class Application extends Entity {
     apns: {production: {type: 'boolean', description: ['Production or development mode. It denotes what default APNS', 'servers to be used to send notifications.', 'See API documentation for more details.']}, certData: {type: 'string', description: 'The certificate data loaded from the cert.pem file'}, keyData: {type: 'string', description: 'The key data loaded from the key.pem file'}, pushOptions: {type: {gateway: 'string', port: 'number'}}, feedbackOptions: {type: {gateway: 'string', port: 'number', batchFeedback: 'boolean', interval: 'number'}}},
     gcm: {serverApiKey: 'string'},
   })
-  pushSettings?: AnonymousModel_0;
+  pushSettings?: object; // AnonymousModel_0;
 
   @property({
     type: 'boolean',
@@ -126,20 +126,20 @@ export class Application extends Entity {
 
   @property({
     type: 'string',
-    default: sandbox,
-    description: Status of the application, production/sandbox/disabled,
+    default: 'sandbox',
+    description: 'Status of the application, production/sandbox/disabled',
   })
   status?: string;
 
   @property({
     type: 'date',
-    defaultFn: now,
+    defaultFn: 'now',
   })
   created?: string;
 
   @property({
     type: 'date',
-    defaultFn: now,
+    defaultFn: 'now',
   })
   modified?: string;
 

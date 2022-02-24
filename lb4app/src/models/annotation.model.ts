@@ -4,12 +4,13 @@ import {Record} from '.';
 @model({settings: {strict: false, description: 'Data commentary and insights'}})
 export class Annotation extends Record {
   @property({
-    type: 'ObjectID',
+    type: 'string',
+    mongodb: {dataType: 'ObjectID'},
     id: 1,
     generated: true,
     updateOnly: true,
   })
-  id?: ObjectID;
+  id?: string;
 
   @property({
     type: 'string',
@@ -18,24 +19,28 @@ export class Annotation extends Record {
   name: string;
 
   @property({
-    type: 'ObjectID',
+    type: 'string',
+    mongodb: {dataType: 'ObjectID'},
   })
-  clientId?: ObjectID;
+  clientId?: string;
 
   @property({
-    type: 'ObjectID',
+    type: 'string',
+    mongodb: {dataType: 'ObjectID'},
   })
-  groupId?: ObjectID;
+  groupId?: string;
 
   @property({
-    type: 'ObjectID',
+    type: 'string',
+    mongodb: {dataType: 'ObjectID'},
   })
-  blockId?: ObjectID;
+  blockId?: string;
 
   @property({
-    type: 'ObjectID',
+    type: 'string',
+    mongodb: {dataType: 'ObjectID'},
   })
-  featureId?: ObjectID;
+  featureId?: string;
 
   // Define well-known properties here
 

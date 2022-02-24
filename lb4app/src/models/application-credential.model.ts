@@ -13,13 +13,13 @@ export class ApplicationCredential extends Entity {
   @property({
     type: 'string',
     required: true,
-    comments: Facebook, google, twitter, linkedIn,
+    comments: 'Facebook, google, twitter, linkedIn',
   })
   provider: string;
 
   @property({
     type: 'string',
-    comments: oAuth, oAuth 2.0, OpenID, OpenID Connect,
+    comments: 'oAuth, oAuth 2.0, OpenID, OpenID Connect',
   })
   authScheme?: string;
 

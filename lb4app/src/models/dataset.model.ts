@@ -38,14 +38,16 @@ export class Dataset extends Record {
   meta?: object;
 
   @property({
-    type: 'ObjectID',
+    type: 'string',
+    mongodb: {dataType: 'ObjectID'},
   })
-  clientId?: ObjectID;
+  clientId?: string;
 
   @property({
-    type: 'ObjectID',
+    type: 'string',
+    mongodb: {dataType: 'ObjectID'},
   })
-  groupId?: ObjectID;
+  groupId?: string;
 
   @property({
     type: 'string',

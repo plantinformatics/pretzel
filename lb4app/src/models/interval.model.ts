@@ -4,12 +4,13 @@ import {Record} from '.';
 @model({settings: {strict: false, description: 'Commentary on Feature range'}})
 export class Interval extends Record {
   @property({
-    type: 'ObjectID',
+    type: 'string',
+    mongodb: {dataType: 'ObjectID'},
     id: 1,
     generated: true,
     updateOnly: true,
   })
-  id?: ObjectID;
+  id?: string;
 
   @property({
     type: 'string',
@@ -32,19 +33,22 @@ export class Interval extends Record {
   positions?: string[];
 
   @property({
-    type: 'ObjectID',
+    type: 'string',
+    mongodb: {dataType: 'ObjectID'},
   })
-  clientId?: ObjectID;
+  clientId?: string;
 
   @property({
-    type: 'ObjectID',
+    type: 'string',
+    mongodb: {dataType: 'ObjectID'},
   })
-  groupId?: ObjectID;
+  groupId?: string;
 
   @property({
-    type: 'ObjectID',
+    type: 'string',
+    mongodb: {dataType: 'ObjectID'},
   })
-  blockId?: ObjectID;
+  blockId?: string;
 
   // Define well-known properties here
 

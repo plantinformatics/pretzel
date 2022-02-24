@@ -12,19 +12,19 @@ export class UserIdentity extends Entity {
 
   @property({
     type: 'string',
-    comments: facebook, google, twitter, linkedin,
+    comments: 'facebook, google, twitter, linkedin',
   })
   provider?: string;
 
   @property({
     type: 'string',
-    comments: oAuth, oAuth 2.0, OpenID, OpenID Connect,
+    comments: 'oAuth, oAuth 2.0, OpenID, OpenID Connect',
   })
   authScheme?: string;
 
   @property({
     type: 'string',
-    comments: The provider specific id,
+    comments: 'The provider specific id',
   })
   externalId?: string;
 
@@ -49,9 +49,10 @@ export class UserIdentity extends Entity {
   modified?: string;
 
   @property({
-    type: 'ObjectID',
+    type: 'string',
+    mongodb: {dataType: 'ObjectID'},
   })
-  userId?: ObjectID;
+  userId?: string;
 
   // Define well-known properties here
 
