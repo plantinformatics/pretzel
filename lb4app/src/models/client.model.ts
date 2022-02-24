@@ -1,5 +1,7 @@
-import {model, property} from '@loopback/repository';
+import {model, property, hasMany} from '@loopback/repository';
 import {User} from '.';
+import {Group} from './group.model';
+import {ClientGroup} from './client-group.model';
 
 @model({
   settings: {
@@ -16,6 +18,8 @@ export class Client extends User {
   })
   groupIds?: string[];
 
+  @hasMany(() => Group, {through: {model: () => ClientGroup}})
+  groups: Group[];
   // Define well-known properties here
 
   // Indexer property to allow additional data

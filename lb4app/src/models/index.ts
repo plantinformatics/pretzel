@@ -19,3 +19,4 @@ export * from './interval.model';
 export * from './alias.model';
 export * from './configuration.model';
 export * from './ontology.model';
+export * from './client-group.model';
