@@ -147,4 +147,28 @@ export class GroupController {
   async deleteById(@param.path.string('id') id: string): Promise<void> {
     await this.groupRepository.deleteById(id);
   }
+
+  // -----------------------------------------------------------------------------
+
+  @get('/api/groups/own')
+  @response(200, {
+    description: 'Array of Group model instances owned/created by the logged-in user',
+    content: {
+      'application/json': {
+        schema: {
+          type: 'array',
+          items: getModelSchemaRef(Group, {includeRelations: true}),
+        },
+      },
+    },
+  })
+  async findOwn(
+    @param.filter(Group) filter?: Filter<Group>,
+  ): Promise<Group[]> {
+    console.log('/api/groups/own', filter);
+    return this.groupRepository.find(filter);
+  }
+
+  // -----------------------------------------------------------------------------
+
 }
