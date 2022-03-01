@@ -25,13 +25,14 @@ Router.map(function() {
     this.route('geneticmap', { path: '/:geneticmap_id' });
   });
   this.route('groups', { path: '/groups' }, function() {
-    this.route('group', { path: '/:group_id' }, function() {
-      this.route('edit');
-      this.route('delete');
-    });
     this.route('add');
+  });
+  this.route('group', { path: '/group/:group_id' }, function() {
+    this.route('edit');
+    this.route('delete');
   });
 
   // landing page if not handled previously
   this.route('404', { path: '/*wildcard' });
+
 });

@@ -1,21 +1,18 @@
-<label>Added groups</label>
+<label>Owned / added groups</label>
 {{#each this.model.groups as |group|}}
-  <div>
+  <div class="margin-1em">
+    {{!-- model=group --}}
+    {{#link-to 'group.edit' group  classNames='btn btn-info btn-xs' tagName='button'}}
+      <i class="glyphicon glyphicon-pencil"></i>
+    {{/link-to}}
+
+    {{#link-to 'group.delete' group  classNames='btn btn-info btn-xs' tagName='button'}}
+      <i class="glyphicon glyphicon-remove"></i>
+    {{/link-to}}
+
    {{group.id}}
    {{group.clientId}}
    {{group.name}}
-
-   {{!-- model=group  --}}
-   {{!-- 
-    {{#link-to 'group.edit' classNames='btn btn-info pull-right' tagName='button'}}
-      Edit Group
-    {{/link-to}}
-
-    {{#link-to 'group.delete'  classNames='btn btn-info pull-right' tagName='button'}}
-      Delete Group
-    {{/link-to}}
-    --}}
-
   </div>
 {{/each}}
 

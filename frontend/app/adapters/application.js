@@ -5,7 +5,10 @@ import { inject as service } from '@ember/service';
 import RESTAdapter from '@ember-data/adapter/rest';
 import DataAdapterMixin from 'ember-simple-auth/mixins/data-adapter-mixin';
 // import PartialModelAdapter from 'ember-data-partial-model/mixins/adapter';
+import { pluralize } from 'ember-inflector';
+
 import ENV from '../config/environment';
+
 
 import {
   getConfiguredEnvironment,
@@ -156,7 +159,20 @@ var config = {
       }
       return res;
     });
-  }
+  },
+
+  pathForType(type) {
+    let path;
+    if (type == "client-group") {
+      path = pluralize(type);
+    } else {
+      /** super will camel-case and pluralize the type */
+      path = this._super(...arguments);
+    }
+    dLog('pathForType', type, path);
+    return path;
+  },
+
 }
 
 var args = [/*PartialModelAdapter,*/ config]

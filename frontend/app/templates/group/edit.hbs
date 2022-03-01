@@ -1,0 +1,14 @@
+{{#let this.model as |group|}}
+ <div style="display:flex; gap:1em">
+
+   <button type="button" class="btn btn-info" {{on 'click' (action this.addClient) }}>Add</button>
+
+   <input
+     oninput={{action (action (mut this.newClientName) value="target.value") }}
+     placeholder="User name (email)"   >
+ </div>
+
+{{/let}}
+
+
+{{outlet}}
