@@ -9,15 +9,15 @@
   "properties": {},
   "validations": [],
   "relations": {
-    "client": {
+    "owner": {
       "type": "belongsTo",
       "model": "Client",
-      "foreignKey": "id"
+      "foreignKey": "_id"
     },
-    "members": {
-      "type": "hasMany",
+    "clients": {
+      "type": "hasAndBelongsToMany",
       "model": "Client",
-      "foreignKey": "id"
+      "throughTable": "ClientGroup"
     }
   },
   "acls": [],

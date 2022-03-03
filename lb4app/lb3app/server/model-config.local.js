@@ -44,6 +44,18 @@ var config = {
     "options": {
     }
   },
+  "Group": {
+    "dataSource": "mongoDs",
+    "public": true,
+    "options": {
+    }
+  },
+  "ClientGroup": {
+    "dataSource": "mongoDs",
+    "public": true,
+    "options": {
+    }
+  },
   "AccessToken": {
     "dataSource": "mongoDs",
     "public": false

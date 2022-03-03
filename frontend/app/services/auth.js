@@ -60,11 +60,19 @@ export default Service.extend({
   groups(own) {
     let verb = own ? 'own' : 'in';
     /** server API /own will implement this filter by default, but client can
-     * define it until LB4 API has clientId from accessToken.  */
+     * define it until LB4 API has clientId from accessToken.
+     * The LB3 API is /Groups/, and the LB4 is /groups/.
     let clientId = this.get('session.session.authenticated.clientId');
     let data = clientId ? {'filter[where]': {clientId}} : {};
     dLog('groups', own, clientId);
-    return this._ajax('groups/' + verb, 'GET', data, true);
+    + clientId + '/'
+     */
+    return this._ajax('Groups/' + verb, 'GET', /*data*/{}, true);
+  },
+
+  addClientGroupEmail(groupId, clientEmail) {
+    let data = {groupId, clientEmail};
+    return this._ajax('ClientGroups/addEmail', 'POST', JSON.stringify(data), true);
   },
 
   runtimeConfig() {

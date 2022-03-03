@@ -1,18 +1,26 @@
 {{#let this.model as |group|}}
- <div style="display:flex; gap:1em">
+  <label>Group</label>
+  <div>
 
+     <div class="margin-1em" style="display:flex; gap:1em">
+      {{group.id}}
+      {{group.clientId}}
+      {{group.name}}
+     </div>
 
-   <div>
-    {{group.id}}
-    {{group.clientId}}
-    {{group.name}}
-
-   </div>
+     <div style="margin : 2em">
+       <label>Group Members</label>
+       {{#each group.clients as |client|}}
+         <div class="margin-1em">
+          {{client.id}}
+          {{client.email}}
+         </div>
+       {{/each}}
+     </div>
 
  </div>
 
 
 {{/let}}
-
 
 {{outlet}}

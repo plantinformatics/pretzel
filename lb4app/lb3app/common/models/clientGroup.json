@@ -1,0 +1,24 @@
+{
+  "name": "ClientGroup",
+  "description": "User Group membership",  
+  "base": "PersistedModel",
+  "idInjection": true,
+  "options": {
+    "validateUpsert": true
+  },
+  "properties": {
+  },
+  "validations": [],
+  "relations": {
+    "client": {
+      "type": "belongsTo",
+      "model": "Client"
+    },
+    "group": {
+      "type": "belongsTo",
+      "model": "Group"
+    }
+  },
+  "acls": [],
+  "methods": {}
+}

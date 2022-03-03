@@ -2,7 +2,9 @@
 
 # compiled output
 /dist
-/backend/client
+# was /backend/
+/lb4app/lb3app/client
+/lb4app/lb3app/tmp
 /tmp
 /log
 *.log

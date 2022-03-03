@@ -59,8 +59,9 @@ module.exports = function(Group) {
     clientIdString = gatherClientId(options),
     query = {
       where: {
-        clientId: clientIdString
-      }
+        clientId: ObjectId(clientIdString)
+      },
+      include : 'clients'
     },
     listP = Group.find(query, options);
     listP.then((list) => console.log(fnName, clientIdString, list.length || JSON.stringify([query, options]) ));
@@ -71,6 +72,7 @@ module.exports = function(Group) {
   /** group/own (session clientId) -> [groupName, .. ] and/or groupId
    */
   Group.remoteMethod('own', {
+    http: {verb: 'get'},
     accepts: [
       {arg: "options", type: "object", http: "optionsFromRequest"},
     ],
@@ -82,15 +84,28 @@ module.exports = function(Group) {
 
   /** List groups which this user is in
    */
-  Group.in = function (cb) {
+  Group.in = function (options, cb) {
     const
-    fnName = 'in';
+    fnName = 'in',
+    clientIdString = gatherClientId(options),
+    query = {
+      where: {
+        clientId: ObjectId(clientIdString)
+      },
+      include : 'group'
+    },
+    listP = this.app.models.ClientGroup.find(query, options);
+    listP.then((list) => console.log(fnName, clientIdString, list.length || JSON.stringify([query, options]) ));
+
+    return listP;
   };
 
   /** group/in (session clientId) -> [groupName, .. ] and/or groupId
    */
   Group.remoteMethod('in', {
+    http: {verb: 'get'},
     accepts: [
+      {arg: "options", type: "object", http: "optionsFromRequest"},
     ],
     returns: {type: 'object', root: true},
     description: "List groups which this user is in"

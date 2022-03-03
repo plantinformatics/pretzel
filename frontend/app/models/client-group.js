@@ -1,8 +1,8 @@
-import Model, { attr } from '@ember-data/model';
+import Model, { attr, belongsTo } from '@ember-data/model';
 
 export default class ClientGroupModel extends Model {
 
-  @attr('string') clientId;
-  @attr('string') groupId;
+  @belongsTo('client') clientId;
+  @belongsTo('group') groupId;
 
 }
