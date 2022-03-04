@@ -10,6 +10,7 @@ import DS from 'ember-data';
 /* global d3 */
 
 import { axisFeatureCircles_selectOne, axisFeatureCircles_selectUnviewed } from '../utils/draw/axis';
+import { thenOrNow } from '../utils/common/promises';
 
 /*----------------------------------------------------------------------------*/
 
@@ -222,7 +223,16 @@ export default Controller.extend(Evented, {
        * matching blockId. */
       this.send('selectBlock', selectedBlock)
     },
+    /**
+     * @param ds may be a promise (yielding a Dataset object)
+     */
     selectDataset: function(ds) {
+      thenOrNow(ds, (dataset) => this.actions.selectDatasetValue.apply(this, [dataset]));
+    },
+    /**
+     * @param ds is a Dataset object, not a promise
+     */
+    selectDatasetValue: function(ds) {
       /** Switching to the dataset tab in right panel is useful if there is a
        * change of selected dataset, but when adjusting the axis brush, it is
        * un-ergonomic to constantly switch to the dataset tab, closing the

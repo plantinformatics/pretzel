@@ -23,6 +23,12 @@
   },
   "validations": [],
   "relations": {
+    "group": {
+      "type": "belongsTo",
+      "model": "Group",
+      "foreignKey": "",
+      "required": false
+    },
     "blocks": {
       "type": "hasMany",
       "model": "Block"

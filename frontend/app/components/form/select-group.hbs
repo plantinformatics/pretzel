@@ -1,0 +1,8 @@
+{{!-- (queue (mut selectedValue) (action @selectedValueChanged)) --}}
+  <select onchange={{action @selectedValueChanged value="target.value"}}>
+    {{#each @values as |optionValue|}}
+      <option value={{optionValue.group.id}} selected={{eq selectedValue optionValue}}>{{optionValue.group.name}}</option>
+    {{/each}}
+  </select>
+
+{{yield}}

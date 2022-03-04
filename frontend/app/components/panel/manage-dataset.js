@@ -1,9 +1,11 @@
+import { inject as service } from '@ember/service';
 import { computed, observer } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import { later as run_later } from '@ember/runloop';
 
 import $ from 'jquery';
 
+import { toArrayPromiseProxy } from '../../utils/ember-devel';
 
 import ManageBase from './manage-base';
 
@@ -13,9 +15,13 @@ const dLog = console.debug;
 const trace = 0;
 
 export default ManageBase.extend({
+  auth : service(),
+  controls : service(),
+
   editorVisible: false,
   toggleShowJsonViewer : true,
   currentMeta: {},
+
 
   onEditable : function() { dLog('onEditable'); return false; },
 
@@ -72,6 +78,45 @@ export default ManageBase.extend({
       this.toggleProperty('toggleShowJsonViewer');
       run_later(() => $('a.jsoneditor-value').attr('target', '_blank'));
     });
-  }
+  },
+
+  inGroups : computed(
+    'controls.apiServerSelectedOrPrimary.store',
+    function () {
+      let
+      /** 
+    'session.session.authenticated.clientId',
+          session : service(),
+      clientId = this.get('session.session.authenticated.clientId'),
+      */
+      store = this.get('controls.apiServerSelectedOrPrimary.store'),
+      groupsP = this.get('auth').groups(/*own*/false),
+      modelP = {groups : toArrayPromiseProxy(groupsP)};
+      return modelP;
+    }),
+
+  selectedGroupChanged(selectedGroupId) {
+    let
+    // currentGroup = this.dataset.content.groupId.content,
+    gs = this.inGroups.groups,
+    selectedGroup = gs.findBy('group.id', selectedGroupId),
+    groupValue = selectedGroup.group;
+    dLog('selectedGroupChanged', selectedGroupId, selectedGroup, groupValue?.name, groupValue?.id, arguments, this);
+    if (groupValue?.id) {
+      let
+      store = this.dataset.store;
+      store.findRecord('group', groupValue.id)
+        .catch((err) => this.set('datasetGroupErrMsg', 'Group ' + selectedGroupId + ':' + groupValue.id + ' not found.\n' + err))
+        .then((group) => {
+          if (! group) {
+            this.set('datasetGroupErrMsg', 'Group ' + selectedGroupId + ':' + groupValue.id + ' not found');
+          } else {
+            this.dataset.set('groupId', group);
+            this.dataset.save()
+              .catch((err) => this.set('datasetGroupErrMsg', 'Dataset Group change ' + selectedGroupId + ':' + groupValue.id + ' not saved.\n' + err));
+          }
+        });
+    }
+  },
 
 });

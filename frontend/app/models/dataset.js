@@ -1,6 +1,6 @@
 import { computed } from '@ember/object';
 import { inject as service } from '@ember/service';
-import { attr, hasMany } from '@ember-data/model';
+import { attr, hasMany, belongsTo } from '@ember-data/model';
 
 import Record from './record';
 
@@ -90,6 +90,7 @@ export default Record.extend({
     return c;
   }),
 
+  groupId: belongsTo('group'),
   blocks: hasMany('block', { async: false }),
   type: attr('string'),
   namespace: attr('string'),
