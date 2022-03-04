@@ -108,7 +108,16 @@ module.exports = function(app) {
       context.property === 'getTree' ||
         // Dataset
       context.property === 'cacheClear' ||
-      context.property === 'cacheClearRequests'
+      context.property === 'cacheClearRequests' ||
+        // Group 
+      context.property === 'own' ||
+      context.property === 'in' ||
+        // addMember not used
+        // ClientGroup 
+      context.property === 'addEmail' ||
+
+        // end of list
+        false
        ) {
       // allow find, create and upload requests
       return process.nextTick(() => cb(null, true))
