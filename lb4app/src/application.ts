@@ -12,6 +12,7 @@ import {Lb3AppBooterComponent} from '@loopback/booter-lb3app';
 import path from 'path';
 import {MySequence} from './sequence';
 
+/* global process */
 
 export {ApplicationConfig};
 
@@ -27,14 +28,14 @@ export class PretzelApplication extends BootMixin(
     // Set up default home page
     this.static('/', path.join(__dirname, '../public'));
 
+    if (process.env.API4_EXPLORER) {
+      console.log('/explorer enabled by API4_EXPLORER');
     // Customize @loopback/rest-explorer configuration here
-
-/*
     this.configure(RestExplorerBindings.COMPONENT).to({
       path: '/explorer',
     });
     this.component(RestExplorerComponent);
-*/
+    }
 
     this.projectRoot = __dirname;
     // Customize @loopback/boot Booter Conventions here
