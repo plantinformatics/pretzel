@@ -1,5 +1,8 @@
 /* global process */
 /* global module */
+/* global require */
+
+var clientGroups = require('../../common/utilities/client-groups');
 
 module.exports = function(app) {
   var Role = app.models.Role;
@@ -7,6 +10,24 @@ module.exports = function(app) {
   function isOwner(data, userId) {
     let clientId = String(data.clientId)
     return clientId == userId
+  }
+
+  /**
+   * @param data.groupId and clientId are BSON
+   */
+  function isInGroup(data, clientId) {
+    /** expect that clientId is BSON; handle either.
+     * clientGroups[clientId] is equivalent to clientGroups[clientIdString], but the latter is clearer.
+     */
+    let clientIdString = clientId.toHexString ? clientId.toHexString() : clientId;
+    /** groupId of the Record (Dataset / Interval / Annotation / ). */
+    let groupId = String(data.groupId);
+    /** groups of the logged-in user.  String, from ClientGroups:update()). */
+    let groups = clientGroups.clientGroups.clientGroups[clientIdString];
+    console.log('isInGroup', clientIdString, groups, data);
+    // can use ObjectId .equals() for comparing BSON with String
+    let ok = groups.find((id) => id == groupId);
+    return ok;
   }
 
   function isPublic(data) {
@@ -18,7 +39,8 @@ module.exports = function(app) {
   }
 
   function canRead(data, userId) {
-    return isOwner(data, userId) || isPublic(data)
+    let ok = isOwner(data, userId) || isInGroup(data, userId) || isPublic(data);
+    return ok;
   }
 
   function canWrite(data, userId) {

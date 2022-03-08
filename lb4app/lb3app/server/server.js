@@ -69,6 +69,8 @@ var loopbackPassport = require('loopback-component-passport');
 var morgan = require('morgan');
 var bodyParser = require('body-parser');
 
+var clientGroups = require('../common/utilities/client-groups');
+
 var app = module.exports = loopback();
 
 // app.use(bodyParser.json({limit: '200mb'}));
@@ -169,5 +171,12 @@ app.use('/', loopback.static(clientPath));
 // validation, as the confirm API request would deliver files
 // instead of hitting the API as desired.
 app.use(/^((?!api).)*$/, loopback.static(clientPath));
+
+// -----------------------------------------------------------------------------
+
+/** Activate the service. */
+clientGroups.clientGroups.init(app);
+
+// -----------------------------------------------------------------------------
 
 module.exports = app; // for testing
