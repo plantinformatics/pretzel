@@ -134,9 +134,13 @@ module.exports = function(Group) {
 
   // ---------------------------------------------------------------------------
 
+
+  acl.assignRulesRecord(Group);
+  acl.limitRemoteMethods(Group);
   acl.limitRemoteMethodsRelated(Group);
 
   // Group.disableRemoteMethodByName("create");
+/*
   Group.disableRemoteMethodByName("upsert");
   Group.disableRemoteMethodByName("updateAll");
   Group.disableRemoteMethodByName("prototype.updateAttributes");
@@ -154,4 +158,5 @@ module.exports = function(Group) {
   Group.disableRemoteMethodByName("exists");
   Group.disableRemoteMethodByName("resetPassword");
   Group.disableRemoteMethodByName("upsertWithWhere");
+*/
 };
