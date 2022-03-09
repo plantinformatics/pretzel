@@ -85,6 +85,7 @@ var config = {
    * The adapterOptions don't seem to be passed to get('host')
    */
   buildURL(modelName, id, snapshot, requestType, query) {
+    let fnName = 'buildURL';
     let serverHandle;
     /** snapshot may be an array of snapshots.
      *  apparently snapshotRecordArray has the options, as adapterOptionsproperty,
@@ -93,17 +94,17 @@ var config = {
     if (snapshot)
     {
       serverHandle = snapshot.adapterOptions || (snapshot.length && snapshot[0].adapterOptions);
-      console.log('buildURL snapshot.adapterOptions', serverHandle);
+      console.log(fnName, 'snapshot.adapterOptions', serverHandle);
     }
     else if (query)
     {
-      console.log('buildURL query', query);
+      console.log(fnName, 'query', query);
       serverHandle = query;
     }
     if (! serverHandle && id)
     {
       serverHandle = id;
-      console.log('buildURL id', id);
+      console.log(fnName, 'id', id);
     }
     // this applies when serverHandle is defined or undefined
     {
@@ -118,7 +119,7 @@ var config = {
       snapshotServer = servers && servers[snapshotServerName],
       server = map.get(serverHandle) || (id && id2Server[id]) || snapshotServer;
       if (trace)
-        dLog('buildURL id2Server', id2Server, map, id, server, requestType, snapshotServerName);
+        dLog(fnName, 'id2Server', id2Server, map, id, server, requestType, snapshotServerName);
       /* if server is undefined or null then this code clears this._server and
        * session.requestServer, which means the default / local / primary
        * server is used.
@@ -128,7 +129,9 @@ var config = {
         this.set('session.requestServer', server);
       }
     }
-    return this._super(modelName, id, snapshot, requestType, query);
+    let url = this._super(modelName, id, snapshot, requestType, query);
+    dLog(fnName, 'url', url, modelName, id, /*snapshot,*/ requestType);
+    return url;
   },
 
   updateRecord(store, type, snapshot) {
