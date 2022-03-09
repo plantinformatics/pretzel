@@ -1,5 +1,6 @@
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
+import { action } from '@ember/object';
 
 
 import { toArrayPromiseProxy } from '../utils/ember-devel';
@@ -20,8 +21,15 @@ export default class GroupsRoute extends Route {
     // filter :  {'include': 'clients'}
     // filter: {clientId} (where : {clientId} )
     // store.query('group', {}),
-    groupsP = this.get('auth').groups(/*own*/true),
-    modelP = {groups : toArrayPromiseProxy(groupsP)};
+    groupsP = [false, true].map(
+      (own) => toArrayPromiseProxy(this.get('auth').groups(own))),
+    modelP = {groupsIn : groupsP[0], groupsOwn : groupsP[1]};
     return modelP;
   }
+
+  @action
+  refreshModel() {
+    this.refresh();
+  }
+
 }

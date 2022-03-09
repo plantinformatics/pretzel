@@ -22,6 +22,7 @@ function sessionClientId(context) {
   let
   accessToken = context.accessToken || context.req.accessToken, 
   userId = accessToken.userId.toHexString();
+  return userId;
 }
 
 

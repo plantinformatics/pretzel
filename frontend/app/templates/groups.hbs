@@ -1,5 +1,5 @@
 <label>Owned / added groups</label>
-{{#each this.model.groups as |group|}}
+{{#each this.model.groupsOwn as |group|}}
   <div class="margin-1em">
     {{!-- model=group --}}
     {{#link-to 'group.edit' group  classNames='btn btn-info btn-xs' tagName='button'}}
@@ -16,14 +16,22 @@
   </div>
 {{/each}}
 
+
 {{#link-to 'groups.add' classNames='btn btn-info' tagName='button'}}
 Add Group
 {{/link-to}}
 
-{{!--
 <hr>
 
 <label>Joined groups</label>
---}}
+{{#each this.model.groupsIn as |group|}}
+  <div class="margin-1em">
+   {{group.groupId}}
+   {{group.clientId}}
+   {{group.group.name}}
+  </div>
+{{/each}}
+
+
 
 {{outlet}}

@@ -48,6 +48,7 @@ export default Controller.extend({
       let store = this.get('apiServers.primaryServer.store');
       dLog(fnName, this.store, store);
 
+      {
         var group = store.createRecord('group', {
           name: newGroupName,
           clientId
@@ -55,7 +56,13 @@ export default Controller.extend({
         let p = group.save();
         
         this.set(msgName, p);
+
+        p.then((obj) => {
+          this.send('refreshModel');
+          this.transitionToRoute('groups');
+        });
       }
+    }
   }
 
   //}
