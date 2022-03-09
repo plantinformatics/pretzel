@@ -25,8 +25,10 @@ export class PretzelApplication extends BootMixin(
     // Set up the custom sequence
     this.sequence(MySequence);
 
-    // Set up default home page
-    this.static('/', path.join(__dirname, '../public'));
+    if (process.env.API4_STATIC) {
+      // Set up default home page
+      this.static('/', path.join(__dirname, '../public'));
+    }
 
     if (process.env.API4_EXPLORER) {
       console.log('/explorer enabled by API4_EXPLORER');
@@ -42,6 +44,7 @@ export class PretzelApplication extends BootMixin(
     this.bootOptions = {
       controllers: {
         // Customize ControllerBooter Conventions here
+        // default : dirs: ['controllers']
         dirs: ['controllers'],
         extensions: ['.controller.js'],
         nested: true,

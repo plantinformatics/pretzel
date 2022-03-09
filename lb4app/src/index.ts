@@ -19,7 +19,7 @@ if (require.main === module) {
   const config = {
     rest: {
       // default basePath seems to be '', also some doc indicated '/api',
-      basePath : '/api',
+      // basePath : '/api',
       port: +(process.env.PORT ?? 3000),
       host: process.env.HOST,
       // The `gracePeriodForClose` provides a graceful close for http/https

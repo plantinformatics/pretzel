@@ -32,7 +32,8 @@
     "preopenapi-spec": "npm run build",
     "openapi-spec": "node ./dist/openapi-spec",
     "prestart": "npm run rebuild",
-    "start": "node $NODE_INSPECT -r source-map-support/register .",
+    "start-no-pre": "node $NODE_INSPECT -r source-map-support/register .",
+    "start" : "npm run start-no-pre",
     "clean": "lb-clean dist *.tsbuildinfo .eslintcache",
     "rebuild": "npm run clean && npm run build"
   },

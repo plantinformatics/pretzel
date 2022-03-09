@@ -9,7 +9,7 @@ process.env.API_PORT_EXT = (process.env.API_PORT_EXT || 3000);
 // using conditional expressions
 var config = {
   // done by src/index.ts: basePath
-  "restApiRoot": "", // "/api",
+  "restApiRoot": "/api",
   "host": "0.0.0.0",
   "port": process.env.API_PORT_EXT,
   "remoting": {
