@@ -22,8 +22,35 @@ export default class GroupsRoute extends Route {
     // filter: {clientId} (where : {clientId} )
     // store.query('group', {}),
     groupsP = [false, true].map(
-      (own) => toArrayPromiseProxy(this.get('auth').groups(own))),
-    modelP = {groupsIn : groupsP[0], groupsOwn : groupsP[1]};
+      (own) => this.get('auth').groups(own)),
+    modelP = {}; // groupsOwn : toArrayPromiseProxy(groupsP[1])};
+
+    let serializer = store.serializerFor('client-group');
+    let groupsP0R = 
+    groupsP[0].then((cgs) => {
+      let cgrs = cgs.map((cg) => {
+        // .push; store.normalize('client-group', cg);
+        let j = serializer.normalizeGroupsIn(cg),
+        jr = serializer.store.push(j);
+        return jr;
+      });
+      return cgrs;
+    });
+    modelP.groupsIn = toArrayPromiseProxy(groupsP0R);
+
+    let groupSerializer = store.serializerFor('group');
+    let groupsP1R = 
+    groupsP[1].then((gs) => {
+      let grs = gs.map((g) => {
+        let j = groupSerializer.normalizeGroupsOwn(g),
+        jr = groupSerializer.store.push(j);
+        return jr;
+      });
+      return grs;
+    });
+    modelP.groupsOwn = toArrayPromiseProxy(groupsP1R);
+
+
     return modelP;
   }
 

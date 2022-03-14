@@ -11,7 +11,7 @@
     {{/link-to}}
 
    {{group.id}}
-   {{group.clientId}}
+   {{group.clientId.name}}
    {{group.name}}
   </div>
 {{/each}}
@@ -24,11 +24,11 @@ Add Group
 <hr>
 
 <label>Joined groups</label>
-{{#each this.model.groupsIn as |group|}}
+{{#each this.model.groupsIn as |clientGroup|}}
   <div class="margin-1em">
-   {{group.groupId}}
-   {{group.clientId}}
-   {{group.group.name}}
+   {{clientGroup.id}}
+   {{clientGroup.clientId.name}}
+   {{clientGroup.groupId.name}}
   </div>
 {{/each}}
 

@@ -53,6 +53,7 @@ module.exports = function(Group) {
   // ---------------------------------------------------------------------------
 
   /** List groups which this user has created / owns
+   * @return promise yielding groups which have .clientId === the userId of request accessToken.
    */
   Group.own = function (options, cb) {
     const
@@ -84,6 +85,7 @@ module.exports = function(Group) {
   // ---------------------------------------------------------------------------
 
   /** List groups which this user is in
+   * @return promise yielding client-groups which have .clientId === the userId of request accessToken.
    */
   Group.in = function (options, cb) {
     const
