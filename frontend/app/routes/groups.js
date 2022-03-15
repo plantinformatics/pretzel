@@ -43,7 +43,7 @@ export default class GroupsRoute extends Route {
     groupsP[1].then((gs) => {
       let grs = gs.map((g) => {
         let j = groupSerializer.normalizeGroupsOwn(g),
-        jr = groupSerializer.store.push(j);
+        jr = j; // groupSerializer.store.push(j);
         return jr;
       });
       return grs;

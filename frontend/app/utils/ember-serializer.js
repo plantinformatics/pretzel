@@ -1,5 +1,6 @@
 import { pluralize } from 'ember-inflector';
 
+
 import { breakPoint } from './breakPoint';
 
 // -----------------------------------------------------------------------------
@@ -11,11 +12,12 @@ const dLog = console.debug;
   /** part of normalize -> JSON API
    */
   function normalizeData(modelName, host, d) {
-    dLog('normalizeGroupsIn', modelName, host, d);
+    dLog('normalizeData', modelName, host, d);
     let
-    {id, group, ...attributes} = d,
+    /** trim out /in .group, and /own .clients. caller does .relationships */
+    {id, group, clients, ...attributes} = d,
     links = {
-      self: host + '/' + pluralize(modelName) + '/' + id
+      self: host + '/api/' + pluralize(modelName) + '/' + id
     },
     data = {
       type : modelName,
@@ -36,6 +38,7 @@ const dLog = console.debug;
     host = store.adapterOptions.host || '',
     data = normalizeData(modelName, host, d),
     modelNameIncP = includedPlural ? pluralize(modelNameIncluded) : modelNameIncluded,
+
     d_included = d[modelNameIncP],
     /** if included model is not an array then put it in [] */
     d_includedP = includedPlural ? d_included : [d_included],
@@ -47,12 +50,14 @@ const dLog = console.debug;
     modelNameIncId = includedPlural ? modelNameIncP : modelNameIncP + 'Id',
     relationships = Object.fromEntries([[modelNameIncId, includedData]]);
     data.relationships = relationships;
-    delete data.attributes.modelNameIncId;
+    delete data.attributes[modelNameIncId];
     let
     included = d_includedP.map((c) => normalizeData(modelNameIncluded, host, c)),
+    subR = store.push({data: included}),
     result = {
       data, included
     };
+
     dLog(fnName, result);
     return result;
   };
