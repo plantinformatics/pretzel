@@ -31,12 +31,12 @@ export default class GroupsRoute extends Route {
       let cgrs = cgs.map((cg) => {
         // .push; store.normalize('client-group', cg);
         let j = serializer.normalizeGroupsIn(cg),
-        jr = serializer.store.push(j);
+        jr = j; // serializer.store.push(j);
         return jr;
       });
       return cgrs;
     });
-    modelP.groupsIn = toArrayPromiseProxy(groupsP0R);
+    modelP.groupsIn = toArrayPromiseProxy(groupsP0R.then((ps) => Promise.all(ps)));
 
     let groupSerializer = store.serializerFor('group');
     let groupsP1R = 

@@ -3,7 +3,7 @@ import { pluralize } from 'ember-inflector';
 import JSONAPISerializer from '@ember-data/serializer/json-api';
 
 
-import { normalizeDataEmbedded } from '../utils/ember-serializer';
+import { attribute2relationship, normalizeDataEmbedded } from '../utils/ember-serializer';
 
 // -----------------------------------------------------------------------------
 
@@ -28,17 +28,24 @@ export default class GroupSerializer extends JSONAPISerializer { // ApplicationS
     modelName = 'group',
     modelNameIncluded = 'client',
     includedPlural = true;
-    let result = normalizeDataEmbedded(this.store, modelName, modelNameIncluded, includedPlural, d);
+    let result = normalizeDataEmbedded(this.store, modelName, [modelNameIncluded], includedPlural, d);
+
+    let data = result.data;
+    // data.relationships is initialised
+    attribute2relationship(data, undefined, 'client', 'clientId');
 
     let 
     store = this.store,
+    /*
     primaryModelClass = store.modelFor(modelName),
     secondaryModelClass = store.modelFor(modelNameIncluded),
     subN = this.normalizeSingleResponse(store, primaryModelClass, {client : result.included}, d.id,   'groups/own'),
     subR = store.push({data: subN[modelNameIncluded]}),
     n = this.normalizeSingleResponse(
-      store, primaryModelClass, {group : result.data}, d.id, /*requestType*/ 'groups/own'),
+      store, primaryModelClass, {group : result.data}, d.id, 'groups/own'), // requestType
     nr = store.push({data: n.group}),
+    */
+    nr = store.push(result),
     result2 = nr;
 
     dLog(fnName, result2);

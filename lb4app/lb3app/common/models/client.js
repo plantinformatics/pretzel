@@ -205,7 +205,7 @@ module.exports = function(Client) {
   Client.disableRemoteMethodByName("prototype.updateAttributes");
 
   Client.disableRemoteMethodByName("find");
-  Client.disableRemoteMethodByName("findById");
+  // Client.disableRemoteMethodByName("findById");
   Client.disableRemoteMethodByName("findOne");
 
   Client.disableRemoteMethodByName("deleteById");

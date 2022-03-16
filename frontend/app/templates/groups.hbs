@@ -27,7 +27,7 @@ Add Group
 {{#each this.model.groupsIn as |clientGroup|}}
   <div class="margin-1em">
    {{clientGroup.id}}
-   {{clientGroup.clientId.name}}
+   {{clientGroup.groupId.clientId.email}}
    {{clientGroup.groupId.name}}
   </div>
 {{/each}}
