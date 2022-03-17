@@ -1,6 +1,5 @@
 import ApplicationSerializer from './application';
 import { pluralize } from 'ember-inflector';
-import JSONAPISerializer from '@ember-data/serializer/json-api';
 
 
 import { attribute2relationship, normalizeDataEmbedded } from '../utils/ember-serializer';
@@ -11,7 +10,7 @@ const dLog = console.debug;
 
 // -----------------------------------------------------------------------------
 
-export default class GroupSerializer extends JSONAPISerializer { // ApplicationSerializer {
+export default class GroupSerializer extends ApplicationSerializer {
   normalize(model, hash, prop) {
     dLog('normalize', model, hash, prop);
     var ret = this._super(...arguments);
@@ -34,23 +33,9 @@ export default class GroupSerializer extends JSONAPISerializer { // ApplicationS
     // data.relationships is initialised
     attribute2relationship(data, undefined, 'client', 'clientId');
 
-    let 
-    store = this.store,
-    /*
-    primaryModelClass = store.modelFor(modelName),
-    secondaryModelClass = store.modelFor(modelNameIncluded),
-    subN = this.normalizeSingleResponse(store, primaryModelClass, {client : result.included}, d.id,   'groups/own'),
-    subR = store.push({data: subN[modelNameIncluded]}),
-    n = this.normalizeSingleResponse(
-      store, primaryModelClass, {group : result.data}, d.id, 'groups/own'), // requestType
-    nr = store.push({data: n.group}),
-    */
-    nr = store.push(result),
-    result2 = nr;
+    dLog(fnName, result);
 
-    dLog(fnName, result2);
-
-    return result2;
+    return result;
   };
 
 }

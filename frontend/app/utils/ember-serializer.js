@@ -28,8 +28,9 @@ function normalizeData(modelName, host, d) {
   return data;
 };
 
-/**
- * @param modelName included object
+/** Move a data.attributes value to data.relationships
+ * @param modelName of object referenced by value
+ * @param fieldName which contains the value to move
  */
 function attribute2relationship(data, included, modelName, fieldName) {
   let
@@ -38,26 +39,26 @@ function attribute2relationship(data, included, modelName, fieldName) {
   delete attributes[fieldName];
 
   let
-  host = 'http://localhost:3000', // store.adapterOptions.host || '',
-  links = {
-    self: host + '/api/' + pluralize(modelName) + '/' + id
-  },
-  includedDataValue = {id, type : modelName/*pluralize()*/ /*, links*/ },
+  /** earlier version applied pluralize() to modelName, and constructed .links,
+   * commented-out in 9888b660, seems not required.
+   */
+  includedDataValue = {id, type : modelName},
   includedData = {
     data: includedDataValue
   };
-  /* data.relationships [] also seemed to work.  {} is the json-api convention.
-  entry = [fieldName, includedData],  // modelName
-  relationships = Object.fromEntries([entry]);
-  data.relationships.push(relationships);
-  */
   data.relationships[fieldName] = includedData;
 }
 
-/** normalize the result of /groups/in
+/** normalize the result of /groups/in and /groups/own
+ * @param store used for host in links, and to push included
+ * @param modelName
  * @param modelNameIncluded array of modelName; related object is embedded / included
+ * @param includedPlural if true then pluralize modelNameIncluded[i], otherwise append 'Id'
+
+ * Perhaps integrate attribute2relationship(), via params such as :
  * @param modifyFn  move data .attributes to .relationships, and possibly .included
  * @param modelNameRelation related object; field is object id.
+
  * @param d response data
  */
 function normalizeDataEmbedded(store, modelName, modelNameIncluded, includedPlural, d) {
@@ -69,6 +70,7 @@ function normalizeDataEmbedded(store, modelName, modelNameIncluded, includedPlur
   included = [],
   include1 = function (modelNameIncluded, includedPlural, d, attributes) {
     let
+    /** possibly get modelName and fieldName from model; or pass variant fieldName as param. */
     modelNameIncP = includedPlural ? pluralize(modelNameIncluded) : modelNameIncluded,
     modelNameIncId = includedPlural ? modelNameIncP : modelNameIncP + 'Id',
 
@@ -79,6 +81,7 @@ function normalizeDataEmbedded(store, modelName, modelNameIncluded, includedPlur
       /** if included model is not an array then put it in [] */
       d_includedP = includedPlural ? d_included : [d_included],
       included1 = d_includedP.map((c) => normalizeData(modelNameIncluded, host, c)),
+      /** this push may not be required, since included1 is appended to result.included */
       subR = store.push({data: included1}),
 
       data2IncFn = (c) => ({ type : modelNameIncluded, id: c.id || breakPoint(fnName, 'data2IncFn', c) });
