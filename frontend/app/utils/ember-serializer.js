@@ -81,8 +81,6 @@ function normalizeDataEmbedded(store, modelName, modelNameIncluded, includedPlur
       /** if included model is not an array then put it in [] */
       d_includedP = includedPlural ? d_included : [d_included],
       included1 = d_includedP.map((c) => normalizeData(modelNameIncluded, host, c)),
-      /** this push may not be required, since included1 is appended to result.included */
-      subR = store.push({data: included1}),
 
       data2IncFn = (c) => ({ type : modelNameIncluded, id: c.id || breakPoint(fnName, 'data2IncFn', c) });
       includedDataValue = includedPlural ? d_included.map(data2IncFn) : data2IncFn(d_included);
