@@ -19,12 +19,10 @@
         </td></tr>
       {{/if}}
 
-      {{#if dataset.groupId}}
-      <tr><td>Group</td><td>{{dataset.groupId.name}}<!-- {{dataset.groupId.id}} -->
+      <tr><td>Group</td><td>{{dataset.groupId.name}} {{dataset.groupId.clientId.email}}<!-- {{dataset.groupId.id}} -->
          {{form/select-group values=this.inGroups.groups selectedValueChanged=(action this.selectedGroupChanged) }}
          {{this.datasetGroupErrMsg}}
       </td></tr>
-      {{/if}}
 
     </tbody>
   </table>

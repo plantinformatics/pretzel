@@ -6,6 +6,7 @@ import { later as run_later } from '@ember/runloop';
 import $ from 'jquery';
 
 import { toArrayPromiseProxy } from '../../utils/ember-devel';
+import { getGroups } from '../../utils/data/group';
 
 import ManageBase from './manage-base';
 
@@ -84,13 +85,16 @@ export default ManageBase.extend({
     'controls.apiServerSelectedOrPrimary.store',
     function () {
       let
+      fnName = 'inGroups',
       /** 
     'session.session.authenticated.clientId',
           session : service(),
       clientId = this.get('session.session.authenticated.clientId'),
       */
       store = this.get('controls.apiServerSelectedOrPrimary.store'),
-      groupsP = this.get('auth').groups(/*own*/false),
+      clientGroupsP = getGroups(this.get('auth'), /*own*/false, store),
+      groupsP = clientGroupsP.then((cgs) => {
+        let gs = cgs.mapBy('groupId'); dLog(fnName, 'gs', gs); return gs;}),
       modelP = {groups : toArrayPromiseProxy(groupsP)};
       return modelP;
     }),

@@ -1,6 +1,7 @@
 import ApplicationSerializer from './application';
 import { pluralize } from 'ember-inflector';
 
+import JSONSerializer from '@ember-data/serializer/json';
 
 import { attribute2relationship, normalizeDataEmbedded } from '../utils/ember-serializer';
 
@@ -10,12 +11,22 @@ const dLog = console.debug;
 
 // -----------------------------------------------------------------------------
 
-export default class GroupSerializer extends ApplicationSerializer {
+export default class GroupsOwnSerializer extends ApplicationSerializer {
   normalize(model, hash, prop) {
     dLog('normalize', model, hash, prop);
-    var ret = this._super(...arguments);
+    let ret;
+    if (this._super === JSONSerializer.proto().normalizeResponse) {
+      /** as in serializers/application.js : normalizeResponse() */
+      let payload = {};
+      payload[model.modelName] = hash;
+      // model === this.serializerFor(prop)
+      ret = this._super(this.store, model, payload, hash.id, /*requestType*/'findRecord');
+    } else {
+      ret = this._super(...arguments);
+    }
     return ret;
   };
+
   /** normalize the result of /groups/in
    * @param d response data
    */
