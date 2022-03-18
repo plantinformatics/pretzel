@@ -8,6 +8,28 @@
      placeholder="User name (email)"   >
  </div>
 
+  <hr>
+
+  <label>Datasets of group {{group.name}}</label>
+  {{#if this.groupDatasets.length}}
+      <div class="margin-1em group-dataset">
+        <label>Dataset</label>
+        <label>Owner</label>
+        <label>Group</label>
+        <label>public</label>
+        <label>createdAt</label>
+      </div>
+    {{#each this.groupDatasets as |dataset|}}
+      <div class="margin-1em group-dataset">
+       <span>{{dataset.id}}</span>
+       <span>{{dataset.clientId.email}}</span>
+       <span>{{dataset.groupId.name}}</span>
+       <span>{{dataset.public}}</span>
+       <span>{{dataset.createdAt}}</span>
+      </div>
+    {{/each}}
+  {{/if}}
+
 {{/let}}
 
 

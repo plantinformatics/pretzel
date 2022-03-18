@@ -23,6 +23,8 @@ export default class GroupEditController extends Controller {
   // @service session;
   // session : service(),
 
+  // @service controls;
+
   // newClientName : string;
   constructor() {
     super();
@@ -36,14 +38,18 @@ export default class GroupEditController extends Controller {
     apiServers = owner.lookup('service:apiServers'),
     session = owner.lookup('service:session'),
     auth = owner.lookup('service:auth'),
+    controls = owner.lookup('service:controls'),
+
     services = {
-      apiServers, session, auth
+      apiServers, session, auth, controls
     };
     return services;
   }
   @alias('services.apiServers') apiServers;
   @alias('services.session') session;
   @alias('services.auth') auth;
+  @alias('services.controls') controls;
+
 
   /** clientId for the primaryServer */
   get clientIdSession() {
@@ -63,10 +69,12 @@ export default class GroupEditController extends Controller {
     newClientName = this.newClientName;
     dLog(fnName, groupId, newClientName);
     let
-    clientId = this.clientIdSession;
+    server = this.get('controls.apiServerSelectedOrPrimary'),
+    store = server.store;
+    let
+    clientId = server.clientId || this.clientIdSession;
     dLog(fnName, this.clientIdSession);
     {
-      let store = this.get('apiServers.primaryServer.store');
       dLog(fnName, store.name, this.store === store);
       if (store && groupId && clientId)  {
         let
@@ -87,6 +95,35 @@ export default class GroupEditController extends Controller {
       }
     }
   }
+
+
+
+  @computed('model.group.id')
+  get groupDatasets() {
+    let
+    apiServers = this.get('apiServers'),
+    server = this.get('controls.apiServerSelectedOrPrimary'),
+    store = server.store,
+    group = this.model,
+    groupId = group.id,
+    filter = {include: 'group', where : {groupId}},
+
+    /** associate the server with the adapterOptions, used by
+     *   adapters/application.js : buildURL().
+     * as in :
+     *   services/data/dataset.js : taskGetList(), getData()
+     *   services/data/block.js : getData()
+     */
+    adapterOptions = apiServers.addId(server, { filter }), 
+
+    datasetsP = store.query('dataset', adapterOptions);
+
+    datasetsP.then(function(datasets) {
+      dLog('datasets', datasets.toArray());
+    });
+
+    return datasetsP;
+  };
 
 
 }
