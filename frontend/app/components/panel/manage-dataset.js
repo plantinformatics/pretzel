@@ -100,12 +100,13 @@ export default ManageBase.extend({
     }),
 
   selectedGroupChanged(selectedGroupId) {
+    const fnName = 'selectedGroupChanged';
     let
     // currentGroup = this.dataset.content.groupId.content,
     gs = this.inGroups.groups,
-    selectedGroup = gs.findBy('group.id', selectedGroupId),
-    groupValue = selectedGroup.group;
-    dLog('selectedGroupChanged', selectedGroupId, selectedGroup, groupValue?.name, groupValue?.id, arguments, this);
+    selectedGroup = gs.findBy('id', selectedGroupId),
+    groupValue = selectedGroup.content || selectedGroup;
+    dLog(fnName, selectedGroupId, selectedGroup, groupValue?.name, groupValue?.id, arguments, this);
     if (groupValue?.id) {
       let
       store = this.dataset.store;
@@ -114,6 +115,8 @@ export default ManageBase.extend({
         .then((group) => {
           if (! group) {
             this.set('datasetGroupErrMsg', 'Group ' + selectedGroupId + ':' + groupValue.id + ' not found');
+          } else if (this.dataset.get('groupId.id') == group.get('id')) {
+            dLog(fnName, 'no change', selectedGroupId, this.dataset.get('id'), group.get('id') );
           } else {
             this.dataset.set('groupId', group);
             this.dataset.save()
