@@ -9,17 +9,17 @@ const groupApi = {
  * @param auth  auth / ajax service
  * @param own true/false for groups/own or /in api
  * @param store to push result to
- * @return promise-proxy yielding array of : /in : client-group, /own : group
+ * @return promise yielding array of records : /in : client-group, /own : group
  */
 function getGroups(auth, own, store) {
   const
   apiName = own ? 'own' : 'in',
   config = groupApi[apiName],
   serializer = store.serializerFor(config.primaryModelName),
-  /** (proxy) promise yielding an array of records */
+  /** promise yielding an array of records */
   groupsPR = auth.groups(own)
     .then((cgs) => {
-      /** result of push is promise, so cgrs is an array of promises yielding records :
+      /** result of push is record, so cgrs is an array of records :
        *    in : client-group, own : group
        */
       let cgrs = cgs.map((cg) => {
@@ -27,9 +27,9 @@ function getGroups(auth, own, store) {
             jr = serializer.store.push(j);
         return jr;
       });
-      return Promise.all(cgrs);
+      return cgrs;
     }),
-  groups = toArrayPromiseProxy(groupsPR);
+  groups = groupsPR;
   return groups;
 }
 

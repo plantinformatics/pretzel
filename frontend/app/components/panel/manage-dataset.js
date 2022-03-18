@@ -29,7 +29,7 @@ export default ManageBase.extend({
   ownedByMe: alias("dataset.owner"),
   apiHost : alias("dataset.store.name"),
 
-  datasetMeta: Ember.computed("dataset._meta", function() {
+  datasetMeta: computed("dataset._meta", function() {
     return this.get("dataset._meta") || {};
   }),
   copyToCurrentMeta : observer('dataset', function () {
@@ -81,7 +81,7 @@ export default ManageBase.extend({
     });
   },
 
-  inGroups : computed(
+  inGroupsPromise : computed(
     'controls.apiServerSelectedOrPrimary.store',
     function () {
       let
@@ -93,36 +93,35 @@ export default ManageBase.extend({
       */
       store = this.get('controls.apiServerSelectedOrPrimary.store'),
       clientGroupsP = getGroups(this.get('auth'), /*own*/false, store),
+      /** cgs[i] is model:client-group, cgs[i].get('groupId') is Proxy, so use .content to get model:group */
       groupsP = clientGroupsP.then((cgs) => {
-        let gs = cgs.mapBy('groupId'); dLog(fnName, 'gs', gs); return gs;}),
-      modelP = {groups : toArrayPromiseProxy(groupsP)};
-      return modelP;
+        let gs = cgs.mapBy('groupId.content'); dLog(fnName, 'gs', gs); return gs;});
+      return groupsP;
     }),
+  get inGroups() {
+    return {groups : toArrayPromiseProxy(this.get('inGroupsPromise'))};
+  },
 
   selectedGroupChanged(selectedGroupId) {
     const fnName = 'selectedGroupChanged';
     let
     // currentGroup = this.dataset.content.groupId.content,
-    gs = this.inGroups.groups,
-    selectedGroup = gs.findBy('id', selectedGroupId),
-    groupValue = selectedGroup.content || selectedGroup;
-    dLog(fnName, selectedGroupId, selectedGroup, groupValue?.name, groupValue?.id, arguments, this);
-    if (groupValue?.id) {
+    gsP = this.inGroupsPromise,
+    selectedGroup = gsP.then((gs) => {
       let
-      store = this.dataset.store;
-      store.findRecord('group', groupValue.id)
-        .catch((err) => this.set('datasetGroupErrMsg', 'Group ' + selectedGroupId + ':' + groupValue.id + ' not found.\n' + err))
-        .then((group) => {
-          if (! group) {
-            this.set('datasetGroupErrMsg', 'Group ' + selectedGroupId + ':' + groupValue.id + ' not found');
-          } else if (this.dataset.get('groupId.id') == group.get('id')) {
-            dLog(fnName, 'no change', selectedGroupId, this.dataset.get('id'), group.get('id') );
-          } else {
-            this.dataset.set('groupId', group);
-            this.dataset.save()
-              .catch((err) => this.set('datasetGroupErrMsg', 'Dataset Group change ' + selectedGroupId + ':' + groupValue.id + ' not saved.\n' + err));
-          }
-        });
+      groupValue = gs.findBy('id', selectedGroupId);
+      dLog(fnName, selectedGroupId, groupValue?.name, groupValue?.id, arguments, this);
+      this.datasetChangeGroup(groupValue);
+    });
+  },
+  datasetChangeGroup(group) {
+    const fnName = 'datasetChangeGroup';
+    if (this.dataset.get('groupId.id') == group.get('id')) {
+      dLog(fnName, 'no change', this.dataset.get('id'), group.get('id') );
+    } else {
+      this.dataset.set('groupId', group);
+      this.dataset.save()
+        .catch((err) => this.set('datasetGroupErrMsg', 'Dataset Group change ' + group.id + ' not saved.\n' + err));
     }
   },
 

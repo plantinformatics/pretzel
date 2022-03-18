@@ -24,9 +24,10 @@ export default class GroupsRoute extends Route {
     // store.query('group', {}),
 
     auth = this.get('auth'),
-    groupsIn = getGroups(auth, /*own*/false, store),
-    groupsOwn = getGroups(auth, /*own*/true, store),
-    modelP = {groupsIn, groupsOwn};
+    fieldNames = ['groupsIn', 'groupsOwn'],
+    groupsP = [false, true].map(
+      (own) => [fieldNames[+own], toArrayPromiseProxy(getGroups(auth, own, store))]),
+    modelP = Object.fromEntries(groupsP);
 
     return modelP;
   }
