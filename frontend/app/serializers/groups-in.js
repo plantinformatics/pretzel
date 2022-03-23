@@ -29,10 +29,14 @@ export default class ClientGroupSerializer extends ApplicationSerializer {
     modelNameIncluded = ['group'],
     includedPlural = false;
     let result = normalizeDataEmbedded(this.store, modelName, modelNameIncluded, includedPlural, d);
+    /** If the group has been deleted and not the client-group, then included will be [].
+     */
     let data = result.included[0];
-    /** result.data.relationships is set by normalizeDataEmbedded(), but not data.relationships */
-    data.relationships = {};
-    attribute2relationship(data, undefined, 'client', 'clientId');
+    if (data)  {
+      /** result.data.relationships is set by normalizeDataEmbedded(), but not data.relationships */
+      data.relationships = {};
+      attribute2relationship(data, undefined, 'client', 'clientId');
+    }
 
     dLog(fnName, JSON.stringify(result));
 

@@ -2,6 +2,7 @@ import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { computed, action } from '@ember/object';
 import { alias } from '@ember/object/computed';
+import { getOwner } from '@ember/application';
 
 /* global Ember */
 
@@ -81,11 +82,13 @@ export default class GroupEditController extends Controller {
         group = store.peekRecord('group',groupId),
         // clientP = store.queryRecord('client', {email: newClientName}),
         // clientP.then((client))
-        clientGroupP = this.get('auth').addClientGroupEmail(groupId, newClientName),
-        p = toPromiseProxy(clientGroupP);
+        clientGroupP = this.get('auth').addClientGroupEmail(groupId, newClientName);
         clientGroupP.then((clientGroup) => {
           dLog(fnName, clientGroup);
-          this.send('refreshModel');});
+          this.send('refreshModel');})
+          .catch((error) => {
+            this.set(msgName, error.message || error);
+          });
 
           /*
           store.createRecord('client-group', {
@@ -95,7 +98,6 @@ export default class GroupEditController extends Controller {
         let p = clientGroup.save();
         */
 
-        this.set(msgName, p);
       }
     }
   }
@@ -169,11 +171,13 @@ export default class GroupEditController extends Controller {
     }
   };
 
+
+  /**
+   * @param clientGroupId may be this.selectedClientGroupId or this.clients[i]
+   */
   @action
-  removeGroupMember() {
+  removeGroupMember(clientGroupId) {
     const
-    /** possibly pass clientGroupId in as param */
-    clientGroupId = this.selectedClientGroupId,
     fnName = 'removeGroupMember',
     apiServers = this.get('apiServers'),
     server = this.get('controls.apiServerSelectedOrPrimary'),
@@ -183,13 +187,75 @@ export default class GroupEditController extends Controller {
     adapterOptions = apiServers.addId(server, { }), 
 
     destroyP = clientGroup.destroyRecord(adapterOptions);
-    destroyP.then(() => {
+    destroyP.then((done) => {
       this.set('selectedClientGroupId', null);
-      dLog(fnName, 'done', clientGroupId);
+      // expect done is {count : 1}
+      dLog(fnName, 'done', clientGroupId, done.count);
       this.send('refreshModel');
     })
       .catch((error) => dLog(fnName, 'error', error, clientGroupId));
     return destroyP;
-  }
+  };
+
+  removeAllGroupMembers() {
+    let
+    fnName = 'removeAllGroupMembers',
+    group = this.model,
+    cgs = group.clientGroups,
+    destroyPs = cgs.map((cg) => {
+      return this.removeGroupMember(cg.id);
+    });
+    dLog(fnName, cgs);
+    return Promise.all(destroyPs);
+  };
+  /** @return true or null, for disabled=
+   */
+  get deleteGroupDisabled() {
+    let insensitive = this.groupDatasets.length ? true : null;
+    return insensitive;
+  };
+  @action
+  deleteGroup() {
+    const fnName = 'deleteGroup';
+    this.set('deleteGroupMsg', '');
+    let
+    group = this.model,
+    apiServers = this.get('apiServers'),
+    server = this.get('controls.apiServerSelectedOrPrimary'),
+    store = server.store,
+    adapterOptions = apiServers.addId(server, { }),
+    removeMembersP = 
+    // group = store.peekRecord('group', this.model.id),
+    this.removeAllGroupMembers();
+    removeMembersP
+      .catch((error) => {
+        dLog(fnName, error);
+        this.set('deleteGroupMsg', error);
+      })
+      .then(() => {
+        let
+        destroyP = 
+          group.destroyRecord(adapterOptions);
+        destroyP
+          .then((done) => {
+            if (done.count !== 1) { console.log(fnName, done); }
+            if (getOwner(this)) {
+              this.transitionToRoute('groups');
+            } else {
+              this.target.transitionTo('groups');
+            }
+          })
+          .catch((error) => {
+            dLog(fnName, error);
+            // error.name : TypeError
+            if (error.message !== 'owner is undefined') {
+              this.set('deleteGroupMsg', error);
+            }
+          });
+        return destroyP;
+      });
+    return removeMembersP;
+  };
+
 
 }

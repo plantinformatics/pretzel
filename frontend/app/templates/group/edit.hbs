@@ -11,6 +11,17 @@
  {{this.addClientMsg}}
 
   <hr>
+    <button type="button"
+     disabled={{this.deleteGroupDisabled}}
+     {{on 'click' (action this.deleteGroup) }}>Delete Group
+     {{#ember-tooltip side="left" delay=500}}
+       Delete this group.  Enabled when the group has no datasets.
+     {{/ember-tooltip}}
+</button>
+
+    <div>{{this.deleteGroupMsg}}</div>
+  <hr>
+
 
   <label>Datasets of group {{group.name}}</label>
   {{#if this.groupDatasets.length}}
@@ -35,7 +46,7 @@
   {{group/group-members group=group selectMember=(action this.selectMember group)}}
   {{#if this.selectedClientGroupId}}
     {{this.selectedClientGroupId}}
-    <button type="button" {{on 'click' (action this.removeGroupMember) }}>Remove member</button>
+    <button type="button" {{on 'click' (action this.removeGroupMember this.selectedClientGroupId) }}>Remove member</button>
   {{/if}}
 
 {{/let}}
