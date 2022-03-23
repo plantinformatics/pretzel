@@ -2150,6 +2150,11 @@ ul.dataBlocks > li > * {
   flex-grow : 1;
 }
 
+.group-members > ul {
+  list-style: none;
+}
+
+
 /* -------------------------------------------------------------------------- */
 
 @import "ember-bootstrap/bootstrap";

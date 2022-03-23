@@ -2,7 +2,7 @@ import { toArrayPromiseProxy } from '../ember-devel';
 
 const groupApi = {
   own :  {primaryModelName : 'groups-own', normalizerName : 'normalizeGroupsOwn'},
-  'in' : {primaryModelName : 'client-group', normalizerName : 'normalizeGroupsIn'},
+  'in' : {primaryModelName : 'groups-in', normalizerName : 'normalizeGroupsIn'},
 };
 
 /**

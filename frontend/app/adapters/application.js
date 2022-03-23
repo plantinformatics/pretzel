@@ -140,9 +140,17 @@ var config = {
     // the JSONAPI adapter calls patch, while the
     // RESTAdapter calls PUT
     let data = {};
+    let
+    /** probably github.com/ef4/ember-data-relationship-tracker offers a better solution. */
+    rc = snapshot._internalModel._relationshipProxyCache,
+    changedRelationshipKeys = Object.keys(rc);
+    if ((changedRelationshipKeys.length === 1) && (changedRelationshipKeys[0] === "groupId" )) {
+      data.groupId = rc.groupId.get('id');
+    } else {
     let serializer = store.serializerFor(type.modelName);
 
     serializer.serializeIntoHash(data, type, snapshot);
+    }
 
     let id = snapshot.id;
     let url = this.buildURL(type.modelName, id, snapshot, 'updateRecord');
@@ -166,9 +174,9 @@ var config = {
 
   pathForType(type) {
     let path;
-    if (type == "client-group") {
+    /* if (type == "client-group") {
       path = pluralize(type);
-    } else {
+    } else*/ {
       /** super will camel-case and pluralize the type */
       path = this._super(...arguments);
     }

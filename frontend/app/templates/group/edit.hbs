@@ -8,6 +8,8 @@
      placeholder="User name (email)"   >
  </div>
 
+ {{this.addClientMsg}}
+
   <hr>
 
   <label>Datasets of group {{group.name}}</label>
@@ -30,7 +32,15 @@
     {{/each}}
   {{/if}}
 
+  {{group/group-members group=group selectMember=(action this.selectMember group)}}
+  {{#if this.selectedClientGroupId}}
+    {{this.selectedClientGroupId}}
+    <button type="button" {{on 'click' (action this.removeGroupMember) }}>Remove member</button>
+  {{/if}}
+
 {{/let}}
+
+
 
 
 {{outlet}}

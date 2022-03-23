@@ -1,0 +1,15 @@
+<div class="group-members" style="margin : 2em">
+  <label>Group Members</label>
+  <ul>
+    {{#each @group.clients as |client|}}
+      <li class="margin-1em"
+        {{on 'click' (action @selectMember client) }}
+       >
+       {{client.id}}
+       {{client.email}}
+      </li>
+    {{/each}}
+  </ul>
+</div>
+
+{{yield}}

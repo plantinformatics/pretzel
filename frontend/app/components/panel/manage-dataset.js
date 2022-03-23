@@ -5,7 +5,7 @@ import { later as run_later } from '@ember/runloop';
 
 import $ from 'jquery';
 
-import { toArrayPromiseProxy } from '../../utils/ember-devel';
+import { toPromiseProxy, toArrayPromiseProxy } from '../../utils/ember-devel';
 import { getGroups } from '../../utils/data/group';
 
 import ManageBase from './manage-base';
@@ -95,12 +95,25 @@ export default ManageBase.extend({
       clientGroupsP = getGroups(this.get('auth'), /*own*/false, store),
       /** cgs[i] is model:client-group, cgs[i].get('groupId') is Proxy, so use .content to get model:group */
       groupsP = clientGroupsP.then((cgs) => {
-        let gs = cgs.mapBy('groupId.content'); dLog(fnName, 'gs', gs); return gs;});
+        let gs = cgs.mapBy('groupId.content'); dLog(fnName, 'gs', gs);
+        this.set('inGroupsValue', gs);  return gs;});
       return groupsP;
     }),
   get inGroups() {
     return {groups : toArrayPromiseProxy(this.get('inGroupsPromise'))};
   },
+  selectedValue : computed('inGroupsValue', 'dataset.groupId.name', function () {
+    const
+    fnName = 'selectedValue',
+    datasetGroupName = this.get('dataset.groupId.name'),
+    inGroupsValue = this.get('inGroupsValue');
+    let group;
+    if (inGroupsValue && datasetGroupName) {
+      group = inGroupsValue.findBy('name', datasetGroupName);
+      dLog(fnName, datasetGroupName, group.get('name'));
+    }
+    return group;
+  }),
 
   selectedGroupChanged(selectedGroupId) {
     const fnName = 'selectedGroupChanged';
