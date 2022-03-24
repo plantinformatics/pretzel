@@ -1,5 +1,9 @@
 import Route from '@ember/routing/route';
 import { action } from '@ember/object';
+import { inject as service } from '@ember/service';
+
+
+import { getGroups } from '../../utils/data/group';
 
 // -----------------------------------------------------------------------------
 
@@ -8,6 +12,7 @@ const dLog = console.debug;
 // -----------------------------------------------------------------------------
 
 export default class GroupEditRoute extends Route {
+  @service auth;
 
   @action
   willTransition(transition) {
@@ -16,9 +21,24 @@ export default class GroupEditRoute extends Route {
     this.controller.set('deleteGroupMsg', null);
   }
 
+
+  /** refreshModel() is used after successful addClient() and removeGroupMember(),
+   * so we want to update group.clients, so this.refresh() is not sufficient.
+   * getGroups(,true,) will update that; it gets all groups owned by this user,
+   * whereas we only need this group to be refreshed.
+   */
   @action
   refreshModel() {
-    this.refresh();
+    const fnName = 'refreshModel';
+    dLog(fnName);
+    let
+    group = this.controller.model,
+    store = group.get('store'),
+    groupsP = getGroups(this.get('auth'), /*own*/true, store);
+    groupsP.then((groups) => {
+      dLog(fnName, this.controller.model.clients, groups.length);
+    });
+    return groupsP;
   }
 
 }

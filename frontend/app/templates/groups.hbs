@@ -2,11 +2,11 @@
 {{#each this.model.groupsOwn as |group|}}
   <div class="margin-1em">
     {{!-- model=group --}}
-    {{#link-to 'group.edit' group  classNames='btn btn-info btn-xs' tagName='button'}}
+    {{#link-to 'group.edit' group.id  classNames='btn btn-info btn-xs' tagName='button'}}
       <i class="glyphicon glyphicon-pencil"></i>
     {{/link-to}}
 
-    {{#link-to 'group.delete' group  classNames='btn btn-info btn-xs' tagName='button'}}
+    {{#link-to 'group.delete' group.id  classNames='btn btn-info btn-xs' tagName='button'}}
       <i class="glyphicon glyphicon-remove"></i>
     {{/link-to}}
 

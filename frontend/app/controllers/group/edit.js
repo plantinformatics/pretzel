@@ -85,7 +85,9 @@ export default class GroupEditController extends Controller {
         clientGroupP = this.get('auth').addClientGroupEmail(groupId, newClientName);
         clientGroupP.then((clientGroup) => {
           dLog(fnName, clientGroup);
-          this.send('refreshModel');})
+          this.send('refreshModel');
+          // this.target.transitionTo('group.edit', groupId);
+        })
           .catch((error) => {
             this.set(msgName, error.message || error);
           });
