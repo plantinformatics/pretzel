@@ -173,7 +173,7 @@ export default class GroupEditController extends Controller {
 
 
   /**
-   * @param clientGroupId may be this.selectedClientGroupId or this.clients[i]
+   * @param clientGroupId may be this.selectedClientGroupId or this.clientGroups[i].id
    */
   @action
   removeGroupMember(clientGroupId) {
