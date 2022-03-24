@@ -137,6 +137,45 @@ module.exports = function(Group) {
 
   // ---------------------------------------------------------------------------
 
+  /** Prevent Group deletion when there are Datasets which are in this group.
+   *
+   * The frontend client disables the 'Delete Group' button when there are
+   * Datasets in the Group (deleteGroupDisabled() in controllers/group/edit.js).
+   * Potentially another user could add a datset to the Group after that page is
+   * displayed, and also this guard prevents API calls not from the frontend
+   * from creating inconsistent data relationships.
+   */
+  Group.observe('before delete', function(ctx, next) {
+    const
+    fnName = 'Group:before delete',
+    models = ctx.Model.app.models,
+    Group = ctx.Model,
+    Dataset = models.Dataset,
+    groupId = ctx.where.id; // ctx.instance is undefined in this case.
+
+    console.log(fnName, groupId, ctx.instance);
+    Dataset.find({
+      where: {
+        groupId
+      }
+    }, ctx.options)
+      .then(function(datasets) {
+        if (! datasets.length) {
+          next();
+        } else {
+          // Stop the deletion of this Group
+          var err = new Error("There are " + datasets.length + " Datasets with this Group; rejecting deletion request");
+          err.statusCode = 400;
+          console.log(err.toString());
+          next(err);
+        }
+      });
+
+
+  });
+
+  // ---------------------------------------------------------------------------
+
 
   acl.assignRulesRecord(Group);
   acl.limitRemoteMethods(Group);
