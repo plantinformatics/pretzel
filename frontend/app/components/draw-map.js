@@ -319,6 +319,7 @@ export default Component.extend(Evented, {
     this.localBus(true);
     let blockService = this.get('blockService');
     blockService.on('receivedBlock', this, 'receivedBlock');
+    this.functionHandles = {};
   }),
 
 /** addPathsToCollation() was in draw closure;  having moved it to library collate-paths.js, it could now be register here
@@ -377,12 +378,19 @@ export default Component.extend(Evented, {
 
   /*------------------------------------------------------------------------*/
 
-  functionHandles : {},
+  /** Initialise in init(), so that each new instance of draw-map gets a
+   * distinct object, so that functions don't refer to destroyed closures.
+   */
+  functionHandles : undefined,
   /** @return a constant value for the function
    * @desc for use with debounce / throttle
    */
   functionHandle(name, fn) {
     let functions = this.get('functionHandles');
+    if (false) { // debug check / trace
+      if (! functions.drawMap) { functions.drawMap = this; }
+      else if (functions.drawMap !== this) { dLog('functionHandle', functions, this); }
+    }
     if (functions[name] && (functions[name] !== fn) && (trace_dataflow > 2)) {
       dLog('functionHandle', name, functions[name], fn);
     }      
@@ -618,7 +626,8 @@ export default Component.extend(Evented, {
       this.on('pathsByReference', addPathsByReferenceToCollation);
     }
 
-    if (oa.showResize === undefined)
+    // instanceChanged is defined below;  not needed because setting to the same value is harmless.
+    // if ((oa.showResize === undefined) || instanceChanged)
     {
       oa.showResize = showResize;
     }
@@ -635,7 +644,10 @@ export default Component.extend(Evented, {
     // stacks.axes[] is a mix of Stacked & Block; shouldn't be required & planning to retire it in these changes.
     oa.axes = stacks.axesP;
     oa.axesP = stacks.axesP;
-    if (! oa.axisApi)
+    /** Refresh axisApi when draw-map object instance changes, so the functions
+     * do not refer to closures in the destroyed instance. */
+    let instanceChanged;
+    if (! oa.axisApi || (instanceChanged = oa.axisApi.drawMap.isDestroying))
       oa.axisApi = {lineHoriz : lineHoriz,
                     inRangeI : inRangeI,
                     featureInRange,
@@ -651,7 +663,8 @@ export default Component.extend(Evented, {
                     makeMapChrName,
                     axisIDAdd,
                     stacksAxesDomVerify : function (unviewedIsOK = false) { stacksAxesDomVerify(stacks, oa.svgContainer, unviewedIsOK); } ,
-                    updateSyntenyBlocksPosition : () => this.get('updateSyntenyBlocksPosition').perform()
+                    updateSyntenyBlocksPosition : () => this.get('updateSyntenyBlocksPosition').perform(),
+                    drawMap : this,  // for debug trace / check.
                    };
     dLog('draw-map stacks', stacks);
 
@@ -718,7 +731,8 @@ export default Component.extend(Evented, {
         let
           widthChanged = oa.vc.viewPort.w != oa.vc.viewPortPrev.w,
         heightChanged = oa.vc.viewPort.h != oa.vc.viewPortPrev.h;
-        if (oa.svgContainer)
+        // showResize() -> collateO() uses .o
+        if (oa.svgContainer && oa.o)
           oa.showResize(widthChanged, heightChanged);
       }
       stacks.vc = vc; //- perhaps create vc earlier and pass vc to stacks.init()
@@ -1195,6 +1209,7 @@ export default Component.extend(Evented, {
 
     /** For all Axes, store the x value of its axis, according to the current scale. */
     function collateO() {
+      // if (me.isDestroying) { return; }
       dLog("collateO", oa.axisIDs.length, oa.stacks.axisIDs());
       oa.stacks.axisIDs().forEach(function(d){
         let o = oa.o;
@@ -1205,7 +1220,7 @@ export default Component.extend(Evented, {
         if (o[d] === undefined) { breakPoint("collateO"); }
       });
       /** scaled x value of each axis, with its axisID. */
-      let offsetArray = oa.stacks.axisIDs().map((d) => ({axisId : d, xOffset : o[d]}));
+      let offsetArray = oa.stacks.axisIDs().map((d) => ({axisId : d, xOffset : oa.o[d]}));
       let previous = me.get('xOffsets'),
           changed = ! isEqual(previous, offsetArray);
       if (changed) {
@@ -1236,7 +1251,7 @@ export default Component.extend(Evented, {
     if (duplicates.length)
       dLog/*breakPoint*/('duplicates', duplicates, blocksToDraw, blocksToAdd, oa.axisIDs);
 
-    if (oa.zoomBehavior === undefined)
+    if ((oa.zoomBehavior === undefined) || instanceChanged)
     {
       /** default is 500.  "scaling applied in response to a WheelEvent ... is
        * proportional to 2 ^ result of wheelDelta(). */
@@ -2850,8 +2865,8 @@ export default Component.extend(Evented, {
      * 5sec to settle the geometry.
      */
     brushClipSize(gBrushParent);
-    later(() => brushClipSize(gBrushParent), 2000);
-    later(() => brushClipSize(gBrushParent), 5000);
+    later(() => ! me.isDestroying && brushClipSize(gBrushParent), 2000);
+    later(() => ! me.isDestroying && brushClipSize(gBrushParent), 5000);
 
 
     if (allG.nodes().length)
@@ -2947,7 +2962,7 @@ export default Component.extend(Evented, {
       showTickLocations(oa.scaffoldTicks, t);
       if (oa.syntenyBlocks) {
         /** time for the axis positions to update */
-        later(() => showSynteny(oa.syntenyBlocks, t), 500);
+        later(() => ! me.isDestroying && showSynteny(oa.syntenyBlocks, t), 500);
       }
 
       me.trigger('axisStackChanged', t);
@@ -5471,7 +5486,7 @@ export default Component.extend(Evented, {
      * Recalculate Y scales.
      * Used after drawing / window (height) resize.
      */
-    function stacksAdjustY()
+    function stacksAdjustY(t)
     {
       oa.stacks.forEach(function (s) { s.calculatePositions(); });
       oa.stacks.axisIDs().forEach(function(axisName) {
@@ -6190,7 +6205,7 @@ export default Component.extend(Evented, {
 
       // recalculate Y scales before pathUpdate().
         if (heightChanged)
-          stacksAdjustY();
+          stacksAdjustY(t);
 
       // for stacked axes, window height change affects the transform.
         if (widthChanged || heightChanged)
@@ -6227,9 +6242,12 @@ export default Component.extend(Evented, {
                * new position based on the changed scale. */
               axisBrushShowSelection(d, this);
             });
-          DropTarget.prototype.showResize();
+          if (DropTarget.prototype.showResize) {
+            DropTarget.prototype.showResize();
+          }
         }
         later( function () {
+          if (me.isDestroying) { return; }
           /* This does .trigger() within .later(), which seems marginally better than vice versa; it works either way.  (Planning to replace event:resize soon). */
           if (widthChanged || heightChanged)
             try {

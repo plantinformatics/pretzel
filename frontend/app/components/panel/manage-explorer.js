@@ -1,5 +1,5 @@
 import $ from 'jquery';
-import { later, next, debounce } from '@ember/runloop';
+import { later, next, debounce, bind } from '@ember/runloop';
 import { debounce as lodash_debounce } from 'lodash/function';
 import { resolve, all } from 'rsvp';
 import { A } from '@ember/array';
@@ -104,10 +104,19 @@ export default ManageBase.extend({
       window.alert('initRecursionCount : ' + initRecursionCount);
     }
 
-    let me = this;
-    this.get('apiServers').on('receivedDatasets', function (datasets) { console.log('receivedDatasets', datasets); me.send('receivedDatasets', datasets); });
+    this.get('apiServers').on('receivedDatasets', this.receivedDatasetsFn);
     /** Initialise this.blocksService so that dependency blocksService.featureUpdateCount works. */
     let blocksService = this.get('blocksService');
+  },
+  receivedDatasetsFn : computed( function() {
+    return (datasets) => {
+      dLog('receivedDatasets', datasets);
+      this.send('receivedDatasets', datasets);
+    };
+    // or bind(this, function ...);
+  }),
+  willDestroyElement() {
+    this.get('apiServers').off('receivedDatasets', this.receivedDatasetsFn);
   },
 
   urlOptions : computed('model.params.options', function () {

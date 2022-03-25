@@ -1139,7 +1139,7 @@ export default Model.extend({
     let axis1d;
     if (this.isViewed) {
       let
-      axes1d = this.get('blockService.axes1d.axis1dArray');
+      axes1d = this.get('blockService.axes1d').get('axis1dArray');
       axis1d = axes1d.find(
         (a1) => !a1.isDestroying &&
           ((a1.get('axis') === this) || 

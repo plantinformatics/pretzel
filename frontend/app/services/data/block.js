@@ -1364,7 +1364,7 @@ export default Service.extend(Evented, {
   axis1dReferenceBlocks : computed(
     'axes1d.axis1dArray.[]',
     function() {
-      let blocks = this.get('axes1d.axis1dArray')
+      let blocks = this.get('axes1d').get('axis1dArray')
           .map((axis1d) => [axis1d, axis1d.get('referenceBlock')]);
       dLog('axis1dReferenceBlocks', blocks);
       return blocks;
