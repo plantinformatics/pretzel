@@ -122,7 +122,9 @@ let config = {
 
     let blocksLimitsTask = this.get('blocksLimitsTask');
     dLog('blocksLimitsTask', blocksLimitsTask);
-    if (! blocksLimitsTask || ! blocksLimitsTask.get('isRunning')) {
+    if (! blocksLimitsTask ||
+        (! Array.isArray(blocksLimitsTask._result) &&
+         (! blocksLimitsTask.get || ! blocksLimitsTask.get('isRunning')))) {
       blocksLimitsTask = blockService.getBlocksLimits(undefined, {server: 'primary'});
       this.set('blocksLimitsTask', blocksLimitsTask);
     }
