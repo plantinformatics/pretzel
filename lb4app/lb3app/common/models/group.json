@@ -12,7 +12,7 @@
     "owner": {
       "type": "belongsTo",
       "model": "Client",
-      "foreignKey": "_id"
+      "foreignKey": "clientId"
     },
     "clients": {
       "type": "hasAndBelongsToMany",

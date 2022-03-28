@@ -43,6 +43,7 @@ module.exports = function(Group) {
     if (userId != data.clientId) {
       console.log('Group beforeRemote create', userId);
       // next('session clientId ' + userId + ' does not match data.clientId ' + data.clientId);
+      // 403 ?
     }
     data.clientId = userId; // ObjectId();
     next();

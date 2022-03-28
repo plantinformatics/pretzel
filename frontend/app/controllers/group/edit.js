@@ -181,6 +181,7 @@ export default class GroupEditController extends Controller {
   removeGroupMember(clientGroupId) {
     const
     fnName = 'removeGroupMember',
+    msgName = fnName + 'Msg',
     apiServers = this.get('apiServers'),
     server = this.get('controls.apiServerSelectedOrPrimary'),
     store = server.store,
@@ -189,6 +190,8 @@ export default class GroupEditController extends Controller {
     adapterOptions = apiServers.addId(server, { }), 
 
     destroyP = clientGroup.destroyRecord(adapterOptions);
+    this.set(msgName, '');
+
     destroyP.then((cg) => {
       this.set('selectedClientGroupId', null);
       // expect API response is {count : 1}
@@ -202,7 +205,16 @@ export default class GroupEditController extends Controller {
 
       this.send('refreshModel');
     })
-      .catch((error) => dLog(fnName, 'error', error, clientGroupId));
+      .catch((error) => {
+        let
+        e = error?.errors[0],
+        statusCode = e.status,
+        /** the GUI won't send a request which would cause 403. */
+        detail = (statusCode === '403') ? 'Only group owner / admin can remove members' :
+          (statusCode === '409') ? 'Data error' : undefined;
+        this.set(msgName, detail || error.message || error);
+        dLog(fnName, 'error', error, clientGroupId);
+      });
     return destroyP;
   };
 

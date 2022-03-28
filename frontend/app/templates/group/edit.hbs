@@ -48,6 +48,7 @@
     {{this.selectedClientGroupId}}
     <button type="button" {{on 'click' (action this.removeGroupMember this.selectedClientGroupId) }}>Remove member</button>
   {{/if}}
+  <div>{{this.removeGroupMemberMsg}}</div>
 
 {{/let}}
 

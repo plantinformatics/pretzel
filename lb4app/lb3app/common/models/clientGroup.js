@@ -3,7 +3,12 @@
 /* global require */
 /* global module */
 
+var ObjectId = require('mongodb').ObjectID;
+
 var acl = require('../utilities/acl');
+
+const { gatherClientId } = require('../utilities/identity');
+
 
 module.exports = function(ClientGroup) {
 
@@ -48,6 +53,63 @@ module.exports = function(ClientGroup) {
     returns: {type: 'object', root: true},
    description: "Add the given email to the group, i.e. create a ClientGroup."
   });
+
+  // ---------------------------------------------------------------------------
+
+  /** Prevent deletion if the group is not owned by the logged-in user.
+   * Permission and other errors are reported via next(error).
+   */
+  ClientGroup.observe('before delete', function(ctx, next) {
+    const
+    fnName = 'ClientGroup:before delete',
+    models = ctx.Model.app.models,
+    ClientGroup = ctx.Model,
+    Group = models.Group,
+    clientGroupId = ctx.where.id;
+
+    console.log(fnName, clientGroupId);
+    ClientGroup.find({
+      where : { id : ObjectId(clientGroupId) },
+      include : { group : 'owner' },
+    })
+      .catch((error) => next(error))
+      .then(function(clientGroups) {
+        if (! clientGroups.length) {
+          const err = new Error('Given ClientGroup id ' + clientGroupId + ' does not refer to an existing Group');
+          err.statusCode = 409; // Conflict
+          console.log(err.toString());
+          next(err);
+        } else if (clientGroups.length > 1) {
+          const err = new Error('Given ClientGroup id ' + clientGroupId + ' is not unique');
+          err.statusCode = 409; // Conflict
+          console.log(err.toString());
+          next(err);
+        } else {
+          console.log(fnName, clientGroupId, clientGroups);
+
+          let userId = gatherClientId(ctx); // related : sessionClientId()
+          /** equivalant without .toObject() :
+           * clientGroup.__cachedRelations.group.__cachedRelations.owner
+           */
+          let clientGroup = clientGroups[0].toObject(),
+              groupOwnerId = clientGroup?.group?.owner?.id;
+          if (groupOwnerId?.equals(userId)) {
+            next();
+          } else  {
+            // Stop the deletion of this ClientGroup
+            const
+            text = "Group is not owned by logged-in user; rejecting deletion request",
+            /** maybe : , {cause : text}.  The error payload becomes detail: "[object Object]" in normalizeErrorResponse(). */
+            err = new Error(text);
+            err.statusCode = 403; // Forbidden
+            console.log(err.toString(), userId, clientGroup.group.owner.id);
+            next(err);
+          }
+
+        }
+      });
+  });
+
 
   // ---------------------------------------------------------------------------
 

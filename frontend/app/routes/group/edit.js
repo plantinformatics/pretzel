@@ -18,6 +18,7 @@ export default class GroupEditRoute extends Route {
   willTransition(transition) {
     dLog('willTransition', transition);
     this.controller.set('selectedClientGroupId', null);
+    this.controller.set('removeGroupMemberMsg', null);
     this.controller.set('deleteGroupMsg', null);
   }
 
