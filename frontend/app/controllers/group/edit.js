@@ -155,7 +155,7 @@ export default class GroupEditController extends Controller {
           if (clientGroups.modelName) {
             cgs = clientGroups.toArray()
               .filter((cg) => (cg.get('clientId.id') === clientId) && (cg.get('groupId.id') === groupId))
-              .map((c) => ({id : c.id, clientId : c.get('clientId.id'), groupId : c.get('clientId.id')}));
+              .map((c) => ({id : c.id, clientId : c.get('clientId.id'), groupId : c.get('groupId.id')}));
           } else {
             cgs = clientGroups.filter((cg) => (cg.clientId === clientId) && (cg.groupId === groupId));
           }
@@ -189,10 +189,17 @@ export default class GroupEditController extends Controller {
     adapterOptions = apiServers.addId(server, { }), 
 
     destroyP = clientGroup.destroyRecord(adapterOptions);
-    destroyP.then((done) => {
+    destroyP.then((cg) => {
       this.set('selectedClientGroupId', null);
-      // expect done is {count : 1}
-      dLog(fnName, 'done', clientGroupId, done.count);
+      // expect API response is {count : 1}
+      dLog(
+        fnName, 'done', clientGroupId, 
+        cg.id,
+        'groupId', cg.get('groupId.id'),
+        'clientId.id', cg.get('clientId.id'),
+        'clientId.email', cg.get('clientId.email'),
+        'groupId.clientId', cg.get('groupId.clientId.id'));
+
       this.send('refreshModel');
     })
       .catch((error) => dLog(fnName, 'error', error, clientGroupId));
