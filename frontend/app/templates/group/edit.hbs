@@ -1,3 +1,5 @@
+<div class="group-outer">
+
 {{#let this.model as |group|}}
  <div style="display:flex; gap:1em">
 
@@ -8,10 +10,10 @@
      placeholder="User name (email)"   >
  </div>
 
- {{this.addClientMsg}}
+ {{elem/display-message message=this.addClientMsg}}
 
-  <hr>
-    <button type="button"
+  <hr class="left20">
+    <button type="button" class="btn btn-info"
      disabled={{this.deleteGroupDisabled}}
      {{on 'click' (action this.deleteGroup) }}>Delete Group
      {{#ember-tooltip side="left" delay=500}}
@@ -20,7 +22,7 @@
 </button>
 
     <div>{{this.deleteGroupMsg}}</div>
-  <hr>
+  <hr class="left20">
 
 
   <label>Datasets of group {{group.name}}</label>
@@ -46,7 +48,7 @@
   {{group/group-members group=group selectMember=(action this.selectMember group)}}
   {{#if this.selectedClientGroupId}}
     {{this.selectedClientGroupId}}
-    <button type="button" {{on 'click' (action this.removeGroupMember this.selectedClientGroupId) }}>Remove member</button>
+    <button type="button" class="btn btn-info" {{on 'click' (action this.removeGroupMember this.selectedClientGroupId) }}>Remove member</button>
   {{/if}}
   <div>{{this.removeGroupMemberMsg}}</div>
 
@@ -56,3 +58,6 @@
 
 
 {{outlet}}
+
+
+</div>

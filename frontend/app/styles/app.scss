@@ -2141,6 +2141,11 @@ ul.dataBlocks > li > * {
 
 /* -------------------------------------------------------------------------- */
 
+.group-outer
+{
+  margin-left : 2em;
+}
+
 /* route : group/edit */
 .group-dataset {
   display : flex;
@@ -2154,6 +2159,19 @@ ul.dataBlocks > li > * {
   list-style: none;
 }
 
+/* for <hr> */
+.left20
+{
+  width : 30em;
+  margin-left : 0px;
+}
+
+/** components/elem/display-message */
+.display-message
+{
+  width : fit-content;
+  margin : 1em;
+}
 
 /* -------------------------------------------------------------------------- */
 
