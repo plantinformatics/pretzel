@@ -22,15 +22,31 @@ exports.clientGroups = new ClientGroups();
  */
 function whenModels(app, fn) {
   let 
-  d, ds, ClientGroup,
+  d, db, ds, ClientGroup,
   ok = (
     (d = /*models.ClientGroup.*/ app.datasources) &&
       // m = d.mongoDs.connector._models,
+    (db = d.db) && db.connected && db.initialized &&
     (ds = d.db?.models?.ClientGroup?.getDataSource()) &&
     (ClientGroup = ds.connector?.collection('ClientGroup')) &&
-    (ClientGroup.aggregate));
+    (ClientGroup.aggregate)
+    );
   if (ok) {
-    fn(ClientGroup);
+    /** Alternative to polling is these event listeners; not working yet.  */
+    db.on('error', function (err) {
+      console.log('Error : Failed to connect to database');
+    });
+
+    // mongoose : open
+    db.once('serverOpening', function () {
+      console.log("Info : Connected to database");
+    });
+    /* Some additional time is required after ok.  5sec is sufficient.
+     * otherwise : loopback-connector-mongodb/lib/mongodb.js:384
+     * throw new Error(g.f('{{MongoDB}} connection is not established'));
+     */
+    setTimeout(() => fn(ClientGroup), 5000, 'ClientGroup update');
+
   } else {
     setTimeout(() => whenModels(app, fn), 1000, 'ClientGroup update');
   }
