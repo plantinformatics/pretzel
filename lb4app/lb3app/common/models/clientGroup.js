@@ -22,22 +22,39 @@ module.exports = function(ClientGroup) {
    * @param cb node response callback
    */
   ClientGroup.addEmail = function(groupId, clientEmail, options, cb) {
+    const fnName = 'addEmail';
     const models = this.app.models;
 
+    /** log the error message and call cb(error) */
+    function cbL(statusCode, errorText) {
+      console.log(fnName, clientEmail, groupId, statusCode, errorText);
+      const error = new Error(errorText);
+      error.statusCode = statusCode;
+      cb(error);
+    }
     models.Client.find({where: {email: clientEmail}, limit: 1})
       .catch((err) => cb(err))
       .then(function(clients) {
         if (! clients.length) {
           // may add a param to indicate : queue this email for addition when client is created.
-          cb(new Error('Email ' + clientEmail + ' not found'));
+          cbL(404, 'Email ' + clientEmail + ' not found');
         } else if (clients.length > 1) {
-          cb(new Error('Email ' + clientEmail + ' found ' + clients.length + ' matches' ));
+          cbL(409, 'Email ' + clientEmail + ' found ' + clients.length + ' matches' );
         } else {
           let
           client = clients[0],
-          /**  Could use .toHexString().  groupId is string - seems either are OK. */
+          /**  Could use .toHexString().  groupId is string - it seems either are OK in create(). */
           clientId = client.getId();
-          ClientGroup.create({groupId, clientId}, options, cb);
+          ClientGroup.find({where : {groupId : ObjectId(groupId), clientId}})
+            .then((clientGroups) => {
+                console.log(fnName, clientGroups, clientId);
+              if (clientGroups.length) {
+                cbL(409, 'Email ' + clientEmail + ' already in group.');
+              } else {
+                ClientGroup.create({groupId, clientId}, options, cb);
+              }
+            })
+            .catch((err) => cb(err));
         };
       });
     // result is via cb().

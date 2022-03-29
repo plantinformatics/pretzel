@@ -68,6 +68,7 @@ export default class GroupEditController extends Controller {
     group = this.model,
     groupId = group.id,
     newClientName = this.newClientName;
+    this.set(msgName, null);
     dLog(fnName, groupId, newClientName);
     let
     server = this.get('controls.apiServerSelectedOrPrimary'),
@@ -89,6 +90,9 @@ export default class GroupEditController extends Controller {
           // this.target.transitionTo('group.edit', groupId);
         })
           .catch((error) => {
+            dLog(fnName, error);
+            if (error.responseJSON.error) { error = error.responseJSON.error; }
+            else if (error.error) { error = error.error; }
             this.set(msgName, error.message || error);
           });
 
