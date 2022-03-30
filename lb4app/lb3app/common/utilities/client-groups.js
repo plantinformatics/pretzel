@@ -122,7 +122,6 @@ function whenModels(app, fn) {
 // -----------------------------------------------------------------------------
 
 /**
- * @param blockId string, just the local blockId not a remote reference
  */
 ClientGroups.prototype.update = async function (ClientGroup) {
   if (! ClientGroup?.aggregate) {
@@ -130,17 +129,41 @@ ClientGroups.prototype.update = async function (ClientGroup) {
     debugger;
     return;
   }
+  const Group = ClientGroup.s.db.collection('Group');
+  await
+  Group.aggregate([{$project : {_id : 1}}])
+    .toArray()
+    .then((groupIds) => {
+      let groupIdsHex = groupIds.map((proj) => proj._id.toHexString());
+      this.updateWithGroupIds(ClientGroup, groupIdsHex); });
+};
+
+/**
+ * @param groupIds [string]
+ */
+ClientGroups.prototype.updateWithGroupIds = async function (ClientGroup, groupIds) {
+  const fnName = 'updateWithGroupIds';
   let clientGroupsP = ClientGroup.aggregate([
     {$group : { _id : "$clientId", groups: {$addToSet : "$groupId"}}}]);
   /** result e.g.
    * [ { "_id" : ObjectId("60db102e162b5e27516170a2"), "groups" : [ ObjectId("621444120d48ade08e6c06ee"), ObjectId("621453130d48ade08e6c06f0") ] }, ... ]
   */
+  await
   clientGroupsP.toArray()
     .then((cgs)  => {
       this.clientGroups = {};
       cgs.forEach((cg) => {
         let clientId = cg._id.toHexString(),
-            groupHex = cg.groups?.map((g) => g?.toHexString());
+            groupHexAll = cg.groups?.map((g) => g?.toHexString()),
+            groupHex = groupHexAll.reduce((result, g) => {
+              if (groupIds.includes(g)) {
+                result.push(g);
+              } else {
+                console.log(fnName, clientId, g, 'not in ', groupIds);
+              }
+              return result;
+            }, []);
+
         // .map((id) => id.toHexString())
         console.log('update', clientId, groupHex);
         this.clientGroups[clientId] = groupHex; // cg.groups;
