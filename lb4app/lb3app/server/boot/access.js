@@ -3,13 +3,20 @@
 /* global require */
 
 var clientGroups = require('../../common/utilities/client-groups');
+var { ObjectId_equals } = require('../../common/utilities/mongoDB-driver-lib');
+
+var { cirquePush, cirqueTail } = require('../../common/utilities/cirque');
+
 
 module.exports = function(app) {
   var Role = app.models.Role;
 
   function isOwner(data, userId) {
-    let clientId = String(data.clientId)
-    return clientId == userId
+    let ok = ObjectId_equals(data.clientId, userId);
+    if (! ok) {
+      cirquePush('isOwner ' + data.clientId + ', ' + userId);
+    }
+    return ok;
   }
 
   /**
@@ -27,6 +34,9 @@ module.exports = function(app) {
     console.log('isInGroup', clientIdString, groups, data);
     // can use ObjectId .equals() for comparing BSON with String
     let ok = groups.find((id) => id == groupId);
+    if (! ok) {
+      cirquePush('isInGroup ' + data.groupId + ', ' + clientId + ', ' + clientIdString + ', ' + JSON.stringify(groups));
+    }
     return ok;
   }
 
@@ -79,6 +89,12 @@ module.exports = function(app) {
     })
   }
 
+  function clientPermissions(client, userId, permission, context, cb) {
+    /** may check that client is in a group owned by userId.
+     */
+    cb(true);
+  }
+
   function access(modelName, model, userId, permission, context, cb) {
     if (modelName == 'Dataset') {
       datasetPermissions(model, userId, permission, context, cb)
@@ -86,8 +102,15 @@ module.exports = function(app) {
       blockPermissions(model, userId, permission, context, cb)
     } else if (modelName == 'Feature') {
       featurePermissions(model, userId, permission, context, cb)
+    } else if (modelName == 'Client') {
+      clientPermissions(model, userId, permission, context, cb)
     } else {
-      cb(permission(model, userId))
+      const ok = permission(model, userId);
+      if (! ok) {
+        cirquePush('access ' + modelName + ', ' + userId);
+        cirqueTail(10);
+      }
+      cb(ok);
     }
   }
 
@@ -173,3 +196,5 @@ module.exports = function(app) {
   Role.registerResolver('viewer', genericResolver)
   Role.registerResolver('editor', genericResolver)
 };
+
+console.log('lb3app/server/boot/access.js');

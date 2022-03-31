@@ -197,7 +197,8 @@ module.exports = function(Client) {
     }
   });
 
-  acl.limitRemoteMethodsRelated(Client)
+  acl.assignRulesRecord(Client);
+  // acl.limitRemoteMethodsRelated(Client)
 
   // Client.disableRemoteMethodByName("create");
   Client.disableRemoteMethodByName("upsert");
