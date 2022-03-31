@@ -19,10 +19,14 @@
         </td></tr>
       {{/if}}
 
-      <tr><td>Group</td><td>{{dataset.groupId.name}} {{dataset.groupId.clientId.email}}<!-- {{dataset.groupId.id}} -->
+      <tr><td>Group</td><td>{{dataset.groupId.name}}<!-- {{dataset.groupId.id}} -->
          {{form/select-group selectedValue=this.selectedValue values=(to-array-promise-proxy this.inGroupsPromise) selectedValueChanged=(action this.selectedGroupChanged) }}
          {{this.datasetGroupErrMsg}}
       </td></tr>
+      {{#if dataset.groupId}}
+        <tr><td>Group Owner</td><td>{{dataset.groupId.clientId.email}}
+        </td></tr>
+      {{/if}}
 
     </tbody>
   </table>

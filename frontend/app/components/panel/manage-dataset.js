@@ -95,7 +95,12 @@ export default ManageBase.extend({
       clientGroupsP = getGroups(this.get('auth'), /*own*/false, store),
       /** cgs[i] is model:client-group, cgs[i].get('groupId') is Proxy, so use .content to get model:group */
       groupsP = clientGroupsP.then((cgs) => {
-        let gs = cgs.mapBy('groupId.content'); dLog(fnName, 'gs', gs);
+        /** API lookup failure for a groupId leads to g.name undefined here.
+         * Will also filter out non-existent groupId from groups/in
+         */
+        let gs = cgs.mapBy('groupId.content')
+            .filter((g) => g.name);
+        dLog(fnName, 'gs', gs);
         this.set('inGroupsValue', gs);  return gs;});
       return groupsP;
     }),
@@ -110,7 +115,10 @@ export default ManageBase.extend({
     let group;
     if (inGroupsValue && datasetGroupName) {
       group = inGroupsValue.findBy('name', datasetGroupName);
-      dLog(fnName, datasetGroupName, group.get('name'));
+      if (! group) {
+        dLog(fnName, inGroupsValue.map((g) => [g.id, g.name]));
+      }
+      dLog(fnName, datasetGroupName, group?.get('name'));
     }
     return group;
   }),
