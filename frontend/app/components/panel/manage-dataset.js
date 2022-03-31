@@ -96,6 +96,9 @@ export default ManageBase.extend({
       /** cgs[i] is model:client-group, cgs[i].get('groupId') is Proxy, so use .content to get model:group */
       groupsP = clientGroupsP.then((cgs) => {
         /** API lookup failure for a groupId leads to g.name undefined here.
+         * E.g. this user may not be a member of the dataset group, and hence
+         * the API lookup is not permitted.
+         * The pull-down contains only groups which this user is a member of.
          * Will also filter out non-existent groupId from groups/in
          */
         let gs = cgs.mapBy('groupId.content')
