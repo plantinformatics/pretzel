@@ -28,7 +28,7 @@ module.exports = function(app) {
      */
     let clientIdString = clientId.toHexString ? clientId.toHexString() : clientId;
     /** groupId of the Record (Dataset / Interval / Annotation / ). */
-    let groupId = String(data.groupId);
+    let groupId = data.getId()?.toHexString();
     /** groups of the logged-in user.  String, from ClientGroups:update()). */
     let groups = clientGroups.clientGroups.clientGroups[clientIdString];
     console.log('isInGroup', clientIdString, groups, data);
