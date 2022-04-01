@@ -18,6 +18,8 @@ const trace = 0;
 export default ManageBase.extend({
   auth : service(),
   controls : service(),
+  session: service(),
+
 
   editorVisible: false,
   toggleShowJsonViewer : true,
@@ -80,6 +82,22 @@ export default ManageBase.extend({
       run_later(() => $('a.jsoneditor-value').attr('target', '_blank'));
     });
   },
+
+  // ---------------------------------------------------------------------------
+
+  /** @return true if the logged in user (Client) owns the selected dataset.
+   * @desc this enables the change-group pull-down
+ */
+  datasetOwned : computed('dataset', function () {
+    const
+    datasetClientId = this.get('dataset.clientId'),
+    sessionUserId = this.get('session.session.authenticated.clientId'),
+    ok = datasetClientId === sessionUserId;
+    dLog('datasetOwned', ok, datasetClientId, sessionUserId, this.get('dataset.id'));
+    return ok;
+  }),
+
+  // ---------------------------------------------------------------------------
 
   inGroupsPromise : computed(
     'controls.apiServerSelectedOrPrimary.store',
