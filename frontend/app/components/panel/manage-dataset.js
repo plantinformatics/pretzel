@@ -1,5 +1,5 @@
 import { inject as service } from '@ember/service';
-import { computed, observer } from '@ember/object';
+import EmberObject, { computed, observer } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import { later as run_later } from '@ember/runloop';
 
@@ -14,6 +14,9 @@ import ManageBase from './manage-base';
 
 const dLog = console.debug;
 const trace = 0;
+
+/** select-group.hbs uses .id and .name.  datasetChangeGroup() uses .get('id') */
+const noGroup = EmberObject.create({id : 'noGroup', name : ''});
 
 export default ManageBase.extend({
   auth : service(),
@@ -121,6 +124,7 @@ export default ManageBase.extend({
          */
         let gs = cgs.mapBy('groupId.content')
             .filter((g) => g.name);
+        gs.unshift(noGroup);
         dLog(fnName, 'gs', gs);
         this.set('inGroupsValue', gs);  return gs;});
       return groupsP;
@@ -156,12 +160,14 @@ export default ManageBase.extend({
       this.datasetChangeGroup(groupValue);
     });
   },
+  /** @param group  from .inGroupsValue, and noGroup
+   */
   datasetChangeGroup(group) {
     const fnName = 'datasetChangeGroup';
     if (this.dataset.get('groupId.id') == group.get('id')) {
       dLog(fnName, 'no change', this.dataset.get('id'), group.get('id') );
     } else {
-      this.dataset.set('groupId', group);
+      this.dataset.set('groupId', group === noGroup ? null : group);
       this.dataset.save()
         .catch((err) => this.set('datasetGroupErrMsg', 'Dataset Group change ' + group.id + ' not saved.\n' + err));
     }

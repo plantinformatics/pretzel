@@ -135,17 +135,34 @@ var config = {
   },
 
   updateRecord(store, type, snapshot) {
+    const fnName = 'updateRecord';
     // updateRecord calls PUT rather than PATCH, which is
     // contrary to the record.save method documentation
     // the JSONAPI adapter calls patch, while the
     // RESTAdapter calls PUT
     let data = {};
     let
+    /** Recognise when dataset.groupId (only) is being set, and put only
+     * .groupId in the PATCH, to avoid writing [] to .blocks
+     * This could be used more generally as other changes are added.
+     */
     /** probably github.com/ef4/ember-data-relationship-tracker offers a better solution. */
     rc = snapshot._internalModel._relationshipProxyCache,
     changedRelationshipKeys = Object.keys(rc);
-    if ((changedRelationshipKeys.length === 1) && (changedRelationshipKeys[0] === "groupId" )) {
-      data.groupId = rc.groupId.get('id');
+    if ((snapshot.modelName === 'dataset') && 
+        (changedRelationshipKeys.length === 1) &&
+        (changedRelationshipKeys[0] === "groupId" )) {
+      /* expect snapshot._changedAttributes is {}.
+       * If needed to set .groupId and attributes in one save, this can be expanded.
+       */
+      if (Object.keys(snapshot._changedAttributes).length) {
+        dLog(fnName, snapshot._changedAttributes);
+      }
+      /* when dataset.groupId is set to null, rc.groupId.get('id') returns
+       * undefined; map this to null, which is valid JSON in PATCH.
+       * (snapshot._internalModel._record.groupId.content is null)
+       */
+      data.groupId = rc.groupId.get('id') || null;
     } else {
     let serializer = store.serializerFor(type.modelName);
 
