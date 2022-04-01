@@ -188,7 +188,13 @@ module.exports = function(app) {
           cb(null, allow)
         })
       } else {
-        cb(Error(`${modelName} not found`), false)
+        let error = Error(`${modelName} not found`);
+        /** default is 500; 404 seems correct because context.model is defined;
+         * change just for Group initially.  */
+        if (modelName === 'Group') {
+          error.statusCode = 404;
+        }
+        cb(error, false);
       }
     })
   }

@@ -105,7 +105,7 @@ module.exports = function(ClientGroup) {
           console.log(fnName, clientGroupId, clientGroups);
 
           let userId = gatherClientId(ctx); // related : sessionClientId()
-          /** equivalant without .toObject() :
+          /** equivalent without .toObject() :
            * clientGroup.__cachedRelations.group.__cachedRelations.owner
            */
           let clientGroup = clientGroups[0].toObject(),

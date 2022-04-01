@@ -98,7 +98,20 @@ module.exports = function(Group) {
       },
       include : 'group'
     },
-    listP = this.app.models.ClientGroup.find(query, options);
+    listP = this.app.models.ClientGroup.find(query, options)
+      .then(function(clientGroups) {
+        let
+        filtered = clientGroups
+          .filter((clientGroup) => {
+            /** .group() accesses (equivalent) clientGroup.__cachedRelations?.group */
+            let ok = !!clientGroup.group(); 
+            if (! ok) {
+              console.log('Group.in', ok, clientGroup);
+            }
+            return ok;
+          });
+        return filtered;
+      });
     listP.then((list) => console.log(fnName, clientIdString, list.length || JSON.stringify([query, options]) ));
 
     return listP;
