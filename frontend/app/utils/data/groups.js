@@ -4,9 +4,11 @@ import EmberObject, { computed } from '@ember/object';
 import { toArrayPromiseProxy } from '../ember-devel';
 import { getGroups } from './group';
 
+/**
+ * @param server  components/service/api-server.js
+ */
 export default class DataGroups extends EmberObject {
   @service auth;
-  @service controls;
 
   constructor() {
     super();
@@ -38,9 +40,9 @@ export default class DataGroups extends EmberObject {
     /**   @service session;
     clientId = this.get('session.session.authenticated.clientId'),
     */
-    store = this.get('controls.apiServerSelectedOrPrimary.store'),
+    store = this.server.store,
     auth = this.get('auth'),
-    groupsP = toArrayPromiseProxy(getGroups(auth, own, store));
+    groupsP = toArrayPromiseProxy(getGroups(auth, own, this.server));
     return groupsP;
   }
 

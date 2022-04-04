@@ -57,7 +57,7 @@ export default Service.extend({
     return this._ajax('Clients/', 'POST', JSON.stringify(data), false)
   },
 
-  groups(own) {
+  groups(server, own) {
     let verb = own ? 'own' : 'in';
     /** server API /own will implement this filter by default, but client can
      * define it until LB4 API has clientId from accessToken.
@@ -67,7 +67,7 @@ export default Service.extend({
     dLog('groups', own, clientId);
     + clientId + '/'
      */
-    return this._ajax('Groups/' + verb, 'GET', /*data*/{}, true);
+    return this._ajax('Groups/' + verb, 'GET', /*data*/{server}, true);
   },
 
   addClientGroupEmail(groupId, clientEmail) {

@@ -56,7 +56,7 @@ export default EmberObject.extend({
   init() {
     this._super(...arguments);
 
-    let groups = DataGroups.create();
+    let groups = DataGroups.create({server : this});
     setOwner(groups, getOwner(this));
     this.set('groups', groups);
   },

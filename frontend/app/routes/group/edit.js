@@ -13,6 +13,7 @@ const dLog = console.debug;
 
 export default class GroupEditRoute extends Route {
   @service auth;
+  @service apiServers;
 
   @action
   willTransition(transition) {
@@ -37,7 +38,8 @@ export default class GroupEditRoute extends Route {
     let
     group = this.controller.model,
     store = group.get('store'),
-    groupsP = getGroups(this.get('auth'), /*own*/true, store);
+    server = this.get('apiServers').lookupServerName(store.name),
+    groupsP = getGroups(this.get('auth'), /*own*/true, server);
     groupsP.then((groups) => {
       dLog(fnName, this.controller.model.clients, groups.length);
     });

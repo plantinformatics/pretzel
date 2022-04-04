@@ -20,8 +20,8 @@ const noGroup = EmberObject.create({id : 'noGroup', name : ''});
 
 export default ManageBase.extend({
   auth : service(),
-  controls : service(),
   session: service(),
+  apiServers : service(),
 
 
   editorVisible: false,
@@ -103,7 +103,7 @@ export default ManageBase.extend({
   // ---------------------------------------------------------------------------
 
   inGroupsPromise : computed(
-    'controls.apiServerSelectedOrPrimary.store',
+    'this.dataset',
     function () {
       let
       fnName = 'inGroups',
@@ -112,8 +112,9 @@ export default ManageBase.extend({
           session : service(),
       clientId = this.get('session.session.authenticated.clientId'),
       */
-      store = this.get('controls.apiServerSelectedOrPrimary.store'),
-      clientGroupsP = getGroups(this.get('auth'), /*own*/false, store),
+      store = this.dataset.store,
+      server = this.get('apiServers').lookupServerName(store.name),
+      clientGroupsP = getGroups(this.get('auth'), /*own*/false, server),
       /** cgs[i] is model:client-group, cgs[i].get('groupId') is Proxy, so use .content to get model:group */
       groupsP = clientGroupsP.then((cgs) => {
         /** API lookup failure for a groupId leads to g.name undefined here.
