@@ -1,9 +1,12 @@
 import EmberObject, { computed } from '@ember/object';
 import Component from '@ember/component';
+import { getOwner, setOwner } from '@ember/application';
 import { inject as service } from '@ember/service';
 import { task, timeout, didCancel } from 'ember-concurrency';
 
 import { breakPoint } from '../../utils/breakPoint';
+import DataGroups from '../../utils/data/groups';
+
 
 
 /* global d3 */
@@ -51,6 +54,16 @@ export default EmberObject.extend({
 
 
   init() {
+    this._super(...arguments);
+
+    let groups = DataGroups.create();
+    setOwner(groups, getOwner(this));
+    this.set('groups', groups);
+  },
+  willDestroy() {
+    this.get('groups').destroy();
+    this.set('groups', null);
+
     this._super(...arguments);
   },
 
