@@ -51,6 +51,8 @@ export default class GroupEditController extends Controller {
   @alias('services.auth') auth;
   @alias('services.controls') controls;
 
+  @alias('controls.apiServerSelectedOrPrimary') server;
+
 
   /** clientId for the primaryServer */
   get clientIdSession() {
@@ -71,7 +73,7 @@ export default class GroupEditController extends Controller {
     this.set(msgName, null);
     dLog(fnName, groupId, newClientName);
     let
-    server = this.get('controls.apiServerSelectedOrPrimary'),
+    server = this.get('server'),
     store = server.store;
     let
     clientId = server.clientId || this.clientIdSession;
@@ -114,7 +116,7 @@ export default class GroupEditController extends Controller {
   get groupDatasets() {
     let
     apiServers = this.get('apiServers'),
-    server = this.get('controls.apiServerSelectedOrPrimary'),
+    server = this.get('server'),
     store = server.store,
     group = this.model,
     groupId = group.id,
@@ -187,7 +189,7 @@ export default class GroupEditController extends Controller {
     fnName = 'removeGroupMember',
     msgName = fnName + 'Msg',
     apiServers = this.get('apiServers'),
-    server = this.get('controls.apiServerSelectedOrPrimary'),
+    server = this.get('server'),
     store = server.store,
 
     clientGroup = store.peekRecord('client-group', clientGroupId),
@@ -246,7 +248,7 @@ export default class GroupEditController extends Controller {
     let
     group = this.model,
     apiServers = this.get('apiServers'),
-    server = this.get('controls.apiServerSelectedOrPrimary'),
+    server = this.get('server'),
     store = server.store,
     adapterOptions = apiServers.addId(server, { }),
     removeMembersP = 
@@ -264,11 +266,15 @@ export default class GroupEditController extends Controller {
         destroyP
           .then((done) => {
             if (done.count !== 1) { console.log(fnName, done); }
-            if (getOwner(this)) {
-              this.transitionToRoute('groups');
-            } else {
-              this.target.transitionTo('groups');
-            }
+            let dataGroups = this.get('server.groups');
+            dataGroups.refresh();
+            /* equivalent
+            let
+            owner = Ember.getOwner(this.target),
+            routeGroups = owner.lookup('route:groups');
+            routeGroups.transitionTo('groups');
+            */
+            this.target.transitionTo('groups');
           })
           .catch((error) => {
             dLog(fnName, error);

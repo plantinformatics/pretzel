@@ -41,7 +41,10 @@ export default class GroupEditRoute extends Route {
     groupsP.then((groups) => {
       dLog(fnName, this.controller.model.clients, groups.length);
     });
-    return groupsP;
+    /** result of groupsP is pushed into the store. */
+    /** Update parent model also. */
+    const eventWasHandled = false;
+    return eventWasHandled;
   }
 
 }

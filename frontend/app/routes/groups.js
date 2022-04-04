@@ -21,6 +21,7 @@ export default class GroupsRoute extends Route {
     fieldNames = ['groupsIn', 'groupsOwn'],
     groupsP = fieldNames.map((fieldName) => [fieldName, this.get('groups').get(fieldName)]),
     modelP = Object.fromEntries(groupsP);
+    modelP.groupsOwn.then((gs) => console.log('routes/groups:model() groupsOwn.then', gs.map((g) => [g.get('id'), g.get('name')]))); 
 
     return modelP;
   }
