@@ -28,7 +28,9 @@ function cirquePush(text) {
   }
 }
 exports.cirquePush = cirquePush;
-/** show last n */
+/** show last n.
+ * Clear buffer.
+ */
 function cirqueTail(n) {
   let
   from = ((cirqueNext - n) + cirqueLength) % cirqueLength,
@@ -36,8 +38,17 @@ function cirqueTail(n) {
   end = split ? cirque.slice(from, cirqueLength) : [],
   start = cirque.slice(split ? 0 : from, cirqueNext);
   console.log('cirqueTail', n, cirqueNext, end, start);
+  cirqueClear();
 }
 exports.cirqueTail = cirqueTail;
+
+/** Clear entire buffer.
+ */
+function cirqueClear() {
+  cirque = []; cirqueNext = 0;
+}
+exports.cirqueClear = cirqueClear;
+
 
 function cirqueTestSetup() {
   for (let i=0; i < cirqueLength; i++) { cirquePush(''+i); }
