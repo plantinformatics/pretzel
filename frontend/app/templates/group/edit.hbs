@@ -23,7 +23,9 @@
 
     <div>{{this.deleteGroupMsg}}</div>
 
-    {{#elem/button-refresh onClick=(action this.refresh)}}Refresh{{/elem/button-refresh}}
+    <div  style="margin-top: 2em;">
+      {{#elem/button-refresh classNames=(array 'btn' 'btn-info') onClick=(action this.refresh)}}Refresh{{/elem/button-refresh}}
+    </div>
 
   <hr class="left20">
 
