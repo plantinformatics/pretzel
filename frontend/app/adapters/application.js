@@ -54,7 +54,9 @@ var config = {
     let store = this.store,
     adapterOptions = store && store.adapterOptions,
     host = (adapterOptions && adapterOptions.host) || get(this, '_server.host');
-    console.log('app/adapters/application.js host', this, store, adapterOptions, host, this._server);
+    if (trace) {
+      dLog('app/adapters/application.js host', adapterOptions, host, (trace < 2) ? [store.name, this._server?.name] : [this, store, this._server]);
+    }
     return host;
   },
 
@@ -74,7 +76,9 @@ var config = {
     let store = this.store,
     adapterOptions = store && store.adapterOptions,
     token = this._server && this._server.token;
-    dLog('headers', store, adapterOptions, this._server, token);
+    if (trace) {
+      dLog('headers', adapterOptions, (trace < 2) ? [store.name, this._server?.name] : [store, this._server], token);
+    }
     return token && {
       Authorization : token
     };
@@ -118,8 +122,9 @@ var config = {
       servers = this.get('apiServers.servers'),
       snapshotServer = servers && servers[snapshotServerName],
       server = map.get(serverHandle) || (id && id2Server[id]) || snapshotServer;
-      if (trace)
-        dLog(fnName, 'id2Server', id2Server, map, id, server, requestType, snapshotServerName);
+      if (trace) {
+        dLog(fnName, 'id2Server', id, requestType, snapshotServerName, (trace < 2) ? [server.name] : [id2Server, map, server]);
+      }
       /* if server is undefined or null then this code clears this._server and
        * session.requestServer, which means the default / local / primary
        * server is used.

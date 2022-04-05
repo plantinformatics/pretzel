@@ -16,7 +16,7 @@ import { after } from 'lodash/function';
 /* global EventSource */
 
 const trace_paths = 0;
-const trace = 0;
+const trace = 1;
 const dLog = console.debug;
 
 /** This value is used in SSE packet event id to signify the end of the cursor in pathsViaStream. */
@@ -416,7 +416,9 @@ export default Service.extend({
 
     if (data) config.data = data
 
-    console.log('_ajax', arguments, this);
+    if (trace) {
+      dLog('_ajax', arguments, (trace < 2) ? ',' : this);
+    }
     if (token === true) {
       let accessToken = this._accessToken(server);
       config.headers.Authorization = accessToken
@@ -465,7 +467,9 @@ export default Service.extend({
       accessToken = this.get('session.data.authenticated.token');
       dLog('_accessToken', this.get('session'), accessToken, server);
     }
-    console.log('_accessToken', server, accessToken);
+    if (trace) {
+      dLog('_accessToken', (trace < 2) ? ',' : server, accessToken);
+    }
     return accessToken
   },
   /** Determine which server to send the request to.
@@ -577,7 +581,9 @@ export default Service.extend({
      *  "If not explicitly set, the cookie domain defaults to the domain the
      *  session was authenticated on."
      */
-    dLog('_endpoint', requestServer, apiHost, endpoint, config);
+    if (trace) {
+      dLog('_endpoint', apiHost, endpoint, trace > 1 && [requestServer, config]);
+    }
     return endpoint
   },
   /** Same as _endpoint() plus append '?access_token=' + access token.

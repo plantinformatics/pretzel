@@ -5,7 +5,8 @@ import { attribute2relationship, normalizeDataEmbedded } from '../utils/ember-se
 
 // -----------------------------------------------------------------------------
 
-const dLog = console.debug;
+const trace = 0;
+let dLog = trace ? console.debug : function () { };
 
 
 // -----------------------------------------------------------------------------

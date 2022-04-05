@@ -5,7 +5,9 @@ import { breakPoint } from './breakPoint';
 
 // -----------------------------------------------------------------------------
 
-const dLog = console.debug;
+const trace = 0;
+let dLog = trace ? console.debug : function () { };
+
 
 // -----------------------------------------------------------------------------
 

@@ -7,7 +7,8 @@ import { getGroups } from '../../utils/data/group';
 
 // -----------------------------------------------------------------------------
 
-const dLog = console.debug;
+const trace = 1;
+let dLog = trace ? console.debug : function () { };
 
 // -----------------------------------------------------------------------------
 
@@ -41,7 +42,7 @@ export default class GroupEditRoute extends Route {
     server = this.get('apiServers').lookupServerName(store.name),
     groupsP = getGroups(this.get('auth'), /*own*/true, server);
     groupsP.then((groups) => {
-      dLog(fnName, this.controller.model.clients, groups.length);
+      dLog(fnName, (trace < 2) ? ',' : [this.controller.model.clients], groups.length);
     });
     /** result of groupsP is pushed into the store. */
     /** Update parent model also. */
