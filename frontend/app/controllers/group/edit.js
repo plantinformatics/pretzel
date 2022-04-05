@@ -71,6 +71,10 @@ export default class GroupEditController extends Controller {
     return clientIdSession;
   }
 
+  @action
+  refresh() {
+    this.send('refreshModel');
+  }
 
   addClient() {
     const

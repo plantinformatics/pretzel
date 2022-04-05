@@ -19,9 +19,12 @@
      {{#ember-tooltip side="left" delay=500}}
        Delete this group.  Enabled when the group has no datasets.
      {{/ember-tooltip}}
-</button>
+    </button>
 
     <div>{{this.deleteGroupMsg}}</div>
+
+    {{#elem/button-refresh onClick=(action this.refresh)}}Refresh{{/elem/button-refresh}}
+
   <hr class="left20">
 
 
