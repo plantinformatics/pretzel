@@ -15,6 +15,9 @@ const dLog = console.debug;
 // -----------------------------------------------------------------------------
 
 
+/**
+ * @param model group
+ */
 export default class GroupEditController extends Controller {
   // @service auth;
 
@@ -53,6 +56,12 @@ export default class GroupEditController extends Controller {
 
   @alias('controls.apiServerSelectedOrPrimary') server;
 
+  /** .server.store === .groupStore. */
+  @alias('group.store') groupStore;
+  /** Lookup the server of the store of this group. */
+  get server() {
+    return this.get('apiServers').lookupServerName(this.groupStore.name);
+  };
 
   /** clientId for the primaryServer */
   get clientIdSession() {
@@ -248,8 +257,8 @@ export default class GroupEditController extends Controller {
     let
     group = this.model,
     apiServers = this.get('apiServers'),
+    store = this.get('groupStore'),
     server = this.get('server'),
-    store = server.store,
     adapterOptions = apiServers.addId(server, { }),
     removeMembersP = 
     // group = store.peekRecord('group', this.model.id),

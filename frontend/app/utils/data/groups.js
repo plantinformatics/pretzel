@@ -14,6 +14,7 @@ export default class DataGroups extends EmberObject {
     super();
     this.refreshSignal = 0;
   }
+  /** Signal that the groupsIn,Own properties should be refreshed when next evaluated */
   refresh() {
     this.incrementProperty('refreshSignal');
   }
