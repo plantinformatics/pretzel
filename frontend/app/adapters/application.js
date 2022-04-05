@@ -90,6 +90,7 @@ var config = {
    */
   buildURL(modelName, id, snapshot, requestType, query) {
     let fnName = 'buildURL';
+    let queryServerName, server;
     let serverHandle;
     /** snapshot may be an array of snapshots.
      *  apparently snapshotRecordArray has the options, as adapterOptionsproperty,
@@ -104,6 +105,17 @@ var config = {
     {
       console.log(fnName, 'query', query);
       serverHandle = query;
+      if (serverHandle.server) {
+        if (serverHandle.server.name) {
+          server = serverHandle.server;
+          delete serverHandle.server;
+        } else if (typeof serverHandle.server === 'string') {
+          queryServerName = serverHandle.server;
+          delete serverHandle.server;
+        } else {
+          console.log(fnName, 'server?', serverHandle.server);
+        }
+      }
     }
     if (! serverHandle && id)
     {
@@ -111,6 +123,7 @@ var config = {
       console.log(fnName, 'id', id);
     }
     // this applies when serverHandle is defined or undefined
+    if (! server)
     {
       /** block getData() is only used if allInitially (i.e. not progressive loading);
        *  so that addId is not done, so use id2Server. */
@@ -119,12 +132,15 @@ var config = {
       let map = this.get('apiServers.obj2Server'),
       /** the above works for blocks; for datasets (e.g. delete), can lookup server name from snapshot.record */
       snapshotServerName = snapshot && get(snapshot, 'record.store.name'),
+      serverName = queryServerName || snapshotServerName,
       servers = this.get('apiServers.servers'),
-      snapshotServer = servers && servers[snapshotServerName],
+      snapshotServer = servers && serverName && servers[serverName];
       server = map.get(serverHandle) || (id && id2Server[id]) || snapshotServer;
       if (trace) {
-        dLog(fnName, 'id2Server', id, requestType, snapshotServerName, (trace < 2) ? [server.name] : [id2Server, map, server]);
+        dLog(fnName, 'id2Server', id, requestType, snapshotServerName, (trace < 2) ? [server?.name] : [id2Server, map, server]);
       }
+    }
+
       /* if server is undefined or null then this code clears this._server and
        * session.requestServer, which means the default / local / primary
        * server is used.
@@ -133,7 +149,7 @@ var config = {
         this._server = server;
         this.set('session.requestServer', server);
       }
-    }
+
     let url = this._super(modelName, id, snapshot, requestType, query);
     dLog(fnName, 'url', url, modelName, id, /*snapshot,*/ requestType);
     return url;

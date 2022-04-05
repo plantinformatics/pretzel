@@ -167,7 +167,8 @@ export default class GroupEditController extends Controller {
           filter = {where};
       /** API filter gives 0 results, so filter here instead.
       */
-      group.store.query('client-group', {/*filter*/})
+      let server = group.store.name;
+      group.store.query('client-group', {server/*filter*/})
       // findAll('client-group')
         .then((clientGroups) => {
           let cgs;
