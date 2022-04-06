@@ -163,6 +163,11 @@ var config = {
     // RESTAdapter calls PUT
     let data = {};
     let
+    object = store.peekRecord(snapshot.modelName, snapshot.id),
+    changedAttributes = snapshot.changedAttributes(),
+    changedAttributesKeys = Object.keys(changedAttributes),
+    /** object.hasDirtyAttributes seems to be true if either an attribute or relationship has changed.
+     */
     /** Recognise when dataset.groupId (only) is being set, and put only
      * .groupId in the PATCH, to avoid writing [] to .blocks
      * This could be used more generally as other changes are added.
@@ -170,20 +175,27 @@ var config = {
     /** probably github.com/ef4/ember-data-relationship-tracker offers a better solution. */
     rc = snapshot._internalModel._relationshipProxyCache,
     changedRelationshipKeys = Object.keys(rc);
-    if ((snapshot.modelName === 'dataset') && 
+    if (! changedAttributesKeys.length &&
+        (snapshot.modelName === 'dataset') && 
         (changedRelationshipKeys.length === 1) &&
         (changedRelationshipKeys[0] === "groupId" )) {
-      /* expect snapshot._changedAttributes is {}.
+      /* expect changedAttributes is {}.
        * If needed to set .groupId and attributes in one save, this can be expanded.
        */
-      if (Object.keys(snapshot._changedAttributes).length) {
-        dLog(fnName, snapshot._changedAttributes);
+      if (changedAttributesKeys.length) {
+        dLog(fnName, changedAttributes);
       }
       /* when dataset.groupId is set to null, rc.groupId.get('id') returns
        * undefined; map this to null, which is valid JSON in PATCH.
        * (snapshot._internalModel._record.groupId.content is null)
        */
       data.groupId = rc.groupId.get('id') || null;
+    } else if (changedAttributesKeys.length === 1) {
+      /** This handles changes to a single attribute, e.g. .public or ._meta,
+       * and places only the changed attribute in the PATCH.
+       */
+      let key = changedAttributesKeys[0];
+      data[key] = snapshot.__attributes[key];
     } else {
     let serializer = store.serializerFor(type.modelName);
 
