@@ -15,6 +15,11 @@ import ManageBase from './manage-base';
 const dLog = console.debug;
 const trace = 0;
 
+/** Indicate whether user selects from /own or /in groups to set dataset:group
+ * @see groupsPromise */
+const selectFromOwn = true;
+const selectFrom = selectFromOwn ? 'own' : 'in';
+
 /** select-group.hbs uses .id and .name.  datasetChangeGroup() uses .get('id') */
 const noGroup = EmberObject.create({id : 'noGroup', name : ''});
 
@@ -102,11 +107,16 @@ export default ManageBase.extend({
 
   // ---------------------------------------------------------------------------
 
-  inGroupsPromise : computed(
+  /** Array of groups which the user may set .dataset.group to.
+   * Originally inGroups, now ownGroups, after a change in requirements : only
+   * the owner of a group can add datasets to it (originally a member of the
+   * group could do that).
+   */
+  groupsPromise : computed(
     'this.dataset',
     function () {
       let
-      fnName = 'inGroups',
+      fnName = 'groupsPromise',
       /** 
     'session.session.authenticated.clientId',
           session : service(),
@@ -114,9 +124,16 @@ export default ManageBase.extend({
       */
       store = this.dataset.store,
       server = this.get('apiServers').lookupServerName(store.name),
-      clientGroupsP = getGroups(this.get('auth'), /*own*/false, server),
-      /** cgs[i] is model:client-group, cgs[i].get('groupId') is Proxy, so use .content to get model:group */
-      groupsP = clientGroupsP.then((cgs) => {
+      apiResultP = getGroups(this.get('auth'), selectFromOwn, server),
+      groupsP = (selectFromOwn ? apiResultP : apiResultP.then(this.clientGroupsToGroups))
+        .then((gs) => {
+        gs.unshift(noGroup);
+        dLog(fnName, 'gs', gs);
+        this.set('groupsValue', gs);  return gs;});
+      return groupsP;
+    }),
+  /** cgs[i] is model:client-group, cgs[i].get('groupId') is Proxy, so use .content to get model:group */
+  clientGroupsToGroups(cgs) {
         /** API lookup failure for a groupId leads to g.name undefined here.
          * E.g. this user may not be a member of the dataset group, and hence
          * the API lookup is not permitted.
@@ -125,24 +142,27 @@ export default ManageBase.extend({
          */
         let gs = cgs.mapBy('groupId.content')
             .filter((g) => g.name);
-        gs.unshift(noGroup);
-        dLog(fnName, 'gs', gs);
-        this.set('inGroupsValue', gs);  return gs;});
-      return groupsP;
-    }),
-  get inGroups() {
-    return {groups : toArrayPromiseProxy(this.get('inGroupsPromise'))};
+    return gs;
   },
-  selectedValue : computed('inGroupsValue', 'dataset.groupId.name', function () {
+
+  /** Instead of using this in .hbs, helper (to-array-promise-proxy ) is used
+   */
+  get groups() {
+    return {groups : toArrayPromiseProxy(this.get('groupsPromise'))};
+  },
+  /** find the current dataset.groupId within groupsValue. This is passed to
+   * select-group to display the current value as initially selected.
+   */
+  selectedValue : computed('groupsValue', 'dataset.groupId.name', function () {
     const
     fnName = 'selectedValue',
     datasetGroupName = this.get('dataset.groupId.name'),
-    inGroupsValue = this.get('inGroupsValue');
+    groupsValue = this.get('groupsValue');
     let group;
-    if (inGroupsValue && datasetGroupName) {
-      group = inGroupsValue.findBy('name', datasetGroupName);
+    if (groupsValue && datasetGroupName) {
+      group = groupsValue.findBy('name', datasetGroupName);
       if (! group) {
-        dLog(fnName, inGroupsValue.map((g) => [g.id, g.name]));
+        dLog(fnName, groupsValue.map((g) => [g.id, g.name]));
       }
       dLog(fnName, datasetGroupName, group?.get('name'));
     }
@@ -153,7 +173,7 @@ export default ManageBase.extend({
     const fnName = 'selectedGroupChanged';
     let
     // currentGroup = this.dataset.content.groupId.content,
-    gsP = this.inGroupsPromise,
+    gsP = this.groupsPromise,
     selectedGroup = gsP.then((gs) => {
       let
       groupValue = gs.findBy('id', selectedGroupId);
@@ -161,7 +181,7 @@ export default ManageBase.extend({
       this.datasetChangeGroup(groupValue);
     });
   },
-  /** @param group  from .inGroupsValue, and noGroup
+  /** @param group  from .groupsValue, and noGroup
    */
   datasetChangeGroup(group) {
     const fnName = 'datasetChangeGroup';
