@@ -28,8 +28,8 @@ Add Group
 <label>Joined groups</label>
 {{#each this.model.groupsIn as |clientGroup|}}
   <div class="margin-1em row joined-groups">
-   <span class="col-sm-3">{{clientGroup.groupId.name}}</span>
-   <span class="col-sm-3">{{clientGroup.groupId.clientId.email}}</span>
+   <span class="col-sm-4">{{clientGroup.groupId.name}}</span>
+   <span class="col-sm-4">{{clientGroup.groupId.clientId.email}}</span>
   </div>
 {{/each}}
 
