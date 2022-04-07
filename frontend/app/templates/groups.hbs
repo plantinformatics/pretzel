@@ -26,12 +26,24 @@ Add Group
 <hr>
 
 <label>Joined groups</label>
+  <div class="margin-1em joined-groups">
+    <span><label>Leave</label></span>
+    <span><label>Visible</label></span>
+    <span><label>Group Name</label></span>
+    <span><label>Group Owner</label></span>
+  </div>
+
 {{#each this.model.groupsIn as |clientGroup|}}
   <div class="margin-1em joined-groups">
     <span>
       <button type="button" class="btn btn-info btn-xs" {{on 'click' (action this.removeGroupMember clientGroup) }}>
         <i class="glyphicon glyphicon-remove"></i>
       </button>
+    </span>
+    <span>
+      <input type="checkbox"
+        checked={{clientGroup.isVisible}}
+        oninput={{action (action (mut clientGroup.isVisible) value="target.checked") }}  >
     </span>
    <span>{{clientGroup.groupId.name}}</span>
    <span>{{clientGroup.groupId.clientId.email}}</span>

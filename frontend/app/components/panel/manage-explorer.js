@@ -545,6 +545,9 @@ export default ManageBase.extend({
     } else {
       if (trace_dataTree > 2)
         availableMaps.then(function (value) { console.log('dataPre availableMaps ->', value); });
+      availableMaps = thenOrNow(
+        availableMaps,
+        (datasetsBlocks) => datasetsBlocks.filterBy('isVisible'));
       return availableMaps;
     }
   }),

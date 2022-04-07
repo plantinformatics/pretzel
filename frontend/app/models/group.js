@@ -1,4 +1,12 @@
 import Model, { attr, belongsTo, hasMany } from '@ember-data/model';
+import { computed } from '@ember/object';
+
+// -----------------------------------------------------------------------------
+
+const dLog = console.debug;
+
+// -----------------------------------------------------------------------------
+
 
 /*
 export default class GroupModel extends Model {
@@ -18,6 +26,21 @@ export default Model.extend({
   /** members of the group */
   clients: hasMany('client', { async: false }),
   clientGroups: hasMany('client-group', { async: false }),
+
+  // ---------------------------------------------------------------------------
+
+  get isVisible() {
+    let
+    clientGroups = this.get('clientGroups'),
+    visibleByCG = clientGroups?.findBy('isVisible'),
+    visible = !! visibleByCG;
+    if (clientGroups) {
+      dLog('isVisible', visible, this.name, clientGroups.mapBy('id'), clientGroups.mapBy('isVisible'));
+    }
+    return visible;
+  },
+
+  // ---------------------------------------------------------------------------
 
 });
 

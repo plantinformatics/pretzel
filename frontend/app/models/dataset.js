@@ -133,6 +133,25 @@ export default Record.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** @return true if this dataset is owned by the logged-in user,
+   * or has no group, or its group is visible to the logged-in user
+   */
+  get isVisible() {
+    let visible = this.get('owner') || this.get('groupIsVisible');
+    return visible;
+  },
+  /** @return true if this dataset has no group, or its group is visible to the
+   * logged-in user
+   */
+  get groupIsVisible() {
+    let
+    /** .groupId is likely a Proxy, with .content which may be null, which gives visible === undefined.  */
+    visible = this.get('groupId.isVisible');
+    return (visible === undefined) || visible;
+  },
+
+  /*--------------------------------------------------------------------------*/
+
   isViewed : computed('blocks.[]', 'blockService.viewed.[]', function () {
     let viewed = this.get('blocks').any((b) => b.isViewed);
     return viewed;
