@@ -27,12 +27,18 @@ Add Group
 
 <label>Joined groups</label>
 {{#each this.model.groupsIn as |clientGroup|}}
-  <div class="margin-1em row joined-groups">
-   <span class="col-sm-4">{{clientGroup.groupId.name}}</span>
-   <span class="col-sm-4">{{clientGroup.groupId.clientId.email}}</span>
+  <div class="margin-1em joined-groups">
+    <span>
+      <button type="button" class="btn btn-info btn-xs" {{on 'click' (action this.removeGroupMember clientGroup) }}>
+        <i class="glyphicon glyphicon-remove"></i>
+      </button>
+    </span>
+   <span>{{clientGroup.groupId.name}}</span>
+   <span>{{clientGroup.groupId.clientId.email}}</span>
   </div>
 {{/each}}
 
+<div>{{this.removeGroupMemberMsg}}</div>
 
 
 {{outlet}}

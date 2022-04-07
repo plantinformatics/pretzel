@@ -4,7 +4,11 @@ import EmberObject, { computed } from '@ember/object';
 import { toArrayPromiseProxy } from '../ember-devel';
 import { getGroups } from './group';
 
-/**
+/** For each api-server, provide access to the groups/in,own APIs
+ *
+ * When groupsIn,Own are evaluated, the APIs will be called if there is not a
+ * cached value, or .refresh() has signalled .refreshSignal
+ *
  * @param server  components/service/api-server.js
  */
 export default class DataGroups extends EmberObject {

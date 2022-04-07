@@ -7,6 +7,7 @@ import { getOwner } from '@ember/application';
 /* global Ember */
 
 import { toPromiseProxy } from '../../utils/ember-devel';
+import { removeGroupMember } from '../../utils/data/group';
 
 // -----------------------------------------------------------------------------
 
@@ -206,34 +207,17 @@ export default class GroupEditController extends Controller {
     server = this.get('server'),
     store = server.store,
 
-    clientGroup = store.peekRecord('client-group', clientGroupId),
-    adapterOptions = apiServers.addId(server, { }), 
-
-    destroyP = clientGroup.destroyRecord(adapterOptions);
+    clientGroup = store.peekRecord('client-group', clientGroupId);
     this.set(msgName, '');
-
-    destroyP.then((cg) => {
-      this.set('selectedClientGroupId', null);
-      // expect API response is {count : 1}
-      dLog(
-        fnName, 'done', clientGroupId, 
-        cg.id,
-        'groupId', cg.get('groupId.id'),
-        'clientId.id', cg.get('clientId.id'),
-        'clientId.email', cg.get('clientId.email'),
-        'groupId.clientId', cg.get('groupId.clientId.id'));
-
-      this.send('refreshModel');
-    })
-      .catch((error) => {
-        let
-        e = error?.errors[0],
-        statusCode = e.status,
-        /** the GUI won't send a request which would cause 403. */
-        detail = (statusCode === '403') ? 'Only group owner / admin can remove members' :
-          (statusCode === '409') ? 'Data error' : undefined;
-        this.set(msgName, detail || error.message || error);
-        dLog(fnName, 'error', error, clientGroupId);
+    let
+    destroyP = removeGroupMember(apiServers, server, clientGroup, clientGroupId);
+    destroyP
+      .then((cg) => {
+        this.set('selectedClientGroupId', null);
+        this.send('refreshModel');
+      })
+      .catch((errorText) => {
+        this.set(msgName, errorText);
       });
     return destroyP;
   };

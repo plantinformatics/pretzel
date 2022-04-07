@@ -1,5 +1,12 @@
 import { toArrayPromiseProxy } from '../ember-devel';
 
+// -----------------------------------------------------------------------------
+
+const dLog = console.debug;
+
+// -----------------------------------------------------------------------------
+
+
 const groupApi = {
   own :  {primaryModelName : 'groups-own', normalizerName : 'normalizeGroupsOwn'},
   'in' : {primaryModelName : 'groups-in', normalizerName : 'normalizeGroupsIn'},
@@ -34,6 +41,54 @@ function getGroups(auth, own, server) {
   return groups;
 }
 
+// -----------------------------------------------------------------------------
+
+/**
+ * @return a promise, yielding the record of the deleted ClientGroup, or
+ * throwing a text error message derived from the API error.
+ * @param clientGroup, clientGroupId.
+ * in controllers/group/edit.js : clientGroup is found from clientGroupId.
+ * in controllers/groups.js : clientGroupId is clientGroup.id.
+ */
+function removeGroupMember(apiServers, server, clientGroup, clientGroupId) {
+  let
+  fnName = 'removeGroupMember',
+  adapterOptions = apiServers.addId(server, { }), 
+
+  destroyP = clientGroup.destroyRecord(adapterOptions);
+
+  destroyP.then((cg) => {
+    // expect API response is {count : 1}
+    dLog(
+      fnName, 'done', clientGroupId, 
+      cg.id,
+      'groupId', cg.get('groupId.id'),
+      'clientId.id', cg.get('clientId.id'),
+      'clientId.email', cg.get('clientId.email'),
+      'groupId.clientId', cg.get('groupId.clientId.id'));
+
+    return cg;
+  })
+    .catch((error) => {
+      let
+      e = error?.errors[0],
+      statusCode = e.status,
+      /** the GUI won't send a request which would cause 403. */
+      detail = (statusCode === '403') ? 'Only group owner / admin can remove members' :
+        (statusCode === '409') ? 'Data error' : undefined,
+      derivedText = detail || error.message || error;
+      dLog(fnName, 'error', error, clientGroupId);
+      throw derivedText;
+    });
+
+  return destroyP;
+}
+
+// -----------------------------------------------------------------------------
+
 export {
   getGroups,
+  removeGroupMember,
 }
+
+// -----------------------------------------------------------------------------
