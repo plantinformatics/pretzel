@@ -10,7 +10,7 @@ class ClientGroups {
     this.clientGroups = null;
   }
   init(app) {
-    whenModels(app, (ClientGroup) => this.update(ClientGroup));
+    whenModels(app, async (ClientGroup) => { await this.update(ClientGroup); console.log('after await update'); this.registerUpdate(app, ClientGroup); });
 
     /** These event listeners don't fire; app does define these event names :
      * app.eventNames()
@@ -118,6 +118,44 @@ function whenModels(app, fn) {
   return ok;
 }
 
+// -----------------------------------------------------------------------------
+
+/** Register fn() to be called after eventName of model.
+ * Used by registerUpdate().
+ */
+ClientGroups.prototype.registerUpdateSingle = function (eventName, modelName, model, fn) {
+  model.observe('after ' + eventName, (ctx, next) => {
+    const
+    fnName = modelName + ':after ' + eventName,
+    obj = ctx.where || ctx.instance,
+    id = obj.id;
+    console.log(fnName, '' + id);
+    fn();
+    next();
+  });
+
+};
+/** Register .update() to be called after save or delete of ClientGroup or Group.
+ */
+ClientGroups.prototype.registerUpdate = function (app, ClientGroup) {
+  /** Loopback model, !== ClientGroup param (Collection). */
+  const lbClientGroup = app.models.ClientGroup;
+  if (! lbClientGroup.observe) {
+    console.log('registerUpdate', 'observe', lbClientGroup.observe, lbClientGroup);
+    return;
+  }
+  if (this.isRegistered) { return; } else { this.isRegistered = true; }
+
+  /** loopback Group */
+  const lbGroup = app.models.Group;
+
+  const fn = () => this.update(ClientGroup); 
+  ['save', 'delete'].forEach((eventName) => {
+    this.registerUpdateSingle(eventName, 'ClientGroup', lbClientGroup, fn);
+    this.registerUpdateSingle(eventName, 'Group', lbGroup, fn);
+  });
+
+};
 
 // -----------------------------------------------------------------------------
 
