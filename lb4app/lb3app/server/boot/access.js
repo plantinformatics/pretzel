@@ -35,7 +35,7 @@ module.exports = function(app) {
     // can use ObjectId .equals() for comparing BSON with String
     let ok = groups.find((id) => id == groupId);
     if (! ok) {
-      cirquePush('isInGroup ' + data.groupId + ', ' + clientId + ', ' + clientIdString + ', ' + JSON.stringify(groups));
+      cirquePush('isInGroup ' + JSON.stringify(data) + ', ' + clientIdString + ', ' + JSON.stringify(groups));
     }
     return ok;
   }
@@ -50,6 +50,9 @@ module.exports = function(app) {
 
   function canRead(data, userId) {
     let ok = isOwner(data, userId) || isInGroup(data, userId) || isPublic(data);
+    if (! ok) {
+      cirquePush('canRead ' + JSON.stringify(data) + ', ' + userId);
+    }
     return ok;
   }
 
@@ -59,6 +62,9 @@ module.exports = function(app) {
     }
     if (isPublic(data) && !isReadOnly(data)) {
       return true;
+    }
+    if (true /*! ok*/) {
+      cirquePush('canWrite ' + JSON.stringify(data) + ', ' + userId);
     }
     return false;
   }
@@ -95,7 +101,10 @@ module.exports = function(app) {
     cb(true);
   }
 
-  function access(modelName, model, userId, permission, context, cb) {
+  /**
+   * @param role used only in cirque trace, if ! ok
+   */
+  function access(modelName, model, userId, permission, context, role, cb) {
     if (modelName == 'Dataset') {
       datasetPermissions(model, userId, permission, context, cb)
     } else if (modelName == 'Block') {
@@ -107,7 +116,7 @@ module.exports = function(app) {
     } else {
       const ok = permission(model, userId);
       if (! ok) {
-        cirquePush('access ' + modelName + ', ' + userId);
+        cirquePush('access ' + role + ',' + context.accessType + ',' + modelName + ', ' + userId);
         cirqueTail(10);
       }
       cb(ok);
@@ -184,7 +193,7 @@ module.exports = function(app) {
     context.model.findById(context.modelId, {}, context)
     .then(function(model) {
       if (model) {
-        access(modelName, model, userId, permission, context, function(allow) {
+        access(modelName, model, userId, permission, context, role, function(allow) {
           cb(null, allow)
         })
       } else {
