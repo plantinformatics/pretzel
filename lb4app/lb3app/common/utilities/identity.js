@@ -47,7 +47,11 @@ exports.queryFilterAccessible = (ctx) => {
   }
   // let groupsNull = groups.slice().push(null);
   let where = {or: [{clientId: clientId}, {public: true}]};
-  if (groups?.length) {
+  /** For read access, it is sufficient for dataset.groupId to be in client groups
+   * This is not applicable for delete, and also for deleteById, $in is not supported :
+   * Operators \"$in\" are not allowed in query","code":"OPERATOR_NOT_ALLOWED_IN_QUERY","
+   */
+  if (ctx.options.property && (ctx.options.property !== 'deleteById') && (groups?.length)) {
     where.or.push({groupId : {$in : groups}});
     console.dir(where);
   }
