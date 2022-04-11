@@ -14,6 +14,15 @@ var loopback = require('loopback'); // for rendering template in custom methods
 var acl = require('../utilities/acl');
 const { gatherClientId } = require('../utilities/identity');
 
+// -----------------------------------------------------------------------------
+
+/** If false then datasets with .public===false have .groupId === null
+ * Same as in frontend/app/controllers/group/edit.js
+ */
+const allowGroupsWhenPrivate = false;
+
+// -----------------------------------------------------------------------------
+
 /** @return session clientId
  * @desc
  * related : let clientIdString = gatherClientId(options);
@@ -153,12 +162,17 @@ module.exports = function(Group) {
 
   /** Prevent Group deletion when there are Datasets which are in this group.
    *
+   * This is only applicable if allowGroupsWhenPrivate; otherwise users are able
+   * to delete (their) groups which have datasets, with the effect that .groupId
+   * of those datasets is set to null.
+   *
    * The frontend client disables the 'Delete Group' button when there are
    * Datasets in the Group (deleteGroupDisabled() in controllers/group/edit.js).
    * Potentially another user could add a datset to the Group after that page is
    * displayed, and also this guard prevents API calls not from the frontend
    * from creating inconsistent data relationships.
    */
+  if (allowGroupsWhenPrivate) {
   Group.observe('before delete', function(ctx, next) {
     const
     fnName = 'Group:before delete',
@@ -187,6 +201,36 @@ module.exports = function(Group) {
 
 
   });
+
+  } else {  // ! allowGroupsWhenPrivate
+
+    /** 
+     * If ! allowGroupsWhenPrivate, users are able to delete (their) groups
+     * which have datasets, with the effect that .groupId of those datasets is
+     * set to null.
+     */
+  Group.observe('after delete', function(ctx, next) {
+    const
+    fnName = 'Group:after delete',
+    models = ctx.Model.app.models,
+    Dataset = models.Dataset,
+    Group = ctx.Model,
+    groupId = ctx.where.id;
+    let group;
+    if (! groupId) {
+      console.log(fnName, ctx.newInstance, ctx.instance, ctx.currentInstance, ctx.where, ctx.data);
+    } else {
+      let where = {groupId : ctx.where.id};
+      console.log(fnName, where, ctx.newInstance, ctx.instance, ctx.currentInstance, ctx.where, ctx.data);
+
+      let promise = Dataset.update(where, {groupId : null}, ctx.options);
+      promise.then((done) => console.log(fnName, done))
+        .catch((error) => console.log(fnName, 'error', error));
+    }
+
+    next();
+  });
+  }
 
   // ---------------------------------------------------------------------------
 

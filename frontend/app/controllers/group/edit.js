@@ -13,6 +13,11 @@ import { removeGroupMember } from '../../utils/data/group';
 
 const dLog = console.debug;
 
+/** If false then datasets with .public===false have .groupId === null
+ * Same as in lb4app/lb3app/common/models/group.js
+ */
+const allowGroupsWhenPrivate = false;
+
 // -----------------------------------------------------------------------------
 
 
@@ -233,10 +238,14 @@ export default class GroupEditController extends Controller {
     dLog(fnName, cgs);
     return Promise.all(destroyPs);
   };
-  /** @return true or null, for disabled=
+  /** If allowGroupsWhenPrivate then the user is prevented from deleting groups
+   * which have datasets assigned; otherwise, the user may delete the group and
+   * .groupId of the corresponding datasets is set to null.
+   *
+   * @return true or null, for disabled=
    */
   get deleteGroupDisabled() {
-    let insensitive = this.groupDatasets.length ? true : null;
+    let insensitive = allowGroupsWhenPrivate && this.groupDatasets.length ? true : null;
     return insensitive;
   };
   @action
