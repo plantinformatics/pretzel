@@ -1,5 +1,6 @@
 import { inject as service } from '@ember/service';
 import EmberObject, { computed } from '@ember/object';
+import { later } from '@ember/runloop';
 
 import { toArrayPromiseProxy } from '../ember-devel';
 import { getGroups } from './group';
@@ -32,7 +33,9 @@ export default class DataGroups extends EmberObject {
   @computed('refreshSignal')
   get groupsIn() {
     const own = false;
-    return this.getGroups(own);
+    let promise = this.getGroups(own);
+    promise.then((gi) => later(() => this.saveGroupInIds(gi), 2000));
+    return promise;
   }
   @computed('refreshSignal')
   get groupsOwn() {
@@ -49,6 +52,26 @@ export default class DataGroups extends EmberObject {
     auth = this.get('auth'),
     groupsP = toArrayPromiseProxy(getGroups(auth, own, this.server));
     return groupsP;
+  }
+
+  /** extract the groupIds from the groups/in result
+   */
+  saveGroupInIds(gi) {
+    let groupIds = gi.toArray()
+        .mapBy('_internalModel._relationshipProxyCache.groupId.content.id');
+    if (groupIds) {
+      this.set('groupsInIds', groupIds);
+    }
+  }
+
+  /** @return true if the logged-in user is in the given groupId.
+   * if groups/in result is not received, return false.
+   */
+  inGroup(groupId) {
+    let
+    groupIds = this.get('groupsInIds'),
+    g = groupIds && groupIds.includes(groupId);
+    return !! g;
   }
 
 }

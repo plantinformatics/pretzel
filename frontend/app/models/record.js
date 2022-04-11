@@ -18,10 +18,15 @@ export default Model.extend({
 
   // ---------------------------------------------------------------------------
 
+  server : computed( function () {
+    let server = this.get('apiServers').lookupServerName(this.store.name);
+    return server;
+  }),
+
   /** @return true if .clientId matches the session .authenticated.clientId
    */
   owner: computed('clientId', function() {
-    let server = this.get('apiServers').lookupServerName(this.store.name),
+    let server = this.get('server'),
     /** clientId for the server which this record is from */
     clientIdRecord = server && server.clientId;
     /** this is the clientId for the primaryServer; same as clientIdRecord only if the record is not from a secondary. */

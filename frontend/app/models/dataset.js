@@ -137,7 +137,7 @@ export default Record.extend({
    * or has no group, or its group is visible to the logged-in user
    */
   get isVisible() {
-    let visible = this.get('owner') || this.get('groupIsVisible');
+    let visible = /*this.public ||*/ this.get('owner') || this.get('groupIsVisible');
     return visible;
   },
   /** @return true if this dataset has no group, or its group is visible to the
@@ -145,9 +145,22 @@ export default Record.extend({
    */
   get groupIsVisible() {
     let
-    /** .groupId is likely a Proxy, with .content which may be null, which gives visible === undefined.  */
-    visible = this.get('groupId.isVisible');
-    return (visible === undefined) || visible;
+    visible,
+    groupId = this.get('groupId.id');
+    if (! groupId) {
+      visible = true;
+    } else {
+      let
+      groups = this.get('server.groups'),
+      /** if ! inGroup, then lookup of .groupId.* will cause 401. */
+      inGroup = groups.inGroup(groupId);
+
+      /** .groupId is likely a Proxy, with .content which may be null.
+       * That case is handled by the above check on groupId.id.
+       */
+      visible = inGroup; //  && this.get('groupId.isVisible');
+    }
+    return visible;
   },
 
   /*--------------------------------------------------------------------------*/
