@@ -185,6 +185,7 @@ export default ManageBase.extend({
    */
   datasetChangeGroup(group) {
     const fnName = 'datasetChangeGroup';
+    this.set('datasetGroupErrMsg', null);
     if (this.dataset.get('groupId.id') == group.get('id')) {
       dLog(fnName, 'no change', this.dataset.get('id'), group.get('id') );
     } else {

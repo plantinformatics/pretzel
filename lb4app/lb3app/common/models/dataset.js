@@ -312,6 +312,35 @@ module.exports = function(Dataset) {
 
   /*--------------------------------------------------------------------------*/
 
+  Dataset.observe('before save', function(ctx, next) {
+    const
+    fnName = 'Dataset:before save',
+    models = ctx.Model.app.models,
+    Dataset = ctx.Model;
+    let dataset;
+
+    if (ctx.newInstance) {
+      /** create : ctx.instance is defined, instead of .currentInstance, .where and .data */
+      dataset = ctx.instance;
+      if (dataset.public && dataset.groupId) {
+        console.log(fnName, ''+dataset.id, ''+dataset.groupId, dataset);
+        dataset.groupId = null; // or dataset.setAttribute('groupId',  )
+      }
+    } else if ((dataset = ctx.currentInstance)) { // update
+      let
+      data = ctx.data,
+      /** check the new value if changing, or otherwise the current value. */
+      isPublic = data.hasOwnProperty('public') ? data.public : dataset.public;
+      if (isPublic && dataset.groupId) {
+        console.log(fnName, isPublic, data, ''+dataset.id, ''+dataset.groupId, dataset);
+        data.groupId = null;
+      }
+    }
+
+    next();
+  });
+
+  // ---------------------------------------------------------------------------
 
   Dataset.remoteMethod('upload', {
     accepts: [
