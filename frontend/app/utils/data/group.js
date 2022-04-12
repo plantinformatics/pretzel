@@ -86,9 +86,34 @@ function removeGroupMember(apiServers, server, clientGroup, clientGroupId) {
 
 // -----------------------------------------------------------------------------
 
+/** request the datasets of the given groupId.
+ */
+function groupDatasets(apiServers, server, store, groupId) {
+  const
+    filter = {include: 'group', where : {groupId}},
+
+    /** associate the server with the adapterOptions, used by
+     *   adapters/application.js : buildURL().
+     * as in :
+     *   services/data/dataset.js : taskGetList(), getData()
+     *   services/data/block.js : getData()
+     */
+    adapterOptions = apiServers.addId(server, { filter }), 
+
+    datasetsP = store.query('dataset', adapterOptions);
+
+    datasetsP.then(function(datasets) {
+      dLog('datasets', datasets.toArray());
+    });
+    return datasetsP;
+}
+
+// -----------------------------------------------------------------------------
+
 export {
   getGroups,
   removeGroupMember,
+  groupDatasets,
 }
 
 // -----------------------------------------------------------------------------

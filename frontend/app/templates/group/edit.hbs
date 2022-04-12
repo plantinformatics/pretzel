@@ -35,7 +35,7 @@
 
 
   <label>Datasets of group {{group.name}}</label>
-  {{#if this.groupDatasets.length}}
+  {{#if group.groupDatasets.length}}
       <div class="margin-1em group-dataset">
         <label>Un-Group</label>
         <label>Dataset</label>
@@ -44,7 +44,7 @@
         <label>public</label>
         <label>createdAt</label>
       </div>
-    {{#each this.groupDatasets as |dataset|}}
+    {{#each group.groupDatasets as |dataset|}}
       <div class="margin-1em group-dataset">
         <span>
           <button type="button" class="btn btn-info btn-xs"

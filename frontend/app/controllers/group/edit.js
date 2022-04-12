@@ -131,35 +131,6 @@ export default class GroupEditController extends Controller {
 
 
 
-  @computed('model.group.id')
-  get groupDatasets() {
-    let
-    apiServers = this.get('apiServers'),
-    server = this.get('server'),
-    store = server.store,
-    group = this.model,
-    groupId = group.id,
-    filter = {include: 'group', where : {groupId}},
-
-    /** associate the server with the adapterOptions, used by
-     *   adapters/application.js : buildURL().
-     * as in :
-     *   services/data/dataset.js : taskGetList(), getData()
-     *   services/data/block.js : getData()
-     */
-    adapterOptions = apiServers.addId(server, { filter }), 
-
-    datasetsP = store.query('dataset', adapterOptions);
-
-    datasetsP.then(function(datasets) {
-      dLog('datasets', datasets.toArray());
-    });
-
-    return datasetsP;
-  };
-
-
-
   @action
   unGroup(dataset, button) {
     const

@@ -3,7 +3,7 @@ import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 
 
-import { getGroups } from '../../utils/data/group';
+import { getGroups, groupDatasets } from '../../utils/data/group';
 
 // -----------------------------------------------------------------------------
 
@@ -26,6 +26,11 @@ export default class GroupEditRoute extends Route {
     this.controller.set('deleteGroupMsg', null);
   }
 
+  afterModel(model) {
+    dLog('afterModel', model);
+    let group = model;
+    model.set('groupDatasets', this.groupDatasets(group));
+  }
 
   /** refreshModel() is used after successful addClient() and removeGroupMember(),
    * so we want to update group.clients, so this.refresh() is not sufficient.
@@ -46,8 +51,22 @@ export default class GroupEditRoute extends Route {
     });
     /** result of groupsP is pushed into the store. */
     /** Update parent model also. */
+    this.refresh();
     const eventWasHandled = false;
     return eventWasHandled;
   }
+
+  groupDatasets(group) {
+    let
+    apiServers = this.get('apiServers'),
+    store = group.store,
+    server = apiServers.lookupServerName(store.name),
+    groupId = group.id,
+    datasetsP = groupDatasets(apiServers, server, store, groupId);
+
+    return datasetsP;
+  };
+
+
 
 }
