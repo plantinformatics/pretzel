@@ -158,6 +158,40 @@ export default class GroupEditController extends Controller {
     return datasetsP;
   };
 
+
+
+  @action
+  unGroup(dataset, button) {
+    const
+    fnName = 'unGroup',
+    msgName = fnName + 'Msg';
+
+    dLog(fnName, dataset.groupId, button);
+
+    this.set(msgName, null);
+
+    dataset.set('groupId', null);
+    let
+    unGroupP = dataset.save()
+      .then((dataset) => {
+        dLog(fnName, dataset.get('id'), dataset.get('public'), dataset.get('groupId.content'));
+        this.send('refreshModel');
+      })
+      .catch((error) => {
+        dLog(fnName, error);
+        /** Example error.message :
+         * "Ember Data Request PATCH .../api/datasets/datasetP1b returned a 500
+         * Payload (application/json; charset=utf-8)
+         * [object Object]"
+         * log : Request PATCH /api/datasets/datasetP1b failed with status code 500. Error: Dataset not found
+         * Possibly 404 instead ? refn : https://datatracker.ietf.org/doc/html/rfc5789
+         */
+        this.set(msgName, error.message || error);
+      });
+  };
+
+
+
   @action
   selectMember(group, client, li) {
     const fnName = 'selectMember';

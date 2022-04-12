@@ -37,6 +37,7 @@
   <label>Datasets of group {{group.name}}</label>
   {{#if this.groupDatasets.length}}
       <div class="margin-1em group-dataset">
+        <label>Un-Group</label>
         <label>Dataset</label>
         <label>Owner</label>
         <label>Group</label>
@@ -45,6 +46,12 @@
       </div>
     {{#each this.groupDatasets as |dataset|}}
       <div class="margin-1em group-dataset">
+        <span>
+          <button type="button" class="btn btn-info btn-xs"
+             {{on 'click' (action this.unGroup dataset) }}>
+               {{elem/icon-base name='remove'}}
+          </button>
+        </span>
        <span>{{dataset.id}}</span>
        <span>{{dataset.clientId.email}}</span>
        <span>{{dataset.groupId.name}}</span>
@@ -52,6 +59,7 @@
        <span>{{dataset.createdAt}}</span>
       </div>
     {{/each}}
+    <div>{{elem/display-message message=this.unGroupMsg}}</div>
   {{/if}}
 
   {{group/group-members group=group selectMember=(action this.selectMember group)}}
