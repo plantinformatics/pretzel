@@ -123,8 +123,9 @@ export default ManageBase.extend({
       clientId = this.get('session.session.authenticated.clientId'),
       */
       store = this.dataset.store,
-      server = this.get('apiServers').lookupServerName(store.name),
-      apiResultP = getGroups(this.get('auth'), selectFromOwn, server),
+      apiServers = this.get('apiServers'),
+      server = apiServers.lookupServerName(store.name),
+      apiResultP = getGroups(this.get('auth'), selectFromOwn, server, apiServers),
       groupsP = (selectFromOwn ? apiResultP : apiResultP.then(this.clientGroupsToGroups))
         .then((gs) => {
         gs.unshift(noGroup);

@@ -44,8 +44,9 @@ export default class GroupEditRoute extends Route {
     let
     group = this.controller.model,
     store = group.get('store'),
-    server = this.get('apiServers').lookupServerName(store.name),
-    groupsP = getGroups(this.get('auth'), /*own*/true, server);
+    apiServers = this.get('apiServers'),
+    server = apiServers.lookupServerName(store.name),
+    groupsP = getGroups(this.get('auth'), /*own*/true, server, apiServers);
     groupsP.then((groups) => {
       dLog(fnName, (trace < 2) ? ',' : [this.controller.model.clients], groups.length);
     });

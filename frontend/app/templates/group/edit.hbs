@@ -62,10 +62,11 @@
     <div>{{elem/display-message message=this.unGroupMsg}}</div>
   {{/if}}
 
-  {{group/group-members group=group selectMember=(action this.selectMember group)}}
-  {{#if this.selectedClientGroupId}}
-    {{this.selectedClientGroupId}}
-    <button type="button" class="btn btn-info" {{on 'click' (action this.removeGroupMember this.selectedClientGroupId) }}>Remove member</button>
+  {{group/group-members group=group selectMember=(action this.selectMember)
+    removeGroupMember=(action this.removeGroupMember) }}
+  {{#if this.selectedClientGroup}}
+    {{this.selectedClientGroup.id}}
+    <button type="button" class="btn btn-info" {{on 'click' (action this.removeGroupMember this.selectedClientGroup) }}>Remove member</button>
   {{/if}}
   <div>{{this.removeGroupMemberMsg}}</div>
 

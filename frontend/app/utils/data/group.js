@@ -18,14 +18,15 @@ const groupApi = {
  * @param server  to request from; server.store to push result to
  * @return promise yielding array of records : /in : client-group, /own : group
  */
-function getGroups(auth, own, server) {
+function getGroups(auth, own, server, apiServers) {
   const
   store = server.store,
   apiName = own ? 'own' : 'in',
   config = groupApi[apiName],
   serializer = store.serializerFor(config.primaryModelName),
   /** promise yielding an array of records */
-  groupsPR = auth.groups(server, own)
+  groupsPR = own ? getGroups2(auth, own, server, apiServers) :
+    auth.groups(server, own)
     .then((cgs) => {
       /** result of push is record, so cgrs is an array of records :
        *    in : client-group, own : group
@@ -41,14 +42,33 @@ function getGroups(auth, own, server) {
   return groups;
 }
 
+function getGroups2(auth, own, server, apiServers) {
+  const
+  fnName = 'getGroups2',
+  store = server.store,
+  clientId = server.clientId,
+  filter = {where : {clientId}, include : 'clientGroups'},
+  adapterOptions = apiServers.addId(server, { filter }),
+  groupsP = store.query('group', adapterOptions, {adapterOptions : {host : server.name}})
+    .then((groups) => {
+      dLog(fnName, groups);
+      /* query() does push(). refn : @ember-data/store/-private.js : _query() :
+       * var internalModels = store._push(payload);
+       */
+      return groups.toArray();
+    })
+    .catch((error) => {dLog(fnName, error); return [];});
+  return groupsP;
+}
+
 // -----------------------------------------------------------------------------
 
 /**
  * @return a promise, yielding the record of the deleted ClientGroup, or
  * throwing a text error message derived from the API error.
  * @param clientGroup, clientGroupId.
- * in controllers/group/edit.js : clientGroup is found from clientGroupId.
- * in controllers/groups.js : clientGroupId is clientGroup.id.
+ * Originally clientGroup was found from clientGroupId in controllers/group/edit.js;
+ * Now, in both uses : clientGroupId is now clientGroup.id
  */
 function removeGroupMember(apiServers, server, clientGroup, clientGroupId) {
   let

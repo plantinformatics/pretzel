@@ -159,78 +159,71 @@ export default class GroupEditController extends Controller {
          */
         this.set(msgName, error.message || error);
       });
-  };
+  }
 
 
 
   @action
-  selectMember(group, client, li) {
+  selectMember(clientGroup, li) {
     const fnName = 'selectMember';
-    dLog(fnName, group?.id, client?.id, li);
-    let clientGroups = group.clientGroups.toArray();
-    if (clientGroups.length) {
-    let clientGroupId = clientGroups[0].id;
-      this.set('selectedClientGroupId', clientGroupId);
-    } else {
-      let clientId = client.id,
-          groupId = group.id,
-          where = {clientId, groupId},
-          filter = {where};
-      /** API filter gives 0 results, so filter here instead.
-      */
-      let server = group.store.name;
-      group.store.query('client-group', {server/*filter*/})
-      // findAll('client-group')
-        .then((clientGroups) => {
-          let cgs;
-          if (clientGroups.modelName) {
-            cgs = clientGroups.toArray()
-              .filter((cg) => (cg.get('clientId.id') === clientId) && (cg.get('groupId.id') === groupId))
-              .map((c) => ({id : c.id, clientId : c.get('clientId.id'), groupId : c.get('groupId.id')}));
-          } else {
-            cgs = clientGroups.filter((cg) => (cg.clientId === clientId) && (cg.groupId === groupId));
-          }
-          if ( ! cgs.length) {
-            dLog(fnName, 'not matched', clientId, groupId, clientGroups);
-          } else {
-            if (cgs.length > 1) {
-              dLog(fnName, cgs.length, 'matched', clientId, groupId, cgs);
-            }
-            let clientGroup = cgs[0];
-            this.set('selectedClientGroupId', clientGroup.id);
-          }
-        })
-        .catch((error) => dLog(fnName, clientId, error));
-    }
-  };
+    dLog(fnName, clientGroup?.id, li);
+    this.set('selectedClientGroup', clientGroup);
+  }
 
+  /** Use group (this.model) and the given client to identify a clientGroup.
+   * Used by removeGroupMemberClient() which is no longer required;
+   * probably won't be needed.
+   */
+  clientToClientGroup(client) {
+    let
+    fnName = 'clientToClientGroup',
+    group = this.model,
+    cgs = group.clientGroups,
+    clientGroup = cgs.find((cg) => {
+      return cg.clientId === client.id;
+    });
+    dLog(fnName, clientGroup, cgs);
+    if (! clientGroup) {
+      clientGroup = client.groups.find((cg) => cg.clientId.get('id') === client.get('id'));
+      dLog(fnName, clientGroup, client.get('id'), client.groups);
+    }
+    return clientGroup;
+  }
+
+  @action
+  removeGroupMemberClient(client) {
+    const
+    fnName = 'removeGroupMemberClient',
+    clientGroup = this.clientToClientGroup(client);
+    if (clientGroup) {
+      this.removeGroupMember(clientGroup.id);
+    }
+  }
 
   /**
-   * @param clientGroupId may be this.selectedClientGroupId or this.clientGroups[i].id
+   * @param clientGroup may be this.selectedClientGroup or group (this.model) .clientGroups[i]
    */
   @action
-  removeGroupMember(clientGroupId) {
+  removeGroupMember(clientGroup) {
     const
     fnName = 'removeGroupMember',
     msgName = fnName + 'Msg',
     apiServers = this.get('apiServers'),
-    server = this.get('server'),
-    store = server.store,
+    server = this.get('server');
 
-    clientGroup = store.peekRecord('client-group', clientGroupId);
     this.set(msgName, '');
     let
-    destroyP = removeGroupMember(apiServers, server, clientGroup, clientGroupId);
+    destroyP = removeGroupMember(apiServers, server, clientGroup, clientGroup.id);
     destroyP
       .then((cg) => {
-        this.set('selectedClientGroupId', null);
+        this.set('selectedClientGroup', null);
         this.send('refreshModel');
       })
       .catch((errorText) => {
         this.set(msgName, errorText);
       });
     return destroyP;
-  };
+  }
 
   removeAllGroupMembers() {
     let
@@ -242,7 +235,7 @@ export default class GroupEditController extends Controller {
     });
     dLog(fnName, cgs);
     return Promise.all(destroyPs);
-  };
+  }
   /** If allowGroupsWhenPrivate then the user is prevented from deleting groups
    * which have datasets assigned; otherwise, the user may delete the group and
    * .groupId of the corresponding datasets is set to null.
@@ -252,7 +245,7 @@ export default class GroupEditController extends Controller {
   get deleteGroupDisabled() {
     let insensitive = allowGroupsWhenPrivate && this.groupDatasets.length ? true : null;
     return insensitive;
-  };
+  }
   @action
   deleteGroup() {
     const fnName = 'deleteGroup';
@@ -298,7 +291,7 @@ export default class GroupEditController extends Controller {
         return destroyP;
       });
     return removeMembersP;
-  };
+  }
 
 
 }

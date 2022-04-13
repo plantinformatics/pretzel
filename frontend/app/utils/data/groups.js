@@ -14,6 +14,7 @@ import { getGroups } from './group';
  */
 export default class DataGroups extends EmberObject {
   @service auth;
+  @service apiServers;
 
   constructor() {
     super();
@@ -50,7 +51,8 @@ export default class DataGroups extends EmberObject {
     */
     store = this.server.store,
     auth = this.get('auth'),
-    groupsP = toArrayPromiseProxy(getGroups(auth, own, this.server));
+    apiServers = this.get('apiServers'),
+    groupsP = toArrayPromiseProxy(getGroups(auth, own, this.server, apiServers));
     return groupsP;
   }
 

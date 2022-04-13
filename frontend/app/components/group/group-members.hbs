@@ -1,12 +1,17 @@
 <div class="group-members" style="margin : 2em">
   <label>Group Members</label>
   <ul>
-    {{#each @group.clients as |client|}}
-      <li class="margin-1em"
-        {{on 'click' (action @selectMember client) }}
-       >
-       {{client.id}}
-       {{client.email}}
+    {{#each @group.clientGroups as |clientGroup|}}
+      <li class="margin-1em" >
+       <button type="button" class="btn btn-info btn-xs"
+         {{on 'click' (action @removeGroupMember clientGroup) }}>
+         {{elem/icon-base name='remove'}}
+       </button>
+       <span {{on 'click' (action @selectMember clientGroup) }} >
+         {{clientGroup.id}}
+         {{clientGroup.clientId.id}}
+         {{clientGroup.clientId.email}}
+       </span>
       </li>
     {{/each}}
   </ul>

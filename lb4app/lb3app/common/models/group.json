@@ -18,6 +18,10 @@
       "type": "hasAndBelongsToMany",
       "model": "Client",
       "throughTable": "ClientGroup"
+    },
+    "clientGroups": {
+      "type": "hasMany",
+      "model": "ClientGroup"
     }
   },
   "acls": [],
