@@ -23,19 +23,27 @@ module.exports = function(app) {
    * @param data.groupId and clientId are BSON
    */
   function isInGroup(data, clientId) {
+    const fnName = 'isInGroup';
     /** expect that clientId is BSON; handle either.
      * clientGroups[clientId] is equivalent to clientGroups[clientIdString], but the latter is clearer.
      */
     let clientIdString = clientId.toHexString ? clientId.toHexString() : clientId;
-    /** groupId of the Record (Dataset / Interval / Annotation / ). */
-    let groupId = data.getId()?.toHexString();
-    /** groups of the logged-in user.  String, from ClientGroups:update()). */
-    let groups = clientGroups.clientGroups.clientGroups[clientIdString];
-    console.log('isInGroup', clientIdString, groups, data);
-    // can use ObjectId .equals() for comparing BSON with String
-    let ok = groups.find((id) => id == groupId);
-    if (! ok) {
-      cirquePush('isInGroup ' + JSON.stringify(data) + ', ' + clientIdString + ', ' + JSON.stringify(groups));
+    let ok;
+    /** data.groupId is the groupId of the Record (Dataset / Interval / Annotation / ),
+     * and data.getId() is the groupId of a Group. */
+    let groupId = data.groupId || data.getId();
+    if (! groupId) {
+      console.log(fnName, clientIdString, JSON.stringify(data));
+    } else {
+      groupId = '' + groupId;
+      /** groups of the logged-in user.  String, from ClientGroups:update()). */
+      let groups = clientGroups.clientGroups.clientGroups[clientIdString];
+      // console.log('isInGroup', clientIdString, groups, groupId, data);
+      // can use ObjectId .equals() for comparing BSON with String
+      ok = groups.find((id) => id == groupId);
+      if (! ok) {
+        cirquePush('isInGroup ' + JSON.stringify(data) + ', ' + clientIdString + ', ' + JSON.stringify(groups));
+      }
     }
     return ok;
   }

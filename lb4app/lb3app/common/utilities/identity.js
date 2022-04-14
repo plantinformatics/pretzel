@@ -51,7 +51,8 @@ exports.queryFilterAccessible = (ctx) => {
    * This is not applicable for delete, and also for deleteById, $in is not supported :
    * Operators \"$in\" are not allowed in query","code":"OPERATOR_NOT_ALLOWED_IN_QUERY","
    */
-  if (ctx.options.property && (ctx.options.property !== 'deleteById') && (groups?.length)) {
+  /** It is possible to use $and, $or, and groups.map(ObjectId), in place of 'and', 'or' and groups. */
+  if ((ctx?.options.property !== 'deleteById') && (groups?.length)) {
     where.or.push({groupId : {$in : groups}});
     console.dir(where);
   }
