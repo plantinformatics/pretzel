@@ -713,7 +713,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
 
    /** Send a database request to collate feature counts in bins for the given block.
    *
-   * @param blockId  block
+   * @param id  blockId, named id for access check
    * @param nBins number of bins to partition the block's features into
    * @param interval  undefined or range of locations of features to count
    * @param isZoomed  true means interval should be used to constrain the location of counted features.
@@ -721,10 +721,11 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
    * boundaries calculated from interval and nBins; otherwise use
    * $bucketAuto.
    */
-  Block.blockFeaturesCounts = function(blockId, interval, nBins, isZoomed, useBucketAuto, options, res, cb) {
+  Block.blockFeaturesCounts = function(id, interval, nBins, isZoomed, useBucketAuto, options, res, cb) {
 
   let
     fnName = 'blockFeaturesCounts',
+    blockId = id, 
     /** when a block is viewed, it is not zoomed (the interval is the
      * whole domain); this request recurs often and is worth caching,
      * but when zoomed in there is no repeatability so result is not
@@ -846,16 +847,17 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
   /** Collate from the database a list of features within the given block, which
    * meet the optional interval domain constraint.
    *
+   * @param id  block   blocks[0], for access check
    * @param blockIds  blocks
    */
-  Block.blockFeaturesInterval = function(blockIds, intervals, options, res, cb) {
+  Block.blockFeaturesInterval = function(id, blockIds, intervals, options, res, cb) {
     // based on Block.pathsProgressive(); there is similarity which could be
     // factored into a mixin, which may be relevant to factoring this with
     // streaming equivalent (not yet added).
 
       let db = this.dataSource.connector;
     const apiName = 'blockFeaturesInterval';
-    console.log(apiName, /*db,*/ blockIds, intervals, intervals.dbPathFilter /*, options, cb*/);
+    console.log(apiName, /*db,*/ id, blockIds, intervals, intervals.dbPathFilter /*, options, cb*/);
     let cacheId = apiName + '_' + blockIds.join('_'),
     /** If intervals.dbPathFilter, we could append the location filter to cacheId,
      * but it is not clear yet whether that would perform better.
@@ -1018,7 +1020,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
 
   Block.remoteMethod('blockFeaturesCounts', {
     accepts: [
-      {arg: 'block', type: 'string', required: true},
+      {arg: 'id', type: 'string', required: true},  // was : block
       {arg: 'interval', type: 'array', required: false},
       {arg: 'nBins', type: 'number', required: false},
       {arg: 'isZoomed', type: 'boolean', required: false, default : 'false'},
@@ -1026,6 +1028,9 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       {arg: "options", type: "object", http: "optionsFromRequest"},
       {arg: 'res', type: 'object', 'http': {source: 'res'}},
     ],
+    /** refn : https://loopback.io/doc/en/lb3/Remote-methods.html#advanced-use
+     * mixing ':id' into the rest url allows $owner to be determined and used for access control
+     */
     http: {verb: 'get'},
     returns: {type: 'array', root: true},
     description: "Returns an array of N bins of counts of the Features in the block"
@@ -1057,6 +1062,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
 
   Block.remoteMethod('blockFeaturesInterval', {
     accepts: [
+      {arg: 'id', type: 'string', required: true},
       {arg: 'blocks', type: 'array', required: true},
       {arg: 'intervals', type: 'object', required: true},
       {arg: "options", type: "object", http: "optionsFromRequest"},

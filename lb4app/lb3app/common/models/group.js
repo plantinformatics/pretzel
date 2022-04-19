@@ -39,6 +39,13 @@ module.exports = function(Group) {
 
 
   // ---------------------------------------------------------------------------
+
+  Group.prototype.groupId = function get() {
+    return this.getId();
+  };
+
+  // ---------------------------------------------------------------------------
+
         
   /** group/add  (session clientId), groupName -> message
    * Set ownerClientId to session clientId

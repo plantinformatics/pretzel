@@ -30,8 +30,8 @@ module.exports = function(app) {
     let clientIdString = clientId.toHexString ? clientId.toHexString() : clientId;
     let ok;
     /** data.groupId is the groupId of the Record (Dataset / Interval / Annotation / ),
-     * and data.getId() is the groupId of a Group. */
-    let groupId = data.groupId || data.getId();
+     * and Group defines an equivalent getter which accesses data.getId(). */
+    let groupId = (typeof data.groupId === 'function') ? data.groupId() : data.groupId;
     if (! groupId) {
       console.log(fnName, clientIdString, JSON.stringify(data));
     } else {
@@ -78,12 +78,16 @@ module.exports = function(app) {
   }
 
   function datasetPermissions(dataset, userId, permission, context, cb) {
-    cb(permission(dataset, userId))
+    cb(null, permission(dataset, userId))
   }
 
   function blockPermissions(block, userId, permission, context, cb) {
-    app.models.Dataset.findById(block.datasetId, {}, context)
+    // app.models.Dataset.find({where : {_id : block.datasetId}}, context.options)
+    let options = Object.assign({ unfiltered: true }, context.options);
+    app.models.Dataset.findById(block.datasetId, {}, options)
     .then(function(dataset) {
+      // let dataset = datasets.length && datasets[0];
+      console.log('blockPermissions', block.datasetId, dataset);
       if (dataset) {
         datasetPermissions(dataset, userId, permission, context, cb)
       } else {
@@ -106,7 +110,7 @@ module.exports = function(app) {
   function clientPermissions(client, userId, permission, context, cb) {
     /** may check that client is in a group owned by userId.
      */
-    cb(true);
+    cb(null, true);
   }
 
   /**
@@ -124,10 +128,10 @@ module.exports = function(app) {
     } else {
       const ok = permission(model, userId);
       if (! ok) {
-        cirquePush('access ' + role + ',' + context.accessType + ',' + modelName + ', ' + userId);
+        cirquePush('access ' + [role, context.accessType, context.method, context.modelId, modelName, userId].join(','));
         cirqueTail(10);
       }
-      cb(ok);
+      cb(null, ok);
     }
   }
 
@@ -155,10 +159,10 @@ module.exports = function(app) {
       context.property == 'pathsProgressive' ||
       context.property == 'blockFeaturesAdd' ||
       context.property == 'blockFeaturesCount' ||
-      context.property == 'blockFeaturesCounts' ||
+//      context.property == 'blockFeaturesCounts' ||
       context.property == 'blockFeatureLimits' ||
       context.property == 'blockValues' ||
-      context.property == 'blockFeaturesInterval' ||
+//      context.property == 'blockFeaturesInterval' ||
       context.property == 'pathsByReference' ||
       context.property == 'pathsViaStream' ||
       context.property == 'pathsAliasesProgressive' ||
@@ -201,9 +205,7 @@ module.exports = function(app) {
     context.model.findById(context.modelId, {}, context)
     .then(function(model) {
       if (model) {
-        access(modelName, model, userId, permission, context, role, function(allow) {
-          cb(null, allow)
-        })
+        access(modelName, model, userId, permission, context, role, cb);
       } else {
         let error = Error(`${modelName} not found`);
         /** default is 500; 404 seems correct because context.model is defined;

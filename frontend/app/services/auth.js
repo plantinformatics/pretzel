@@ -267,7 +267,7 @@ export default Service.extend({
   getBlockFeaturesCounts(block, interval, nBins, isZoomed, useBucketAuto, options) {
     if (trace_paths)
       dLog('services/auth getBlockFeaturesCounts', block, interval, nBins, isZoomed, useBucketAuto, options);
-    return this._ajax('Blocks/blockFeaturesCounts', 'GET', {block, interval, nBins, isZoomed, useBucketAuto, options}, true);
+    return this._ajax('Blocks/blockFeaturesCounts', 'GET', {id : block, block, interval, nBins, isZoomed, useBucketAuto, options}, true);
   },
 
   getBlockFeaturesCount(blocks, options) {
@@ -291,7 +291,7 @@ export default Service.extend({
   getBlockFeaturesInterval(blocks, intervals, options) {
     if (trace_paths)
       dLog('services/auth getBlockFeaturesInterval', blocks, intervals, options);
-    return this._ajax('Blocks/blockFeaturesInterval', 'GET', {blocks, intervals, options}, true);
+    return this._ajax('Blocks/blockFeaturesInterval', 'GET', {id : blocks[0], blocks, intervals, options}, true);
   },
 
   /** Search for Features matching the given list of Feature names in featureNames[].

@@ -43,6 +43,7 @@ envNames =
     'AUTH',
     'nBlockFeaturesCopy',
 
+    'DEBUG',
     'DOTENV_CONFIG_DEBUG',
     'DOTENV_CONFIG_PATH',
   ];
