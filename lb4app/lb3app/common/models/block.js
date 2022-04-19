@@ -847,18 +847,17 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
   /** Collate from the database a list of features within the given block, which
    * meet the optional interval domain constraint.
    *
-   * @param id  block   blocks[0], for access check
-   * @param blockIds  blocks
+   * @param id  blockId, for access check
    */
-  Block.blockFeaturesInterval = function(id, blockIds, intervals, options, res, cb) {
+  Block.blockFeaturesInterval = function(id, intervals, options, res, cb) {
     // based on Block.pathsProgressive(); there is similarity which could be
     // factored into a mixin, which may be relevant to factoring this with
     // streaming equivalent (not yet added).
 
       let db = this.dataSource.connector;
     const apiName = 'blockFeaturesInterval';
-    console.log(apiName, /*db,*/ id, blockIds, intervals, intervals.dbPathFilter /*, options, cb*/);
-    let cacheId = apiName + '_' + blockIds.join('_'),
+    console.log(apiName, /*db,*/ id, intervals, intervals.dbPathFilter /*, options, cb*/);
+    let cacheId = apiName + '_' + id,
     /** If intervals.dbPathFilter, we could append the location filter to cacheId,
      * but it is not clear yet whether that would perform better.
      * e.g. filterId = intervals.dbPathFilter ? '_' + intervals.axes[0].domain[0] + '_' + ... : ''
@@ -875,7 +874,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     }
     else {
       let cursor =
-        pathsAggr.blockFeaturesInterval(db, blockIds, intervals);
+        pathsAggr.blockFeaturesInterval(db, [id], intervals);
       cursor.toArray()
         .then(function(data) {
           console.log(apiName, ' then', (data.length > 2) ? data.length : data);
@@ -1038,7 +1037,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
 
   Block.remoteMethod('blockFeatureLimits', {
     accepts: [
-      {arg: 'block', type: 'string', required: false},
+      {arg: 'id', type: 'string', required: false},
       {arg: "options", type: "object", http: "optionsFromRequest"},
       {arg: 'res', type: 'object', 'http': {source: 'res'}},
     ],
@@ -1063,7 +1062,6 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
   Block.remoteMethod('blockFeaturesInterval', {
     accepts: [
       {arg: 'id', type: 'string', required: true},
-      {arg: 'blocks', type: 'array', required: true},
       {arg: 'intervals', type: 'object', required: true},
       {arg: "options", type: "object", http: "optionsFromRequest"},
       {arg: 'res', type: 'object', 'http': {source: 'res'}},

@@ -694,6 +694,8 @@ function pipelineLimits(featureCollection, intervals, pipeline) {
  *
  * @param blockCollection dataSource collection
  * @param blockIds  ids of data blocks
+ * The API now only passes a single id, to enable access checking per-id.
+ * If $in match is less performant then change to simple equality.
  *
  * As commented in requestBlockFeaturesInterval(), using $sample will result in
  * only 1 blockId in the result, so this function is called once for each

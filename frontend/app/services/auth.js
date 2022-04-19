@@ -279,7 +279,7 @@ export default Service.extend({
   getBlockFeatureLimits(block, options) {
     if (trace_paths)
       dLog('services/auth getBlockFeatureLimits', block, options);
-    return this._ajax('Blocks/blockFeatureLimits', 'GET', {block, options}, true);
+    return this._ajax('Blocks/blockFeatureLimits', 'GET', {id : block, block, options}, true);
   },
 
   getBlockValues(fieldName, options) {
@@ -288,10 +288,10 @@ export default Service.extend({
     return this._ajax('Blocks/blockValues', 'GET', {fieldName, options}, true);
   },
 
-  getBlockFeaturesInterval(blocks, intervals, options) {
+  getBlockFeaturesInterval(blockId, intervals, options) {
     if (trace_paths)
-      dLog('services/auth getBlockFeaturesInterval', blocks, intervals, options);
-    return this._ajax('Blocks/blockFeaturesInterval', 'GET', {id : blocks[0], blocks, intervals, options}, true);
+      dLog('services/auth getBlockFeaturesInterval', blockId, intervals, options);
+    return this._ajax('Blocks/blockFeaturesInterval', 'GET', {id : blockId, blockId, intervals, options}, true);
   },
 
   /** Search for Features matching the given list of Feature names in featureNames[].

@@ -213,7 +213,7 @@ function forgetBlockRequest(blockId, host) {
 function remoteBlockGetFeatures(blockRemoteRefn, interval)
 {
   let b = blockRemoteRefn,
-  blocks = [b.blockId],
+  blockId = b.blockId,
   host = b.host,
   accessToken = b.token;
 
@@ -223,9 +223,9 @@ function remoteBlockGetFeatures(blockRemoteRefn, interval)
    * nFeatures are set to a large number to get "all" the features.  */
   let {nSamples, nFeatures, ...intervals} = interval;
   intervals.nSamples = intervals.nFeatures = nBlockFeaturesCopy;
-  let queryParams = param({blocks, intervals}),
+  let queryParams = param({blockId, intervals}),
   headers = {'Authorization' : accessToken};
-  console.log('/api/Blocks/blockFeaturesInterval', blocks, interval, accessToken);
+  console.log('/api/Blocks/blockFeaturesInterval', blockId, interval, accessToken);
   let promise =
     getJSON('/api/Blocks/blockFeaturesInterval' + '?' + queryParams, /*body*/undefined, headers)
     .catch(function (err) {
