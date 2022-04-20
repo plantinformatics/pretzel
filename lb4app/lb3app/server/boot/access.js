@@ -4,6 +4,7 @@
 
 var clientGroups = require('../../common/utilities/client-groups');
 var { ObjectId_equals } = require('../../common/utilities/mongoDB-driver-lib');
+var ObjectId = require('mongodb').ObjectID;
 
 var { cirquePush, cirqueTail } = require('../../common/utilities/cirque');
 
@@ -136,10 +137,14 @@ module.exports = function(app) {
   }
 
   function genericResolver(role, context, cb) {    
+    const fnName = 'genericResolver';
     if (!context.accessToken || !context.accessToken.userId) {
       // Not logged in -> deny
       return process.nextTick(() => cb(null, false))
     }
+
+    let userId = context.accessToken.userId;
+
     if (context.property == 'find' ||
       context.property ==  'create' ||
         // Dataset
@@ -164,7 +169,6 @@ module.exports = function(app) {
       context.property == 'blockValues' ||
 //      context.property == 'blockFeaturesInterval' ||
       context.property == 'pathsByReference' ||
-      context.property == 'pathsViaStream' ||
       context.property == 'pathsAliasesProgressive' ||
       context.property == 'pathsAliasesViaStream' ||
       context.property == 'namespacesAliases' ||
@@ -187,13 +191,80 @@ module.exports = function(app) {
        ) {
       // allow find, create and upload requests
       return process.nextTick(() => cb(null, true))
-    }
+    } else if (context.property.startsWith('paths')) {
+        // Block : id is 2 Block Ids
+      /*
+      context.property == 'paths' ||
+      context.property == 'pathsProgressive' ||
+      context.property == 'pathsByReference' ||
+      context.property == 'pathsViaStream' ||
+      context.property == 'pathsAliasesProgressive' ||
+      context.property == 'pathsAliasesViaStream' ||
+      */
+        const
+        permission = canRead,
+        /** expect === 'Block' */
+        modelName = context.modelName,
+        /** expect that model === Block */
+        Block = context.model.app.models.Block,
+        blockIds = context.modelId;
+        if (! Array.isArray(blockIds) || blockIds.length !== 2) {
+          console.log(fnName, 'modelId', blockIds);
+          let error = Error(`${modelName} expect id to be 2 BlockIds : ` + blockIds);
+          error.statusCode = 400; // Bad Request
+          cb(error, false);
+        } else {
+          const
+          blockObjectIds = blockIds.map(ObjectId),
+          blockIdsText = blockIds.join(',');
+        /**
+           .pathsByReference = function(blockA, blockB
+           .paths = function(left, right
+           .pathsProgressive = function(left, right
+           .pathsViaStream = function(blockId0, blockId1
+           .pathsAliasesProgressive
+           .pathsAliasesViaStream = function(blockIds
+        */
+        context.model.findByIds(blockObjectIds, {}, context/*.options ?*/)
+          .then(function(models) {
+            if (models?.length === 2) {
+              let allOk = true;
+              function cbWrap(i) {
+                return function (error, ok) {
+                  console.log('cbWrap', i, blockIds[i], models[i], error, ok);
+                  if (error || ! ok) {
+                    allOk = false;
+                    cb(error, ok);
+                  }
+                  else {
+                    if ((i === 1) && allOk) {
+                      cb(null, true);
+                    }
+                  }
+                };
+              }
+              models.forEach(
+                (model, i) => access(modelName, model, userId, permission, context, role, cbWrap(i)));
+            } else {
+              let error = Error(`${modelName} not found : ${blockIdsText}`);
+              error.statusCode = 404;
+              cb(error, false);
+            }})
+          .catch((error) => {
+            console.log('findByIds', error, blockIdsText);
+            cb(error, false);
+          });
+        }
+      // cb() will be called by one of the above cases
+      }
+    else {
+
+
     if (!context.modelId) {
       // No model id -> deny
       return process.nextTick(() => cb(null, false))
     }
 
-    let userId = context.accessToken.userId
     let modelName = context.modelName
 
     let permission = canWrite;
@@ -216,6 +287,7 @@ module.exports = function(app) {
         cb(error, false);
       }
     })
+    }
   }
 
   Role.registerResolver('viewer', genericResolver)

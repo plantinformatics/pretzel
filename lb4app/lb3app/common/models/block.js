@@ -234,7 +234,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
    * @param res for using raw Express functions rather than rely on Loopback.
    * Used for res.flush() and res.setHeader()
    */
-  Block.pathsViaStream = function(blockId0, blockId1, intervals, options, req, res, cb) {
+  Block.pathsViaStream = function(id, blockId0, blockId1, intervals, options, req, res, cb) {
     localiseBlocks(this.app.models, [blockId0, blockId1], intervals)
       .then(([blockId0, blockId1]) => {
         let db = this.dataSource.connector;
@@ -1112,6 +1112,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
 
   Block.remoteMethod('pathsViaStream', {
     accepts: [
+      {arg: 'id', type: 'array', required: true},
       {arg: 'blockA', type: blockRemoteType, required: true},
       {arg: 'blockB', type: blockRemoteType, required: true},
       {arg: 'intervals', type: 'object', required: true},

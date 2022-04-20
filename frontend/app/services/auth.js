@@ -115,6 +115,7 @@ export default Service.extend({
       route= 'Blocks/pathsViaStream',
     dataIn = {blockA, blockB},
     {url, data} = this._endpointURLToken(dataIn, route);
+    data.id = [blockA, blockB];
     data.intervals = filteredIntervalParams;
       url +=
       '&' +
