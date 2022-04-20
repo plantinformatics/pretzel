@@ -136,16 +136,27 @@ module.exports = function(app) {
     }
   }
 
-  function genericResolver(role, context, cb) {    
+  /**
+   * @return undefined
+   *
+   * @desc
+   * process.nextTick() does not return a value.  refn : node:internal/process/task_queues
+   * genericResolver() is called from Role.isInRole() (node_modules/loopback/common/models/role.js)
+   *   const promise = resolver(role, context, callback);
+   * which does not use an undefined result.
+   *
+   * Possibly uses of nextTick() can be replaced with setImmediate(), refn:
+   * https://nodejs.org/en/docs/guides/event-loop-timers-and-nexttick/#process-nexttick-vs-setimmediate
+   */
+  function genericResolver(role, context, cb) {
     const fnName = 'genericResolver';
     if (!context.accessToken || !context.accessToken.userId) {
       // Not logged in -> deny
       return process.nextTick(() => cb(null, false))
     }
 
-    let userId = context.accessToken.userId;
-
-    if (context.property == 'find' ||
+    if (
+      context.property == 'find' ||
       context.property ==  'create' ||
         // Dataset
       context.property == 'upload' ||
@@ -160,17 +171,12 @@ module.exports = function(app) {
         // Alias
       context.property == 'bulkCreate' ||
         // Block
-      context.property == 'paths' ||
-      context.property == 'pathsProgressive' ||
       context.property == 'blockFeaturesAdd' ||
       context.property == 'blockFeaturesCount' ||
 //      context.property == 'blockFeaturesCounts' ||
       context.property == 'blockFeatureLimits' ||
       context.property == 'blockValues' ||
 //      context.property == 'blockFeaturesInterval' ||
-      context.property == 'pathsByReference' ||
-      context.property == 'pathsAliasesProgressive' ||
-      context.property == 'pathsAliasesViaStream' ||
       context.property == 'namespacesAliases' ||
         // Configuration
       context.property === 'runtimeConfig' ||
@@ -192,102 +198,119 @@ module.exports = function(app) {
       // allow find, create and upload requests
       return process.nextTick(() => cb(null, true))
     } else if (context.property.startsWith('paths')) {
-        // Block : id is 2 Block Ids
-      /*
+      resolve2Blocks(role, context, cb);
+    }
+    else {
+
+      if (!context.modelId) {
+        // No model id -> deny
+        return process.nextTick(() => cb(null, false))
+      }
+
+      let userId = context.accessToken.userId;
+      let modelName = context.modelName
+
+      let permission = canWrite;
+      if (role == 'viewer') {
+        permission = canRead;
+      }
+
+      //Retrieve the model
+      context.model.findById(context.modelId, {}, context)
+        .then(function(model) {
+          if (model) {
+            access(modelName, model, userId, permission, context, role, cb);
+          } else {
+            let error = Error(`${modelName} not found`);
+            /** default is 500; 404 seems correct because context.model is defined;
+             * change just for Group initially.  */
+            if (modelName === 'Group') {
+              error.statusCode = 404;
+            }
+            cb(error, false);
+          }
+        })
+    }
+  }
+
+  /** Used by genericResolver(), this handles the paths* APIs,
+   * for which id is an array of 2 string blockIds.
+   * Similar to genericResolver(), use .findByIds() and cbWrap() to report
+   * OK if all the ids are OK.
+   *
+   * Block is the only model which Pretzel API currently requires this function
+   * for, but it can equally handle other models.
+   */
+  function resolve2Blocks(role, context, cb) {
+    const fnName = 'resolve2Blocks';
+
+    // Block : id is 2 Block Ids
+    /*
       context.property == 'paths' ||
       context.property == 'pathsProgressive' ||
       context.property == 'pathsByReference' ||
       context.property == 'pathsViaStream' ||
       context.property == 'pathsAliasesProgressive' ||
       context.property == 'pathsAliasesViaStream' ||
+    */
+    const
+    permission = canRead,
+    userId = context.accessToken.userId,
+    /** expect === 'Block' */
+    modelName = context.modelName,
+    /** expect that model === Block */
+    Block = context.model.app.models.Block,
+    blockIds = context.modelId;
+    if (! Array.isArray(blockIds) || blockIds.length !== 2) {
+      console.log(fnName, 'modelId', blockIds);
+      let error = Error(`${modelName} expect id to be 2 BlockIds : ` + blockIds);
+      error.statusCode = 400; // Bad Request
+      process.nextTick(() => cb(error, false));
+    } else {
+      const
+      /** filter out remote blockIds - the secondary server will check those. */
+      blockIdsLocal = blockIds.filter((id) => !id.blockId),
+      blockObjectIds = blockIdsLocal.map(ObjectId),
+      blockIdsText = blockIdsLocal.join(',');
+      /**
+         .pathsByReference = function(blockA, blockB
+         .paths = function(left, right
+         .pathsProgressive = function(left, right
+         .pathsViaStream = function(blockId0, blockId1
+         .pathsAliasesProgressive
+         .pathsAliasesViaStream = function(blockIds
       */
-        const
-        permission = canRead,
-        /** expect === 'Block' */
-        modelName = context.modelName,
-        /** expect that model === Block */
-        Block = context.model.app.models.Block,
-        blockIds = context.modelId;
-        if (! Array.isArray(blockIds) || blockIds.length !== 2) {
-          console.log(fnName, 'modelId', blockIds);
-          let error = Error(`${modelName} expect id to be 2 BlockIds : ` + blockIds);
-          error.statusCode = 400; // Bad Request
-          cb(error, false);
-        } else {
-          const
-          blockObjectIds = blockIds.map(ObjectId),
-          blockIdsText = blockIds.join(',');
-        /**
-           .pathsByReference = function(blockA, blockB
-           .paths = function(left, right
-           .pathsProgressive = function(left, right
-           .pathsViaStream = function(blockId0, blockId1
-           .pathsAliasesProgressive
-           .pathsAliasesViaStream = function(blockIds
-        */
-        context.model.findByIds(blockObjectIds, {}, context/*.options ?*/)
-          .then(function(models) {
-            if (models?.length === 2) {
-              let allOk = true;
-              function cbWrap(i) {
-                return function (error, ok) {
-                  console.log('cbWrap', i, blockIds[i], models[i], error, ok);
-                  if (error || ! ok) {
-                    allOk = false;
-                    cb(error, ok);
+      context.model.findByIds(blockObjectIds, {}, context/*.options ?*/)
+        .then(function(models) {
+          if (models?.length === blockIdsLocal.length) {
+            let allOk = true;
+            function cbWrap(i) {
+              return function (error, ok) {
+                console.log('cbWrap', i, blockIds[i], models[i], error, ok);
+                if (error || ! ok) {
+                  allOk = false;
+                  process.nextTick(() => cb(error, ok));
+                }
+                else {
+                  if ((i === 1) && allOk) {
+                    process.nextTick(() => cb(null, true));
                   }
-                  else {
-                    if ((i === 1) && allOk) {
-                      cb(null, true);
-                    }
-                  }
-                };
-              }
-              models.forEach(
-                (model, i) => access(modelName, model, userId, permission, context, role, cbWrap(i)));
-            } else {
-              let error = Error(`${modelName} not found : ${blockIdsText}`);
-              error.statusCode = 404;
-              cb(error, false);
-            }})
-          .catch((error) => {
-            console.log('findByIds', error, blockIdsText);
-            cb(error, false);
-          });
-        }
-      // cb() will be called by one of the above cases
-      }
-    else {
-
-
-    if (!context.modelId) {
-      // No model id -> deny
-      return process.nextTick(() => cb(null, false))
+                }
+              };
+            }
+            models.forEach(
+              (model, i) => access(modelName, model, userId, permission, context, role, cbWrap(i)));
+          } else {
+            let error = Error(`${modelName} not found : ${blockIdsText}`);
+            error.statusCode = 404;
+            process.nextTick(() => cb(error, false));
+          }})
+        .catch((error) => {
+          console.log('findByIds', error, blockIdsText);
+          process.nextTick(() => cb(error, false));
+        });
     }
-
-    let modelName = context.modelName
-
-    let permission = canWrite;
-    if (role == 'viewer') {
-      permission = canRead;
-    }
-
-    //Retrieve the model
-    context.model.findById(context.modelId, {}, context)
-    .then(function(model) {
-      if (model) {
-        access(modelName, model, userId, permission, context, role, cb);
-      } else {
-        let error = Error(`${modelName} not found`);
-        /** default is 500; 404 seems correct because context.model is defined;
-         * change just for Group initially.  */
-        if (modelName === 'Group') {
-          error.statusCode = 404;
-        }
-        cb(error, false);
-      }
-    })
-    }
+    // cb() will be called by one of the above cases
   }
 
   Role.registerResolver('viewer', genericResolver)

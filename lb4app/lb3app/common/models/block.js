@@ -160,9 +160,11 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
    * SSE - streaming.
    * @see pathsProgressive(), pathsViaStream(), 
    * pathsAliasesProgressive(), pathsAliasesViaStream()
+   *
+   * @param id [blockId, blockId], aka [left, right]
    */
-  Block.paths = function(left, right, withDirect = true, options, res, cb) {
-    task.paths(this.app.models, left, right, withDirect, options)
+  Block.paths = function(id, withDirect = true, options, res, cb) {
+    task.paths(this.app.models, id[0], id[1], withDirect, options)
     .then(function(data) {
       // completed additions to database
       cb(null, data);
@@ -181,11 +183,10 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
    * identical result.  i.e. blockId0 < blockId1.
    * They don't correspond in order to left or right axes.
    *
-   * @param blockId0
-   * @param blockId1
+   * @param id  [blockId0, blockId1]
    */
-  Block.pathsProgressive = function(left, right, intervals, options, res, cb) {
-    localiseBlocks(this.app.models, [left, right], intervals)
+  Block.pathsProgressive = function(id, intervals, options, res, cb) {
+    localiseBlocks(this.app.models, id, intervals)
     /** @param left, right are localised - just the ID string */
       .then(([left, right]) => {
     let db = this.dataSource.connector;
@@ -230,12 +231,14 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
 
 
   /**
+   * @param id  [blockId0, blockId1]  array length is checked in resolve2Blocks().
+   *
    * @param req to registor for req.on(close)
    * @param res for using raw Express functions rather than rely on Loopback.
    * Used for res.flush() and res.setHeader()
    */
-  Block.pathsViaStream = function(id, blockId0, blockId1, intervals, options, req, res, cb) {
-    localiseBlocks(this.app.models, [blockId0, blockId1], intervals)
+  Block.pathsViaStream = function(id, intervals, options, req, res, cb) {
+    localiseBlocks(this.app.models, id, intervals)
       .then(([blockId0, blockId1]) => {
         let db = this.dataSource.connector;
         /** @return cursor */
@@ -904,9 +907,11 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
 
   /*--------------------------------------------------------------------------*/
 
-
-  Block.pathsByReference = function(blockA, blockB, referenceGenome, maxDistance, options, cb) {
-    task.pathsViaLookupReference(this.app.models, blockA, blockB, referenceGenome, maxDistance, options)
+  /**
+   * @param id  blockIds : aka [blockA, blockB]
+   */
+  Block.pathsByReference = function(id, referenceGenome, maxDistance, options, cb) {
+    task.pathsViaLookupReference(this.app.models, id[0], id[1], referenceGenome, maxDistance, options)
     .then(function(paths) {
       cb(null, paths);
     }).catch(function(err) {
@@ -1073,8 +1078,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
 
   Block.remoteMethod('paths', {
     accepts: [
-      {arg: 'blockA', type: 'string', required: true}, // block reference
-      {arg: 'blockB', type: 'string', required: true}, // block reference
+      {arg: 'id', type: 'array', required: true}, // array[2] block references
       {arg: 'withDirect', type: 'Boolean', required: false, default : 'true'}, // true means include direct (same name) links, otherwise just aliases
       {arg: "options", type: "object", http: "optionsFromRequest"},
       {arg: 'res', type: 'object', 'http': {source: 'res'}}
@@ -1086,8 +1090,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
 
   Block.remoteMethod('pathsProgressive', {
     accepts: [
-      {arg: 'blockA', type: blockRemoteType, required: true},
-      {arg: 'blockB', type: blockRemoteType, required: true},
+      {arg: 'id', type: 'array', required: true},
       {arg: 'intervals', type: 'object', required: true},
       {arg: "options", type: "object", http: "optionsFromRequest"},
       {arg: 'res', type: 'object', 'http': {source: 'res'}},
@@ -1099,8 +1102,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
 
   Block.remoteMethod('pathsByReference', {
     accepts: [
-      {arg: 'blockA', type: blockRemoteType, required: true},
-      {arg: 'blockB', type: blockRemoteType, required: true},
+      {arg: 'id', type: 'array', required: true},
       {arg: 'reference', type: 'string', required: true},
       {arg: 'max_distance', type: 'number', required: true},
       {arg: "options", type: "object", http: "optionsFromRequest"},
@@ -1113,8 +1115,6 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
   Block.remoteMethod('pathsViaStream', {
     accepts: [
       {arg: 'id', type: 'array', required: true},
-      {arg: 'blockA', type: blockRemoteType, required: true},
-      {arg: 'blockB', type: blockRemoteType, required: true},
       {arg: 'intervals', type: 'object', required: true},
       {arg: "options", type: "object", http: "optionsFromRequest"},
       {arg: 'req', type: 'object', 'http': {source: 'req'}},
@@ -1132,7 +1132,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
 
   Block.remoteMethod('pathsAliasesProgressive', {
     accepts: [
-      {arg: 'blockIds', type: 'array', required: true},
+      {arg: 'id', type: 'array', required: true}, // blockIds
       {arg: 'intervals', type: 'object', required: true},
       {arg: "options", type: "object", http: "optionsFromRequest"},
       {arg: 'res', type: 'object', 'http': {source: 'res'}},
@@ -1144,7 +1144,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
 
   Block.remoteMethod('pathsAliasesViaStream', {
     accepts: [
-      {arg: 'blockIds', type: 'array', required: true},
+      {arg: 'id', type: 'array', required: true}, // blockIds
       {arg: 'intervals', type: 'object', required: true},
       {arg: "options", type: "object", http: "optionsFromRequest"},
       {arg: 'req', type: 'object', 'http': {source: 'req'}},

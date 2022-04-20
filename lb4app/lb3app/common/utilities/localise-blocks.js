@@ -223,7 +223,7 @@ function remoteBlockGetFeatures(blockRemoteRefn, interval)
    * nFeatures are set to a large number to get "all" the features.  */
   let {nSamples, nFeatures, ...intervals} = interval;
   intervals.nSamples = intervals.nFeatures = nBlockFeaturesCopy;
-  let queryParams = param({blockId, intervals}),
+  let queryParams = param({id : blockId, blockId, intervals}),
   headers = {'Authorization' : accessToken};
   console.log('/api/Blocks/blockFeaturesInterval', blockId, interval, accessToken);
   let promise =

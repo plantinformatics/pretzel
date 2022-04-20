@@ -96,13 +96,13 @@ export default Service.extend({
   getPaths(blockA, blockB, withDirect, options) {
     if (trace_paths)
       dLog('services/auth getPaths', blockA, blockB, withDirect, options);
-    return this._ajax('Blocks/paths', 'GET', {blockA : blockA, blockB : blockB, withDirect, options : options}, true)
+    return this._ajax('Blocks/paths', 'GET', {id : [blockA, blockB], blockA, blockB, withDirect, options : options}, true);
   },
 
   getPathsProgressive(blockA, blockB, intervals, options) {
     if (trace_paths)
       dLog('services/auth getPathsProgressive', blockA, blockB, intervals, options);
-    return this._ajax('Blocks/pathsProgressive', 'GET', {blockA : blockA, blockB : blockB, intervals, options : options}, true);
+    return this._ajax('Blocks/pathsProgressive', 'GET', {id : [blockA, blockB], blockA, blockB, intervals, options : options}, true);
   },
 
   /** 
@@ -115,6 +115,9 @@ export default Service.extend({
       route= 'Blocks/pathsViaStream',
     dataIn = {blockA, blockB},
     {url, data} = this._endpointURLToken(dataIn, route);
+    /** .id replaces .blockA, .blockB, but _server() still uses them, and it
+     * enables secondary Pretzel servers prior to addition of id to be
+     * accessed. */
     data.id = [blockA, blockB];
     data.intervals = filteredIntervalParams;
       url +=
@@ -216,7 +219,7 @@ export default Service.extend({
   getPathsAliasesProgressive(blockIds, intervals, options) {
     if (trace_paths)
       dLog('services/auth getPathsAliasesProgressive', blockIds, intervals, options);
-    return this._ajax('Blocks/pathsAliasesProgressive', 'GET', {blockIds, intervals, options}, true);
+    return this._ajax('Blocks/pathsAliasesProgressive', 'GET', {id : blockIds, blockIds, intervals, options}, true);
   },
 
   /** 
@@ -227,7 +230,7 @@ export default Service.extend({
     const filteredIntervalParams = omitUndefined(intervals);
     let
       route= 'Blocks/pathsAliasesViaStream',
-    dataIn = {blockIds},
+    dataIn = {id : blockIds, blockIds},
     {url, data} = this._endpointURLToken(dataIn, route);
     data.intervals = filteredIntervalParams;
     url +=
@@ -262,7 +265,7 @@ export default Service.extend({
   getPathsByReference(blockA, blockB, reference, max_distance, options) {
     if (trace_paths)
       dLog('services/auth getPathsByReference', blockA, blockB, reference, max_distance, options);
-    return this._ajax('Blocks/pathsByReference', 'GET', {blockA : blockA, blockB : blockB, reference, max_distance, options : options}, true);
+    return this._ajax('Blocks/pathsByReference', 'GET', {id : [blockA, blockB], blockA, blockB, reference, max_distance, options : options}, true);
   },
 
   getBlockFeaturesCounts(block, interval, nBins, isZoomed, useBucketAuto, options) {
