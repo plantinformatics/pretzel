@@ -43,7 +43,7 @@ Add Group
     <span>
       <input type="checkbox"
         checked={{clientGroup.isVisible}}
-        oninput={{action (action (mut clientGroup.isVisible) value="target.checked") }}  >
+        oninput={{action (action this.setIsVisible clientGroup) value="target.checked" }}  >
     </span>
    <span>{{clientGroup.groupId.name}}</span>
    <span>{{clientGroup.groupId.clientId.email}}</span>
@@ -51,7 +51,7 @@ Add Group
 {{/each}}
 
 <div>{{this.removeGroupMemberMsg}}</div>
-
+{{elem/display-message message=this.setIsVisibleMsg}}
 
 {{outlet}}
 

@@ -60,4 +60,21 @@ export default class GroupsController extends Controller {
     return destroyP;
   };
 
+  @action
+  setIsVisible(clientGroup, isVisible) {
+    const
+    fnName = 'setIsVisible',
+    msgName = fnName + 'Msg';
+    dLog(fnName, clientGroup, isVisible);
+    this.set(msgName, null);
+    clientGroup.set('isVisible', isVisible);
+    clientGroup.save()
+      .then((cg) => {
+        dLog(fnName, cg.isVisible, clientGroup.isVisible);
+        // this.send('refreshModel');
+      })
+      .catch((errorText) => {
+        this.set(msgName, errorText);
+      });
+  }
 }

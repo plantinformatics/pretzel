@@ -9,6 +9,13 @@ var acl = require('../utilities/acl');
 
 const { gatherClientId } = require('../utilities/identity');
 
+/** The addition of the Leave column (removeGroupMember) in templates/groups.hbs
+ * implies that a group member can leave the group (originally the group owner
+ * controlled group membership).
+ * See also : common/models/group.js : allowGroupsWhenPrivate
+ */
+const allowMemberToLeaveGroup = true;
+
 
 module.exports = function(ClientGroup) {
 
@@ -73,6 +80,7 @@ module.exports = function(ClientGroup) {
 
   // ---------------------------------------------------------------------------
 
+  if (! allowMemberToLeaveGroup) {
   /** Prevent deletion if the group is not owned by the logged-in user.
    * Permission and other errors are reported via next(error).
    */
@@ -126,7 +134,7 @@ module.exports = function(ClientGroup) {
         }
       });
   });
-
+  }
 
   // ---------------------------------------------------------------------------
 
