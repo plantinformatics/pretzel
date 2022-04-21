@@ -66,6 +66,9 @@ export default class GroupsController extends Controller {
     fnName = 'setIsVisible',
     msgName = fnName + 'Msg';
     dLog(fnName, clientGroup, isVisible);
+    if (clientGroup.isDeleted || clientGroup.isDestroying) {
+      this.send('refreshModel');
+    } else {
     this.set(msgName, null);
     clientGroup.set('isVisible', isVisible);
     clientGroup.save()
@@ -74,7 +77,14 @@ export default class GroupsController extends Controller {
         // this.send('refreshModel');
       })
       .catch((errorText) => {
+        const errorDetail = errorText?.errors[0];
+        dLog(fnName, errorDetail || errorText);
+        if (errorDetail?.status === '404') {
+          errorText = 'Unable to set visible because this group membership no longer exists.';
+        }
         this.set(msgName, errorText);
+        this.send('refreshModel');
       });
+  }
   }
 }
