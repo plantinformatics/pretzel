@@ -282,7 +282,13 @@ export default class GroupEditController extends Controller {
             this.target.transitionTo('groups');
           })
           .catch((error) => {
+            const errorDetail = error?.errors[0];
+            dLog(fnName, errorDetail || error);
+            if (errorDetail?.status === '404') {
+              error = 'Unable to delete Group because this Group no longer exists.';
+            }
             dLog(fnName, error);
+
             // error.name : TypeError
             if (error.message !== 'owner is undefined') {
               this.set('deleteGroupMsg', error);
