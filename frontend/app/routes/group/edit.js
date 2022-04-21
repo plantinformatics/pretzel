@@ -36,6 +36,10 @@ export default class GroupEditRoute extends Route {
    * so we want to update group.clients, so this.refresh() is not sufficient.
    * getGroups(,true,) will update that; it gets all groups owned by this user,
    * whereas we only need this group to be refreshed.
+   *
+   * If the user navigates to the groups page then 'Joined Groups' should be
+   * refreshed, so use groups.refresh() which flags both groups/{in,own} to be
+   * updated when they are displayed.
    */
   @action
   refreshModel() {
@@ -45,11 +49,19 @@ export default class GroupEditRoute extends Route {
     group = this.controller.model,
     store = group.get('store'),
     apiServers = this.get('apiServers'),
-    server = apiServers.lookupServerName(store.name),
+    server = apiServers.lookupServerName(store.name);
+    server.groups.refresh();
+
+    /** This updates just groups/own, whereas the above groups.refresh() also refreshes
+     * groups/in, which the groups page displays. */
+    if (false) {
+      const
     groupsP = getGroups(this.get('auth'), /*own*/true, server, apiServers);
     groupsP.then((groups) => {
       dLog(fnName, (trace < 2) ? ',' : [this.controller.model.clients], groups.length);
     });
+    }
+
     /** result of groupsP is pushed into the store. */
     /** Update parent model also. */
     this.refresh();
