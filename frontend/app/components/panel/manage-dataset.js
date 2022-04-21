@@ -107,13 +107,24 @@ export default ManageBase.extend({
 
   // ---------------------------------------------------------------------------
 
+  server : computed(
+    'dataset',
+    function () {
+    const
+      store = this.dataset.store,
+      apiServers = this.get('apiServers'),
+      server = apiServers.lookupServerName(store.name);
+      return server;
+  }),
+
   /** Array of groups which the user may set .dataset.group to.
    * Originally inGroups, now ownGroups, after a change in requirements : only
    * the owner of a group can add datasets to it (originally a member of the
    * group could do that).
    */
   groupsPromise : computed(
-    'this.dataset',
+    'dataset',
+    'server.groups.{groupsIn,groupsOwn}',
     function () {
       let
       fnName = 'groupsPromise',
@@ -122,10 +133,12 @@ export default ManageBase.extend({
           session : service(),
       clientId = this.get('session.session.authenticated.clientId'),
       */
-      store = this.dataset.store,
-      apiServers = this.get('apiServers'),
-      server = apiServers.lookupServerName(store.name),
-      apiResultP = getGroups(this.get('auth'), selectFromOwn, server, apiServers),
+
+      server = this.get('server'),
+      groupsService = server.groups,
+      fieldName = 'groups' + selectFrom.capitalize(),
+      apiResultP = groupsService.get(fieldName),
+      // getGroups(this.get('auth'), selectFromOwn, server, apiServers),
       groupsP = (selectFromOwn ? apiResultP : apiResultP.then(this.clientGroupsToGroups))
         .then((gs) => {
         gs.unshift(noGroup);

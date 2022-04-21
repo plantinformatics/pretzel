@@ -146,6 +146,7 @@ export default EmberObject.extend({
     let taskGetList = datasetService.get('taskGetList');  // availableMaps
     /** server was a param when this function was an attribute of apiServers. */
     let server = this;
+    server.groups.refresh();
     let datasetsTask = taskGetList.perform(server)
         .catch((error) => {
           // Recognise if the given task error is a TaskCancelation.
