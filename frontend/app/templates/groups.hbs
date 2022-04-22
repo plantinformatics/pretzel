@@ -1,4 +1,4 @@
-<div class="group-outer">
+<div class="group-outer groups">
 
 <label>Owned / added groups</label>
 {{#each this.model.groupsOwn as |group|}}
@@ -12,9 +12,9 @@
       <i class="glyphicon glyphicon-remove"></i>
     {{/link-to}}
 
-   {{group.id}}
-   {{group.clientId.name}}
-   {{group.name}}
+   {{!-- group.id --}}
+   <span>{{group.name}}</span>
+
   </div>
 {{/each}}
 

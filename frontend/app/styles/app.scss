@@ -2153,6 +2153,19 @@ ul.dataBlocks > li > * {
 {
   margin-left : 2em;
 }
+.groups > div
+{
+  display : flex;
+  grid-template-columns: 1fr 1fr 6fr;
+  grid-gap: 1em;
+}
+
+.flex-gap-1
+{
+  display : flex;
+  gap : 1em
+}
+
 
 /* route : group/edit */
 .group-dataset {

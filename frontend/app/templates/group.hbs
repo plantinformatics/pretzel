@@ -2,15 +2,15 @@
 
 {{#let this.model as |group|}}
   <label>Group</label>
-  <div>
+  <div class="group-details margin-1em">
 
-     <div class="margin-1em" style="display:flex; gap:1em">
-      {{group.id}}
-      {{group.clientId.email}}
+    {{!-- group.id --}}
+
+    <div class="flex-gap-1 margin-1em">
 
       {{#unless this.editingName}}
-        {{group.name}}
-        <div>
+        <label>Name : </label><span>{{group.name}}</span>
+        <span>
           <button type="button" class="btn btn-info btn-xs" {{on 'click' (action (mut this.editingName) true) }}>
             <i class="glyphicon glyphicon-pencil"></i>
           </button>
@@ -25,7 +25,7 @@
           {{#ember-tooltip side="bottom" delay=1000}}
             Edit the group name.  Each keystroke is saved.
           {{/ember-tooltip}}
-       </div>
+       </span>
       {{else}}
         <input
           oninput={{action (action this.changeGroupName group) value="target.value" }}
@@ -34,7 +34,10 @@
         {{elem/display-message message=this.changeGroupNameMsg}}
       {{/unless}}
 
-     </div>
+    </div>
+
+    <div class="flex-gap-1 margin-1em"><label>Owner : </label><span>{{group.clientId.email}}</span></div>
+
 
  </div>
 
