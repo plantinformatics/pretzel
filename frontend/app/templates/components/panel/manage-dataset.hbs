@@ -22,7 +22,9 @@
       {{#unless dataset.public}}
       <tr><td>Group</td><td>{{dataset.groupId.name}}<!-- {{dataset.groupId.id}} -->
         {{#if this.datasetOwned}}
-           {{form/select-group selectedValue=this.selectedValue values=(to-array-promise-proxy this.groupsPromise) selectedValueChanged=(action this.selectedGroupChanged) }}
+           {{form/select-group selectedValue=this.selectedValue
+             values=(to-array-promise-proxy this.groupsPromise)
+             selectedGroupChanged=(action this.datasetChangeGroup) }}
            {{this.datasetGroupErrMsg}}
          {{/if}}
       </td></tr>

@@ -6,7 +6,7 @@ import { later as run_later } from '@ember/runloop';
 import $ from 'jquery';
 
 import { toPromiseProxy, toArrayPromiseProxy } from '../../utils/ember-devel';
-import { getGroups } from '../../utils/data/group';
+import { getGroups, clientGroupsToGroups } from '../../utils/data/group';
 
 import ManageBase from './manage-base';
 
@@ -139,25 +139,13 @@ export default ManageBase.extend({
       fieldName = 'groups' + selectFrom.capitalize(),
       apiResultP = groupsService.get(fieldName),
       // getGroups(this.get('auth'), selectFromOwn, server, apiServers),
-      groupsP = (selectFromOwn ? apiResultP : apiResultP.then(this.clientGroupsToGroups))
+      groupsP = (selectFromOwn ? apiResultP : apiResultP.then(clientGroupsToGroups))
         .then((gs) => {
         gs.unshift(noGroup);
         dLog(fnName, 'gs', gs);
         this.set('groupsValue', gs);  return gs;});
       return groupsP;
     }),
-  /** cgs[i] is model:client-group, cgs[i].get('groupId') is Proxy, so use .content to get model:group */
-  clientGroupsToGroups(cgs) {
-        /** API lookup failure for a groupId leads to g.name undefined here.
-         * E.g. this user may not be a member of the dataset group, and hence
-         * the API lookup is not permitted.
-         * The pull-down contains only groups which this user is a member of.
-         * Will also filter out non-existent groupId from groups/in
-         */
-        let gs = cgs.mapBy('groupId.content')
-            .filter((g) => g.name);
-    return gs;
-  },
 
   /** Instead of using this in .hbs, helper (to-array-promise-proxy ) is used
    */
@@ -183,18 +171,8 @@ export default ManageBase.extend({
     return group;
   }),
 
-  selectedGroupChanged(selectedGroupId) {
-    const fnName = 'selectedGroupChanged';
-    let
     // currentGroup = this.dataset.content.groupId.content,
-    gsP = this.groupsPromise,
-    selectedGroup = gsP.then((gs) => {
-      let
-      groupValue = gs.findBy('id', selectedGroupId);
-      dLog(fnName, selectedGroupId, groupValue?.name, groupValue?.id, arguments, this);
-      this.datasetChangeGroup(groupValue);
-    });
-  },
+
   /** @param group  from .groupsValue, and noGroup
    */
   datasetChangeGroup(group) {

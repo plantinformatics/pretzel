@@ -63,6 +63,25 @@ function getGroups2(auth, own, server, apiServers) {
 
 // -----------------------------------------------------------------------------
 
+/** The result of groups/in is an array of client-groups; map from this to an
+ * array of the corresponding groups.
+ *
+ * cgs[i] is model:client-group, cgs[i].get('groupId') is Proxy, so use .content to get model:group
+ */
+function clientGroupsToGroups(cgs) {
+  /** API lookup failure for a groupId leads to g.name undefined here.
+   * E.g. this user may not be a member of the dataset group, and hence
+   * the API lookup is not permitted.
+   * The pull-down contains only groups which this user is a member of.
+   * Will also filter out non-existent groupId from groups/in
+   */
+  let gs = cgs.mapBy('groupId.content')
+      .filter((g) => g.name);
+  return gs;
+}
+
+// -----------------------------------------------------------------------------
+
 /**
  * @return a promise, yielding the record of the deleted ClientGroup, or
  * throwing a text error message derived from the API error.
@@ -132,6 +151,7 @@ function groupDatasets(apiServers, server, store, groupId) {
 
 export {
   getGroups,
+  clientGroupsToGroups,
   removeGroupMember,
   groupDatasets,
 }

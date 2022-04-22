@@ -10,7 +10,7 @@ import { singularize, pluralize } from 'ember-inflector';
 
 import DS from 'ember-data';
 
-import { computed } from '@ember/object';
+import EmberObject, { computed } from '@ember/object';
 import {
   filter,
   filterBy,
@@ -55,6 +55,9 @@ import {
   selectOntologyNode,
 } from '../../utils/data/block-values';
 
+import { clientGroupsToGroups } from '../../utils/data/group';
+
+
 import ManageBase from './manage-base'
 
 /*----------------------------------------------------------------------------*/
@@ -82,7 +85,9 @@ const dLog = console.debug;
 
 const selectorExplorer = 'div#left-panel-explorer';
 
-
+/** Copied from manage-dataset.js.  This can be factored into components/form/select-group.
+ */ 
+const noGroup = EmberObject.create({id : 'noGroup', name : ''});
 
 /*----------------------------------------------------------------------------*/
 
@@ -459,6 +464,31 @@ export default ManageBase.extend({
   filterGroupsChangeCounter : 0,
   //----------------------------------------------------------------------------
 
+  groupFilterSelected : undefined,
+  groupsIn : alias('apiServerSelectedOrPrimary.groups.groupsIn'),
+  groupsForFilter : computed('groupsIn', function () {
+    /** based on similar in manage-dataset.js : groupsPromise() */
+    const
+    fnName = 'groupsForFilter',
+    apiResultP = this.get('groupsIn'),
+    groupsP = apiResultP.then(clientGroupsToGroups)
+      .then((gs) => {
+        gs.unshift(noGroup);
+        dLog(fnName, 'gs', gs);
+        this.set('groupsValue', gs);  return gs;});
+    return groupsP;
+  }),
+
+  selectedGroupChanged(selectedGroup) {
+    if (selectedGroup === noGroup) {
+      selectedGroup = null;
+    }
+    this.set('groupFilterSelected', selectedGroup);
+  },
+
+
+  //----------------------------------------------------------------------------
+
   promiseToTask : task(function * (promise) {
     // dLog('promiseToTask', promise, 'mapsTask');
     let result = yield promise;
@@ -531,7 +561,7 @@ export default ManageBase.extend({
     return combined;
   }),
   //----------------------------------------------------------------------------
-  dataPre1: computed('datasetsBlocks', 'datasetsBlocks.[]', 'filter', function() {
+  dataPre1: computed('datasetsBlocks', 'datasetsBlocks.[]', 'filter', 'groupFilterSelected', function() {
     let availableMaps = this.get('datasetsBlocks') || resolve([]);
     let filter = this.get('filter')
     dLog('dataPre', availableMaps, filter);
@@ -545,6 +575,12 @@ export default ManageBase.extend({
     } else {
       if (trace_dataTree > 2)
         availableMaps.then(function (value) { console.log('dataPre availableMaps ->', value); });
+      if (this.groupFilterSelected) {
+        availableMaps = thenOrNow(
+          availableMaps,
+          (datasetsBlocks) => datasetsBlocks.filter((d) => {
+            let ok = d.get('groupId.id') === this.groupFilterSelected.id; return ok; }));
+      }
       availableMaps = thenOrNow(
         availableMaps,
         (datasetsBlocks) => datasetsBlocks.filterBy('isVisible'));

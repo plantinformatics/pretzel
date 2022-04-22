@@ -42,6 +42,17 @@
         <label for="checkbox-historyBlocks">Viewed Chromosomes</label>
       </span>
 
+      <span style="margin-left : 10px; display: inline-block;">
+        <label for="select-group-as-filter">Group</label>
+        <span id="select-group-as-filter">
+          {{form/select-group
+            selectedValue=this.groupFilterSelected
+            values=(to-array-promise-proxy this.groupsForFilter)
+            selectedGroupChanged=(action this.selectedGroupChanged) }}
+           </span>
+      </span>
+
+
     </li>
 
 
