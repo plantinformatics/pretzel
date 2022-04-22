@@ -7,7 +7,33 @@
      <div class="margin-1em" style="display:flex; gap:1em">
       {{group.id}}
       {{group.clientId.email}}
-      {{group.name}}
+
+      {{#unless this.editingName}}
+        {{group.name}}
+        <div>
+          <button type="button" class="btn btn-info btn-xs" {{on 'click' (action (mut this.editingName) true) }}>
+            <i class="glyphicon glyphicon-pencil"></i>
+          </button>
+
+          {{elem/button-base
+            click=(action (mut this.editingName) true)
+            icon='edit'
+            classColour="info"
+            classSize='xs'
+          }}
+
+          {{#ember-tooltip side="bottom" delay=1000}}
+            Edit the group name.  Each keystroke is saved.
+          {{/ember-tooltip}}
+       </div>
+      {{else}}
+        <input
+          oninput={{action (action this.changeGroupName group) value="target.value" }}
+          onblur={{action (mut this.editingName) false}}
+          value={{group.name}}   >
+        {{elem/display-message message=this.changeGroupNameMsg}}
+      {{/unless}}
+
      </div>
 
  </div>

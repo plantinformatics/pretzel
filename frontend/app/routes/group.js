@@ -12,6 +12,11 @@ export default class GroupRoute extends Route {
 
   @alias('controls.apiServerSelectedOrPrimary.store') selectedOrPrimaryStore;
 
+
+  activate() {
+    this.controllerFor('group').send('reset');
+  }
+
   beforeModel() {
     let store = this.get('selectedOrPrimaryStore');
     dLog('beforeModel', this.store === store);
