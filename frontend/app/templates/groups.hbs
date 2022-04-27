@@ -1,5 +1,12 @@
 <div class="group-outer groups">
 
+{{#if (gt apiServers.serversLength 1)}}
+  <div style="margin-bottom:3ex">
+    <label>Server</label>
+    {{form/select-server selectedValue=model.server selectedServerChanged=(action this.selectedServerChanged) }}
+  </div>
+{{/if}}
+
 <label>Owned / added groups</label>
 {{#each this.model.groupsOwn as |group|}}
   <div class="margin-1em">

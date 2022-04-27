@@ -475,7 +475,11 @@ export default ManageBase.extend({
       .then((gs) => {
         gs.unshift(noGroup);
         dLog(fnName, 'gs', gs);
-        this.set('groupsValue', gs);  return gs;});
+        if (! this.isDestroying) {
+          this.set('groupsValue', gs);
+        }
+        return gs;
+      });
     return groupsP;
   }),
 

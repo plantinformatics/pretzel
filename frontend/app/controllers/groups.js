@@ -1,6 +1,7 @@
 import Controller from '@ember/controller';
 import { computed, action } from '@ember/object';
 import { alias } from '@ember/object/computed';
+import { getOwner } from '@ember/application';
 
 import { removeGroupMember } from '../utils/data/group';
 
@@ -14,6 +15,15 @@ export default class GroupsController extends Controller {
 
   // @service apiServers;
 
+  queryParams = ['server'];
+  // .server is initially undefined.
+
+  @computed('server')
+  get serverObj() {
+    const server = this.apiServers.lookupServerTabId(this.server);
+    return server;
+  }
+
   constructor() {
     super();
     this.newClientName = undefined;
@@ -21,7 +31,7 @@ export default class GroupsController extends Controller {
 
   /** lookup owner and services when required. */
   @computed() get services () {
-    let owner = Ember.getOwner(this.target);
+    let owner = getOwner(this.target);
     let
     apiServers = owner.lookup('service:apiServers'),
 
@@ -32,6 +42,13 @@ export default class GroupsController extends Controller {
   }
   @alias('services.apiServers') apiServers;
 
+  @action
+  selectedServerChanged(server) {
+    dLog('selectedServerChanged', server);
+    let queryParams = {server : server.tabId};
+    this.target.transitionTo({queryParams});
+    // this.send('refreshModel');
+  }
 
   /**
    * @param clientGroup is from this.model.groupsIn, via #each in .hbs

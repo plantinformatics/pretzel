@@ -206,7 +206,7 @@ export default Component.extend({
   featureNameListInput() {
     console.log('featureNameListInput');
     this.inputIsActive();
-    later(() => this.incrementProperty('featureNameListEnter'));
+    later(() => ! this.isDestroying && this.incrementProperty('featureNameListEnter'));
   },
   toSelectedFeatures() {
     console.log('toSelectedFeatures');

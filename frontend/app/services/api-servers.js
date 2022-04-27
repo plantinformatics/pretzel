@@ -1,9 +1,13 @@
 import $ from 'jquery';
+
 import { getOwner } from '@ember/application';
 import EmberObject, { computed } from '@ember/object';
 import Evented from '@ember/object/evented';
 import Service, { inject as service } from '@ember/service';
 import { isPresent } from '@ember/utils';
+
+import { find as collection_find } from 'lodash/collection';
+
 import {
   default as ApiServer,
   removePunctuation
@@ -169,6 +173,17 @@ export default Service.extend(Evented, {
     index = nameList.indexOf(name);
     return index;
   },
+  /** Lookup a server by its api-server.tabId, which is generally .name without 'https__'.
+   * @param tabId
+   * @return undefined if tabId is not in .servers
+   */
+  lookupServerTabId : function(tabId) {
+    const
+    servers = this.get('servers'),
+    server = collection_find(servers, (s) => s.tabId === tabId);
+    return server;
+  },
+
   /*--------------------------------------------------------------------------*/
   /** The user selection of one of the server tabs in the data explorer
    * indicates which server should be the request target for upload, datasets

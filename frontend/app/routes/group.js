@@ -8,18 +8,26 @@ import { toArrayPromiseProxy } from '../utils/ember-devel';
 const dLog = console.debug;
 
 export default class GroupRoute extends Route {
+  @service session;
   @service controls;
 
   @alias('controls.apiServerSelectedOrPrimary.store') selectedOrPrimaryStore;
-
 
   activate() {
     this.controllerFor('group').send('reset');
   }
 
-  beforeModel() {
+  beforeModel(transition) {
+    const fnName = 'beforeModel';
+    // pre-Octane equivalent using AuthenticatedRouteMixin : authenticationRoute = 'login';
+    // this.session.requireAuthentication(transition, 'login');
+    if (! this.session.isAuthenticated) {
+      dLog(fnName, '!isAuthenticated', this.session);
+      this.transitionTo('login');
+    }
+
     let store = this.get('selectedOrPrimaryStore');
-    dLog('beforeModel', this.store === store);
+    dLog(fnName, this.store === store);
     this.store = store;
   }
 
