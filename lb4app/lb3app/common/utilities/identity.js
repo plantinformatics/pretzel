@@ -52,7 +52,7 @@ exports.queryFilterAccessible = (ctx) => {
    * Operators \"$in\" are not allowed in query","code":"OPERATOR_NOT_ALLOWED_IN_QUERY","
    */
   /** It is possible to use $and, $or, and groups.map(ObjectId), in place of 'and', 'or' and groups. */
-  if ((ctx?.options.property !== 'deleteById') && (groups?.length)) {
+  if (ctx?.options.property && (ctx?.options.property !== 'deleteById') && (groups?.length)) {
     where.or.push({groupId : {$in : groups}});
     console.dir(where);
   }
