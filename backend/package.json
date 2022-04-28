@@ -12,7 +12,7 @@
     "test": "NODE_ENV=test mocha --reporter spec --timeout 20000 --slow 700 --extension .spec.js test/*.spec.js --exit"
   },
   "dependencies": {
-    "async": "^2.4.0",
+    "async": "^2.6.4",
     "bent": "^7.3.0",
     "body-parser": "^1.18.3",
     "compression": "^1.7.3",
