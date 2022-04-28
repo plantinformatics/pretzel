@@ -202,7 +202,15 @@ var config = {
        * and places only the changed attribute in the PATCH.
        */
       let key = changedAttributesKeys[0];
-      data[key] = snapshot.__attributes[key];
+      /** the Dataset and Block serializers rename the db field .meta as ._meta
+       * within the frontend, to avoid clash with Ember .meta. (commented also
+       * in serializers/dataset.js : attrs).
+       */
+      let
+      modelName = snapshot.modelName,
+      serializer = store.serializerFor(modelName),
+      rename = serializer?.attrs[key];
+      data[rename || key] = snapshot.__attributes[key];
     } else {
     let serializer = store.serializerFor(type.modelName);
 

@@ -49,7 +49,7 @@ export default class GroupEditRoute extends Route {
     group = this.controller.model,
     store = group.get('store'),
     apiServers = this.get('apiServers'),
-    server = apiServers.lookupServerName(store.name),
+    server = store.name ? apiServers.lookupServerName(store.name) : apiServers.primaryServer,
     groups = server.groups;
     groups.refresh();
     groups.get('groupsIn'); 
