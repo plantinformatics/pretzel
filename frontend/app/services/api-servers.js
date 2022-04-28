@@ -87,6 +87,13 @@ export default Service.extend(Evented, {
 
   // needs: ['component:service/api-server'],
 
+  /** @return true if currently connected to >1 servers.
+   * @desc used to enable select-server pull-down
+   */
+  get multipleServers() {
+    return this.serversLength > 1;
+  },
+
   /** Add a new ApiServer.
    * Store it in this.servers, indexed by .name = .host_safe()
    * @return server (Ember Object) ApiServer
@@ -284,6 +291,27 @@ export default Service.extend(Evented, {
       dLog('stores', datasetName, stores, servers);
     return stores;
   },
+
+  // ---------------------------------------------------------------------------
+
+  groupId2Server(groupId) {
+    let
+    servers = this.get('servers'),
+    server = Object.values(servers)
+      .find((server) => {
+        let
+        groups = server.groups,
+        match = groups.groupsInIds?.includes(groupId) ||
+          groups.groupsOwn.toArray().findBy('id', groupId);
+        return match;
+      });
+    return server;
+  },
+
+  
+
+  // ---------------------------------------------------------------------------
+
   /** Equivalent to this.get('datasetsBlocks') which is [serverName] -> datasetsBlocks.
    * This form is useful as a ComputedProperty dependency, because dependency
    * .@each can only be on arrays, not objects (i.e. indexed by integer, not
@@ -306,6 +334,7 @@ export default Service.extend(Evented, {
       return result;
     }),
 
+  // ---------------------------------------------------------------------------
 
 
   ServerLogin: function(url, user, password) {

@@ -1,6 +1,6 @@
 <div class="group-outer groups">
 
-{{#if (gt apiServers.serversLength 1)}}
+{{#if apiServers.multipleServers}}
   <div style="margin-bottom:3ex">
     <label>Server</label>
     {{form/select-server selectedValue=model.server selectedServerChanged=(action this.selectedServerChanged) }}

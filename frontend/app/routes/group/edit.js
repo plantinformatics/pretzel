@@ -49,8 +49,11 @@ export default class GroupEditRoute extends Route {
     group = this.controller.model,
     store = group.get('store'),
     apiServers = this.get('apiServers'),
-    server = apiServers.lookupServerName(store.name);
-    server.groups.refresh();
+    server = apiServers.lookupServerName(store.name),
+    groups = server.groups;
+    groups.refresh();
+    groups.get('groupsIn'); 
+    groups.get('groupsOwn'); 
 
     /** This updates just groups/own, whereas the above groups.refresh() also refreshes
      * groups/in, which the groups page displays. */

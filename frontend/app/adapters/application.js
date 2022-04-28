@@ -125,19 +125,26 @@ var config = {
     // this applies when serverHandle is defined or undefined
     if (! server)
     {
-      /** block getData() is only used if allInitially (i.e. not progressive loading);
-       *  so that addId is not done, so use id2Server. */
-      let
-        id2Server = this.get('apiServers.id2Server');
-      let map = this.get('apiServers.obj2Server'),
-      /** the above works for blocks; for datasets (e.g. delete), can lookup server name from snapshot.record */
-      snapshotServerName = snapshot && get(snapshot, 'record.store.name'),
-      serverName = queryServerName || snapshotServerName,
-      servers = this.get('apiServers.servers'),
-      snapshotServer = servers && serverName && servers[serverName];
-      server = map.get(serverHandle) || (id && id2Server[id]) || snapshotServer;
-      if (trace) {
-        dLog(fnName, 'id2Server', id, requestType, snapshotServerName, (trace < 2) ? [server?.name] : [id2Server, map, server]);
+      if ((modelName === 'group') && id) {
+        server = this.get('apiServers').groupId2Server(id);
+        if (! server) {
+          server = this.apiServers.primaryServer;
+        }
+      } else {
+        /** block getData() is only used if allInitially (i.e. not progressive loading);
+         *  so that addId is not done, so use id2Server. */
+        let
+        id2Server = this.get('apiServers.id2Server'),
+        map = this.get('apiServers.obj2Server'),
+        /** the above works for blocks; for datasets (e.g. delete), can lookup server name from snapshot.record */
+        snapshotServerName = snapshot && get(snapshot, 'record.store.name'),
+        serverName = queryServerName || snapshotServerName,
+        servers = this.get('apiServers.servers'),
+        snapshotServer = servers && serverName && servers[serverName];
+        server = map.get(serverHandle) || (id && id2Server[id]) || snapshotServer;
+        if (trace) {
+          dLog(fnName, 'id2Server', id, requestType, snapshotServerName, (trace < 2) ? [server?.name] : [id2Server, map, server]);
+        }
       }
     }
 

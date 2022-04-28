@@ -9,9 +9,6 @@ const dLog = console.debug;
 
 export default class GroupRoute extends Route {
   @service session;
-  @service controls;
-
-  @alias('controls.apiServerSelectedOrPrimary.store') selectedOrPrimaryStore;
 
   activate() {
     this.controllerFor('group').send('reset');
@@ -26,24 +23,12 @@ export default class GroupRoute extends Route {
       this.transitionTo('login');
     }
 
-    let store = this.get('selectedOrPrimaryStore');
-    dLog(fnName, this.store === store);
-    this.store = store;
-  }
-
-  x_model(params) {
-    dLog('group model', this, params);
-    let store = this.get('selectedOrPrimaryStore');
-    let modelP;
-
-    if (params.group_id) {
-      let groupP =
-          store.peekRecord('group', params.group_id) ||
-          store.findRecord('group', params.group_id);
-      modelP = groupP;
+    /** can add server to queryParams, as in routes/groups */
+    let store = transition.from?.attributes.server?.store;
+    if (store) {
+      dLog(fnName, this.store === store, store?.name);
+      this.store = store;
     }
-    return modelP;
   }
-
 
 }

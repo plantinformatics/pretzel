@@ -1,6 +1,14 @@
 <div class="group-outer">
 
 {{#let this.model as |group|}}
+
+  {{#if apiServers.multipleServers}}
+    <div style="margin-bottom:3ex">
+      <label>Server</label>
+      <span>{{server.tabId}}</span>
+    </div>
+  {{/if}}
+
   <label>Group</label>
   <div class="group-details margin-1em">
 

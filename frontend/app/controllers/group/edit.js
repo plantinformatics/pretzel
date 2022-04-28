@@ -60,8 +60,7 @@ export default class GroupEditController extends Controller {
   @alias('services.auth') auth;
   @alias('services.controls') controls;
 
-  @alias('controls.apiServerSelectedOrPrimary') server;
-
+  @alias('model') group;
   /** .server.store === .groupStore. */
   @alias('group.store') groupStore;
   /** Lookup the server of the store of this group. */
@@ -93,6 +92,7 @@ export default class GroupEditController extends Controller {
     dLog(fnName, groupId, newClientName);
     let
     server = this.get('server'),
+    /** equivalent : this.groupStore */
     store = server.store;
     let
     clientId = server.clientId || this.clientIdSession;

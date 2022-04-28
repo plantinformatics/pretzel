@@ -58,6 +58,7 @@ export default Controller.extend({
         this.set(msgName, p);
 
         p.then((obj) => {
+          this.model.server.groups.refresh();
           this.send('refreshModel');
           this.transitionToRoute('groups');
         });
