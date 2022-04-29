@@ -73,11 +73,13 @@ var config = {
   },
 
   get headers() {
-    let store = this.store,
+    let
+    store = this.store,
     adapterOptions = store && store.adapterOptions,
-    token = this._server && this._server.token;
+    server = store.name && this.apiServers.lookupServerName(store.name) || this._server,
+    token = server && server.token;
     if (trace) {
-      dLog('headers', adapterOptions, (trace < 2) ? [store.name, this._server?.name] : [store, this._server], token);
+      dLog('headers', adapterOptions, (trace < 2) ? [store.name, server?.name] : [store, server], token);
     }
     return token && {
       Authorization : token

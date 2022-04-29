@@ -40,7 +40,7 @@ exports.queryFilterAccessible = (ctx) => {
     debugger;
   }
   let groups = clientGroups.clientGroups.clientGroups[clientId];
-  console.log(fnName, clientId, groups);
+  // console.log(fnName, clientId, groups);
 
   if (!ctx.query) {
     ctx.query = {};

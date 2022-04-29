@@ -77,7 +77,7 @@ export default Service.extend({
 
   runtimeConfig() {
     console.log('runtimeConfig');
-    return this._ajax('Configurations/runtimeConfig', undefined, 'GET', true);
+    return this._ajax('Configurations/runtimeConfig', 'GET', undefined, true);
   },
 
   uploadData(data, onProgress) {
@@ -407,7 +407,7 @@ export default Service.extend({
    * onProgress is a callback accepting (percentComplete, data_direction)
    */
   _ajax(route, method, dataIn, token, onProgress) {
-    let {server, data} = this._server(dataIn),
+    let {server, data} = this._server(route, dataIn),
      url = this._endpoint(server, route);
 
     let config = {
@@ -477,7 +477,10 @@ export default Service.extend({
     return accessToken
   },
   /** Determine which server to send the request to.
+   * @param route from _ajax(), used to indicate if data contains blockId params.
    * @param data  params to the API; these guide the server determination;
+   * data.server is used if defined;  otherwise server is determined from blockId params
+   * or default to primaryServer,
    * e.g. if the param is block: <blockId>, use the server from which blockId was loaded.
    *
    * For POST, data is a JSON string, so data.server is not defined (except by dnaSequenceSearch);
@@ -493,16 +496,22 @@ export default Service.extend({
    * The blockIds in input param data may be modified, in which case result
    * .data is a modified copy of input data.
    */
-  _server(data) {
+  _server(route, data) {
+    const fnName = '_server';
     let result = {data}, requestServer;
-    if (data.server) {
-      if (data.server === 'primary')
+    if (data?.server) {
+      if (data.server === 'primary') {
         requestServer = this.get('apiServers.primaryServer');
+        // in this case data may be a constant so don't delete data.server
+      }
       else {
         requestServer = data.server;
         delete data.server;
       }
-    } else {
+    } else if (data?.options?.server) {
+      requestServer = data.options.server;
+      delete data.options.server;
+    } else if (route.startsWith('Blocks/') && (route !== 'Blocks/dnaSequenceLookup')) {
       /** Map a blockId which may be a remote reference, to a local blockId;
        * no change if the value is already local.
        * This function is copied from backend/common/utilities/localise-blocks.js
@@ -522,13 +531,15 @@ export default Service.extend({
        */
       let
         blockIds = data.blocks || data.blockIds ||
-        [data.blockA, data.blockB].filter((b) => b),
+        data.blockId && [data.blockId] ||
+        (data.blockA || data.blockB) && [data.blockA, data.blockB].filter((b) => b) ||
+        data.id && [data.id],
       blockServers = blockIds && blockIds.map((blockId) => blockIdServer(blockId)),
       blockId = data.block,
       blockServer = blockId && blockIdServer(blockId);
       if (blockServer) {
         if (blockServers.length) {
-          dLog('_server', 'data has both single and multiple block params - unexpected', 
+          dLog(fnName, 'data has both single and multiple block params - unexpected', 
                data, blockIds, blockServers, blockId, blockServer);
         }
         requestServer = blockServer;
@@ -549,19 +560,22 @@ export default Service.extend({
             result.data = blockIdMap(data, [blockLocalId, I]);
         }
       }
-      if (! requestServer) {
-	/** For requests without blockIds to determine blockServer from.
-	 * requestServerAttr (.session.requestServer) is set by buildURL(),
-	 * called via adapters/application.js: updateRecord().  Prior to that
-	 * being called, fall back to primaryServer, e.g. for runtimeConfig
-	 * which is used by getHoTLicenseKey() when the key is not defined in
-	 * the build environment.
-	 */
-        requestServer = this.get(requestServerAttr)
-	  || this.get('apiServers.primaryServer');
-      }
-      dLog(blockId, 'blockServer', blockServer, requestServer, this.get(requestServerAttr));
+      dLog(fnName, blockId, 'blockServer', blockServer, requestServer);
     }
+
+    if (! requestServer) {
+      /** For requests without data.server or blockIds to determine blockServer from.
+       * requestServerAttr (.session.requestServer) is set by buildURL(),
+       * called via adapters/application.js: updateRecord().  Prior to that
+       * being called, fall back to primaryServer, e.g. for runtimeConfig
+       * which is used by getHoTLicenseKey() when the key is not defined in
+       * the build environment.
+       */
+      requestServer = this.get(requestServerAttr)
+        || this.get('apiServers.primaryServer');
+      dLog(fnName, requestServer, this.get(requestServerAttr));
+    }
+
     result.server = requestServer;
     return result;
   },
@@ -600,7 +614,7 @@ export default Service.extend({
    * https://github.com/whatwg/html/issues/2177#issuecomment-487194160
    */
   _endpointURLToken(dataIn, route) {
-    let {server, data} = this._server(dataIn),
+    let {server, data} = this._server(route, dataIn),
     url = this._endpoint(server, route) +
       '?access_token=' + this._accessToken(server);
     return {url, data};

@@ -88,7 +88,7 @@ module.exports = function(app) {
     app.models.Dataset.findById(block.datasetId, {}, options)
     .then(function(dataset) {
       // let dataset = datasets.length && datasets[0];
-      console.log('blockPermissions', block.datasetId, dataset);
+      console.log('blockPermissions', block.datasetId, dataset?.groupId);
       if (dataset) {
         datasetPermissions(dataset, userId, permission, context, cb)
       } else {
@@ -292,7 +292,7 @@ module.exports = function(app) {
                   process.nextTick(() => cb(error, ok));
                 }
                 else {
-                  if ((i === 1) && allOk) {
+                  if ((i === models.length-1) && allOk) {
                     process.nextTick(() => cb(null, true));
                   }
                 }

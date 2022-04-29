@@ -239,18 +239,18 @@ export default Service.extend(Evented, {
      * featureSaved() clears .pName, to enable result refresh after feature (.values.Ontology) save.
      */
     promise = apiServer[pName] || 
-      (apiServer[pName] = this.get('taskGetValues').perform(fieldName)
+      (apiServer[pName] = this.get('taskGetValues').perform(apiServer, fieldName)
        .then((values) => (apiServer[name] = values)) );
 
     return promise;
   },
   /** Call getBlockValues() in a task - yield the block Traits or Ontologys result.
    */
-  taskGetValues: task(function * (fieldName) {
+  taskGetValues: task(function * (server, fieldName) {
     const fnName = 'taskGetValues';
     dLog("block", fnName);
     let blockP =
-        this.get('auth').getBlockValues(fieldName, /*options*/{});
+        this.get('auth').getBlockValues(fieldName, /*options*/{server});
     let blockValues = yield blockP;
 
     if (trace_block)
