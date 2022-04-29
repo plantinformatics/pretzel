@@ -533,7 +533,11 @@ export default Service.extend({
         blockIds = data.blocks || data.blockIds ||
         data.blockId && [data.blockId] ||
         (data.blockA || data.blockB) && [data.blockA, data.blockB].filter((b) => b) ||
+        data.block && [data.block] ||
         data.id && [data.id],
+      /** Blocks/blockFeatureLimits may have .block === undefined, causing
+       * blockServers === undefined
+       */
       blockServers = blockIds && blockIds.map((blockId) => blockIdServer(blockId)),
       blockId = data.block,
       blockServer = blockId && blockIdServer(blockId);
@@ -543,6 +547,8 @@ export default Service.extend({
                data, blockIds, blockServers, blockId, blockServer);
         }
         requestServer = blockServer;
+      } else if (! blockServers) {
+        // requestServer is undefined
       } else if (blockServers.length === 1) {
         requestServer = blockServers[0];
       } else if (blockServers.length) {
