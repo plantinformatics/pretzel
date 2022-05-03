@@ -80,6 +80,11 @@ export default Service.extend({
     return this._ajax('Configurations/runtimeConfig', 'GET', undefined, true);
   },
 
+  getVersion(server) {
+    console.log('getVersion');
+    return this._ajax('Configurations/version', 'GET', {server}, true);
+  },
+
   uploadData(data, onProgress) {
     return this._ajax('Datasets/upload', 'POST', JSON.stringify(data), true, onProgress);
   },
@@ -295,7 +300,7 @@ export default Service.extend({
   getBlockFeaturesInterval(blockId, intervals, options) {
     if (trace_paths)
       dLog('services/auth getBlockFeaturesInterval', blockId, intervals, options);
-    return this._ajax('Blocks/blockFeaturesInterval', 'GET', {id : blockId, blockId, intervals, options}, true);
+    return this._ajax('Blocks/blockFeaturesInterval', 'GET', {id : blockId, blocks : [blockId], intervals, options}, true);
   },
 
   /** Search for Features matching the given list of Feature names in featureNames[].

@@ -180,6 +180,7 @@ module.exports = function(app) {
       context.property == 'namespacesAliases' ||
         // Configuration
       context.property === 'runtimeConfig' ||
+      context.property === 'version' ||
         // Ontology
       context.property === 'getTree' ||
         // Dataset
@@ -286,7 +287,7 @@ module.exports = function(app) {
             let allOk = true;
             function cbWrap(i) {
               return function (error, ok) {
-                console.log('cbWrap', i, blockIds[i], models[i], error, ok);
+                console.log('cbWrap', i, blockIdsLocal[i], models[i], error, ok);
                 if (error || ! ok) {
                   allOk = false;
                   process.nextTick(() => cb(error, ok));

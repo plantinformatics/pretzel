@@ -44,15 +44,23 @@ export default class DataGroups extends EmberObject {
     return this.getGroups(own);
   }
 
+  /**
+   * @return promise, yielding [] if the server.apiVersion precedes groups/ APIs
+   */
   getGroups(own) {
-    let
-    /**   @service session;
-    clientId = this.get('session.session.authenticated.clientId'),
-    */
-    store = this.server.store,
-    auth = this.get('auth'),
-    apiServers = this.get('apiServers'),
-    groupsP = toArrayPromiseProxy(getGroups(auth, own, this.server, apiServers));
+    let groupsP;
+    if (! this.server.apiVersion || (this.server.apiVersion < 2)) {
+      groupsP = Promise.resolve([]);
+    } else {
+      let
+      /**   @service session;
+            clientId = this.get('session.session.authenticated.clientId'),
+      */
+      store = this.server.store,
+      auth = this.get('auth'),
+      apiServers = this.get('apiServers');
+      groupsP = toArrayPromiseProxy(getGroups(auth, own, this.server, apiServers));
+    }
     return groupsP;
   }
 

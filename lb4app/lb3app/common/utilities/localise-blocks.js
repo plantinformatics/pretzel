@@ -223,7 +223,8 @@ function remoteBlockGetFeatures(blockRemoteRefn, interval)
    * nFeatures are set to a large number to get "all" the features.  */
   let {nSamples, nFeatures, ...intervals} = interval;
   intervals.nSamples = intervals.nFeatures = nBlockFeaturesCopy;
-  let queryParams = param({id : blockId, blockId, intervals}),
+  /** param .blocks (array) changes to .id (string) in v2.14. send .blocks[] for older secondary. */
+  let queryParams = param({id : blockId, blocks : [blockId], intervals}),
   headers = {'Authorization' : accessToken};
   console.log('/api/Blocks/blockFeaturesInterval', blockId, interval, accessToken);
   let promise =
@@ -260,7 +261,8 @@ async function localiseBlockGet(models, apiServer, blockRemoteRefn, interval) {
   } else {
     promise =
     remoteBlockGetFeatures(blockRemoteRefn, interval).then((features) => {
-      console.log('features', features.length);
+      /** 400 'Bad Request' causes features undefined. */
+      console.log('features', features?.length);
       /* features[*].blockId is the same as block._id, b.blockId.       */
       /** For those features which are already loaded, the result will be a write error
        */
@@ -271,7 +273,7 @@ async function localiseBlockGet(models, apiServer, blockRemoteRefn, interval) {
       /** insert_features_recursive() does not use dataset_id; it passes it to cb() as result. 
        * datasetId is not handy, so pass b instead.
        */
-      return blockAddFeatures(db, /*datasetId*/b, features, cb)
+      return features && blockAddFeatures(db, /*datasetId*/b, features, cb)
         .then(() => { console.log('after blockAddFeatures', b); return b.blockId; });
     });
   }

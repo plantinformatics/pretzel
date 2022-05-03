@@ -72,6 +72,7 @@ export default Service.extend(Evented, {
        */
       let primaryServer = this.addServer(apiOrigin || siteOrigin, undefined, token, clientId);
       console.log('primaryServer', primaryServer);
+      primaryServer.getVersion();
     }
 
     if (false)  // useful in setting up development data
@@ -358,6 +359,7 @@ export default Service.extend(Evented, {
       let server =
         me.addServer(url, user, token, response.userId);
       server.getDatasets();
+      server.getVersion();
     }).catch(function (error) {
       let
       re = error && error.responseJSON && error.responseJSON.error,

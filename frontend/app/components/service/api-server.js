@@ -51,6 +51,7 @@ export default EmberObject.extend({
   block: service('data/block'),
   apiServers: service(),
   queryParamsService: service('query-params'),
+  auth : service(),
 
 
   init() {
@@ -136,6 +137,28 @@ export default EmberObject.extend({
   },
 
   /*--------------------------------------------------------------------------*/
+
+  /** Get API Version of server
+   */
+  getVersion : function () {
+    const
+    fnName = 'getVersion',
+    server = this; // this.get('apiServers').lookupServerName(this.get('name'));
+    /** could use a task with .drop().  */
+    if (! server.getVersionP) {
+      server.getVersionP = this.get('auth').getVersion(server)
+        .then((configVersion) => {
+          dLog(fnName, configVersion);
+          server.apiVersion = configVersion.apiVersion;
+        })
+        .catch((error) => {
+          dLog(fnName, error);
+          if (error.statusCode === 404) {
+            server.apiVersion = 1;
+          }
+        });
+    }
+  },
 
   /** Get the list of datasets, including their blocks, from this API server.
    *

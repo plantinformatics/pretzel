@@ -28,6 +28,25 @@ module.exports = function(Configuration) {
 
   /*--------------------------------------------------------------------------*/
 
+
+  Configuration.version = function (cb) {
+    let apiVersion = 2,
+    config = {apiVersion};
+    console.log('version', config);
+    cb(null, config);
+  };
+
+  // ---------------------------------------------------------------------------
+
+  Configuration.remoteMethod('version', {
+    accepts: [
+    ],
+    returns: {type: 'object', root: true},
+    description: "Request API version of backend server"
+  });
+
+  // ---------------------------------------------------------------------------
+
   acl.assignRulesRecord(Configuration);
 
   Configuration.disableRemoteMethodByName("findById");
