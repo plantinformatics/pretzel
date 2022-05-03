@@ -191,6 +191,11 @@ ClientGroups.prototype.updateWithGroupIds = async function (ClientGroup, groupId
     .then((cgs)  => {
       this.clientGroups = {};
       cgs.forEach((cg) => {
+        /** this would be caused by ClientGroup with {clientId : null}, which is invalid;  */
+        if (! cg._id) {
+          console.log(fnName, cg, JSON.stringify(cg));
+          return;
+        }
         let clientId = cg._id.toHexString(),
             groupHexAll = cg.groups?.map((g) => g?.toHexString()),
             groupHex = groupHexAll.reduce((result, g) => {

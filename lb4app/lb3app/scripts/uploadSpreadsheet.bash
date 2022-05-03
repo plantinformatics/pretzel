@@ -5,7 +5,7 @@ case $PWD in
     resourcesDir=/app/scripts
     toolsDev=$resourcesDir
     ;;
-  *backend)
+  *backend|*lb4app)
     resourcesDir=../resources
     ;;
   *)
@@ -436,17 +436,26 @@ function spreadsheetConvert()
   # installation of ssconvert (gnumeric) on centos had dependency problems, so using docker
   if [ -f /etc/system-release-cpe ]
   then
+    # since update to node 16, child process now has just the user
+    # group, as shown by id -G; access to docker run is enabled via
+    # group 'docker', so use newgrp docker
+      # pwd; (id -Z -G; id -G; bash -c groups | cat -n)  1>&2 # who am i;
+      # docker run hello-world
+    #
     # renameIfSpaces is done by caller, before rm.
     # if renameIfSpaces has changed $fileName, then "$2" and "$3" need to change also
     # Perhaps switch from centos and install ssconvert directly; but if renameIfSpaces
     # is needed, can refactor this to pass in $fileName perhaps.
+      newgrp docker <<EOF
+      set -x
     docker run \
 	   -u $(id -u):$(id -g) \
-	   -v /home/ec2-user/pretzel/tmp:/home/user \
+	   -v $PWD:/home/user \
 	   -e PARAMS="$1" \
 	   -e FILETOREAD="$fileName" \
 	   -e FILETOWRITE="$fileName.%s.csv" \
 	   nalscher/ssconvert:latest
+EOF
   else
     ssconvert "$1" "$2" "$3"
   fi
