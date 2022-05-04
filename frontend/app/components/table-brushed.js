@@ -258,7 +258,8 @@ export default Component.extend({
       (name) => {
         let c = {
           data: name,
-          type: featureValuesTypes[name] || 'text'
+          type: featureValuesTypes[name] || 'text',
+          editor: false,
         };
         let a = featureValuesColumnsAttributes[name];
         if (a) {
@@ -338,15 +339,18 @@ export default Component.extend({
     columns = [
           {
             data: 'Chromosome',
-            type: 'text'
+            type: 'text',
+            editor: false,
           },
           {
             data: 'Feature',
-            type: 'text'
+            type: 'text',
+            editor: false,
           },
           {
             data: 'Position',
             type: 'numeric',
+            editor: false,
             numericFormat: {
               pattern: '0,0.*'
             }
@@ -370,7 +374,8 @@ export default Component.extend({
             type: 'numeric',
             numericFormat: {
               pattern: '0,0.*'
-            }
+            },
+            editor: false,
         }],
         ['End'],
         [60]
