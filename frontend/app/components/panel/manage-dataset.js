@@ -139,7 +139,10 @@ export default ManageBase.extend({
       fieldName = 'groups' + selectFrom.capitalize(),
       apiResultP = groupsService.get(fieldName),
       // getGroups(this.get('auth'), selectFromOwn, server, apiServers),
-      groupsP = (selectFromOwn ? apiResultP : apiResultP.then(clientGroupsToGroups))
+      groupsP = (
+        selectFromOwn ?
+          apiResultP.then((a) => a.slice()) :
+          apiResultP.then(clientGroupsToGroups))
         .then((gs) => {
         gs.unshift(noGroup);
         dLog(fnName, 'gs', gs);
