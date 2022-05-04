@@ -44,12 +44,28 @@ export default class DataGroups extends EmberObject {
     return this.getGroups(own);
   }
 
-  /**
-   * @return promise, yielding [] if the server.apiVersion precedes groups/ APIs
+  /** Check server.apiVersion < 2, then if OK call getGroups2(own)
+   * I.e. this handles server.getVersionP being pending, whereas getGroups2()
+   * expects that apiVersion has been received or is assigned its default value.
+   * @return promise yielding array of groups (own) or client-groups + groups (in),
+   * wrapped with toArrayPromiseProxy() because model.groups{Own,In} are used in
+   * .hbs (could alternately use helper (to-array-promise-proxy ) in .hbs).
    */
   getGroups(own) {
+    let
+    server = this.server,
+    groupsP = server.getVersion().then((apiVersion) => {
+      return this.getGroups2(apiVersion, own); });
+    return toArrayPromiseProxy(groupsP);
+  }
+  /**
+   * @param apiVersion  server.apiVersion, which may be default (1)
+   * @param own true for groups/own, false for groups/in (or equivalent)
+   * @return promise, yielding [] if the server.apiVersion precedes groups/ APIs
+   */
+  getGroups2(apiVersion, own) {
     let groupsP;
-    if (! this.server.apiVersion || (this.server.apiVersion < 2)) {
+    if (! apiVersion || (apiVersion < 2)) {
       groupsP = Promise.resolve([]);
     } else {
       let
@@ -59,7 +75,7 @@ export default class DataGroups extends EmberObject {
       store = this.server.store,
       auth = this.get('auth'),
       apiServers = this.get('apiServers');
-      groupsP = toArrayPromiseProxy(getGroups(auth, own, this.server, apiServers));
+      groupsP = getGroups(auth, own, this.server, apiServers);
     }
     return groupsP;
   }

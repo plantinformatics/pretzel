@@ -138,7 +138,8 @@ export default EmberObject.extend({
 
   /*--------------------------------------------------------------------------*/
 
-  /** Get API Version of server
+  /** Get API Version of server;  request it if not already done.
+   * @return promise yielding apiVersion
    */
   getVersion : function () {
     const
@@ -150,14 +151,17 @@ export default EmberObject.extend({
         .then((configVersion) => {
           dLog(fnName, configVersion);
           server.apiVersion = configVersion.apiVersion;
+          return server.apiVersion;
         })
         .catch((error) => {
           dLog(fnName, error);
           if (error.statusCode === 404) {
             server.apiVersion = 1;
           }
+          return server.apiVersion;
         });
     }
+    return server.getVersionP;
   },
 
   /** Get the list of datasets, including their blocks, from this API server.
