@@ -105,6 +105,11 @@ export default Record.extend({
     return this.get('_meta.shortName') || this.get('id');
   }),
 
+  /** @return a brief version of .createdAt */
+  get createdAtShort() {
+    return this.get('createdAt').toString().slice(0,21);
+  },
+
   /*--------------------------------------------------------------------------*/
 
 

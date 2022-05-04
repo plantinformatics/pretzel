@@ -34,10 +34,11 @@
   <hr class="left20">
 
 
-  <label>Datasets of group {{group.name}}</label>
+  <label>Datasets of group : &nbsp;<span style="font-size: larger;">{{group.name}}</span>
+ </label>
   {{#if group.groupDatasets.length}}
       <div class="margin-1em group-dataset">
-        <label>Un-Group</label>
+        <label>Remove group ownership</label>
         <label>Dataset</label>
         <label>Owner</label>
         <label>Group</label>
@@ -56,7 +57,7 @@
        <span>{{dataset.clientId.email}}</span>
        <span>{{dataset.groupId.name}}</span>
        <span>{{dataset.public}}</span>
-       <span>{{dataset.createdAt}}</span>
+       <span>{{dataset.createdAtShort}}</span>
       </div>
     {{/each}}
     <div>{{elem/display-message message=this.unGroupMsg}}</div>
