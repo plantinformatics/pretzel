@@ -896,7 +896,9 @@ Block.titleTextMax = function (axisName)
     lengthMax = d3.keys(stacks.blocks).reduce(function (result, a) {
       let block = stacks.blocks[a],
       isViewed = block && block.block.get('isViewed'),
-      title = isViewed && block.titleText(),
+      /** during axisDelete() -> removeAxisMaybeStack(), updateAxisTitleSize()
+       * is called, and the block being un-viewed is ignored here via ! block.axis */
+      title = isViewed && block.axis && block.titleText(),
       length = title && title.length;
       // dLog('titleTextMax', result, a, block, isViewed, title, length);
       if (length > result)
