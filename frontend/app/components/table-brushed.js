@@ -572,6 +572,7 @@ export default Component.extend({
    * }
    */
   highlightFeature: function(feature) {
+    const fnName = 'highlightFeature';
     d3.selection.prototype.moveToFront = function() {
       return this.each(function(){
         this.parentNode.appendChild(this);
@@ -583,7 +584,8 @@ export default Component.extend({
       .style("stroke", "red");
     if (feature) {
       if (Array.isArray(feature)) {
-        feature.forEach((f) => this.highlightFeature1(f.feature));
+        feature.forEach(
+          (f, i) => f ? this.highlightFeature1(f.feature) : dLog(fnName, f, i, feature));
       } else {
         this.highlightFeature1(feature);
       }
