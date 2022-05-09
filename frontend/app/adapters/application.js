@@ -199,7 +199,11 @@ var config = {
        * (snapshot._internalModel._record.groupId.content is null)
        */
       data.groupId = rc.groupId.get('id') || null;
-    } else if (changedAttributesKeys.length === 1) {
+    } else if ((changedAttributesKeys.length === 1) && (type.modelName !== 'feature')) {
+      /* excluding 'feature' because having attributes .value and .values seems to
+       * confuse snapshot.changedAttributes() - when .values.Ontology is set,
+       * changedAttributes contains .value instead of .values
+       */
       /** This handles changes to a single attribute, e.g. .public or ._meta,
        * and places only the changed attribute in the PATCH.
        */
