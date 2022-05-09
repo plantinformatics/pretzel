@@ -4,6 +4,7 @@
 /* global require */
 
 var clientGroups = require('./client-groups');
+var { cirquePush } = require('../../common/utilities/cirque');
 
 /**
  * Find the client id from loopback context, if exists
@@ -55,13 +56,40 @@ exports.queryFilterAccessible = (ctx) => {
   let property = ctx?.options.property;
   if ((! property || (property !== 'deleteById')) && (groups?.length)) {
     let groupId = {},
-	inField = property ? '$in' : 'in';
+        inField = property ? '$in' : 'in';
     groupId[inField] = groups;
     where.or.push({groupId});
-    console.dir(where.or[2]);
+    // console.dir(where.or[2]);
   }
   if (ctx.query.where) {
     where = {and: [where, ctx.query.where]}
   }
   ctx.query.where = where;
 }
+
+// -----------------------------------------------------------------------------
+
+/**
+ * @param clientId string or BSON id
+ * @param groupId string
+ */
+exports.clientIsInGroup = function(clientId, groupId) {
+  const fnName = 'clientIsInGroup';
+  /** .toString() will do .toHexString() if clientId is BSON id.  */
+  let clientIdString = clientId.toString();
+  /** groups of the logged-in user.  String, from ClientGroups:update()). */
+  let groups = clientGroups.clientGroups.clientGroups[clientIdString];
+  // console.log('isInGroup', clientIdString, groups, groupId, data);
+  /** if groupId may be BSON id insteam of string,
+   * can use ObjectId .equals() for comparing BSON with String :
+   *   groups.find((id) => groupId.equals(id))
+   * or groups.includes(groupId.toString())
+   */
+  let ok = groups.includes(groupId);
+  if (! ok) {
+    cirquePush(fnName + ' ' + groupId.toString() + ', ' + clientIdString + ', ' + JSON.stringify(groups));
+  }
+  return ok;
+};
+
+// -----------------------------------------------------------------------------

@@ -3,6 +3,7 @@
 /* global require */
 
 var clientGroups = require('../../common/utilities/client-groups');
+var { clientIsInGroup } = require('../../common/utilities/identity');
 var { ObjectId_equals } = require('../../common/utilities/mongoDB-driver-lib');
 var ObjectId = require('mongodb').ObjectID;
 
@@ -42,14 +43,7 @@ module.exports = function(app) {
       console.log(fnName, clientIdString, JSON.stringify(data));
     } else {
       groupId = '' + groupId;
-      /** groups of the logged-in user.  String, from ClientGroups:update()). */
-      let groups = clientGroups.clientGroups.clientGroups[clientIdString];
-      // console.log('isInGroup', clientIdString, groups, groupId, data);
-      // can use ObjectId .equals() for comparing BSON with String
-      ok = groups.find((id) => id == groupId);
-      if (! ok) {
-        cirquePush('isInGroup ' + JSON.stringify(data) + ', ' + clientIdString + ', ' + JSON.stringify(groups));
-      }
+      ok = clientIsInGroup(clientId, groupId);
     }
     return ok;
   }

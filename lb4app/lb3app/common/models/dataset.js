@@ -13,7 +13,7 @@ var _ = require('lodash');
 
 
 var acl = require('../utilities/acl');
-var identity = require('../utilities/identity');
+var { clientIsInGroup } = require('../utilities/identity');
 var upload = require('../utilities/upload');
 var load = require('../utilities/load');
 const { cacheClearBlocks } = require('../utilities/localise-blocks');
@@ -316,19 +316,37 @@ module.exports = function(Dataset) {
     const
     fnName = 'Dataset:before save',
     models = ctx.Model.app.models,
-    Dataset = ctx.Model;
-    let dataset;
+    Dataset = ctx.Model,
+    data = ctx.data,
+    dataset = ctx.newInstance ? ctx.instance : ctx.currentInstance;
+
+    if (data.groupId) {
+      let
+      /** similar : models/group.js : sessionClientId(context),
+       * utilities/identity.js : gatherClientId() */
+      accessToken = ctx.options.accessToken,
+      clientId = accessToken.userId;
+      let groupId = data.groupId;
+      let ok = clientIsInGroup(clientId, groupId);
+      console.log(fnName, ok, ''+dataset.id, ''+groupId, dataset);
+      if (! ok) {
+        // Don't save
+        var err = new Error('User ' + clientId + ' is not a member of group ' + groupId + ' so they cannot set that as group of dataset ' + dataset.id);
+        err.statusCode = 401;
+        console.log(err.toString());
+        next(err);
+        return;
+      }
+    }
 
     if (ctx.newInstance) {
       /** create : ctx.instance is defined, instead of .currentInstance, .where and .data */
-      dataset = ctx.instance;
       if (dataset.public && dataset.groupId) {
         console.log(fnName, ''+dataset.id, ''+dataset.groupId, dataset);
         dataset.groupId = null; // or dataset.setAttribute('groupId',  )
       }
-    } else if ((dataset = ctx.currentInstance)) { // update
+    } else if (dataset) { // update
       let
-      data = ctx.data,
       /** check the new value if changing, or otherwise the current value. */
       isPublic = data.hasOwnProperty('public') ? data.public : dataset.public;
       if (isPublic && dataset.groupId) {
