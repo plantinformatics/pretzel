@@ -146,23 +146,126 @@ module.exports = function(Group) {
 
   // ---------------------------------------------------------------------------
 
-  /**
+  /** Add the given clientId to the Group, i.e. create a ClientGroup.
+   * @param id  groupId
    * @param addId clientId of user to add to group
+   * @param options
+   * The params id and addId are already checked by access.js : genericResolver()
    */
-  Group.addMember = function (groupId, addId, cb) {
+  Group.addMember = function (groupId, addId, options, cb) {
     const
-    fnName = 'addMember';
+    fnName = 'addMember',
+    clientId = addId,
+    models = this.app.models,
+    ClientGroup = models.ClientGroup;
+    // based on ClientGroup.addEmail()
+
+    /** log the error message and call cb(error) */
+    function cbL(statusCode, errorText) {
+      console.log(fnName, groupId, clientId, statusCode, errorText);
+      const error = new Error(errorText);
+      error.statusCode = statusCode;
+      cb(error);
+    }
+
+    ClientGroup.groupAddMember(groupId, clientId, options, cbL, cb);
+
+    // result is via cb().  All cases call cb().
   };
 
-  /** group/addMember (session clientId), groupId, addId -> message
+  /** group/addMember (session clientId), groupId, addId -> message or ClientGroup
    */
   Group.remoteMethod('addMember', {
     accepts: [
-      {arg: 'groupId', type: 'string', required: true},
+      {arg: 'id', type: 'string', required: true},
       {arg: 'addId', type: 'string', required: true},
+      {arg: "options", type: "object", http: "optionsFromRequest"},
     ],
-    returns: {type: 'string', root: true},
-    description: "Add user to group"
+    returns: {type: 'object', root: true},
+    description: "Add user to group, i.e. create a ClientGroup."
+    // http: {verb: 'post'},  (default)
+  });
+
+  // ---------------------------------------------------------------------------
+
+  /** Lookup Client by email;  if not found, create it.
+   * Call cb() if error.
+   * @param groupId The client is being created to add to this group
+   * @param options optionsFromRequest
+   * @return promise yielding clientId, or undefined if error
+   */
+  Group.retrieveEmailOrCreate = function(Client, email, groupId, options, cb) {
+    const fnName = 'retrieveEmailOrCreate';
+
+    /** log the error message and call cb(error) */
+    function cbL(statusCode, errorText) {
+      console.log(fnName, email, statusCode, errorText);
+      const error = new Error(errorText);
+      error.statusCode = statusCode;
+      cb(error);
+    }
+
+    let promise =
+    Client.find({where : {email}})
+      .then((clients) => {
+        console.log(fnName, clients, email);
+        if (clients.length === 1) {
+          return clients[0];
+        } else if (clients.length) {
+          cbL(409, 'There are multiple Users with email ' + email + '.');
+          return undefined;
+        } else {
+          /** may use random text instead of groupId for password.  Possibly this .create() will not be enabled. */
+          let clientP = Client.create({email, emailVerified : true, password: groupId, forGroup : true, options});
+          clientP.then((client) => { console.log(fnName, 'created', client.id.toHexString(), email); });
+          return clientP;
+        }
+      })
+      .catch((err) => cb(err));
+    return promise;
+  };
+
+  /** Add the given clientId to the Group, i.e. create a ClientGroup.
+   * @param id  groupId
+   * @param addEmail email of user to add to group
+   * @param options
+   * The params id and addId are already checked by access.js : genericResolver()
+   */
+  Group.addMemberEmail = function (groupId, addEmail, options, cb) {
+    const
+    fnName = 'addMemberEmail',
+    clientId = addEmail,
+    models = this.app.models,
+    ClientGroup = models.ClientGroup;
+    // based on ClientGroup.addEmail()
+
+    /** log the error message and call cb(error) */
+    function cbL(statusCode, errorText) {
+      console.log(fnName, groupId, clientId, statusCode, errorText);
+      const error = new Error(errorText);
+      error.statusCode = statusCode;
+      cb(error);
+    }
+
+    this.retrieveEmailOrCreate(models.Client, addEmail, groupId, options, cb)
+      .then((client) => {
+        ClientGroup.groupAddMember(groupId, client.id, options, cbL, cb); })
+      .catch((err) => cb(err));
+
+    // result is via cb().  All cases call cb().
+  };
+
+  /** group/addMember (session clientId), groupId, addId -> message or ClientGroup
+   */
+  Group.remoteMethod('addMemberEmail', {
+    accepts: [
+      {arg: 'id', type: 'string', required: true},
+      {arg: 'addEmail', type: 'string', required: true},
+      {arg: "options", type: "object", http: "optionsFromRequest"},
+    ],
+    returns: {type: 'object', root: true},
+    description: "Add user email to group, i.e. create a ClientGroup."
+    // http: {verb: 'post'},  (default)
   });
 
   // ---------------------------------------------------------------------------

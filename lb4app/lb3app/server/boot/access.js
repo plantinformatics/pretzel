@@ -12,6 +12,11 @@ var { cirquePush, cirqueTail } = require('../../common/utilities/cirque');
 module.exports = function(app) {
   var Role = app.models.Role;
 
+  /** @return true if data.clientId equals userId.
+   * @param data may be Record (Dataset, Annotation, Interval) or Group,
+   * which all have property .clientId
+   * @param userId  clientId
+   */
   function isOwner(data, userId) {
     let ok = ObjectId_equals(data.clientId, userId);
     if (! ok) {
@@ -65,17 +70,21 @@ module.exports = function(app) {
     return ok;
   }
 
-  function canWrite(data, userId) {
+  function canWriteModel(modelName) {
+  return function canWrite(data, userId) {
     if (isOwner(data, userId)) {
       return true;
     }
-    if (isPublic(data) && !isReadOnly(data)) {
-      return true;
+    if (modelName !== 'group') {
+      if (isPublic(data) && !isReadOnly(data)) {
+        return true;
+      }
     }
     if (true /*! ok*/) {
       cirquePush('canWrite ' + JSON.stringify(data) + ', ' + userId);
     }
     return false;
+  };
   }
 
   function datasetPermissions(dataset, userId, permission, context, cb) {
@@ -114,18 +123,38 @@ module.exports = function(app) {
     cb(null, true);
   }
 
+  /** Check : only group owner can write to a group;  group members can read. */
+  function groupPermissions(group, userId, permission, context, cb) {
+    const ok = permission(group, userId);
+    if (! ok) {
+      cirqueTail(10);
+    }
+    cb(null, ok);
+  }
+
+  /** Functions which check the access permissions for a given model.
+   * Signature is : (model, userId, permission, context, cb);
+   * Each function is required to call cb().
+   */
+  const modelPermissions = {
+    datasetPermissions,
+    blockPermissions,
+    featurePermissions,
+    clientPermissions,
+    groupPermissions,
+  };
+
   /**
+   * @param model object found from id param (context.modelId).
+   * This is not context.model which is the class of the object.
    * @param role used only in cirque trace, if ! ok
    */
   function access(modelName, model, userId, permission, context, role, cb) {
-    if (modelName == 'Dataset') {
-      datasetPermissions(model, userId, permission, context, cb)
-    } else if (modelName == 'Block') {
-      blockPermissions(model, userId, permission, context, cb)
-    } else if (modelName == 'Feature') {
-      featurePermissions(model, userId, permission, context, cb)
-    } else if (modelName == 'Client') {
-      clientPermissions(model, userId, permission, context, cb)
+    const
+    pfnName = modelName.toLowerCase() + 'Permissions',
+    modelPermissionsFn = modelPermissions[pfnName];
+    if (modelPermissionsFn) {
+      modelPermissionsFn(model, userId, permission, context, cb);
     } else {
       const ok = permission(model, userId);
       if (! ok) {
@@ -134,6 +163,7 @@ module.exports = function(app) {
       }
       cb(null, ok);
     }
+    /** cb() is called in all cases. */
   }
 
   /**
@@ -189,7 +219,8 @@ module.exports = function(app) {
         // Group 
       context.property === 'own' ||
       context.property === 'in' ||
-        // addMember not used
+        /*  additional resolve check for /addMember : param addId.        */
+      context.property === 'addMemberEmail' ||
         // ClientGroup 
       context.property === 'addEmail' ||
 
@@ -211,27 +242,77 @@ module.exports = function(app) {
       let userId = context.accessToken.userId;
       let modelName = context.modelName
 
-      let permission = canWrite;
+      let permission = canWriteModel(modelName);
       if (role == 'viewer') {
         permission = canRead;
       }
 
+      /** Check the primary model, then if OK, afterPrimaryModel() will check
+       * param addId if Group/addMember.
+       */
+
+      function checkAccess(object) {
+        access(modelName, object, userId, permission, context, role, cb);
+      }
+
+      function afterPrimaryModel(primaryObject) {
+        if (context.property === 'addMember') {
+          const
+          clientModel = context.model.app.models.Client,
+          /* The authenticated clientId can be accessed from these equivalents :
+           *   context.getUserId().toHexString()
+           *   context.getUser().id.toHexString()
+           *   context.principals[0].id.toHexString()
+           * This is the addId parameter of the API request.
+           */
+          clientId = context.remotingContext.args.addId;
+
+          retrieveModel(
+            context, 'Client', clientModel, clientId, cb,
+            (object) => checkAccess(primaryObject));
+        } else {
+          checkAccess(primaryObject);
+        }
+      }
+
       //Retrieve the model
-      context.model.findById(context.modelId, {}, context)
-        .then(function(model) {
-          if (model) {
-            access(modelName, model, userId, permission, context, role, cb);
-          } else {
-            let error = Error(`${modelName} not found`);
-            /** default is 500; 404 seems correct because context.model is defined;
-             * change just for Group initially.  */
-            if (modelName === 'Group') {
-              error.statusCode = 404;
-            }
-            cb(error, false);
-          }
-        })
+      retrieveModel(
+        context, modelName, context.model, context.modelId, cb, afterPrimaryModel);
+
     }
+    /** cb() should be called in all cases.
+     * As noted in header comment, process.nextTick() does not return a value.
+     */
+  }
+
+  /** Retrieve a model
+   * Call either cb or okFn
+   * @param modelName e.g. 'Client', 'Group', 
+   * @param model Model definition class
+   * @param modelId string id of object 
+   * @param cb
+   * @param okFn  (object)
+   */
+  function retrieveModel(context, modelName, model, modelId, cb, okFn)
+  {
+    const fnName = 'retrieveModel';
+    // context.property === 'addMember'
+    model.findById(modelId, {}, context)
+      .then(function(object) {
+        if (object) {
+          okFn(object);
+          // access(modelName, object, userId, permission, context, role, cb);
+        } else {
+          let error = Error(`${modelName} ${modelId} not found`);
+          error.statusCode = 404;
+          cb(error, false);
+        }
+      })
+      .catch((error) => {
+        console.log(fnName, error, modelName, modelId);
+        /** default statusCode is 500; */
+        cb(error, false);
+      });
   }
 
   /** Used by genericResolver(), this handles the paths* APIs,

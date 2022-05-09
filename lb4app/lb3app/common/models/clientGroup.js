@@ -67,6 +67,35 @@ module.exports = function(ClientGroup) {
     // result is via cb().
   };
 
+  /** Add a ClientGroup to represent clientId being added to groupId.
+   * Call cbL() to log 409 : User already in group, otherwise cb().
+   * @param groupId string
+   * @param clientId string or ObjectID
+   * @param options from 
+   * @param cbL wraps cb. signature : (statusCode, errorText) => { ... }
+   * @param cb
+   */
+  ClientGroup.groupAddMember = function(groupId, clientId, options, cbL, cb) {
+    const
+    fnName = 'groupAddMember',
+    /** ObjectID() works OK on either string or ObjectID. */
+    promise = 
+    ClientGroup.find({where : {groupId : ObjectId(groupId), clientId : ObjectId(clientId)}})
+      .then((clientGroups) => {
+        if (clientGroups?.length) {
+          console.log(fnName, 'found', clientGroups, clientId);
+        }
+        if (clientGroups.length) {
+          cbL(409, 'User ' + clientId + ' already in group.');
+        } else {
+          ClientGroup.create({groupId, clientId}, options, cb);
+        }
+      })
+      .catch((err) => cb(err));
+    return promise;
+  };
+
+
   ClientGroup.remoteMethod('addEmail', {
     accepts: [
       {arg: 'groupId', type: 'string', required: true},

@@ -71,8 +71,8 @@ export default Service.extend({
   },
 
   addClientGroupEmail(groupId, clientEmail) {
-    let data = {groupId, clientEmail};
-    return this._ajax('ClientGroups/addEmail', 'POST', JSON.stringify(data), true);
+    let data = {id : groupId, addEmail : clientEmail};
+    return this._ajax('Groups/addMemberEmail', 'POST', JSON.stringify(data), true);
   },
 
   runtimeConfig() {

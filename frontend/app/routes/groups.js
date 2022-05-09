@@ -46,6 +46,10 @@ export default class GroupsRoute extends Route {
       server = this.get('defaultServer');
     }
     this.set('server', server);
+    if (server && this.groupsRefresh) {
+      this.groupsRefresh = false;
+      server.groups.refresh();
+    }
     let groups = server.groups;
 
     let
@@ -65,13 +69,12 @@ export default class GroupsRoute extends Route {
 
   @action
   refreshModel() {
-    /** called before model(), so this.server is the previous value.
+    /** called before model(), so this.server is the previous value, when changing servers.
      * groups.refresh() may not be required when simply switching between servers (via select-server)
+     * let server = this.get('controller.model.server') || this.get('controller.serverObj') || this.server;
+     * Simpler to signal to model() that server.groups.refresh() should be done.
      */
-    let server = this.model.server || this.get('controller.serverObj');
-    if (server) {
-      server.groups.refresh();
-    }
+    this.set('groupsRefresh', true);
     this.refresh();
   }
 
