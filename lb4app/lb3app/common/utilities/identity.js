@@ -40,7 +40,7 @@ exports.queryFilterAccessible = (ctx) => {
     debugger;
   }
   let groups = clientGroups.clientGroups.clientGroups[clientId];
-  // console.log(fnName, clientId, groups);
+  // console.log(fnName, clientId, groups, ctx?.options.property);
 
   if (!ctx.query) {
     ctx.query = {};
@@ -52,9 +52,13 @@ exports.queryFilterAccessible = (ctx) => {
    * Operators \"$in\" are not allowed in query","code":"OPERATOR_NOT_ALLOWED_IN_QUERY","
    */
   /** It is possible to use $and, $or, and groups.map(ObjectId), in place of 'and', 'or' and groups. */
-  if (ctx?.options.property && (ctx?.options.property !== 'deleteById') && (groups?.length)) {
-    where.or.push({groupId : {$in : groups}});
-    console.dir(where);
+  let property = ctx?.options.property;
+  if ((! property || (property !== 'deleteById')) && (groups?.length)) {
+    let groupId = {},
+	inField = property ? '$in' : 'in';
+    groupId[inField] = groups;
+    where.or.push({groupId});
+    console.dir(where.or[2]);
   }
   if (ctx.query.where) {
     where = {and: [where, ctx.query.where]}
