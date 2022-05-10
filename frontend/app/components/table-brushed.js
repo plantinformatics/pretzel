@@ -25,6 +25,22 @@ const dLog = console.debug;
  * enable auto-width on that column.  */
 const ColumnAutoWidthValueMaxLength = 40;
 
+/** Fields of Feature displayed in table columns.
+ * Fields which are not listed here are in .values
+ */
+const baseFields = {
+  Chromosome : true,  // Block, blockId.datasetId.id + ':' + blockId.scope
+  Feature : true,   // .name
+  Position : true,  // value[0]
+  PositionEnd : true, // End, value[1]
+};
+const fieldNames = {
+  // Chromosome : needs to be split, not yet required to be saved.
+  Feature : 'name',
+  Position : 'value.0',
+  PositionEnd : 'value.1',
+};
+
 /*----------------------------------------------------------------------------*/
 
 let formFeatureEditEnable;
@@ -127,6 +143,7 @@ const featureValuesWidths = {
 export default Component.extend({
   ontology : service('data/ontology'),
   controls : service(),
+  block : service('data/block'),
 
   classNames : ['h-100'],
 
@@ -419,6 +436,8 @@ export default Component.extend({
         },
         /* see comment re. handsOnTableLicenseKey in frontend/config/environment.js */
         licenseKey: config.handsOnTableLicenseKey,
+        beforePaste : (data, coords) => this.beforePaste(data, coords),
+        afterPaste : (data, coords) => this.afterPaste(data, coords),
         afterSelection,
         afterOnCellMouseOver,
         outsideClickDeselects: false,
@@ -604,6 +623,114 @@ export default Component.extend({
   closeFeatureEdit() {
     dLog('closeFeatureEdit', this);
     this.set('formFeatureEditEnable', null);
+  },
+
+  /** Paste is OK if it only contains Ontology column
+   */
+  beforePaste(data, coords) {
+    const fnName = 'beforePaste';
+    dLog(fnName, data, coords);
+    const
+    table = this.table,
+    ok = ! coords.find((c) => {
+      /** true if a non-editable column is found (i.e. non-Ontology, or Block),
+       * in which case exit the search, ok is false. */
+      let found = false;
+      for (let row = c.startRow; ! found && (row <= c.endRow); row++) {
+        for (let col = c.startCol; ! found && (col <= c.endCol); col++) {
+          const meta = table.getCellMeta(row, col);
+          found = meta?.prop == 'Chromosome'; //  !== 'Ontology';
+        }
+      }
+      return found;
+    });
+    dLog(fnName, ok);
+    if (! ok) {
+      const msgName = 'saveFeature' + 'Msg';
+      this.set(msgName, 'Edit / Paste are only supported in the Ontology column');
+    }
+    return ok;
+  },
+
+  afterPaste(data, coords) {
+    const fnName = 'afterPaste',
+          msgName = 'saveFeature' + 'Msg';
+    dLog(fnName, data, coords);
+    const
+    table = this.table;
+    this.set(msgName, null);
+    coords.forEach((c) => {
+      for (let row = c.startRow, dataRowIndex = 0;
+           (row <= c.endRow) && (dataRowIndex < data.length);
+           row++, dataRowIndex++) {
+        const
+        td = table.getCell(row, 0),
+        tr = td.parentElement,
+        feature = tr.__dataPretzelFeature__;
+        /* a better alternative, not used yet : table.getDataAtRowProp(row, 'dataPretzelFeature')
+         * also : feature = meta?.PretzelFeature?.feature;
+         */
+        dLog(fnName, coords, row, feature?.name, feature?.values?.Ontology);
+        if (feature) {
+          /** count the columns edited because if the data runs out at the end
+          * of a row there is no reason to save the feature of the next row.
+          */
+          let colsEdited = 0;
+          for (let col = c.startCol, dataColIndex = 0;
+               (col <= c.endCol) && (dataColIndex < data[dataRowIndex].length);
+               col++, dataColIndex++) {
+            const
+            meta = table.getCellMeta(row, col),
+            prop = meta.prop,
+            inValues = ! baseFields[prop],
+            fieldPrefix = inValues ? 'values.' : '';
+            let
+            fieldName = prop;
+            /* if column is a base field, i.e. ! inValues, then map .prop to the
+             * actual Feature field name.
+             * Writing to columns other than Ontology is not yet required, so
+             * this is draft only.
+             */
+            if (! inValues) {
+              fieldName = fieldNames[prop];
+            }
+            if (inValues && ! feature.values) {
+              feature.set('values', {});
+            }
+            let d = data[dataRowIndex][dataColIndex];
+            if (meta.type === 'numeric') {
+              d = +d;
+            }
+            feature.set(fieldPrefix + fieldName, d);
+            colsEdited++;
+          }
+          if (colsEdited) {
+            this.saveFeature(feature);
+          }
+        }
+      }
+    });
+  },
+  saveFeature(editedFeature) {
+    const
+    fnName = 'saveFeature',
+    /** {{saveFeatureMsg}} is displayed in .hbs, but currently is not visible
+     * because the table is height:100% (h-100).  possibly make it visible with :
+     *   right-panel-section > panel-section > div : {overflow-y: auto; }
+     */
+    msgName = fnName + 'Msg';
+    /** based on similar components/form/feature-edit.js : saveFeature() */
+    let promise = editedFeature.save();
+    promise
+      .then((feature) => {
+        this.get('block').featureSaved();
+        dLog(fnName, feature);
+      })
+      .catch((err) => {
+        dLog(fnName, 'err', err, this, arguments);
+        this.set(msgName, err);
+      });
+    return promise;
   },
 
 });
