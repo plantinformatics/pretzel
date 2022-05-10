@@ -7,7 +7,7 @@ import {
   bind,
   throttle
 } from '@ember/runloop';
-import { computed, get, observer } from '@ember/object';
+import { computed, get, set as Ember_set, observer } from '@ember/object';
 import { alias, filterBy } from '@ember/object/computed';
 import Evented from '@ember/object/evented';
 import Component from '@ember/component';
@@ -277,8 +277,10 @@ export default Component.extend(Evented, {
 
       /* oa.eventBus is used in stacks to send updatedStacks and stackPositionsChanged; 
        * perhaps change ownership of those events to a stacks Evented component. */
-      let bus =
-      oa.eventBus = this;
+      let bus = this;
+      if (oa.eventBus !== this) {
+        Ember_set(oa, 'eventBus', this);
+      }
       if (this.get('listener') === undefined)
         this.createListener(bus);
     }
@@ -315,6 +317,7 @@ export default Component.extend(Evented, {
       f.on('resetZooms', this, 'resetZooms');
     }
 
+    this.oa = {};
     this.drawControlsListen(true);
     this.localBus(true);
     let blockService = this.get('blockService');
@@ -342,7 +345,9 @@ export default Component.extend(Evented, {
     this.localBus(false);
 
     /* not registered in willInsertElement(). registered in draw() : drawControlsLifeC */
-    this.off('paths', addPathsToCollation);
+    if (this.has('paths')) {
+      this.off('paths', addPathsToCollation);
+    }
 
     let blockService = this.get('blockService');
     blockService.off('receivedBlock', this, 'receivedBlock');
@@ -532,8 +537,8 @@ export default Component.extend(Evented, {
   },
 
 
-  /** object attributes */
-  oa : {},
+  /** object attributes. initialised in init(). */
+  oa : undefined,
 
   /*------------------------------------------------------------------------------*/
 
@@ -554,6 +559,7 @@ export default Component.extend(Evented, {
                     rc = chrData(ch);
                     /** use same structure as routes/mapview.js */
                     retHash[chr] = rc;
+    const receiveChr = this.receiveChr || console.log;
     this.get('receiveChr')(chr, rc, 'dataReceived');
       return retHash;
     }, {});
@@ -647,8 +653,8 @@ export default Component.extend(Evented, {
     /** Refresh axisApi when draw-map object instance changes, so the functions
      * do not refer to closures in the destroyed instance. */
     let instanceChanged;
-    if (! oa.axisApi || (instanceChanged = oa.axisApi.drawMap.isDestroying))
-      oa.axisApi = {lineHoriz : lineHoriz,
+    if (! oa.axisApi || (instanceChanged = oa.axisApi.drawMap.isDestroying)) {
+      const axisApi = {lineHoriz : lineHoriz,
                     inRangeI : inRangeI,
                     featureInRange,
                     patham,
@@ -666,6 +672,8 @@ export default Component.extend(Evented, {
                     updateSyntenyBlocksPosition : () => this.get('updateSyntenyBlocksPosition').perform(),
                     drawMap : this,  // for debug trace / check.
                    };
+      Ember_set(oa, 'axisApi', axisApi);
+    }
     dLog('draw-map stacks', stacks);
 
     /** Reference to all datasets by name.
@@ -3817,7 +3825,7 @@ export default Component.extend(Evented, {
        */
       let
       ir,
-      valueInInterval = me.get('controls.view.valueInInterval'),
+      valueInInterval = me.get('controls').get('view.valueInInterval'),
       /** If the block containing one end of the path is un-viewed, block.axis
        * may be undefined if render occurs before block-adj is destroyed . */
       a0_ = Stacked.getAxis(a0);
@@ -4173,7 +4181,7 @@ export default Component.extend(Evented, {
            * FeatureTicks; possibly a sub-component of axis-1d.
            */
 
-          let valueInInterval = me.get('controls.view.valueInInterval');
+          let valueInInterval = me.get('controls').get('view.valueInInterval');
 
           let selectedAxes = oa.selectedAxes;
         console.log("Selected: ", " ", selectedAxes.length);
@@ -6505,6 +6513,9 @@ export default Component.extend(Evented, {
     let me = this;
     let data = this.get('data');
     throttle(function () {
+      /** when switching back from groups/ route to mapview/, this may be called
+       * before oa.axisApi is initialised in draw(), */
+      if (me.oa.axisApi) {
       /** viewed[] is equivalent to data[], apart from timing differences.  */
       let viewed = me.get('blockService.viewed'),
       /** create axes for the reference blocks before the data blocks are added. */
@@ -6514,6 +6525,7 @@ export default Component.extend(Evented, {
         return aHasReference === bHasReference ? 0 : aHasReference ?  1 : -1;
       });
       referencesFirst.forEach((block) => me.oa.axisApi.ensureAxis(block.id));
+      }
       me.draw(data, 'didRender');
     }, 1500);
 

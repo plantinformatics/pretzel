@@ -2,7 +2,8 @@
 import { assert } from '@ember/debug';
 
 import { later, bind } from '@ember/runloop';
-import EmberObject, { get } from '@ember/object';
+import EmberObject, { get, set as Ember_set } from '@ember/object';
+
 import { isEqual } from 'lodash/lang';
 
 
@@ -76,10 +77,13 @@ let blocks;
 */
 stacks.init = function (oa_)
 {
-  if (stacks.oa === undefined)
+  let initData = stacks.oa === undefined;
+  if (stacks.oa !== oa_) {
+    oa = oa_;
+    Ember_set(stacks, 'oa', oa_);
+  }
+  if (initData)
   {
-    oa = stacks.oa = oa_;
-
     /** Give each Stack a unique id so that its <g> can be selected. */
     stacks.nextStackID = 0;
 
@@ -105,6 +109,7 @@ stacks.init = function (oa_)
     stacks.stacksCount = EmberObject.create({ count: 0 });
 
   }
+
 };
 
 
@@ -1561,7 +1566,9 @@ Stack.prototype.move = function (axisName, toStack, insertIndex)
       result.push(this);
     if (trace_updatedStacks)
       //- pass action bus to init()
-      oa.eventBus.send('updatedStacks', stacks);
+      if (! oa.eventBus.isDestroying) {
+        oa.eventBus.send('updatedStacks', stacks);
+      }
   }
   setCount('move');
   return result;
@@ -1769,7 +1776,9 @@ Stack.prototype.calculatePositions = function ()
       a.position = [sumPortion,  nextPosition /*- axisGapPortion*/];
       sumPortion = nextPosition;
     });
-  oa.eventBus.send('stackPositionsChanged', this);
+  if (! oa.eventBus.isDestroying) {
+    oa.eventBus.send('stackPositionsChanged', this);
+  }
 };
 /** find / lookup Stack of given axis.
  * This is now replaced by axes[axisName]; could be used as a data structure
