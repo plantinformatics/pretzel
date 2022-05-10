@@ -109,7 +109,7 @@ module.exports = function(Dataset) {
       currentDir = process.cwd(),
       /** In the Docker container, server cwd is /, and uploadSpreadsheet.bash is in /app/scripts/ */
       scriptsDir = (currentDir === "/") ? "/app/scripts" : 
-        currentDir.endsWith("/backend") ? 'scripts' : 'backend/scripts',
+        currentDir.endsWith("/lb4app") ? 'lb3app/scripts' : 'backend/scripts',
       // process.execPath is /usr/bin/node,  need /usr/bin/ for mv, mkdir, perl
       PATH = process.env.PATH + ':' + scriptsDir,
       /** file handles : stdin, stdout, stderr, output errors, output warnings. */
@@ -317,9 +317,12 @@ module.exports = function(Dataset) {
     fnName = 'Dataset:before save',
     models = ctx.Model.app.models,
     Dataset = ctx.Model,
-    data = ctx.data,
-    dataset = ctx.newInstance ? ctx.instance : ctx.currentInstance;
+    dataset = ctx.isNewInstance ? ctx.instance : ctx.currentInstance,
+    data = ctx.data || dataset.__data;
 
+    if (! data) {
+      console.log(fnName, ''+dataset?.id, dataset, ctx);
+    } else
     if (data.groupId) {
       let
       /** similar : models/group.js : sessionClientId(context),
@@ -339,7 +342,7 @@ module.exports = function(Dataset) {
       }
     }
 
-    if (ctx.newInstance) {
+    if (ctx.isNewInstance) {
       /** create : ctx.instance is defined, instead of .currentInstance, .where and .data */
       if (dataset.public && dataset.groupId) {
         console.log(fnName, ''+dataset.id, ''+dataset.groupId, dataset);

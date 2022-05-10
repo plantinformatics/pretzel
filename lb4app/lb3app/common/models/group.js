@@ -328,10 +328,10 @@ module.exports = function(Group) {
     groupId = ctx.where.id;
     let group;
     if (! groupId) {
-      console.log(fnName, ctx.newInstance, ctx.instance, ctx.currentInstance, ctx.where, ctx.data);
+      console.log(fnName, ctx.isNewInstance, ctx.instance, ctx.currentInstance, ctx.where, ctx.data);
     } else {
       let where = {groupId : ctx.where.id};
-      console.log(fnName, where, ctx.newInstance, ctx.instance, ctx.currentInstance, ctx.where, ctx.data);
+      console.log(fnName, where, ctx.isNewInstance, ctx.instance, ctx.currentInstance, ctx.where, ctx.data);
 
       let promise = Dataset.update(where, {groupId : null}, ctx.options);
       promise.then((done) => console.log(fnName, done))
