@@ -41,6 +41,9 @@ body.mapview div#Page-Body
 .nav-tabs > li:not(.active) {
   background-color: #f8f8f8;
 }
+ul.nav-tabs.api-server-tabs > li:not(.active) {
+  background-color: #ddd;
+}
 .nav-tabs > li.active + li {
   border-bottom-left-radius: 15px;
   /* can't do the preceding li : */
@@ -275,6 +278,7 @@ svg {
 }
 
 
+/** for axis being dragged : dragstarted(). SVG. */
 .active {
   stroke: #f93;
   /*stroke-width: 2px;*/
@@ -1167,6 +1171,10 @@ div.selected-server {
 }
 #left-panel-explorer ul.nav-tabs.api-server-tabs {
   border-bottom: none;
+}
+ul.api-server-tabs > li.active {
+  /* earlier rule defines stroke for active (SVG) axis being dragged; not applicable to <li>.   */
+  /* could add more .active highlight here if needed.  already have change to background-color - li:not(.active) */
 }
 /* for nodes in explorer tree with colour border - use a wide border to show the colour. */
 .wide-border.btn
