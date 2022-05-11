@@ -1,5 +1,6 @@
 import { assert } from '@ember/debug';
 import { getOwner } from '@ember/application';
+import { alias } from '@ember/object/computed';
 import $ from 'jquery';
 import Service, { inject as service } from '@ember/service';
 import { isEmpty, typeOf } from '@ember/utils';
@@ -38,6 +39,9 @@ const requestServerAttr = 'session.requestServer';
 export default Service.extend({
   session: service('session'),
   apiServers : service(),
+  controls : service(),
+
+  apiServerSelectedOrPrimary : alias('controls.apiServerSelectedOrPrimary'),
 
   changePassword(data) {
     return this._ajax('Clients/change-password', 'POST', JSON.stringify(data), true)
@@ -86,11 +90,13 @@ export default Service.extend({
   },
 
   uploadData(data, onProgress) {
-    return this._ajax('Datasets/upload', 'POST', JSON.stringify(data), true, onProgress);
+    let server = this.get('apiServerSelectedOrPrimary');
+    return this._ajax('Datasets/upload', 'POST', JSON.stringify(data), true, onProgress, server);
   },
 
   tableUpload(data, onProgress) {
-    return this._ajax('Datasets/tableUpload', 'POST', JSON.stringify(data), true, onProgress);
+    let server = this.get('apiServerSelectedOrPrimary');
+    return this._ajax('Datasets/tableUpload', 'POST', JSON.stringify(data), true, onProgress, server);
   },
 
   getBlocks() {
@@ -369,7 +375,7 @@ export default Service.extend({
       options},
         dataS = JSON.stringify(data); // new String();
     // dataS.server = apiServer;
-    return this._ajax('Features/dnaSequenceSearch', 'POST', dataS, true);
+    return this._ajax('Features/dnaSequenceSearch', 'POST', dataS, true, /*progress*/undefined, apiServer);
   },
 
   createDataset(name) {
@@ -410,9 +416,17 @@ export default Service.extend({
   /** Customised ajax caller
    * token may be actual token string, or equal true to trigger token fetch
    * onProgress is a callback accepting (percentComplete, data_direction)
+   *
+   * @param dataIn  an object, or for POST : JSON.stringify(data object)
+   * The object may define .options.server or .server
+   * @param apiServer optional - server may also be passed as dataIn.server, which is deleted;
+   * this param is used for some POST calls
+   * (phasing out : requestServerAttr - .session.requestServer)
    */
-  _ajax(route, method, dataIn, token, onProgress) {
-    let {server, data} = this._server(route, dataIn),
+  _ajax(route, method, dataIn, token, onProgress , apiServer) {
+    let {server, data} = apiServer ?
+        {server : apiServer, data : dataIn} :
+        this._server(route, dataIn),
      url = this._endpoint(server, route);
 
     let config = {
@@ -624,8 +638,10 @@ export default Service.extend({
    * https://stackoverflow.com/questions/28176933/http-authorization-header-in-eventsource-server-sent-events
    * https://github.com/whatwg/html/issues/2177#issuecomment-487194160
    */
-  _endpointURLToken(dataIn, route) {
-    let {server, data} = this._server(route, dataIn),
+  _endpointURLToken(dataIn, route, apiServer) {
+    let {server, data} = apiServer ?
+        {server : apiServer, data : dataIn} :
+        this._server(route, dataIn),
     url = this._endpoint(server, route) +
       '?access_token=' + this._accessToken(server);
     return {url, data};
