@@ -20,12 +20,15 @@
       {{/if}}
 
       {{#unless dataset.public}}
-      <tr><td>Group</td><td>{{dataset.groupId.name}}<!-- {{dataset.groupId.id}} -->
+      <tr><td>Group</td>
+        <td>
         {{#if this.datasetOwned}}
            {{form/select-group selectedValue=this.selectedValue
              values=(to-array-promise-proxy this.groupsPromise)
              selectedGroupChanged=(action this.datasetChangeGroup) }}
            {{this.datasetGroupErrMsg}}
+         {{else}}
+           {{dataset.groupId.name}}<!-- {{dataset.groupId.id}} -->
          {{/if}}
       </td></tr>
       {{#if dataset.groupId}}
