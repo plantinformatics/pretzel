@@ -10,6 +10,7 @@ const { gatherClientId } = require('./identity');
 const load = require('./load');
 
 const { bufferSlice } = require('./buffer-slice');
+const { ErrorStatus } = require('./errorStatus.js');
 
 /* global require */
 /* global exports */
@@ -282,6 +283,12 @@ exports.handleJson = function(msg, uploadParsed, cb) {
 
 /*----------------------------------------------------------------------------*/
 
+/**
+ * @param cb  (err, result) => { ... }
+ * cb is called with Error(); the string err.message is passed back in the
+ * response message and the .stack is not used; err.statusCode is used in the
+ * response status.
+ */
   exports.uploadParsedCb = 
     // Common steps for both .json and .gz files after parsing
   (models, jsonMap, options, cb) => {
@@ -292,12 +299,12 @@ exports.handleJson = function(msg, uploadParsed, cb) {
         // Passing option of 'unfiltered: true' overrides filter for public/personal-only
         models.Dataset.exists(jsonMap.name, { unfiltered: true }).then((exists) => {
           if (exists) {
-            cb(Error(`Dataset name "${jsonMap.name}" is already in use`));
+            cb(ErrorStatus(400, `Dataset name "${jsonMap.name}" is already in use`));
           } else {
             datasetParentContainsNamedFeatures(models, jsonMap, options, cb)
               .then((errorMsg) => {
                 if (errorMsg) {
-                  cb(Error(`Dataset name "${jsonMap.name}" error : ` + errorMsg));
+                  cb(ErrorStatus(400, `Dataset name "${jsonMap.name}" error : ` + errorMsg));
                 } else {
                   // Should be good to process saving of data
                   exports.uploadDataset(jsonMap, models, options, cb);

@@ -17,6 +17,8 @@ var { clientIsInGroup } = require('../utilities/identity');
 var upload = require('../utilities/upload');
 var load = require('../utilities/load');
 const { cacheClearBlocks } = require('../utilities/localise-blocks');
+const { ErrorStatus } = require('../utilities/errorStatus.js');
+
 
 module.exports = function(Dataset) {
 
@@ -81,7 +83,7 @@ module.exports = function(Dataset) {
         if (last || (last === undefined) || err) {
           if (cbCalled++ === 0) {
             if (err && (errors.length || warnings.length)) {
-              err = [err].concat(errors).concat(warnings).join("\n");
+              err = [err.toString()].concat(errors).concat(warnings).join("\n");
               errors = []; warnings = [];
             }
             cbOrig(err, message);
@@ -117,6 +119,9 @@ module.exports = function(Dataset) {
       const child = spawn('uploadSpreadsheet.bash', [msg.fileName, useFile], spawnOptions);
       child.on('error', (err) => {
         console.error('Failed to start subprocess.', 'uploadSpreadsheet', msg.fileName, err.toString());
+        if (err.constructor === Error) {
+          err.statusCode = 400; // or default to 500, but that drops the message.
+        }
         // const error = Error("Failed to start subprocess to upload xlsx file " + msg.fileName + '\n' + err.toString());
         cb(err/*or*/);
       });
@@ -149,7 +154,7 @@ module.exports = function(Dataset) {
             let [fileName, datasetName] = textLine.split(';');
             console.log('uploadSpreadsheet stdout data',  "'", fileName,  "', '", datasetName, "'");
             if (fileName.startsWith('Error:') || ! datasetName) {
-              cb(new Error(fileName + " Dataset '" + datasetName + "'"));
+              cb(ErrorStatus(400, fileName + " Dataset '" + datasetName + "'"));
             } else {
               console.log('before removeExisting "', datasetName, '"');
               upload.removeExisting(models, options, datasetName, replaceDataset, cb, loadAfterDelete);
@@ -169,7 +174,7 @@ module.exports = function(Dataset) {
       child.on('close', (code) => {
         console.log('child process exited with code',  code);
         if (code) {
-          const error = Error("Failed to read xlsx file " + msg.fileName);
+          const error = ErrorStatus(400, "Failed to read xlsx file " + msg.fileName);
           cb(error);
         } else {
           // process each tmp/out_json/"$datasetName".json
@@ -180,7 +185,7 @@ module.exports = function(Dataset) {
         }
       });
     } else {
-      cb(Error('Unsupported file type'));
+      cb(ErrorStatus(400, 'Unsupported file type'));
     }
   };
 
@@ -212,7 +217,7 @@ module.exports = function(Dataset) {
         // delete old features
         return models.Feature.deleteAll({blockId: {inq: existing_blocks}}, options)
       } else {
-        cb(Error("Dataset not found"));
+        cb(ErrorStatus(404, "Dataset not found"));
       }
     })
     .then(function(deleted_features) {
@@ -334,9 +339,9 @@ module.exports = function(Dataset) {
       console.log(fnName, ok, ''+dataset.id, ''+groupId, dataset);
       if (! ok) {
         // Don't save
-        var err = new Error('User ' + clientId + ' is not a member of group ' + groupId + ' so they cannot set that as group of dataset ' + dataset.id);
-        err.statusCode = 401;
-        console.log(err.toString());
+        const errorText = 'User ' + clientId + ' is not a member of group ' + groupId + ' so they cannot set that as group of dataset ' + dataset.id;
+        var err = ErrorStatus(401, errorText);
+        console.log(errorText);
         next(err);
         return;
       }

@@ -52,7 +52,7 @@ exports.childProcess = (scriptName, postData, useFile, fileName, moreParams, dat
     if (last || (last === undefined) || err) {
       if (cbCalled++ === 0) {
         if (err && (errors.length || warnings.length)) {
-          err = [err].concat(errors).concat(warnings).join("\n");
+          err = [err.toString()].concat(errors).concat(warnings).join("\n");
           errors = []; warnings = [];
         }
         cbOrig(err, message);
