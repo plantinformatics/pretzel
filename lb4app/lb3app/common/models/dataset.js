@@ -13,7 +13,7 @@ var _ = require('lodash');
 
 
 var acl = require('../utilities/acl');
-var { clientIsInGroup } = require('../utilities/identity');
+var { clientIsInGroup, clientOwnsGroup } = require('../utilities/identity');
 var upload = require('../utilities/upload');
 var load = require('../utilities/load');
 const { cacheClearBlocks } = require('../utilities/localise-blocks');
@@ -335,7 +335,7 @@ module.exports = function(Dataset) {
       accessToken = ctx.options.accessToken,
       clientId = accessToken.userId;
       let groupId = data.groupId;
-      let ok = clientIsInGroup(clientId, groupId);
+      let ok = clientIsInGroup(clientId, groupId) || clientOwnsGroup(clientId, groupId);
       console.log(fnName, ok, ''+dataset.id, ''+groupId, dataset);
       if (! ok) {
         // Don't save

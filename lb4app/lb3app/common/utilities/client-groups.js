@@ -8,6 +8,8 @@ class ClientGroups {
     /** [clientId] -> [groupId-s]
      */
     this.clientGroups = null;
+    /** [groupId] -> { clientId, name } */
+    this.groups = null;
   }
   init(app) {
     whenModels(app, async (ClientGroup) => { await this.update(ClientGroup); console.log('after await update'); this.registerUpdate(app, ClientGroup); });
@@ -162,17 +164,22 @@ ClientGroups.prototype.registerUpdate = function (app, ClientGroup) {
 /**
  */
 ClientGroups.prototype.update = async function (ClientGroup) {
+  const fnName = 'update';
   if (! ClientGroup?.aggregate) {
-    console.log('update', ClientGroup);
+    console.log(fnName, ClientGroup);
     debugger;
     return;
   }
   const Group = ClientGroup.s.db.collection('Group');
+  /** originally just the ids : [{$project : {_id : 1}}] */
   await
-  Group.aggregate([{$project : {_id : 1}}])
+  Group.aggregate()
     .toArray()
-    .then((groupIds) => {
-      let groupIdsHex = groupIds.map((proj) => proj._id.toHexString());
+    .then((groups) => {
+      this.groups = groups.reduce(
+        (result, group) => { result[group._id] = group; return result; }, {});
+      console.log(fnName, 'Groups :', groups.length); console.dir(this.groups);
+      let groupIdsHex = groups.map((group) => group._id.toHexString());
       this.updateWithGroupIds(ClientGroup, groupIdsHex); });
 };
 
@@ -208,7 +215,7 @@ ClientGroups.prototype.updateWithGroupIds = async function (ClientGroup, groupId
             }, []);
 
         // .map((id) => id.toHexString())
-        console.log('update', clientId, groupHex);
+        console.log(fnName, clientId, groupHex);
         this.clientGroups[clientId] = groupHex; // cg.groups;
       });
     });

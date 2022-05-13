@@ -92,4 +92,19 @@ exports.clientIsInGroup = function(clientId, groupId) {
   return ok;
 };
 
+
+/**
+ * @param clientId string or BSON id
+ * @param groupId string or BSON id
+ */
+exports.clientOwnsGroup = function(clientId, groupId) {
+  const
+  fnName = 'clientOwnsGroup',
+  groups = clientGroups.clientGroups?.groups,
+  group = groups && groups[groupId.toString()],
+  ok = group?.clientId.equals(clientId);
+  console.log(fnName, ok, clientId.toString(), groupId.toString(), clientGroups.clientGroups);
+  return ok;
+};
+
 // -----------------------------------------------------------------------------
