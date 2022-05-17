@@ -6,7 +6,8 @@ import { later as run_later } from '@ember/runloop';
 import $ from 'jquery';
 
 import { toPromiseProxy, toArrayPromiseProxy } from '../../utils/ember-devel';
-import { getGroups, clientGroupsToGroups } from '../../utils/data/group';
+import { getGroups } from '../../utils/data/group';
+import { noGroup } from '../../utils/data/groups';
 
 import ManageBase from './manage-base';
 
@@ -21,8 +22,6 @@ const trace = 0;
  * @see groupsPromise */
 const selectIncludeIn = true;
 
-/** select-group.hbs uses .id and .name.  datasetChangeGroup() uses .get('id') */
-const noGroup = EmberObject.create({id : 'noGroup', name : ''});
 
 export default ManageBase.extend({
   auth : service(),
@@ -125,7 +124,7 @@ export default ManageBase.extend({
    */
   groupsPromise : computed(
     'dataset',
-    'server.groups.{groupsIn,groupsOwn}',
+    'server.groups.{groupsInOwnNone,groupsOwn}',
     function () {
       let
       fnName = 'groupsPromise',
@@ -137,20 +136,9 @@ export default ManageBase.extend({
 
       server = this.get('server'),
       groupsService = server.groups,
-      ownP = groupsService.get('groupsOwn'),
-      apiResultP = ownP;
-      if (selectIncludeIn) {
-        let
-        inP = groupsService.get('groupsIn')
-          .then(clientGroupsToGroups);
-        apiResultP = Promise.all([ownP, inP])
-          .then((as) => as[0].concat(as[1]));
-      }
-      let
-      groupsP = apiResultP.then((gs) => {
-        gs.unshift(noGroup);
-        dLog(fnName, 'gs', gs);
-        this.set('groupsValue', gs);  return gs;});
+      /** If groupsOwn is used : create groupsOwnNone(), with noGroup prepended.  */
+      groupsP = groupsService.get(selectIncludeIn ? 'groupsInOwnNone' : 'groupsOwn');
+      groupsP.then((gs) => ! this.isDestroying && this.set('groupsValue', gs));
       return groupsP;
     }),
 

@@ -55,7 +55,7 @@ import {
   selectOntologyNode,
 } from '../../utils/data/block-values';
 
-import { clientGroupsToGroups } from '../../utils/data/group';
+import { noGroup } from '../../utils/data/groups';
 
 
 import ManageBase from './manage-base'
@@ -84,10 +84,6 @@ const dLog = console.debug;
  */
 
 const selectorExplorer = 'div#left-panel-explorer';
-
-/** Copied from manage-dataset.js.  This can be factored into components/form/select-group.
- */ 
-const noGroup = EmberObject.create({id : 'noGroup', name : ''});
 
 /*----------------------------------------------------------------------------*/
 
@@ -465,21 +461,11 @@ export default ManageBase.extend({
   //----------------------------------------------------------------------------
 
   groupFilterSelected : undefined,
-  groupsIn : alias('apiServerSelectedOrPrimary.groups.groupsIn'),
+  groupsService : alias('apiServerSelectedOrPrimary.groups'),
   groupsForFilter : computed('groupsIn', function () {
-    /** based on similar in manage-dataset.js : groupsPromise() */
     const
     fnName = 'groupsForFilter',
-    apiResultP = this.get('groupsIn'),
-    groupsP = apiResultP.then(clientGroupsToGroups)
-      .then((gs) => {
-        gs.unshift(noGroup);
-        dLog(fnName, 'gs', gs);
-        if (! this.isDestroying) {
-          this.set('groupsValue', gs);
-        }
-        return gs;
-      });
+    groupsP = this.get('groupsService').get('groupsInOwnNone');
     return groupsP;
   }),
 

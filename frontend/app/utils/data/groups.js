@@ -1,9 +1,16 @@
 import { inject as service } from '@ember/service';
 import EmberObject, { computed } from '@ember/object';
 import { later } from '@ember/runloop';
+import { A } from '@ember/array';
 
 import { toArrayPromiseProxy } from '../ember-devel';
-import { getGroups } from './group';
+import { getGroups, clientGroupsToGroups } from './group';
+
+// -----------------------------------------------------------------------------
+
+const dLog = console.debug;
+
+// -----------------------------------------------------------------------------
 
 /** For each api-server, provide access to the groups/in,own APIs
  *
@@ -42,6 +49,30 @@ export default class DataGroups extends EmberObject {
   get groupsOwn() {
     const own = true;
     return this.getGroups(own);
+  }
+  /** Combine the groups from groupsIn and groupsOwn, de-duplicated,
+   * and prefixed with noGroup.
+   * This is used in 2 pull-down lists (manage-dataset.js and manage-explorer.js),
+   * allowing the user to select either none, or any of the groups they are in or own.
+   */
+  @computed('groupsIn', 'groupsOwn')
+  get groupsInOwnNone() {
+    /** factored from manage-dataset.js : groupsPromise() */
+    const
+    fnName = 'groupsInOwnNone',
+    ownP = this.get('groupsOwn'),
+    inP = this.get('groupsIn')
+      .then(clientGroupsToGroups),
+    apiResultP = Promise.all([ownP, inP])
+      .then((as) => A(as[0]).addObjects(as[1]));
+
+    let
+    groupsP = apiResultP.then((gs) => {
+      gs.unshift(noGroup);
+      dLog(fnName, 'gs', gs);
+      return gs;
+    });
+    return groupsP;
   }
 
   /** Check server.apiVersion < 2, then if OK call getGroups2(own)
@@ -101,3 +132,18 @@ export default class DataGroups extends EmberObject {
   }
 
 }
+
+// -----------------------------------------------------------------------------
+
+/** select-group.hbs uses .id and .name.
+ *  manage-dataset.js : datasetChangeGroup() uses .get('id')
+ */
+const noGroup = EmberObject.create({id : 'noGroup', name : ''});
+
+// -----------------------------------------------------------------------------
+
+export {
+  noGroup
+}
+
+// -----------------------------------------------------------------------------
