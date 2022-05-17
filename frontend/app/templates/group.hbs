@@ -1,5 +1,11 @@
 <div class="group-outer">
 
+  {{!-- when server is added to groups query-params, lookup from group.store.name --}}
+  {{#link-to 'groups' classNames='btn btn-info btn-xs' tagName='button'}}
+  <i class="glyphicon glyphicon-arrow-left"></i>
+  {{/link-to}}
+
+
 {{#let this.model as |group|}}
 
   {{#if apiServers.multipleServers}}
@@ -9,7 +15,7 @@
     </div>
   {{/if}}
 
-  <label>Group</label>
+  <label style="margin-left:1em; font-size: larger;">Group</label>
   <div class="group-details margin-1em">
 
     {{!-- group.id --}}
@@ -19,13 +25,9 @@
       {{#unless this.editingName}}
         <label>Name : </label><span>{{group.name}}</span>
         <span>
-          <button type="button" class="btn btn-info btn-xs" {{on 'click' (action (mut this.editingName) true) }}>
-            <i class="glyphicon glyphicon-pencil"></i>
-          </button>
-
           {{elem/button-base
             click=(action (mut this.editingName) true)
-            icon='edit'
+            icon='pencil'
             classColour="info"
             classSize='xs'
           }}
