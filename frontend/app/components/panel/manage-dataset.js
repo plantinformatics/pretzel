@@ -15,10 +15,11 @@ import ManageBase from './manage-base';
 const dLog = console.debug;
 const trace = 0;
 
-/** Indicate whether user selects from /own or /in groups to set dataset:group
+/** Indicate whether user selects from /in groups, in addition to /own, to set dataset:group
+ * If true then both are included.  (in e6db6e38 .. 18af19e1, the flag
+ * selectFromOwn indicated to use either /own _or_ /in).
  * @see groupsPromise */
-const selectFromOwn = true;
-const selectFrom = selectFromOwn ? 'own' : 'in';
+const selectIncludeIn = true;
 
 /** select-group.hbs uses .id and .name.  datasetChangeGroup() uses .get('id') */
 const noGroup = EmberObject.create({id : 'noGroup', name : ''});
@@ -136,14 +137,17 @@ export default ManageBase.extend({
 
       server = this.get('server'),
       groupsService = server.groups,
-      fieldName = 'groups' + selectFrom.capitalize(),
-      apiResultP = groupsService.get(fieldName),
-      // getGroups(this.get('auth'), selectFromOwn, server, apiServers),
-      groupsP = (
-        selectFromOwn ?
-          apiResultP.then((a) => a.slice()) :
-          apiResultP.then(clientGroupsToGroups))
-        .then((gs) => {
+      ownP = groupsService.get('groupsOwn'),
+      apiResultP = ownP;
+      if (selectIncludeIn) {
+        let
+        inP = groupsService.get('groupsIn')
+          .then(clientGroupsToGroups);
+        apiResultP = Promise.all([ownP, inP])
+          .then((as) => as[0].concat(as[1]));
+      }
+      let
+      groupsP = apiResultP.then((gs) => {
         gs.unshift(noGroup);
         dLog(fnName, 'gs', gs);
         this.set('groupsValue', gs);  return gs;});
