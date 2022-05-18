@@ -205,8 +205,19 @@ module.exports = function(Group) {
       cb(error);
     }
 
-    let promise =
-        Client.find({where : {email : {like : email, options : 'i'} }})
+    let
+    promise =
+      Client.find({where : {email}})
+      .then((clients) => {
+        if (! clients?.length) {
+          /** Case-insensitive search : 'like' implies a regexp match, which
+           * means punctuation like *,+ in the email causes mismatch, so first
+           * do a simple string search, above, and if ! clients.length try
+           * case-insensitive regexp search. */
+          clients = Client.find({where : {email : {like : email, options : 'i'} }});
+        }
+        return clients;
+      })
       .then((clients) => {
         console.log(fnName, clients, email);
         if (clients.length === 1) {
