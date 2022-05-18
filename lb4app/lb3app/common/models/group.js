@@ -206,7 +206,7 @@ module.exports = function(Group) {
     }
 
     let promise =
-    Client.find({where : {email}})
+        Client.find({where : {email : {like : email, options : 'i'} }})
       .then((clients) => {
         console.log(fnName, clients, email);
         if (clients.length === 1) {
@@ -214,8 +214,14 @@ module.exports = function(Group) {
         } else if (clients.length) {
           cbL(409, 'There are multiple Users with email ' + email + '.');
           return undefined;
+        } else if (! process.env.enableClientCreate) {  // can be enabled by a User admin role.
+          cbL(404, 'There are no Users with email ' + email + '.');
+          return undefined;
         } else {
-          /** may use random text instead of groupId for password.  Possibly this .create() will not be enabled. */
+          /** may use random text instead of groupId for password.  Possibly this .create() will not be enabled.
+           * Possibly a better workflow would be 2 step : first request reports back that the user doesn't exist,
+           * then (admin) user is able to click a checkbox enabling create and resend the request.
+           */
           let clientP = Client.create({email, emailVerified : true, password: groupId, forGroup : true, options});
           clientP.then((client) => { console.log(fnName, 'created', client.id.toHexString(), email); });
           return clientP;
