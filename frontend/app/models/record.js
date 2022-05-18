@@ -53,5 +53,15 @@ export default Model.extend({
 
   editable: computed('owner', 'readOnly', function() {
     return this.get('owner') || !this.get('readOnly')
+  }),
+
+
+  /** @return promise yielding Client record object corresponding to .clientId
+   */
+  client: computed('clientId', function() {
+    const
+    clientP = this.store.find('client', this.clientId);
+    return clientP;
   })
+
 });

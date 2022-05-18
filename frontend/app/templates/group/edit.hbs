@@ -54,7 +54,16 @@
           </button>
         </span>
        <span>{{dataset.id}}</span>
-       <span>{{dataset.clientId.email}}</span>
+       <span style="overflow-x: hidden">
+         {{#if dataset.owner}}
+           <i class="glyphicon glyphicon-ok"></i>
+         {{else}}
+           {{to-promise-proxy dataset.client.email}}
+           {{#ember-tooltip side="bottom" delay=500}}
+             {{to-promise-proxy dataset.client.email}}
+           {{/ember-tooltip}}
+         {{/if}}
+       </span>
        <span>{{dataset.groupId.name}}</span>
        <span>{{dataset.public}}</span>
        <span>{{dataset.createdAtShort}}</span>
