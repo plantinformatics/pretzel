@@ -109,7 +109,16 @@ function readMetadata()
   worksheetName=$(echo "$i" | fileName2worksheetName)
   datasetMeta="$fileDir"/"$worksheetName".Metadata.csv
 
-  eval $( < "$datasetMeta" egrep  '^(commonName|parentName|platform|shortName),' | deletePunctuation \
+  # See also also snps2Dataset.pl : setupMeta(), which reads $datasetMetaFile,
+  # so the following is only useful for namespace and commonName (commonName
+  # goes in meta, so setupMeta() could handle it and also -c; parentName is
+  # pulled out of meta as $metaParentName).
+  # Converting this and .pl into .js will solve the divided responsibilties of
+  # these 2 scripts.
+  #
+  # deletePunctuation sanitizes the csv input before eval, leaving only ,. _.
+  # It removes (optional) "", which simplifies the egrep regexp. (doesn't handle extra spaces)
+  eval $( < "$datasetMeta"  deletePunctuation | egrep  '^(commonName|parentName|platform|shortName|namespace),' \
    | awk -F, '{ printf("%s=\"%s\";\n", $1, $2); }' )
   echo namespace=$namespace, commonName=$commonName >> uploadSpreadsheet.log
 }
