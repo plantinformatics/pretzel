@@ -630,6 +630,11 @@ export default Component.extend({
   beforePaste(data, coords) {
     const fnName = 'beforePaste';
     dLog(fnName, data, coords);
+
+    if (! this.editable) {
+      return false;
+    }
+
     const
     table = this.table,
     ok = ! coords.find((c) => {
@@ -704,7 +709,7 @@ export default Component.extend({
             feature.set(fieldPrefix + fieldName, d);
             colsEdited++;
           }
-          if (colsEdited) {
+          if (colsEdited && this.saveToDatabase) {
             this.saveFeature(feature);
           }
         }
