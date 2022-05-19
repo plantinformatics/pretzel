@@ -118,7 +118,7 @@ exports.groupIsWritable = function(groupId) {
   group = groups && groups[groupId.toString()],
   writable = group?.writable;
   console.log(fnName, writable, groupId.toString());
-  return ok;
+  return writable;
 };
 
 // -----------------------------------------------------------------------------
