@@ -1,5 +1,6 @@
 import Controller from '@ember/controller';
 import { computed, action } from '@ember/object';
+import { alias } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 
 // -----------------------------------------------------------------------------
@@ -40,12 +41,38 @@ export default class GroupController extends Controller {
 
   }
 
-  get server() {
-    let
-    group = this.model,
-    serverName = group.store.name,
-    server = serverName && this.apiServers.lookupServerName(serverName);
-    dLog('server', server, serverName, group);
-    return server;
+  /** model is group */
+  @alias('model.server') server;
+
+  @action
+  setWritable(writable) {
+    /** based on controllers/groups.js : setIsVisible() */ 
+    const
+    fnName = 'setWritable',
+    msgName = fnName + 'Msg',
+    group = this.model;
+    dLog(fnName, this, writable);
+    if (this.isDeleted || this.isDestroying) {
+      this.send('refreshModel');
+    } else {
+      this.set(msgName, null);
+      group.set('writable', writable);
+      group.save()
+        .then((g) => {
+          dLog(fnName, g.writable, group.writable);
+          // this.send('refreshModel');
+        })
+        .catch((errorText) => {
+          const errorDetail = errorText?.errors[0];
+          dLog(fnName, errorDetail || errorText);
+          if (errorDetail?.status === '404') {
+            errorText = 'Unable to set writable because this group no longer exists.';
+          }
+          this.set(msgName, errorText);
+          this.send('refreshModel');
+        });
+    }
   }
+
+
 }

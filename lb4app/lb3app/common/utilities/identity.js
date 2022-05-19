@@ -107,4 +107,18 @@ exports.clientOwnsGroup = function(clientId, groupId) {
   return ok;
 };
 
+
+/**
+ * @param groupId string or BSON id
+ */
+exports.groupIsWritable = function(groupId) {
+  const
+  fnName = 'groupIsWritable',
+  groups = clientGroups.clientGroups?.groups,
+  group = groups && groups[groupId.toString()],
+  writable = group?.writable;
+  console.log(fnName, writable, groupId.toString());
+  return ok;
+};
+
 // -----------------------------------------------------------------------------

@@ -48,6 +48,17 @@
 
     <div class="flex-gap-1 margin-1em"><label>Owner : </label><span>{{group.clientId.email}}</span></div>
 
+    <div class="flex-gap-1 margin-1em">
+      <div>
+        <input type="checkbox"
+        id="select-group-as-filter"
+        checked={{group.writable}}
+        oninput={{action (action this.setWritable) value="target.checked" }}  >
+      <label for="select-group-as-filter">Group Members can add Datasets to this Group</label>
+      </div>
+      <div>{{setWritableMsg}}</div>
+    </div>
+
 
  </div>
 

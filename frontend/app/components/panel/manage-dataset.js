@@ -138,6 +138,10 @@ export default ManageBase.extend({
       groupsService = server.groups,
       /** If groupsOwn is used : create groupsOwnNone(), with noGroup prepended.  */
       groupsP = groupsService.get(selectIncludeIn ? 'groupsInOwnNone' : 'groupsOwn');
+      if (selectIncludeIn) {
+        groupsP = groupsP.then((groups) => groups.filter(
+          (g) => (g === noGroup) || g.get('owner') || g.writable));
+      }
       groupsP.then((gs) => ! this.isDestroying && this.set('groupsValue', gs));
       return groupsP;
     }),

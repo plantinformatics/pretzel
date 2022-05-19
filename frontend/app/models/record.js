@@ -23,19 +23,22 @@ export default Model.extend({
     return server;
   }),
 
-  /** @return true if .clientId matches the session .authenticated.clientId
+  /** @return true if .clientId matches the authenticated session clientId of
+   * the server of this record.
    */
   owner: computed('clientId', function() {
     let server = this.get('server'),
     /** clientId for the server which this record is from */
     clientIdRecord = server && server.clientId;
-    /** this is the clientId for the primaryServer; same as clientIdRecord only if the record is not from a secondary. */
+    /** this is the clientId for the primaryServer; same as clientIdRecord only if the record is not from a secondary.
     let clientIdSession = this.get('session.data.authenticated.clientId')
+    */
     let clientId = this.get('clientId')
     return clientId && (clientIdRecord === clientId);
   }),
 
-  /** @return true if .groupId is a group of the session .authenticated.clientId
+  /** @return true if .groupId is a group of the authenticated session clientId of
+   * the server of this record.
    */
   groupOwner: computed('clientId', function() {
     let server = this.get('apiServers').lookupServerName(this.store.name),

@@ -6,7 +6,12 @@
   "options": {
     "validateUpsert": true
   },
-  "properties": {},
+  "properties": {
+    "writable": {
+      "type": "boolean",
+      "default": false
+    }
+  },
   "validations": [],
   "relations": {
     "owner": {

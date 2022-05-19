@@ -13,7 +13,7 @@ var _ = require('lodash');
 
 
 var acl = require('../utilities/acl');
-var { clientIsInGroup, clientOwnsGroup } = require('../utilities/identity');
+var { clientIsInGroup, clientOwnsGroup, groupIsWritable } = require('../utilities/identity');
 var upload = require('../utilities/upload');
 var load = require('../utilities/load');
 const { cacheClearBlocks } = require('../utilities/localise-blocks');
@@ -335,11 +335,18 @@ module.exports = function(Dataset) {
       accessToken = ctx.options.accessToken,
       clientId = accessToken.userId;
       let groupId = data.groupId;
-      let ok = clientIsInGroup(clientId, groupId) || clientOwnsGroup(clientId, groupId);
+      let
+      writable = groupIsWritable(groupId),
+      ok = (writable && clientIsInGroup(clientId, groupId)) ||
+          clientOwnsGroup(clientId, groupId);
       console.log(fnName, ok, ''+dataset.id, ''+groupId, dataset);
       if (! ok) {
         // Don't save
-        const errorText = 'User ' + clientId + ' is not a member of group ' + groupId + ' so they cannot set that as group of dataset ' + dataset.id;
+        const
+        soText = ' so they cannot set that as group of dataset ' + dataset.id,
+        errorText = writable ? 
+              'User ' + clientId + ' is not a member of group ' + groupId + soText :
+              'User ' + clientId + ' is not owner of group ' + groupId + ' which is not writable,' + soText;
         var err = ErrorStatus(401, errorText);
         console.log(errorText);
         next(err);
