@@ -1,7 +1,7 @@
 import $ from 'jquery';
 
 import Component from '@ember/component';
-import { observer } from '@ember/object';
+import EmberObject, { observer } from '@ember/object';
 import { computed } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { later, bind } from '@ember/runloop';
@@ -36,7 +36,8 @@ const baseFields = {
 };
 const fieldNames = {
   // Chromosome : needs to be split, not yet required to be saved.
-  Feature : 'name',
+  // Feature : .name is a ComputedProperty dervied from ._name, see serializers/feature.js
+  Feature : '_name',
   Position : 'value.0',
   PositionEnd : 'value.1',
 };
@@ -324,8 +325,63 @@ export default Component.extend({
     return widthResult;
   },
 
+  /** Find a feature with the same datasetId : scope and return its block.
+   * Used when creating a new Feature, in afterPaste().
+   * datasetId is unique within a server; so the result could be ambiguous if
+   * datasets of multiple servers are brushed.
+   *
+   * @param mapChrName Chromosome column cell value
+   * Block, blockId.datasetId.id + ':' + blockId.scope
+   * from : models/block.js : brushName
+   */
+  datasetScope2Block(mapChrName) {
+    const fnName = 'datasetScope2Block';
+    /** 
+    let
+    parts = mapChrName.split(':'),
+    blockId = parts[0],
+    scope = parts[1];
+    */
+
+    let feature = this.get('data').find((f) => {
+      /** remove .feature from structure because it causes Handsontable to give errors. */
+      let {feature, Chromosome, ...rest} = f;
+      let match = Chromosome === mapChrName;
+      return match;
+    });
+    let block = feature?.feature?.get('blockId');
+    /** if block is not found in selected features, search viewed blocks, then all blocks */
+    if (! block) {
+      let
+      blockService = this.get('block'),
+      /** search viewed blocks.
+       *  equivalent : block = blockService.viewed.find((b) => mapChrName === b.brushName);
+       */
+      stacks = Array.from(blockService.stacksAxes.values()),
+      blockS,
+      stack = stacks.find((axes) => axes.find((a) => (blockS = a.blocks.findBy('block.brushName', mapChrName))));
+      if (blockS) {
+        block = blockS.block;
+        dLog(fnName, mapChrName, block);
+      }
+
+      if (! block) {
+        /** search all blocks. */
+        block = blockService.blockValues.find((b) => mapChrName === b.brushName);
+        dLog(fnName, mapChrName, block);
+      }
+    }
+    return block;
+  },
+
+  createdFeatures : [],
+
   dataForHoTable : computed('data', function () {
-    let data = this.get('data').map((f) => {
+    let data = this.get('data');
+    if (this.createdFeatures.length) {
+      data = data.concat(this.createdFeatures);
+    }
+    data = data.map((f) => {
       /** remove .feature from structure because it causes Handsontable to give errors. */
       let {feature, ...rest} = f,
           values = feature.values;
@@ -631,9 +687,11 @@ export default Component.extend({
     const fnName = 'beforePaste';
     dLog(fnName, data, coords);
 
-    if (! this.editable) {
-      return false;
-    }
+    return this.editable;
+
+    /** To allow creation of new Features via paste, paste into 'Chromosome'
+     * column is required, so the following check is not required.
+     */
 
     const
     table = this.table,
@@ -644,7 +702,7 @@ export default Component.extend({
       for (let row = c.startRow; ! found && (row <= c.endRow); row++) {
         for (let col = c.startCol; ! found && (col <= c.endCol); col++) {
           const meta = table.getCellMeta(row, col);
-          found = meta?.prop == 'Chromosome'; //  !== 'Ontology';
+          found = meta?.prop === 'Chromosome'; //  !== 'Ontology';
         }
       }
       return found;
@@ -670,12 +728,17 @@ export default Component.extend({
            row++, dataRowIndex++) {
         const
         td = table.getCell(row, 0),
-        tr = td.parentElement,
+        tr = td.parentElement;
+        let
         feature = tr.__dataPretzelFeature__;
         /* a better alternative, not used yet : table.getDataAtRowProp(row, 'dataPretzelFeature')
          * also : feature = meta?.PretzelFeature?.feature;
          */
         dLog(fnName, coords, row, feature?.name, feature?.values?.Ontology);
+        let newFeature = ! feature;
+        if (newFeature) {
+          feature = EmberObject.create({value : []});
+        }
         if (feature) {
           /** count the columns edited because if the data runs out at the end
           * of a row there is no reason to save the feature of the next row.
@@ -691,6 +754,14 @@ export default Component.extend({
             fieldPrefix = inValues ? 'values.' : '';
             let
             fieldName = prop;
+            let d = data[dataRowIndex][dataColIndex];
+
+            if (prop === 'Chromosome') {
+              let
+              block = this.datasetScope2Block(d);
+              feature.set('blockId', block);
+            }
+            else {
             /* if column is a base field, i.e. ! inValues, then map .prop to the
              * actual Feature field name.
              * Writing to columns other than Ontology is not yet required, so
@@ -702,14 +773,40 @@ export default Component.extend({
             if (inValues && ! feature.values) {
               feature.set('values', {});
             }
-            let d = data[dataRowIndex][dataColIndex];
             if (meta.type === 'numeric') {
               d = +d;
             }
             feature.set(fieldPrefix + fieldName, d);
+            }
             colsEdited++;
           }
-          if (colsEdited && this.saveToDatabase) {
+          if (newFeature) {
+            if (feature.blockId && feature.value.length && feature._name) {
+              dLog(fnName, 'newFeature', feature, tr);
+              let store = feature .blockId.get('store');
+              // name is in feature._name
+              // Replace Ember.Object() with models/feature.
+              feature = store.createRecord('Feature', feature);
+              // this is also done by setRowAttribute(), all being well.
+              tr.__dataPretzelFeature__ = feature;
+              let mapChrName = feature.get('blockId.brushName');
+              let selectionFeature = {Chromosome : mapChrName, Feature : feature.name, Position : feature.value[0], feature};
+              /** this.data is from components/panel/manage-features.js : data : computed();
+               * Possibly add the new feature to selectionFeatures ?
+               * Currently : concat the features created in this component to .data.
+               */
+              this.createdFeatures.push(selectionFeature);
+
+              // selectedFeaturesSet.add(f);
+              // selectedFeatures[mapChrName].push(feature);
+
+              this.setRowAttribute(table, row, selectionFeature);
+            } else {
+              // don't save feature, it is not models/feature
+              feature = undefined;
+            }
+          }
+          if (colsEdited && this.saveToDatabase && feature) {
             this.saveFeature(feature);
           }
         }
