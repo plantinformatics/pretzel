@@ -64,7 +64,7 @@ export default class DataGroups extends EmberObject {
     inP = this.get('groupsIn')
       .then(clientGroupsToGroups),
     apiResultP = Promise.all([ownP, inP])
-      .then((as) => A(as[0]).addObjects(as[1]));
+      .then((as) => A(as[0].slice()).addObjects(as[1]));
 
     let
     groupsP = apiResultP.then((gs) => {
