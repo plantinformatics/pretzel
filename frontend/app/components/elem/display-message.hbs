@@ -1,0 +1,11 @@
+{{#if @message}}
+  <div class="display-message">
+    {{#elem/panel-form
+      name="warning"
+      heading="Message"}}
+      {{@message}}
+    {{/elem/panel-form}}
+  </div>
+{{/if}}
+
+{{yield}}

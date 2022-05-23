@@ -562,8 +562,9 @@ export default Service.extend({
     fnName = 'featureFilter',
     ontologyId = feature.get('values.Ontology'),
     visibleByOntology = this.get('controls.viewed.visibleByOntology'),
+    showQTLsWithoutOntologies = this.get('controls.viewed.showQTLsWithoutOntologies'),
     defined = (ontologyId !== undefined) && (ontologyId !== ''),
-    ok = ! visibleByOntology || (defined && this.getOntologyIsVisible(ontologyId));
+    ok = ! visibleByOntology || showQTLsWithoutOntologies || (defined && this.getOntologyIsVisible(ontologyId));
     if (trace > 2) {
       dLog(fnName, ontologyId, ok);
     }

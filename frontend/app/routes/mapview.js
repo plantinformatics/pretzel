@@ -85,8 +85,14 @@ let config = {
     /** blockService supports in computing the model. */
     let params = this.get('queryParamsService').get('params');
     dLog('paramsIn', paramsIn, params, paramsIn.mapsToView, params.mapsToView);
-    Object.assign(params, paramsIn);
-    dLog('params', params, params.mapsToView);
+
+    if (JSON.stringify(params) != JSON.stringify(paramsIn)) {
+      /** Object.assign(params, paramsIn) would be equivalent, but it gets a warning :
+       * "... attempted to update <Ember.Object:...>.mapsToView to "", but it is being tracked by a tracking context, ..."
+       */
+      Object.keys(paramsIn).forEach((key) => params.set(key, paramsIn[key]));
+      dLog('params', params, params.mapsToView);
+    }
 
     if (params.options)
       params.parsedOptions = parseOptions(params.options);
@@ -116,7 +122,9 @@ let config = {
 
     let blocksLimitsTask = this.get('blocksLimitsTask');
     dLog('blocksLimitsTask', blocksLimitsTask);
-    if (! blocksLimitsTask || ! blocksLimitsTask.get('isRunning')) {
+    if (! blocksLimitsTask ||
+        (! Array.isArray(blocksLimitsTask._result) &&
+         (! blocksLimitsTask.get || ! blocksLimitsTask.get('isRunning')))) {
       blocksLimitsTask = blockService.getBlocksLimits(undefined, {server: 'primary'});
       this.set('blocksLimitsTask', blocksLimitsTask);
     }

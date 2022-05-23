@@ -1,0 +1,62 @@
+<div class="group-outer groups">
+
+{{#if apiServers.multipleServers}}
+  <div style="margin-bottom:3ex">
+    <label>Server</label>
+    {{form/select-server selectedValue=model.server selectedServerChanged=(action this.selectedServerChanged) }}
+  </div>
+{{/if}}
+
+<label>Owned / added groups</label>
+{{#each this.model.groupsOwn as |group|}}
+  <div class="margin-1em">
+    {{!-- model=group --}}
+    {{#link-to 'group.edit' group.id  classNames='btn btn-info btn-xs' tagName='button'}}
+      <i class="glyphicon glyphicon-pencil"></i>
+    {{/link-to}}
+
+   {{!-- group.id --}}
+   <span>{{group.name}}</span>
+
+  </div>
+{{/each}}
+
+
+{{#link-to 'groups.add' classNames='btn btn-info' tagName='button'}}
+Add Group
+{{/link-to}}
+
+<hr>
+
+<label>Joined groups</label>
+  <div class="margin-1em joined-groups">
+    <span><label>Leave</label></span>
+    <span><label>Visible</label></span>
+    <span><label>Group Name</label></span>
+    <span><label>Group Owner</label></span>
+  </div>
+
+{{#each this.model.groupsIn as |clientGroup|}}
+  <div class="margin-1em joined-groups">
+    <span>
+      <button type="button" class="btn btn-info btn-xs" {{on 'click' (action this.removeGroupMember clientGroup) }}>
+        <i class="glyphicon glyphicon-remove"></i>
+      </button>
+    </span>
+    <span>
+      <input type="checkbox"
+        checked={{clientGroup.isVisible}}
+        oninput={{action (action this.setIsVisible clientGroup) value="target.checked" }}  >
+    </span>
+   <span>{{clientGroup.groupId.name}}</span>
+   <span>{{clientGroup.groupId.clientId.email}}</span>
+  </div>
+{{/each}}
+
+<div>{{this.removeGroupMemberMsg}}</div>
+{{elem/display-message message=this.setIsVisibleMsg}}
+
+{{outlet}}
+
+
+</div>

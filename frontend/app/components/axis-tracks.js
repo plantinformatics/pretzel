@@ -2052,6 +2052,7 @@ export default InAxis.extend({
     'ontology.ontologyIsVisibleChangeCount',
     'controlsViewed.visibleByTrait',
     'controlsViewed.visibleByOntology',
+    'controlsViewed.showQTLsWithoutOntologies',
     function () {
     let
     trait = this.get('trait'),

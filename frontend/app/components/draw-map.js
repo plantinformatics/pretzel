@@ -7,7 +7,7 @@ import {
   bind,
   throttle
 } from '@ember/runloop';
-import { computed, get, observer } from '@ember/object';
+import { computed, get, set as Ember_set, observer } from '@ember/object';
 import { alias, filterBy } from '@ember/object/computed';
 import Evented from '@ember/object/evented';
 import Component from '@ember/component';
@@ -223,7 +223,7 @@ export default Component.extend(Evented, {
     /** drawActions is an action&event bus specific to one draw-map; it is a reference
      * to mapview (see map-view.hbs) but could be owned by the draw-map. */
     let drawActions = this.get('drawActions'); 
-    console.log("drawActionsListen", listen, drawActions, this);
+    console.log("drawActionsListen", listen, name, target._debugContainerKey, method, drawActions, this);
     if (drawActions === undefined)
       console.log('parent component drawActions not passed', this);
     else
@@ -260,9 +260,12 @@ export default Component.extend(Evented, {
     else
       this.set('listener', new EventedListener(
         bus,
-        [{name: 'stackPositionsChanged', target: this, method: this.stackPositionsChanged}]
+        [{name: 'stackPositionsChanged', target: this, method: /*.actions.*/this.stackPositionsChanged}]
         // this.pathUpdateFlow is set later, because it calls into the draw() closure.
       ));
+  },
+  stackPositionsChanged(stack) {
+    this.actions.stackPositionsChanged(stack);
   },
 
   /** listen to events sent by sub-components.
@@ -274,8 +277,10 @@ export default Component.extend(Evented, {
 
       /* oa.eventBus is used in stacks to send updatedStacks and stackPositionsChanged; 
        * perhaps change ownership of those events to a stacks Evented component. */
-      let bus =
-      oa.eventBus = this;
+      let bus = this;
+      if (oa.eventBus !== this) {
+        Ember_set(oa, 'eventBus', this);
+      }
       if (this.get('listener') === undefined)
         this.createListener(bus);
     }
@@ -312,17 +317,19 @@ export default Component.extend(Evented, {
       f.on('resetZooms', this, 'resetZooms');
     }
 
+    this.oa = {};
     this.drawControlsListen(true);
     this.localBus(true);
     let blockService = this.get('blockService');
     blockService.on('receivedBlock', this, 'receivedBlock');
+    this.functionHandles = {};
   }),
 
-/** addPathsToCollation() is in draw closure, otherwise would register it here
+/** addPathsToCollation() was in draw closure;  having moved it to library collate-paths.js, it could now be register here
   willInsertElement : function () {
     console.log("components/draw-map willInsertElement");
     this._super(...arguments);
-    this.on('paths', this.addPathsToCollation);
+    this.on('paths', addPathsToCollation);
   },
 */
 
@@ -337,7 +344,10 @@ export default Component.extend(Evented, {
     this.drawControlsListen(false);
     this.localBus(false);
 
-    this.off('paths');
+    /* not registered in willInsertElement(). registered in draw() : drawControlsLifeC */
+    if (this.has('paths')) {
+      this.off('paths', addPathsToCollation);
+    }
 
     let blockService = this.get('blockService');
     blockService.off('receivedBlock', this, 'receivedBlock');
@@ -373,12 +383,19 @@ export default Component.extend(Evented, {
 
   /*------------------------------------------------------------------------*/
 
-  functionHandles : {},
+  /** Initialise in init(), so that each new instance of draw-map gets a
+   * distinct object, so that functions don't refer to destroyed closures.
+   */
+  functionHandles : undefined,
   /** @return a constant value for the function
    * @desc for use with debounce / throttle
    */
   functionHandle(name, fn) {
     let functions = this.get('functionHandles');
+    if (false) { // debug check / trace
+      if (! functions.drawMap) { functions.drawMap = this; }
+      else if (functions.drawMap !== this) { dLog('functionHandle', functions, this); }
+    }
     if (functions[name] && (functions[name] !== fn) && (trace_dataflow > 2)) {
       dLog('functionHandle', name, functions[name], fn);
     }      
@@ -520,8 +537,8 @@ export default Component.extend(Evented, {
   },
 
 
-  /** object attributes */
-  oa : {},
+  /** object attributes. initialised in init(). */
+  oa : undefined,
 
   /*------------------------------------------------------------------------------*/
 
@@ -542,6 +559,7 @@ export default Component.extend(Evented, {
                     rc = chrData(ch);
                     /** use same structure as routes/mapview.js */
                     retHash[chr] = rc;
+    const receiveChr = this.receiveChr || console.log;
     this.get('receiveChr')(chr, rc, 'dataReceived');
       return retHash;
     }, {});
@@ -614,7 +632,8 @@ export default Component.extend(Evented, {
       this.on('pathsByReference', addPathsByReferenceToCollation);
     }
 
-    if (oa.showResize === undefined)
+    // instanceChanged is defined below;  not needed because setting to the same value is harmless.
+    // if ((oa.showResize === undefined) || instanceChanged)
     {
       oa.showResize = showResize;
     }
@@ -631,8 +650,11 @@ export default Component.extend(Evented, {
     // stacks.axes[] is a mix of Stacked & Block; shouldn't be required & planning to retire it in these changes.
     oa.axes = stacks.axesP;
     oa.axesP = stacks.axesP;
-    if (! oa.axisApi)
-      oa.axisApi = {lineHoriz : lineHoriz,
+    /** Refresh axisApi when draw-map object instance changes, so the functions
+     * do not refer to closures in the destroyed instance. */
+    let instanceChanged;
+    if (! oa.axisApi || (instanceChanged = oa.axisApi.drawMap.isDestroying)) {
+      const axisApi = {lineHoriz : lineHoriz,
                     inRangeI : inRangeI,
                     featureInRange,
                     patham,
@@ -647,8 +669,11 @@ export default Component.extend(Evented, {
                     makeMapChrName,
                     axisIDAdd,
                     stacksAxesDomVerify : function (unviewedIsOK = false) { stacksAxesDomVerify(stacks, oa.svgContainer, unviewedIsOK); } ,
-                    updateSyntenyBlocksPosition : () => this.get('updateSyntenyBlocksPosition').perform()
+                    updateSyntenyBlocksPosition : () => this.get('updateSyntenyBlocksPosition').perform(),
+                    drawMap : this,  // for debug trace / check.
                    };
+      Ember_set(oa, 'axisApi', axisApi);
+    }
     dLog('draw-map stacks', stacks);
 
     /** Reference to all datasets by name.
@@ -714,7 +739,8 @@ export default Component.extend(Evented, {
         let
           widthChanged = oa.vc.viewPort.w != oa.vc.viewPortPrev.w,
         heightChanged = oa.vc.viewPort.h != oa.vc.viewPortPrev.h;
-        if (oa.svgContainer)
+        // showResize() -> collateO() uses .o
+        if (oa.svgContainer && oa.o)
           oa.showResize(widthChanged, heightChanged);
       }
       stacks.vc = vc; //- perhaps create vc earlier and pass vc to stacks.init()
@@ -1191,6 +1217,7 @@ export default Component.extend(Evented, {
 
     /** For all Axes, store the x value of its axis, according to the current scale. */
     function collateO() {
+      // if (me.isDestroying) { return; }
       dLog("collateO", oa.axisIDs.length, oa.stacks.axisIDs());
       oa.stacks.axisIDs().forEach(function(d){
         let o = oa.o;
@@ -1201,7 +1228,7 @@ export default Component.extend(Evented, {
         if (o[d] === undefined) { breakPoint("collateO"); }
       });
       /** scaled x value of each axis, with its axisID. */
-      let offsetArray = oa.stacks.axisIDs().map((d) => ({axisId : d, xOffset : o[d]}));
+      let offsetArray = oa.stacks.axisIDs().map((d) => ({axisId : d, xOffset : oa.o[d]}));
       let previous = me.get('xOffsets'),
           changed = ! isEqual(previous, offsetArray);
       if (changed) {
@@ -1232,7 +1259,7 @@ export default Component.extend(Evented, {
     if (duplicates.length)
       dLog/*breakPoint*/('duplicates', duplicates, blocksToDraw, blocksToAdd, oa.axisIDs);
 
-    if (oa.zoomBehavior === undefined)
+    if ((oa.zoomBehavior === undefined) || instanceChanged)
     {
       /** default is 500.  "scaling applied in response to a WheelEvent ... is
        * proportional to 2 ^ result of wheelDelta(). */
@@ -2846,8 +2873,8 @@ export default Component.extend(Evented, {
      * 5sec to settle the geometry.
      */
     brushClipSize(gBrushParent);
-    later(() => brushClipSize(gBrushParent), 2000);
-    later(() => brushClipSize(gBrushParent), 5000);
+    later(() => ! me.isDestroying && brushClipSize(gBrushParent), 2000);
+    later(() => ! me.isDestroying && brushClipSize(gBrushParent), 5000);
 
 
     if (allG.nodes().length)
@@ -2943,7 +2970,7 @@ export default Component.extend(Evented, {
       showTickLocations(oa.scaffoldTicks, t);
       if (oa.syntenyBlocks) {
         /** time for the axis positions to update */
-        later(() => showSynteny(oa.syntenyBlocks, t), 500);
+        later(() => ! me.isDestroying && showSynteny(oa.syntenyBlocks, t), 500);
       }
 
       me.trigger('axisStackChanged', t);
@@ -3798,7 +3825,7 @@ export default Component.extend(Evented, {
        */
       let
       ir,
-      valueInInterval = me.get('controls.view.valueInInterval'),
+      valueInInterval = me.get('controls').get('view.valueInInterval'),
       /** If the block containing one end of the path is un-viewed, block.axis
        * may be undefined if render occurs before block-adj is destroyed . */
       a0_ = Stacked.getAxis(a0);
@@ -4154,7 +4181,7 @@ export default Component.extend(Evented, {
            * FeatureTicks; possibly a sub-component of axis-1d.
            */
 
-          let valueInInterval = me.get('controls.view.valueInInterval');
+          let valueInInterval = me.get('controls').get('view.valueInInterval');
 
           let selectedAxes = oa.selectedAxes;
         console.log("Selected: ", " ", selectedAxes.length);
@@ -5467,7 +5494,7 @@ export default Component.extend(Evented, {
      * Recalculate Y scales.
      * Used after drawing / window (height) resize.
      */
-    function stacksAdjustY()
+    function stacksAdjustY(t)
     {
       oa.stacks.forEach(function (s) { s.calculatePositions(); });
       oa.stacks.axisIDs().forEach(function(axisName) {
@@ -6117,7 +6144,9 @@ export default Component.extend(Evented, {
      * @see resizeEffect()
      */
     function recordViewport(w, h) {
-      later(() => 
+      later(
+        () => 
+          ! this.isDestroying &&
       this.setProperties({
         viewportWidth : w,
         viewportHeight : h
@@ -6184,7 +6213,7 @@ export default Component.extend(Evented, {
 
       // recalculate Y scales before pathUpdate().
         if (heightChanged)
-          stacksAdjustY();
+          stacksAdjustY(t);
 
       // for stacked axes, window height change affects the transform.
         if (widthChanged || heightChanged)
@@ -6221,9 +6250,12 @@ export default Component.extend(Evented, {
                * new position based on the changed scale. */
               axisBrushShowSelection(d, this);
             });
-          DropTarget.prototype.showResize();
+          if (DropTarget.prototype.showResize) {
+            DropTarget.prototype.showResize();
+          }
         }
         later( function () {
+          if (me.isDestroying) { return; }
           /* This does .trigger() within .later(), which seems marginally better than vice versa; it works either way.  (Planning to replace event:resize soon). */
           if (widthChanged || heightChanged)
             try {
@@ -6481,6 +6513,9 @@ export default Component.extend(Evented, {
     let me = this;
     let data = this.get('data');
     throttle(function () {
+      /** when switching back from groups/ route to mapview/, this may be called
+       * before oa.axisApi is initialised in draw(), */
+      if (me.oa.axisApi) {
       /** viewed[] is equivalent to data[], apart from timing differences.  */
       let viewed = me.get('blockService.viewed'),
       /** create axes for the reference blocks before the data blocks are added. */
@@ -6490,6 +6525,7 @@ export default Component.extend(Evented, {
         return aHasReference === bHasReference ? 0 : aHasReference ?  1 : -1;
       });
       referencesFirst.forEach((block) => me.oa.axisApi.ensureAxis(block.id));
+      }
       me.draw(data, 'didRender');
     }, 1500);
 
@@ -6590,7 +6626,7 @@ export default Component.extend(Evented, {
     changed = ! isEqual(previous, now);
     if (changed) {
       console.log('stacksWidthChanged', previous, now);
-      later(() => this.set('previousRender', now));
+      later(() => ! this.isDestroying && this.set('previousRender', now));
     }
     return changed;
   },

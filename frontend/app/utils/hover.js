@@ -54,6 +54,7 @@ function configureHover(context, textFn)
 function showHover(context, textFn, d, i, g) {
   // console.log("configureHover", location, this, this.outerHTML);
   let text = textFn.apply(this, [context, d, i, g]);
+  let isHtml = text.startsWith('<div') || text.startsWith('<span');
 
   /** jQuery selection of target element to display popover near.
    * if hoverNearElement then node_ is also the source element which originates the hover.
@@ -67,7 +68,9 @@ function showHover(context, textFn, d, i, g) {
       node_
         .popover('show')
         .popover({content : text}); */
-      node_.data('bs.popover').options .content = text;
+      let options = node_.data('bs.popover').options;
+      options.content = text;
+      options.html = isHtml;
     } else {
       /** https://getbootstrap.com/docs/3.4/javascript/#popovers */
       let options = {
@@ -79,8 +82,8 @@ function showHover(context, textFn, d, i, g) {
         // comment re. title versus content in @see draw-map.js: configureHorizTickHover() 
         content : text
       };
-      if (text.startsWith('<div') || text.startsWith('<span')) {
-        options.html = true;
+      if (isHtml) {
+        options.html = isHtml;
       }
       if (! hoverNearElement) {
         // same as default, with arrow removed : <div class="arrow"></div>

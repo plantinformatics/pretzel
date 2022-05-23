@@ -34,19 +34,26 @@ export default Component.extend(Evented, {
   }),
 
 
-  willInsertElement() {
+  didInsertElement() {
+    this._super.apply(this, arguments);
+
+    const fnName = 'didInsertElement';
     if (trace_links)
-      console.log('components/draw/link-path willInsertElement');
+      console.log('components/draw/link-path', fnName);
 
     let options = this.get('parsedOptions'),
     byReference = options && options.byReference;
-    console.log('willInsertElement', options, byReference);
+    console.log(fnName, options, byReference);
 
-    let blockService = this.get('blockService'),
-    blocksSameServer = blockService.get('blocksSameServer');
     let stackEvents = this.get('stackEvents');
     if (options && options.allInitially)
-    stackEvents.on('expose', this, function (blockA, blockB) {
+    stackEvents.on('expose', this, this.exposeHandler);
+  },
+  exposeHandler (blockA, blockB) {
+    let options = this.get('parsedOptions'),
+    byReference = options && options.byReference;
+    let blockService = this.get('blockService'),
+    blocksSameServer = blockService.get('blocksSameServer');
       if (! blocksSameServer.apply(blockService, [blockA, blockB]))
       {
         console.log('blocksSameServer', blockA, blockB);
@@ -57,11 +64,13 @@ export default Component.extend(Evented, {
       this.request(blockA, blockB);
       if (byReference)
         this.requestByReference(blockA, blockB);
-    } );
   },
   willDestroyElement() {
-    let stackEvents = this.get('stackEvents');
-    stackEvents.off('expose');
+    let options = this.get('parsedOptions');
+    if (options && options.allInitially) {
+      let stackEvents = this.get('stackEvents');
+      stackEvents.off('expose', this, this.exposeHandler);
+    }
 
     this._super.apply(this, arguments);
   },

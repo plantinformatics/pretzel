@@ -1,6 +1,6 @@
 import { computed } from '@ember/object';
 import { inject as service } from '@ember/service';
-import { attr, hasMany } from '@ember-data/model';
+import { attr, hasMany, belongsTo } from '@ember-data/model';
 
 import Record from './record';
 
@@ -90,6 +90,7 @@ export default Record.extend({
     return c;
   }),
 
+  groupId: belongsTo('group'),
   blocks: hasMany('block', { async: false }),
   type: attr('string'),
   namespace: attr('string'),
@@ -103,6 +104,11 @@ export default Record.extend({
   shortNameOrName : computed('datasetId._meta.shortName', function () {
     return this.get('_meta.shortName') || this.get('id');
   }),
+
+  /** @return a brief version of .createdAt */
+  get createdAtShort() {
+    return this.get('createdAt').toString().slice(0,21);
+  },
 
   /*--------------------------------------------------------------------------*/
 
@@ -128,6 +134,38 @@ export default Record.extend({
     let tags = this.get('tags'),
     has = tags && tags.length && (tags.indexOf(tag) >= 0);
     return has;
+  },
+
+  /*--------------------------------------------------------------------------*/
+
+  /** @return true if this dataset is owned by the logged-in user,
+   * or has no group, or its group is visible to the logged-in user
+   */
+  get isVisible() {
+    let visible = /*this.public ||*/ this.get('owner') || this.get('groupIsVisible');
+    return visible;
+  },
+  /** @return true if this dataset has no group, or its group is visible to the
+   * logged-in user
+   */
+  get groupIsVisible() {
+    let
+    visible,
+    groupId = this.get('groupId.id');
+    if (! groupId) {
+      visible = true;
+    } else {
+      let
+      groups = this.get('server.groups'),
+      /** if ! inGroup, then lookup of .groupId.* will cause 401. */
+      inGroup = groups.inGroup(groupId);
+
+      /** .groupId is likely a Proxy, with .content which may be null.
+       * That case is handled by the above check on groupId.id.
+       */
+      visible = inGroup; //  && this.get('groupId.isVisible');
+    }
+    return visible;
   },
 
   /*--------------------------------------------------------------------------*/

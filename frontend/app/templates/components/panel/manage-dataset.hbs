@@ -14,13 +14,33 @@
         <tr><td>tags</td><td>
           {{#each dataset.tags as |tag index|}}
               {{#if index}}<nbsp/>{{/if}}
-	      {{tag}}
+              {{tag}}
           {{/each}}
         </td></tr>
       {{/if}}
+
+      {{#unless dataset.public}}
+      <tr><td>Group</td>
+        <td>
+        {{#if this.datasetOwned}}
+           {{form/select-group selectedValue=this.selectedValue
+             values=(to-array-promise-proxy this.groupsPromise)
+             selectedGroupChanged=(action this.datasetChangeGroup) }}
+           {{this.datasetGroupErrMsg}}
+         {{else}}
+           {{dataset.groupId.name}}<!-- {{dataset.groupId.id}} -->
+         {{/if}}
+      </td></tr>
+      {{#if dataset.groupId}}
+        <tr><td>Group Owner</td><td>{{dataset.groupId.clientId.email}}
+        </td></tr>
+      {{/if}}
+      {{/unless}}
+
     </tbody>
   </table>
   </div>
+
 
   <div class="metaeditor-panel">
 

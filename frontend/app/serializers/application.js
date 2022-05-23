@@ -2,6 +2,12 @@ import RESTSerializer from '@ember-data/serializer/rest';
 
 // import PartialModelRESTSerializer from 'ember-data-partial-model/mixins/rest-serializer';
 
+// -----------------------------------------------------------------------------
+
+const dLog = console.debug;
+
+// -----------------------------------------------------------------------------
+
 export default RESTSerializer.extend(/*PartialModelRESTSerializer,*/ {
   //primaryKey: '_id'
 
@@ -45,8 +51,10 @@ export default RESTSerializer.extend(/*PartialModelRESTSerializer,*/ {
     })
   },
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
+    dLog('application normalizeResponse', primaryModelClass.modelName, payload, id, requestType);
     let payloadTemp = {};
     payloadTemp[primaryModelClass.modelName] = payload
     return this._super(store, primaryModelClass, payloadTemp, id, requestType);
   },
+
 });
