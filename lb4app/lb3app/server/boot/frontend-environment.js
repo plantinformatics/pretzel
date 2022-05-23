@@ -5,7 +5,7 @@ var path = require('path');
 
 module.exports = function frontendEnvironment(server) {
 
-  let indexPath = path.resolve(__dirname, '../../client/index.html')
+  let indexPath = path.resolve(__dirname, '../../../client/index.html')
 
   fs.readFile(indexPath, function (error, data) {
     if (error) {

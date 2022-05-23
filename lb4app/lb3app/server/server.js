@@ -162,7 +162,7 @@ app.set('views', path.resolve(__dirname, 'views'));
 //
 // 
 
-let clientPath = path.resolve(__dirname, '../client')
+let clientPath = path.resolve(__dirname, '../../client')
 
 // default route handling to deliver client files
 app.use('/', loopback.static(clientPath));
