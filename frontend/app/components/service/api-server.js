@@ -1,9 +1,12 @@
 import EmberObject, { computed } from '@ember/object';
 import Component from '@ember/component';
+import { getOwner, setOwner } from '@ember/application';
 import { inject as service } from '@ember/service';
 import { task, timeout, didCancel } from 'ember-concurrency';
 
 import { breakPoint } from '../../utils/breakPoint';
+import DataGroups from '../../utils/data/groups';
+
 
 
 /* global d3 */
@@ -48,9 +51,20 @@ export default EmberObject.extend({
   block: service('data/block'),
   apiServers: service(),
   queryParamsService: service('query-params'),
+  auth : service(),
 
 
   init() {
+    this._super(...arguments);
+
+    let groups = DataGroups.create({server : this});
+    setOwner(groups, getOwner(this));
+    this.set('groups', groups);
+  },
+  willDestroy() {
+    this.get('groups').destroy();
+    this.set('groups', null);
+
     this._super(...arguments);
   },
 
@@ -124,6 +138,32 @@ export default EmberObject.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** Get API Version of server;  request it if not already done.
+   * @return promise yielding apiVersion
+   */
+  getVersion : function () {
+    const
+    fnName = 'getVersion',
+    server = this; // this.get('apiServers').lookupServerName(this.get('name'));
+    /** could use a task with .drop().  */
+    if (! server.getVersionP) {
+      server.getVersionP = this.get('auth').getVersion(server)
+        .then((configVersion) => {
+          dLog(fnName, configVersion);
+          server.apiVersion = configVersion.apiVersion;
+          return server.apiVersion;
+        })
+        .catch((error) => {
+          dLog(fnName, error);
+          if (error.statusCode === 404) {
+            server.apiVersion = 1;
+          }
+          return server.apiVersion;
+        });
+    }
+    return server.getVersionP;
+  },
+
   /** Get the list of datasets, including their blocks, from this API server.
    *
    */
@@ -133,6 +173,7 @@ export default EmberObject.extend({
     let taskGetList = datasetService.get('taskGetList');  // availableMaps
     /** server was a param when this function was an attribute of apiServers. */
     let server = this;
+    server.groups.refresh();
     let datasetsTask = taskGetList.perform(server)
         .catch((error) => {
           // Recognise if the given task error is a TaskCancelation.

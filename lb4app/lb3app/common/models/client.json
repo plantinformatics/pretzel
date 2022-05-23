@@ -1,0 +1,40 @@
+{
+  "name": "Client",
+  "description": "User management services",  
+  "base": "User",
+  "idInjection": true,
+  "options": {
+    "validateUpsert": true
+  },
+  "properties": {},
+  "validations": [],
+  "relations": {
+    "groups": {
+      "type": "hasAndBelongsToMany",
+      "model": "Group",
+      "throughTable": "ClientGroup"
+    },
+    "datasets": {
+      "type": "hasMany",
+      "model": "Dataset",
+      "foreignKey": "clientId"
+    },
+    "blocks": {
+      "type": "hasMany",
+      "model": "Block",
+      "foreignKey": "clientId"
+    },
+    "annotations": {
+      "type": "hasMany",
+      "model": "Annotation",
+      "foreignKey": "clientId"
+    },
+    "intervals": {
+      "type": "hasMany",
+      "model": "Interval",
+      "foreignKey": "clientId"
+    }
+  },
+  "acls": [],
+  "methods": {}
+}

@@ -1,12 +1,26 @@
-{{#elem/icon-toggle state=detailed iconTrue='collapse-down' iconFalse='expand' class="margin-1em" }}
-  {{#ember-tooltip side="right" delay=500}}
-    Toggle display of QTL colour and filtering controls.
-  {{/ember-tooltip}}
-{{/elem/icon-toggle}}
+<div style="display:flex">
 
-{{#if detailed}}
+  <span style="margin:1em; width: 20%;">
+    {{#elem/icon-toggle state=detailed iconTrue='collapse-down' iconFalse='expand' }}
+    {{#ember-tooltip side="right" delay=500}}
+    Toggle display of QTL colour and filtering controls.
+    {{/ember-tooltip}}
+    {{/elem/icon-toggle}}
+  </span>
+
+  <span style="flex : 1; margin-top:1em">
+    <input type="checkbox"
+    checked={{this.tabSticky}}
+    oninput={{action (action (mut this.tabSticky) value="target.checked") }}  >
+    <label>Make this tab sticky</label>
+  </span>
+</div>
+
+
 
   <ul class="list-group view-controls">
+
+{{#if detailed}}
 
     <li class="list-group-item">
       <label style="display:inline">QTL colour by :</label>
@@ -26,7 +40,7 @@
     </li>
 
     <li class="list-group-item horiz-2">
-      <label>Visible by : </label>
+      <label>Filter by : </label>
       <div style="width:30%">
         <input type="checkbox"
           checked={{this.visibleByOntology}}
@@ -44,8 +58,20 @@
         <label>Trait</label>
       </div>
     </li>
+{{/if}}
 
+
+{{#if tabIsOntology}}
+
+  <li class="list-group-item">
+    <span>
+      <input type="checkbox"
+      checked={{this.showQTLsWithoutOntologies}}
+      oninput={{action (action (mut this.showQTLsWithoutOntologies) value="target.checked") }}  >
+      <label>Show QTLs without ontologies</label>
+    </span>
+  </li>
+
+  {{/if}}
 
   </ul>
-
-{{/if}}

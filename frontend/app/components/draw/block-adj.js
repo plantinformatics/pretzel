@@ -233,10 +233,13 @@ export default Component.extend(Evented, AxisEvents, {
       if (Object.values(blockDomains).indexOf(undefined) !== -1) {
         return Promise.resolve();
       }
+    /** if either domain is 0-length, don't apply pathIsColinear() because
+     * corresonding sp[i] will be NaN */
+    let zeroDomain = Object.values(blockDomains).any((d) => d[1] === d[0]);
     /** this is the number of paths in scope, which is relevant to the
      * check for incrementing pathsRequestCount. */
     let pathsResult_length = pathsResult.length;
-      if (pathsResult.length) {
+      if (! zeroDomain && pathsResult.length) {
         let pathGradient = this.get('controlsView.pathGradient'),
             pathGradientUpper = this.get('controlsView.pathGradientUpper');
         dLog('pathGradient', pathGradient, pathGradientUpper, pathsResult.length);

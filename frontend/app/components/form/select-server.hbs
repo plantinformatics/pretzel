@@ -1,0 +1,9 @@
+  <select onchange={{action (action this.selectedServerChangedName) value="target.value" }}>
+    {{#each-in servers as |apiServerName apiServer| }}
+      <option value={{apiServer.tabId}} selected={{eq @selectedValue apiServer}}>{{apiServer.tabId}}</option>
+
+    {{/each-in}}
+  </select>
+
+
+{{yield}}

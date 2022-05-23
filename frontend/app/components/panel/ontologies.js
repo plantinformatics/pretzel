@@ -176,6 +176,9 @@ export default Component.extend({
 
   controlOptions : {
     showHierarchy : true,
+    /** viewOntology : indicate to record/entry-expander whether it is within
+     * the context of panel/ontologies or manage-explorer.
+     */
     context : {viewOntology : true},
   },
   showHierarchyChanged(value) {

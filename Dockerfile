@@ -13,7 +13,7 @@ FROM node:10-alpine
 # terminus-font is required by ssconvert.
 RUN apk add --no-cache git \
      --virtual .gyp \
-     python \
+     py3-pip \
      make \
      g++ \
      bash	\
@@ -22,16 +22,42 @@ RUN apk add --no-cache git \
      terminus-font	\
      curl	\
      jq	\
-     samtools	\
   && npm install bower -g
 
+#     samtools	
+
+# to compile node.js from source, apk add linux-headers
+# for debugging binaries : add strace
+
+
 # add backend to image
-COPY ./backend /app
+COPY ./lb4app /app
 
 # add frontend to image
 COPY ./frontend /frontend
-COPY ./backend/scripts/uploadSpreadsheet.bash /app/scripts/.
+COPY ./lb4app/lb3app/scripts/uploadSpreadsheet.bash /app/scripts/.
 COPY ./resources/tools/dev/snps2Dataset.pl /app/scripts/.
+
+# additional node version for lb4app (backend)
+ENV NODE_BE /usr/local/node16
+RUN mkdir $NODE_BE $NODE_BE/bin $NODE_BE/lib
+
+# To copy these symbolic links successfully, copy the whole directory, not individual files :
+# /usr/local/bin
+#   npm -> ../lib/node_modules/npm/bin/npm-cli.js
+#   npx -> ../lib/node_modules/npm/bin/npx-cli.js
+COPY --from=node:16-alpine /usr/local/bin  $NODE_BE/bin
+COPY --from=node:16-alpine /usr/local/lib  $NODE_BE/lib
+
+
+RUN date \
+  && ls -sF $NODE_BE/lib \
+  && export PATH=$NODE_BE/bin:$PATH \
+  && export NODE_PATH=$NODE_BE/lib/node_modules \
+  && cd $NODE_BE/lib && npm -v && node -v \
+  && npm config set scripts-prepend-node-path true \
+  && cd /app && npm install nodemon@1.18.8 && npm ci \
+  && date
 
 
 RUN node --version
@@ -50,4 +76,4 @@ RUN ( [ ! -L /app/client ] || rm /app/client ) && \
 
 ENV EMAIL_VERIFY=NONE AUTH=ALL
 
-ENTRYPOINT ["node", "/app/server/server.js"]
+ENTRYPOINT ["/usr/local/node16/bin/node", "/app/lb3app/server/server.js"]

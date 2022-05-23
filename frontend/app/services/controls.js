@@ -20,7 +20,7 @@ export default Service.extend(Evented, {
     /** This occurs after mapview.js: controls : Ember.Object.create({ view : {  } }),
      * and draw-map : draw() setup of  oa.drawOptions.
      */
-    controls = oa.drawOptions.controls;
+    controls = oa?.drawOptions.controls;
     dLog('controls', controls);
     return controls;
   }),

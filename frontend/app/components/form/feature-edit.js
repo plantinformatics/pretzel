@@ -248,12 +248,17 @@ export default Component.extend({
     let match = nodeName.match(/^\[(CO_[0-9]{3}:[0-9]{7})\]/);
     if (match) {
       nodeName = match[1];
+    } else if (!(match = nodeName.match(/^CO_[0-9]{3}:[0-9]{7}$/))) {
+      dLog('selectExpander', nodeName, 'not an OntologyID; no action');
+      nodeName = null;
     }
-    this.set('browseTreeEnable', false);
-    this.feature.set('values.Ontology', nodeName);
-    /* ontologyText depends on .editOntology. for setFeatureOntology() it is set by <input>. */
-    this.set('editOntology', nodeName);
-    this.saveFeature(nodeName);
+    if (nodeName) {
+      this.set('browseTreeEnable', false);
+      this.feature.set('values.Ontology', nodeName);
+      /* ontologyText depends on .editOntology. for setFeatureOntology() it is set by <input>. */
+      this.set('editOntology', nodeName);
+      this.saveFeature(nodeName);
+    }
   },
 
 

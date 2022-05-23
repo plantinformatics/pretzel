@@ -42,13 +42,26 @@
         <label for="checkbox-historyBlocks">Viewed Chromosomes</label>
       </span>
 
+      <span style="margin-left : 10px; display: inline-block;">
+        <label for="select-group-as-filter">Group</label>
+        <span id="select-group-as-filter">
+          {{form/select-group
+            selectedValue=this.groupFilterSelected
+            values=(to-array-promise-proxy this.groupsForFilter)
+            selectedGroupChanged=(action this.selectedGroupChanged) }}
+           </span>
+      </span>
+
+
     </li>
 
 
   <div class="textInput">
     <i class="glyphicon glyphicon-filter"></i>
     {{!-- there is no suitable autocomplete, so may change to  =off --}}
-    {{input id="nameFilter" type="search" value=nameFilter placeholder="Search All Datasets" autocomplete="dataset-name" }}
+    {{input id="nameFilter" type="search" value=nameFilter
+      input=(action this.nameFilterChanged value="target.value")
+      placeholder="Search All Datasets" autocomplete="dataset-name" }}
   </div>
   <div class="button-row">
     <label>Case</label>

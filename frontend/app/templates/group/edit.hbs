@@ -1,0 +1,92 @@
+<div class="group-outer group-edit">
+
+{{#let this.model as |group|}}
+ <div style="display:flex; gap:1em">
+
+   <button type="button" class="btn btn-info" {{on 'click' (action this.addClient) }}>Add member</button>
+
+   <input
+     oninput={{action (action (mut this.newClientName) value="target.value") }}
+     placeholder="User name (email)"   >
+ </div>
+
+ {{elem/display-message message=this.addClientMsg}}
+
+  <hr class="left20">
+    <button type="button" class="btn btn-info"
+     disabled={{this.deleteGroupDisabled}}
+     {{on 'click' (action this.deleteGroup) }}>Delete Group
+     {{#ember-tooltip side="left" delay=500}}
+       Delete this group.  Enabled when the group has no datasets and no members.
+     {{/ember-tooltip}}
+    </button>
+
+    <div>{{this.deleteGroupMsg}}</div>
+
+    <div  style="margin-top: 2em;">
+      <button type="button" class="btn btn-info"
+       {{on 'click' (action this.refresh) }}>
+        {{elem/icon-base name='refresh'}}
+        Refresh
+      </button>
+    </div>
+
+  <hr class="left20">
+
+
+  <label style="margin-top : 3em;">
+    Datasets of group : &nbsp;<span style="font-size: larger;">{{group.name}}</span>
+  </label>
+  {{#if group.groupDatasets.length}}
+      <div class="margin-1em group-dataset">
+        <label>Remove group ownership</label>
+        <label>Dataset</label>
+        <label>Owner</label>
+        <label>Group</label>
+        <label>public</label>
+        <label>createdAt</label>
+      </div>
+    {{#each group.groupDatasets as |dataset|}}
+      <div class="margin-1em group-dataset">
+        <span>
+          <button type="button" class="btn btn-info btn-xs"
+             {{on 'click' (action this.unGroup dataset) }}>
+               {{elem/icon-base name='remove'}}
+          </button>
+        </span>
+       <span>{{dataset.id}}</span>
+       <span style="overflow-x: hidden">
+         {{#if dataset.owner}}
+           <i class="glyphicon glyphicon-ok"></i>
+         {{else}}
+           {{to-promise-proxy dataset.client.email}}
+           {{#ember-tooltip side="bottom" delay=500}}
+             {{to-promise-proxy dataset.client.email}}
+           {{/ember-tooltip}}
+         {{/if}}
+       </span>
+       <span>{{dataset.groupId.name}}</span>
+       <span>{{dataset.public}}</span>
+       <span>{{dataset.createdAtShort}}</span>
+      </div>
+    {{/each}}
+    <div>{{elem/display-message message=this.unGroupMsg}}</div>
+  {{/if}}
+
+  {{group/group-members group=group selectMember=(action this.selectMember)
+    removeGroupMember=(action this.removeGroupMember) }}
+  {{#if this.selectedClientGroup}}
+    {{this.selectedClientGroup.id}}
+    <button type="button" class="btn btn-info" {{on 'click' (action this.removeGroupMember this.selectedClientGroup) }}>Remove member</button>
+  {{/if}}
+  <div>{{this.removeGroupMemberMsg}}</div>
+
+{{/let}}
+
+
+
+
+{{outlet}}
+
+
+</div>
