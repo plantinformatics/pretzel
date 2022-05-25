@@ -43,7 +43,7 @@ import { selectGroup, nowOrAfterTransition } from '../../utils/draw/d3-svg';
 import { breakPoint } from '../../utils/breakPoint';
 import { configureHover } from '../../utils/hover';
 import { getAttrOrCP } from '../../utils/ember-devel';
-import { intervalExtent, intervalOverlap }  from '../../utils/interval-calcs';
+import { intervalExtent, intervalOverlapOrAbut }  from '../../utils/interval-calcs';
 import { inRange } from '../../utils/draw/zoomPanCalcs';
 import { updateDomain } from '../../utils/stacksLayout';
 
@@ -1211,7 +1211,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     /** comment re. getAttrOrCP() in @see keyFn() */
     value = getAttrOrCP(feature, 'value'), // feature.get('value'),
     domain = this.currentDomain,
-    overlap = intervalOverlap([value, domain]);
+    overlap = intervalOverlapOrAbut([value, domain]);
     return overlap;
   },
   inRange(feature) {
@@ -1230,7 +1230,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     yInterval = value.length ? value.map(yScale) : yScale(value),
     overlap = value.length === 1 ?
       inRange(yInterval[0], range0) :
-      value.length ? intervalOverlap([yInterval, range0]) :
+      value.length ? intervalOverlapOrAbut([yInterval, range0]) :
       inRange(yInterval, range0);
     return overlap;
   },
