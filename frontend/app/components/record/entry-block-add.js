@@ -45,7 +45,7 @@ export default EntryBase.extend({
   featureHasAliases(featureName) {
     /** array of aliases which mapped to this feature name. */
     let
-    aliases = this.featuresAliases[featureName],
+    aliases = this.featuresAliases ? this.featuresAliases[featureName] : [],
     /** return the other half of the alias, relative to featureName.  */
     aliasNames = aliases; /*&& aliases
       .map((a) => (a.string1 === featureName) ? a.string2 : a.string1); */
