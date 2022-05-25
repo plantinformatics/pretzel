@@ -9,6 +9,7 @@ serverDir=$PWD
 case $PWD in
   /)
     # container configuration
+    # resourcesDir=$scriptsDir
     resourcesDir=/app/scripts
     toolsDev=$resourcesDir
     datasetIdDir=$resourcesDir/blast/datasetId

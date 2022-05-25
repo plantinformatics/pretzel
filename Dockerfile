@@ -29,14 +29,15 @@ RUN apk add --no-cache git \
 # to compile node.js from source, apk add linux-headers
 # for debugging binaries : add strace
 
+ENV scriptsDir /app/lb3app/scripts
 
 # add backend to image
 COPY ./lb4app /app
 
 # add frontend to image
 COPY ./frontend /frontend
-COPY ./lb4app/lb3app/scripts/uploadSpreadsheet.bash /app/scripts/.
-COPY ./resources/tools/dev/snps2Dataset.pl /app/scripts/.
+# uploadSpreadsheet.bash is in $scriptsDir/.
+COPY ./resources/tools/dev/snps2Dataset.pl $scriptsDir/.
 
 # additional node version for lb4app (backend)
 ENV NODE_BE /usr/local/node16
@@ -76,4 +77,5 @@ RUN ( [ ! -L /app/client ] || rm /app/client ) && \
 
 ENV EMAIL_VERIFY=NONE AUTH=ALL
 
+# $NODE_BE/bin/node
 ENTRYPOINT ["/usr/local/node16/bin/node", "/app/lb3app/server/server.js"]

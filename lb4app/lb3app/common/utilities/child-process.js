@@ -77,9 +77,10 @@ exports.childProcess = (scriptName, postData, useFile, fileName, moreParams, dat
   replaceDataset = !!msg.replaceDataset, 
    */
   currentDir = process.cwd(),
-  /** In the Docker container, server cwd is /, and scriptName (e.g. uploadSpreadsheet.bash) is in /app/scripts/ */
-  scriptsDir = (currentDir === "/") ? "/app/scripts" : 
-    currentDir.endsWith("/backend") ? 'scripts' : 'backend/scripts',
+  /** In the Docker container, server cwd is /.  scriptName (e.g. uploadSpreadsheet.bash) is in $scriptsDir/ */
+  scriptsDir = process.env.scriptsDir ||
+    ((currentDir === "/") ? "/app/lb3app/scripts" :
+     currentDir.endsWith("/backend") ? 'scripts' : 'backend/scripts'),
   // process.execPath is /usr/bin/node,  need /usr/bin/ for mv, mkdir, perl
   PATH = process.env.PATH + ':' + scriptsDir,
   /** file handles : stdin, stdout, stderr, output errors, output warnings. */

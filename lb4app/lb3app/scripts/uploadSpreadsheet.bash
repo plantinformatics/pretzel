@@ -2,6 +2,7 @@
 
 case $PWD in
   /)
+    # resourcesDir=$scriptsDir
     resourcesDir=/app/scripts
     toolsDev=$resourcesDir
     ;;
