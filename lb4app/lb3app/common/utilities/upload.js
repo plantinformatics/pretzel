@@ -196,8 +196,15 @@ function insert_features_recursive(db, dataset_id, features_to_insert, ordered, 
       });
       delete feature.features;
     }
-    if (! notDefined(feature.value) && notDefined(feature.value_0)) {
-      feature.value_0 = feature.value.length ? feature.value[0] : feature.value;
+    /** snps2Dataset.pl generates value_0:null for QTL;
+     * models/block.js : loadRequiredData() -> allFeatures() ->
+     * getBlockFeaturesInterval( true) loads all the features of a QTL block, so
+     * QTL value_0 is not used.
+     */
+    if (! notDefined(feature.value) && (feature.value_0 === undefined)) {
+      const value = feature.value;
+      feature.value_0 = (value.length === 0) ? null : 
+        value.length ? value[0] : value;
     }
   });
 
