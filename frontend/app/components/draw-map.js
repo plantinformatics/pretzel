@@ -4558,6 +4558,7 @@ export default Component.extend(Evented, {
      * @param brushExtents  limits of the current brush, to which we are zooming
      */
     function zoom(that, brushExtents) {
+      const fnName = 'zoom';
       const trace_zoom = 0;
       /** can be undefined in some cases. it is defined for WheelEvent - mousewheel zoom. */
       let e = d3.event.sourceEvent;
@@ -4667,6 +4668,11 @@ export default Component.extend(Evented, {
 
             domain = wheelNewDomain(axis, oa.axisApi, false);  // uses d3.event, d3.mouse()
           }
+          if (! axis.axis1d) {
+            let a1 = axis?.blocks?.mapBy('block.axis1d');
+            dLog(fnName, axisName, axis, a1, a1?.mapBy('isDestroying'));
+            // axis.log();
+          } else
           if (domain) {
             domainChanged = true;
             /** mousewheel zoom out is limited by javascript

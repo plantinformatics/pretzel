@@ -1117,10 +1117,24 @@ export default Model.extend({
       return axis1d;
     }),
 
+  /** match with a different server, using reference dataset name and scope. */
+  get crossServerAxis1d() {
+    let
+    scope = this.get('scope'),
+    datasetId = this.get('datasetId.id'),
+    axes1d = this.get('blockService').axes1d,
+    axis1d = axes1d.datasetIdScope2axis1d(datasetId, scope);
+    return axis1d;
+  },
   axis1d : computed(
     'referencedAxis1d', 'referenceBlock.referencedAxis1d',
     function () {
+      const fnName = 'axis1d';
       let axis1d = this.get('referencedAxis1d') || this.get('referenceBlock.referencedAxis1d');
+      if (! axis1d) {
+        axis1d = this.get('crossServerAxis1d') || this.get('referenceBlock.crossServerAxis1d');
+        dLog(fnName, axis1d, this);
+      }
       if (axis1d?.isDestroying) {
         dLog('axis1d isDestroying', axis1d);
         axis1d = undefined;

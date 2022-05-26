@@ -765,8 +765,19 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     'axis.id', 'stacks.axesPCount', 'axis.view',
     function () {
       let
+      fnName = 'axisS',
       axisName = this.get('axis.id'),
       axisS = Stacked.getAxis(axisName) || this.get('axis.view');
+      if (! axisS) {
+        let
+        block = this.axis,
+        scope = block.get('scope'),
+        name = block.get('datasetId.id');
+        /** match with a different server, using name and scope. */
+        axisS = Stacked.axisOfDatasetAndScope(true, name, scope) ||
+          Stacked.axisOfDatasetAndScope(false, name, scope);
+        dLog(fnName, name, scope, axisS, block);
+      }
       if (axisS) {
         if (axisS.axis1d === this && this.isDestroying)
           axisS.axis1d = undefined;
