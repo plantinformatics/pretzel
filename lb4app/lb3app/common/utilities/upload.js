@@ -408,9 +408,13 @@ exports.handleJson = function(msg, uploadParsed, cb) {
               /* if using .find( {where} )
                * let dataset = datasets && datasets.length && datasets.find((d) => d.id === id); */
               /** id exists, so dataset !== undefined.
+               * If dataset is a copy from another server (it has ._origin),
+               * then it is OK for any user to remove it and replace with their
+               * own upload.
                * if using {where} then !dataset would imply it is owned by another user. */
-              if (dataset && (clientIdString !== dataset.clientId.id.hexSlice())) {
-                let error = Error('Dataset ' + id + ' is not owned by this user');
+              if (dataset && ! dataset.meta._origin &&
+                  (clientIdString !== dataset.clientId.id.hexSlice())) {
+                let error = ErrorStatus(403, 'Dataset ' + id + ' is not owned by this user');
                 // .catch does replyCb(error);
                 // don't proceed to following .then()
                 throw error;
