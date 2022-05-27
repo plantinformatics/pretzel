@@ -348,7 +348,7 @@ module.exports = function(Dataset) {
         errorText = writable ? 
               'User ' + clientId + ' is not a member of group ' + groupId + soText :
               'User ' + clientId + ' is not owner of group ' + groupId + ' which is not writable,' + soText;
-        var err = ErrorStatus(401, errorText);
+        var err = ErrorStatus(403, errorText);
         console.log(errorText);
         next(err);
         return;
