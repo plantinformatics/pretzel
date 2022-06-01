@@ -7,7 +7,7 @@ logFile=~/log/blast/blastn_cont
 # examples:
 #   OUN333/newdir/190509_OUN333_pseudomolecules_V1.00
 #   190509_RGT_Planet_pseudomolecules_V1/190509_RGT_Planet_pseudomolecules_V1.fasta
-B=/mnt/data_blast/blast/GENOME_REFERENCES
+B=${blastDir:-/mnt/data_blast/blast}/GENOME_REFERENCES
 [ -d $B ] || { status=$?; echo 1>&2 "dir $B is not present." $status ; exit $status; }
 
 # $blastnIsInstalled is 0 (true) if blastn is installed locally, otherwise use blast container.

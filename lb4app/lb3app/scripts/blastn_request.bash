@@ -1,10 +1,11 @@
 #!/bin/bash
 
-# @param fileName	fasta file in $B/queries/ containing the search query
+# @param fileName	fasta file in $logBlastDir/queries/ containing the search query
 # @param dbName currently the blast db name, e.g. 190509_RGT_Planet_pseudomolecules_V1.fasta
 #  may change to be the parent / reference name.
 
-B=/mnt/data_blast/blast/GENOME_REFERENCES/190509_RGT_Planet_pseudomolecules_V1
+# precursor of $logBlastDir
+# B=/mnt/data_blast/blast/GENOME_REFERENCES/190509_RGT_Planet_pseudomolecules_V1
 if [ -d ~/log ]
 then 
   logDir= ~/log

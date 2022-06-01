@@ -10,7 +10,6 @@ case $PWD in
     resourcesDir=/app/scripts
     toolsDev=$resourcesDir
     blastn=$resourcesDir/blastn_request.bash
-    datasetIdDir=$resourcesDir/blast/datasetId
     ;;
   *backend)
     resourcesDir=../resources
@@ -19,10 +18,14 @@ case $PWD in
     resourcesDir=resources
     ;;
 esac
+# Treat blank variables as unset, using :=, instead of =.
+# bash(1) : Omitting the colon results in a test only for a parameter that is unset.
+#
 # Default value of toolsDev, if not set above.
-unused_var=${toolsDev=$resourcesDir/tools/dev}
-unused_var=${blastn=blastn}
-unused_var=${datasetIdDir=/mnt/data_blast/blast/datasetId}
+unused_var=${toolsDev:=$resourcesDir/tools/dev}
+unused_var=${blastn:=blastn}
+unused_var=${blastDir:=/mnt/data_blast/blast}
+unused_var=${datasetIdDir:=$blastDir/datasetId}
 
 
 sp=$toolsDev/snps2Dataset.pl

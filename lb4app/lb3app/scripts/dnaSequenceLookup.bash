@@ -10,9 +10,8 @@ case $PWD in
   /)
     # container configuration
     # resourcesDir=$scriptsDir
-    resourcesDir=/app/scripts
+    resourcesDir=${scriptsDir=/app/lb3app/scripts}
     toolsDev=$resourcesDir
-    datasetIdDir=$resourcesDir/blast/datasetId
     ;;
   *backend)
     resourcesDir=../resources
@@ -25,7 +24,8 @@ esac
 unused_var=${toolsDev=$resourcesDir/tools/dev}
 unused_var=${samtools=samtools}
 # or /faidx after blast/
-unused_var=${datasetIdDir=/mnt/data_blast/blast/datasetId}
+unused_var=${blastDir:=/mnt/data_blast/blast}
+unused_var=${datasetIdDir:=$blastDir/datasetId}
 
 # Test if running within container.
 # File Handles for errors and warnings to be reported back to the user.
@@ -55,7 +55,7 @@ then
   fileName=$1
   useFile=$2
   parent=$3
-  region=$4
+  region=$(echo "$4" | sed 's/^chr//')
   echo fileName="$fileName", useFile=$useFile, parent="$parent", region=$region  >> $logFile
 else
   parent=$1
