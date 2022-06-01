@@ -4265,9 +4265,16 @@ export default Component.extend(Evented, {
           mapChrName = blockR.get('brushName');
           selectedFeatures[mapChrName] = [];
 
-            let blockFeatures = oa.z[block.axisName]; // or block.get('features')
-          d3.keys(blockFeatures).forEach(function(f) {
-            let feature = blockFeatures[f];
+          /** The initial application, Marker Map Viewer, was for genetic maps,
+           * for which marker names are unique within a chromosome, and the data
+           * structure reflected this : (z[axisName][featureName] -> location).
+           * Now block.get('features') is used - providing the full array of
+           * features, regardless of uniqueness of names.
+           */
+          let blockFeatures = block.block.get('features');  // was oa.z[block.axisName];
+          /*d3.keys()*/ blockFeatures.forEach(function(feature) {
+            let f = feature.name;
+            // let feature = blockFeatures[f];
             let value = feature?.value;
             /** fLocation is value[0], i.e. the start position. The circles are placed
              * at fLocation, and the end position is not currently shown.
@@ -4275,7 +4282,7 @@ export default Component.extend(Evented, {
              * overlaps the brush thumb [start,end].
              */
             let fLocation;
-            if (! isOtherField[f] && ((fLocation = blockFeatures[f].location) !== undefined))
+            if (/*! isOtherField[f] && */ ((fLocation = feature.location) !== undefined))
             {
               /** range is from yRange() which incorporates .portion, so use ys rather than axis.y. */
               let yScale = oa.ys[p];
@@ -4295,11 +4302,11 @@ export default Component.extend(Evented, {
                * fLocation :  actual feature position in the axis, 
                * yp(fLocation) :  is the relative feature position in the svg
                */
-              /** lacking the g.block structure which would enable f to be
+              /** lacking the g.block structure which would enable f (feature.name) to be
                * unique within its parent g, this combinedId enables transition
                * to be implemented in an improvised way.
-               * Update : originally (Genetic Maps) f.name was unique within block,
-               * now use f.id because f.name can be repeated within block.
+               * Update : originally (Genetic Maps) feature.name was unique within block,
+               * now use feature.id because feature.name can be repeated within block.
                */
               let combinedId = axisFeatureCircles_eltId(feature),
               dot = axisS.selectAll('circle#' + combinedId);
