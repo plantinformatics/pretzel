@@ -1,11 +1,49 @@
-FROM node:10-alpine
+
+# ------------------------------------------------------------------------------
+#     samtools	faidx is used for DNA lookup
+
+# samtools build layer is based on https://hub.docker.com/r/bschiffthaler/samtools/dockerfile
+
+ARG NODE_ALPINE_VERSION 10
+
+# ${NODE_ALPINE_VERSION}
+FROM node:10-alpine as node-alpine-build-samtools
+
+ARG NODE_ALPINE_VERSION 10
+ARG SAMTOOLS_VERSION=1.15.1
+ARG BUILD_NCPU=1
+
+RUN apk update && apk add build-base wget zlib-dev tar bzip2-dev xz-dev \
+    curl-dev ncurses-dev ncurses-static curl-static zlib-static bzip2-static \
+    nghttp2-static openssl-libs-static brotli-static
+
+WORKDIR /build
+RUN wget https://github.com/samtools/samtools/releases/download/${SAMTOOLS_VERSION}/samtools-${SAMTOOLS_VERSION}.tar.bz2
+RUN tar -xf samtools-${SAMTOOLS_VERSION}.tar.bz2
+WORKDIR /build/samtools-${SAMTOOLS_VERSION}
+RUN ./configure && \
+    make -j${BUILD_NCPU}
+RUN strip samtools
+
+
+# ------------------------------------------------------------------------------
+
+# ${NODE_ALPINE_VERSION}
+FROM node:10-alpine as node-alpine-pretzel
+
+ARG PRETZEL_VERSION 2.14.1
+ARG NODE_ALPINE_VERSION 10
 
 # node-sass version is selected so that the binary can be downloaded;
 # otherwise, node-gyp will be built, and hence the following dependencies on python, make, c++.
 # from : https://github.com/nodejs/docker-node/issues/610 :
 #  node-sass is built using node-gyp, which is built using python.
 # required for an NPM repo
-#
+# 
+# alpine image uses libmusl (C stdlib) so linux_musl-x64-* is required.
+# The version can be indicated either by $SASS_BINARY_NAME or --sass-binary-name :
+# export SASS_BINARY_NAME=linux_musl-x64-64; npm install node-sass@^5.0.0 --sass-binary-name=linux_musl-x64-64 --scripts-prepend-node-path=true
+
 # These packages are for importing spreadsheets (xlsx etc) :
 # bash is now used by /backend/scripts/uploadSpreadsheet.bash
 # and perl by /resources/tools/dev/snps2Dataset.pl
@@ -24,19 +62,31 @@ RUN apk add --no-cache git \
      jq	\
   && npm install bower -g
 
-#     samtools	
+
+# ------------------------------------------------------------------------------
+
+ARG SAMTOOLS_VERSION=1.15.1
+
+# RUN apk add --no-cache bash
+RUN apk add --no-cache libbz2 zlib libcurl xz-libs
+WORKDIR / 
+COPY --from=node-alpine-build-samtools /build/samtools-${SAMTOOLS_VERSION}/samtools /usr/local/bin/samtools
+
+# ------------------------------------------------------------------------------
+
 
 # to compile node.js from source, apk add linux-headers
 # for debugging binaries : add strace
 
+ENV scriptsDir /app/lb3app/scripts
 
 # add backend to image
 COPY ./lb4app /app
 
 # add frontend to image
 COPY ./frontend /frontend
-COPY ./lb4app/lb3app/scripts/uploadSpreadsheet.bash /app/scripts/.
-COPY ./resources/tools/dev/snps2Dataset.pl /app/scripts/.
+# uploadSpreadsheet.bash is in $scriptsDir/.
+COPY ./resources/tools/dev/snps2Dataset.pl $scriptsDir/.
 
 # additional node version for lb4app (backend)
 ENV NODE_BE /usr/local/node16
@@ -76,4 +126,16 @@ RUN ( [ ! -L /app/client ] || rm /app/client ) && \
 
 ENV EMAIL_VERIFY=NONE AUTH=ALL
 
+# $NODE_BE/bin/node
 ENTRYPOINT ["/usr/local/node16/bin/node", "/app/lb3app/server/server.js"]
+
+# ------------------------------------------------------------------------------
+
+ARG SAMTOOLS_VERSION=1.15.1
+
+LABEL maintainer='github.com/plantinformatics'
+LABEL software.version=${PRETZEL_VERSION}
+LABEL samtools.version=${SAMTOOLS_VERSION}
+LABEL nodeAlpine.version=${NODE_ALPINE_VERSION}
+
+# ------------------------------------------------------------------------------

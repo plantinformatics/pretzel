@@ -80,24 +80,34 @@ function intervalOverlapCoverage(domain1, domain2) {
 }
 
 /** Calculate the intersection of the given intervals. 
- * @params intervals  number[2][2]
+ * @param intervals  number[2][2]
  * (intervals[i] !== undefined)
  * (intervals[i][0] <= intervals[i][1])
+ * @param abut  true means return a 0-length interval if the intervals abut.
+ * This param may change - prefer to use the separate function for this : @see intervalOverlapOrAbut()
  * @return number[2], or undefined if intervals[i] are disjoint.
  * @desc For testing if there is an overlap, in zoomPanCalcs.js, @see overlapInterval()
  */
-function intervalOverlap(intervals) {
+function intervalOverlap(intervals, abut) {
   let overlap,
   i0 = intervalOrdered(intervals[0]),
   i1 = intervalOrdered(intervals[1]);
 
   // refn : https://scicomp.stackexchange.com/a/26260 spektr
-  if ((i1[0] < i0[1]) && (i0[0] < i1[1])) {
+  let isOverlap = abut ?
+      (i1[0] <= i0[1]) && (i0[0] <= i1[1]) :
+      (i1[0] <  i0[1]) && (i0[0] <  i1[1]);
+  if (isOverlap) {
     overlap = [Math.max(i0[0], i1[0]), Math.min(i0[1], i1[1])];
   }
 
   return overlap;
 }
+function intervalOverlapOrAbut(intervals) {
+  let overlap = intervalOverlap(intervals, true);
+  return overlap;
+}
+
 
 /** Ensure that the endpoints of the given interval are in increasing order, or equal.
  * @return a new array if the endpoints need to be swapped
@@ -229,6 +239,7 @@ export {
   intervalSize, intervalLimit, intervalOutside, intervalMerge, intervalExtent,
   intervalOverlapCoverage,
   intervalOverlap,
+  intervalOverlapOrAbut,
   intervalOrdered,
   intervalJoin,
   intervalSubtract2,

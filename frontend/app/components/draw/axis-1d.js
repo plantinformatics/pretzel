@@ -43,7 +43,7 @@ import { selectGroup, nowOrAfterTransition } from '../../utils/draw/d3-svg';
 import { breakPoint } from '../../utils/breakPoint';
 import { configureHover } from '../../utils/hover';
 import { getAttrOrCP } from '../../utils/ember-devel';
-import { intervalExtent, intervalOverlap }  from '../../utils/interval-calcs';
+import { intervalExtent, intervalOverlapOrAbut }  from '../../utils/interval-calcs';
 import { inRange } from '../../utils/draw/zoomPanCalcs';
 import { updateDomain } from '../../utils/stacksLayout';
 
@@ -765,8 +765,19 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     'axis.id', 'stacks.axesPCount', 'axis.view',
     function () {
       let
+      fnName = 'axisS',
       axisName = this.get('axis.id'),
       axisS = Stacked.getAxis(axisName) || this.get('axis.view');
+      if (! axisS) {
+        let
+        block = this.axis,
+        scope = block.get('scope'),
+        name = block.get('datasetId.id');
+        /** match with a different server, using name and scope. */
+        axisS = Stacked.axisOfDatasetAndScope(true, name, scope) ||
+          Stacked.axisOfDatasetAndScope(false, name, scope);
+        dLog(fnName, name, scope, axisS, block);
+      }
       if (axisS) {
         if (axisS.axis1d === this && this.isDestroying)
           axisS.axis1d = undefined;
@@ -1211,7 +1222,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     /** comment re. getAttrOrCP() in @see keyFn() */
     value = getAttrOrCP(feature, 'value'), // feature.get('value'),
     domain = this.currentDomain,
-    overlap = intervalOverlap([value, domain]);
+    overlap = intervalOverlapOrAbut([value, domain]);
     return overlap;
   },
   inRange(feature) {
@@ -1230,7 +1241,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     yInterval = value.length ? value.map(yScale) : yScale(value),
     overlap = value.length === 1 ?
       inRange(yInterval[0], range0) :
-      value.length ? intervalOverlap([yInterval, range0]) :
+      value.length ? intervalOverlapOrAbut([yInterval, range0]) :
       inRange(yInterval, range0);
     return overlap;
   },

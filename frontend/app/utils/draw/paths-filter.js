@@ -1,7 +1,7 @@
 
 import {
   intervalSize,
-  intervalOverlap as intervalOverlap2
+  intervalOverlapOrAbut as intervalOverlap2
 } from '../interval-calcs';
 
 /* global require */
@@ -45,6 +45,8 @@ function targetNPaths(pathsDensityParams, axisLengthPx) {
 /*----------------------------------------------------------------------------*/
 
 /** Return true if the endpoints of the given path are in the corresponding axis domains.
+ * The comparison is <=, i.e. the path endpoint feature value is in if it is abuts the domain,
+ * e.g. feature value [0,0] is considered within if one end of the domain is 0.
  *
  * @param prType  abstract type description of path result p
  * @param p a path (result from request to backend)
@@ -140,6 +142,7 @@ const indexPrev = 0, indexCurrent = 1;
 
 /** Similar in role to pathsFilter(), this function aims for continuity of the
  * selected paths.
+ * As in pathInDomain(), the comparison is <= (abut).  @see pathInDomain().
  * @param scope = model block-adj .get('scope')
  * scope[2] : {0,1} are {prev,current};  each element is : {blockDomains, pathsDensityParams, nPaths}
  * @param shown set of paths which are shown  (Set)

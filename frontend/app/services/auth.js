@@ -124,12 +124,15 @@ export default Service.extend({
     const filteredIntervalParams = omitUndefined(intervals);
     let
       route= 'Blocks/pathsViaStream',
-    dataIn = {blockA, blockB},
+    /** .id[] is mapped in _endpointURLToken() -> _server() -> blockIdMap() */
+    dataIn = {
+      blockA, blockB,
+      id : [blockA, blockB],
+    },
     {url, data} = this._endpointURLToken(dataIn, route);
     /** .id replaces .blockA, .blockB, but _server() still uses them, and it
      * enables secondary Pretzel servers prior to addition of id to be
      * accessed. */
-    data.id = [blockA, blockB];
     data.intervals = filteredIntervalParams;
       url +=
       '&' +
@@ -654,6 +657,9 @@ export default Service.extend({
 
 /** Map the input blockId params of data, using mapFns, which contains a
  * function for the first and second blockId params respectively.
+ * This is used to selectively modify the blockId params : e.g. when sending to
+ * the server of blockIds[0], map that to a local id.
+ * Apply the same mapping to id[].
  */
 function blockIdMap(data, mapFns) {
   /** blockA, blockB, blockIds are the input blockId params;
@@ -689,6 +695,7 @@ function blockIdMap(data, mapFns) {
   }
   /** if blockIds.length > mapFns.length, then mapFns[0] === mapFns[1], so just use mapFns[0]. */
   blockIds = blockIds.map((blockId, i) => (mapFns[i] || mapFns[0])(blockId));
+  d.id = d.id.map((blockId, i) => (mapFns[i] || mapFns[0])(blockId));
   if (ab)
     [d.blockA, d.blockB] = blockIds;
   else {

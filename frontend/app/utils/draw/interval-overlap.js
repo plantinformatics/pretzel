@@ -21,7 +21,12 @@ var trace_filter = 1;
  * The result is analogous to the comparator function (cmp) result.
  * Assume i[0] < i[1].
  * @return 0 if v is in i, -1 if v < i, +1 if v > i
+ * @desc
+ * The comparison is <=, i.e. the interval domain is a closed [] interval;
+ * equivalent to intervalOverlapOrAbut().
  * The argument order is opposite to the similar function @see inRange()
+ * @param i interval domain.
+ * @param v value to test within domain
  */
 function inInterval(i, v) {
   let
@@ -37,6 +42,8 @@ function trueFunction() { return true; }
 /**
  * @return a function which takes a feature as parameter and returns true if
  * the feature value is within the domain.
+ * @desc
+ * The comparison is <=,  equivalent to intervalOverlapOrAbut(). @see inInterval().
  * @param dataLocation  function which reads the location value from the data
  * @param domain  Array[2] of location limit values.  Not undefined.
  */

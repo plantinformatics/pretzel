@@ -2,7 +2,8 @@
 
 case $PWD in
   /)
-    resourcesDir=/app/scripts
+    # resourcesDir=$scriptsDir
+    resourcesDir=${scriptsDir=/app/lb3app/scripts}
     toolsDev=$resourcesDir
     ;;
   *backend|*lb4app)
