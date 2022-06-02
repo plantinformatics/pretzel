@@ -7,7 +7,7 @@ case $PWD in
   /)
     # container configuration
     # resourcesDir=$scriptsDir
-    resourcesDir=/app/scripts
+    resourcesDir=${scriptsDir=/app/lb3app/scripts}
     toolsDev=$resourcesDir
     blastn=$resourcesDir/blastn_request.bash
     ;;
