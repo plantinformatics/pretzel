@@ -4,12 +4,12 @@
 
 # samtools build layer is based on https://hub.docker.com/r/bschiffthaler/samtools/dockerfile
 
-ARG NODE_ALPINE_VERSION 10
+ARG NODE_ALPINE_VERSION 12
 
 # ${NODE_ALPINE_VERSION}
-FROM node:10-alpine as node-alpine-build-samtools
+FROM node:12-alpine as node-alpine-build-samtools
 
-ARG NODE_ALPINE_VERSION 10
+ARG NODE_ALPINE_VERSION 12
 ARG SAMTOOLS_VERSION=1.15.1
 ARG BUILD_NCPU=1
 
@@ -29,10 +29,10 @@ RUN strip samtools
 # ------------------------------------------------------------------------------
 
 # ${NODE_ALPINE_VERSION}
-FROM node:10-alpine as node-alpine-pretzel
+FROM node:12-alpine as node-alpine-pretzel
 
 ARG PRETZEL_VERSION 2.14.1
-ARG NODE_ALPINE_VERSION 10
+ARG NODE_ALPINE_VERSION 12
 
 # node-sass version is selected so that the binary can be downloaded;
 # otherwise, node-gyp will be built, and hence the following dependencies on python, make, c++.
