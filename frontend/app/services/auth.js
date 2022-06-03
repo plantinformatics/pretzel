@@ -291,7 +291,7 @@ export default Service.extend({
   getBlockFeaturesCount(blocks, options) {
     if (trace_paths)
       dLog('services/auth getBlockFeaturesCount', blocks, options);
-    return this._ajax('Blocks/blockFeaturesCount', 'GET', {blocks, options}, true);
+    return this._ajax('Blocks/blockFeaturesCount', 'GET', {id : blocks, blocks, options}, true);
   },
 
   getBlockFeatureLimits(block, options) {
@@ -662,6 +662,7 @@ export default Service.extend({
  * Apply the same mapping to id[].
  */
 function blockIdMap(data, mapFns) {
+  const fnName = 'blockIdMap';
   /** blockA, blockB, blockIds are the input blockId params;
    * d is the result data, and at this point contains the other params.
    */
@@ -678,7 +679,7 @@ function blockIdMap(data, mapFns) {
   d = restFields.reduce((result, f) => {result[f] = data[f]; return result;}, {}),
   /** ab is true if data contains .blockA,B, false if .blockIds or .blocks */
   ab = !!blockA;
-  console.log('blockIdMap', data, blockA, blockB, blockIds, restFields, d, ab);
+  console.log(fnName, data, blockA, blockB, blockIds, restFields, d, ab);
   if ((!blockA !== !blockB) || (!blockA === !blockIds)) {
     assert('param data is expected to contain either .blockA and .blockB, or .blockIds : ' +
                  JSON.stringify(data), false);
@@ -695,13 +696,18 @@ function blockIdMap(data, mapFns) {
   }
   /** if blockIds.length > mapFns.length, then mapFns[0] === mapFns[1], so just use mapFns[0]. */
   blockIds = blockIds.map((blockId, i) => (mapFns[i] || mapFns[0])(blockId));
-  d.id = d.id.map((blockId, i) => (mapFns[i] || mapFns[0])(blockId));
+  /** handle any functions which pass blockIds and don't yet set id.   */
+  if (! d.id) {
+    dLog(fnName, d, '.id undefined', blockIds);
+  } else {
+    d.id = d.id.map((blockId, i) => (mapFns[i] || mapFns[0])(blockId));
+  }
   if (ab)
     [d.blockA, d.blockB] = blockIds;
   else {
     d[arrayName] = blockIds;
   }
-  console.log('blockIdMap', d, ab, arrayName);
+  console.log(fnName, d, ab, arrayName);
   return d;
 }
 
