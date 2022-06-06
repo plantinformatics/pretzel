@@ -2219,3 +2219,17 @@ ul.dataBlocks > li > * {
 
 
 /* -------------------------------------------------------------------------- */
+
+#stacksFrames {
+  display : flex;
+  flex-direction : row;
+  gap : 1em;
+  width: 100%;
+  height: 70%;
+  position: absolute;
+}
+#stacksFrames > div {
+  flex-grow: 1;
+}
+
+// -----------------------------------------------------------------------------

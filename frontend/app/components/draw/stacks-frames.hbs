@@ -1,0 +1,12 @@
+
+{{log 'stacks-frames' this.stacks 'oa' @oa  }} {{!-- this.stacks.0.axes.length this.stacks.axesPCount  this.stacksCount this --}}
+
+stacksFrames {{this.stacks.length}} {{this.stacks.axesPCount}} {{this.stacksCount}}
+<div id="stacksFrames">
+  {{#each this.stacks as |stack| }}
+    <div style="border : 1px solid green">{{stack}}</div> {{!-- .stackID --}}
+  {{/each}}
+</div>
+
+{{yield}}
+
