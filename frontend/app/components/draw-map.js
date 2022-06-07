@@ -432,6 +432,9 @@ export default Component.extend(Evented, {
   allowPathsOutsideZoom : computed('controls.view.tickOrPath', function () {
     return this.get('controls.view.tickOrPath') === 'path'; }),
 
+  /** enable display of stacks-frames */
+  showStacksFrames : false,
+
   /*------------------------------------------------------------------------*/
 
   xOffsets : {},

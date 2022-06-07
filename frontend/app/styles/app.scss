@@ -2232,4 +2232,19 @@ ul.dataBlocks > li > * {
   flex-grow: 1;
 }
 
+.grid-stack
+{
+  position: absolute;
+}
+.grid-stack-item
+{
+  border : 1px solid darkblue;
+}
+
+svg.FeatureMapViewer
+{
+  /* z-index: 1;*/	/* in front of .grid-stack, so that axis is sensitive to cursor actions */
+  /* position: relative;*/	/* enable z-index */
+}
+
 // -----------------------------------------------------------------------------

@@ -1,12 +1,17 @@
+{{this.stacksLengthEffect}}
 
 {{log 'stacks-frames' this.stacks 'oa' @oa  }} {{!-- this.stacks.0.axes.length this.stacks.axesPCount  this.stacksCount this --}}
 
-stacksFrames {{this.stacks.length}} {{this.stacks.axesPCount}} {{this.stacksCount}}
-<div id="stacksFrames">
-  {{#each this.stacks as |stack| }}
-    <div style="border : 1px solid green">{{stack}}</div> {{!-- .stackID --}}
+{{!-- stacksFrames {{this.stacks.length} } {{this.stacks.axesPCount} } {{this.stacksCount --}}
+
+<GridStack @options={{hash animate=true}} @onChange={{this.change}}>
+  {{#each xOffsets as | xOffset i | }}
+  <GridStackItem @options={{hash x=xOffset y=0 w=itemWidth h=4}}>
+    Axis #{{i}}
+  </GridStackItem>
   {{/each}}
-</div>
+</GridStack>
+
 
 {{yield}}
 

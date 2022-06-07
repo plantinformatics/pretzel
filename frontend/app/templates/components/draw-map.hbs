@@ -11,7 +11,16 @@
 
 
   <div id="popoverTarget" style="float:right"></div>
-  {{draw/stacks-frames  oa=oa drawMap=this axes2d=axes2d  }}
+  <div style="margin-left : 2em">
+    <input type="checkbox"
+      id="enable-stacks-frames"
+      checked={{this.showStacksFrames}}
+      oninput={{action (action (mut this.showStacksFrames)) value="target.checked" }}  >
+    <label for="enable-stacks-frames">Show Stacks Frames</label>
+  </div>
+  {{#if this.showStacksFrames}}
+    {{draw/stacks-frames  oa=oa drawMap=this axes2d=axes2d  }}
+  {{/if}}
 </div>
 
 {{yield}}
