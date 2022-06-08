@@ -85,7 +85,7 @@
   },
   "private": true,
   "dependencies": {
-    "caniuse-lite": "^1.0.30001230",
+    "caniuse-lite": "^1.0.30001349",
     "colresizable": "github:felipedgarcia/colresizable",
     "ember-array-helper": ">=5",
     "ember-cli-build-date": "github:bracke/ember-cli-build-date",
