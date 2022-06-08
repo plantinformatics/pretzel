@@ -1,4 +1,11 @@
-stacksCount : {{ stacksCount }}, {{ axesP.length }}
-{{draw/axes-1d drawMap=drawMap axesP=axesP axes2d=axes2d
+{{!-- stacksCount : {{ stacksCount } }, {{ axesP.length --}}
+
+{{this.stacksNew.length}}
+{{#each this.stacksNew as | stack i | }}
+  <Draw::StackView stack>{{i}}</Draw::StackView>
+{{/each}}
+
+{{draw/axes-1d drawMap=drawMap axes2d=axes2d
   featuresInBlocks=featuresInBlocks
 }}
+{{yield}}

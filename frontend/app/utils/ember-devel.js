@@ -151,10 +151,15 @@ function findParent(emberComponent, matchFn) {
 
 // -----------------------------------------------------------------------------
 
+function blockInfo(block) { return block && [block.id, block.store.name, block.get(_internalModel_data), block.get('isCopy'), block.get('_meta._origin')]; }
+
+// -----------------------------------------------------------------------------
+
 
 export {
   parentOfType, elt0, getAttrOrCP, _internalModel_data, nowOrLater,  promiseText, toPromiseProxy,
   toArrayPromiseProxy,
   compareDependencies,
   findParent,
+  blockInfo,
  };
