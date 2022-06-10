@@ -77,14 +77,20 @@ exports.childProcess = (scriptName, postData, useFile, fileName, moreParams, dat
   replaceDataset = !!msg.replaceDataset, 
    */
   currentDir = process.cwd(),
-  /** In the Docker container, server cwd is /.  scriptName (e.g. uploadSpreadsheet.bash) is in $scriptsDir/ */
+  /** In the Docker container, server cwd is /.  scriptName (e.g. uploadSpreadsheet.bash) is in $scriptsDir/
+   * backend/ has been renamed to lb4app, but eventually lb3app/ should be
+   * re-absorbed and could become backend/ again.
+   */
   scriptsDir = process.env.scriptsDir ||
     ((currentDir === "/") ? "/app/lb3app/scripts" :
+     currentDir.endsWith("/lb4app") ? 'lb3app/scripts' : 
      currentDir.endsWith("/backend") ? 'scripts' : 'backend/scripts'),
+  env = Object.assign({}, process.env),
   // process.execPath is /usr/bin/node,  need /usr/bin/ for mv, mkdir, perl
   PATH = process.env.PATH + ':' + scriptsDir,
   /** file handles : stdin, stdout, stderr, output errors, output warnings. */
-  options = {env : {PATH},  stdio: ['pipe', 'pipe', process.stderr, 'pipe', 'pipe'] };
+  options = {env,  stdio: ['pipe', 'pipe', process.stderr, 'pipe', 'pipe'] };
+  env.PATH = PATH;
   let params = [fileName, useFile];
   if (moreParams && moreParams.length) {
     params = params.concat(moreParams);

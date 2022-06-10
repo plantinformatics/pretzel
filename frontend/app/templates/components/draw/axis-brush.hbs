@@ -12,7 +12,7 @@
   </tr>
 
 <div>
-  <label>DNA sequence for brushed interval</label>
+  <label>DNA sequence / VCF Genotype for brushed interval</label>
   <span>
     <span>{{object-at 0 this.sequenceLookupDomain}}</span>
     <span>{{object-at 1 this.sequenceLookupDomain}}</span>
@@ -24,9 +24,17 @@
   {{else}}
     <span>Lookup Region limit is 100kb</span>
   {{/unless}}
+
+  {{#if this.vcfGenotypeLookupDomain}}
+    <button onclick={{action this.vcfGenotypeLookup}} class="btn btn-xs">VCF Lookup</button>
+  {{else}}
+    <span>VCF Lookup Region limit is 1Mb</span>
+  {{/if}}
+
 </div>
 <div>
   <textarea style="width: 100%;">{{sequenceText}}</textarea>
+  <textarea style="width: 100%;">{{vcfGenotypeText}}</textarea>
 </div>
 
 

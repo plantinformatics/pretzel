@@ -298,6 +298,38 @@ export default Component.extend(Evented, AxisEvents, {
 
   // ---------------------------------------------------------------------------
 
+  vcfGenotypeLookupDomain: computed('block.brushedDomain', function () {
+    let
+    domain = this.get('block.brushedDomain'),
+    domainInteger = domain && 
+      (intervalSize(domain) < 1e6) &&
+      domain.map((d) => d.toFixed(0));
+    return domainInteger;
+  }),
+  vcfGenotypeLookup() {
+    let
+    domainInteger = this.get('vcfGenotypeLookupDomain');
+    if (domainInteger) {
+      let
+      scope = this.get('block.block.scope'),
+      region = 'chr' + scope + ':' + domainInteger.join('-'),
+      preArgs = '-r ' + region + ' -s ExomeCapture-DAS5-003024,ExomeCapture-DAS5-003047',
+      parent = this.get('datasetName');
+
+      let textP = this.get('auth').vcfGenotypeLookup(
+        this.get('apiServerSelectedOrPrimary'), parent, preArgs,
+        {} );
+      textP.then(
+        (text) => {
+          dLog('vcfGenotypeLookup', text);
+          this.set('vcfGenotypeText', text?.sequence);
+        });
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+
+
   
 });
 

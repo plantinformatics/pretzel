@@ -192,6 +192,7 @@ module.exports = function(app) {
       context.property == 'depthSearch' ||
       context.property == 'dnaSequenceSearch' ||
       context.property == 'dnaSequenceLookup' ||
+      context.property == 'vcfGenotypeLookup' ||
         // Alias
       context.property == 'bulkCreate' ||
         // Block

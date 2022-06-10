@@ -336,6 +336,19 @@ export default Service.extend({
 
   /** Request DNA sequence lookup (Blast).
    * @param parent  datasetId of parent / reference of the blast db which is to be searched
+   * @param preArgs args to be inserted in command line between 'bcftools' and parent
+   *  e.g. region : -r 'chr6A:607200000-607200000'
+   *      samples : -s ...,...
+   * @param options not used yet, may be for streaming result
+   */
+  vcfGenotypeLookup(apiServer, parent, preArgs, options) {
+    dLog('services/auth vcfGenotypeLookup', parent, preArgs, options);
+    return this._ajax('Blocks/vcfGenotypeLookup', 'GET', {server : apiServer, parent, preArgs, options}, true);
+  },
+
+
+  /** Request DNA sequence lookup (Blast).
+   * @param parent  datasetId of parent / reference of the blast db which is to be searched
    * @param region e.g. 'chr6A:607200000-607200000'
    * @param options not used yet, may be for streaming result
    */

@@ -19,6 +19,7 @@ const { blockServer } = require('../utilities/api-server');
 const { getAliases } = require('../utilities/localise-aliases');
 const { childProcess } = require('../utilities/child-process');
 const { ArgsDebounce } = require('../utilities/debounce-args');
+const { ErrorStatus } = require('../utilities/errorStatus.js');
 
 var ObjectId = require('mongodb').ObjectID
 
@@ -1197,7 +1198,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     /** Receive the results from the child process.
      * @param chunk is a Buffer
      * null / undefined indicates child process closed with status 0 (OK) and sent no output.
-     * @param cb is cbWrap of cb passed to dnaSequenceSearch().
+     * @param cb is cbWrap of cb passed to dnaSequenceLookup().
      */
     function dataOutReply(chunk, cb) {
       /** based on searchDataOut() */
@@ -1205,7 +1206,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
         cb(null, chunks);
       } else
       if (chunk && (chunk.length >= 6) && (chunk.asciiSlice(0,6) === 'Error:')) {
-        cb(new Error(chunk.toString()));
+        cb(new ErrorStatus(400, chunk.toString()));
       } else {
         // chunks.push(chunk)
         cb(null, chunk.toString());
@@ -1222,6 +1223,52 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     http: {verb: 'get'},
     returns: {arg: 'sequence', type: 'string'},
     description: "DNA Sequence Lookup e.g. samtools faidx, returns nucleotide sequence output as text string"
+  });
+
+  // ---------------------------------------------------------------------------
+
+  /**
+   * param preArgs
+   * See comment in frontend/app/services/auth.js : vcfGenotypeLookup()
+   */
+  Block.vcfGenotypeLookup = function(parent, preArgs, cb) {
+    childProcess(
+      'vcfGenotypeLookup.bash',
+      /* postData */ '', 
+      /* useFile */ false,
+      /* fileName */ undefined,
+      /* moreParams */ [parent, preArgs],
+      dataOutReply, cb, /*progressive*/ false);
+
+    let chunks = [];
+    /** Receive the results from the child process.
+     * @param chunk is a Buffer
+     * null / undefined indicates child process closed with status 0 (OK) and sent no output.
+     * @param cb is cbWrap of cb passed to vcfGenotypeLookup().
+     */
+    function dataOutReply(chunk, cb) {
+      /** based on searchDataOut() */
+      if (! chunk) {
+        cb(null, chunks);
+      } else
+      if (chunk && (chunk.length >= 6) && (chunk.asciiSlice(0,6) === 'Error:')) {
+        cb(new ErrorStatus(400, chunk.toString()));
+      } else {
+        // chunks.push(chunk)
+        cb(null, chunk.toString());
+      }
+    };
+
+  };
+
+  Block.remoteMethod('vcfGenotypeLookup', {
+    accepts: [
+      {arg: 'parent', type: 'string', required: true},
+      {arg: 'preArgs', type: 'string', required: true},
+    ],
+    http: {verb: 'get'},
+    returns: {arg: 'sequence', type: 'string'},
+    description: "VCF genotype Lookup e.g. samtools bcftools, returns subset of .vcf TSV table as text string"
   });
 
   // ---------------------------------------------------------------------------
