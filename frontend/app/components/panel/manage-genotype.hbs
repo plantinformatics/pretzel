@@ -4,6 +4,8 @@ Genotypes
 
 {{this.apiServerSelectedOrPrimary.name}}
 
+<div class="axis-brushes">
+
 <table>
   <tr>
     <th>Dataset Name</th>
@@ -34,6 +36,8 @@ Genotypes
 
 </table>
 
+</div>
+
 {{referenceDataset.id}}, {{datasetName}}
 
 <div>
@@ -51,9 +55,9 @@ Genotypes
 
 </div>
 
-<div>
+<div class='genotype'>
   {{this.vcfGenotypeText.length}}
-  <textarea style="overflow: auto; width : 20em; height : 20ex;">{{this.vcfGenotypeText}}</textarea>
+  <textarea>{{this.vcfGenotypeText}}</textarea>
 </div>
 
 

@@ -29,10 +29,8 @@ export default class PanelManageGenotypeComponent extends Component {
 
   // ---------------------------------------------------------------------------
 
-  classNames = [ 'axis-brushes' ];
-
   @tracked
-  vcfGenotypeText = '___';
+  vcfGenotypeText = '';
 
   // ---------------------------------------------------------------------------
 
