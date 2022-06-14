@@ -3,6 +3,7 @@
 /* global require */
 /* global Buffer */
 /* global process */
+/* global exports */
 
 const { spawn } = require('child_process');
 var fs = require('fs');
@@ -141,7 +142,7 @@ exports.childProcess = (scriptName, postData, useFile, fileName, moreParams, dat
       let
       errors_warnings = errors.concat(warnings).join("\n");
       errors = []; warnings = [];
-      cb(errors_warnings);
+      cb(new ErrorStatus(400, errors_warnings));
     } else {
       // process each tmp/out_json/"$datasetName".json
       const message = 'Processed file ' + fileName;
@@ -212,3 +213,35 @@ let dataOutUpload = (chunk, cb) => {
 };
 
 /*----------------------------------------------------------------------------*/
+
+const { ErrorStatus } = require('./errorStatus.js');
+
+exports.dataOutReplyClosure = function dataOutReplyClosure(cb) {
+  let chunks = [];
+  /* possibly add req to params and reference chunks there :
+  let chunksSymbol = Symbol.for('dataOutChunks');
+  req[chunksSymbol] = chunks;
+  */
+
+  return dataOutReply;
+
+  /** Receive the results from the child process.
+   * @param chunk is a Buffer
+   * null / undefined indicates child process closed with status 0 (OK) and sent no output.
+   * @param cb is cbWrap of cb passed to vcfGenotypeLookup().
+   */
+  function dataOutReply(chunk, cb) {
+    /** based on searchDataOut() */
+    if (! chunk) {
+      cb(null, chunks);
+    } else
+      if (chunk && (chunk.length >= 6) && (chunk.asciiSlice(0,6) === 'Error:')) {
+        cb(new ErrorStatus(400, chunk.toString()));
+      } else {
+        // chunks.push(chunk)
+        cb(null, chunk.toString());
+      }
+  };
+};
+
+// -----------------------------------------------------------------------------

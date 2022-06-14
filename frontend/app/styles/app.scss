@@ -1926,11 +1926,28 @@ div.metaeditor-panel div.jsoneditor-tree button.jsoneditor-contextmenu-button {
 }
 
 /*#right-panel-content.right-panel-dataset >*/ .axis-brushes > table > div > textarea,
-div.genotype > textarea
+div.genotype  textarea
 {
   width: 100%;
   height: 20ex;
   overflow: auto;
+}
+div.genotype > div > div > textarea
+{
+  width: 20em;
+}
+
+.vcfGenotypeSamplesSelected
+{
+ border: solid 4px lightblue;
+}
+div.genotype button
+{
+  margin-left : 1em;
+}
+div.genotype label
+{
+  margin-top : 2em;
 }
 
 /* -------------------------------------------------------------------------- */

@@ -4,6 +4,7 @@ Genotypes
 
 {{this.apiServerSelectedOrPrimary.name}}
 
+<div class="genotype">
 <div class="axis-brushes">
 
 <table>
@@ -21,8 +22,8 @@ Genotypes
   <tr>
     <td>
       {{!-- datasetName --}}
-      {{block.axis.referenceBlock.datasetId.id}},
-      {{block.axis.axis1d.referenceBlock.datasetId.id}}
+      <div>{{block.axis.referenceBlock.datasetId.id}}</div>
+      <div>{{block.axis.axis1d.referenceBlock.datasetId.id}}</div>
     </td>
     <td>{{block.block.scope}}</td>
     <td>{{brushedDomainRounded}}</td>
@@ -38,9 +39,31 @@ Genotypes
 
 </div>
 
-{{referenceDataset.id}}, {{datasetName}}
+<div>{{referenceDataset.id}}</div>
+<div>{{datasetName}}</div>
+
 
 <div>
+  <label>List of samples from VCF</label>
+  <button type="button" onclick={{action this.vcfGenotypeSamples}} class="btn btn-info btn-xs">Get samples list</button>
+
+  <div>
+    <div>{{this.vcfGenotypeSamplesText.length}}</div>
+    <textarea>{{this.vcfGenotypeSamplesText}}</textarea>
+  </div>
+</div>
+
+<div>
+  <label>Selected samples to be requested in VCF Lookup</label>
+  {{content-editable
+    value=this.vcfGenotypeSamplesSelected
+    placeholder="Samples to be requested in VCF Lookup"
+    escape-press="putContent"
+    class="vcfGenotypeSamplesSelected"
+    type="text"}}
+</div>
+
+
   <label>VCF Genotype for brushed interval</label>
   <span>
     <span>{{object-at 0 this.sequenceLookupDomain}}</span>
@@ -48,17 +71,17 @@ Genotypes
   </span>
 
   {{#if this.vcfGenotypeLookupDomain}}
-    <button onclick={{action this.vcfGenotypeLookup}} class="btn btn-xs">VCF Lookup</button>
+    <button type="button" onclick={{action this.vcfGenotypeLookup}} class="btn btn-info btn-xs">VCF Lookup</button>
   {{else}}
     <span>VCF Lookup Region limit is 1Mb</span>
   {{/if}}
 
-</div>
 
-<div class='genotype'>
+<div>
   {{this.vcfGenotypeText.length}}
   <textarea>{{this.vcfGenotypeText}}</textarea>
 </div>
 
+</div>
 
 {{yield}}

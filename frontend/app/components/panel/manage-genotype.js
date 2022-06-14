@@ -32,6 +32,13 @@ export default class PanelManageGenotypeComponent extends Component {
   @tracked
   vcfGenotypeText = '';
 
+  @tracked
+  vcfGenotypeSamplesText = '';
+
+  @tracked
+  vcfGenotypeSamplesSelected = 
+    'ExomeCapture-DAS5-003024\nExomeCapture-DAS5-003047';
+
   // ---------------------------------------------------------------------------
 
   /**
@@ -88,14 +95,39 @@ export default class PanelManageGenotypeComponent extends Component {
 
   // ---------------------------------------------------------------------------
 
+  vcfGenotypeSamples() {
+    let
+    fnName = 'vcfGenotypeSamples',
+    scope = this.block?.get('block.scope');
+    if (scope)  // if this.dataset.hasTag('view'),  .meta.vcfFilename
+    {
+      let
+      preArgs = 'query -l',
+      parent = this.datasetName;
+
+      let textP = this.auth.vcfGenotypeSamples(
+        this.apiServerSelectedOrPrimary, parent, scope,
+        {} );
+      textP.then(
+        (text) => {
+          dLog(fnName, text);
+          this.vcfGenotypeSamplesText =  text?.text;
+        });
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+
   vcfGenotypeLookup() {
     let
+    samples = this.vcfGenotypeSamplesSelected,
     domainInteger = this.vcfGenotypeLookupDomain;
-    if (domainInteger) {
+    samples = samples?.trimStart().trimEnd();
+    if (samples?.length && domainInteger) {
       let
       scope = this.block?.get('block.scope'),
       region = 'chr' + scope + ':' + domainInteger.join('-'),
-      preArgs = '-r ' + region + ' -s ExomeCapture-DAS5-003024,ExomeCapture-DAS5-003047',
+      preArgs = '-r ' + region + ' -s ' + samples.replaceAll('\n', ','),
       parent = this.datasetName;
 
       let textP = this.auth.vcfGenotypeLookup(
@@ -104,7 +136,7 @@ export default class PanelManageGenotypeComponent extends Component {
       textP.then(
         (text) => {
           dLog('vcfGenotypeLookup', text);
-          this.vcfGenotypeText =  text?.sequence;
+          this.vcfGenotypeText =  text?.text;
         });
     }
   }

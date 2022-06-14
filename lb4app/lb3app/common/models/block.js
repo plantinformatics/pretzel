@@ -17,7 +17,7 @@ var pathsStream = require('../utilities/paths-stream');
 var { localiseBlocks, blockLocalId } = require('../utilities/localise-blocks');
 const { blockServer } = require('../utilities/api-server');
 const { getAliases } = require('../utilities/localise-aliases');
-const { childProcess } = require('../utilities/child-process');
+const { childProcess, dataOutReplyClosure } = require('../utilities/child-process');
 const { ArgsDebounce } = require('../utilities/debounce-args');
 const { ErrorStatus } = require('../utilities/errorStatus.js');
 
@@ -1229,6 +1229,33 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
 
   /**
    * param preArgs
+   * See comment in frontend/app/services/auth.js : vcfGenotypeSamples()
+   */
+  Block.vcfGenotypeSamples = function(parent, scope, cb) {
+    childProcess(
+      'vcfGenotypeLookup.bash',
+      /* postData */ '', 
+      /* useFile */ false,
+      /* fileName */ undefined,
+      /* moreParams */ ['query', parent, scope, /*preArgs*/ '-l'],
+      dataOutReplyClosure(cb), cb, /*progressive*/ false);
+
+  };
+
+  Block.remoteMethod('vcfGenotypeSamples', {
+    accepts: [
+      {arg: 'parent', type: 'string', required: true},
+      {arg: 'scope', type: 'string', required: true},
+    ],
+    http: {verb: 'get'},
+    returns: {arg: 'text', type: 'string'},
+    description: "VCF genotype Samples e.g. samtools bcftools, returns list of samples defined in .vcf TSV table as text string"
+  });
+
+  // ---------------------------------------------------------------------------
+
+  /**
+   * param preArgs
    * See comment in frontend/app/services/auth.js : vcfGenotypeLookup()
    */
   Block.vcfGenotypeLookup = function(parent, preArgs, cb) {
@@ -1237,27 +1264,8 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       /* postData */ '', 
       /* useFile */ false,
       /* fileName */ undefined,
-      /* moreParams */ [parent, preArgs],
-      dataOutReply, cb, /*progressive*/ false);
-
-    let chunks = [];
-    /** Receive the results from the child process.
-     * @param chunk is a Buffer
-     * null / undefined indicates child process closed with status 0 (OK) and sent no output.
-     * @param cb is cbWrap of cb passed to vcfGenotypeLookup().
-     */
-    function dataOutReply(chunk, cb) {
-      /** based on searchDataOut() */
-      if (! chunk) {
-        cb(null, chunks);
-      } else
-      if (chunk && (chunk.length >= 6) && (chunk.asciiSlice(0,6) === 'Error:')) {
-        cb(new ErrorStatus(400, chunk.toString()));
-      } else {
-        // chunks.push(chunk)
-        cb(null, chunk.toString());
-      }
-    };
+      /* moreParams */ ['view', parent, /*scope*/ '', preArgs],
+      dataOutReplyClosure(cb), cb, /*progressive*/ false);
 
   };
 
@@ -1267,7 +1275,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       {arg: 'preArgs', type: 'string', required: true},
     ],
     http: {verb: 'get'},
-    returns: {arg: 'sequence', type: 'string'},
+    returns: {arg: 'text', type: 'string'},
     description: "VCF genotype Lookup e.g. samtools bcftools, returns subset of .vcf TSV table as text string"
   });
 

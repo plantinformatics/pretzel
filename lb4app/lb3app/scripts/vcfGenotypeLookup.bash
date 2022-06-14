@@ -84,18 +84,27 @@ if [ -e /proc/self/fd/3 ]
 then
   fileName="$1"
   useFile="$2"
-  parent="$3"
+  command="$3"
+  parent="$4"
+  scope="$5"
+  shift 5
+  preArgs="$*"
+  echo fileName="$fileName", useFile=$useFile, command="$command", parent="$parent", scope="$scope", preArgs=$preArgs  >> $logFile
+else
+  command="$1"
+  parent="$2"
+  scope="$3"
   shift 3
   preArgs="$*"
-  echo fileName="$fileName", useFile=$useFile, parent="$parent", preArgs=$preArgs  >> $logFile
-else
-  parent="$1"
-  shift
-  preArgs="$*"
-  echo parent="$parent", preArgs=$preArgs  >> $logFile
+  echo command="$command", parent="$parent", scope="$scope", preArgs=$preArgs  >> $logFile
 fi
-chrFromArgs "$*"
 
+if [ -z "$scope" ]
+then
+  chrFromArgs "$*"
+else
+  chr=$scope
+fi
 
 
 #-------------------------------------------------------------------------------
@@ -120,6 +129,8 @@ function dev_result() {
 
 #-------------------------------------------------------------------------------
 
+# The given param $parent is actually the data dataset not the reference;
+# possibly both will be required.
 datasetId=$parent
 # Sanitize datasetId. Allow only alphanumeric and -._ and space.
 datasetId=$(echo "$datasetId" | sed 's/[^-A-Za-z0-9._ ]/_/g')
@@ -168,9 +179,9 @@ else
     fi
     if [ -f "$vcfGz".csi ]
     then
-      if ! time "$bcftools" view "$vcfGz" $*
+      if ! time "$bcftools" "$command" "$vcfGz" $*
       then
-        echo 1>&$F_ERR 'Error:' "Unable to run bcftools view $vcfGz $*"
+        echo 1>&$F_ERR 'Error:' "Unable to run bcftools $command $vcfGz $*"
       else
         status=$?	# 0
       fi
