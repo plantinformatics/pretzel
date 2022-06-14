@@ -151,7 +151,9 @@ export default Ember.Component.extend({
   dataBlockColour(blockS) {
     let
     block = blockS.block,
-    axis1d = this.block.axis1d,
+    axis1d = this.block.axis1d ||
+      blockS.axis?.axis1d ||
+      block.get('view.axis.axis1d'),
     colour = axis1d.blockColourValue(block);
     return colour;
   },
