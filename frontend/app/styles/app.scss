@@ -1925,6 +1925,13 @@ div.metaeditor-panel div.jsoneditor-tree button.jsoneditor-contextmenu-button {
   border-spacing: 1em;
 }
 
+#right-panel-content.right-panel-dataset > .axis-brushes > table > div > textarea
+{
+  width: 100%;
+  height: 20ex;
+  overflow: auto;
+}
+
 /* -------------------------------------------------------------------------- */
 
 .h-100 {
