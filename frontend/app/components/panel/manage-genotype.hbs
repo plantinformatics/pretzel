@@ -1,0 +1,60 @@
+Genotypes
+
+{{log 'flowsService.axisBrush' flowsService.axisBrush}}
+
+{{this.apiServerSelectedOrPrimary.name}}
+
+<table>
+  <tr>
+    <th>Dataset Name</th>
+    <th>Scope</th>
+    <th>Interval</th>
+    <!-- ----------------------------- -->
+    <th class="devel-visible">BlockId</th>
+    <th class="devel-visible">zoomCounter</th>
+  </tr>
+
+{{#each flowsService.axisBrush.brushedAxes as |block| }}
+
+  <tr>
+    <td>
+      {{!-- datasetName --}}
+      {{block.axis.referenceBlock.datasetId.id}},
+      {{block.axis.axis1d.referenceBlock.datasetId.id}}
+    </td>
+    <td>{{block.block.scope}}</td>
+    <td>{{brushedDomainRounded}}</td>
+    <!-- ----------------------------- -->
+    <td class="devel-visible">{{blockId}}</td>
+    <td class="devel-visible">{{zoomCounter}}</td>
+    <td style="display:none;"> {{features.length}} <!-- for features request. --></td>
+  </tr>
+
+{{/each}}
+
+</table>
+
+{{referenceDataset.id}}, {{datasetName}}
+
+<div>
+  <label>VCF Genotype for brushed interval</label>
+  <span>
+    <span>{{object-at 0 this.sequenceLookupDomain}}</span>
+    <span>{{object-at 1 this.sequenceLookupDomain}}</span>
+  </span>
+
+  {{#if this.vcfGenotypeLookupDomain}}
+    <button onclick={{action this.vcfGenotypeLookup}} class="btn btn-xs">VCF Lookup</button>
+  {{else}}
+    <span>VCF Lookup Region limit is 1Mb</span>
+  {{/if}}
+
+</div>
+
+<div>
+  {{this.vcfGenotypeText.length}}
+  <textarea style="overflow: auto; width : 20em; height : 20ex;">{{this.vcfGenotypeText}}</textarea>
+</div>
+
+
+{{yield}}

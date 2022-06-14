@@ -89,24 +89,35 @@
             {{elem/icon-base name="globe"}}&nbsp; Block
           {{/elem/button-tab}}
         {{/if}}
+
         {{#elem/button-tab
            side="right"
            key="dataset"
            state=layout.right.tab onClick="setTab"}}
           {{elem/icon-base name="globe"}}&nbsp; Dataset
         {{/elem/button-tab}}
+
         {{#elem/button-tab
            side="right"
            key="selection"
            state=layout.right.tab onClick="setTab"}}
           {{elem/icon-base name="asterisk"}}&nbsp; Features <span class="badge">{{selectedFeatures.length}}</span>
         {{/elem/button-tab}}
+
         {{#elem/button-tab
            side="right"
            key="paths"
            state=layout.right.tab onClick="setTab"}}
           {{elem/icon-base name="globe"}}&nbsp; Paths <span class="badge">{{pathsTableSummary.count}}</span>
         {{/elem/button-tab}}
+
+        {{#elem/button-tab
+           side="right"
+           key="genotype"
+           state=layout.right.tab onClick="setTab"}}
+          {{elem/icon-base name="barcode"}}&nbsp; Genotypes <span class="badge"></span>
+        {{/elem/button-tab}}
+
         {{#if model.params.parsedOptions.advSettings}}
           {{#elem/button-tab
              side="right"
@@ -143,6 +154,9 @@
           {{panel/manage-dataset
             dataset=selectedDataset}}
           {{panel/axis-brushes}}
+        {{else if (compare layout.right.tab '===' 'genotype')}}
+          {{panel/manage-genotype
+            dataset=selectedDataset}}
 
         {{else if (and (compare layout.right.tab '===' 'settings') model.params.parsedOptions.advSettings)}}
           {{panel/manage-settings
