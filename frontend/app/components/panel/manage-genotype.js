@@ -6,6 +6,7 @@ import { tracked } from '@glimmer/tracking';
 
 
 import { intervalSize } from '../../utils/interval-calcs';
+import { addFeaturesJson } from '../../utils/data/vcf-feature';
 
 // -----------------------------------------------------------------------------
 
@@ -24,6 +25,7 @@ export default class PanelManageGenotypeComponent extends Component {
   @service() auth;
   /** used for axisBrush.brushedAxes to instantiate axis-brush s. */
   @service('data/flows-collate') flowsService;
+  @service('data/block') blockService;
 
   @alias('controls.apiServerSelectedOrPrimary') apiServerSelectedOrPrimary;
 
@@ -45,9 +47,9 @@ export default class PanelManageGenotypeComponent extends Component {
    * @return model:axis-brush
    */
   @computed('flowsService.axisBrush.brushedAxes')
-  get block() {
-    let blocks = this.flowsService.axisBrush.brushedAxes;
-    return blocks && blocks[0];
+  get axisBrush() {
+    let axisBrushes = this.flowsService.axisBrush.brushedAxes;
+    return axisBrushes && axisBrushes[0];
   }
 
   // ---------------------------------------------------------------------------
@@ -70,23 +72,23 @@ export default class PanelManageGenotypeComponent extends Component {
 
   // ---------------------------------------------------------------------------
 
-  @computed('block.brushedDomain')
+  @computed('axisBrush.brushedDomain')
   get brushedDomainRounded () {
     /** copied from axis-brush.js */
-    let domain = this.block.brushedDomain;
+    let domain = this.axisBrush.brushedDomain;
     if (domain) {
       domain = domain.map((d) => d.toFixed(2));
     }
     return domain;
   }
 
-  @computed('block.brushedDomain')
+  @computed('axisBrush.brushedDomain')
   get vcfGenotypeLookupDomain () {
     /** copied from sequenceLookupDomain() axis-brush.js
      * could be factored to a library - probably 2 1-line functions - not compelling.
      */
     let
-    domain = this.block?.brushedDomain,
+    domain = this.axisBrush?.brushedDomain,
     domainInteger = domain && 
       (intervalSize(domain) <= maxRequestInterval) &&
       domain.map((d) => d.toFixed(0));
@@ -98,7 +100,7 @@ export default class PanelManageGenotypeComponent extends Component {
   vcfGenotypeSamples() {
     let
     fnName = 'vcfGenotypeSamples',
-    scope = this.block?.get('block.scope');
+    scope = this.axisBrush?.get('block.scope');
     if (scope)  // if this.dataset.hasTag('view'),  .meta.vcfFilename
     {
       let
@@ -120,12 +122,17 @@ export default class PanelManageGenotypeComponent extends Component {
 
   vcfGenotypeLookup() {
     let
+    /** this.args.dataset, this.axisBrush.block are currently the reference; lookup the data block. */
+    // store = this.axisBrush?.get('block.store'),
+    store = this.apiServerSelectedOrPrimary?.store,
+    datasetNameV = 'Triticum_aestivum_IWGSC_RefSeq_v1.0_vcf_data',
+    datasetV = store.peekRecord('dataset', datasetNameV),
     samples = this.vcfGenotypeSamplesSelected,
     domainInteger = this.vcfGenotypeLookupDomain;
     samples = samples?.trimStart().trimEnd();
     if (samples?.length && domainInteger) {
       let
-      scope = this.block?.get('block.scope'),
+      scope = this.axisBrush?.get('block.scope'),
       region = 'chr' + scope + ':' + domainInteger.join('-'),
       preArgs = '-r ' + region + ' -s ' + samples.replaceAll('\n', ','),
       parent = this.datasetName;
@@ -135,8 +142,15 @@ export default class PanelManageGenotypeComponent extends Component {
         {} );
       textP.then(
         (text) => {
-          dLog('vcfGenotypeLookup', text);
+          dLog('vcfGenotypeLookup', text, datasetV);
           this.vcfGenotypeText =  text?.text;
+          /** datasetV?.get('blocks').findBy('scope', scope)  */
+          // let blockV = datasetV?.get('blocks.0');
+          let blockV = this.blockService.viewed.find(
+            (b) => (b.get('scope') === scope) && (b.get('datasetId.id') === datasetNameV));
+          if (text?.text && blockV) {
+            const createdFeatures = addFeaturesJson(blockV, text?.text);
+          }
         });
     }
   }
