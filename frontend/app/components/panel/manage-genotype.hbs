@@ -49,7 +49,7 @@ Genotypes
 
   <div>
     <div>{{this.vcfGenotypeSamplesText.length}}</div>
-    <textarea>{{this.vcfGenotypeSamplesText}}</textarea>
+    <textarea class="vcfGenotypeSamplesText">{{this.vcfGenotypeSamplesText}}</textarea>
   </div>
 </div>
 
@@ -77,11 +77,17 @@ Genotypes
   {{/if}}
 
 
-<div>
-  {{this.vcfGenotypeText.length}}
-  <textarea>{{this.vcfGenotypeText}}</textarea>
 </div>
 
+{{matrix-view
+  displayData=displayData
+  selectedBlock=selectedBlock
+  blockSamples=true
+}}
+
+<div>
+  {{this.vcfGenotypeText.length}}
+  <textarea class="vcfGenotypeText">{{this.vcfGenotypeText}}</textarea>
 </div>
 
 {{yield}}

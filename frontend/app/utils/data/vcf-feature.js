@@ -36,7 +36,9 @@ chr1A	327382120	scaffold22435_31704476	G	A	100	PASS	AC=3;AN=6;NS=616;MAF=0.41801
 
 
 /** Parse VCF output and add features to block.
- * @return array of created Features
+ * @return
+ *  { createdFeatures : array of created Features,
+ *    sampleNames : array of sample names }
  */
 function addFeaturesJson(block, text) {
   const fnName = 'addFeaturesJson';
@@ -50,6 +52,7 @@ function addFeaturesJson(block, text) {
   lines = text.split('\n'),
   meta = {},
   columnNames,
+  sampleNames,
   nFeatures = 0;
   lines.forEach((l, lineNum) => {
     if (l.startsWith('##')) {
@@ -62,6 +65,7 @@ function addFeaturesJson(block, text) {
       }
     } else if (l.startsWith('#CHROM')) {
       columnNames = l.slice(1).split('\t');
+      sampleNames = columnNames.slice(nColumnsBeforeSamples);            
     } else if (columnNames && l.length) {
       const values = l.split('\t');
       let feature = values.reduce((f, value, i) => {
@@ -119,13 +123,14 @@ function addFeaturesJson(block, text) {
 
       /** based on similar : components/table-brushed.js : afterPaste()  */
 
+      /** If it is required for vcfFeatures2MatrixView() to create displayData
+       * without creating model:Feature in the Ember data store, the following
+       * part can factor out as a separate function, returning an array of of
+       * native JS objects at this point, and passing those to the 2nd function
+       * for creation of model:Feature
+       */
       if (feature.blockId && feature.value.length && feature._name) {
         dLog(fnName, 'newFeature', feature);
-
-        let mapChrName = Ember_get(feature, 'blockId.brushName');
-        let selectionFeature = {Chromosome : mapChrName, Feature : feature.name, Position : feature.value[0], feature};
-
-        createdFeatures.push(selectionFeature);
 
         // in this case feature.blockId is block
         let store = feature.blockId.get('store');
@@ -133,6 +138,11 @@ function addFeaturesJson(block, text) {
         // Replace Ember.Object() with models/feature.
         feature = store.createRecord('Feature', feature);
         nFeatures++;
+
+        let mapChrName = Ember_get(feature, 'blockId.brushName');
+        let selectionFeature = {Chromosome : mapChrName, Feature : feature.name, Position : feature.value[0], feature};
+
+        createdFeatures.push(feature);
       }
 
     }
@@ -142,7 +152,53 @@ function addFeaturesJson(block, text) {
     dLog(fnName, lines.length, text.length);
   }
 
-  return createdFeatures;
+  let result = {createdFeatures, sampleNames};
+  return result;
 }
 
-export { addFeaturesJson };
+
+// -----------------------------------------------------------------------------
+
+function matchExtract(string, regexp, valueIndex) {
+  let match = string.match(regexp),
+      value = match && match[valueIndex];
+  return value;
+}
+
+/** Map the result of vcfGenotypeLookup() to the format expected by component:matrix-view param displayData
+ *  columns [] -> {features -> [{name, value}...],  datasetId.id, name }
+ *
+ * @param block {datasetId.id, name}
+ * @param added
+ *  { createdFeatures : array of created Features,
+ *    sampleNames : array of sample names }
+ *
+ * @return displayData
+ */
+function vcfFeatures2MatrixView(block, added) {
+  const fnName = 'vcfFeatures2MatrixView';
+  /** createdFeatures : array of model:Feature (could be native JS objects - see
+   * comment in addFeaturesJson() */
+  let {createdFeatures, sampleNames} = added;
+  let displayData = sampleNames.map((sampleName) => {
+    let
+    features = createdFeatures.map((f) => {
+      let
+      sampleValue = Ember_get(f, 'values.' + sampleName),
+      value = matchExtract(sampleValue, /^([^:]+):/, 1),
+      fx = {name : f.name, value};
+      return fx;
+    }),
+    datasetId = Ember_get(block, 'datasetId.id'),
+    name = Ember_get(block, 'name') + ' ' + sampleName,
+    column = {features,  datasetId : {id : datasetId}, name};
+    return column;
+  });
+  dLog(fnName, displayData);
+  return displayData;
+}
+
+// -----------------------------------------------------------------------------
+
+
+export { addFeaturesJson, vcfFeatures2MatrixView };

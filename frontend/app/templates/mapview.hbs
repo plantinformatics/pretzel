@@ -156,7 +156,10 @@
           {{panel/axis-brushes}}
         {{else if (compare layout.right.tab '===' 'genotype')}}
           {{panel/manage-genotype
-            dataset=selectedDataset}}
+            dataset=selectedDataset
+            displayData=block.viewed
+            selectedBlock=selectedBlock
+            }}
 
         {{else if (and (compare layout.right.tab '===' 'settings') model.params.parsedOptions.advSettings)}}
           {{panel/manage-settings

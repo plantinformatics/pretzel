@@ -1,16 +1,10 @@
-<div id="matrix-view" style="width:100%; height: 100%">
-    {{panel/left-panel
-        displayData=displayData
-        view="matrixview"
-        loadBlock="loadBlock"
-        removeBlock="removeBlock"
-        selectBlock="selectBlock"
-    }}
     {{#if noData}}
+      {{#unless blockSamples}}
         <div class="well">
             <span>Select individuals to display using Dataset Explorer</span>
         </div>
+      {{/unless}}
     {{/if}}
     <div id="observational-table"></div>
     <span id="length_checker" style="position:absolute; visibility: hidden"></span>
-</div>
+    {{rowHeaderWidth}}

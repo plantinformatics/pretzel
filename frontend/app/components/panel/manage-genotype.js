@@ -3,10 +3,10 @@ import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-
+import { A as Ember_A } from '@ember/array';
 
 import { intervalSize } from '../../utils/interval-calcs';
-import { addFeaturesJson } from '../../utils/data/vcf-feature';
+import { addFeaturesJson, vcfFeatures2MatrixView } from '../../utils/data/vcf-feature';
 
 // -----------------------------------------------------------------------------
 
@@ -40,6 +40,8 @@ export default class PanelManageGenotypeComponent extends Component {
   @tracked
   vcfGenotypeSamplesSelected = 
     'ExomeCapture-DAS5-003024\nExomeCapture-DAS5-003047';
+
+  displayData = Ember_A();
 
   // ---------------------------------------------------------------------------
 
@@ -149,7 +151,9 @@ export default class PanelManageGenotypeComponent extends Component {
           let blockV = this.blockService.viewed.find(
             (b) => (b.get('scope') === scope) && (b.get('datasetId.id') === datasetNameV));
           if (text?.text && blockV) {
-            const createdFeatures = addFeaturesJson(blockV, text?.text);
+            const added = addFeaturesJson(blockV, text?.text);
+            const displayData = vcfFeatures2MatrixView(blockV, added);
+            this.displayData.addObjects(displayData);
           }
         });
     }

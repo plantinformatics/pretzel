@@ -1630,7 +1630,7 @@ div#goto-feature > div
 }
 
 #observational-table .head {
-  transform: rotate(90deg);
+  /* transform: rotate(90deg); */
 }
 
 .truncate {
@@ -1822,13 +1822,13 @@ body > div.ember-popover {
   flex-direction : column;
   justify-content : flex-start;
 }
-#right-panel-content
+#right-panel-content:not(.right-panel-genotype)
 {
   flex-grow : 1;
   flex-basis : calc(100% - 78px);
   max-height : calc(100% - 78px);
 }
-#right-panel-content.right-panel-paths
+#right-panel-content.right-panel-paths:not(.right-panel-genotype)
 {
   flex-basis : calc(100% - 220px);
   max-height : calc(100% - 220px);
@@ -1846,7 +1846,8 @@ body:not(.tablesPanelRight) .metaeditor-panel {
 }
 
 
-#right-panel-content.right-panel-dataset
+#right-panel-content.right-panel-dataset,
+#right-panel-content.right-panel-genotype,
 {
   overflow-y: auto;
 }
@@ -1926,13 +1927,18 @@ div.metaeditor-panel div.jsoneditor-tree button.jsoneditor-contextmenu-button {
 }
 
 /*#right-panel-content.right-panel-dataset >*/ .axis-brushes > table > div > textarea,
-div.genotype  textarea
+textarea.vcfGenotypeText
 {
   width: 100%;
   height: 20ex;
   overflow: auto;
 }
-div.genotype > div > div > textarea
+textarea.vcfGenotypeSamplesText
+{
+  height: 20ex;
+}
+div.genotype > div > div > textarea,
+.vcfGenotypeSamplesSelected
 {
   width: 20em;
 }

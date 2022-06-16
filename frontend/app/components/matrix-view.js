@@ -1,113 +1,230 @@
 import { computed, observer } from '@ember/object';
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
+import { get as Ember_get, set as Ember_set } from '@ember/object';
+import { later, once, bind } from '@ember/runloop';
 
+/* global Handsontable */
+/* global $ */
+/* global d3 */
+
+import config from '../config/environment';
+
+
+// -----------------------------------------------------------------------------
+
+const dLog = console.debug;
+
+// -----------------------------------------------------------------------------
+
+/** map from block ( + sample) to column name.
+ * @param column block / selectedBlock or column object
+ */
+function col_name_fn(column) {
+  /** If column is block then block.get('datasetId.id') requires .get();
+   * otherwise column can be a native JS object, so use Ember_get() to handle either case.
+   */
+  const col_name = Ember_get(column, 'datasetId.id') + ':' + Ember_get(column, 'name');
+  return col_name;
+}
+
+/** For use when ! .fullPage, calculate ex height for the given number of rows,
+ * with a maximum which gives a nearly full height table.
+ */
+function nRows2HeightEx(nRows) {
+  return Math.min(nRows || 2, 30) * 3;
+}
+
+// -----------------------------------------------------------------------------
+
+/**
+ * Component args :
+ * @param selectedBlock
+ * @param displayData
+ *  columns [] -> {features -> [{name, value}...],  datasetId.id, name }
+ * 
+ * @param blockSamples  true if blocks contain multiple samples (each column is a sample)
+ * false if each column is a block (dataset : chromosome)
+ *
+ * @desc
+ * Multiple blocks are loaded, from multiple datasets, via panel/left-panel :
+ *   loadBlock, removeBlock, selectBlock
+ *
+ * table :
+ *   row_name : feature_name = feature.name
+ *   col_name : col_name_fn(block)
+ *
+ * Computed properties :
+ * 
+ *   noData		<- displayData.[]
+ *   columns		<- displayData.[]
+ *   rowHeaderWidth		<- rows
+ *   colHeaderHeight		<- columns
+ *   dataByRow		<- columns (<- displayData.[])  (and .set(numericalData))
+ *   rows		<- dataByRow
+ *   abValues		<- dataByRow, selectedBlock
+ *   data		<- columns, rows, dataByRow  (<- displayData.[])
+ *   rowRanges		<- dataByRow
+ *   updateTable: observer('rows', 'selectedBlock') (<- displayData.[])
+ *
+ * Cell Renderers :
+ *   CATGRenderer
+ *   ABRenderer : abValues
+ *   numericalDataRenderer : rowRanges
+ *
+ *   renderer =
+ *     numericalData ? numericalDataRenderer :
+ *        selectedBlock ? ABRenderer : CATGRenderer
+ *
+ * Actions / events :
+ *   afterOnCellMouseDown -> selectBlock (column name)
+ */
 export default Component.extend({
+  /** this may move up to matrix-view-page
   style: 'height:100%; width:100%',
   attributeBindings: ['style:style'],
+ */
   numericalData: true,
 
   selectedBlock: null,
 
+  // ---------------------------------------------------------------------------
+
   didInsertElement() {
     this._super.apply(this, arguments);
 
-    let me = this;
+    dLog('matrix-view', this, 'vcf');
+    this.fullPage = ! this.blockSamples;
+    // later(() => ! this.isDestroying && this.createTable(), 1000);
+  },
+
+  didRender() {
+    once(() => ! this.isDestroying && (this.table ? this.updateTable() : this.createTable()));
+  },
+
+  // ---------------------------------------------------------------------------
+
+  createTable() {
+    const fnName = 'createTable';
 
     let tableDiv = $("#observational-table")[0];
-    let table = new Handsontable(tableDiv, {
+    dLog(fnName, tableDiv);
+    let nRows = this.get('rows.length') || 0;
+    let settings = {
+      /* see comment re. handsOnTableLicenseKey in frontend/config/environment.js */
+      licenseKey: config.handsOnTableLicenseKey,
       data: [],
       readOnly: true,
       rowHeaders: true,
       manualColumnMove: true,
-      height: '100%',
+      height: this.fullPage ? '100%' : nRows2HeightEx(nRows) + 'ex',
       colWidths: 25,
       stretchH: 'none',
-      cells: function(row, col, prop) {
-        let cellProperties = {};
-        let selectedBlock = me.get('selectedBlock');
-        let numericalData = me.get('numericalData');
-        if (numericalData) {
-          cellProperties.renderer = 'numericalDataRenderer';
-        } else if (selectedBlock == null) {
-          cellProperties.renderer = 'CATGRenderer';
-        } else {
-          cellProperties.renderer = 'ABRenderer';
-        }
-        return cellProperties;
-      },
-      afterOnCellMouseDown: function(event, coords, td) {
-        if (coords.row == -1) {
-          let col_name = $(td).find('span').text();
-          me.send('selectBlock', me.get('columns')[col_name]);
-        }
-      }
-    });
-    Handsontable.renderers.registerRenderer('CATGRenderer', function(instance, td, row, col, prop, value, cellProperties) {
-      Handsontable.renderers.TextRenderer.apply(this, arguments);
-      if (value == 'A') {
-        td.style.background = 'green';
-        td.style.color = 'white';
-      } else if (value == 'C') {
-        td.style.background = 'blue';
-        td.style.color = 'white';
-      } else if (value == 'G' || value == 'B') {
-        td.style.background = 'red';
-        td.style.color = 'white';
-      } else if (value == 'T') {
-        td.style.background = 'black';
-        td.style.color = 'white';
-      }
-    });
+      cells: bind(this, this.cells),
+      afterOnCellMouseDown: bind(this, this.afterOnCellMouseDown)
+    };
+    let table = new Handsontable(tableDiv, settings);
 
-    Handsontable.renderers.registerRenderer('ABRenderer', function(instance, td, row, col, prop, value, cellProperties) {
-      Handsontable.renderers.TextRenderer.apply(this, arguments);
-      let abValues = me.get('abValues');
-      if (value != null && abValues[row] != null) {
-        if (value == abValues[row]) {
-          td.style.background = 'green';
-          td.style.color = 'white';
-          $(td).text('A');
-        } else {
-          td.style.background = 'red';
-          td.style.color = 'white';
-          $(td).text('B');
-        }
-      }
-    });
-
-    Handsontable.renderers.registerRenderer('numericalDataRenderer', function(instance, td, row, col, prop, value, cellProperties) {
-      Handsontable.renderers.TextRenderer.apply(this, arguments);
-      let row_ranges = me.get('rowRanges')
-
-      if (!isNaN(value)) {
-        let color_scale = d3.scaleLinear().domain(row_ranges[row])
-          .interpolate(d3.interpolateHsl)
-          .range([d3.rgb("#0000FF"), d3.rgb('#FFFFFF'), d3.rgb('#FF0000')]);
-        td.style.background = color_scale(value);
-        td.title = value;
-        $(td).css('font-size', 10);
-      }
-    });
+    Handsontable.renderers.registerRenderer('CATGRenderer', bind(this, this.CATGRenderer));
+    Handsontable.renderers.registerRenderer('ABRenderer', bind(this, this.ABRenderer));
+    Handsontable.renderers.registerRenderer('numericalDataRenderer', bind(this, this.numericalDataRenderer));
 
     this.set('table', table);
-    this.set('displayData', []);
   },
 
-  displayData: [],
+  // ---------------------------------------------------------------------------
+
+  cells(row, col, prop) {
+    let cellProperties = {};
+    let selectedBlock = this.get('selectedBlock');
+    let numericalData = this.get('numericalData');
+    if (numericalData) {
+      cellProperties.renderer = 'numericalDataRenderer';
+    } else if (selectedBlock == null) {
+      cellProperties.renderer = 'CATGRenderer';
+    } else {
+      cellProperties.renderer = 'ABRenderer';
+    }
+    return cellProperties;
+  },
+
+  afterOnCellMouseDown(event, coords, td) {
+    if (coords.row == -1) {
+      let col_name = $(td).find('span').text();
+      this.send('selectBlock', this.get('columns')[col_name]);
+    }
+  },
+
+  CATGRenderer(instance, td, row, col, prop, value, cellProperties) {
+    Handsontable.renderers.TextRenderer.apply(this, arguments);
+    if (value == 'A') {
+      td.style.background = 'green';
+      td.style.color = 'white';
+    } else if (value == 'C') {
+      td.style.background = 'blue';
+      td.style.color = 'white';
+    } else if (value == 'G' || value == 'B') {
+      td.style.background = 'red';
+      td.style.color = 'white';
+    } else if (value == 'T') {
+      td.style.background = 'black';
+      td.style.color = 'white';
+    }
+  },
+
+  ABRenderer(instance, td, row, col, prop, value, cellProperties) {
+    Handsontable.renderers.TextRenderer.apply(this, arguments);
+    let abValues = this.get('abValues');
+    if (value != null && abValues[row] != null) {
+      if (value == abValues[row]) {
+        td.style.background = 'green';
+        td.style.color = 'white';
+        $(td).text('A');
+      } else {
+        td.style.background = 'red';
+        td.style.color = 'white';
+        $(td).text('B');
+      }
+    }
+  },
+
+  numericalDataRenderer(instance, td, row, col, prop, value, cellProperties) {
+    Handsontable.renderers.TextRenderer.apply(this, arguments);
+    let row_ranges = this.get('rowRanges');
+
+    if (!isNaN(value)) {
+      let color_scale = d3.scaleLinear().domain(row_ranges[row])
+          .interpolate(d3.interpolateHsl)
+          .range([d3.rgb("#0000FF"), d3.rgb('#FFFFFF'), d3.rgb('#FF0000')]);
+      td.style.background = color_scale(value);
+      td.title = value;
+      $(td).css('font-size', 10);
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+
+
   noData: computed('displayData.[]', function() {
     let d = this.get('displayData');
-    return d.length == 0;
+    return ! d?.length;
   }),
+  /** Map displayData[] to object mapping from column names of each column to
+   * the column data.
+   * @return array[col_name] -> column data (block)
+   */
   columns: computed('displayData.[]', function() {
     let data = this.get('displayData');
     let cols = {};
-    data.forEach(function(d) {
-      let col_name = d.get('datasetId').get('id') + ':' + d.get('name');
+    data?.forEach(function(d) {
+      let col_name = col_name_fn(d);
       cols[col_name] = d;
     });
     return cols;
   }),
+  /** For each value in .rows (row names), measure the length of the text
+   * rendering using #length_checker, and return the maximum length.
+   */
   rowHeaderWidth: computed('rows', function() {
     let rows = this.get('rows');
     let longest_row = 0;
@@ -117,36 +234,50 @@ export default Component.extend({
       if (w > longest_row) {
         longest_row = w;
       }
-    })
+    });
     return longest_row + 10;
   }),
+  /** For each key (column name) of .columns{}, measure the length of the text
+   * representation using #length_checker, and return the maximum length.
+   */
   colHeaderHeight: computed('columns', function() {
     let cols = this.get('columns');
-    let longest_row = 0;
+    /** pixel length of longest column header text */
+    let longest = 0;
     let length_checker = $("#length_checker");
     length_checker.css('font-weight', 'bold');
     Object.keys(cols).forEach(function(col_name) {
       let w = length_checker.text(col_name).width();
-      if (w > longest_row) {
-        longest_row = w;
+      if (w > longest) {
+        longest = w;
       }
     });
-    return longest_row + 20;
+    return longest + 20;
   }),
-  dataByRow: computed('displayData.[]', function() {
+  /** For each value (column data / block / sample)  of .columns{},
+   *   for each feature,
+   *     rows[feature_name][col_name] = feature value (using .value[0])
+   *  Set .numericalData true if any feature value is not a number
+   * @return rows[feature_name][col_name]
+   */
+  dataByRow: computed(/*'displayData.[]',*/ 'columns', function() {
     let nonNumerical = false;
-    let rows = {}
+    let rows = {};
     let cols = this.get('columns');
     Object.keys(cols).forEach(function(col_name) {
       let col = cols[col_name];
-      col.get('features').forEach(function(feature) {
-        let feature_name = feature.get('name');
+      Ember_get(col, 'features').forEach(function(feature) {
+        let feature_name = feature.name;
         if (rows[feature_name] == null) {
           rows[feature_name] = {};
         }
-        rows[feature_name][col_name] = feature.get('value');
+        let value = feature.value;
+        if (Array.isArray(value)) {
+          value = value[0];
+        }
+        rows[feature_name][col_name] = value;
         
-        if (isNaN(feature.get('value'))) {
+        if (isNaN(value)) {
           nonNumerical = true;
         }
       });
@@ -154,24 +285,31 @@ export default Component.extend({
     this.set('numericalData', !nonNumerical);
     return rows;
   }),
+  /** @return an array of the keys of .dataByRow, i.e. the feature names
+   */
   rows: computed('dataByRow', function() {
     let data = this.get('dataByRow');
     return Object.keys(data);
   }),
+  /** @return [] if selectedBlock is null, otherwise
+   * return just an array of data of the selected column.
+   */
   abValues: computed('dataByRow', 'selectedBlock', function() {
     let data = this.get('dataByRow');
     let selectedBlock = this.get('selectedBlock');
     let values = [];
 
     if (selectedBlock != null) {
-      let col_name = selectedBlock.get('datasetId').get('id') + ':' + selectedBlock.get('name');
+      let col_name = col_name_fn(selectedBlock);
       Object.keys(data).forEach(function(row_name) {
         values.push(data[row_name][col_name]);
       });
     }
     return values;
   }),
-  data: computed('displayData.[]', function() {
+  /** @return an array of, for each row, an object mapping col_name to cell data (feature)
+   */
+  data: computed(/*'displayData.[]'*/ 'columns', 'rows', 'dataByRow', function() {
     let cols = this.get('columns');
     let rows = this.get('rows');
     let dataByRow = this.get('dataByRow');
@@ -186,6 +324,10 @@ export default Component.extend({
     });
     return data;
   }),
+  /** For each row, collate an array of cell data for each column,
+   * and determine [min, avg, max] of each row.
+   * @return an array of, for each row, [min, avg, max]
+   */
   rowRanges: computed('dataByRow', function() {
     let data = this.get('dataByRow');
 
@@ -222,13 +364,17 @@ export default Component.extend({
     return ranges;        
   }),
 
-  updateTable: observer('displayData.[]', 'selectedBlock', function() {
+  /** Observe changes to .rows and .selectedBlock, and update table settings with
+   * column headings from keys(.data), .rows, .rowHeaderWidth, .colHeaderHeight.
+   */
+  updateTable: observer(/*'displayData.[]'*/ 'rows', 'selectedBlock', function() {
     let t = $("#observational-table");
     let rows = this.get('rows');
     let rowHeaderWidth = this.get('rowHeaderWidth');
     let colHeaderHeight = this.get('colHeaderHeight');
     let table = this.get('table');
     let data = this.get('data');
+    dLog('matrix-view', 'updateTable', t, rows, rowHeaderWidth, colHeaderHeight, table, data, this.blockSamples && 'vcf');
 
     if (data.length > 0) {
       t.show();
@@ -238,13 +384,19 @@ export default Component.extend({
       });
 
       for(let i=0; i<2; i++) {
-        table.updateSettings({
+        const settings = {
           colHeaders: columns,
           rowHeaders: rows,
           rowHeaderWidth: rowHeaderWidth,
-          columnHeaderHeight: colHeaderHeight,
           data: data
-        });
+        };
+        if (this.fullPage) {
+          settings.columnHeaderHeight = colHeaderHeight;
+        } else {
+          let nRows = rows.length;
+          settings.height = nRows2HeightEx(nRows) + 'ex';
+        }
+        table.updateSettings(settings);
       }
     } else {
       t.hide();
@@ -256,41 +408,24 @@ export default Component.extend({
       $(".left-panel-shown").toggle();
       $(".left-panel-hidden").toggle();
     },
-    loadBlock(block) {
-      let data = this.get('displayData');
-      let store = block.store;
-      store.findRecord('block', block.id, {
-          reload: true,
-          adapterOptions: {filter: {'include': 'features'}}
-      }).then(function(b)  {
-        if (!data.includes(b)) {
-          data.pushObject(b);
-        }
-      });
-    },
-    removeBlock(block) {
-      let data = this.get('displayData');
-      if (data.includes(block)) {
-        data.removeObject(block);
-      }
-    },
-    selectBlock(block) {
-      let selectedBlock = this.get('selectedBlock');
-      let table = this.get('table');
-      if (block == selectedBlock) {
-        selectedBlock = null;
-      } else {
-        selectedBlock = block;
-      }
-      this.set('selectedBlock', selectedBlock);
-      $("ul#display-blocks > li").removeClass('selected');
-      $('#matrix-view').find('table').find('th').find('span').removeClass('selected');
-      if (selectedBlock != null) {
-        $('ul#display-blocks > li[data-chr-id="' + selectedBlock.id + '"]').addClass("selected");
-        let col_name = selectedBlock.get('datasetId').get('id') + ':' + selectedBlock.get('name');
-        table.selectColumns(col_name);
-        $('#matrix-view').find('table').find('th').find('span:contains("' + col_name + '")').addClass('selected');
-      }
+  },
+
+  showSelectedBlockObserver: observer('selectedBlock', function() {
+    this.showSelectedBlock(this.selectedBlock);
+  }),
+
+  showSelectedBlock(selectedBlock) {
+    dLog('showSelectedBlock', selectedBlock);
+    let table = this.get('table');
+
+    $("ul#display-blocks > li").removeClass('selected');
+    $('#matrix-view').find('table').find('th').find('span').removeClass('selected');
+    if (selectedBlock != null) {
+      $('ul#display-blocks > li[data-chr-id="' + selectedBlock.id + '"]').addClass("selected");
+      let col_name = col_name_fn(selectedBlock);
+      table.selectColumns(col_name);
+      $('#matrix-view').find('table').find('th').find('span:contains("' + col_name + '")').addClass('selected');
     }
   }
+
 });
