@@ -8,3 +8,18 @@
     <div id="observational-table"></div>
     <span id="length_checker" style="position:absolute; visibility: hidden"></span>
     {{rowHeaderWidth}}
+
+<ul class="list-group view-controls">
+  <li class="list-group-item">
+    <label style="display:inline">Select phase to display in CATG :</label>
+    {{radio-button value='0' groupValue=selectPhase
+      changed=(action selectPhaseChanged preventDefault=false)
+    }}
+    0 &nbsp;&nbsp; /
+    {{radio-button value='1' groupValue=selectPhase
+      changed=(action selectPhaseChanged preventDefault=false)
+    }}
+    1 &nbsp;&nbsp;
+  </li>
+
+</ul>

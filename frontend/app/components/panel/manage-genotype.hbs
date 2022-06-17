@@ -70,6 +70,32 @@ Genotypes
     <span>{{object-at 1 this.sequenceLookupDomain}}</span>
   </span>
 
+
+  <div>
+    <ul class="list-group view-controls">
+      <li class="list-group-item">
+        <label style="display:inline">Format to request :</label>
+        {{radio-button value='CATG' groupValue=requestFormat
+          changed=(action requestFormatChanged preventDefault=false)
+        }}
+        CATG &nbsp;&nbsp;
+        {{radio-button value='Numerical' groupValue=requestFormat
+          changed=(action requestFormatChanged preventDefault=false)
+        }}
+        Numerical &nbsp;&nbsp;
+
+      </li>
+
+    </ul>
+
+    <input type="checkbox"
+      style="margin-left: 3em;"
+      checked={{this.replaceResults}}
+      oninput={{action (mut this.replaceResults) value="target.checked"}}  >
+    <label>Replace previous results.</label>
+
+  </div>
+
   {{#if this.vcfGenotypeLookupDomain}}
     <button type="button" onclick={{action this.vcfGenotypeLookup}} class="btn btn-info btn-xs">VCF Lookup</button>
   {{else}}

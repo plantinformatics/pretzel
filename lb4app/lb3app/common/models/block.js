@@ -1228,8 +1228,8 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
   // ---------------------------------------------------------------------------
 
   /**
-   * param preArgs
-   * See comment in frontend/app/services/auth.js : vcfGenotypeSamples()
+   * @param parent  name of parent or view dataset, or vcf directory name
+   * @param scope e.g. '1A'; identifies the vcf file, i.e. datasetId/scope.vcf.gz
    */
   Block.vcfGenotypeSamples = function(parent, scope, cb) {
     childProcess(
@@ -1255,16 +1255,32 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
   // ---------------------------------------------------------------------------
 
   /**
-   * param preArgs
+   * @param preArgs args to be inserted in command line, additional to the parent / vcf file name.
    * See comment in frontend/app/services/auth.js : vcfGenotypeLookup()
    */
   Block.vcfGenotypeLookup = function(parent, preArgs, cb) {
+    const
+    fnName = 'vcfGenotypeLookup',
+    command = preArgs.requestFormat ? 'query' : 'view';
+    let moreParams = [command, parent, /*scope*/ '', '-r', preArgs.region ];
+    if (preArgs.requestFormat) {
+      const
+      format = (preArgs.requestFormat === 'CATG') ?
+        "%ID\t%POS[\t%TGT]\n" :
+        "%ID\t%POS[\t%GT]\n";
+      moreParams = moreParams.concat('-H', '-f', format);
+    }
+    if (preArgs.samples) {
+      moreParams = moreParams.concat('-s', preArgs.samples.replaceAll('\n', ','));
+    }
+    console.log(fnName, parent, preArgs, moreParams);
+
     childProcess(
       'vcfGenotypeLookup.bash',
       /* postData */ '', 
       /* useFile */ false,
       /* fileName */ undefined,
-      /* moreParams */ ['view', parent, /*scope*/ '', preArgs],
+      moreParams,
       dataOutReplyClosure(cb), cb, /*progressive*/ false);
 
   };
@@ -1272,7 +1288,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
   Block.remoteMethod('vcfGenotypeLookup', {
     accepts: [
       {arg: 'parent', type: 'string', required: true},
-      {arg: 'preArgs', type: 'string', required: true},
+      {arg: 'preArgs', type: 'object', required: false},
     ],
     http: {verb: 'get'},
     returns: {arg: 'text', type: 'string'},

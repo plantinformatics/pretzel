@@ -21,6 +21,10 @@ const vcfColumn2Feature = {
 // -----------------------------------------------------------------------------
 
 /* sample data :
+
+ * -------------------------------------
+ * default output format :
+
 ##fileformat=VCFv4.1
 ##FILTER=<ID=PASS,Description="All filters passed">
 ##phasing=none
@@ -30,6 +34,20 @@ const vcfColumn2Feature = {
 
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	ExomeCapture-DAS5-003227	ExomeCapture-DAS5-002775	ExomeCapture-DAS5-002986
 chr1A	327382120	scaffold22435_31704476	G	A	100	PASS	AC=3;AN=6;NS=616;MAF=0.418019;AC_Het=233;tSNP=.;pass=no;passRelaxed=no;selected=no	GT:GL:DP	1/0:-7.65918,-2.74391e-08,-7.48455:6	1/0:-5.41078,-0.00397816,-2.1981:3	1/0:-4.50477,-1.46346e-05,-10.5809:6
+
+ * -------------------------------------
+ * requestFormat === 'CATG' : formatArgs = '-H  -f "%ID\t%POS[\t%TGT]\n"' :
+
+# [1]ID	[2]POS	[3]ExomeCapture-DAS5-002978:GT	[4]ExomeCapture-DAS5-003024:GT	[5]ExomeCapture-DAS5-003047:GT	[6]ExomeC
+scaffold38755_709316	709316	C/C	C/T	C/C	C/C	C/C	./.	C/C	C/C	C/C	C/T	C/C	C/C	C/C	C/C	C/T	C/C	C/C	C/C	C/C	C/T	C/C	C/C	C
+
+ * -------------------------------------
+ * requestFormat === 'Numerical' : formatArgs = '-H  -f "%ID\t%POS[\t%GT]\n"' :
+
+# [1]ID	[2]POS	[3]ExomeCapture-DAS5-002978:GT	[4]ExomeCapture-DAS5-003024:GT	[5]ExomeCapture-DAS5-003047:GT	[6]ExomeC
+scaffold38755_709316	709316	0/0	0/1	0/0	0/0	0/0	./.	0/0	0/0	0/0	0/1	0/0	0/0	0/0	0/0	0/1	0/0	0/0	0/0	0/0	0/1	0/0	0/0	0
+
+
 */
 
 
@@ -39,12 +57,16 @@ chr1A	327382120	scaffold22435_31704476	G	A	100	PASS	AC=3;AN=6;NS=616;MAF=0.41801
  * @return
  *  { createdFeatures : array of created Features,
  *    sampleNames : array of sample names }
+ *
+ * @param block view dataset block for corresponding scope (chromosome)
+ * @param requestFormat 'CATG', 'Numerical', ...
+ * @param text result from bcftools request
  */
-function addFeaturesJson(block, text) {
+function addFeaturesJson(block, requestFormat, text) {
   const fnName = 'addFeaturesJson';
   dLog(fnName, block, text);
   /** optional : add fileformat, FILTER, phasing, INFO, FORMAT to block meta
-   * read #CHROM column headers as feature field names
+   * read #CHROM or '# [1]ID' column headers as feature field names
    * parse /^[^#]/ (chr) lines into features, add to block
    */
   let
@@ -65,7 +87,13 @@ function addFeaturesJson(block, text) {
       }
     } else if (l.startsWith('#CHROM')) {
       columnNames = l.slice(1).split('\t');
-      sampleNames = columnNames.slice(nColumnsBeforeSamples);            
+      sampleNames = columnNames.slice(nColumnsBeforeSamples);
+    } else if (l.startsWith('# [1]ID')) {
+      // # [1]ID	[2]POS	[3]ExomeCapture-DAS5-002978:GT	[4]ExomeCapture-DAS5-003024:GT	[5]ExomeCapture-DAS5-003047:GT	[6]ExomeC
+      columnNames = l.split(/\t\[[0-9]+\]/);
+      columnNames[0] = columnNames[0].replace(/^# \[1\]/, '');
+      // nColumnsBeforeSamples is 2 in this case : skip ID, POS.
+      sampleNames = columnNames.slice(2);
     } else if (columnNames && l.length) {
       const values = l.split('\t');
       let feature = values.reduce((f, value, i) => {
@@ -121,6 +149,12 @@ function addFeaturesJson(block, text) {
       }, {});
       // or EmberObject.create({value : []});
 
+      /* CHROM column is present in default format, and omitted when -f is used
+       * i.e. 'CATG', 'Numerical', so in this case set .blockId here. */
+      if (requestFormat) {
+        feature.blockId = block;
+      }
+
       /** based on similar : components/table-brushed.js : afterPaste()  */
 
       /** If it is required for vcfFeatures2MatrixView() to create displayData
@@ -148,7 +182,7 @@ function addFeaturesJson(block, text) {
     }
   });
 
-  if (! columnNames) {
+  if (! columnNames || ! sampleNames) {
     dLog(fnName, lines.length, text.length);
   }
 
@@ -169,13 +203,14 @@ function matchExtract(string, regexp, valueIndex) {
  *  columns [] -> {features -> [{name, value}...],  datasetId.id, name }
  *
  * @param block {datasetId.id, name}
+ * @param requestFormat 'CATG', 'Numerical', ...
  * @param added
  *  { createdFeatures : array of created Features,
  *    sampleNames : array of sample names }
  *
  * @return displayData
  */
-function vcfFeatures2MatrixView(block, added) {
+function vcfFeatures2MatrixView(block, requestFormat, added) {
   const fnName = 'vcfFeatures2MatrixView';
   /** createdFeatures : array of model:Feature (could be native JS objects - see
    * comment in addFeaturesJson() */
@@ -185,7 +220,7 @@ function vcfFeatures2MatrixView(block, added) {
     features = createdFeatures.map((f) => {
       let
       sampleValue = Ember_get(f, 'values.' + sampleName),
-      value = matchExtract(sampleValue, /^([^:]+):/, 1),
+      value = requestFormat ? sampleValue : matchExtract(sampleValue, /^([^:]+):/, 1),
       fx = {name : f.name, value};
       return fx;
     }),

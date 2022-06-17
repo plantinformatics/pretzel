@@ -104,6 +104,19 @@ export default Component.extend({
 
   // ---------------------------------------------------------------------------
 
+  /** 
+   *    selectPhase : string : '0', '1'
+   */
+
+  /** The user can toggle the phase of a diploid which is shown by CATGRenderer. */
+  selectPhase : '0',
+  selectPhaseChanged(value) {
+    dLog('selectPhaseChanged', value);
+    this.selectPhase = value;
+  },
+
+  // ---------------------------------------------------------------------------
+
   createTable() {
     const fnName = 'createTable';
 
@@ -157,6 +170,10 @@ export default Component.extend({
 
   CATGRenderer(instance, td, row, col, prop, value, cellProperties) {
     Handsontable.renderers.TextRenderer.apply(this, arguments);
+    let match = value.split(/[/|]/);
+    if (match) {
+      value = match[+this.selectPhase];
+    }
     if (value == 'A') {
       td.style.background = 'green';
       td.style.color = 'white';

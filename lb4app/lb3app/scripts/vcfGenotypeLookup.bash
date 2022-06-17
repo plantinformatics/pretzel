@@ -70,7 +70,8 @@ echo  \
 # extract the chromosome name, e.g. from "... chr1A ..." set chr="1A"
 function chrFromArgs()
 {
-  chr=$( echo "$*" | sed 's/\(chr..\).*/\1/;s/.*chr//')
+  # $* may be a multi-line string; only output the chr line.
+  chr=$( echo "$*" | sed -n 's/\(chr..\).*/\1/;s/.*chr//p')
 }
 
 #-------------------------------------------------------------------------------
@@ -179,7 +180,8 @@ else
     fi
     if [ -f "$vcfGz".csi ]
     then
-      if ! time "$bcftools" "$command" "$vcfGz" $*
+      # some elements in preArgs may contain white-space, e.g. format "%ID\t%POS[\t%TGT]\n"
+      if ! time "$bcftools" "$command" "$vcfGz" "${@}"
       then
         echo 1>&$F_ERR 'Error:' "Unable to run bcftools $command $vcfGz $*"
       else

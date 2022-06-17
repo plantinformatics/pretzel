@@ -43,6 +43,23 @@ export default class PanelManageGenotypeComponent extends Component {
 
   displayData = Ember_A();
 
+  /** true means replace the previous result Features added to the block. */
+  replaceResults = true;
+
+  // ---------------------------------------------------------------------------
+
+  /** 
+   *    requestFormat : string : 'CATG', 'Numerical'
+   */
+
+  /** The user can choose the format of information to request from bcftools,
+   * which is associated with a corresponding Renderer. */
+  requestFormat = 'Numerical';
+  requestFormatChanged(value) {
+    dLog('requestFormatChanged', value);
+    this.requestFormat = value;
+  }
+
   // ---------------------------------------------------------------------------
 
   /**
@@ -136,7 +153,7 @@ export default class PanelManageGenotypeComponent extends Component {
       let
       scope = this.axisBrush?.get('block.scope'),
       region = 'chr' + scope + ':' + domainInteger.join('-'),
-      preArgs = '-r ' + region + ' -s ' + samples.replaceAll('\n', ','),
+      preArgs = {region, samples, requestFormat : this.requestFormat},
       parent = this.datasetName;
 
       let textP = this.auth.vcfGenotypeLookup(
@@ -151,9 +168,11 @@ export default class PanelManageGenotypeComponent extends Component {
           let blockV = this.blockService.viewed.find(
             (b) => (b.get('scope') === scope) && (b.get('datasetId.id') === datasetNameV));
           if (text?.text && blockV) {
-            const added = addFeaturesJson(blockV, text?.text);
-            const displayData = vcfFeatures2MatrixView(blockV, added);
-            this.displayData.addObjects(displayData);
+            const added = addFeaturesJson(blockV, this.requestFormat, text?.text);
+            if (added.createdFeatures && added.sampleNames) {
+              const displayData = vcfFeatures2MatrixView(blockV, this.requestFormat, added);
+              this.displayData.addObjects(displayData);
+            }
           }
         });
     }

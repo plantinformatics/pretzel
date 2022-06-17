@@ -346,7 +346,9 @@ export default Service.extend({
 
   /** Request DNA sequence lookup (Blast).
    * @param parent  datasetId of parent / reference of the blast db which is to be searched
-   * @param preArgs args to be inserted in command line between 'bcftools' and parent
+
+   * @param preArgs args to be inserted in command line, this may be between
+   * 'bcftools' and parent (vcf file name), or after the file name.
    *  e.g. region : -r 'chr6A:607200000-607200000'
    *      samples : -s ...,...
    * This will likely be replaced by specific params region and samples.
