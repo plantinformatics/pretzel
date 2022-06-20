@@ -168,24 +168,42 @@ export default Component.extend({
     }
   },
 
+  /** Map from base letter to colour.
+   * Used by base2Colour(), which can switch mappings to support different
+   * colour schemes.
+   */
+  baseColour : {
+    A : 'green',
+    C : 'blue',
+    G : 'red',
+    B : 'red',
+    T : 'black',
+  },
+  base2Colour(base) {
+    let colour = this.baseColour[base];
+    return colour;
+  },
   CATGRenderer(instance, td, row, col, prop, value, cellProperties) {
     Handsontable.renderers.TextRenderer.apply(this, arguments);
-    let match = value.split(/[/|]/);
-    if (match) {
-      value = match[+this.selectPhase];
+    let diagonal;
+    let alleles = value.split(/[/|]/);
+    if (alleles) {
+      diagonal = alleles[0] !== alleles[1];
+      if (diagonal) {
+        td.classList.add('diagonal-triangle');
+      }
+      // value = alleles[+this.selectPhase];
     }
-    if (value == 'A') {
-      td.style.background = 'green';
+    let colours = alleles.map(this.base2Colour.bind(this));
+    if (colours[0]) {
+      td.style.background = colours[0];
       td.style.color = 'white';
-    } else if (value == 'C') {
-      td.style.background = 'blue';
-      td.style.color = 'white';
-    } else if (value == 'G' || value == 'B') {
-      td.style.background = 'red';
-      td.style.color = 'white';
-    } else if (value == 'T') {
-      td.style.background = 'black';
-      td.style.color = 'white';
+    }
+    if (diagonal && colours[1]) {
+      const
+      allele2Colour = colours[1],
+      allele2Class = 'allele2-' + allele2Colour;
+      td.classList.add(allele2Class);
     }
   },
 
