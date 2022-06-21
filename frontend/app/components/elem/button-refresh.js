@@ -1,5 +1,8 @@
 import Component from '@ember/component';
 
+/**
+ * @param classNames  optional;  default ['pull-right']
+ */
 export default Component.extend({
   tagName: 'span',
   // attributes
@@ -7,6 +10,16 @@ export default Component.extend({
     this.sendAction('onClick');
   },
   // classes
-  classNames: ['pull-right']
+  classNames: undefined,
   // actions
+
+  // ---------------------------------------------------------------------------
+
+  init() {
+    this._super(...arguments);
+
+    if (! this.classNames) {
+      this.set('classNames', ['pull-right']);
+    }
+  },
 });

@@ -694,16 +694,15 @@ export default Service.extend({
      * the blockIds.  This is because of the implementation of $sample
      * (https://stackoverflow.com/a/46881483).
      * So instead getBlockFeaturesInterval() is called once for each blockId;
-     * requestBlockIds is used in place of dataBlockIds.
+     * this also simplifies API access-checking.
      */
     let promises =
     dataBlockIds.map(function (blockId) {
-      let requestBlockIds = [blockId];
     let promise = 
       // streaming version not added yet
       // pathsViaStream ?
       // this.get('auth').getPathsViaStream(blockA, blockB, intervalParams, /*options*/{dataEvent : receivedData}) :
-      me.get('auth').getBlockFeaturesInterval(requestBlockIds, intervalParams, /*options*/{});
+      me.get('auth').getBlockFeaturesInterval(blockId, intervalParams, /*options*/{});
         function receivedData(res){
           if (trace_pathsP > 1)
             dLog(apiName, ' request then', res.length);

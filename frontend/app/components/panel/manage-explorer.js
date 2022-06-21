@@ -1,5 +1,6 @@
 import $ from 'jquery';
-import { later, next } from '@ember/runloop';
+import { later, next, debounce, bind } from '@ember/runloop';
+import { debounce as lodash_debounce } from 'lodash/function';
 import { resolve, all } from 'rsvp';
 import { A } from '@ember/array';
 import { inject as service } from '@ember/service';
@@ -9,7 +10,7 @@ import { singularize, pluralize } from 'ember-inflector';
 
 import DS from 'ember-data';
 
-import { computed } from '@ember/object';
+import EmberObject, { computed } from '@ember/object';
 import {
   filter,
   filterBy,
@@ -54,6 +55,9 @@ import {
   selectOntologyNode,
 } from '../../utils/data/block-values';
 
+import { noGroup } from '../../utils/data/groups';
+
+
 import ManageBase from './manage-base'
 
 /*----------------------------------------------------------------------------*/
@@ -81,8 +85,6 @@ const dLog = console.debug;
 
 const selectorExplorer = 'div#left-panel-explorer';
 
-
-
 /*----------------------------------------------------------------------------*/
 
 
@@ -103,10 +105,19 @@ export default ManageBase.extend({
       window.alert('initRecursionCount : ' + initRecursionCount);
     }
 
-    let me = this;
-    this.get('apiServers').on('receivedDatasets', function (datasets) { console.log('receivedDatasets', datasets); me.send('receivedDatasets', datasets); });
+    this.get('apiServers').on('receivedDatasets', this.receivedDatasetsFn);
     /** Initialise this.blocksService so that dependency blocksService.featureUpdateCount works. */
     let blocksService = this.get('blocksService');
+  },
+  receivedDatasetsFn : computed( function() {
+    return (datasets) => {
+      dLog('receivedDatasets', datasets);
+      this.send('receivedDatasets', datasets);
+    };
+    // or bind(this, function ...);
+  }),
+  willDestroyElement() {
+    this.get('apiServers').off('receivedDatasets', this.receivedDatasetsFn);
   },
 
   urlOptions : computed('model.params.options', function () {
@@ -449,6 +460,25 @@ export default ManageBase.extend({
   filterGroupsChangeCounter : 0,
   //----------------------------------------------------------------------------
 
+  groupFilterSelected : undefined,
+  groupsService : alias('apiServerSelectedOrPrimary.groups'),
+  groupsForFilter : computed('groupsIn', function () {
+    const
+    fnName = 'groupsForFilter',
+    groupsP = this.get('groupsService').get('groupsInOwnNone');
+    return groupsP;
+  }),
+
+  selectedGroupChanged(selectedGroup) {
+    if (selectedGroup === noGroup) {
+      selectedGroup = null;
+    }
+    this.set('groupFilterSelected', selectedGroup);
+  },
+
+
+  //----------------------------------------------------------------------------
+
   promiseToTask : task(function * (promise) {
     // dLog('promiseToTask', promise, 'mapsTask');
     let result = yield promise;
@@ -521,7 +551,7 @@ export default ManageBase.extend({
     return combined;
   }),
   //----------------------------------------------------------------------------
-  dataPre1: computed('datasetsBlocks', 'datasetsBlocks.[]', 'filter', function() {
+  dataPre1: computed('datasetsBlocks', 'datasetsBlocks.[]', 'filter', 'groupFilterSelected', function() {
     let availableMaps = this.get('datasetsBlocks') || resolve([]);
     let filter = this.get('filter')
     dLog('dataPre', availableMaps, filter);
@@ -535,6 +565,15 @@ export default ManageBase.extend({
     } else {
       if (trace_dataTree > 2)
         availableMaps.then(function (value) { console.log('dataPre availableMaps ->', value); });
+      if (this.groupFilterSelected) {
+        availableMaps = thenOrNow(
+          availableMaps,
+          (datasetsBlocks) => datasetsBlocks.filter((d) => {
+            let ok = d.get('groupId.id') === this.groupFilterSelected.id; return ok; }));
+      }
+      availableMaps = thenOrNow(
+        availableMaps,
+        (datasetsBlocks) => datasetsBlocks.filterBy('isVisible'));
       return availableMaps;
     }
   }),
@@ -549,9 +588,23 @@ export default ManageBase.extend({
     }
     return data;
   }),
-  nameFilterArray : computed('nameFilter', function () {
+  nameFilterChanged(value) {
+    // dLog('nameFilterChanged', value);
+    // debounce(this, this.nameFilterChangedSet, 2000);
+    // use lodash_debounce() instead because it has option : leading
+    this.get('nameFilterDebouncedLodash')();
+  },
+  nameFilterDebouncedLodash : computed(function () {
+    let debounced = lodash_debounce(() => this.nameFilterChangedSet(), 500, { maxWait: 2000, leading: true });
+    return debounced;
+  }),
+  nameFilterChangedSet() {
+    dLog('nameFilterChangedSet', 'set', this.nameFilter);
+    this.set('nameFilterDebounced', this.nameFilter);
+  },
+  nameFilterArray : computed('nameFilterDebounced', function () {
     let
-    nameFilter = this.get('nameFilter'),
+    nameFilter = this.get('nameFilterDebounced'),
     array = !nameFilter || (nameFilter === '') ? [] :
       nameFilter.split(/[ \t]/);
     return array;
@@ -1657,18 +1710,36 @@ export default ManageBase.extend({
     /** Update : now that qtlColourBy and visibleBy{Trait,Ontology} are
      * controlled by the user tab selection instead of viewed-settings buttons,
      * making all the block values of the non-selected field visible is not required.
+
+     * Update 2 : re-enable this functionality when adding blocks from tabs
+     * other than Trait and Ontology;
+     * for the Trait and Ontology tabs : just the values related in the QTLs of this
+     * block are made visible; in record/entry-block-add-button.js @see collateOT()
      */
-    const makeOtherFieldVisible = false;
+    const makeOtherFieldVisible = doFields.length == 2;
     if (makeOtherFieldVisible) {
       doFields.forEach((fieldName) => this.makeValuesVisibleField(block, pluralize(fieldName)));
+      /** this has to wait for block.allFeatures, and also for
+       * ontology.ontologyIsVisible@each, and perhaps .setScaleDomain changes;
+       * can set up a promise to wait on once the functionality is settled;
+       * using later( 3sec) as in entry-block-add-button.js : loadBlock().
+       */
+      this.get('ontology').ensureVisibleOntologiesAreColoured();
+      later(() => this.get('ontology').ensureVisibleOntologiesAreColoured(), 3000);
     }
 
+    /** if true, set .qtlColourBy to Traits or Ontologies if this block has
+     * Traits or Ontologies.
+     */
+    const colourByAttributes = false;
     /** if current tab is in fields[], i.e. fields.includes(doneField) */
     if (doFields.length < fields.length) {
       this.colourAndVisibleBy(doneField);
-    } else {
+    } else if (colourByAttributes) {
       /** use apiServer blockFeature{Traits|Ontologies} to see if block has
-       * either, and set 'Ontology' if block has no Traits.
+       * either, and set 'Ontology' if block has Ontologies and no Traits,
+       * otherwise defaulting to colour by Traits if the block has Traits, and
+       * otherwise Block.
        */
       let 
       haveField = ['Traits', 'Ontologies'].find(
@@ -1707,11 +1778,7 @@ export default ManageBase.extend({
     let viewedSettings = this.get('controls.viewed');
     dLog('colourAndVisibleBy', field, viewedSettings);
     if (viewedSettings) {
-    viewedSettings.setProperties({
-      visibleByOntology : field === 'Ontology',
-      visibleByTrait : field === 'Trait',
-      qtlColourBy : (field === 'Trait') ? 'Trait' : 'Ontology',
-    });
+      viewedSettings.colourAndVisibleBy(fieldNameSingular);
     }
   },
 
@@ -1751,6 +1818,7 @@ export default ManageBase.extend({
      * display.
      */
     this.set('nameFilter', '');
+    this.set('nameFilterDebounced', '');
     this.set('activeId', id);
   },
 

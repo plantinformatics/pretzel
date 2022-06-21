@@ -174,7 +174,7 @@ export default Component.extend(Evented, AxisEvents, {
     /** could use an immutable structure, then template get would depend on it.  */
     featuresResults.forEach((featuresLengthResult) => {
       if (featuresLengthResult) {
-        let length = featuresLengthResult.value.length;
+        let length = featuresLengthResult.value?.length;
         /** if length, get blockId from value[0], otherwise not
          * straightforward to use this result.  */
         if (length) {

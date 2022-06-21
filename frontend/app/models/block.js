@@ -1117,10 +1117,24 @@ export default Model.extend({
       return axis1d;
     }),
 
+  /** match with a different server, using reference dataset name and scope. */
+  get crossServerAxis1d() {
+    let
+    scope = this.get('scope'),
+    datasetId = this.get('datasetId.id'),
+    axes1d = this.get('blockService').axes1d,
+    axis1d = axes1d.datasetIdScope2axis1d(datasetId, scope);
+    return axis1d;
+  },
   axis1d : computed(
     'referencedAxis1d', 'referenceBlock.referencedAxis1d',
     function () {
+      const fnName = 'axis1d';
       let axis1d = this.get('referencedAxis1d') || this.get('referenceBlock.referencedAxis1d');
+      if (! axis1d) {
+        axis1d = this.get('crossServerAxis1d') || this.get('referenceBlock.crossServerAxis1d');
+        dLog(fnName, axis1d, this);
+      }
       if (axis1d?.isDestroying) {
         dLog('axis1d isDestroying', axis1d);
         axis1d = undefined;
@@ -1139,7 +1153,7 @@ export default Model.extend({
     let axis1d;
     if (this.isViewed) {
       let
-      axes1d = this.get('blockService.axes1d.axis1dArray');
+      axes1d = this.get('blockService.axes1d').get('axis1dArray');
       axis1d = axes1d.find(
         (a1) => !a1.isDestroying &&
           ((a1.get('axis') === this) || 
@@ -1274,6 +1288,7 @@ export default Model.extend({
    * This enables calculation of the .value[] of the QTL features.
    */
   loadRequiredData : computed(function () {
+    /* No dependency - will compute once.  */
     // possibly generalise the tag from 'QTL' to : 'valueComputed'
     if (this.get('isQTL')) {
       let
@@ -1293,7 +1308,7 @@ export default Model.extend({
         .then((ps) => {
           let parentFeatures = ps[1];
           return parentFeatures && parentFeatures.then((pf) => {
-            /** referencedFeatures() yields an array of Features */
+            /** referencedFeatures() yields an array of Features : pf */
             let features = ps[0][0].value,
                 /** no return value, so result is a promise yielding undefined */
                 f2 = this.valueCompute(features, pf);
@@ -1365,12 +1380,14 @@ export default Model.extend({
     }
   },
   /** Request all features of this block.
+   * @return promise yielding features
    */
   allFeatures : computed(function () {
+    /* No dependency - will compute once, and thereafter return cached value.  */
     let
-    pathsP = this.get('pathsP'),
-    features = pathsP.getBlockFeaturesInterval(this.id, /*all*/true);
-    return features;
+    pathsPro = this.get('pathsP'),
+    featuresP = pathsPro.getBlockFeaturesInterval(this.id, /*all*/true);
+    return featuresP;
   }),
 
   /** Request features for blockId, within the interval which

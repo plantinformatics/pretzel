@@ -1,0 +1,70 @@
+<div class="group-outer">
+
+  {{!-- when server is added to groups query-params, lookup from group.store.name --}}
+  {{#link-to 'groups' classNames='btn btn-info btn-xs' tagName='button'}}
+  <i class="glyphicon glyphicon-arrow-left"></i>
+  {{/link-to}}
+
+
+{{#let this.model as |group|}}
+
+  {{#if apiServers.multipleServers}}
+    <div style="margin-top: 2ex; margin-bottom:3ex">
+      <label>Server</label>
+      <span>{{server.tabId}}</span>
+    </div>
+  {{/if}}
+
+  <label style="margin-left:1em; font-size: larger;">Group</label>
+  <div class="group-details margin-1em">
+
+    {{!-- group.id --}}
+
+    <div class="flex-gap-1 margin-1em">
+
+      {{#unless this.editingName}}
+        <label>Name : </label><span>{{group.name}}</span>
+        <span>
+          {{elem/button-base
+            click=(action (mut this.editingName) true)
+            icon='pencil'
+            classColour="info"
+            classSize='xs'
+          }}
+
+          {{#ember-tooltip side="bottom" delay=1000}}
+            Edit the group name.  Each keystroke is saved.
+          {{/ember-tooltip}}
+       </span>
+      {{else}}
+        <input
+          oninput={{action (action this.changeGroupName group) value="target.value" }}
+          onblur={{action (mut this.editingName) false}}
+          value={{group.name}}   >
+        {{elem/display-message message=this.changeGroupNameMsg}}
+      {{/unless}}
+
+    </div>
+
+    <div class="flex-gap-1 margin-1em"><label>Owner : </label><span>{{group.clientId.email}}</span></div>
+
+    <div class="flex-gap-1 margin-1em">
+      <div>
+        <input type="checkbox"
+        id="select-group-as-filter"
+        checked={{group.writable}}
+        oninput={{action (action this.setWritable) value="target.checked" }}  >
+      <label for="select-group-as-filter">Group Members can add Datasets to this Group</label>
+      </div>
+      <div>{{setWritableMsg}}</div>
+    </div>
+
+
+ </div>
+
+
+{{/let}}
+
+{{outlet}}
+
+</div>

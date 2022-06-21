@@ -1,0 +1,43 @@
+{
+  "name": "Record",
+  "base": "PersistedModel",
+  "description": "Base model for owned resources",
+  "idInjection": true,
+  "options": {
+    "validateUpsert": true
+  },
+  "properties": {
+    "public": {
+      "type": "boolean",
+      "default": false
+    },
+    "readOnly": {
+      "type": "boolean",
+      "default": true
+    },
+    "createdAt" : {
+      "type": "date",
+      "default": "$now"
+    },
+    "updatedAt" : {
+      "type": "date",
+      "default": "$now"
+    }
+  },
+  "validations": [],
+  "relations": {
+    "client": {
+      "type": "belongsTo",
+      "model": "Client",
+      "foreignKey": "clientId"
+    },
+    "group": {
+      "type": "belongsTo",
+      "model": "Group",
+      "foreignKey": "groupId"
+    }
+  },
+  "acls": [
+  ],
+  "methods": {}
+}

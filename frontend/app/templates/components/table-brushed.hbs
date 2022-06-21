@@ -8,6 +8,19 @@
     checked={{this.autoColumnWidth}}
     oninput={{action this.autoColumnWidthChanged value="target.checked"}}  >
   <label>Auto Column Width</label>
+
+  <input type="checkbox"
+    style="margin-left: 3em;"
+    checked={{this.editable}}
+    oninput={{action (mut this.editable) value="target.checked"}}  >
+  <label>Editable</label>
+
+  <input type="checkbox"
+    style="margin-left: 3em;"
+    checked={{this.saveToDatabase}}
+    oninput={{action (mut this.saveToDatabase) value="target.checked"}}  >
+  <label>Save To Database</label>
+
 </div>
 <div style="clear:both"></div>
 
@@ -22,6 +35,8 @@
 }}
 -->
 <div id="table-brushed"> </div>
+
+{{saveFeatureMsg}}
 
 {{#if formFeatureEditEnable}}
   {{#ember-modal-dialog modal-id="feature-edit-modal" title="Feature Edit" header-icon='edit'}}

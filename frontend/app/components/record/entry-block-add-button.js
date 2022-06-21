@@ -26,8 +26,8 @@ export default EntryBase.extend({
       /** these 2 functions each determine if this button is within the explorer
        * Trait or Ontology tab, and only the corresponding function will take an
        * action. */
-      this.setTraitVisible();
-      this.setOntologyVisible();
+      this.setTraitVisible(block);
+      this.setOntologyVisible(block);
       this.get('ontology').ensureVisibleOntologiesAreColoured();
       later(() => this.get('ontology').ensureVisibleOntologiesAreColoured(), 3000);
     }
@@ -37,7 +37,7 @@ export default EntryBase.extend({
   /** If this component is in explorer trait tree, set as visible the
    * TraitId which this component is within.
    */
-  setTraitVisible() {
+  setTraitVisible(block) {
     /** record/entry-* component */
     let entry = this;
     /** Both this function and setOntologyVisible() use component-tree lookup to
@@ -64,13 +64,14 @@ export default EntryBase.extend({
       dLog('setTraitVisible', traitName, parent);
       /** This will also add traitName as required. */
       this.get('trait').traitVisible(traitName, true);
+      this.collateOT(block, traitName, undefined);
     }
   },
 
   /** If this component is in explorer ontology tree, set as visible the
    * OntologyId which this component is within.
    */
-  setOntologyVisible() {
+  setOntologyVisible(block) {
     /** record/entry-* component */
     let
     entry = this,
@@ -88,7 +89,47 @@ export default EntryBase.extend({
       ontologyId = values.id ||
       (values.name && ontologyIdFromIdText(values.name));
       this.get('ontology').setOntologyIsVisible(ontologyId, true);
+      this.collateOT(block, undefined, ontologyId);
     }
+  },
+  /** Collate the ontology or trait values of features in the block which match
+   * the given a trait or ontology.
+   *
+   * When the user adds a block from Explorer Trait tab, the Ontologies of QTLs
+   * (features) in the block which match the branch Trait are made visible.
+   * And vice versa, for Ontology / Trait.
+   *
+   * @param block block which is being viewed
+   * @param traitName, ontologyId one of these is !== undefined
+   */
+  collateOT(block, traitName, ontologyId) {
+    const
+    fnName = 'collateOT',
+    /** match this value */
+    value = traitName || ontologyId,
+    fields = ['Trait', 'Ontology'],
+    /** true if adding from Trait tab of explorer */
+    fromTrait = !!traitName,
+    /** field name of explorer tab */
+    fromField = fields[+!fromTrait],
+    otherField = fields[+fromTrait];
+    dLog(fnName, block.id, traitName, ontologyId, value, fromTrait, fromField, otherField);
+    block.get('allFeatures').then((features) => {
+      dLog(fnName, features.length);
+    let
+    valueSet = block.get('features').reduce((result, feature) => {
+      if (feature.get('values.' + fromField) == value) {
+        result.add(feature.get('values.' + otherField));
+      }
+      return result;
+    }, new Set()),
+    values = Array.from(valueSet.keys());
+    dLog(fnName, values);
+    values.forEach(
+      (value) => fromTrait ?
+        this.get('ontology').setOntologyIsVisible(value, true) :
+        this.get('trait').traitVisible(value, true) );
+    });
   },
 
 });

@@ -58,6 +58,28 @@ export default Component.extend(Evented, /*AxisEvents,*/ {
 
   /*--------------------------------------------------------------------------*/
 
+  /** Match axis-1d using dataset name and scope; this can match with axes of
+   * any server.
+   * @param datasetId block.get('datasetId.id')
+   * @param scope block.get('scope')
+   * @return axis-1d
+   */
+  datasetIdScope2axis1d(datasetId, scope) {
+    const fnName = 'datasetIdScope2axis1d';
+    let 
+    axis1d = this.axis1dArray.find((a1) => {
+      let
+      a1Block = a1.axis,
+      match = (a1.axis.get('datasetId.id') === datasetId) && 
+        (a1Block.get('scope') === scope);
+      return match;
+    });
+    dLog(fnName, datasetId, scope, axis1d);
+    return axis1d;
+  },
+
+  // ---------------------------------------------------------------------------
+
   /** axes-1d receives axisStackChanged from draw-map and
    * (todo) propagates it to its children
    */

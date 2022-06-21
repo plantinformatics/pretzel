@@ -1,5 +1,6 @@
 import { assert } from '@ember/debug';
 import { getOwner } from '@ember/application';
+import { alias } from '@ember/object/computed';
 import $ from 'jquery';
 import Service, { inject as service } from '@ember/service';
 import { isEmpty, typeOf } from '@ember/utils';
@@ -16,7 +17,7 @@ import { after } from 'lodash/function';
 /* global EventSource */
 
 const trace_paths = 0;
-const trace = 0;
+const trace = 1;
 const dLog = console.debug;
 
 /** This value is used in SSE packet event id to signify the end of the cursor in pathsViaStream. */
@@ -38,6 +39,9 @@ const requestServerAttr = 'session.requestServer';
 export default Service.extend({
   session: service('session'),
   apiServers : service(),
+  controls : service(),
+
+  apiServerSelectedOrPrimary : alias('controls.apiServerSelectedOrPrimary'),
 
   changePassword(data) {
     return this._ajax('Clients/change-password', 'POST', JSON.stringify(data), true)
@@ -57,17 +61,42 @@ export default Service.extend({
     return this._ajax('Clients/', 'POST', JSON.stringify(data), false)
   },
 
+  groups(server, own) {
+    let verb = own ? 'own' : 'in';
+    /** server API /own will implement this filter by default, but client can
+     * define it until LB4 API has clientId from accessToken.
+     * The LB3 API is /Groups/, and the LB4 is /groups/.
+    let clientId = this.get('session.session.authenticated.clientId');
+    let data = clientId ? {'filter[where]': {clientId}} : {};
+    dLog('groups', own, clientId);
+    + clientId + '/'
+     */
+    return this._ajax('Groups/' + verb, 'GET', /*data*/{server}, true);
+  },
+
+  addClientGroupEmail(groupId, clientEmail) {
+    let data = {id : groupId, addEmail : clientEmail};
+    return this._ajax('Groups/addMemberEmail', 'POST', JSON.stringify(data), true);
+  },
+
   runtimeConfig() {
     console.log('runtimeConfig');
-    return this._ajax('Configurations/runtimeConfig', undefined, 'GET', true);
+    return this._ajax('Configurations/runtimeConfig', 'GET', undefined, true);
+  },
+
+  getVersion(server) {
+    console.log('getVersion');
+    return this._ajax('Configurations/version', 'GET', {server}, true);
   },
 
   uploadData(data, onProgress) {
-    return this._ajax('Datasets/upload', 'POST', JSON.stringify(data), true, onProgress);
+    let server = this.get('apiServerSelectedOrPrimary');
+    return this._ajax('Datasets/upload', 'POST', JSON.stringify(data), true, onProgress, server);
   },
 
   tableUpload(data, onProgress) {
-    return this._ajax('Datasets/tableUpload', 'POST', JSON.stringify(data), true, onProgress);
+    let server = this.get('apiServerSelectedOrPrimary');
+    return this._ajax('Datasets/tableUpload', 'POST', JSON.stringify(data), true, onProgress, server);
   },
 
   getBlocks() {
@@ -78,13 +107,13 @@ export default Service.extend({
   getPaths(blockA, blockB, withDirect, options) {
     if (trace_paths)
       dLog('services/auth getPaths', blockA, blockB, withDirect, options);
-    return this._ajax('Blocks/paths', 'GET', {blockA : blockA, blockB : blockB, withDirect, options : options}, true)
+    return this._ajax('Blocks/paths', 'GET', {id : [blockA, blockB], blockA, blockB, withDirect, options : options}, true);
   },
 
   getPathsProgressive(blockA, blockB, intervals, options) {
     if (trace_paths)
       dLog('services/auth getPathsProgressive', blockA, blockB, intervals, options);
-    return this._ajax('Blocks/pathsProgressive', 'GET', {blockA : blockA, blockB : blockB, intervals, options : options}, true);
+    return this._ajax('Blocks/pathsProgressive', 'GET', {id : [blockA, blockB], blockA, blockB, intervals, options : options}, true);
   },
 
   /** 
@@ -95,8 +124,15 @@ export default Service.extend({
     const filteredIntervalParams = omitUndefined(intervals);
     let
       route= 'Blocks/pathsViaStream',
-    dataIn = {blockA, blockB},
+    /** .id[] is mapped in _endpointURLToken() -> _server() -> blockIdMap() */
+    dataIn = {
+      blockA, blockB,
+      id : [blockA, blockB],
+    },
     {url, data} = this._endpointURLToken(dataIn, route);
+    /** .id replaces .blockA, .blockB, but _server() still uses them, and it
+     * enables secondary Pretzel servers prior to addition of id to be
+     * accessed. */
     data.intervals = filteredIntervalParams;
       url +=
       '&' +
@@ -197,7 +233,7 @@ export default Service.extend({
   getPathsAliasesProgressive(blockIds, intervals, options) {
     if (trace_paths)
       dLog('services/auth getPathsAliasesProgressive', blockIds, intervals, options);
-    return this._ajax('Blocks/pathsAliasesProgressive', 'GET', {blockIds, intervals, options}, true);
+    return this._ajax('Blocks/pathsAliasesProgressive', 'GET', {id : blockIds, blockIds, intervals, options}, true);
   },
 
   /** 
@@ -208,7 +244,7 @@ export default Service.extend({
     const filteredIntervalParams = omitUndefined(intervals);
     let
       route= 'Blocks/pathsAliasesViaStream',
-    dataIn = {blockIds},
+    dataIn = {id : blockIds, blockIds},
     {url, data} = this._endpointURLToken(dataIn, route);
     data.intervals = filteredIntervalParams;
     url +=
@@ -243,25 +279,25 @@ export default Service.extend({
   getPathsByReference(blockA, blockB, reference, max_distance, options) {
     if (trace_paths)
       dLog('services/auth getPathsByReference', blockA, blockB, reference, max_distance, options);
-    return this._ajax('Blocks/pathsByReference', 'GET', {blockA : blockA, blockB : blockB, reference, max_distance, options : options}, true);
+    return this._ajax('Blocks/pathsByReference', 'GET', {id : [blockA, blockB], blockA, blockB, reference, max_distance, options : options}, true);
   },
 
   getBlockFeaturesCounts(block, interval, nBins, isZoomed, useBucketAuto, options) {
     if (trace_paths)
       dLog('services/auth getBlockFeaturesCounts', block, interval, nBins, isZoomed, useBucketAuto, options);
-    return this._ajax('Blocks/blockFeaturesCounts', 'GET', {block, interval, nBins, isZoomed, useBucketAuto, options}, true);
+    return this._ajax('Blocks/blockFeaturesCounts', 'GET', {id : block, block, interval, nBins, isZoomed, useBucketAuto, options}, true);
   },
 
   getBlockFeaturesCount(blocks, options) {
     if (trace_paths)
       dLog('services/auth getBlockFeaturesCount', blocks, options);
-    return this._ajax('Blocks/blockFeaturesCount', 'GET', {blocks, options}, true);
+    return this._ajax('Blocks/blockFeaturesCount', 'GET', {id : blocks, blocks, options}, true);
   },
 
   getBlockFeatureLimits(block, options) {
     if (trace_paths)
       dLog('services/auth getBlockFeatureLimits', block, options);
-    return this._ajax('Blocks/blockFeatureLimits', 'GET', {block, options}, true);
+    return this._ajax('Blocks/blockFeatureLimits', 'GET', {id : block, block, options}, true);
   },
 
   getBlockValues(fieldName, options) {
@@ -270,10 +306,10 @@ export default Service.extend({
     return this._ajax('Blocks/blockValues', 'GET', {fieldName, options}, true);
   },
 
-  getBlockFeaturesInterval(blocks, intervals, options) {
+  getBlockFeaturesInterval(blockId, intervals, options) {
     if (trace_paths)
-      dLog('services/auth getBlockFeaturesInterval', blocks, intervals, options);
-    return this._ajax('Blocks/blockFeaturesInterval', 'GET', {blocks, intervals, options}, true);
+      dLog('services/auth getBlockFeaturesInterval', blockId, intervals, options);
+    return this._ajax('Blocks/blockFeaturesInterval', 'GET', {id : blockId, blocks : [blockId], intervals, options}, true);
   },
 
   /** Search for Features matching the given list of Feature names in featureNames[].
@@ -342,7 +378,7 @@ export default Service.extend({
       options},
         dataS = JSON.stringify(data); // new String();
     // dataS.server = apiServer;
-    return this._ajax('Features/dnaSequenceSearch', 'POST', dataS, true);
+    return this._ajax('Features/dnaSequenceSearch', 'POST', dataS, true, /*progress*/undefined, apiServer);
   },
 
   createDataset(name) {
@@ -383,9 +419,17 @@ export default Service.extend({
   /** Customised ajax caller
    * token may be actual token string, or equal true to trigger token fetch
    * onProgress is a callback accepting (percentComplete, data_direction)
+   *
+   * @param dataIn  an object, or for POST : JSON.stringify(data object)
+   * The object may define .options.server or .server
+   * @param apiServer optional - server may also be passed as dataIn.server, which is deleted;
+   * this param is used for some POST calls
+   * (phasing out : requestServerAttr - .session.requestServer)
    */
-  _ajax(route, method, dataIn, token, onProgress) {
-    let {server, data} = this._server(dataIn),
+  _ajax(route, method, dataIn, token, onProgress , apiServer) {
+    let {server, data} = apiServer ?
+        {server : apiServer, data : dataIn} :
+        this._server(route, dataIn),
      url = this._endpoint(server, route);
 
     let config = {
@@ -398,7 +442,9 @@ export default Service.extend({
 
     if (data) config.data = data
 
-    console.log('_ajax', arguments, this);
+    if (trace) {
+      dLog('_ajax', arguments, (trace < 2) ? ',' : this);
+    }
     if (token === true) {
       let accessToken = this._accessToken(server);
       config.headers.Authorization = accessToken
@@ -447,11 +493,16 @@ export default Service.extend({
       accessToken = this.get('session.data.authenticated.token');
       dLog('_accessToken', this.get('session'), accessToken, server);
     }
-    console.log('_accessToken', server, accessToken);
+    if (trace) {
+      dLog('_accessToken', (trace < 2) ? ',' : server, accessToken);
+    }
     return accessToken
   },
   /** Determine which server to send the request to.
+   * @param route from _ajax(), used to indicate if data contains blockId params.
    * @param data  params to the API; these guide the server determination;
+   * data.server is used if defined;  otherwise server is determined from blockId params
+   * or default to primaryServer,
    * e.g. if the param is block: <blockId>, use the server from which blockId was loaded.
    *
    * For POST, data is a JSON string, so data.server is not defined (except by dnaSequenceSearch);
@@ -467,16 +518,22 @@ export default Service.extend({
    * The blockIds in input param data may be modified, in which case result
    * .data is a modified copy of input data.
    */
-  _server(data) {
+  _server(route, data) {
+    const fnName = '_server';
     let result = {data}, requestServer;
-    if (data.server) {
-      if (data.server === 'primary')
+    if (data?.server) {
+      if (data.server === 'primary') {
         requestServer = this.get('apiServers.primaryServer');
+        // in this case data may be a constant so don't delete data.server
+      }
       else {
         requestServer = data.server;
         delete data.server;
       }
-    } else {
+    } else if (data?.options?.server) {
+      requestServer = data.options.server;
+      delete data.options.server;
+    } else if (route.startsWith('Blocks/') && (route !== 'Blocks/dnaSequenceLookup')) {
       /** Map a blockId which may be a remote reference, to a local blockId;
        * no change if the value is already local.
        * This function is copied from backend/common/utilities/localise-blocks.js
@@ -496,16 +553,24 @@ export default Service.extend({
        */
       let
         blockIds = data.blocks || data.blockIds ||
-        [data.blockA, data.blockB].filter((b) => b),
+        data.blockId && [data.blockId] ||
+        (data.blockA || data.blockB) && [data.blockA, data.blockB].filter((b) => b) ||
+        data.block && [data.block] ||
+        data.id && [data.id],
+      /** Blocks/blockFeatureLimits may have .block === undefined, causing
+       * blockServers === undefined
+       */
       blockServers = blockIds && blockIds.map((blockId) => blockIdServer(blockId)),
       blockId = data.block,
       blockServer = blockId && blockIdServer(blockId);
       if (blockServer) {
         if (blockServers.length) {
-          dLog('_server', 'data has both single and multiple block params - unexpected', 
+          dLog(fnName, 'data has both single and multiple block params - unexpected', 
                data, blockIds, blockServers, blockId, blockServer);
         }
         requestServer = blockServer;
+      } else if (! blockServers) {
+        // requestServer is undefined
       } else if (blockServers.length === 1) {
         requestServer = blockServers[0];
       } else if (blockServers.length) {
@@ -523,19 +588,22 @@ export default Service.extend({
             result.data = blockIdMap(data, [blockLocalId, I]);
         }
       }
-      if (! requestServer) {
-	/** For requests without blockIds to determine blockServer from.
-	 * requestServerAttr (.session.requestServer) is set by buildURL(),
-	 * called via adapters/application.js: updateRecord().  Prior to that
-	 * being called, fall back to primaryServer, e.g. for runtimeConfig
-	 * which is used by getHoTLicenseKey() when the key is not defined in
-	 * the build environment.
-	 */
-        requestServer = this.get(requestServerAttr)
-	  || this.get('apiServers.primaryServer');
-      }
-      dLog(blockId, 'blockServer', blockServer, requestServer, this.get(requestServerAttr));
+      dLog(fnName, blockId, 'blockServer', blockServer, requestServer);
     }
+
+    if (! requestServer) {
+      /** For requests without data.server or blockIds to determine blockServer from.
+       * requestServerAttr (.session.requestServer) is set by buildURL(),
+       * called via adapters/application.js: updateRecord().  Prior to that
+       * being called, fall back to primaryServer, e.g. for runtimeConfig
+       * which is used by getHoTLicenseKey() when the key is not defined in
+       * the build environment.
+       */
+      requestServer = this.get(requestServerAttr)
+        || this.get('apiServers.primaryServer');
+      dLog(fnName, requestServer, this.get(requestServerAttr));
+    }
+
     result.server = requestServer;
     return result;
   },
@@ -559,7 +627,9 @@ export default Service.extend({
      *  "If not explicitly set, the cookie domain defaults to the domain the
      *  session was authenticated on."
      */
-    dLog('_endpoint', requestServer, apiHost, endpoint, config);
+    if (trace) {
+      dLog('_endpoint', apiHost, endpoint, trace > 1 && [requestServer, config]);
+    }
     return endpoint
   },
   /** Same as _endpoint() plus append '?access_token=' + access token.
@@ -571,8 +641,10 @@ export default Service.extend({
    * https://stackoverflow.com/questions/28176933/http-authorization-header-in-eventsource-server-sent-events
    * https://github.com/whatwg/html/issues/2177#issuecomment-487194160
    */
-  _endpointURLToken(dataIn, route) {
-    let {server, data} = this._server(dataIn),
+  _endpointURLToken(dataIn, route, apiServer) {
+    let {server, data} = apiServer ?
+        {server : apiServer, data : dataIn} :
+        this._server(route, dataIn),
     url = this._endpoint(server, route) +
       '?access_token=' + this._accessToken(server);
     return {url, data};
@@ -585,8 +657,12 @@ export default Service.extend({
 
 /** Map the input blockId params of data, using mapFns, which contains a
  * function for the first and second blockId params respectively.
+ * This is used to selectively modify the blockId params : e.g. when sending to
+ * the server of blockIds[0], map that to a local id.
+ * Apply the same mapping to id[].
  */
 function blockIdMap(data, mapFns) {
+  const fnName = 'blockIdMap';
   /** blockA, blockB, blockIds are the input blockId params;
    * d is the result data, and at this point contains the other params.
    */
@@ -603,7 +679,7 @@ function blockIdMap(data, mapFns) {
   d = restFields.reduce((result, f) => {result[f] = data[f]; return result;}, {}),
   /** ab is true if data contains .blockA,B, false if .blockIds or .blocks */
   ab = !!blockA;
-  console.log('blockIdMap', data, blockA, blockB, blockIds, restFields, d, ab);
+  console.log(fnName, data, blockA, blockB, blockIds, restFields, d, ab);
   if ((!blockA !== !blockB) || (!blockA === !blockIds)) {
     assert('param data is expected to contain either .blockA and .blockB, or .blockIds : ' +
                  JSON.stringify(data), false);
@@ -620,12 +696,18 @@ function blockIdMap(data, mapFns) {
   }
   /** if blockIds.length > mapFns.length, then mapFns[0] === mapFns[1], so just use mapFns[0]. */
   blockIds = blockIds.map((blockId, i) => (mapFns[i] || mapFns[0])(blockId));
+  /** handle any functions which pass blockIds and don't yet set id.   */
+  if (! d.id) {
+    dLog(fnName, d, '.id undefined', blockIds);
+  } else {
+    d.id = d.id.map((blockId, i) => (mapFns[i] || mapFns[0])(blockId));
+  }
   if (ab)
     [d.blockA, d.blockB] = blockIds;
   else {
     d[arrayName] = blockIds;
   }
-  console.log('blockIdMap', d, ab, arrayName);
+  console.log(fnName, d, ab, arrayName);
   return d;
 }
 

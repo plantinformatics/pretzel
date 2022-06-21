@@ -302,6 +302,7 @@ export default InAxis.extend({
      * equiv : this.axis1d.{zoomedDomainThrottled,zoomedDomainDebounced}
      */
   'axis1d.currentPosition.{yDomainDebounced,yDomainThrottled}',
+  'axis1d.flipped',
   'axis1d.extended',
   'blockViews.@each.isZoomedOut',
     /** .@each.x.y is no longer supported; if these dependencies are needed, can

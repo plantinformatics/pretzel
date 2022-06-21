@@ -1,9 +1,13 @@
 import $ from 'jquery';
+
 import { getOwner } from '@ember/application';
 import EmberObject, { computed } from '@ember/object';
 import Evented from '@ember/object/evented';
 import Service, { inject as service } from '@ember/service';
 import { isPresent } from '@ember/utils';
+
+import { find as collection_find } from 'lodash/collection';
+
 import {
   default as ApiServer,
   removePunctuation
@@ -68,6 +72,7 @@ export default Service.extend(Evented, {
        */
       let primaryServer = this.addServer(apiOrigin || siteOrigin, undefined, token, clientId);
       console.log('primaryServer', primaryServer);
+      primaryServer.getVersion();
     }
 
     if (false)  // useful in setting up development data
@@ -82,6 +87,13 @@ export default Service.extend(Evented, {
   },
 
   // needs: ['component:service/api-server'],
+
+  /** @return true if currently connected to >1 servers.
+   * @desc used to enable select-server pull-down
+   */
+  get multipleServers() {
+    return this.serversLength > 1;
+  },
 
   /** Add a new ApiServer.
    * Store it in this.servers, indexed by .name = .host_safe()
@@ -169,6 +181,17 @@ export default Service.extend(Evented, {
     index = nameList.indexOf(name);
     return index;
   },
+  /** Lookup a server by its api-server.tabId, which is generally .name without 'https__'.
+   * @param tabId
+   * @return undefined if tabId is not in .servers
+   */
+  lookupServerTabId : function(tabId) {
+    const
+    servers = this.get('servers'),
+    server = collection_find(servers, (s) => s.tabId === tabId);
+    return server;
+  },
+
   /*--------------------------------------------------------------------------*/
   /** The user selection of one of the server tabs in the data explorer
    * indicates which server should be the request target for upload, datasets
@@ -269,6 +292,27 @@ export default Service.extend(Evented, {
       dLog('stores', datasetName, stores, servers);
     return stores;
   },
+
+  // ---------------------------------------------------------------------------
+
+  groupId2Server(groupId) {
+    let
+    servers = this.get('servers'),
+    server = Object.values(servers)
+      .find((server) => {
+        let
+        groups = server.groups,
+        match = groups.groupsInIds?.includes(groupId) ||
+          groups.groupsOwn.toArray().findBy('id', groupId);
+        return match;
+      });
+    return server;
+  },
+
+  
+
+  // ---------------------------------------------------------------------------
+
   /** Equivalent to this.get('datasetsBlocks') which is [serverName] -> datasetsBlocks.
    * This form is useful as a ComputedProperty dependency, because dependency
    * .@each can only be on arrays, not objects (i.e. indexed by integer, not
@@ -291,6 +335,7 @@ export default Service.extend(Evented, {
       return result;
     }),
 
+  // ---------------------------------------------------------------------------
 
 
   ServerLogin: function(url, user, password) {
@@ -314,6 +359,7 @@ export default Service.extend(Evented, {
       let server =
         me.addServer(url, user, token, response.userId);
       server.getDatasets();
+      server.getVersion();
     }).catch(function (error) {
       let
       re = error && error.responseJSON && error.responseJSON.error,

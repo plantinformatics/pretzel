@@ -3,7 +3,6 @@
   "dependencies": {
     "ember-qunit-notifications": "^0.1.0",
     "pretender": "~1.1.0",
-    "Faker": "~3.1.0",
     "antiscroll": "8dc9793150",
     "minimatch": "isaacs/minimatch#^3.0.4",
     "d3-tip": "VACLab/d3-tip",
