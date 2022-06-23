@@ -85,6 +85,12 @@ module.exports = function(Dataset) {
             if (err && (errors.length || warnings.length)) {
               err = [err.toString()].concat(errors).concat(warnings).join("\n");
               errors = []; warnings = [];
+            } else if (typeof err.message === 'string') {
+              console.log(fnName, 'cbWrap', err.message);
+              err = ErrorStatus(400, err.message);
+              if (! message) {
+                message = err.message;
+              }
             }
             cbOrig(err, message);
           }

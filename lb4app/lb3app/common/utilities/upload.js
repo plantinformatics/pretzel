@@ -129,6 +129,7 @@ exports.uploadDataset = (data, models, options, cb) => {
  * @return promise
  */
 function uploadDatasetContent(dataset_id, blocks, models, options, cb) {
+  const fnName = 'uploadDatasetContent';
   let json_annotations = [];
   let json_intervals = [];
   let json_features = [];
@@ -164,7 +165,9 @@ function uploadDatasetContent(dataset_id, blocks, models, options, cb) {
   }).then(function(intervals) {
     //create features using connector for performance
     models.Feature.dataSource.connector.connect(function(err, db) {
-      insert_features_recursive(db, dataset_id, json_features, true, cb);
+      insert_features_recursive(db, dataset_id, json_features, true, cb)
+        /* cb already called. */
+        .catch((err) => console.log(fnName, err.message || err));
     });
   }).catch(cb);
   return promise;
@@ -231,7 +234,7 @@ function insert_features_recursive(db, dataset_id, features_to_insert, ordered, 
       }
       else {
         cb(err);
-        return Promise.reject(err);
+        return Promise.reject(err.message);
       }
     });
   return promise;
