@@ -115,6 +115,87 @@ class FeatureEditor extends Handsontable.editors.BaseEditor {
 
 /*----------------------------------------------------------------------------*/
 
+/** @return feature data of the table cell being edited */
+function getEditCellData(cell) {
+  let
+  td = cell.TD,
+  tr = td?.parentElement,
+  row = tr?.rowIndex,
+  table = cell.hot,
+  tableBrushed = table.rootElement.__PretzelTableBrushed__;
+  // td.cellIndex
+  let feature = tableBrushed.data[row];
+  return feature;
+}
+
+let windowOpenAction;
+
+
+class FeatureUrlView extends Handsontable.editors.BaseEditor {
+  constructor(props) {
+    super(props);
+  }
+
+  createElements() {
+    // super.createElements();
+
+    this.anchor = this.hot.rootDocument.createElement('a');
+    dLog('FeatureUrlView', this.anchor, this);
+
+    this.anchor.setAttribute('target', '_blank');
+    this.anchor.setAttribute('data-hot-input', true); // Makes the element recognizable by HOT as its own component's element.
+    let aStyle = this.anchor.style;
+    aStyle.width = 0;
+    aStyle.height = 0;
+  }
+
+  beginEditing(newInitialValue, event) {
+    dLog('beginEditing', newInitialValue, event);
+    super.beginEditing(newInitialValue, event);
+
+    if (! this.anchor) {
+      this.createElements();
+    }
+
+    const
+    feature = getEditCellData(this),
+    base = 'http://www.sbg.bio.ic.ac.uk/phyre2/',
+    Phyre2_ID = 'afceadc4df2bf1e7', // feature.values.Phyre2_ID
+    idUrl = base + 'phyre2_output/' + Phyre2_ID,
+    url = idUrl + '/summary.html';
+    /** other urls :
+     * base + '/webscripts/batchprogress.cgi?batchid=' + feature.values.Batch_ID
+     * idUrl + 'c6orbA_.1{.big,}.png', or 'c6orbA_.1.pdb'
+     */
+    this.anchor.setAttribute('href', url);
+    // this.anchor.click();
+    // window.open(url, '_blank');
+    windowOpenAction(url);
+    // return false;
+  }
+  getValue() {
+    dLog('getValue');
+    return this.originalValue;
+  }
+  setValue(newValue /* Mixed*/) {
+    dLog('setValue', newValue);
+  }
+  open() {
+    dLog('open', this, this.TD);
+  }
+  close() {
+    dLog('close', this);
+    /* This is called when user clicks into the feature-edit dialog;  no action required. */
+  }
+  focus() {
+    dLog('focus');
+  }
+
+}
+
+
+/*----------------------------------------------------------------------------*/
+
 /** Provide default types for feature .values fields
  */
 const featureValuesTypes = {
@@ -127,6 +208,7 @@ const featureValuesColumnsAttributes = {
   alt : { className: "htCenter"},
   Reference : {className : 'htNoWrap' },
   Ontology : { editor : FeatureEditor, className : 'editDialog' },
+  Phyre2_ID : { editor : FeatureUrlView},
 };
 /** Provide default widths for feature .values fields
  */
@@ -218,6 +300,7 @@ export default Component.extend({
     dLog("components/table-brushed.js: didInsertElement");
 
     formFeatureEditEnable = (enable) => later(() => this.set('formFeatureEditEnable', enable));
+    windowOpenAction = (url) => later(() => window.open(url, '_blank'));
   },
 
   /** Destroy the HandsOnTable so that it does not clash with the HandsOnTable
