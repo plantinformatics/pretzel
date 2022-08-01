@@ -157,8 +157,9 @@
         {{else if (compare layout.right.tab '===' 'genotype')}}
           {{panel/manage-genotype
             dataset=selectedDataset
-            displayData=block.viewed
             selectedBlock=selectedBlock
+            selectedFeatures=selectedFeatures
+            updatedSelectedFeatures='updateSelectedFeatures'
             }}
 
         {{else if (and (compare layout.right.tab '===' 'settings') model.params.parsedOptions.advSettings)}}

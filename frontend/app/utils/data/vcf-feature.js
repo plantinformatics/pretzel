@@ -1,4 +1,5 @@
 import { get as Ember_get, set as Ember_set } from '@ember/object';
+import { A as Ember_A } from '@ember/array';
 
 
 // -----------------------------------------------------------------------------
@@ -60,9 +61,11 @@ scaffold38755_709316	709316	0/0	0/1	0/0	0/0	0/0	./.	0/0	0/0	0/0	0/1	0/0	0/0	0/0	
  *
  * @param block view dataset block for corresponding scope (chromosome)
  * @param requestFormat 'CATG', 'Numerical', ...
+ * @param replaceResults  true means remove previous results for this block from block.features[] and selectedFeatures.
+ * @param selectedFeatures  updated directly - can change to use updatedSelectedFeatures
  * @param text result from bcftools request
  */
-function addFeaturesJson(block, requestFormat, text) {
+function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures, text) {
   const fnName = 'addFeaturesJson';
   dLog(fnName, block, text);
   /** optional : add fileformat, FILTER, phasing, INFO, FORMAT to block meta
@@ -71,11 +74,33 @@ function addFeaturesJson(block, requestFormat, text) {
    */
   let
   createdFeatures = [],
+  /** The same features as createdFeatures[], in selectedFeatures format. */
+  selectionFeatures = [],
   lines = text.split('\n'),
   meta = {},
   columnNames,
   sampleNames,
   nFeatures = 0;
+
+  if (replaceResults) {
+    let mapChrName = Ember_get(block, 'brushName');
+    /* remove features of block from createdFeatures, i.e. matching Chromosome : mapChrName
+     * If the user has renewed the axis brush, then selectedFeatures will not
+     * contain any features from selectionFeature in previous result; in that
+     * case this has no effect and none is required.
+     * If the user send a new request with e.g. changed samples, then this would apply.
+     */
+    let blockSelectedFeatures = selectedFeatures.filter((f) => f.feature.get('blockId.id') === block.id);
+    if (blockSelectedFeatures.length) {
+      selectedFeatures.removeObjects(blockSelectedFeatures);
+    }
+
+    if (block.get('features.length')) {
+      // alternative : block.set('features', Ember_A());
+      block.features.removeAt(0, block.get('features.length'));
+    }
+  }
+
   lines.forEach((l, lineNum) => {
     if (l.startsWith('##')) {
       const nameVal = l.match(/^##([^=]+)=(.*)/);
@@ -96,6 +121,7 @@ function addFeaturesJson(block, requestFormat, text) {
       sampleNames = columnNames.slice(2);
     } else if (columnNames && l.length) {
       const values = l.split('\t');
+
       let feature = values.reduce((f, value, i) => {
         const fieldName = columnNames[i];
 
@@ -177,10 +203,12 @@ function addFeaturesJson(block, requestFormat, text) {
         let selectionFeature = {Chromosome : mapChrName, Feature : feature.name, Position : feature.value[0], feature};
 
         createdFeatures.push(feature);
+        selectionFeatures.push(selectionFeature);
       }
 
     }
   });
+  selectedFeatures.pushObjects(selectionFeatures);
 
   if (! columnNames || ! sampleNames) {
     dLog(fnName, lines.length, text.length);

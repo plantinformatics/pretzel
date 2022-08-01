@@ -168,7 +168,9 @@ export default class PanelManageGenotypeComponent extends Component {
           let blockV = this.blockService.viewed.find(
             (b) => (b.get('scope') === scope) && (b.get('datasetId.id') === datasetNameV));
           if (text?.text && blockV) {
-            const added = addFeaturesJson(blockV, this.requestFormat, text?.text);
+            const added = addFeaturesJson(
+              blockV, this.requestFormat, this.replaceResults,
+              this.args.selectedFeatures, text?.text);
             if (added.createdFeatures && added.sampleNames) {
               const displayData = vcfFeatures2MatrixView(blockV, this.requestFormat, added);
               this.displayData.addObjects(displayData);
