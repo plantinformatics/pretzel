@@ -201,6 +201,8 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
         // in this case feature.blockId is block
         let store = feature.blockId.get('store');
 
+        // .id is used by axisFeatureCircles_eltId().
+        feature.id = feature._name;
         // Replace Ember.Object() with models/feature.
         feature = store.createRecord('Feature', feature);
         nFeatures++;
