@@ -32,7 +32,8 @@ function col_name_fn(column) {
  * with a maximum which gives a nearly full height table.
  */
 function nRows2HeightEx(nRows) {
-  return Math.min(nRows || 2, 30) * 3;
+  // 2 -> 6ex : only 1 row visible; may need an base offset - try adding 5ex
+  return 5 + Math.min(nRows || 2, 30) * 3;
 }
 
 // -----------------------------------------------------------------------------

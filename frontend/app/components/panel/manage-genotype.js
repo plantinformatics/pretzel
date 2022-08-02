@@ -160,17 +160,18 @@ export default class PanelManageGenotypeComponent extends Component {
         this.apiServerSelectedOrPrimary, parent, preArgs,
         {} );
       textP.then(
-        (text) => {
-          dLog('vcfGenotypeLookup', text, datasetV);
-          this.vcfGenotypeText =  text?.text;
+        (textObj) => {
+          const text = textObj.text;
+          dLog('vcfGenotypeLookup', text.length, text && text.slice(0,200), datasetV);
+          this.vcfGenotypeText =  text;
           /** datasetV?.get('blocks').findBy('scope', scope)  */
           // let blockV = datasetV?.get('blocks.0');
           let blockV = this.blockService.viewed.find(
             (b) => (b.get('scope') === scope) && (b.get('datasetId.id') === datasetNameV));
-          if (text?.text && blockV) {
+          if (text && blockV) {
             const added = addFeaturesJson(
               blockV, this.requestFormat, this.replaceResults,
-              this.args.selectedFeatures, text?.text);
+              this.args.selectedFeatures, text);
             if (added.createdFeatures && added.sampleNames) {
               const displayData = vcfFeatures2MatrixView(blockV, this.requestFormat, added);
               this.displayData.addObjects(displayData);

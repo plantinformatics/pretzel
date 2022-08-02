@@ -6,6 +6,8 @@ import { A as Ember_A } from '@ember/array';
 
 const dLog = console.debug;
 
+const trace = 1;
+
 /** number of columns in the vcf output before the first sample column. */
 const nColumnsBeforeSamples = 9;
 
@@ -67,7 +69,7 @@ scaffold38755_709316	709316	0/0	0/1	0/0	0/0	0/0	./.	0/0	0/0	0/0	0/1	0/0	0/0	0/0	
  */
 function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures, text) {
   const fnName = 'addFeaturesJson';
-  dLog(fnName, block, text);
+  dLog(fnName, block.id, block.mapName, text.length);
   /** optional : add fileformat, FILTER, phasing, INFO, FORMAT to block meta
    * read #CHROM or '# [1]ID' column headers as feature field names
    * parse /^[^#]/ (chr) lines into features, add to block
@@ -81,6 +83,7 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
   columnNames,
   sampleNames,
   nFeatures = 0;
+  dLog(fnName, lines.length);
 
   if (replaceResults) {
     let mapChrName = Ember_get(block, 'brushName');
@@ -190,7 +193,10 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
        * for creation of model:Feature
        */
       if (feature.blockId && feature.value.length && feature._name) {
-        dLog(fnName, 'newFeature', feature);
+        // trace level is e.g. 0,1,2,3; the number of rows displayed will be e.g. 0,2,4,8.
+        if (trace && (lineNum < (1 << trace))) {
+          dLog(fnName, 'newFeature', feature);
+        }
 
         // in this case feature.blockId is block
         let store = feature.blockId.get('store');
