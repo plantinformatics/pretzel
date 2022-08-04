@@ -6,6 +6,7 @@ import { tracked } from '@glimmer/tracking';
 import { A as Ember_A } from '@ember/array';
 
 import { intervalSize } from '../../utils/interval-calcs';
+import { overlapInterval } from '../../utils/draw/zoomPanCalcs';
 import { addFeaturesJson, vcfFeatures2MatrixView } from '../../utils/data/vcf-feature';
 
 // -----------------------------------------------------------------------------
@@ -274,11 +275,16 @@ export default class PanelManageGenotypeComponent extends Component {
       sampleNames = this.vcfGenotypeSamplesSelected?.split('\n');
       dLog(fnName, block?.get('id'), sampleNames, this.selected.get('sampleNames'));
       if (block && sampleNames.length) {
-        let createdFeatures = block.get('features').toArray();
-        // filter by axisBrush.brushedDomain
-        let cf = createdFeatures.filter((f) => f.value[0]);
-        if (createdFeatures?.length) {
-          let sampleGenotypes = {createdFeatures, sampleNames};
+        const
+        createdFeatures = block.get('features').toArray(),
+        interval = this.axisBrush.brushedDomain,
+        // based on similar in featureInRange().
+        valueInInterval = this.controls.get('view.valueInInterval'),
+        /** filter by axisBrush.brushedDomain */
+        features = createdFeatures.filter((f) => valueInInterval(f.value, interval));
+
+        if (features?.length) {
+          let sampleGenotypes = {createdFeatures : features, sampleNames};
           const displayData = vcfFeatures2MatrixView(block, this.requestFormat, sampleGenotypes);
           this.displayData.addObjects(displayData);
         }

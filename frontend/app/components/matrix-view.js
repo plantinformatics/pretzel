@@ -200,25 +200,27 @@ export default Component.extend({
   },
   CATGRenderer(instance, td, row, col, prop, value, cellProperties) {
     Handsontable.renderers.TextRenderer.apply(this, arguments);
-    let diagonal;
-    let alleles = value.split(/[/|]/);
-    if (alleles) {
-      diagonal = alleles[0] !== alleles[1];
-      if (diagonal) {
-        td.classList.add('diagonal-triangle');
+    if (value) {
+      let diagonal;
+      let alleles = value.split(/[/|]/);
+      if (alleles) {
+        diagonal = alleles[0] !== alleles[1];
+        if (diagonal) {
+          td.classList.add('diagonal-triangle');
+        }
+        // value = alleles[+this.selectPhase];
       }
-      // value = alleles[+this.selectPhase];
-    }
-    let colours = alleles.map(this.base2Colour.bind(this));
-    if (colours[0]) {
-      td.style.background = colours[0];
-      td.style.color = 'white';
-    }
-    if (diagonal && colours[1]) {
-      const
-      allele2Colour = colours[1],
-      allele2Class = 'allele2-' + allele2Colour;
-      td.classList.add(allele2Class);
+      let colours = alleles.map(this.base2Colour.bind(this));
+      if (colours[0]) {
+        td.style.background = colours[0];
+        td.style.color = 'white';
+      }
+      if (diagonal && colours[1]) {
+        const
+        allele2Colour = colours[1],
+        allele2Class = 'allele2-' + allele2Colour;
+        td.classList.add(allele2Class);
+      }
     }
   },
 
