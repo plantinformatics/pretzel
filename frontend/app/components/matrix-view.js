@@ -4,6 +4,9 @@ import { inject as service } from '@ember/service';
 import { get as Ember_get, set as Ember_set } from '@ember/object';
 import { later, once, bind } from '@ember/runloop';
 
+import { task, didCancel } from 'ember-concurrency';
+
+
 /* global Handsontable */
 /* global $ */
 /* global d3 */
@@ -100,7 +103,18 @@ export default Component.extend({
   },
 
   didRender() {
-    once(() => ! this.isDestroying && (this.table ? this.updateTable() : this.createTable()));
+    once(() => ! this.isDestroying && this.createOrUpdateTable());
+  },
+
+  createOrUpdateTable() {
+    if (this.table) {
+      this.updateTable();
+    } else {
+      this.createTable();
+      if (this.displayData.length) {
+        this.updateTableOnce();
+      }
+    }
   },
 
   // ---------------------------------------------------------------------------
@@ -325,6 +339,7 @@ export default Component.extend({
    */
   rows: computed('dataByRow', function() {
     let data = this.get('dataByRow');
+    dLog('rows', 'dataByRow', data);
     return Object.keys(data);
   }),
   /** @return [] if selectedBlock is null, otherwise
@@ -444,6 +459,37 @@ export default Component.extend({
       $(".left-panel-shown").toggle();
       $(".left-panel-hidden").toggle();
     },
+  },
+
+  updateTableTask: task(function * () {
+    const fnName = 'updateTableTask';
+    try {
+      this.updateTable();
+    } catch(e) {
+      dLog(fnName, 'error', e);
+    } finally {
+    }
+  }).keepLatest(),
+
+  updateTableOnce() {
+    const
+    fnName = 'updateTableOnce',
+    table = this.get('table');
+    if (! table) {
+      dLog(fnName, 'table', table);
+      // in practice, a call will occur later after table is created.
+    } else {
+      this.get('updateTableTask')
+        .perform()
+        .catch((error) => {
+          // Recognise if the given task error is a TaskCancelation.
+          if (! didCancel(error)) {
+            dLog(fnName, 'taskInstance.catch', error);
+            throw error;
+          } else {
+          }
+        });
+    }
   },
 
   showSelectedBlockObserver: observer('selectedBlock', function() {

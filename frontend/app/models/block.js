@@ -1112,7 +1112,11 @@ export default Model.extend({
       axisBlocks = this.get('blockService.axis1dReferenceBlocks'),
       /** could calculate a hash in axis1dReferenceBlocks and lookup via that,
        * but this is a small array to scan. */
-      axis1d = axisBlocks.find((ab) => ab[1] === this);
+      /* also check for .id match, block object references may not match because
+       * axisBrush.block is in the wrong store;
+       * solution is to move model/axis-brush out of store, in a separate commit.
+       */
+      axis1d = axisBlocks.find((ab) => (ab[1] === this) || (ab[1].get('id') === this.get('id')));
       axis1d = axis1d && axis1d[0];
       return axis1d;
     }),
@@ -1134,6 +1138,12 @@ export default Model.extend({
       if (! axis1d) {
         axis1d = this.get('crossServerAxis1d') || this.get('referenceBlock.crossServerAxis1d');
         dLog(fnName, axis1d, this);
+      }
+      /* using .id match in referencedAxis1d (see comment there) is probably
+       * sufficient, this is just backup, probably not required.
+       */
+      if (! axis1d && this.axis) {
+        axis1d = this.axis.axis1d;
       }
       if (axis1d?.isDestroying) {
         dLog('axis1d isDestroying', axis1d);

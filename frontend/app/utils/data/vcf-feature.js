@@ -118,7 +118,10 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
       sampleNames = columnNames.slice(nColumnsBeforeSamples);
     } else if (l.startsWith('# [1]ID')) {
       // # [1]ID	[2]POS	[3]ExomeCapture-DAS5-002978:GT	[4]ExomeCapture-DAS5-003024:GT	[5]ExomeCapture-DAS5-003047:GT	[6]ExomeC
-      columnNames = l.split(/\t\[[0-9]+\]/);
+      // trim off :GT, and split at 'tab[num]'
+      columnNames = l
+        .replaceAll(':GT', '')
+        .split(/\t\[[0-9]+\]/);
       columnNames[0] = columnNames[0].replace(/^# \[1\]/, '');
       // nColumnsBeforeSamples is 2 in this case : skip ID, POS.
       sampleNames = columnNames.slice(2);
@@ -205,6 +208,11 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
         feature.id = feature._name;
         // Replace Ember.Object() with models/feature.
         feature = store.createRecord('Feature', feature);
+        /** fb is a Proxy */
+        let fb = feature.get('blockId');
+        if (fb.then) {
+          fb.then((b) => feature.set('blockId', b));
+        }
         nFeatures++;
 
         let mapChrName = Ember_get(feature, 'blockId.brushName');
@@ -212,6 +220,7 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
 
         createdFeatures.push(feature);
         selectionFeatures.push(selectionFeature);
+        block.features.addObject(feature);
       }
 
     }

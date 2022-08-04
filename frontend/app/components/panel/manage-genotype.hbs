@@ -1,3 +1,5 @@
+{{this.initialDisplayEffect}}
+
 Genotypes
 
 {{log 'flowsService.axisBrush' flowsService.axisBrush}}
@@ -42,6 +44,13 @@ Genotypes
 <div>{{referenceDataset.id}}</div>
 <div>{{datasetName}}</div>
 
+<div>
+  <select onchange={{action (mut this.axisBrushBlockIndex) value="target.value"}}>
+    {{#each brushedVCFBlocks as |abbChoice abbIndex|}}
+      <option value={{abbIndex}} selected={{eq this.axisBrushBlockIndex abbIndex}}>{{abbIndex}} : {{abbChoice.1.datasetId.id}} : {{abbChoice.1.scope}}</option>
+    {{/each}}
+  </select>
+</div>
 
 <div>
   <label>List of samples from VCF</label>
