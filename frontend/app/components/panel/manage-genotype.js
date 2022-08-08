@@ -267,12 +267,22 @@ export default class PanelManageGenotypeComponent extends Component {
   showBlockIntervalSamplesGenotype() {
     const fnName = 'showBlockIntervalSamplesGenotype';
     if (! this.displayData.length) {
-      let
+      this.showSamplesWithinBrush();
+    }
+  }
+  showSamplesWithinBrush() {
+    const fnName = 'showSamplesWithinBrush';
+    if (! this.axisBrush || ! this.lookupBlock) {
+      // perhaps clear table
+    } else {
+      const
       referenceBlock = this.axisBrush?.get('block'),
       /** expect : block.referenceBlock === referenceBlock
        */
       block = this.lookupBlock,
-      sampleNames = this.vcfGenotypeSamplesSelected?.split('\n');
+      samplesText = this.vcfGenotypeSamplesSelected?.trimEnd(),
+      sampleNames = samplesText?.split('\n')
+      .filter((s) => s !== '');
       dLog(fnName, block?.get('id'), sampleNames, this.selected.get('sampleNames'));
       if (block && sampleNames.length) {
         const
@@ -289,8 +299,17 @@ export default class PanelManageGenotypeComponent extends Component {
           this.displayData.addObjects(displayData);
         }
       }
-    }
   }
+
+  @computed('axisBrush.brushedDomain', 'vcfGenotypeSamplesSelected')
+  get selectedSampleEffect () {
+    // remove all because sampleNames / columns may have changed.
+    if (this.displayData.length) {
+      this.displayData.removeAt(0, this.displayData.length);
+    }
+    this.showSamplesWithinBrush();
+  }
+
 
   // ---------------------------------------------------------------------------
 
