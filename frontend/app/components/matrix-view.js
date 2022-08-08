@@ -149,7 +149,12 @@ export default Component.extend({
       colWidths: 25,
       stretchH: 'none',
       cells: bind(this, this.cells),
-      afterOnCellMouseDown: bind(this, this.afterOnCellMouseDown)
+      afterOnCellMouseDown: bind(this, this.afterOnCellMouseDown),
+      headerTooltips: {
+        rows: false,
+        columns: true,
+        onlyTrimmed: true
+      }
     };
     let table = new Handsontable(tableDiv, settings);
 
