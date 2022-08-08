@@ -299,6 +299,7 @@ export default class PanelManageGenotypeComponent extends Component {
           this.displayData.addObjects(displayData);
         }
       }
+    }
   }
 
   @computed('axisBrush.brushedDomain', 'vcfGenotypeSamplesSelected')
