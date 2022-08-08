@@ -320,6 +320,10 @@ export default Service.extend({
   featureSearch(apiServer, blockId, featureNames, options) {
     if (trace_paths)
       dLog('services/auth featureSearch', blockId, featureNames, options);
+    let paramLimit = 200;
+    if (featureNames?.length > paramLimit) {
+      featureNames = featureNames.slice(0, paramLimit);
+    }
     return this._ajax('Features/search', 'GET', {server : apiServer, blockId, filter : featureNames, options}, true);
   },
 

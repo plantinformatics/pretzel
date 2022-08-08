@@ -65,9 +65,17 @@ export default Component.extend({
              * a single datasetName/scope/.
              * This is used by axesP() before the block is viewed,
              * so include reference which is not viewed.
+             *
+             * That may include both a local and secondary reference, where the
+             * local reference is not viewed, so prefer the viewed reference
+             * .id for mapByReferenceBlock[] index.
              */
             blocks = blocks.filter((b) => b.get('isViewed') || ! b.get('isData'));
-            mapByReferenceBlock[blocks[0].id] = blocks;
+            const
+            referenceBlocks = blocks.filterBy('isData', false)
+              .sortBy('isViewed'),
+            referenceBlock = referenceBlocks.length && referenceBlocks[referenceBlocks.length-1];
+            mapByReferenceBlock[referenceBlock.id] = blocks;
             if (true /*trace*/ )
               dLog('axesBlocks', referenceName, scope, blocks.mapBy(_internalModel_data));
           }
@@ -111,7 +119,12 @@ export default Component.extend({
             if (originalReferences.length == 1) {
               block = originalReferences[0];
             } else if (originalReferences.length > 1) {  // not expected to happen
-              dLog('axesP', axisID, 'choosing [0] from', originalReferences.map(blockInfo));
+              const
+              /** as in axesBlocks(), prefer the viewed reference */
+              referenceBlocks = originalReferences.sortBy('isViewed'),
+              referenceBlock = referenceBlocks.length && referenceBlocks[referenceBlocks.length-1];
+              block = referenceBlock;
+              dLog('axesP', axisID, 'choosing', block.id, 'from', originalReferences.map(blockInfo));
             } else {
               dLog('axesP', axisID, 'no original reference, choosing [0] from', original.map(blockInfo));
             }

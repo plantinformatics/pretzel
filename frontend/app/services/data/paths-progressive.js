@@ -274,7 +274,7 @@ export default Service.extend({
           if (pathsViaStream)
             dLog('path request', 'pathsViaStream', blockA, blockB, me, err, status);
           else
-          dLog('path request', blockA, blockB, me, err.responseJSON[status] /* .error.message*/, status);
+          dLog('path request', blockA, blockB, me, err?.responseJSON && err.responseJSON[status] /* .error.message*/, status);
         });
     return promise;
   },
