@@ -120,11 +120,12 @@ function getEditCellData(cell) {
   let
   td = cell.TD,
   tr = td?.parentElement,
-  row = tr?.rowIndex,
+  row = tr?.rowIndex - 1,
   table = cell.hot,
   tableBrushed = table.rootElement.__PretzelTableBrushed__;
   // td.cellIndex
   let feature = tableBrushed.data[row];
+  // feature.feature === tr.__dataPretzelFeature__
   return feature;
 }
 
@@ -160,7 +161,8 @@ class FeatureUrlView extends Handsontable.editors.BaseEditor {
     const
     feature = getEditCellData(this),
     base = 'http://www.sbg.bio.ic.ac.uk/phyre2/',
-    Phyre2_ID = 'afceadc4df2bf1e7', // feature.values.Phyre2_ID
+    // e.g. 'afceadc4df2bf1e7'
+    Phyre2_ID = feature.feature.values.Phyre2_ID,
     idUrl = base + 'phyre2_output/' + Phyre2_ID,
     url = idUrl + '/summary.html';
     /** other urls :
