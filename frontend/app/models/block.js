@@ -1153,6 +1153,9 @@ export default Model.extend({
       if (axis1d !== a1Check) {
         dLog('axis1d', axis1d, a1Check);
       }
+      if (! axis1d) {
+        dLog(fnName, axis1d, this.id, this.get('referenceBlock.id'), this.axis, a1Check);
+      }
       return axis1d;
     }),
   /** Check result of axis1d().

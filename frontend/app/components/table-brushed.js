@@ -9,7 +9,11 @@ import { later, bind } from '@ember/runloop';
 
 import { featureEdit } from '../components/form/feature-edit';
 import { eltClassName } from '../utils/domElements';
-import { axisFeatureCircles_selectOneInAxis } from '../utils/draw/axis';
+import {
+  // setRowAttributes,
+  afterOnCellMouseOverClosure,
+  highlightFeature,
+} from '../utils/panel/axis-table';
 
 import config from '../config/environment';
 
@@ -548,6 +552,8 @@ export default Component.extend({
       me.afterSelection(this, row, col);
     }
 
+    const afterOnCellMouseOver = afterOnCellMouseOverClosure(this);
+
       let data = this.get('dataForHoTable');
       /** if data is [], Handsontable appends {} to it, so pass it a new empty array instead of the CP result. */
       if (data.length === 0) {
@@ -595,23 +601,6 @@ export default Component.extend({
       /** application client data : this component */
       table.rootElement.__PretzelTableBrushed__ = this;
 
-    function afterOnCellMouseOver(event, coords, TD) {
-      if (coords.row === -1) {
-        return;
-      }
-      // getDataAtCell(coords.row, coords.col)
-      // table?.getDataAtRow(coords.row);
-      let
-      table = that.table,
-      /** The meta is associated with column 0.
-       * The data is currently the selected feature, which refers to the Ember
-       * data object as .feature
-       */
-      feature = table?.getCellMeta(coords.row, 0)?.PretzelFeature?.feature;
-      dLog('afterOnCellMouseOver', coords, TD, feature?.name, feature?.value);
-      /** clears any previous highlights if feature is undefined */
-      that.highlightFeature(feature);
-    }
     /* alternative :
     function afterOnCellMouseOut(event, coords, TD) {
       that.highlightFeature();
@@ -645,6 +634,7 @@ export default Component.extend({
       this.setRowAttribute(table, row, feature) ;
       /* this alternative is more specific to HoT, but is less brittle than setRowAttribute() using tr.__dataPretzelFeature__
        * Used by afterOnCellMouseOver().
+       * This function can be replaced by axis-table.js : setRowAttributes().
        */
       table.setCellMeta(row, 0, 'PretzelFeature', feature);
     });
@@ -723,43 +713,7 @@ export default Component.extend({
     }
   }),
 
-  /** @param feature may be name of one feature, or an array of features -
-   * selectedFeatures data : {
-   *   Chromosome: string : datasetId ':' block name (scope)
-   *   Feature: string : feature name
-   *   Position: number
-   *   feature: ember-data object
-   * }
-   */
-  highlightFeature: function(feature) {
-    const fnName = 'highlightFeature';
-    d3.selection.prototype.moveToFront = function() {
-      return this.each(function(){
-        this.parentNode.appendChild(this);
-      });
-    };
-    d3.selectAll("g.axis-outer > circle")
-      .attr("r", 2)
-      .style("fill", "red")
-      .style("stroke", "red");
-    if (feature) {
-      if (Array.isArray(feature)) {
-        feature.forEach(
-          (f, i) => f ? this.highlightFeature1(f.feature) : dLog(fnName, f, i, feature));
-      } else {
-        this.highlightFeature1(feature);
-      }
-    }
-  },
-  /** Highlight 1 feature, given feature */
-  highlightFeature1: function(feature) {
-      /** see also handleFeatureCircleMouseOver(). */
-      axisFeatureCircles_selectOneInAxis(undefined, feature)
-        .attr("r", 5)
-        .style("fill", "yellow")
-        .style("stroke", "black")
-        .moveToFront();
-  },
+  highlightFeature,
 
   closeFeatureEdit() {
     dLog('closeFeatureEdit', this);

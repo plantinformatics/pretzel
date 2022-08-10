@@ -8,6 +8,8 @@ const dLog = console.debug;
 
 const trace = 1;
 
+const featureSymbol = Symbol.for('feature');
+
 /** number of columns in the vcf output before the first sample column. */
 const nColumnsBeforeSamples = 9;
 
@@ -267,6 +269,7 @@ function vcfFeatures2MatrixView(block, requestFormat, added) {
       sampleValue = Ember_get(f, 'values.' + sampleName),
       value = requestFormat ? sampleValue : matchExtract(sampleValue, /^([^:]+):/, 1),
       fx = {name : f.name, value};
+      fx[featureSymbol] = f;
       return fx;
     }),
     datasetId = Ember_get(block, 'datasetId.id'),

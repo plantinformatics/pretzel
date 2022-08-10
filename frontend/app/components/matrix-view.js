@@ -13,10 +13,18 @@ import { task, didCancel } from 'ember-concurrency';
 
 import config from '../config/environment';
 
+import {
+  setRowAttributes,
+  afterOnCellMouseOverClosure,
+  highlightFeature,
+} from '../utils/panel/axis-table';
+
 
 // -----------------------------------------------------------------------------
 
 const dLog = console.debug;
+
+const featureSymbol = Symbol.for('feature');
 
 // -----------------------------------------------------------------------------
 
@@ -137,6 +145,7 @@ export default Component.extend({
 
     let tableDiv = $("#observational-table")[0];
     dLog(fnName, tableDiv);
+    const afterOnCellMouseOver = afterOnCellMouseOverClosure(this);
     let nRows = this.get('rows.length') || 0;
     let settings = {
       /* see comment re. handsOnTableLicenseKey in frontend/config/environment.js */
@@ -150,6 +159,7 @@ export default Component.extend({
       stretchH: 'none',
       cells: bind(this, this.cells),
       afterOnCellMouseDown: bind(this, this.afterOnCellMouseDown),
+      afterOnCellMouseOver,
       headerTooltips: {
         rows: false,
         columns: true,
@@ -164,6 +174,8 @@ export default Component.extend({
 
     this.set('table', table);
   },
+
+  highlightFeature,
 
   // ---------------------------------------------------------------------------
 
@@ -456,6 +468,7 @@ export default Component.extend({
         }
         table.updateSettings(settings);
       }
+      setRowAttributes(table, this.displayData);
     } else {
       t.hide();
     }
