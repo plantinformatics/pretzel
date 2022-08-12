@@ -683,6 +683,10 @@ export default Service.extend({
     }
     else if (brushedDomain)
       paramAxis.domain = brushedDomain;
+    if (! axis || (axisBrush?.block.get('isViewed') === false)) {
+      dLog(apiName, axis, axisBrush?.block);
+      return Promise.resolve([]);
+    }
     let dataBlockIds =
         all ? [blockA] :
         axis.dataBlocks(true, false)

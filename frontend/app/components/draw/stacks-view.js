@@ -72,7 +72,7 @@ export default Component.extend({
              */
             blocks = blocks.filter((b) => b.get('isViewed') || ! b.get('isData'));
             const
-            referenceBlocks = blocks.filterBy('isData', false)
+            referenceBlocks = blocks.filterBy('isReferenceForAxis', true)
               .sortBy('isViewed'),
             referenceBlock = referenceBlocks.length && referenceBlocks[referenceBlocks.length-1];
             mapByReferenceBlock[referenceBlock.id] = blocks;

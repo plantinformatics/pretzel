@@ -208,6 +208,14 @@ export default Model.extend({
     }
     return isData;
   }),
+  /** @return true if this block is a reference or a GM (i.e. it is it's own reference).
+   * Each axis contains exactly 1 block for which .isReferenceForAxis is true.
+   */
+  isReferenceForAxis : computed('isData', 'datasetId.parentName', function isReference () {
+    /** also : for a reference : this.get('range') !== undefined */
+    let isReference = this.isData || ! this.get('datasetId.parentName');
+    return isReference;
+  }),
   currentDomain : computed('referenceBlock', 'range',  function () {
     let domain = this.get('zoomedDomain');
     if (! domain)  {

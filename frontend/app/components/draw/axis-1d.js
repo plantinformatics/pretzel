@@ -616,7 +616,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   headsUp : service('data/heads-up'),
   controls : service(),
 
-  controlsView : alias('controls.controls.view'),
+  controlsView : alias('controls.view'),
 
   stacks : stacks,
   /** oa is used for these connections, which will eventually be
@@ -1344,7 +1344,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
 
       
       function showText(text) {
-        if (! this.get('headsUp.isDestroying')) {
+        if (! this.get('isDestroying') && ! this.get('headsUp.isDestroying')) {
           this.set('headsUp.tipText', text);
         }
       }
