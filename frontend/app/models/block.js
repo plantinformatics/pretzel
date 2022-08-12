@@ -210,6 +210,7 @@ export default Model.extend({
   }),
   /** @return true if this block is a reference or a GM (i.e. it is it's own reference).
    * Each axis contains exactly 1 block for which .isReferenceForAxis is true.
+   * @desc related @see referenceBlockOrSelf
    */
   isReferenceForAxis : computed('isData', 'datasetId.parentName', function isReference () {
     /** also : for a reference : this.get('range') !== undefined */
@@ -473,6 +474,14 @@ export default Model.extend({
     blocks = parent?.get('blocks'),
     pb = blocks && blocks.findBy('scope', this.scope);
     return pb;
+  }),
+
+  /** use .dataset : .parent.name or .parentName */
+  datasetParentName : computed('datasetId.{parent.name,parentName}', function () {
+    const
+    d = this.get('datasetId'),
+    p = d.get && d.get('parent');
+    return p ? p.get('name') : d.get('parentName');
   }),
 
   /** If the dataset of this block has a parent, return the name of that parent (reference dataset).
