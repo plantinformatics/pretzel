@@ -5,7 +5,7 @@
     {{!-- block.id --}} {{block.datasetId.id}}:{{block.name}} ({{block.store.name}})
     </p>
     {{log block}}
-    <p>you need to load a reference with name '{{block.datasetId.parentName}}'</p>
+    <p>you need to load a reference with name '{{block.datasetId.parentName}}', containing a block with scope '{{block.scope}}'</p>
 
     <div>
       {{#if referenceBlocks.length}}
