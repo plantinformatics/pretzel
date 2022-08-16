@@ -118,6 +118,24 @@ export default class PanelManageGenotypeComponent extends Component {
     const abb = this.axisBrushBlock;
     return abb && abb[1];
   }
+  /** axisBrushBlock -> lookupBlock is selected from a list which satisfies dataset .hasTag('view').
+   * May later pass dataset .meta.vcfFilename
+   * See comments in vcfGenotypeLookup() re. vcfDatasetId / parent.
+   */
+  @computed('lookupBlock')
+  get lookupDatasetId() {
+    const b = this.lookupBlock;
+    return b?.get('datasetId.id');
+  }
+  @computed('lookupBlock')
+  get lookupScope() {
+    const b = this.lookupBlock;
+    /** Using .name instead of .scope to handle some test datasets which have
+     * 'chr' prefixing the chr name, e.g. chr1A
+     * Will probably revert this to 'scope'.
+     */
+    return b?.get('name');
+  }
 
   /** Return brushed VCF blocks
    * @return [[axisBrush, vcfBlock], ...]
@@ -147,6 +165,8 @@ export default class PanelManageGenotypeComponent extends Component {
   // ---------------------------------------------------------------------------
 
 
+  /** mapview : selectedDataset is the reference (parent) of the selected axis.
+   */
   @computed('dataset')
   get referenceDataset () {
     let dataset = this.args.dataset;
@@ -192,17 +212,18 @@ export default class PanelManageGenotypeComponent extends Component {
   /** Request the list of samples of the vcf of the brushed block.
    */
   vcfGenotypeSamples() {
-    let
+    const
     fnName = 'vcfGenotypeSamples',
-    scope = this.axisBrush?.get('block.scope');
-    if (scope)  // if this.dataset.hasTag('view'),  .meta.vcfFilename
+    scope = this.lookupScope,
+    vcfDatasetId = this.lookupDatasetId;
+    if (scope && vcfDatasetId)
     {
       let
       preArgs = 'query -l',
       parent = this.datasetName;
 
       let textP = this.auth.vcfGenotypeSamples(
-        this.apiServerSelectedOrPrimary, parent, scope,
+        this.apiServerSelectedOrPrimary, vcfDatasetId, scope,
         {} );
       textP.then(
         (text) => {
@@ -217,34 +238,54 @@ export default class PanelManageGenotypeComponent extends Component {
   /** Lookup the genotype for the selected samples in the interval of the brushed block.
    */
   vcfGenotypeLookup() {
-    let
+    const
+    fnName = 'vcfGenotypeLookup',
     /** this.args.dataset, this.axisBrush.block are currently the reference; lookup the data block. */
     // store = this.axisBrush?.get('block.store'),
     store = this.apiServerSelectedOrPrimary?.store,
-    datasetNameV = 'Triticum_aestivum_IWGSC_RefSeq_v1.0_vcf_data',
-    datasetV = store.peekRecord('dataset', datasetNameV),
-    samples = this.vcfGenotypeSamplesSelected,
-    domainInteger = this.vcfGenotypeLookupDomain;
-    samples = samples?.trimStart().trimEnd();
-    if (samples?.length && domainInteger) {
+    samplesRaw = this.vcfGenotypeSamplesSelected,
+    samples = samplesRaw?.trimStart().trimEnd(),
+    domainInteger = this.vcfGenotypeLookupDomain,
+    vcfDatasetId = this.lookupDatasetId;
+    if (samples?.length && domainInteger && vcfDatasetId) {
       let
-      scope = this.axisBrush?.get('block.scope'),
-      region = 'chr' + scope + ':' + domainInteger.join('-'),
+      scope = this.lookupScope,
+      region = scope + ':' + domainInteger.join('-'),
       preArgs = {region, samples, requestFormat : this.requestFormat},
       parent = this.datasetName;
 
+      /** Currently passing datasetId as param 'parent', until requirements evolve.
+       * The VCF dataset directories are just a single level in $vcfDir;
+       * it may be desirable to interpose a parent level, e.g. 
+       * vcf/
+       *   Triticum_aestivum_IWGSC_RefSeq_v1.0/
+       *     Triticum_aestivum_IWGSC_RefSeq_v1.0_vcf_data
+       * It's not necessary because datasetId is unique.
+       * (also the directory name could be e.g.  dataset._meta.vcfFilename instead of the default datasetId).
+       */
       let textP = this.auth.vcfGenotypeLookup(
-        this.apiServerSelectedOrPrimary, parent, preArgs,
+        this.apiServerSelectedOrPrimary, vcfDatasetId, scope, preArgs,
         {} );
       textP.then(
         (textObj) => {
           const text = textObj.text;
-          dLog('vcfGenotypeLookup', text.length, text && text.slice(0,200), datasetV);
           this.vcfGenotypeText =  text;
-          /** datasetV?.get('blocks').findBy('scope', scope)  */
-          // let blockV = datasetV?.get('blocks.0');
-          let blockV = this.blockService.viewed.find(
-            (b) => (b.get('scope') === scope) && (b.get('datasetId.id') === datasetNameV));
+          const
+          /** axisBrush.block is currently in the unused store; it has the local
+           * values (id, range, scope, name, featureType), but not
+           * relationships.
+           */
+          brushReferenceBlock = this.blockService.viewed.find((b) => b.id === this.axisBrush.block.get('id')),
+          dataBlocksV = brushReferenceBlock?.axis1d?.dataBlocks
+            .filter((b) => b.hasTag('VCF'));
+          let blockV = dataBlocksV && dataBlocksV[0];
+          if (! blockV) {
+            /** match the first block which is viewed and has scope matching
+             * axisBrush and is VCF.  */
+            blockV = this.blockService.viewed.find(
+              (b) => (b.get('scope') === scope) && b.hasTag('VCF'));
+          }
+          dLog(fnName, text.length, text && text.slice(0,200), blockV.get('id'));
           if (text && blockV) {
             const added = addFeaturesJson(
               blockV, this.requestFormat, this.replaceResults,

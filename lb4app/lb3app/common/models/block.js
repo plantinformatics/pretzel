@@ -1258,11 +1258,11 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
    * @param preArgs args to be inserted in command line, additional to the parent / vcf file name.
    * See comment in frontend/app/services/auth.js : vcfGenotypeLookup()
    */
-  Block.vcfGenotypeLookup = function(parent, preArgs, cb) {
+  Block.vcfGenotypeLookup = function(parent, scope, preArgs, cb) {
     const
     fnName = 'vcfGenotypeLookup',
     command = preArgs.requestFormat ? 'query' : 'view';
-    let moreParams = [command, parent, /*scope*/ '', '-r', preArgs.region ];
+    let moreParams = [command, parent, scope, '-r', preArgs.region ];
     if (preArgs.requestFormat) {
       const
       format = (preArgs.requestFormat === 'CATG') ?
@@ -1288,6 +1288,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
   Block.remoteMethod('vcfGenotypeLookup', {
     accepts: [
       {arg: 'parent', type: 'string', required: true},
+      {arg: 'scope', type: 'string', required: true},
       {arg: 'preArgs', type: 'object', required: false},
     ],
     http: {verb: 'get'},

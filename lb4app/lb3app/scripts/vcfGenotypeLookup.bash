@@ -157,7 +157,8 @@ else
   # (! does not preserve $?, so if that is required, if cd ... ; then : ; else status=$?; echo 1>&$F_ERR "..."; exit $status; fi;  , and equivalent for each if. )
   status=1
   # relative to $vcfDir/$dbName/
-  vcfGz="chr$chr.vcf.gz"
+  # Some vcf files may have "chr" before $chr.
+  vcfGz="$chr.vcf.gz"
   if ! cd "$vcfDir"
   then
     echo 1>&$F_ERR 'Error:' "VCF file is not configured"
