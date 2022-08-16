@@ -148,7 +148,10 @@ export default Record.extend({
   /** @return true if this dataset has no group, or its group is visible to the
    * logged-in user
    */
-  get groupIsVisible() {
+  groupIsVisible : computed(
+    'groupId.id',
+    'server.groups.groupsInIds',
+    function groupIsVisible() {
     let
     visible,
     groupId = this.get('groupId.id');
@@ -166,7 +169,7 @@ export default Record.extend({
       visible = inGroup; //  && this.get('groupId.isVisible');
     }
     return visible;
-  },
+    }),
 
   /*--------------------------------------------------------------------------*/
 
