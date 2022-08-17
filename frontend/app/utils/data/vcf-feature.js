@@ -207,13 +207,21 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
         let store = feature.blockId.get('store');
 
         // .id is used by axisFeatureCircles_eltId().
-        feature.id = feature._name;
-        // Replace Ember.Object() with models/feature.
-        feature = store.createRecord('Feature', feature);
-        /** fb is a Proxy */
-        let fb = feature.get('blockId');
-        if (fb.then) {
-          fb.then((b) => feature.set('blockId', b));
+        // ._name may be also added to other blocks.
+        feature.id = block.id + '_' + feature._name;
+        let existingFeature = store.peekRecord('Feature', feature.id);
+        if (existingFeature) {
+          mergeFeatureValues(existingFeature, feature);
+          feature = existingFeature;
+          // this is included in createdFeatures, since it is a result from the current request.
+        } else {
+          // Replace Ember.Object() with models/feature.
+          feature = store.createRecord('Feature', feature);
+          /** fb is a Proxy */
+          let fb = feature.get('blockId');
+          if (fb.then) {
+            fb.then((b) => feature.set('blockId', b));
+          }
         }
         nFeatures++;
 
@@ -237,6 +245,18 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
   return result;
 }
 
+// -----------------------------------------------------------------------------
+
+/** Merge feature.values into existingFeature.values
+ */
+function mergeFeatureValues(existingFeature, feature) {
+  Object.entries(feature.values).forEach((e) => {
+    if (existingFeature.values[e[0]] !== e[1]) {
+      console.log(feature.id, existingFeature.values[e[0]] ? 'adding' : 'setting', e);
+      existingFeature.values[e[0]] = e[1];
+    }
+  });
+}
 
 // -----------------------------------------------------------------------------
 
