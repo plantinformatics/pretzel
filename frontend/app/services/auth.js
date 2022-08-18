@@ -396,7 +396,7 @@ export default Service.extend({
      * search is defined in backend/scripts/blastn_request.bash
      */
     if (options.timeout === undefined) {
-      options.timeout = 2 * 60 * 1000;
+      options.timeout = 3 * 60 * 1000;
     }
     /** Attach .server to JSON string, instead of using
      * requestServerAttr (.session.requestServer)
@@ -458,6 +458,7 @@ export default Service.extend({
    * (phasing out : requestServerAttr - .session.requestServer)
    */
   _ajax(route, method, dataIn, token, onProgress , apiServer) {
+    const fnName = '_ajax';
     let {server, data} = apiServer ?
         {server : apiServer, data : dataIn} :
         this._server(route, dataIn),
@@ -471,10 +472,23 @@ export default Service.extend({
       contentType: 'application/json'
     }
 
-    if (data) config.data = data
+    if (data) {
+      config.data = data;
+      const
+      /** data and dataIn may be already converted to JSON */
+      options = typeof data === "object" ? data.options : JSON.parse(data).options,
+      timeout = options?.timeout;
+      if (timeout !== undefined) {
+        dLog(fnName, 'timeout', timeout);
+        /* JSON.parse(data).options.timeout has no effect, but setting config.timeout does.
+         * Also limited by : nginx.conf : ... location / { ... proxy_read_timeout 180; }
+         */
+        config.timeout = timeout;
+      }
+    }
 
     if (trace) {
-      dLog('_ajax', arguments, (trace < 2) ? ',' : this);
+      dLog(fnName, arguments, (trace < 2) ? ',' : this);
     }
     if (token === true) {
       let accessToken = this._accessToken(server);
@@ -482,6 +496,9 @@ export default Service.extend({
     } else if (typeOf(token) == 'string') {
       config.headers.Authorization = token
     }
+
+
+
 
     // If an onProgress function passed, add progress event listeners
     if (onProgress instanceof Function) {
