@@ -244,7 +244,8 @@ export default class PanelManageGenotypeComponent extends Component {
     // store = this.axisBrush?.get('block.store'),
     store = this.apiServerSelectedOrPrimary?.store,
     samplesRaw = this.vcfGenotypeSamplesSelected,
-    samples = samplesRaw?.trimStart().trimEnd(),
+    samples = samplesRaw?.trimStart().trimEnd()
+      .replaceAll(/[ \t\r]/g, '\n'),
     domainInteger = this.vcfGenotypeLookupDomain,
     vcfDatasetId = this.lookupDatasetId;
     if (samples?.length && domainInteger && vcfDatasetId) {
@@ -322,7 +323,7 @@ export default class PanelManageGenotypeComponent extends Component {
        */
       block = this.lookupBlock,
       samplesText = this.vcfGenotypeSamplesSelected?.trimEnd(),
-      sampleNames = samplesText?.split('\n')
+      sampleNames = samplesText?.split(/[\n \t\r]/)
       .filter((s) => s !== '');
       dLog(fnName, block?.get('id'), sampleNames, this.selected.get('sampleNames'));
       if (block && sampleNames.length) {
