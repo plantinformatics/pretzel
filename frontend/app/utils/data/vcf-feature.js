@@ -252,7 +252,7 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
 function mergeFeatureValues(existingFeature, feature) {
   Object.entries(feature.values).forEach((e) => {
     if (existingFeature.values[e[0]] !== e[1]) {
-      console.log(feature.id, existingFeature.values[e[0]] ? 'adding' : 'setting', e);
+      console.log(feature.id, existingFeature.values[e[0]] ? 'setting' : 'adding', e);
       existingFeature.values[e[0]] = e[1];
     }
   });
