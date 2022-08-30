@@ -323,6 +323,11 @@ export default Controller.extend(Evented, {
 
   queryParams: ['mapsToView'],
   mapsToView: [],
+  /** GUI controls / settings changed by the user, preserved for components
+   * which exist only while their tab is visible.
+   * e.g. preserved settings for component panel/manage-genotype are in userSettings.genotype.
+   */
+  userSettings : {genotype : {}},
 
   selectedFeatures: [],
   /** counts of selected paths, from paths-table; shown in tab. */

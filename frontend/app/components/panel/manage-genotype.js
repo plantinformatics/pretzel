@@ -1,5 +1,5 @@
 import Component from '@glimmer/component';
-import { computed, action } from '@ember/object';
+import { computed, action, set } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
@@ -39,17 +39,37 @@ export default class PanelManageGenotypeComponent extends Component {
   @tracked
   vcfGenotypeSamplesText = '';
 
-  @tracked
-  vcfGenotypeSamplesSelected = 
-    'ExomeCapture-DAS5-003024\nExomeCapture-DAS5-003047';
+  // @tracked
+  @alias('args.userSettings.vcfGenotypeSamplesSelected')
+  vcfGenotypeSamplesSelected;
 
   displayData = Ember_A();
 
+  /** in .args.userSettings : */
   /** true means replace the previous result Features added to the block. */
-  replaceResults = true;
+  // replaceResults = undefined;
 
   @tracked
   axisBrushBlockIndex = undefined;
+
+  // ---------------------------------------------------------------------------
+
+  constructor() {
+    super(...arguments);
+
+
+    if (this.args.userSettings.vcfGenotypeSamplesSelected === undefined) {
+      this.args.userSettings.vcfGenotypeSamplesSelected =
+        'ExomeCapture-DAS5-003024\nExomeCapture-DAS5-003047';
+    }
+
+    this.requestFormat =
+      this.args.userSettings.requestFormat || 'Numerical';
+
+    if (this.args.userSettings.replaceResults === undefined) {
+      this.args.userSettings.replaceResults = true;
+    }
+  }
 
   // ---------------------------------------------------------------------------
 
@@ -57,6 +77,8 @@ export default class PanelManageGenotypeComponent extends Component {
   mut_axisBrushBlockIndex(value) {
     dLog('axisBrushBlockIndex', value, arguments, this);
     this.axisBrushBlockIndex = value;
+    /** save user setting for next component instance. */
+    this.args.userSettings.lookupBlock = this.lookupBlock;
   }
 
   // ---------------------------------------------------------------------------
@@ -68,7 +90,7 @@ export default class PanelManageGenotypeComponent extends Component {
   get initialDisplayEffect() {
     let sampleNames = this.selected.get('sampleNames');
     if (sampleNames?.length) {
-      this.vcfGenotypeSamplesSelected = sampleNames.join('\n');
+      set(this, 'args.userSettings.vcfGenotypeSamplesSelected', sampleNames.join('\n'));
       if (this.axisBrushBlock) {
         this.showBlockIntervalSamplesGenotype();
       }
@@ -83,7 +105,7 @@ export default class PanelManageGenotypeComponent extends Component {
 
   /** The user can choose the format of information to request from bcftools,
    * which is associated with a corresponding Renderer. */
-  requestFormat = 'Numerical';
+  requestFormat = undefined;
   requestFormatChanged(value) {
     dLog('requestFormatChanged', value);
     this.requestFormat = value;
@@ -155,9 +177,14 @@ export default class PanelManageGenotypeComponent extends Component {
     })
       .flat();
     dLog(fnName, axisBrushes, blocks);
-    if (blocks.length && (this.axisBrushBlockIndex === undefined)) {
-      /* first value is selected. if only 1 value then select onchange action will not be called.  */
-      this.axisBrushBlockIndex = 0;
+    if (blocks.length) {
+      if (this.args.userSettings.lookupBlock !== undefined) {
+        this.axisBrushBlockIndex = blocks.findIndex((abb) => abb[1] === this.args.userSettings.lookupBlock);
+        dLog(fnName, this.axisBrushBlockIndex, blocks[this.axisBrushBlockIndex][1].id, blocks, this.args.userSettings.lookupBlock.id);
+      } else if ((this.axisBrushBlockIndex === undefined) || (this.axisBrushBlockIndex > blocks.length-1)) {
+        /* first value is selected. if only 1 value then select onchange action will not be called.  */
+        this.axisBrushBlockIndex = 0;
+      }
     }
     return blocks;
   }
@@ -270,26 +297,13 @@ export default class PanelManageGenotypeComponent extends Component {
       textP.then(
         (textObj) => {
           const text = textObj.text;
-          this.vcfGenotypeText =  text;
-          const
-          /** axisBrush.block is currently in the unused store; it has the local
-           * values (id, range, scope, name, featureType), but not
-           * relationships.
-           */
-          brushReferenceBlock = this.blockService.viewed.find((b) => b.id === this.axisBrush.block.get('id')),
-          dataBlocksV = brushReferenceBlock?.axis1d?.dataBlocks
-            .filter((b) => b.hasTag('VCF'));
-          let blockV = dataBlocksV && dataBlocksV[0];
-          if (! blockV) {
-            /** match the first block which is viewed and has scope matching
-             * axisBrush and is VCF.  */
-            blockV = this.blockService.viewed.find(
-              (b) => (b.get('scope') === scope) && b.hasTag('VCF'));
-          }
+          this.vcfGenotypeText = text;
+          /** .lookupDatasetId is derived from .lookupBlock so .lookupBlock must be defined here. */
+          let blockV = this.lookupBlock;
           dLog(fnName, text.length, text && text.slice(0,200), blockV.get('id'));
           if (text && blockV) {
             const added = addFeaturesJson(
-              blockV, this.requestFormat, this.replaceResults,
+              blockV, this.requestFormat, this.args.userSettings.replaceResults,
               this.args.selectedFeatures, text);
             if (added.createdFeatures && added.sampleNames) {
               const displayData = vcfFeatures2MatrixView(blockV, this.requestFormat, added);

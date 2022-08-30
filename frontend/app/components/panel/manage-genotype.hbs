@@ -100,8 +100,8 @@ Genotypes
 
     <input type="checkbox"
       style="margin-left: 3em;"
-      checked={{this.replaceResults}}
-      oninput={{action (mut this.replaceResults) value="target.checked"}}  >
+      checked={{@userSettings.replaceResults}}
+      oninput={{action (mut @userSettings.replaceResults) value="target.checked"}}  >
     <label>Replace previous results.</label>
 
   </div>
