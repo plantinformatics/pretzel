@@ -271,7 +271,9 @@ export default class PanelManageGenotypeComponent extends Component {
     // store = this.axisBrush?.get('block.store'),
     store = this.apiServerSelectedOrPrimary?.store,
     samplesRaw = this.vcfGenotypeSamplesSelected,
+    /** result is 1 string of names, separated by 1 newline.  */
     samples = samplesRaw?.trimStart().trimEnd()
+      .replaceAll('\r\n', '\n')
       .replaceAll(/[ \t\r]/g, '\n'),
     domainInteger = this.vcfGenotypeLookupDomain,
     vcfDatasetId = this.lookupDatasetId;
@@ -336,7 +338,9 @@ export default class PanelManageGenotypeComponent extends Component {
       /** expect : block.referenceBlock === referenceBlock
        */
       block = this.lookupBlock,
-      samplesText = this.vcfGenotypeSamplesSelected?.trimEnd(),
+      /** also done in vcfGenotypeLookup(), .trimStart().trimEnd() could be a CP;
+       * this results in an array. */
+      samplesText = this.vcfGenotypeSamplesSelected?.trimStart().trimEnd(),
       sampleNames = samplesText?.split(/[\n \t\r]/)
       .filter((s) => s !== '');
       dLog(fnName, block?.get('id'), sampleNames, this.selected.get('sampleNames'));
