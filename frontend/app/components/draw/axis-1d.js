@@ -698,7 +698,10 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     return brushedDomain;
   }),
 
-  brushedBlocks : computed('brushed', 'block', 'zoomedDomain.{0,1}', function () {
+  /** Dependency on .dataBlocks provides update for this axis if brushed, when a
+   * data block is viewed on it.
+   */
+  brushedBlocks : computed('brushed', 'block', 'zoomedDomain.{0,1}', 'dataBlocks', function () {
     let blocks;
     if (this.brushed) {
       blocks = this.get('dataBlocks');

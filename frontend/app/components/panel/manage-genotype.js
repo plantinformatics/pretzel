@@ -141,7 +141,7 @@ export default class PanelManageGenotypeComponent extends Component {
     return abb && abb[1];
   }
   /** axisBrushBlock -> lookupBlock is selected from a list which satisfies dataset .hasTag('view').
-   * May later pass dataset .meta.vcfFilename
+   * May later pass lookupDatasetId .meta.vcfFilename
    * See comments in vcfGenotypeLookup() re. vcfDatasetId / parent.
    */
   @computed('lookupBlock')
@@ -162,8 +162,11 @@ export default class PanelManageGenotypeComponent extends Component {
   /** Return brushed VCF blocks
    * @return [[axisBrush, vcfBlock], ...]
    * axisBrush will be repeated when there are multiple vcfBlocks on the axis of that axisBrush.
+   * @desc
+   * Dependency on .viewed provides update when a data block is added to an axis which is brushed.
+   * axis1d.brushedBlocks also depends (indirectly) on viewed[].
    */
-  @computed('flowsService.axisBrush.brushedAxes')
+  @computed('flowsService.axisBrush.brushedAxes', 'blockService.viewed.[]')
   get brushedVCFBlocks() {
     const
     fnName = 'brushedVCFBlocks',
@@ -176,7 +179,7 @@ export default class PanelManageGenotypeComponent extends Component {
       return ab1;
     })
       .flat();
-    dLog(fnName, axisBrushes, blocks);
+    dLog(fnName, axisBrushes, blocks, this.blockService.viewed.length, this.blockService.params.mapsToView);
     if (blocks.length) {
       if (this.args.userSettings.lookupBlock !== undefined) {
         this.axisBrushBlockIndex = blocks.findIndex((abb) => abb[1] === this.args.userSettings.lookupBlock);
@@ -191,23 +194,10 @@ export default class PanelManageGenotypeComponent extends Component {
 
   // ---------------------------------------------------------------------------
 
-
-  /** mapview : selectedDataset is the reference (parent) of the selected axis.
+  /** dataset parent name of the selected block for lookup.
+   * related : mapview : selectedDataset is the reference (parent) of the selected axis.
    */
-  @computed('dataset')
-  get referenceDataset () {
-    let dataset = this.args.dataset;
-    return dataset;
-  }
-
-  @computed('referenceDataset')
-  get datasetName () {
-    let
-    name = this.referenceDataset?.id;
-    dLog('datasetName', name);
-    return name;
-  }
-
+  @alias('lookupBlock.datasetId.parentName') referenceDatasetName;
 
   // ---------------------------------------------------------------------------
 
@@ -246,8 +236,7 @@ export default class PanelManageGenotypeComponent extends Component {
     if (scope && vcfDatasetId)
     {
       let
-      preArgs = 'query -l',
-      parent = this.datasetName;
+      preArgs = 'query -l';
 
       let textP = this.auth.vcfGenotypeSamples(
         this.apiServerSelectedOrPrimary, vcfDatasetId, scope,
@@ -267,7 +256,7 @@ export default class PanelManageGenotypeComponent extends Component {
   vcfGenotypeLookup() {
     const
     fnName = 'vcfGenotypeLookup',
-    /** this.args.dataset, this.axisBrush.block are currently the reference; lookup the data block. */
+    /** this.axisBrush.block is currently the reference; lookup the data block. */
     // store = this.axisBrush?.get('block.store'),
     store = this.apiServerSelectedOrPrimary?.store,
     samplesRaw = this.vcfGenotypeSamplesSelected,
@@ -281,8 +270,8 @@ export default class PanelManageGenotypeComponent extends Component {
       let
       scope = this.lookupScope,
       region = scope + ':' + domainInteger.join('-'),
-      preArgs = {region, samples, requestFormat : this.requestFormat},
-      parent = this.datasetName;
+      preArgs = {region, samples, requestFormat : this.requestFormat};
+      // parent is .referenceDatasetName
 
       /** Currently passing datasetId as param 'parent', until requirements evolve.
        * The VCF dataset directories are just a single level in $vcfDir;
@@ -291,7 +280,7 @@ export default class PanelManageGenotypeComponent extends Component {
        *   Triticum_aestivum_IWGSC_RefSeq_v1.0/
        *     Triticum_aestivum_IWGSC_RefSeq_v1.0_vcf_data
        * It's not necessary because datasetId is unique.
-       * (also the directory name could be e.g.  dataset._meta.vcfFilename instead of the default datasetId).
+       * (also the directory name could be e.g.  lookupDatasetId ._meta.vcfFilename instead of the default datasetId).
        */
       let textP = this.auth.vcfGenotypeLookup(
         this.apiServerSelectedOrPrimary, vcfDatasetId, scope, preArgs,
