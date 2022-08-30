@@ -1441,8 +1441,10 @@ export default Service.extend(Evented, {
         this.get('viewed')
         .filter(function (block) {
           // hasFeatures indicates isData.  - change to use block.isData
+          // view blocks (e.g. VCF) have dynamic features - 0 in db, so initially ! hasFeatures.
           return block.get('isLoaded') // i.e. !== undefined
-            && block.get('hasFeatures');
+            // equivalent : block.get('isData')
+            && (block.get('hasFeatures') || block.hasTag('view'));
         });
       if (trace_block > 1)
         console.log(

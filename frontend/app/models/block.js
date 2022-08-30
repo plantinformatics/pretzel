@@ -1118,6 +1118,27 @@ export default Model.extend({
     return overlaps;
   },
 
+  // ---------------------------------------------------------------------------
+
+  /** @return features of this block, filtered by brushedDomain if the axis of
+   * this block is brushed.
+   */
+  featuresInBrush : computed('brushedDomain.{0,1}', 'features.[]', function() {
+    let
+    features,
+    interval = this.brushedDomain;
+    if (interval) {
+      const
+      // based on similar in featureInRange().
+      valueInInterval = this.controls.get('view.valueInInterval');
+      /** filter by axisBrush .brushedDomain */
+      features = this.features.filter((f) => valueInInterval(f.value, interval));
+    } else {
+      features = this.features.toArray();
+    }
+    return features;
+  }),
+
   /*--------------------------------------------------------------------------*/
 
   /**  @return undefined if this block is not the referenceBlock of an axis1d

@@ -297,7 +297,7 @@ export default class PanelManageGenotypeComponent extends Component {
               blockV, this.requestFormat, this.args.userSettings.replaceResults,
               this.args.selectedFeatures, text);
             if (added.createdFeatures && added.sampleNames) {
-              const displayData = vcfFeatures2MatrixView(blockV, this.requestFormat, added);
+              const displayData = vcfFeatures2MatrixView(this.requestFormat, added);
               this.displayData.addObjects(displayData);
               /* Retain sampleNames for continuity when user is switching between tabs. */
               this.selected.set('sampleNames', added.sampleNames);
@@ -317,34 +317,37 @@ export default class PanelManageGenotypeComponent extends Component {
       this.showSamplesWithinBrush();
     }
   }
+  /** Show VCF data which has been received.
+   * For those on brushed axes, filter features by the brush interval.
+   * If any axes are brushed, show just (VCF) data blocks of brushed axes.
+   * 
+   */
   showSamplesWithinBrush() {
     const fnName = 'showSamplesWithinBrush';
     if (! this.axisBrush || ! this.lookupBlock) {
       // perhaps clear table
     } else {
-      const
+      let
       referenceBlock = this.axisBrush?.get('block'),
-      /** expect : block.referenceBlock === referenceBlock
+      /** expect : block.referenceBlock.id === referenceBlock.id
        */
-      block = this.lookupBlock,
+      blocks = this.brushedVCFBlocks.map((abb) => abb[1]),
       /** also done in vcfGenotypeLookup(), .trimStart().trimEnd() could be a CP;
        * this results in an array. */
       samplesText = this.vcfGenotypeSamplesSelected?.trimStart().trimEnd(),
       sampleNames = samplesText?.split(/[\n \t\r]/)
       .filter((s) => s !== '');
-      dLog(fnName, block?.get('id'), sampleNames, this.selected.get('sampleNames'));
-      if (block && sampleNames.length) {
+      if (blocks.length === 0) {
+        blocks = this.blockService.viewed.filter((b) => b.hasTag('VCF'));
+      }
+      dLog(fnName, blocks.mapBy('id'), sampleNames, this.selected.get('sampleNames'));
+      if (blocks.length && sampleNames.length) {
         const
-        createdFeatures = block.get('features').toArray(),
-        interval = this.axisBrush.brushedDomain,
-        // based on similar in featureInRange().
-        valueInInterval = this.controls.get('view.valueInInterval'),
-        /** filter by axisBrush.brushedDomain */
-        features = createdFeatures.filter((f) => valueInInterval(f.value, interval));
-
+        features = blocks.map((b) => b.featuresInBrush)
+          .flat();
         if (features?.length) {
           let sampleGenotypes = {createdFeatures : features, sampleNames};
-          const displayData = vcfFeatures2MatrixView(block, this.requestFormat, sampleGenotypes);
+          const displayData = vcfFeatures2MatrixView(this.requestFormat, sampleGenotypes);
           this.displayData.addObjects(displayData);
         }
       }

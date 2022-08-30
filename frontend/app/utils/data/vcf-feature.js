@@ -269,7 +269,9 @@ function matchExtract(string, regexp, valueIndex) {
 /** Map the result of vcfGenotypeLookup() to the format expected by component:matrix-view param displayData
  *  columns [] -> {features -> [{name, value}...],  datasetId.id, name }
  *
- * @param block {datasetId.id, name}
+ * Originally block was a param, but now it is derived from features, because
+ * there may be features of multiple blocks.
+ *
  * @param requestFormat 'CATG', 'Numerical', ...
  * @param added
  *  { createdFeatures : array of created Features,
@@ -277,7 +279,7 @@ function matchExtract(string, regexp, valueIndex) {
  *
  * @return displayData
  */
-function vcfFeatures2MatrixView(block, requestFormat, added) {
+function vcfFeatures2MatrixView(requestFormat, added) {
   const fnName = 'vcfFeatures2MatrixView';
   /** createdFeatures : array of model:Feature (could be native JS objects - see
    * comment in addFeaturesJson() */
@@ -288,12 +290,15 @@ function vcfFeatures2MatrixView(block, requestFormat, added) {
       let
       sampleValue = Ember_get(f, 'values.' + sampleName),
       value = requestFormat ? sampleValue : matchExtract(sampleValue, /^([^:]+):/, 1),
-      fx = {name : f.name, value};
+      name = f.get('blockId.brushName') + ' ' + f.name,
+      fx = {name, value};
       fx[featureSymbol] = f;
       return fx;
     }),
-    datasetId = Ember_get(block, 'datasetId.id'),
-    name = Ember_get(block, 'name') + ' ' + sampleName,
+    feature0 = createdFeatures.length && createdFeatures[0],
+    block = feature0?.blockId,
+    datasetId = block ? Ember_get(block, 'datasetId.id') : '',
+    name = (block ? Ember_get(block, 'name') + ' ' : '') + sampleName,
     column = {features,  datasetId : {id : datasetId}, name};
     return column;
   });
