@@ -13,8 +13,6 @@ import { addFeaturesJson, vcfFeatures2MatrixView } from '../../utils/data/vcf-fe
 
 const dLog = console.debug;
 
-const maxRequestInterval = 1e6;
-
 // -----------------------------------------------------------------------------
 
 
@@ -80,6 +78,43 @@ export default class PanelManageGenotypeComponent extends Component {
     /** save user setting for next component instance. */
     this.args.userSettings.lookupBlock = this.lookupBlock;
   }
+
+  // ---------------------------------------------------------------------------
+
+  /** Maximum interval for VCF lookup request.
+   * This initial default value is coordinated with hbs : <input ... value=1 ... intervalLimitInput >
+   */
+  @tracked
+  intervalLimit = 1;
+
+  @action
+  intervalLimitInput(event) {
+    /** default is 1 : value=1 in hbs
+     * event.target.value is a string; convert to a number.
+     */
+    let value = +event.target.value;
+     dLog('intervalLimitInput', value, event.target.value);
+    this.intervalLimit = value;
+  }
+
+  // -----------------------------------
+
+  /** Limit on result rows for VCF lookup response.
+   * This initial default value is coordinated with hbs : <input ... value=100 ... rowLimitInput >
+   */
+  @tracked
+  rowLimit = 100;
+
+  @action
+  rowLimitInput(event) {
+    /** default is 100 : value=100 in hbs
+     * event.target.value is a string; convert to a number.
+     */
+    let value = +event.target.value;
+     dLog('rowLimitInput', value, event.target.value);
+    this.rowLimit = value;
+  }
+
 
   // ---------------------------------------------------------------------------
 
@@ -211,7 +246,7 @@ export default class PanelManageGenotypeComponent extends Component {
     return domain;
   }
 
-  @computed('axisBrush.brushedDomain')
+  @computed('axisBrush.brushedDomain', 'intervalLimit')
   get vcfGenotypeLookupDomain () {
     /** copied from sequenceLookupDomain() axis-brush.js
      * could be factored to a library - probably 2 1-line functions - not compelling.
@@ -219,7 +254,7 @@ export default class PanelManageGenotypeComponent extends Component {
     let
     domain = this.axisBrush?.brushedDomain,
     domainInteger = domain && 
-      (intervalSize(domain) <= maxRequestInterval) &&
+      (intervalSize(domain) <= this.intervalLimit * 1e6) &&
       domain.map((d) => d.toFixed(0));
     return domainInteger;
   }

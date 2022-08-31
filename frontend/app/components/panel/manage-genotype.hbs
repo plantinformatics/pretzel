@@ -73,42 +73,75 @@ Genotypes
 </div>
 
 
-  <label>VCF Genotype for brushed interval</label>
-  <span>
-    <span>{{object-at 0 this.sequenceLookupDomain}}</span>
-    <span>{{object-at 1 this.sequenceLookupDomain}}</span>
-  </span>
-
-
+<div>
   <div>
-    <ul class="list-group view-controls">
-      <li class="list-group-item">
-        <label style="display:inline">Format to request :</label>
-        {{radio-button value='CATG' groupValue=requestFormat
-          changed=(action requestFormatChanged preventDefault=false)
-        }}
-        CATG &nbsp;&nbsp;
-        {{radio-button value='Numerical' groupValue=requestFormat
-          changed=(action requestFormatChanged preventDefault=false)
-        }}
-        Numerical &nbsp;&nbsp;
+    <label>VCF Genotype for brushed interval</label>
+    <span>
+      <span>{{object-at 0 this.sequenceLookupDomain}}</span>
+      <span>{{object-at 1 this.sequenceLookupDomain}}</span>
+    </span>
+  </div>
 
+  <div style="display: flex">
+    <div>
+      <ul class="view-controls"
+        style="min-width: fit-content; list-style-type: none; padding-left: 0px;">
+        {{!-- possibly : class="list-group" --}}
+
+        <li> {{!-- possibly :  class="list-group-item" --}}
+          <label style="display:inline">Format to request :</label>
+          {{radio-button value='CATG' groupValue=requestFormat
+            changed=(action requestFormatChanged preventDefault=false)
+          }}
+          CATG &nbsp;&nbsp;
+          {{radio-button value='Numerical' groupValue=requestFormat
+            changed=(action requestFormatChanged preventDefault=false)
+          }}
+          Numerical &nbsp;&nbsp;
+
+        </li>
+
+      <li>
+        <input type="checkbox"
+          style="margin-left: 3em;"
+          checked={{@userSettings.replaceResults}}
+          oninput={{action (mut @userSettings.replaceResults) value="target.checked"}}  >
+        <label>Replace previous results.</label>
       </li>
 
-    </ul>
+      <li class="list-group-item horiz-2">
+        <div>
+          <label>Interval limit</label>
+          <span class="sub-label">{{ this.intervalLimit }}</span>
+          <input type="range"
+           value=0
+           oninput={{action this.intervalLimitInput}}
+           min="1" max="100"
+          />
+        </div>
 
-    <input type="checkbox"
-      style="margin-left: 3em;"
-      checked={{@userSettings.replaceResults}}
-      oninput={{action (mut @userSettings.replaceResults) value="target.checked"}}  >
-    <label>Replace previous results.</label>
+        <div>
+          <label>Result rows</label>
+          <span class="sub-label">{{ this.rowLimit }}</span>
+          <input type="range"
+           value=100
+           oninput={{action this.rowLimitInput}}
+           min="1" max="1000"
+          />
+        </div>
+      </li>
+
+      </ul>
+
+    </div>
 
   </div>
+</div>
 
   {{#if this.vcfGenotypeLookupDomain}}
     <button type="button" onclick={{action this.vcfGenotypeLookup}} class="btn btn-info btn-xs">VCF Lookup</button>
   {{else}}
-    <span>VCF Lookup Region limit is 1Mb</span>
+    <span>VCF Lookup Region limit is {{this.intervalLimit}}Mb</span>
   {{/if}}
 
 
