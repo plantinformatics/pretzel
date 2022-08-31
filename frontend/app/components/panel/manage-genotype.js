@@ -343,7 +343,9 @@ export default class PanelManageGenotypeComponent extends Component {
       dLog(fnName, blocks.mapBy('id'), sampleNames, this.selected.get('sampleNames'));
       if (blocks.length && sampleNames.length) {
         const
-        features = blocks.map((b) => b.featuresInBrush)
+        features = blocks
+        .filterBy('visible')
+          .map((b) => b.featuresInBrush)
           .flat();
         if (features?.length) {
           let sampleGenotypes = {createdFeatures : features, sampleNames};
@@ -354,8 +356,11 @@ export default class PanelManageGenotypeComponent extends Component {
     }
   }
 
-  @computed('axisBrush.brushedDomain', 'vcfGenotypeSamplesSelected')
+  @computed('axisBrush.brushedDomain', 'vcfGenotypeSamplesSelected', 'blockService.viewedVisible')
   get selectedSampleEffect () {
+    const fnName = 'selectedSampleEffect';
+    const viewedVisible = this.blockService.viewedVisible;
+    dLog(fnName, viewedVisible.length);
     // remove all because sampleNames / columns may have changed.
     if (this.displayData.length) {
       this.displayData.removeAt(0, this.displayData.length);

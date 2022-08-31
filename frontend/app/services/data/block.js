@@ -2,7 +2,7 @@ import { isArray } from '@ember/array';
 import { later } from '@ember/runloop';
 import { resolve, Promise } from 'rsvp';
 import { computed, get } from '@ember/object';
-import { alias } from '@ember/object/computed';
+import { alias, filterBy } from '@ember/object/computed';
 import Evented from '@ember/object/evented';
 import Ember from 'ember';
 import Service, { inject as service } from '@ember/service';
@@ -963,6 +963,12 @@ export default Service.extend(Evented, {
     let viewed = this.get('viewed'),
     viewedById = keyBy(viewed, (b) => b.id);
     return viewedById;
+  }),
+  // viewedVisible : filterBy('viewed', 'visible'),
+  viewedVisible : computed('viewed.@each.visible', function () {
+    const visible = this.viewed.filterBy('visible');
+    dLog('viewedVisible', visible.mapBy('id'));
+    return visible;
   }),
   /** Ensure that there is an axis for each viewed block.
    */
