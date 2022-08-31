@@ -298,34 +298,34 @@ function vcfFeatures2MatrixView(requestFormat, added) {
      * feature.value[0] order - empty where block has no feature.
      */
     for (const block of blocks.keys()) {
-    /** blocks : features : samples
-     * maybe filter by sampleName.
-     * each column is identified by block + sampleName, and has features of that block with that sampleName
-     */
-    let
-    featuresMatchSample = 0,
-    /** could map block to an array of samples which its features have, enabling
-     * column order by block. */
+      /** blocks : features : samples
+       * maybe filter by sampleName.
+       * each column is identified by block + sampleName, and has features of that block with that sampleName
+       */
+      let
+      featuresMatchSample = 0,
+      /** could map block to an array of samples which its features have, enabling
+       * column order by block. */
       // sort features by .value[0]
-    features = createdFeatures.map((f) => {
-      let
-      sampleValue = Ember_get(f, 'values.' + sampleName),
-      value = requestFormat ? sampleValue : matchExtract(sampleValue, /^([^:]+):/, 1),
-      name = f.get('blockId.brushName') + ' ' + f.name,
-      fx = {name, value};
-      if ((f.get('blockId.id') === block.get('id')) && (sampleValue !== undefined)) {
-        featuresMatchSample++;
+      features = createdFeatures.map((f) => {
+        let
+        sampleValue = Ember_get(f, 'values.' + sampleName),
+        value = requestFormat ? sampleValue : matchExtract(sampleValue, /^([^:]+):/, 1),
+        name = f.get('blockId.brushName') + ' ' + f.name,
+        fx = {name, value};
+        if ((f.get('blockId.id') === block.get('id')) && (sampleValue !== undefined)) {
+          featuresMatchSample++;
+        }
+        fx[featureSymbol] = f;
+        return fx;
+      });
+      if (featuresMatchSample) {
+        let
+        datasetId = block ? Ember_get(block, 'datasetId.id') : '',
+        name = (block ? Ember_get(block, 'name') + ' ' : '') + sampleName,
+        column = {features,  datasetId : {id : datasetId}, name};
+        result.push(column);
       }
-      fx[featureSymbol] = f;
-      return fx;
-    });
-    if (featuresMatchSample) {
-      let
-      datasetId = block ? Ember_get(block, 'datasetId.id') : '',
-      name = (block ? Ember_get(block, 'name') + ' ' : '') + sampleName,
-      column = {features,  datasetId : {id : datasetId}, name};
-      result.push(column);
-    }
     };
     return result;
   }, []);
