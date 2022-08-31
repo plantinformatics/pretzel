@@ -284,24 +284,51 @@ function vcfFeatures2MatrixView(requestFormat, added) {
   /** createdFeatures : array of model:Feature (could be native JS objects - see
    * comment in addFeaturesJson() */
   let {createdFeatures, sampleNames} = added;
-  let displayData = sampleNames.map((sampleName) => {
+  /** The param added.createdFeatures could be grouped by block.
+   * Ordering by sampleName seems more useful, although not clear how often sampleName appears in 2 blocks.
+   */
+  const blocks = createdFeatures.reduce((result, feature) => {
+    result.set(feature.get('blockId.content'), true);
+    return result;
+  }, new Map());
+
+  let displayData = sampleNames.reduce((result, sampleName) => {
+    /** if any features of a block contain sampleName, then generate a
+     * block:sampleName column, with all features of all blocks, in
+     * feature.value[0] order - empty where block has no feature.
+     */
+    for (const block of blocks.keys()) {
+    /** blocks : features : samples
+     * maybe filter by sampleName.
+     * each column is identified by block + sampleName, and has features of that block with that sampleName
+     */
     let
+    featuresMatchSample = 0,
+    /** could map block to an array of samples which its features have, enabling
+     * column order by block. */
+      // sort features by .value[0]
     features = createdFeatures.map((f) => {
       let
       sampleValue = Ember_get(f, 'values.' + sampleName),
       value = requestFormat ? sampleValue : matchExtract(sampleValue, /^([^:]+):/, 1),
       name = f.get('blockId.brushName') + ' ' + f.name,
       fx = {name, value};
+      if ((f.get('blockId.id') === block.get('id')) && (sampleValue !== undefined)) {
+        featuresMatchSample++;
+      }
       fx[featureSymbol] = f;
       return fx;
-    }),
-    feature0 = createdFeatures.length && createdFeatures[0],
-    block = feature0?.blockId,
-    datasetId = block ? Ember_get(block, 'datasetId.id') : '',
-    name = (block ? Ember_get(block, 'name') + ' ' : '') + sampleName,
-    column = {features,  datasetId : {id : datasetId}, name};
-    return column;
-  });
+    });
+    if (featuresMatchSample) {
+      let
+      datasetId = block ? Ember_get(block, 'datasetId.id') : '',
+      name = (block ? Ember_get(block, 'name') + ' ' : '') + sampleName,
+      column = {features,  datasetId : {id : datasetId}, name};
+      result.push(column);
+    }
+    };
+    return result;
+  }, []);
   dLog(fnName, displayData);
   return displayData;
 }
