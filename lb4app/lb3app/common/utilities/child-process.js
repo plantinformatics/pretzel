@@ -177,39 +177,39 @@ function factored(msg, options, cb) {
 
 // params needed : this (model/dataset), models, options (optionsFromRequest), replaceDataset, uploadParsedTry
 let dataOutUpload = (chunk, cb) => {
-    // data from the standard output is here as buffers
-    // Possibly multiple lines, separated by \n,
-    // completed by \n.
-    const
-    textLines = chunk.toString().split('\n');
-    textLines.forEach((textLine) => {
-      if (textLine !== "") {
-        let [fileName, datasetName] = textLine.split(';');
-        console.log('uploadSpreadsheet stdout data',  "'", fileName,  "', '", datasetName, "'");
-        if (fileName.startsWith('Error:') || ! datasetName) {
-          cb(new Error(fileName + " Dataset '" + datasetName + "'"));
-        } else {
-          console.log('before removeExisting "', datasetName, '"', replaceDataset);
-          this.removeExisting(models, /*options*/undefined, datasetName, replaceDataset, cb, loadAfterDelete);
-        }
-        function loadAfterDelete(err) {
-          if (err) {
-            cb(err);
-          }
-          else {
-            fs.readFile(fileName, (err, jsonData) => {
-              if (err) {
-                cb(err);
-              } else {
-                console.log('readFile', fileName, jsonData.length);
-                // jsonData is a Buffer;  JSON.parse() handles this OK.
-                uploadParsedTry(jsonData);
-              }
-            });
-          }
-        };
+  // data from the standard output is here as buffers
+  // Possibly multiple lines, separated by \n,
+  // completed by \n.
+  const
+  textLines = chunk.toString().split('\n');
+  textLines.forEach((textLine) => {
+    if (textLine !== "") {
+      let [fileName, datasetName] = textLine.split(';');
+      console.log('uploadSpreadsheet stdout data',  "'", fileName,  "', '", datasetName, "'");
+      if (fileName.startsWith('Error:') || ! datasetName) {
+        cb(new Error(fileName + " Dataset '" + datasetName + "'"));
+      } else {
+        console.log('before removeExisting "', datasetName, '"', replaceDataset);
+        this.removeExisting(models, /*options*/undefined, datasetName, replaceDataset, cb, loadAfterDelete);
       }
-    });
+      function loadAfterDelete(err) {
+        if (err) {
+          cb(err);
+        }
+        else {
+          fs.readFile(fileName, (err, jsonData) => {
+            if (err) {
+              cb(err);
+            } else {
+              console.log('readFile', fileName, jsonData.length);
+              // jsonData is a Buffer;  JSON.parse() handles this OK.
+              uploadParsedTry(jsonData);
+            }
+          });
+        }
+      };
+    }
+  });
 };
 
 /*----------------------------------------------------------------------------*/
