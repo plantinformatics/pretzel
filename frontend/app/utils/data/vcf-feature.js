@@ -130,10 +130,10 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
       sampleNames = columnNames.slice(nColumnsBeforeSamples);
     } else if (l.startsWith('# [1]ID')) {
       // # [1]ID	[2]POS	[3]ExomeCapture-DAS5-002978:GT	[4]ExomeCapture-DAS5-003024:GT	[5]ExomeCapture-DAS5-003047:GT	[6]ExomeC
-      // trim off :GT, and split at 'tab[num]'
       columnIsGT = l
         .split(/\t\[[0-9]+\]/)
         .map((name) => name.endsWith(':GT'));
+      // trim off :GT, and split at 'tab[num]'
       columnNames = l
         .replaceAll(':GT', '')
         .split(/\t\[[0-9]+\]/);
@@ -286,6 +286,16 @@ function matchExtract(string, regexp, valueIndex) {
   return value;
 }
 
+function featureSortValue(f) {
+  return f.value[0];
+}
+/** Usage : featureArray.sort(featureSortComparator)
+ */
+function featureSortComparator(a,b) {
+  const order = a.value[0] - b.value[0];
+  return order;
+}
+
 /** Map the result of vcfGenotypeLookup() to the format expected by component:matrix-view param displayData
  *  columns [] -> {features -> [{name, value}...],  datasetId.id, name }
  *
@@ -327,7 +337,9 @@ function vcfFeatures2MatrixView(requestFormat, added) {
       /** could map block to an array of samples which its features have, enabling
        * column order by block. */
       // sort features by .value[0]
-      features = createdFeatures.map((f) => {
+      features = createdFeatures
+        .sort(featureSortComparator)
+        .map((f) => {
         let
         sampleValue = Ember_get(f, 'values.' + sampleName),
         value = requestFormat ? sampleValue : matchExtract(sampleValue, /^([^:]+):/, 1),
