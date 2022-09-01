@@ -17,7 +17,7 @@ var pathsStream = require('../utilities/paths-stream');
 var { localiseBlocks, blockLocalId } = require('../utilities/localise-blocks');
 const { blockServer } = require('../utilities/api-server');
 const { getAliases } = require('../utilities/localise-aliases');
-const { childProcess, dataOutReplyClosure } = require('../utilities/child-process');
+const { childProcess, dataOutReplyClosure, dataOutReplyClosureLimit } = require('../utilities/child-process');
 const { ArgsDebounce } = require('../utilities/debounce-args');
 const { ErrorStatus } = require('../utilities/errorStatus.js');
 
@@ -1255,10 +1255,13 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
   // ---------------------------------------------------------------------------
 
   /**
+   * @param parent  name of parent or view dataset, or vcf directory name
+   * @param scope e.g. '1A'; identifies the vcf file, i.e. datasetId/scope.vcf.gz
+   * @param nLines if defined, limit the output to nLines.
    * @param preArgs args to be inserted in command line, additional to the parent / vcf file name.
    * See comment in frontend/app/services/auth.js : vcfGenotypeLookup()
    */
-  Block.vcfGenotypeLookup = function(parent, scope, preArgs, cb) {
+  Block.vcfGenotypeLookup = function(parent, scope, preArgs, nLines, cb) {
     const
     fnName = 'vcfGenotypeLookup',
     command = preArgs.requestFormat ? 'query' : 'view';
@@ -1281,7 +1284,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       /* useFile */ false,
       /* fileName */ undefined,
       moreParams,
-      dataOutReplyClosure(cb), cb, /*progressive*/ false);
+      dataOutReplyClosureLimit(cb, nLines), cb, /*progressive*/ true);
 
   };
 
@@ -1290,6 +1293,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       {arg: 'parent', type: 'string', required: true},
       {arg: 'scope', type: 'string', required: true},
       {arg: 'preArgs', type: 'object', required: false},
+      {arg: 'nLines', type: 'number', required: false},
     ],
     http: {verb: 'get'},
     returns: {arg: 'text', type: 'string'},

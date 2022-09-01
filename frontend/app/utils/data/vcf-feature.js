@@ -80,12 +80,20 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
   createdFeatures = [],
   /** The same features as createdFeatures[], in selectedFeatures format. */
   selectionFeatures = [],
+  /** if the output is truncated by rowLimit aka nLines, the last line will not
+   * have a trailing \n, and is discarded.
+   * Otherwise values.length may be < 4, and feature.value may be undefined.
+   */
   lines = text.split('\n'),
   meta = {},
   columnNames,
   sampleNames,
   nFeatures = 0;
   dLog(fnName, lines.length);
+  if (text && text.length && (text.charAt(text.length-1) === '\n')) {
+    dLog(fnName, 'discarding', lines[lines.length-1]);
+    lines.splice(-1, 1);
+  }
 
   if (replaceResults) {
     let mapChrName = Ember_get(block, 'brushName');
@@ -197,7 +205,7 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
        * native JS objects at this point, and passing those to the 2nd function
        * for creation of model:Feature
        */
-      if (feature.blockId && feature.value.length && feature._name) {
+      if (feature.blockId && feature.value?.length && feature._name) {
         // trace level is e.g. 0,1,2,3; the number of rows displayed will be e.g. 0,2,4,8.
         if (trace && (lineNum < (1 << trace))) {
           dLog(fnName, 'newFeature', feature);

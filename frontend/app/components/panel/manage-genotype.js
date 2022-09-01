@@ -318,7 +318,7 @@ export default class PanelManageGenotypeComponent extends Component {
        * (also the directory name could be e.g.  lookupDatasetId ._meta.vcfFilename instead of the default datasetId).
        */
       let textP = this.auth.vcfGenotypeLookup(
-        this.apiServerSelectedOrPrimary, vcfDatasetId, scope, preArgs,
+        this.apiServerSelectedOrPrimary, vcfDatasetId, scope, preArgs, this.rowLimit,
         {} );
       textP.then(
         (textObj) => {

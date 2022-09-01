@@ -213,11 +213,14 @@ module.exports = function(Feature) {
         textLines = chunk.toString().split('\n')
           .filter((textLine) => filterBlastResults(
             minLengthOfHit, minPercentIdentity, minPercentCoverage, textLine));
-        textLines.forEach((textLine) => {
-          if (textLine !== "") {
-            console.log(fnName, 'stdout data',  "'", textLine,  "'");
-          }
-        });
+        if (trace) {
+          (trace > 3 ? textLines : textLines.slice(0, 2))
+            .forEach((textLine) => {
+              if (textLine !== "") {
+                console.log(fnName, 'stdout data',  "'", textLine,  "'");
+              }
+            });
+        };
         if (addDataset) {
           let jsonFile='tmp/' + datasetName + '.json';
           /** same as convertSearchResults2Json() in dnaSequenceSearch.bash */

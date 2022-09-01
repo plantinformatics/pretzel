@@ -357,11 +357,12 @@ export default Service.extend({
    *  e.g. region : -r 'chr6A:607200000-607200000'
    *      samples : -s ...,...
    * This will likely be replaced by specific params region and samples.
+   * @param nLines if defined, limit the output to nLines.
    * @param options not used yet, may be for streaming result
    */
-  vcfGenotypeLookup(apiServer, parent, scope, preArgs, options) {
-    dLog('services/auth vcfGenotypeLookup', parent, scope, preArgs, options);
-    return this._ajax('Blocks/vcfGenotypeLookup', 'GET', {server : apiServer, parent, scope, preArgs, options}, true);
+  vcfGenotypeLookup(apiServer, parent, scope, preArgs, nLines, options) {
+    dLog('services/auth vcfGenotypeLookup', parent, scope, preArgs, nLines, options);
+    return this._ajax('Blocks/vcfGenotypeLookup', 'GET', {server : apiServer, parent, scope, preArgs, nLines, options}, true);
   },
 
 

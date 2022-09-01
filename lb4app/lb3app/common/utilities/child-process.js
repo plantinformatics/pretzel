@@ -17,13 +17,19 @@ var fs = require('fs');
  * @param fileName
  * @param moreParams array of params to pass as command-line params to
  * child process, after [fileName, useFile]
- * @param dataOutCb (Buffer chunk, cb) {}
+ * @param dataOutCb (Buffer chunk, cb) {} -> finished.
  * If child process closes with status 0 (OK) and sent no output, then
  * dataOutCb will be called with chunk === null
+ * See param progressive.
+ * See dataOutReplyClosureLimit() (which can limit outout to nLines), and dataOutReplyClosure().
+ * If the callback returns truthy then do not call it again;
+ * if this truthy return value !== true then pass it as result to cb.
  * @param cb  response node callback
  * @param progressive true means pass received data back directly to
  * dataOutCb, otherwise catenate it and call dataOutCb just once when
  * child closes
+ * If progressive then the dataOutCb can catenate the chunks and return them
+ * when finished.
  * @return child
  */
 exports.childProcess = (scriptName, postData, useFile, fileName, moreParams, dataOutCb, cb, progressive) => {
@@ -75,8 +81,8 @@ exports.childProcess = (scriptName, postData, useFile, fileName, moreParams, dat
 
   const
   /** msg.replaceDataset is defined by uploadSpreadsheet(), but not by data-json.js : submitFile()
-  replaceDataset = !!msg.replaceDataset, 
-   */
+      replaceDataset = !!msg.replaceDataset, 
+  */
   currentDir = process.cwd(),
   /** In the Docker container, server cwd is /.  scriptName (e.g. uploadSpreadsheet.bash) is in $scriptsDir/
    * backend/ has been renamed to lb4app, but eventually lb3app/ should be
@@ -122,9 +128,24 @@ exports.childProcess = (scriptName, postData, useFile, fileName, moreParams, dat
 
   /** output chunks received from child, if progressive. */
   let outputs = [];
-  let outCb = progressive ?
-      (chunk) => dataOutCb(chunk, cb) :
-      (chunk) => outputs.push(chunk);
+  let progressiveResult = undefined;
+  function outCb(chunk) {
+    if (progressiveResult) {
+      // a further chunk received after finished(), so close child.
+      console.log('outCb', 'SIGINT child', progressiveResult.length);
+      child.kill('SIGINT');
+    } else if (progressive) {
+      let results;
+      progressiveResult ||= (results = dataOutCb(chunk, cb));
+      if (results) {
+        const text = Buffer.concat(results).toString();
+        cb(null, text);
+      }
+    }
+    else {
+      outputs.push(chunk);
+    }
+  }
   child.stdout.on('data', outCb);
 
   // since these are streams, you can pipe them elsewhere
@@ -214,13 +235,41 @@ let dataOutUpload = (chunk, cb) => {
 
 /*----------------------------------------------------------------------------*/
 
+/** Count occurrences of stringSearch in string.
+ *
+ * from : https://stackoverflow.com/a/10671743/18307804, method 3, Lorenz Lo Sauer.
+ * https://stackoverflow.com/a/51493288/18307804 : Damion Dooley reports this is the fastest on Node.js v.6, of those methods.
+ */
+function stringCountString(string, stringSearch) {
+  for (
+    var count=-1, index=-2;
+    index != -1;
+    count++, index=string.indexOf(stringSearch, index+1)
+  );
+  return count;
+}
+
+// -----------------------------------------------------------------------------
+
+
 const { ErrorStatus } = require('./errorStatus.js');
 
-exports.dataOutReplyClosure = function dataOutReplyClosure(cb) {
+/** @return a callback wrapping the param cb
+ * The signature of the result is function(chunk, cb), which matches param
+ * dataOutCb of above childProcess().
+ * @param cb
+ * @param nLines if defined, limit the output to nLines.
+ * (currently the whole of the last chunk containing line nLines is delivered).
+ * If !progressive then nLines is not effective because dataOutCb receives the
+ * combined chunks after child close.
+ */
+exports.dataOutReplyClosureLimit = function dataOutReplyClosureLimit(cb, nLines) {
   let chunks = [];
+  let lineCount = 0;
+
   /* possibly add req to params and reference chunks there :
-  let chunksSymbol = Symbol.for('dataOutChunks');
-  req[chunksSymbol] = chunks;
+     let chunksSymbol = Symbol.for('dataOutChunks');
+     req[chunksSymbol] = chunks;
   */
 
   return dataOutReply;
@@ -229,19 +278,48 @@ exports.dataOutReplyClosure = function dataOutReplyClosure(cb) {
    * @param chunk is a Buffer
    * null / undefined indicates child process closed with status 0 (OK) and sent no output.
    * @param cb is cbWrap of cb passed to vcfGenotypeLookup().
+   * @return truthy if finished - i.e. unsubscribe; caller should not call again.
+   * No effect if ! progressive; see nLines.
    */
   function dataOutReply(chunk, cb) {
+    const fnName = 'dataOutReply';
     /** based on searchDataOut() */
+
+    /** result is chunks, if chunk makes finished() true.  */
+    let result;
+    function finished() { return (nLines !== undefined) && (lineCount >= nLines); }
     if (! chunk) {
-      cb(null, chunks);
-    } else
+      // child status 0 (OK) and no output, so return [].
+      cb(null, []); // equiv Buffer.concat(chunks)
+    } else if (! finished()) {
+      const text = chunk?.toString();
+      // equiv : text?.startsWith('Error:')
       if (chunk && (chunk.length >= 6) && (chunk.asciiSlice(0,6) === 'Error:')) {
-        cb(new ErrorStatus(400, chunk.toString()));
+        cb(new ErrorStatus(400, text));
       } else {
-        // chunks.push(chunk)
-        cb(null, chunk.toString());
+        /* childProcess() wraps the given cb : cbWrap calls cbOrig just once.
+         * Otherwise, chunks could be catenated here into chunks.
+         */
+        if (text && (nLines !== undefined)) {
+          lineCount += stringCountString(text, '\n');
+          console.log(fnName, 'lineCount', lineCount, text.length, chunks.length);
+          chunks.push(chunk);
+          if (finished()) {
+            result = chunks;
+          }
+        } else {
+          cb(null, text);
+        }
       }
+    }
+    return result;
   };
+};
+
+/** call dataOutReplyClosureLimit() with nLines === undefined.
+ */
+exports.dataOutReplyClosure = function dataOutReplyClosure(cb) {
+  return exports.dataOutReplyClosureLimit(cb, /*nLines*/undefined);
 };
 
 // -----------------------------------------------------------------------------
