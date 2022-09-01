@@ -86,6 +86,8 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
    */
   lines = text.split('\n'),
   meta = {},
+  /** true if column is genotype format value. */
+  columnIsGT,
   columnNames,
   sampleNames,
   nFeatures = 0;
@@ -129,6 +131,9 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
     } else if (l.startsWith('# [1]ID')) {
       // # [1]ID	[2]POS	[3]ExomeCapture-DAS5-002978:GT	[4]ExomeCapture-DAS5-003024:GT	[5]ExomeCapture-DAS5-003047:GT	[6]ExomeC
       // trim off :GT, and split at 'tab[num]'
+      columnIsGT = l
+        .split(/\t\[[0-9]+\]/)
+        .map((name) => name.endsWith(':GT'));
       columnNames = l
         .replaceAll(':GT', '')
         .split(/\t\[[0-9]+\]/);
@@ -178,6 +183,13 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
           let prefix = fieldNameF.match(/^(.+)\..*/);
           prefix = prefix && prefix[1];
           if (prefix) {
+            /** replace A/A with A */
+            if (columnIsGT[i]) {
+              let match = value.match(/^(\w)[|/](\w)$/);
+              if (match && (match[1] === match[2])) {
+                value = match[1];
+              }
+            }
             if (! f[prefix]) {
               f[prefix] = {};
             }

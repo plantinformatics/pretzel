@@ -61,8 +61,9 @@ export default class PanelManageGenotypeComponent extends Component {
         'ExomeCapture-DAS5-003024\nExomeCapture-DAS5-003047';
     }
 
+    // possible values listed in comment before requestFormat
     this.requestFormat =
-      this.args.userSettings.requestFormat || 'Numerical';
+      this.args.userSettings.requestFormat || 'CATG';
 
     if (this.args.userSettings.replaceResults === undefined) {
       this.args.userSettings.replaceResults = true;

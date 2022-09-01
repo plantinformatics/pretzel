@@ -52,7 +52,7 @@ exports.childProcess = (scriptName, postData, useFile, fileName, moreParams, dat
   let cbOrig = cb,
       cbCalled = 0;
   function cbWrap(err, message, last) {
-    console.log('cbWrap', err && err.toString(), message, last);
+    console.log('cbWrap', err && err.toString(), message.slice(0, 200), last);
     /* insert_features_recursive() "passes" last === undefined,
      * and when !err, message is datasetId (i.e. datasetName)
      */
