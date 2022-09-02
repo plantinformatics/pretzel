@@ -140,6 +140,15 @@ export default Component.extend({
 
   // ---------------------------------------------------------------------------
 
+  colWidths : function (columnIndex) {
+    /** fix GT columns at 25; they have long headings so autoColumnWidth is too wide.
+     * Column 0 is Position.
+     */
+    return columnIndex === 0 ? 80 : 25;
+  },
+
+  // ---------------------------------------------------------------------------
+
   createTable() {
     const fnName = 'createTable';
 
@@ -155,7 +164,7 @@ export default Component.extend({
       rowHeaders: true,
       manualColumnMove: true,
       height: this.fullPage ? '100%' : nRows2HeightEx(nRows) + 'ex',
-      colWidths: 25,
+      colWidths : bind(this, this.colWidths),
       stretchH: 'none',
       cells: bind(this, this.cells),
       afterOnCellMouseDown: bind(this, this.afterOnCellMouseDown),
@@ -183,7 +192,10 @@ export default Component.extend({
     let cellProperties = {};
     let selectedBlock = this.get('selectedBlock');
     let numericalData = this.get('numericalData');
-    if (numericalData) {
+    if (prop.endsWith('Position') || prop.endsWith('End')) {
+      // see also col_name_fn(), table-brushed.js : featureValuesColumnsAttributes
+      cellProperties.type = 'numeric';
+    } else if (numericalData) {
       cellProperties.renderer = 'numericalDataRenderer';
     } else if (selectedBlock == null) {
       cellProperties.renderer = 'CATGRenderer';

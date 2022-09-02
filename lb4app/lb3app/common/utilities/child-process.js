@@ -52,7 +52,7 @@ exports.childProcess = (scriptName, postData, useFile, fileName, moreParams, dat
   let cbOrig = cb,
       cbCalled = 0;
   function cbWrap(err, message, last) {
-    console.log('cbWrap', err && err.toString(), message.slice(0, 200), last);
+    console.log('cbWrap', err && err.toString(), message?.slice(0, 200), last);
     /* insert_features_recursive() "passes" last === undefined,
      * and when !err, message is datasetId (i.e. datasetName)
      */
@@ -276,7 +276,7 @@ exports.dataOutReplyClosureLimit = function dataOutReplyClosureLimit(cb, nLines)
 
   /** Receive the results from the child process.
    * @param chunk is a Buffer
-   * null / undefined indicates child process closed with status 0 (OK) and sent no output.
+   * null / undefined indicates child process closed with status 0 (OK) and sent no output in this chunk.
    * @param cb is cbWrap of cb passed to vcfGenotypeLookup().
    * @return truthy if finished - i.e. unsubscribe; caller should not call again.
    * No effect if ! progressive; see nLines.
@@ -290,7 +290,7 @@ exports.dataOutReplyClosureLimit = function dataOutReplyClosureLimit(cb, nLines)
     function finished() { return (nLines !== undefined) && (lineCount >= nLines); }
     if (! chunk) {
       // child status 0 (OK) and no output, so return [].
-      cb(null, []); // equiv Buffer.concat(chunks)
+      cb(null, Buffer.concat(chunks).toString());
     } else if (! finished()) {
       const text = chunk?.toString();
       // equiv : text?.startsWith('Error:')

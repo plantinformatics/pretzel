@@ -156,8 +156,9 @@ export default class PanelManageGenotypeComponent extends Component {
     const
     fnName = 'axisBrushBlock',
     axisBrushes = this.brushedVCFBlocks;
-    let abb = axisBrushes && (this.axisBrushBlockIndex !== undefined) &&
-      axisBrushes[this.axisBrushBlockIndex];
+    let abb = axisBrushes &&
+        ((this.axisBrushBlockIndex === undefined) ? undefined : 
+         axisBrushes[this.axisBrushBlockIndex]);
     dLog(fnName, axisBrushes, abb);
     return abb;
   }

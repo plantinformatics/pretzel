@@ -92,7 +92,7 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
   sampleNames,
   nFeatures = 0;
   dLog(fnName, lines.length);
-  if (text && text.length && (text.charAt(text.length-1) === '\n')) {
+  if (text && text.length && (text.charAt(text.length-1) !== '\n')) {
     dLog(fnName, 'discarding', lines[lines.length-1]);
     lines.splice(-1, 1);
   }
@@ -286,7 +286,7 @@ function matchExtract(string, regexp, valueIndex) {
   return value;
 }
 
-function featureSortValue(f) {
+function featureValue(f) {
   return f.value[0];
 }
 /** Usage : featureArray.sort(featureSortComparator)
@@ -322,6 +322,16 @@ function vcfFeatures2MatrixView(requestFormat, added) {
     return result;
   }, new Map());
 
+  /** sort features by .value[0] */
+  const
+  sortedFeatures = createdFeatures
+    .sort(featureSortComparator),
+  valuesMaxLen = sortedFeatures.reduce((result, f) => Math.max(result, f.value.length), 0),
+  valueColumns = Array.apply(null, Array(valuesMaxLen))
+    .map((x, i) => ({
+      features : sortedFeatures.map((f) => ({name : f.get('blockId.brushName') + ' ' + f.name, value : f.value[0]})), // featureValue
+      datasetId : {id : ''},
+      name : ['Position', 'End'][i]}));
   let displayData = sampleNames.reduce((result, sampleName) => {
     /** if any features of a block contain sampleName, then generate a
      * block:sampleName column, with all features of all blocks, in
@@ -336,9 +346,7 @@ function vcfFeatures2MatrixView(requestFormat, added) {
       featuresMatchSample = 0,
       /** could map block to an array of samples which its features have, enabling
        * column order by block. */
-      // sort features by .value[0]
-      features = createdFeatures
-        .sort(featureSortComparator)
+      features = sortedFeatures
         .map((f) => {
         let
         sampleValue = Ember_get(f, 'values.' + sampleName),
@@ -360,7 +368,7 @@ function vcfFeatures2MatrixView(requestFormat, added) {
       }
     };
     return result;
-  }, []);
+  }, valueColumns);
   dLog(fnName, displayData);
   return displayData;
 }
