@@ -295,6 +295,17 @@ function featureSortComparator(a,b) {
   const order = a.value[0] - b.value[0];
   return order;
 }
+/** Construct a feature in the form expected by matrix-view in columns[].features[]
+ * @return {name, value} with Symbol('feature')
+ */
+function featurePosition(feature) {
+  let
+  name = feature.get('blockId.brushName') + ' ' + feature.name,
+  // or featureValue()
+  fx = {name, value : feature.value[0]};
+  fx[featureSymbol] = feature;
+  return fx;
+}
 
 /** Map the result of vcfGenotypeLookup() to the format expected by component:matrix-view param displayData
  *  columns [] -> {features -> [{name, value}...],  datasetId.id, name }
@@ -329,7 +340,7 @@ function vcfFeatures2MatrixView(requestFormat, added) {
   valuesMaxLen = sortedFeatures.reduce((result, f) => Math.max(result, f.value.length), 0),
   valueColumns = Array.apply(null, Array(valuesMaxLen))
     .map((x, i) => ({
-      features : sortedFeatures.map((f) => ({name : f.get('blockId.brushName') + ' ' + f.name, value : f.value[0]})), // featureValue
+      features : sortedFeatures.map(featurePosition),
       datasetId : {id : ''},
       name : ['Position', 'End'][i]}));
   let displayData = sampleNames.reduce((result, sampleName) => {
