@@ -50,6 +50,9 @@ export default class PanelManageGenotypeComponent extends Component {
   @tracked
   axisBrushBlockIndex = undefined;
 
+  @tracked
+  showInputDialog = false;
+
   // ---------------------------------------------------------------------------
 
   constructor() {

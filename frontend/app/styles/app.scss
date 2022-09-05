@@ -675,6 +675,7 @@ div.colouredFeatures
   border: pink 3px dashed;
 }
 
+/* bootstrap has clearfix, but it is not present in current build.  */
 .clear-both,
 div.ExportFlowData
 {

@@ -1,6 +1,36 @@
 {{this.initialDisplayEffect}}
 {{this.selectedSampleEffect}}
 
+<div class="col-md-7" style="display: inline-block;">
+
+  {{#elem/button-base
+    icon="search"
+    classColour="info"
+    onClick=(action (mut this.showInputDialog) true)
+    }}
+    <span>Lookup ...</span>
+
+     {{#ember-tooltip side="right" delay=500}}
+       Show/hide the VCF Lookup dialog.
+     {{/ember-tooltip}}
+
+  {{/elem/button-base}}
+
+</div>
+
+
+{{#if this.showInputDialog}}
+
+{{#ember-modal-dialog
+  onClose=(action (mut this.showInputDialog) false)
+  targetAttachment="center"
+  translucentOverlay=true
+
+  modal-id="split-container-dialog-modal"
+  title="VCF Lookup Inputs"
+  header-icon='search'
+}}
+
 Genotypes
 
 {{log 'flowsService.axisBrush' flowsService.axisBrush}}
@@ -147,15 +177,25 @@ Genotypes
 
 </div>
 
+{{#elem/panel-container}}
+  <div>
+    {{this.vcfGenotypeText.length}}
+    <textarea class="vcfGenotypeText">{{this.vcfGenotypeText}}</textarea>
+  </div>
+{{/elem/panel-container}}
+
+{{/ember-modal-dialog}}
+{{/if}}
+
+
+{{!-- --------------------------------------------------------------------- --}}
+<div class="clear-both"></div>
+
 {{matrix-view
   displayData=displayData
   selectedBlock=selectedBlock
   blockSamples=true
 }}
 
-<div>
-  {{this.vcfGenotypeText.length}}
-  <textarea class="vcfGenotypeText">{{this.vcfGenotypeText}}</textarea>
-</div>
 
 {{yield}}
