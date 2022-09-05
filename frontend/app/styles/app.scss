@@ -1976,6 +1976,12 @@ div.genotype button
 {
   margin-left : 1em;
 }
+/* vertical space above labelled inputs in manage-genotype : lookup inputs dialog.
+ * Don't apply to the x-toggle label (in div.x-toggle-component >) 
+  */
+div.genotype span.x-toggle-container > label {
+  margin-top : inherit;
+}
 div.genotype label
 {
   margin-top : 2em;

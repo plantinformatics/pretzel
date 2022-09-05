@@ -175,14 +175,36 @@ Genotypes
   {{/if}}
 
 
-</div>
+{{!-- --------------------------------------------------------------------- --}}
 
-{{#elem/panel-container}}
-  <div>
-    {{this.vcfGenotypeText.length}}
-    <textarea class="vcfGenotypeText">{{this.vcfGenotypeText}}</textarea>
+  <div style="margin-top:2ex">
+
+    {{#elem/panel-container state="primary" showComponent=showResultText as |panelContainer|}}
+
+      {{#elem/panel-heading icon="transfer" panelContainer=panelContainer}}
+        Result text
+      {{/elem/panel-heading}}
+
+      {{#if panelContainer.showComponent}}
+
+      <div>
+        <textarea class="vcfGenotypeText"
+          style={{compute (action this.vcfGenotypeTextWidthStyle)}} >
+          {{this.vcfGenotypeText}}</textarea>
+      </div>
+
+      {{else}}
+        {{this.vcfGenotypeTextSizeDescription}}
+      {{/if}} {{!-- showComponent --}}
+    {{/elem/panel-container}}
+
+
   </div>
-{{/elem/panel-container}}
+
+
+{{!-- --------------------------------------------------------------------- --}}
+
+</div>
 
 {{/ember-modal-dialog}}
 {{/if}}

@@ -8,6 +8,7 @@ import { A as Ember_A } from '@ember/array';
 import { intervalSize } from '../../utils/interval-calcs';
 import { overlapInterval } from '../../utils/draw/zoomPanCalcs';
 import { addFeaturesJson, vcfFeatures2MatrixView } from '../../utils/data/vcf-feature';
+import { stringCountString } from '../../utils/string';
 
 // -----------------------------------------------------------------------------
 
@@ -53,12 +54,19 @@ export default class PanelManageGenotypeComponent extends Component {
   @tracked
   showInputDialog = false;
 
+  @alias('args.userSettings.showResultText')
+  showResultText;
+
   // ---------------------------------------------------------------------------
 
   constructor() {
     super(...arguments);
 
-
+    this.userSettingsDefaults();
+  }
+  /** Provide default values for args.userSettings; used in constructor().
+   */
+  userSettingsDefaults() {
     if (this.args.userSettings.vcfGenotypeSamplesSelected === undefined) {
       this.args.userSettings.vcfGenotypeSamplesSelected =
         'ExomeCapture-DAS5-003024\nExomeCapture-DAS5-003047';
@@ -70,6 +78,10 @@ export default class PanelManageGenotypeComponent extends Component {
 
     if (this.args.userSettings.replaceResults === undefined) {
       this.args.userSettings.replaceResults = true;
+    }
+
+    if (this.args.userSettings.showResultText === undefined) {
+      this.args.userSettings.showResultText = false;
     }
   }
 
@@ -328,6 +340,7 @@ export default class PanelManageGenotypeComponent extends Component {
       textP.then(
         (textObj) => {
           const text = textObj.text;
+          // displays vcfGenotypeText in textarea, which triggers this.vcfGenotypeTextSetWidth();
           this.vcfGenotypeText = text;
           /** .lookupDatasetId is derived from .lookupBlock so .lookupBlock must be defined here. */
           let blockV = this.lookupBlock;
@@ -411,4 +424,43 @@ export default class PanelManageGenotypeComponent extends Component {
 
   // ---------------------------------------------------------------------------
 
+  @computed('vcfGenotypeText')
+  get vcfGenotypeTextSizeDescription()
+  {
+    const
+    fnName = 'vcfGenotypeTextSizeDescription',
+    text = this.vcfGenotypeText,
+    row0 = text.slice(0, text.indexOf('\n'));
+    let
+    columns = stringCountString(row0, '\t'),
+    rows = stringCountString(text, '\n');
+    if (columns) {
+      /* count just the data columns.
+       * first 2 columns are : ID	POS, so -2.  \t is column separator, so +1. result -1. */
+      columns--;
+    }
+    if (rows) {
+      /* count just the data rows.
+       * first row is header, so -1  */
+      rows--;
+    }
+
+    const
+    description = '' + columns + ' columns, ' + rows + ' rows, ' + text.length + ' characters';
+    return description;
+  }
+
+
+  @action
+  vcfGenotypeTextWidthStyle() {
+    const
+    fnName = 'vcfGenotypeTextSetWidth',
+    text = this.vcfGenotypeText,
+    lastRowWidth = text.length - text.lastIndexOf('\n', text.length-2),
+    style = lastRowWidth ? 'width:' + lastRowWidth + 'em' : '';
+    console.log(fnName, arguments, lastRowWidth, style);
+    return style;
+  }
+
+  // ---------------------------------------------------------------------------
 }
