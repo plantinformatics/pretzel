@@ -18,6 +18,7 @@ import {
   afterOnCellMouseOverClosure,
   highlightFeature,
 } from '../utils/panel/axis-table';
+import { afterSelectionFeatures } from '../utils/panel/feature-table';
 
 
 // -----------------------------------------------------------------------------
@@ -28,6 +29,14 @@ const featureSymbol = Symbol.for('feature');
 
 // -----------------------------------------------------------------------------
 
+/** indexed by +false / +true, or 0 / 1.   used in ABRenderer() */
+const coloursEqualsRef = ['red', 'green'];
+/** true means ABRenderer show 'A' or 'B' instead of C A T G */
+const ABRendererShowAB = false;
+
+// -----------------------------------------------------------------------------
+
+
 /** map from block ( + sample) to column name.
  * @param column block / selectedBlock or column object
  */
@@ -35,7 +44,12 @@ function col_name_fn(column) {
   /** If column is block then block.get('datasetId.id') requires .get();
    * otherwise column can be a native JS object, so use Ember_get() to handle either case.
    */
-  const col_name = Ember_get(column, 'datasetId.id') + ':' + Ember_get(column, 'name');
+  const
+  datasetId = Ember_get(column, 'datasetId.id'),
+  /** if datasetId is '' or undefined / null, then ':' separator is not required.
+   * This is true for non-sample columns, e.g. Position, End, Ref, Alt
+   */
+  col_name = (! datasetId ? '' : datasetId + ':')  + Ember_get(column, 'name');
   return col_name;
 }
 
@@ -52,6 +66,8 @@ function nRows2HeightEx(nRows) {
 /**
  * Component args :
  * @param selectedBlock
+ * block / selectedBlock or column object
+ * if .blockSamples, this is a Block, otherwise {block : Block, sampleName : string}.
  * @param displayData
  *  columns [] -> {features -> [{name, value}...],  datasetId.id, name }
  * 
@@ -74,7 +90,7 @@ function nRows2HeightEx(nRows) {
  *   colHeaderHeight		<- columns
  *   dataByRow		<- columns (<- displayData.[])  (and .set(numericalData))
  *   rows		<- dataByRow
- *   abValues		<- dataByRow, selectedBlock
+ *   abValues		<- dataByRow, selectedBlock, selectedColumnName
  *   data		<- columns, rows, dataByRow  (<- displayData.[])
  *   rowRanges		<- dataByRow
  *   updateTable: observer('rows', 'selectedBlock') (<- displayData.[])
@@ -149,6 +165,7 @@ export default Component.extend({
 
   // ---------------------------------------------------------------------------
 
+
   createTable() {
     const fnName = 'createTable';
 
@@ -167,6 +184,7 @@ export default Component.extend({
       colWidths : bind(this, this.colWidths),
       stretchH: 'none',
       cells: bind(this, this.cells),
+      afterSelection : bind(this, this.afterSelection),
       afterOnCellMouseDown: bind(this, this.afterOnCellMouseDown),
       afterOnCellMouseOver,
       headerTooltips: {
@@ -204,6 +222,29 @@ export default Component.extend({
     }
     return cellProperties;
   },
+
+  // ---------------------------------------------------------------------------
+
+  /** handle click on a cell.
+   * Note the selected column in .selectedColumnName
+   */
+  afterSelection(row, col) {
+    const fnName = 'afterSelection';
+    /* no result if (row === -1), e.g. ^A (Select All) */
+    const features = afterSelectionFeatures.apply(this, [this.table].concat(arguments));
+    if (features?.length) {
+      const
+      feature = features[0],
+      // let columns = Object.keys(data[0]);
+      cols = this.get('columns'),
+      columnNames = Object.keys(cols),
+      col_name = columnNames[col];
+      dLog(fnName, col_name);
+      this.set('selectedColumnName', col_name);
+    }
+  },
+
+  // ---------------------------------------------------------------------------
 
   afterOnCellMouseDown(event, coords, td) {
     if (coords.row == -1) {
@@ -253,18 +294,20 @@ export default Component.extend({
     }
   },
 
+  /** Compare the cell value against a selected column or the genome reference.
+   *  i.e. A/B comparison
+   */
   ABRenderer(instance, td, row, col, prop, value, cellProperties) {
     Handsontable.renderers.TextRenderer.apply(this, arguments);
-    let abValues = this.get('abValues');
-    if (value != null && abValues[row] != null) {
-      if (value == abValues[row]) {
-        td.style.background = 'green';
-        td.style.color = 'white';
-        $(td).text('A');
-      } else {
-        td.style.background = 'red';
-        td.style.color = 'white';
-        $(td).text('B');
+    const abValues = this.get('abValues'),
+          refValue = abValues && abValues[row];
+    if (value != null && refValue != null) {
+      const equalsReference = value === refValue;
+      td.style.background = coloursEqualsRef[+equalsReference];
+      td.style.color = 'white';
+
+      if (ABRendererShowAB) {
+        $(td).text(['B', 'A'][+equalsReference]);
       }
     }
   },
@@ -282,6 +325,14 @@ export default Component.extend({
       $(td).css('font-size', 10);
     }
   },
+
+  // ---------------------------------------------------------------------------
+
+  /** When configuration of one of the Renderers changes, re-render.
+   */
+  rendererConfigEffect : computed('abValues', 'rowRanges', function () {
+    this.table?.render();
+  }),
 
   // ---------------------------------------------------------------------------
 
@@ -376,13 +427,16 @@ export default Component.extend({
   /** @return [] if selectedBlock is null, otherwise
    * return just an array of data of the selected column.
    */
-  abValues: computed('dataByRow', 'selectedBlock', function() {
+  abValues: computed('dataByRow', 'selectedBlock', 'selectedColumnName', function() {
     let data = this.get('dataByRow');
     let selectedBlock = this.get('selectedBlock');
+    let col_name = this.blockSamples ?
+        this.get('selectedColumnName') :
+        selectedBlock && col_name_fn(selectedBlock);
     let values = [];
 
-    if (selectedBlock != null) {
-      let col_name = col_name_fn(selectedBlock);
+    if (col_name != null) {
+      // equiv: Object.values(data).mapBy(col_name)
       Object.keys(data).forEach(function(row_name) {
         values.push(data[row_name][col_name]);
       });

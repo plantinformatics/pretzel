@@ -1971,6 +1971,8 @@ div.genotype > div > div > textarea,
 .vcfGenotypeSamplesSelected
 {
  border: solid 4px lightblue;
+ overflow-y: auto;
+ max-height: 20ex;
 }
 div.genotype button
 {

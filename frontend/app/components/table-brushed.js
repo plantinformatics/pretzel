@@ -14,6 +14,7 @@ import {
   afterOnCellMouseOverClosure,
   highlightFeature,
 } from '../utils/panel/axis-table';
+import { afterSelectionFeatures } from '../utils/panel/feature-table';
 
 import config from '../config/environment';
 
@@ -668,32 +669,15 @@ export default Component.extend({
   },
 
   afterSelection(table, row, col) {
-    // ^A (Select All) causes row===-1, col===-1
-    if (row === -1) { return; }
+    /* no result if (row === -1), e.g. ^A (Select All) */
+    const features = afterSelectionFeatures.apply(this, arguments);
+    if (features) {
+      this.get('controls').set('tableSelectedFeatures', features);
 
-    const
-    ranges = table.selection?.selectedRange?.ranges,
-    data = this.get('data'),
-    features = data?.length && ranges && ranges.reduce((fs, r) => {
-      /** from,to are in the order selected by the user's click & drag.
-       * ^A can select row -1.
-       */
-      dLog('afterSelection', r.from.row, r.to.row);
-      let ft = [r.from.row, r.to.row].sort();
-      for (let i = Math.max(0, ft[0]); i <= ft[1]; i++) {
-        let f = data[i];
-        fs.push(f);
+      let feature = this.data[row];
+      if (feature) {
+        this.setRowAttribute(table, row, feature);
       }
-      return fs;
-    }, []);
-    dLog('afterSelection', features, table, row, col);
-    this.set('tableSelectedFeatures', features);
-    this.highlightFeature(features);
-    this.get('controls').set('tableSelectedFeatures', features);
-
-    let feature = this.data[row];
-    if (feature) {
-      this.setRowAttribute(table, row, feature);
     }
   },
 
