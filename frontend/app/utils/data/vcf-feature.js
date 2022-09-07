@@ -370,7 +370,7 @@ function vcfFeatures2MatrixView(requestFormat, added) {
   /** generate valuesMaxLen columns of feature.value[i] . */
   valueColumns = Array.apply(null, Array(valuesMaxLen))
     .map((x, i) => ({
-      features : sortedFeatures.map(featurePosition),
+      features : sortedFeatures.map((f) => featurePosition(f, 0)),
       datasetId : {id : ''},
       name : ['Position', 'End'][i]}));
   const blockColourColumn = 
