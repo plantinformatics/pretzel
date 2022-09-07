@@ -280,6 +280,8 @@ function mergeFeatureValues(existingFeature, feature) {
 
 // -----------------------------------------------------------------------------
 
+/** if string.match(regexp), return match[valueIndex], otherwise undefined. 
+ */
 function matchExtract(string, regexp, valueIndex) {
   let match = string.match(regexp),
       value = match && match[valueIndex];
@@ -296,16 +298,33 @@ function featureSortComparator(a,b) {
   return order;
 }
 /** Construct a feature in the form expected by matrix-view in columns[].features[]
+ * Used as a base for featurePosition() and featureBlockColour().
  * @return {name, value} with Symbol('feature')
+ * @param value to assign to result feature .value
  */
-function featurePosition(feature) {
+function featureNameValue(feature, value) {
   let
   name = feature.get('blockId.brushName') + ' ' + feature.name,
-  // or featureValue()
-  fx = {name, value : feature.value[0]};
+  fx = {name, value};
   fx[featureSymbol] = feature;
   return fx;
 }
+/**
+ * @param i select .value[] : 0 : start, 1 : end
+ */
+function featurePosition(feature, i) {
+  // or featureValue()
+  const value = feature.value[i || 0];
+  return featureNameValue(feature, value);
+}
+function featureBlockColour(feature, i) {
+  /** preferably use : FeatureTicks:featureColour() (factor out of components/draw/axis-1d.js)  */
+  const
+  axis1d = feature.get('blockId.axis1d'),
+  value = axis1d.blockColourValue(feature.get('blockId'));
+  return featureNameValue(feature, value);
+}
+
 
 /** Map the result of vcfGenotypeLookup() to the format expected by component:matrix-view param displayData
  *  columns [] -> {features -> [{name, value}...],  datasetId.id, name }
@@ -337,12 +356,23 @@ function vcfFeatures2MatrixView(requestFormat, added) {
   const
   sortedFeatures = createdFeatures
     .sort(featureSortComparator),
+  /** Features have Position start (.value[0]) and optional End (.value[1])
+   * This value is 2 if any feature has .value[1], otherwise 1.
+   */
   valuesMaxLen = sortedFeatures.reduce((result, f) => Math.max(result, f.value.length), 0),
+  /** generate valuesMaxLen columns of feature.value[i] . */
   valueColumns = Array.apply(null, Array(valuesMaxLen))
     .map((x, i) => ({
       features : sortedFeatures.map(featurePosition),
       datasetId : {id : ''},
       name : ['Position', 'End'][i]}));
+  const blockColourColumn = 
+    {
+      features : sortedFeatures.map(featureBlockColour),
+      datasetId : {id : ''},
+      name : 'Block' };
+  const leftColumns = [blockColourColumn].concat(valueColumns);
+
   let displayData = sampleNames.reduce((result, sampleName) => {
     /** if any features of a block contain sampleName, then generate a
      * block:sampleName column, with all features of all blocks, in
@@ -354,6 +384,7 @@ function vcfFeatures2MatrixView(requestFormat, added) {
        * each column is identified by block + sampleName, and has features of that block with that sampleName
        */
       let
+      /** count of features with .values[sampleName] */
       featuresMatchSample = 0,
       /** could map block to an array of samples which its features have, enabling
        * column order by block. */
@@ -379,7 +410,7 @@ function vcfFeatures2MatrixView(requestFormat, added) {
       }
     };
     return result;
-  }, valueColumns);
+  }, leftColumns);
   dLog(fnName, displayData);
   return displayData;
 }

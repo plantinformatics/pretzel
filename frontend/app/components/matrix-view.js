@@ -99,10 +99,13 @@ function nRows2HeightEx(nRows) {
  *   CATGRenderer
  *   ABRenderer : abValues
  *   numericalDataRenderer : rowRanges
+ *   blockColourRenderer
  *
  *   renderer =
+ *     (prop === 'Block') ? blockColourRenderer :
  *     numericalData ? numericalDataRenderer :
  *        selectedBlock ? ABRenderer : CATGRenderer
+ *   type =  (prop.endsWith 'Position' or 'End') ? 'numeric'
  *
  * Actions / events :
  *   afterOnCellMouseDown -> selectBlock (column name)
@@ -158,9 +161,13 @@ export default Component.extend({
 
   colWidths : function (columnIndex) {
     /** fix GT columns at 25; they have long headings so autoColumnWidth is too wide.
-     * Column 0 is Position.
+     * Columns :
+     *  0 : Block (track colour).  same as GT - 25px
+     *  1 : Position.   80px
+     *  (2 : End) - optional; preferably make this the same width as Position
+     *  Current data won't have End because bcftools output has 1 row per SNP - single base pair.
      */
-    return columnIndex === 0 ? 80 : 25;
+    return columnIndex === 1 ? 80 : 25;
   },
 
   // ---------------------------------------------------------------------------
@@ -198,6 +205,7 @@ export default Component.extend({
     Handsontable.renderers.registerRenderer('CATGRenderer', bind(this, this.CATGRenderer));
     Handsontable.renderers.registerRenderer('ABRenderer', bind(this, this.ABRenderer));
     Handsontable.renderers.registerRenderer('numericalDataRenderer', bind(this, this.numericalDataRenderer));
+    Handsontable.renderers.registerRenderer('blockColourRenderer', bind(this, this.blockColourRenderer));
 
     this.set('table', table);
   },
@@ -213,6 +221,8 @@ export default Component.extend({
     if (prop.endsWith('Position') || prop.endsWith('End')) {
       // see also col_name_fn(), table-brushed.js : featureValuesColumnsAttributes
       cellProperties.type = 'numeric';
+    } else if (prop === 'Block') {
+      cellProperties.renderer = 'blockColourRenderer';
     } else if (numericalData) {
       cellProperties.renderer = 'numericalDataRenderer';
     } else if (selectedBlock == null) {
@@ -324,6 +334,15 @@ export default Component.extend({
       td.title = value;
       $(td).css('font-size', 10);
     }
+  },
+
+  /** The .text is a rgb() block colour; show it as a colour rectangle.
+   */
+  blockColourRenderer(instance, td, row, col, prop, value, cellProperties) {
+    Handsontable.renderers.TextRenderer.apply(this, arguments);
+    const colour = $(td).text();
+    td.style.background = colour;
+    $(td).text(' ');
   },
 
   // ---------------------------------------------------------------------------
