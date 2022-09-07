@@ -98,7 +98,7 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
   }
 
   if (replaceResults) {
-    let mapChrName = Ember_get(block, 'brushName');
+    // let mapChrName = Ember_get(block, 'brushName');
     /* remove features of block from createdFeatures, i.e. matching Chromosome : mapChrName
      * If the user has renewed the axis brush, then selectedFeatures will not
      * contain any features from selectionFeature in previous result; in that
@@ -288,6 +288,13 @@ function matchExtract(string, regexp, valueIndex) {
   return value;
 }
 
+function featureName(feature) {
+  /** Use first 5 chars of datasetId; will remove this from left column,
+   * but retain prefix for uniqueness until row merging is implemented.
+   */
+  let name = feature.get('blockId.brushName').slice(0, 5) + ' ' + feature.name;
+  return name;
+}
 function featureValue(f) {
   return f.value[0];
 }
@@ -304,7 +311,7 @@ function featureSortComparator(a,b) {
  */
 function featureNameValue(feature, value) {
   let
-  name = feature.get('blockId.brushName') + ' ' + feature.name,
+  name = featureName(feature),
   fx = {name, value};
   fx[featureSymbol] = feature;
   return fx;
@@ -393,7 +400,7 @@ function vcfFeatures2MatrixView(requestFormat, added) {
         let
         sampleValue = Ember_get(f, 'values.' + sampleName),
         value = requestFormat ? sampleValue : matchExtract(sampleValue, /^([^:]+):/, 1),
-        name = f.get('blockId.brushName') + ' ' + f.name,
+        name = featureName(f),
         fx = {name, value};
         if ((f.get('blockId.id') === block.get('id')) && (sampleValue !== undefined)) {
           featuresMatchSample++;
