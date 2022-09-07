@@ -184,7 +184,11 @@ exports.uploadDatasetContent = uploadDatasetContent;
 function insert_features_recursive(db, dataset_id, features_to_insert, ordered, cb) {
   // no more features
   if (features_to_insert.length == 0) {
-    return process.nextTick(() => cb(null, dataset_id));
+    /** this promise is only to satisfy the .catch() in uploadDatasetContent().
+     * result is not used, and resolve time doesn't matter.  */
+    return new Promise((resolve, reject) => {
+      process.nextTick(() => { cb(null, dataset_id); resolve();});
+    });
   }
 
   let next_level_features = [];
