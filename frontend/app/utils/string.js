@@ -19,6 +19,21 @@ function stringCountString(string, stringSearch) {
 
 // -----------------------------------------------------------------------------
 
+/** Convert the given text to TitleCase aka EditCase or PascalCase
+ * (https://en.wikipedia.org/wiki/Title_case, see also CamelCase, which has a
+ * leading lower-case https://en.wikipedia.org/wiki/Camel_case).
+ *
+ * extract from : https://stackoverflow.com/a/7225450/18307804, ZenMaster
+ * (there are Ember utility functions for this also ...)
+ */
+function toTitleCase(text) {
+  const result = text.charAt(0).toUpperCase() + text.slice(1);
+  return result;
+}
+
+// -----------------------------------------------------------------------------
+
 export {
   stringCountString,
+  toTitleCase,
 };

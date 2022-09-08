@@ -1268,9 +1268,12 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     let moreParams = [command, parent, scope, '-r', preArgs.region ];
     if (preArgs.requestFormat) {
       const
-      format = (preArgs.requestFormat === 'CATG') ?
-        "%ID\t%POS[\t%TGT]\n" :
-        "%ID\t%POS[\t%GT]\n";
+      /** from BCFTOOLS(1) :
+       *        %GT             Genotype (e.g. 0/1)
+       *        %TGT            Translated genotype (e.g. C/A)
+       */
+      formatGT = (preArgs.requestFormat === 'CATG') ? '%TGT' : '%GT',
+      format = '%ID\t%POS' + '\t%REF\t%ALT' + '[\t' + formatGT + ']\n';
       moreParams = moreParams.concat('-H', '-f', format);
     }
     if (preArgs.samples) {

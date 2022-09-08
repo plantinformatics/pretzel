@@ -1,6 +1,7 @@
 import { get as Ember_get, set as Ember_set } from '@ember/object';
 import { A as Ember_A } from '@ember/array';
 
+import { toTitleCase } from '../string';
 
 // -----------------------------------------------------------------------------
 
@@ -12,6 +13,9 @@ const featureSymbol = Symbol.for('feature');
 
 /** number of columns in the vcf output before the first sample column. */
 const nColumnsBeforeSamples = 9;
+
+const refAlt = ['ref', 'alt'];
+const refAltHeadings = refAlt.map(toTitleCase);
 
 /** map from vcf column name to Feature field name.
  */
@@ -298,6 +302,14 @@ function featureName(feature) {
 function featureValue(f) {
   return f.value[0];
 }
+/** Extract a field from feature.values.
+ * @param feature Ember data store Feature object
+ * @param fieldName field within feature.values{} to access
+ * @return undefined if feature.values does not have that field
+ */
+function featureValuesField(feature, fieldName) {
+  return feature.values[fieldName];
+}
 /** Usage : featureArray.sort(featureSortComparator)
  */
 function featureSortComparator(a,b) {
@@ -322,6 +334,13 @@ function featureNameValue(feature, value) {
 function featurePosition(feature, i) {
   // or featureValue()
   const value = feature.value[i || 0];
+  return featureNameValue(feature, value);
+}
+/**
+ * @param fieldName select .values[fieldName], e.g. 'ref', 'alt'
+ */
+function featureValues(feature, fieldName) {
+  const value = featureValuesField(feature, fieldName);
   return featureNameValue(feature, value);
 }
 function featureBlockColour(feature, i) {
@@ -378,7 +397,14 @@ function vcfFeatures2MatrixView(requestFormat, added) {
       features : sortedFeatures.map(featureBlockColour),
       datasetId : {id : ''},
       name : 'Block' };
-  const leftColumns = [blockColourColumn].concat(valueColumns);
+  const
+  refAltColumns = refAlt
+    .map((ra, i) => ({
+      features : sortedFeatures.map((f) => featureValues(f, ra)),
+      datasetId : {id : ''},
+      name : refAltHeadings[i]}));
+
+  const leftColumns = [blockColourColumn].concat(valueColumns, refAltColumns);
 
   let displayData = sampleNames.reduce((result, sampleName) => {
     /** if any features of a block contain sampleName, then generate a
