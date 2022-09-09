@@ -39,13 +39,32 @@ function setRowAttributes(table, data) {
  */
 function afterOnCellMouseOverClosure(hasTable) {
   function afterOnCellMouseOver(event, coords, TD) {
-    if (coords.row === -1) {
-      return;
-    }
-    // getDataAtCell(coords.row, coords.col)
-    // table?.getDataAtRow(coords.row);
     let
     table = hasTable.table, // === this
+    feature = tableCoordsToFeature(table, coords);
+    dLog('afterOnCellMouseOver', coords, TD, feature?.name, feature?.value);
+    /** clears any previous highlights if feature is undefined */
+    highlightFeature(feature);
+  }
+  return afterOnCellMouseOver;
+}
+
+/**
+ * @param table HandsOnTable
+ * @param coords {row, col}  as passed to afterOnCellMouseDown
+ * @return feature, or undefined if (coords.row === -1)
+ */
+function tableCoordsToFeature(table, coords) {
+  let feature;
+
+  if (coords.row === -1) {
+    /* this may be ^A (Select All), or click outside, or click in header row.
+     * No feature associated with those so return undefined.
+     */
+  } else {
+    // getDataAtCell(coords.row, coords.col)
+    // table?.getDataAtRow(coords.row);
+
     /** The meta is associated with column 0.
      * The data is currently the selected feature, which refers to the Ember
      * data object as .feature
@@ -58,11 +77,9 @@ function afterOnCellMouseOverClosure(hasTable) {
     if (feature?.feature) {
       feature = feature.feature;
     }
-    dLog('afterOnCellMouseOver', coords, TD, feature?.name, feature?.value);
-    /** clears any previous highlights if feature is undefined */
-    highlightFeature(feature);
   }
-  return afterOnCellMouseOver;
+
+  return feature;
 }
 
 
@@ -110,6 +127,7 @@ d3.selection.prototype.moveToFront = function() {
 export {
   setRowAttributes,
   afterOnCellMouseOverClosure,
+  tableCoordsToFeature,
   highlightFeature1,
   highlightFeature,
 };

@@ -16,10 +16,12 @@ import config from '../config/environment';
 import {
   setRowAttributes,
   afterOnCellMouseOverClosure,
+  tableCoordsToFeature,
   highlightFeature,
 } from '../utils/panel/axis-table';
 import { afterSelectionFeatures } from '../utils/panel/feature-table';
 import { toTitleCase } from '../utils/string';
+import { thenOrNow } from '../utils/common/promises';
 
 
 // -----------------------------------------------------------------------------
@@ -44,6 +46,12 @@ const ABRendererShowAB = false;
 /** copied from vcf-feature.js */
 const refAlt = ['ref', 'alt'];
 const refAltHeadings = refAlt.map(toTitleCase);
+
+// -----------------------------------------------------------------------------
+
+function copiesColour(alleleValue) {
+  return copiesColours[+alleleValue];
+}
 
 // -----------------------------------------------------------------------------
 
@@ -274,9 +282,20 @@ export default Component.extend({
   // ---------------------------------------------------------------------------
 
   afterOnCellMouseDown(event, coords, td) {
-    if (coords.row == -1) {
+    let block;
+    if ((coords.col == -1) || (coords.col < this.colSample0)) {
+      // no column or column does not identify a block
+    } else if (this.blockSamples) {
+      let feature = tableCoordsToFeature(this.table, coords);
+      block = feature.get('blockId');
+    } else if (coords.row == -1) {
       let col_name = $(td).find('span').text();
-      this.send('selectBlock', this.get('columns')[col_name]);
+      block = this.get('columns')[col_name];
+    }
+    /* selectBlock() causes a switch to the Dataset tab, which is not desired
+     * when using the genotype tab. */
+    if (block && ! this.blockSamples) {
+      thenOrNow(block, (b) => this.attrs.selectBlock(b));
     }
   },
 
@@ -309,6 +328,7 @@ export default Component.extend({
     }
     return colour;
   },
+
   CATGRenderer(instance, td, row, col, prop, value, cellProperties) {
     Handsontable.renderers.TextRenderer.apply(this, arguments);
     if (value) {
@@ -377,15 +397,25 @@ export default Component.extend({
        * relative to refValue, i.e. # of copies of refValue. */
       /** either true : show copies colour, or false : show AB (relative) colour
        * this.selectedColumnName is defined, so ! this.selectedSampleColumn means selected column is Ref/Alt.
+       * If prop is Ref or Alt, use avToColour (CATG) if abValues[col] is #copies.
+       * related : avToColour()
+       * showCopiesColour:
+       *        selectedSampleColumn
+       *        false   true
+       * CATG   false   false
+       * 012    true    false
        */
+      showValueColour = refAltHeadings.includes(prop) && abValues[col].match(/^[012]/),
       showCopiesColour = ! cellIsCATG && ! this.selectedSampleColumn,
-      valueToColour = showCopiesColour ?
-        (alleleValue) => copiesColours[+alleleValue] :
-        (alleleValue) => {
+      valueToColour = showValueColour ? this.base2Colour.bind(this) :
+        showCopiesColour ? copiesColour : relativeColour;
+
+      function relativeColour(alleleValue) {
         /** If showing a single colour instead of diagonal,  show 0/1 and 1/0 as 1. */
         const equalsReference = alleleValue === refValue;
         return coloursEqualsRef[+equalsReference];
-      };
+      }
+
       this.valueDiagonal(td, value, valueToColour);
 
       if (ABRendererShowAB) {

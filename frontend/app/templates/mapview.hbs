@@ -156,7 +156,7 @@
           {{panel/axis-brushes}}
         {{else if (compare layout.right.tab '===' 'genotype')}}
           {{panel/manage-genotype
-            selectBlock="selectBlock"
+            selectBlock=(action this.actions.selectBlock)
             selectedBlock=selectedBlock
             selectedFeatures=selectedFeatures
             updatedSelectedFeatures='updateSelectedFeatures'
