@@ -352,6 +352,9 @@ export default class PanelManageGenotypeComponent extends Component {
             if (added.createdFeatures && added.sampleNames) {
               const displayData = vcfFeatures2MatrixView(this.requestFormat, added);
               this.displayData.addObjects(displayData);
+              if (displayData.length) {
+                this.showInputDialog = false;
+              }
               /* Retain sampleNames for continuity when user is switching between tabs. */
               this.selected.set('sampleNames', added.sampleNames);
             }

@@ -19,6 +19,7 @@ import {
   highlightFeature,
 } from '../utils/panel/axis-table';
 import { afterSelectionFeatures } from '../utils/panel/feature-table';
+import { toTitleCase } from '../utils/string';
 
 
 // -----------------------------------------------------------------------------
@@ -29,10 +30,20 @@ const featureSymbol = Symbol.for('feature');
 
 // -----------------------------------------------------------------------------
 
+/**
+ * bcftools %GT : numerical format
+ * 0, 1, 2 is dosage of the alleles. 0 is no copies of alt, 1 is 1 copy and 2 is 2 copies. 
+ */
+const copiesColours = [ /*0*/ 'orange', /*1*/ 'white', /*2*/ 'blue'];  
+
 /** indexed by +false / +true, or 0 / 1.   used in ABRenderer() */
 const coloursEqualsRef = ['red', 'green'];
 /** true means ABRenderer show 'A' or 'B' instead of C A T G */
 const ABRendererShowAB = false;
+
+/** copied from vcf-feature.js */
+const refAlt = ['ref', 'alt'];
+const refAltHeadings = refAlt.map(toTitleCase);
 
 // -----------------------------------------------------------------------------
 
@@ -85,7 +96,7 @@ function nRows2HeightEx(nRows) {
  * Computed properties :
  * 
  *   noData		<- displayData.[]
- *   columns		<- displayData.[]
+ *   columns		<- displayData.[] (and set .columnNames)
  *   rowHeaderWidth		<- rows
  *   colHeaderHeight		<- columns
  *   dataByRow		<- columns (<- displayData.[])  (and .set(numericalData))
@@ -134,13 +145,11 @@ export default Component.extend({
   },
 
   createOrUpdateTable() {
-    if (this.table) {
-      this.updateTable();
-    } else {
+    if (! this.table) {
       this.createTable();
-      if (this.displayData.length) {
-        this.updateTableOnce();
-      }
+    }
+    if (this.displayData.length) {
+      this.updateTableOnce();
     }
   },
 
@@ -191,6 +200,7 @@ export default Component.extend({
       colWidths : bind(this, this.colWidths),
       stretchH: 'none',
       cells: bind(this, this.cells),
+      outsideClickDeselects: true,
       afterSelection : bind(this, this.afterSelection),
       afterOnCellMouseDown: bind(this, this.afterOnCellMouseDown),
       afterOnCellMouseOver,
@@ -217,7 +227,7 @@ export default Component.extend({
   cells(row, col, prop) {
     let cellProperties = {};
     let selectedBlock = this.get('selectedBlock');
-    let numericalData = this.get('numericalData');
+    let numericalData = ! this.blockSamples && this.get('numericalData');
     if (prop.endsWith('Position') || prop.endsWith('End')) {
       // see also col_name_fn(), table-brushed.js : featureValuesColumnsAttributes
       cellProperties.type = 'numeric';
@@ -225,7 +235,7 @@ export default Component.extend({
       cellProperties.renderer = 'blockColourRenderer';
     } else if (numericalData) {
       cellProperties.renderer = 'numericalDataRenderer';
-    } else if (selectedBlock == null) {
+    } else if ((selectedBlock == null) || (this.selectedColumnName == null)) {
       cellProperties.renderer = 'CATGRenderer';
     } else {
       cellProperties.renderer = 'ABRenderer';
@@ -237,21 +247,28 @@ export default Component.extend({
 
   /** handle click on a cell.
    * Note the selected column in .selectedColumnName
+   * and set .selectedSampleColumn if .selectedColumnName and it is not Ref or Alt.
    */
   afterSelection(row, col) {
     const fnName = 'afterSelection';
-    /* no result if (row === -1), e.g. ^A (Select All) */
+    let col_name;
     const features = afterSelectionFeatures.apply(this, [this.table].concat(arguments));
-    if (features?.length) {
+    if (col !== -1) {
       const
-      feature = features[0],
-      // let columns = Object.keys(data[0]);
       cols = this.get('columns'),
-      columnNames = Object.keys(cols),
+      columnNames = Object.keys(cols);
       col_name = columnNames[col];
+      /* selectedColumnName may be Ref, Alt, or a sample column, not Block, Position, End. */
+      if (['Block', 'Position', 'End'].includes(col_name)) {
+        col_name = undefined;
+      }
       dLog(fnName, col_name);
-      this.set('selectedColumnName', col_name);
     }
+    this.set('selectedColumnName', col_name);
+    /* const
+    selectedRefAlt = refAltHeadings.includes(this.selectedColumnName);
+    selectedSampleColumn = this.selectedColumnName && ! selectedRefAlt */
+    this.set('selectedSampleColumn', col >= this.colSample0);
   },
 
   // ---------------------------------------------------------------------------
@@ -266,6 +283,8 @@ export default Component.extend({
   /** Map from base letter to colour.
    * Used by base2Colour(), which can switch mappings to support different
    * colour schemes.
+   * CATG are nucleotide (allele) values.
+   * AB are comparison values, from ABRenderer.
    */
   baseColour : {
     A : 'green',
@@ -278,22 +297,52 @@ export default Component.extend({
     let colour = this.baseColour[base];
     return colour;
   },
+  /** map a single allele value to colour.
+   * The value may be GT or TGT, i.e. [012] or [CATG].
+  */
+  avToColour(alleleValue) {
+    let colour;
+    if (alleleValue.match(/^[012]/)) {
+      colour = copiesColours[+alleleValue];
+    } else {
+      colour = this.base2Colour(alleleValue);
+    }
+    return colour;
+  },
   CATGRenderer(instance, td, row, col, prop, value, cellProperties) {
     Handsontable.renderers.TextRenderer.apply(this, arguments);
     if (value) {
+      this.valueDiagonal(td, value, this.avToColour.bind(this));
+    }
+  },
+  /**
+   * The params td and value are from the Renderer signature.
+   * @param td
+   * @param value
+   * @param valueToColour (alleleValue) -> colour string
+   * where alleleValue is a single character from value, after splitting at | and /.
+   * e.g. if value is '0/1' then alleleValue is '0' or '1'.
+   */
+  valueDiagonal(td, value, valueToColour) {
+     // ./. should show as white, not diagonal.
+    if (value === './.') {
+      td.style.background = 'white';
+    } else {
       let diagonal;
+      /** value has been reduced : x/x -> x, so if value contains | or /
+       * then it is heterozygous, i.e. diagonal.
+       */
       let alleles = value.split(/[/|]/);
-      if (alleles) {
+      if (alleles?.length === 2) {
         diagonal = alleles[0] !== alleles[1];
         if (diagonal) {
           td.classList.add('diagonal-triangle');
         }
         // value = alleles[+this.selectPhase];
       }
-      let colours = alleles.map(this.base2Colour.bind(this));
+      let colours = alleles.map(valueToColour);
       if (colours[0]) {
         td.style.background = colours[0];
-        td.style.color = 'white';
       }
       if (diagonal && colours[1]) {
         const
@@ -301,22 +350,46 @@ export default Component.extend({
         allele2Class = 'allele2-' + allele2Colour;
         td.classList.add(allele2Class);
       }
+
+      /* default text colour is black.  if changing the background colour to
+       * something other than white, set text colour to white.
+       */
+      if (! colours.includes('white')) {
+        td.style.color = 'white';
+      }
     }
   },
 
   /** Compare the cell value against a selected column or the genome reference.
-   *  i.e. A/B comparison
+   * i.e. A/B comparison
+   *
+   * .selectedBlock and .selectedSampleColumn are not null
    */
   ABRenderer(instance, td, row, col, prop, value, cellProperties) {
     Handsontable.renderers.TextRenderer.apply(this, arguments);
     const abValues = this.get('abValues'),
           refValue = abValues && abValues[row];
     if (value != null && refValue != null) {
-      const equalsReference = value === refValue;
-      td.style.background = coloursEqualsRef[+equalsReference];
-      td.style.color = 'white';
+      const
+      /** false : GT (# of allele copies), true : TGT. */
+      cellIsCATG = value.match(/[CATG]/),
+      /** refValue not used in the showCopiesColour case - # of copies value is
+       * relative to refValue, i.e. # of copies of refValue. */
+      /** either true : show copies colour, or false : show AB (relative) colour
+       * this.selectedColumnName is defined, so ! this.selectedSampleColumn means selected column is Ref/Alt.
+       */
+      showCopiesColour = ! cellIsCATG && ! this.selectedSampleColumn,
+      valueToColour = showCopiesColour ?
+        (alleleValue) => copiesColours[+alleleValue] :
+        (alleleValue) => {
+        /** If showing a single colour instead of diagonal,  show 0/1 and 1/0 as 1. */
+        const equalsReference = alleleValue === refValue;
+        return coloursEqualsRef[+equalsReference];
+      };
+      this.valueDiagonal(td, value, valueToColour);
 
       if (ABRendererShowAB) {
+        const equalsReference = value === refValue;
         $(td).text(['B', 'A'][+equalsReference]);
       }
     }
@@ -373,6 +446,12 @@ export default Component.extend({
     });
     return cols;
   }),
+  columnNames : computed('columns', function() {
+    const columnNames = Object.keys(this.get('columns'));
+    this.colSample0 = this.blockSamples ? columnNames.indexOf('Alt') + 1 : 0;
+    dLog('columnNames', columnNames, this.colSample0);
+    return columnNames;
+  }),
   /** For each value in .rows (row names), measure the length of the text
    * rendering using #length_checker, and return the maximum length.
    */
@@ -391,13 +470,12 @@ export default Component.extend({
   /** For each key (column name) of .columns{}, measure the length of the text
    * representation using #length_checker, and return the maximum length.
    */
-  colHeaderHeight: computed('columns', function() {
-    let cols = this.get('columns');
+  colHeaderHeight: computed('columnNames', function() {
     /** pixel length of longest column header text */
     let longest = 0;
     let length_checker = $("#length_checker");
     length_checker.css('font-weight', 'bold');
-    Object.keys(cols).forEach(function(col_name) {
+    this.get('columnNames').forEach(function(col_name) {
       let w = length_checker.text(col_name).width();
       if (w > longest) {
         longest = w;
@@ -411,12 +489,11 @@ export default Component.extend({
    *  Set .numericalData true if any feature value is not a number
    * @return rows[feature_name][col_name]
    */
-  dataByRow: computed(/*'displayData.[]',*/ 'columns', function() {
+  dataByRow: computed(/*'displayData.[]',*/ 'columns', 'columnNames', function() {
     let nonNumerical = false;
     let rows = {};
     let cols = this.get('columns');
-    Object.keys(cols).forEach(function(col_name) {
-      let col = cols[col_name];
+    Object.entries(cols).forEach(function([col_name, col]) {
       Ember_get(col, 'features').forEach(function(feature) {
         let feature_name = feature.name;
         if (rows[feature_name] == null) {
@@ -449,6 +526,10 @@ export default Component.extend({
   abValues: computed('dataByRow', 'selectedBlock', 'selectedColumnName', function() {
     let data = this.get('dataByRow');
     let selectedBlock = this.get('selectedBlock');
+    /** selectedBlock is a parameter to this component.
+     * if ! .blockSamples then afterSelection could signal selectBlock, setting
+     * .selectedBlock, or this could use .selectedColumnName directly.
+     */
     let col_name = this.blockSamples ?
         this.get('selectedColumnName') :
         selectedBlock && col_name_fn(selectedBlock);
@@ -464,15 +545,14 @@ export default Component.extend({
   }),
   /** @return an array of, for each row, an object mapping col_name to cell data (feature)
    */
-  data: computed(/*'displayData.[]'*/ 'columns', 'rows', 'dataByRow', function() {
-    let cols = this.get('columns');
+  data: computed(/*'displayData.[]'*/ 'columnNames', 'rows', 'dataByRow', function() {
     let rows = this.get('rows');
     let dataByRow = this.get('dataByRow');
 
     let data = [];
-    rows.forEach(function(row_name) {
+    rows.forEach((row_name) => {
       let d  = {};
-      Object.keys(cols).forEach(function(col_name) {
+      this.get('columnNames').forEach(function(col_name) {
         d[col_name] = dataByRow[row_name][col_name];
       });
       data.push(d);
@@ -487,8 +567,7 @@ export default Component.extend({
     let data = this.get('dataByRow');
 
     let all_values = {};
-    Object.keys(data).forEach(function(row_name) {
-      let row = data[row_name];
+    Object.entries(data).forEach(function([row_name, row]) {
       if (all_values[row_name] == null) {
         all_values[row_name] = [];
       }
@@ -533,8 +612,8 @@ export default Component.extend({
 
     if (data.length > 0) {
       t.show();
-      let columns = Object.keys(data[0]);
-      columns = columns.map(function(x) {
+      const
+      columns = this.get('columnNames').map(function(x) {
         return '<div class="head">' + x + '</div>';
       });
 

@@ -10,25 +10,29 @@ const dLog = console.debug;
  */
 function afterSelectionFeatures(table, row, col) {
   const fnName = 'afterSelectionFeatures';
+  const data = this.get('data');
+  let features;
 
   // ^A (Select All) causes row===-1, col===-1
-  if (row === -1) { return; }
+  if (row === -1) {
+    features = data;
+  } else {
+    const
+    ranges = table.selection?.selectedRange?.ranges;
+    features = data?.length && ranges && ranges.reduce((fs, r) => {
+      /** from,to are in the order selected by the user's click & drag.
+       * ^A can select row -1.
+       */
+      dLog('afterSelection', r.from.row, r.to.row);
+      let ft = [r.from.row, r.to.row].sort();
+      for (let i = Math.max(0, ft[0]); i <= ft[1]; i++) {
+        let f = data[i];
+        fs.push(f);
+      }
+      return fs;
+    }, []);
+  }
 
-  const
-  ranges = table.selection?.selectedRange?.ranges,
-  data = this.get('data'),
-  features = data?.length && ranges && ranges.reduce((fs, r) => {
-    /** from,to are in the order selected by the user's click & drag.
-     * ^A can select row -1.
-     */
-    dLog('afterSelection', r.from.row, r.to.row);
-    let ft = [r.from.row, r.to.row].sort();
-    for (let i = Math.max(0, ft[0]); i <= ft[1]; i++) {
-      let f = data[i];
-      fs.push(f);
-    }
-    return fs;
-  }, []);
   dLog('afterSelection', features, table, row, col);
   this.set('tableSelectedFeatures', features);
   /* in the case of table-brushed, the caller will also set
