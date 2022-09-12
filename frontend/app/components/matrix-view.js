@@ -53,6 +53,10 @@ function copiesColour(alleleValue) {
   return copiesColours[+alleleValue];
 }
 
+function valueIsCopies(alleleValue) {
+  return alleleValue?.match(/^[012]/);
+}
+
 // -----------------------------------------------------------------------------
 
 
@@ -321,7 +325,7 @@ export default Component.extend({
   */
   avToColour(alleleValue) {
     let colour;
-    if (alleleValue.match(/^[012]/)) {
+    if (valueIsCopies(alleleValue)) {
       colour = copiesColours[+alleleValue];
     } else {
       colour = this.base2Colour(alleleValue);
@@ -405,7 +409,7 @@ export default Component.extend({
        * CATG   false   false
        * 012    true    false
        */
-      showValueColour = refAltHeadings.includes(prop) && abValues[col].match(/^[012]/),
+      showValueColour = refAltHeadings.includes(prop) && valueIsCopies(abValues[col]),
       showCopiesColour = ! cellIsCATG && ! this.selectedSampleColumn,
       valueToColour = showValueColour ? this.base2Colour.bind(this) :
         showCopiesColour ? copiesColour : relativeColour;
