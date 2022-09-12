@@ -35,7 +35,7 @@ const featureSymbol = Symbol.for('feature');
 /**
  * bcftools %GT : numerical format
  * 0, 1, 2 is dosage of the alleles. 0 is no copies of alt, 1 is 1 copy and 2 is 2 copies. 
- * Instead of setting the colour of the element, classes are now used - see copiesColour(),
+ * Instead of setting the colour of the element, classes are now used - see copiesColourClass(),
  * enabling easier consistent changes.
  */
 const copiesColours = [ /*0*/ 'orange', /*1*/ 'white', /*2*/ 'blue'];  
@@ -51,7 +51,7 @@ const refAltHeadings = refAlt.map(toTitleCase);
 
 // -----------------------------------------------------------------------------
 
-function copiesColour(alleleValue) {
+function copiesColourClass(alleleValue) {
   // related : copiesColours[+alleleValue]
   return 'copyNum_' + alleleValue;
 }
@@ -349,7 +349,7 @@ export default Component.extend({
   },
 
   /** Map from base letter to colour.
-   * Used by base2Colour(), which can switch mappings to support different
+   * Used by base2ColourClass(), which can switch mappings to support different
    * colour schemes.
    * CATG are nucleotide (allele) values.
    * AB are comparison values, from ABRenderer.
@@ -363,7 +363,7 @@ export default Component.extend({
   },
   /** Map from base letter to colour class.
    */
-  base2Colour(base) {
+  base2ColourClass(base) {
     // related : this.baseColour[base]
     let colour = 'nucleotide_' + base;
     return colour;
@@ -371,12 +371,12 @@ export default Component.extend({
   /** map a single allele value to a colour class.
    * The value may be GT or TGT, i.e. [012] or [CATG].
   */
-  avToColour(alleleValue) {
+  avToColourClass(alleleValue) {
     let colour;
     if (valueIsCopies(alleleValue)) {
-      colour = copiesColour(alleleValue);
+      colour = copiesColourClass(alleleValue);
     } else {
-      colour = this.base2Colour(alleleValue);
+      colour = this.base2ColourClass(alleleValue);
     }
     return colour;
   },
@@ -384,18 +384,18 @@ export default Component.extend({
   CATGRenderer(instance, td, row, col, prop, value, cellProperties) {
     Handsontable.renderers.TextRenderer.apply(this, arguments);
     if (value) {
-      this.valueDiagonal(td, value, this.avToColour.bind(this));
+      this.valueDiagonal(td, value, this.avToColourClass.bind(this));
     }
   },
   /**
    * The params td and value are from the Renderer signature.
    * @param td
    * @param value
-   * @param valueToColour (alleleValue) -> colour string
+   * @param valueToColourClass (alleleValue) -> colour string
    * where alleleValue is a single character from value, after splitting at | and /.
    * e.g. if value is '0/1' then alleleValue is '0' or '1'.
    */
-  valueDiagonal(td, value, valueToColour) {
+  valueDiagonal(td, value, valueToColourClass) {
      // ./. should show as white, not diagonal.
     if (value === './.') {
       td.style.background = 'white';
@@ -413,7 +413,7 @@ export default Component.extend({
         // value = alleles[+this.selectPhase];
       }
       /** colour classes */
-      let colours = alleles.map(valueToColour);
+      let colours = alleles.map(valueToColourClass);
       if (colours[0]) {
         td.classList.add(colours[0]);
       }
@@ -452,8 +452,8 @@ export default Component.extend({
        * relative to refValue, i.e. # of copies of refValue. */
       /** either true : show copies colour, or false : show AB (relative) colour
        * this.selectedColumnName is defined, so ! this.selectedSampleColumn means selected column is Ref/Alt.
-       * If prop is Ref or Alt, use avToColour (CATG) if abValues[col] is #copies.
-       * related : avToColour()
+       * If prop is Ref or Alt, use avToColourClass (CATG) if abValues[col] is #copies.
+       * related : avToColourClass()
        * showCopiesColour:
        *        selectedSampleColumn
        *        false   true
@@ -462,10 +462,10 @@ export default Component.extend({
        */
       showValueColour = refAltHeadings.includes(prop) && valueIsCopies(abValues[col]),
       showCopiesColour = ! cellIsCATG && ! this.selectedSampleColumn,
-      valueToColour = showValueColour ? this.base2Colour.bind(this) :
-        showCopiesColour ? copiesColour : relativeColour;
+      valueToColourClass = showValueColour ? this.base2ColourClass.bind(this) :
+        showCopiesColour ? copiesColourClass : relativeColourClass;
 
-      function relativeColour(alleleValue) {
+      function relativeColourClass(alleleValue) {
         /** If showing a single colour instead of diagonal,  show 0/1 and 1/0 as 1. */
         const equalsReference = alleleValue === refValue;
         // related : coloursEqualsRef[+equalsReference];
@@ -473,7 +473,7 @@ export default Component.extend({
         return colourClass;
       }
 
-      this.valueDiagonal(td, value, valueToColour);
+      this.valueDiagonal(td, value, valueToColourClass);
 
       if (ABRendererShowAB) {
         const equalsReference = value === refValue;
