@@ -186,12 +186,52 @@ export default Component.extend({
      *  0 : Block (track colour).  same as GT - 25px
      *  1 : Position.   80px
      *  (2 : End) - optional; preferably make this the same width as Position
-     *  Current data won't have End because bcftools output has 1 row per SNP - single base pair.
+     *     Current data won't have End because bcftools output has 1 row per SNP - single base pair.
+     *  this.colSample0 : sample column width +3 to allow for 3px white gutter between Alt and the first sample column.
+     *   (commented-out because handsontable does not increase the padding-left of sample0 column by the gutter width;
+     *    may switch to a class-based solution)
      */
-    return columnIndex === 1 ? 80 : 25;
+    const
+    width =
+      columnIndex === 1 ? 80 :
+      /* works, but padding-left is required also, to move the text.
+      columnIndex === this.colSample0 ? 
+      25 + 3 :
+      */
+      25;
+    return width;
   },
 
   // ---------------------------------------------------------------------------
+
+  /** Show a white line between the Position [ / Ref / Alt] columns and the
+   * first sample column.
+   */
+  customBorders : computed('colSample0', function () {
+    /** index of the column before the first sample column. */
+    const colAlt = this.colSample0 - 1;
+    const customBorders
+     = [
+    {
+      range: {
+        from: {
+          row: 0,
+          col: colAlt
+        },
+        to: {
+          row: 1000,
+          col: colAlt
+        }
+      },
+      right: {
+        width: 3,
+        color: 'white'
+      }
+    }];
+    return customBorders;
+  }),
+
+  //----------------------------------------------------------------------------
 
 
   createTable() {
@@ -201,6 +241,7 @@ export default Component.extend({
     dLog(fnName, tableDiv);
     const afterOnCellMouseOver = afterOnCellMouseOverClosure(this);
     let nRows = this.get('rows.length') || 0;
+
     let settings = {
       /* see comment re. handsOnTableLicenseKey in frontend/config/environment.js */
       licenseKey: config.handsOnTableLicenseKey,
@@ -210,6 +251,7 @@ export default Component.extend({
       manualColumnMove: true,
       height: this.fullPage ? '100%' : nRows2HeightEx(nRows) + 'ex',
       colWidths : bind(this, this.colWidths),
+      customBorders : this.customBorders,
       stretchH: 'none',
       cells: bind(this, this.cells),
       outsideClickDeselects: true,
@@ -480,9 +522,13 @@ export default Component.extend({
     });
     return cols;
   }),
+  /** index of the first sample column.
+   * 2 or 4 if Ref & Alt
+   */
+  colSample0 : 2,
   columnNames : computed('columns', function() {
     const columnNames = Object.keys(this.get('columns'));
-    this.colSample0 = this.blockSamples ? columnNames.indexOf('Alt') + 1 : 0;
+    this.set('colSample0', this.blockSamples ? columnNames.indexOf('Alt') + 1 : 0);
     dLog('columnNames', columnNames, this.colSample0);
     return columnNames;
   }),
@@ -635,7 +681,7 @@ export default Component.extend({
   /** Observe changes to .rows and .selectedBlock, and update table settings with
    * column headings from keys(.data), .rows, .rowHeaderWidth, .colHeaderHeight.
    */
-  updateTable: observer(/*'displayData.[]'*/ 'rows', 'selectedBlock', function() {
+  updateTable: observer(/*'displayData.[]'*/ 'rows', 'selectedBlock', 'customBorders', function() {
     let t = $("#observational-table");
     let rows = this.get('rows');
     let rowHeaderWidth = this.get('rowHeaderWidth');
@@ -656,6 +702,7 @@ export default Component.extend({
           colHeaders: columns,
           rowHeaders: rows,
           rowHeaderWidth: rowHeaderWidth,
+          customBorders : this.customBorders,
           data: data
         };
         if (this.fullPage) {
