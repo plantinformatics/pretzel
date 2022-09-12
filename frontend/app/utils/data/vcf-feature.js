@@ -265,6 +265,8 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
     }
   });
   selectedFeatures.pushObjects(selectionFeatures);
+  block.set('featureCount', block.get('features.length'));
+
 
   if (! columnNames || ! sampleNames) {
     dLog(fnName, lines.length, text.length);
