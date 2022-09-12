@@ -1634,34 +1634,74 @@ div#goto-feature > div
   /* transform: rotate(90deg); */
 }
 
+//------------------------------------------------------------------------------
+
+/* use specificity #observational-table to override .handsontable default
+ * (perhaps change to !important)
+ */
+
+/** colours representing N copies of Alt value */
+#observational-table td.copyNum_0 {
+  background-color : orange;
+}
+#observational-table td.copyNum_1 {
+  background-color : white;
+}
+#observational-table td.copyNum_2 {
+  background-color : blue;
+}
+
+#observational-table td.relativeColour_equal {
+  background-color : red;
+}
+#observational-table td.relativeColour_unequal {
+  background-color : green;
+}
+
+#observational-table td.nucleotide_A {
+  background-color : green;
+}
+#observational-table td.nucleotide_C {
+  background-color : blue;
+}
+#observational-table td.nucleotide_G {
+  background-color : red;
+}
+#observational-table td.nucleotide_T {
+  background-color : black;
+}
+
 // -----------------------------------------------------------------------------
 
 // used in #observational-table / genotype view, to show colour of distinct alleles.
-.diagonal-triangle.allele2-green
+.diagonal-triangle.allele2-nucleotide_A
 {
   background-image : linear-gradient(130deg, #fff0 40%, green 0%) !important;
 }
-.diagonal-triangle.allele2-blue
+.diagonal-triangle.allele2-nucleotide_C
 {
   background-image : linear-gradient(130deg, #fff0 40%, blue 0%) !important;
 }
-.diagonal-triangle.allele2-red
+.diagonal-triangle.allele2-nucleotide_G
 {
   background-image : linear-gradient(130deg, #fff0 40%, red 0%) !important;
 }
-.diagonal-triangle.allele2-black
+.diagonal-triangle.allele2-nucleotide_T
 {
   background-image : linear-gradient(130deg, #fff0 40%, black 0%) !important;
 }
-.diagonal-triangle.allele2-white
-{
-  background-image : linear-gradient(130deg, #fff0 40%, white 0%) !important;
-}
-.diagonal-triangle.allele2-orange
+.diagonal-triangle.allele2-.copyNum_0
 {
   background-image : linear-gradient(130deg, #fff0 40%, orange 0%) !important;
 }
-
+.diagonal-triangle.allele2-.copyNum_1
+{
+  background-image : linear-gradient(130deg, #fff0 40%, white 0%) !important;
+}
+.diagonal-triangle.allele2-.copyNum_2
+{
+  background-image : linear-gradient(130deg, #fff0 40%, blue 0%) !important;
+}
 
 
 // -----------------------------------------------------------------------------

@@ -35,6 +35,8 @@ const featureSymbol = Symbol.for('feature');
 /**
  * bcftools %GT : numerical format
  * 0, 1, 2 is dosage of the alleles. 0 is no copies of alt, 1 is 1 copy and 2 is 2 copies. 
+ * Instead of setting the colour of the element, classes are now used - see copiesColour(),
+ * enabling easier consistent changes.
  */
 const copiesColours = [ /*0*/ 'orange', /*1*/ 'white', /*2*/ 'blue'];  
 
@@ -50,7 +52,8 @@ const refAltHeadings = refAlt.map(toTitleCase);
 // -----------------------------------------------------------------------------
 
 function copiesColour(alleleValue) {
-  return copiesColours[+alleleValue];
+  // related : copiesColours[+alleleValue]
+  return 'copyNum_' + alleleValue;
 }
 
 function valueIsCopies(alleleValue) {
@@ -358,17 +361,20 @@ export default Component.extend({
     B : 'red',
     T : 'black',
   },
+  /** Map from base letter to colour class.
+   */
   base2Colour(base) {
-    let colour = this.baseColour[base];
+    // related : this.baseColour[base]
+    let colour = 'nucleotide_' + base;
     return colour;
   },
-  /** map a single allele value to colour.
+  /** map a single allele value to a colour class.
    * The value may be GT or TGT, i.e. [012] or [CATG].
   */
   avToColour(alleleValue) {
     let colour;
     if (valueIsCopies(alleleValue)) {
-      colour = copiesColours[+alleleValue];
+      colour = copiesColour(alleleValue);
     } else {
       colour = this.base2Colour(alleleValue);
     }
@@ -406,12 +412,14 @@ export default Component.extend({
         }
         // value = alleles[+this.selectPhase];
       }
+      /** colour classes */
       let colours = alleles.map(valueToColour);
       if (colours[0]) {
-        td.style.background = colours[0];
+        td.classList.add(colours[0]);
       }
       if (diagonal && colours[1]) {
         const
+        /** colour class */
         allele2Colour = colours[1],
         allele2Class = 'allele2-' + allele2Colour;
         td.classList.add(allele2Class);
@@ -419,8 +427,9 @@ export default Component.extend({
 
       /* default text colour is black.  if changing the background colour to
        * something other than white, set text colour to white.
+       * copyNum_1 is white.
        */
-      if (! colours.includes('white')) {
+      if (! colours.includes('copyNum_1')) {
         td.style.color = 'white';
       }
     }
@@ -459,7 +468,9 @@ export default Component.extend({
       function relativeColour(alleleValue) {
         /** If showing a single colour instead of diagonal,  show 0/1 and 1/0 as 1. */
         const equalsReference = alleleValue === refValue;
-        return coloursEqualsRef[+equalsReference];
+        // related : coloursEqualsRef[+equalsReference];
+        const colourClass = 'relativeColour_' + (equalsReference ? '' : 'un') + 'equal';
+        return colourClass;
       }
 
       this.valueDiagonal(td, value, valueToColour);
