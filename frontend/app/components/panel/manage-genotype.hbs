@@ -123,11 +123,16 @@ Genotypes
           {{radio-button value='CATG' groupValue=requestFormat
             changed=(action requestFormatChanged preventDefault=false)
           }}
-          CATG &nbsp;&nbsp;
+          ACGT &nbsp;&nbsp;
+          <span>
           {{radio-button value='Numerical' groupValue=requestFormat
             changed=(action requestFormatChanged preventDefault=false)
           }}
-          Dosage / # allele copies of Alt &nbsp;&nbsp;
+          012 &nbsp;&nbsp;
+          {{#ember-tooltip side="right" delay=500}}
+            Dosage / # allele copies of Alt
+          {{/ember-tooltip}}
+          </span>
 
         </li>
 
