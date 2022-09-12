@@ -187,10 +187,15 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
           let prefix = fieldNameF.match(/^(.+)\..*/);
           prefix = prefix && prefix[1];
           if (prefix) {
-            /** replace A/A with A */
+            /** replace A/A with A, 1/1 with 2 (i.e. x/y -> x+y). */
             if (columnIsGT[i]) {
               let match = value.match(/^(\w)[|/](\w)$/);
-              if (match && (match[1] === match[2])) {
+              if (! match) {
+              } else if (requestFormat === 'Numerical') {
+                // +"0" + "0" is "00", so the + + is required.
+                value = '' + (+match[1] + +match[2]);
+              } else /* CATG */
+              if (match[1] === match[2]) {
                 value = match[1];
               }
             }
