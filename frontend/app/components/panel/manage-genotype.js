@@ -7,7 +7,10 @@ import { A as Ember_A } from '@ember/array';
 
 import { intervalSize } from '../../utils/interval-calcs';
 import { overlapInterval } from '../../utils/draw/zoomPanCalcs';
-import { addFeaturesJson, vcfFeatures2MatrixView, vcfFeatures2MatrixViewRows
+import {
+  refAlt,
+  addFeaturesJson, vcfFeatures2MatrixView, vcfFeatures2MatrixViewRows,
+  featureSampleNames,
  } from '../../utils/data/vcf-feature';
 import { stringCountString } from '../../utils/string';
 
@@ -28,8 +31,13 @@ export default class PanelManageGenotypeComponent extends Component {
   @service('data/flows-collate') flowsService;
   @service('data/block') blockService;
   @service('data/selected') selected;
+  @service('query-params') queryParamsService;
+
 
   @alias('controls.apiServerSelectedOrPrimary') apiServerSelectedOrPrimary;
+
+  @alias('queryParamsService.urlOptions') urlOptions;
+
 
   // ---------------------------------------------------------------------------
 
@@ -413,11 +421,31 @@ export default class PanelManageGenotypeComponent extends Component {
           .map((b) => b.featuresInBrush)
           .filter((features) => features.length);
         if (featuresArrays.length) {
-          /** {rows, sampleNames}; */
-          let sampleGenotypes = 
-          vcfFeatures2MatrixViewRows(this.requestFormat, featuresArrays);
-          this.displayDataRows = sampleGenotypes.rows;
-          this.columnNames = ['Block', 'Name'].concat(sampleGenotypes.sampleNames);
+          if (this.urlOptions.gtMergeRows) {
+            /** {rows, sampleNames}; */
+            let sampleGenotypes = 
+                vcfFeatures2MatrixViewRows(this.requestFormat, featuresArrays);
+            this.displayDataRows = sampleGenotypes.rows;
+            this.columnNames = ['Block', 'Name'].concat(sampleGenotypes.sampleNames);
+          } else {
+            function omitRefAlt(sampleName) {
+              return ! refAlt.includes(sampleName) && sampleName;
+            }
+            const
+            sampleNamesSet = featuresArrays
+              .reduce(
+                (sampleNamesSet, features) => features
+                  .reduce(
+                    (sampleNamesSet, feature) =>
+                      featureSampleNames(sampleNamesSet, feature, omitRefAlt),
+                    sampleNamesSet),
+                new Set()),
+            sampleNames = Array.from(sampleNamesSet.keys()),
+            features = featuresArrays.flat(),
+            sampleGenotypes =  {createdFeatures : features, sampleNames},
+            displayData = vcfFeatures2MatrixView(this.requestFormat, sampleGenotypes);
+            this.displayData = displayData;
+          }
         }
       }
     }

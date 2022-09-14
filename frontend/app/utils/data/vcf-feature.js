@@ -521,10 +521,13 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features) {
       Object.entries(featureSamples).reduce(
         (res2, [sampleName, sampleValue]) => {
           /* related to refAltColumns */
-          if (refAlt.includes(sampleName)) {
-            sampleName = toTitleCase(sampleName);
+          function caseRefAlt(sampleName) {
+            if (refAlt.includes(sampleName)) {
+              sampleName = toTitleCase(sampleName);
+            }
+            return sampleName;
           }
-          sampleNamesSet.add(sampleName);
+          featureSampleNames(sampleNamesSet, feature, caseRefAlt);
           const 
           // featureNameValue(feature, sampleValue),
           fx = stringSetFeature(sampleValue, feature),
@@ -549,7 +552,37 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features) {
   return result;
 }
 
+/** Collate "sample names" i.e. keys(feature.values), adding them to sampleNamesSet.
+ * Omit ref and alt, i.e. names which are in refAlt.
+ * @param feature
+ * @param filterFn  if defined, process names, and if result is not undefined, add it to set.
+ * @param sampleNamesSet new Set() to accumulate sampleNames
+ * @return sampleNamesSet, for use in .reduce().
+ */
+function featureSampleNames(sampleNamesSet, feature, filterFn) {
+  const
+  featureSamples = feature.get('values');
+  Object.entries(featureSamples).reduce(
+    (sampleNamesSet, [sampleName, sampleValue]) => {
+      if (filterFn) {
+        sampleName = filterFn(sampleName);
+      }
+      if (sampleName) {
+        sampleNamesSet.add(sampleName);
+      }
+      return sampleNamesSet;
+    },
+    sampleNamesSet);
+
+  return sampleNamesSet;
+}
+
+
 // -----------------------------------------------------------------------------
 
 
-export { addFeaturesJson, vcfFeatures2MatrixView, vcfFeatures2MatrixViewRows };
+export {
+  refAlt,
+  addFeaturesJson, vcfFeatures2MatrixView, vcfFeatures2MatrixViewRows,
+  featureSampleNames,
+};
