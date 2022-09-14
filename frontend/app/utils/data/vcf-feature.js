@@ -2,6 +2,7 @@ import { get as Ember_get, set as Ember_set } from '@ember/object';
 import { A as Ember_A } from '@ember/array';
 
 import { toTitleCase } from '../string';
+import { stringGetFeature, stringSetFeature } from '../panel/axis-table';
 
 // -----------------------------------------------------------------------------
 
@@ -26,6 +27,11 @@ const vcfColumn2Feature = {
   'REF' : 'values.ref',
   'ALT' : 'values.alt',
 };
+
+/** for multiple features in a cell, i.e. merge rows - multiple features at a
+ * position from different vcf datasets; could also merge columns (samples).  */
+const cellMultiFeatures = false;
+
 
 // -----------------------------------------------------------------------------
 
@@ -323,6 +329,7 @@ function featureSortComparator(a,b) {
   const order = a.value[0] - b.value[0];
   return order;
 }
+
 /** Construct a feature in the form expected by matrix-view in columns[].features[]
  * Used as a base for featurePosition() and featureBlockColour().
  * @return {name, value} with Symbol('feature')
@@ -353,9 +360,14 @@ function featureValues(feature, fieldName) {
 function featureBlockColour(feature, i) {
   /** preferably use : FeatureTicks:featureColour() (factor out of components/draw/axis-1d.js)  */
   const
-  axis1d = feature.get('blockId.axis1d'),
-  value = axis1d.blockColourValue(feature.get('blockId'));
+  value = featureBlockColourValue(feature);
   return featureNameValue(feature, value);
+}
+function featureBlockColourValue(feature) {
+  const
+  axis1d = feature.get('blockId.axis1d'),
+  blockColourValue = axis1d.blockColourValue(feature.get('blockId'));
+  return blockColourValue;
 }
 
 
@@ -431,21 +443,16 @@ function vcfFeatures2MatrixView(requestFormat, added) {
       features = sortedFeatures
         .map((f) => {
         let
-        sampleValue = Ember_get(f, 'values.' + sampleName),
-        value = requestFormat ? sampleValue : matchExtract(sampleValue, /^([^:]+):/, 1),
-        name = featureName(f),
-        fx = {name, value};
+          sampleValue = Ember_get(f, 'values.' + sampleName),
+          fx = featureForMatrixColumn(f, sampleName, sampleValue, requestFormat);
         if ((f.get('blockId.id') === block.get('id')) && (sampleValue !== undefined)) {
           featuresMatchSample++;
         }
-        fx[featureSymbol] = f;
         return fx;
       });
       if (featuresMatchSample) {
         let
-        datasetId = block ? Ember_get(block, 'datasetId.id') : '',
-        name = (block ? Ember_get(block, 'name') + ' ' : '') + sampleName,
-        column = {features,  datasetId : {id : datasetId}, name};
+        column = blockToMatrixColumn(block, sampleName, features);
         result.push(column);
       }
     };
@@ -455,7 +462,94 @@ function vcfFeatures2MatrixView(requestFormat, added) {
   return displayData;
 }
 
+function featureForMatrixColumn(f, sampleName, sampleValue, requestFormat) {
+  const
+  value = requestFormat ? sampleValue : matchExtract(sampleValue, /^([^:]+):/, 1),
+  /** equivalent : featureNameValue(f, value) */
+  name = featureName(f);
+  let
+  fx = {name, value};
+  fx[featureSymbol] = f;
+  return fx;
+}
+
+function blockToMatrixColumn(block, sampleName, features) {
+  const
+  datasetId = block ? Ember_get(block, 'datasetId.id') : '',
+  name = (block ? Ember_get(block, 'name') + ' ' : '') + sampleName,
+  column = {features,  datasetId : {id : datasetId}, name};
+  return column;
+}
+
+/**
+ * @param features block.featuresInBrush
+ * (may call this function once with features of all blocks (brushedVCFBlocks) )
+
+ * brushedVCFBlocks.reduce ( block.featuresInBrush.reduce() )
+
+ * @return result : {rows, sampleNames}
+ */
+function vcfFeatures2MatrixViewRows(requestFormat, featuresArrays) {
+  const fnName = 'vcfFeatures2MatrixViewRows';
+  const result = featuresArrays.reduce((res, features) => {
+    res = vcfFeatures2MatrixViewRowsResult(res, requestFormat, features);
+    return res;
+  }, {rows : [], sampleNames : []});
+  return result;
+}
+/**
+ * @param features block.featuresInBrush. one array, one block.
+ * @param result : {rows, sampleNames}. function can be called via .reduce()
+ */
+function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features) {
+  const fnName = 'vcfFeatures2MatrixViewRows';
+
+  let sampleNamesSet = new Set();
+
+  // result =
+  features.reduce(
+    (res, feature) => {
+      const
+      position = feature.get('value.0'),
+      row = (res.rows[position] ||= {}),
+      blockColourValue = featureBlockColourValue(feature);
+      /* related to vcfFeatures2MatrixView() : blockColourColumn,  */
+      row.Block = stringSetFeature(blockColourValue, feature);
+      row.Name = stringSetFeature(feature.name, feature);
+      const
+      featureSamples = feature.get('values');
+      Object.entries(featureSamples).reduce(
+        (res2, [sampleName, sampleValue]) => {
+          /* related to refAltColumns */
+          if (refAlt.includes(sampleName)) {
+            sampleName = toTitleCase(sampleName);
+          }
+          sampleNamesSet.add(sampleName);
+          const 
+          // featureNameValue(feature, sampleValue),
+          fx = stringSetFeature(sampleValue, feature),
+          r = row[sampleName];
+          /** for multiple features in a cell */
+          if (cellMultiFeatures) {
+            const
+            cell = (row[sampleName] ||= []);
+            cell.push(fx);
+          } else {
+            row[sampleName] = fx;
+          }
+          return res2;
+        }, res);
+      return res;
+    },
+    result);
+
+  result.sampleNames.addObjects(Array.from(sampleNamesSet.keys()));
+
+  dLog(fnName, result.rows.length);
+  return result;
+}
+
 // -----------------------------------------------------------------------------
 
 
-export { addFeaturesJson, vcfFeatures2MatrixView };
+export { addFeaturesJson, vcfFeatures2MatrixView, vcfFeatures2MatrixViewRows };

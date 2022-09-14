@@ -1655,10 +1655,10 @@ div#goto-feature > div
 }
 
 #observational-table td.relativeColour_equal {
-  background-color : red;
+  background-color : #5cb85c; /*green*/
 }
 #observational-table td.relativeColour_unequal {
-  background-color : #5cb85c; /*green*/
+  background-color : red;
 }
 
 #observational-table td.nucleotide_A {

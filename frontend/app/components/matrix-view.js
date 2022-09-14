@@ -110,11 +110,13 @@ function nRows2HeightEx(nRows) {
  *
  * Computed properties :
  * 
- *   noData		<- displayData.[]
- *   columns		<- displayData.[] (and set .columnNames)
+ *   customBorders <- colSample0
+ *   noData		<- displayData.[] or displayDataRows.[]
+ *   columns		<- displayData.[]
+ *   columnNames		<- columnNamesParam or displayData.[]  (and set colSample0)
  *   rowHeaderWidth		<- rows
  *   colHeaderHeight		<- columns
- *   dataByRow		<- columns (<- displayData.[])  (and .set(numericalData))
+ *   dataByRow		<- displayDataRows or columns (<- displayData.[])  (and .set(numericalData))
  *   rows		<- dataByRow
  *   abValues		<- dataByRow, selectedBlock, selectedColumnName
  *   data		<- columns, rows, dataByRow  (<- displayData.[])
@@ -163,7 +165,7 @@ export default Component.extend({
     if (! this.table) {
       this.createTable();
     }
-    if (this.displayData.length) {
+    if (! this.noData) {
       this.updateTableOnce();
     }
   },
@@ -211,9 +213,11 @@ export default Component.extend({
    * first sample column.
    */
   customBorders : computed('colSample0', function () {
+    let customBorders;
+    if (this.colSample0 > 1) {
     /** index of the column before the first sample column. */
     const colAlt = this.colSample0 - 1;
-    const customBorders
+    customBorders
      = [
     {
       range: {
@@ -231,6 +235,7 @@ export default Component.extend({
         color: 'white'
       }
     }];
+    }
     return customBorders;
   }),
 
@@ -285,11 +290,13 @@ export default Component.extend({
     let cellProperties = {};
     let selectedBlock = this.get('selectedBlock');
     let numericalData = ! this.blockSamples && this.get('numericalData');
-    if (prop.endsWith('Position') || prop.endsWith('End')) {
+    if ((typeof prop === 'string') && (prop.endsWith('Position') || prop.endsWith('End'))) {
       // see also col_name_fn(), table-brushed.js : featureValuesColumnsAttributes
       cellProperties.type = 'numeric';
     } else if (prop === 'Block') {
       cellProperties.renderer = 'blockColourRenderer';
+    } else if (prop === 'Name') {
+      cellProperties.renderer = Handsontable.renderers.TextRenderer;
     } else if (numericalData) {
       cellProperties.renderer = 'numericalDataRenderer';
     } else if ((selectedBlock == null) || (this.selectedColumnName == null)) {
@@ -309,17 +316,18 @@ export default Component.extend({
   afterSelection(row, col) {
     const fnName = 'afterSelection';
     let col_name;
-    const features = afterSelectionFeatures.apply(this, [this.table].concat(arguments));
+    const features = afterSelectionFeatures.apply(this, [this.table].concat(Array.from(arguments)));
     if (col !== -1) {
       const
-      cols = this.get('columns'),
-      columnNames = Object.keys(cols);
-      col_name = columnNames[col];
-      /* selectedColumnName may be Ref, Alt, or a sample column, not Block, Position, End. */
-      if (['Block', 'Position', 'End'].includes(col_name)) {
-        col_name = undefined;
+      columnNames = this.get('columnNames');
+      if (columnNames) {
+        col_name = columnNames[col];
+        /* selectedColumnName may be Ref, Alt, or a sample column, not Block, Position, End. */
+        if (['Block', 'Name', 'Position', 'End'].includes(col_name)) {
+          col_name = undefined;
+        }
+        dLog(fnName, col_name);
       }
-      dLog(fnName, col_name);
     }
     this.set('selectedColumnName', col_name);
     /* const
@@ -339,6 +347,7 @@ export default Component.extend({
       block = feature.get('blockId');
     } else if (coords.row == -1) {
       let col_name = $(td).find('span').text();
+      // ! this.blockSamples, so get .columns from .displayData
       block = this.get('columns')[col_name];
     }
     /* selectBlock() causes a switch to the Dataset tab, which is not desired
@@ -516,9 +525,9 @@ export default Component.extend({
   // ---------------------------------------------------------------------------
 
 
-  noData: computed('displayData.[]', function() {
-    let d = this.get('displayData');
-    return ! d?.length;
+  noData: computed('displayData.[]', 'displayDataRows.[]', function() {
+    let d = this.get('displayData.length') || this.get('displayDataRows.length') ;
+    return ! d;
   }),
   /** Map displayData[] to object mapping from column names of each column to
    * the column data.
@@ -537,8 +546,8 @@ export default Component.extend({
    * 2 or 4 if Ref & Alt
    */
   colSample0 : 2,
-  columnNames : computed('columns', function() {
-    const columnNames = Object.keys(this.get('columns'));
+  columnNames : computed('columns', 'columnNamesParam', function() {
+    const columnNames = this.columnNamesParam || Object.keys(this.get('columns'));
     this.set('colSample0', this.blockSamples ? columnNames.indexOf('Alt') + 1 : 0);
     dLog('columnNames', columnNames, this.colSample0);
     return columnNames;
@@ -580,7 +589,11 @@ export default Component.extend({
    *  Set .numericalData true if any feature value is not a number
    * @return rows[feature_name][col_name]
    */
-  dataByRow: computed(/*'displayData.[]',*/ 'columns', 'columnNames', function() {
+  dataByRow: computed('displayDataRows', /*'displayData.[]',*/ 'columns', 'columnNames', function() {
+    let rows = this.displayDataRows || this.dataByRowFromColumns;
+    return rows;
+  }),
+  get dataByRowFromColumns() {
     let nonNumerical = false;
     let rows = {};
     let cols = this.get('columns');
@@ -603,7 +616,7 @@ export default Component.extend({
     });
     this.set('numericalData', !nonNumerical);
     return rows;
-  }),
+  },
   /** @return an array of the keys of .dataByRow, i.e. the feature names
    */
   rows: computed('dataByRow', function() {
@@ -627,10 +640,18 @@ export default Component.extend({
     let values = [];
 
     if (col_name != null) {
+      const dataIsRows = this.displayDataRows === data;
+      if (dataIsRows) {
+        const
+        /** incidental : these values have [featureSymbol] */
+        selectedValues = Object.values(data).map((fv) => fv[col_name]);
+        values = selectedValues;
+      } else {
       // equiv: Object.values(data).mapBy(col_name)
       Object.keys(data).forEach(function(row_name) {
         values.push(data[row_name][col_name]);
       });
+      }
     }
     return values;
   }),
@@ -724,7 +745,8 @@ export default Component.extend({
         }
         table.updateSettings(settings);
       }
-      setRowAttributes(table, this.displayData);
+      const dataIsRows = !!this.displayDataRows;
+      setRowAttributes(table, dataIsRows ? this.displayDataRows : this.displayData, dataIsRows);
     } else {
       t.hide();
     }

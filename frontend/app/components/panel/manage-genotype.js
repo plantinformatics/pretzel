@@ -7,7 +7,8 @@ import { A as Ember_A } from '@ember/array';
 
 import { intervalSize } from '../../utils/interval-calcs';
 import { overlapInterval } from '../../utils/draw/zoomPanCalcs';
-import { addFeaturesJson, vcfFeatures2MatrixView } from '../../utils/data/vcf-feature';
+import { addFeaturesJson, vcfFeatures2MatrixView, vcfFeatures2MatrixViewRows
+ } from '../../utils/data/vcf-feature';
 import { stringCountString } from '../../utils/string';
 
 // -----------------------------------------------------------------------------
@@ -42,7 +43,19 @@ export default class PanelManageGenotypeComponent extends Component {
   @alias('args.userSettings.vcfGenotypeSamplesSelected')
   vcfGenotypeSamplesSelected;
 
+  @tracked
   displayData = Ember_A();
+  /** data for matrix-view displayDataRows,
+   * [feature position][sample name]{name, value, Symbol feature }
+   */
+  @tracked
+  displayDataRows = null;
+
+  /** derived from brushedVCFBlocks .featuresInBrush  .values. sampleNames 
+   * in showSamplesWithinBrush()
+   */
+  @tracked
+  columnNames = null;
 
   /** in .args.userSettings : */
   /** true means replace the previous result Features added to the block. */
@@ -381,33 +394,30 @@ export default class PanelManageGenotypeComponent extends Component {
    */
   showSamplesWithinBrush() {
     const fnName = 'showSamplesWithinBrush';
-    if (! this.axisBrush || ! this.lookupBlock) {
+    if (! this.axisBrush /* || ! this.lookupBlock*/) {
       // perhaps clear table
     } else {
       let
       referenceBlock = this.axisBrush?.get('block'),
       /** expect : block.referenceBlock.id === referenceBlock.id
        */
-      blocks = this.brushedVCFBlocks.map((abb) => abb[1]),
-      /** also done in vcfGenotypeLookup(), .trimStart().trimEnd() could be a CP;
-       * this results in an array. */
-      samplesText = this.vcfGenotypeSamplesSelected?.trimStart().trimEnd(),
-      sampleNames = samplesText?.split(/[\n \t\r]/)
-      .filter((s) => s !== '');
+      blocks = this.brushedVCFBlocks.map((abb) => abb[1]);
       if (blocks.length === 0) {
         blocks = this.blockService.viewed.filter((b) => b.hasTag('VCF'));
       }
-      dLog(fnName, blocks.mapBy('id'), sampleNames, this.selected.get('sampleNames'));
-      if (blocks.length && sampleNames.length) {
+      dLog(fnName, blocks.mapBy('id'));
+      if (blocks.length) {
         const
-        features = blocks
+        featuresArrays = blocks
         .filterBy('visible')
           .map((b) => b.featuresInBrush)
-          .flat();
-        if (features?.length) {
-          let sampleGenotypes = {createdFeatures : features, sampleNames};
-          const displayData = vcfFeatures2MatrixView(this.requestFormat, sampleGenotypes);
-          this.displayData.addObjects(displayData);
+          .filter((features) => features.length);
+        if (featuresArrays.length) {
+          /** {rows, sampleNames}; */
+          let sampleGenotypes = 
+          vcfFeatures2MatrixViewRows(this.requestFormat, featuresArrays);
+          this.displayDataRows = sampleGenotypes.rows;
+          this.columnNames = ['Block', 'Name'].concat(sampleGenotypes.sampleNames);
         }
       }
     }

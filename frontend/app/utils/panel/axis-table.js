@@ -11,23 +11,51 @@ const dLog = console.debug;
 
 /*----------------------------------------------------------------------------*/
 
+/** Alternative to featureSymbol for string values, which can't have [Symbol].
+ * Store a mapping from string to Feature.
+ */
+let stringsToFeatures = {};
+function stringGetFeature(sampleValue) {
+  return stringsToFeatures[sampleValue];
+}
+/**
+ * @return sampleValue, so that this can be used in a value pipeline
+ */
+function stringSetFeature(sampleValue, feature) {
+  stringsToFeatures[sampleValue] = feature;
+  return sampleValue;
+}
+
+
+/*----------------------------------------------------------------------------*/
+
 /** Assign Feature reference to each row. */
-function setRowAttributes(table, data) {
+function setRowAttributes(table, data, dataIsRows) {
   /** genotype data is samples[], and contains samples[i].features
    * These 2 uses should fall into alignment as the genotype table requirements evolve.
    */
-  const dataIsColumns = data.length && Array.isArray(data[0].features);
+  const dataIsColumns = ! dataIsRows && data.length && Array.isArray(data[0].features);
   if (dataIsColumns) {
     data = data[0].features;
+  } else if (dataIsRows) {
+    /* displayDataRows is a sparse array, indexed by Position (value.0)
+     * Object.values() returns the non-empty values, which will correspond to the table rows.
+     */
+    data = Object.values(data);
   }
   // expect that data.length matches  table.countRows()
   data.forEach((feature, row) => {
     if (dataIsColumns) {
       feature = feature[featureSymbol];
+      /* original table-brushed.js setRowAttributes() used .setRowAttribute(),
+       * which used tr.__dataPretzelFeature__; CellMeta seems better. */
+      table.setCellMeta(row, 0, 'PretzelFeature', feature);
+    } else if (dataIsRows) {
+      Object.values(feature).forEach((value, col) => {
+        const feature = value[featureSymbol] || stringGetFeature(value);
+        table.setCellMeta(row, col, 'PretzelFeature', feature);
+      });
     }
-    /* original table-brushed.js setRowAttributes() used .setRowAttribute(),
-     * which used tr.__dataPretzelFeature__; CellMeta seems better. */
-    table.setCellMeta(row, 0, 'PretzelFeature', feature);
   });
 }
 
@@ -125,6 +153,8 @@ d3.selection.prototype.moveToFront = function() {
 
 
 export {
+  stringGetFeature,
+  stringSetFeature,
   setRowAttributes,
   afterOnCellMouseOverClosure,
   tableCoordsToFeature,

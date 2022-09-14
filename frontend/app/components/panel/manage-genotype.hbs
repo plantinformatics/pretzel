@@ -219,7 +219,9 @@ Genotypes
 <div class="clear-both"></div>
 
 {{matrix-view
-  displayData=displayData
+  displayData=this.displayData
+  displayDataRows=this.displayDataRows
+  columnNamesParam=this.columnNames
   selectBlock=(action @selectBlock)
   selectedBlock=@selectedBlock
   blockSamples=true
