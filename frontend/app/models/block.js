@@ -198,6 +198,22 @@ export default Model.extend({
     let count = this.get('featureCount') || this.get('featureValueCount');
     return count > 0;
   }),
+  /** True if a block has features, or is a view and hence may have features.
+   *
+   * If features have been requested without a constraining domain interval and
+   * 0 features were returned then .featureCount may be set to 0, indicating the
+   * block definitely has no features, and in this case this fucntion returns
+   * false.
+   *
+   * Role : to support dataBlocks definition, to enable requesting features.
+   * related : isDataCount, isData
+   */
+  get mayHaveFeatures() {
+    /* view blocks (e.g. VCF) have dynamic features - 0 in db, so initially ! hasFeatures. */
+    /** (.featureCount === undefined) indicates count is not known, so this result may be true. */
+    const mayHave = this.get('hasFeatures') || (this.hasTag('view') && (this.featureCount !== 0) );
+    return mayHave;
+  },
   /** Similar to isData(), but relies on .featureCount, which may not have been received. */
   isDataCount : and('isLoaded', 'hasFeatures'),
   isData : computed('referenceBlock', 'range', function (){
@@ -464,6 +480,28 @@ export default Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** server which this block was received from.
+   *
+   * It is possible that the block may be a copy from a secondary server which
+   * is not currently connected.
+   *
+   * block id is generally unique across servers, but a reference block may
+   * be copied from another server for use as test data, which would cause
+   * id2Server[] to return the most-recently-connected server with that
+   * block id, whereas servers[this.store.name] will handle that OK.
+   * Otherwise these 2 expressions are equivalent.
+   */
+  server : computed( function () {
+    /** no dependency needed because .server need only be calculated once.  */
+    const
+    apiServers = this.get('apiServers'),
+    server = apiServers.servers[this.store.name] || 
+      apiServers.id2ServerGet(this.id);
+    return server;
+  }),
+
+  //----------------------------------------------------------------------------
+
   /** This will be different to referenceBlock if the parent has a parent.
    * I.e. referenceBlock corresponds to the axis, and parentBlock is the list of
    * features which this blocks feature.value.flankingMarkers[] refer to
@@ -577,18 +615,7 @@ export default Model.extend({
      */
     if (parentName)
     {
-      /** it is possible that the block may be a copy from a secondary server which is not currently connected. */
-      let
-      apiServers = this.get('apiServers'),
-      /** server which this block was received from.
-       *
-       * block id is generally unique across servers, but a reference block may
-       * be copied from another server for use as test data, which would cause
-       * id2Server[] to return the most-recently-connected server with that
-       * block id, whereas servers[this.store.name] will handle that OK.
-       * Otherwise these 2 expressions are equivalent.
-       */
-      server = apiServers.servers[this.store.name] || apiServers.id2Server[this.id];
+      const server = this.get('server');
 
       /** this function is called for each block, e.g. when view / un-view a
        * block. Scanning all blocks is becoming too slow, so an alternate

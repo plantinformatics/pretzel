@@ -20,6 +20,7 @@ const { getAliases } = require('../utilities/localise-aliases');
 const { childProcess, dataOutReplyClosure, dataOutReplyClosureLimit } = require('../utilities/child-process');
 const { ArgsDebounce } = require('../utilities/debounce-args');
 const { ErrorStatus } = require('../utilities/errorStatus.js');
+const { vcfGenotypeLookup } = require('../utilities/vcf-genotype');
 
 var ObjectId = require('mongodb').ObjectID
 
@@ -1263,32 +1264,8 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
    */
   Block.vcfGenotypeLookup = function(parent, scope, preArgs, nLines, cb) {
     const
-    fnName = 'vcfGenotypeLookup',
-    command = preArgs.requestFormat ? 'query' : 'view';
-    let moreParams = [command, parent, scope, '-r', preArgs.region ];
-    if (preArgs.requestFormat) {
-      const
-      /** from BCFTOOLS(1) :
-       *        %GT             Genotype (e.g. 0/1)
-       *        %TGT            Translated genotype (e.g. C/A)
-       */
-      formatGT = (preArgs.requestFormat === 'CATG') ? '%TGT' : '%GT',
-      format = '%ID\t%POS' + '\t%REF\t%ALT' + '[\t' + formatGT + ']\n';
-      moreParams = moreParams.concat('-H', '-f', format);
-    }
-    if (preArgs.samples) {
-      moreParams = moreParams.concat('-s', preArgs.samples.replaceAll('\n', ','));
-    }
-    console.log(fnName, parent, preArgs, moreParams);
-
-    childProcess(
-      'vcfGenotypeLookup.bash',
-      /* postData */ '', 
-      /* useFile */ false,
-      /* fileName */ undefined,
-      moreParams,
-      dataOutReplyClosureLimit(cb, nLines), cb, /*progressive*/ true);
-
+    fnName = 'vcfGenotypeLookup';
+    vcfGenotypeLookup(parent, scope, preArgs, nLines, cb);
   };
 
   Block.remoteMethod('vcfGenotypeLookup', {

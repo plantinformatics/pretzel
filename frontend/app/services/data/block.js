@@ -1446,11 +1446,9 @@ export default Service.extend(Evented, {
       let records =
         this.get('viewed')
         .filter(function (block) {
-          // hasFeatures indicates isData.  - change to use block.isData
-          // view blocks (e.g. VCF) have dynamic features - 0 in db, so initially ! hasFeatures.
+          /** see comment re. hasFeatures, isData{,Count} in @see mayHaveFeatures */
           return block.get('isLoaded') // i.e. !== undefined
-            // equivalent : block.get('isData')
-            && (block.get('hasFeatures') || block.hasTag('view'));
+            && block.get('mayHaveFeatures');
         });
       if (trace_block > 1)
         console.log(
@@ -1491,7 +1489,8 @@ export default Service.extend(Evented, {
    * @return Map : blockId -> [block]
    */
   dataBlocks : computed(
-    'loadedViewedChildBlocks.@each.hasFeatures',
+    /** loadedViewedChildBlocks is filtered by .@each.mayHaveFeatures */
+    'loadedViewedChildBlocks',
     function () {
       let records = this.get('loadedViewedChildBlocks'),
       map = records.reduce(
@@ -1507,8 +1506,7 @@ export default Service.extend(Evented, {
               map.set(id, blocks = []);
             /* non-data (reference) blocks are map indexes, but are not put in
              * the dataBlocks array. */
-            if (block.get('hasFeatures'))
-              blocks.push(block);
+            blocks.push(block);
           }
           return map; },
         new Map()

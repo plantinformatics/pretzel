@@ -9,6 +9,7 @@ import { intervalSize } from '../../utils/interval-calcs';
 import { overlapInterval } from '../../utils/draw/zoomPanCalcs';
 import {
   refAlt,
+  vcfGenotypeLookup,
   addFeaturesJson, vcfFeatures2MatrixView, vcfFeatures2MatrixViewRows,
   featureSampleNames,
  } from '../../utils/data/vcf-feature';
@@ -342,27 +343,12 @@ export default class PanelManageGenotypeComponent extends Component {
     if (samples?.length && domainInteger && vcfDatasetId) {
       let
       scope = this.lookupScope,
-      region = scope + ':' + domainInteger.join('-'),
-      preArgs = {region, samples, requestFormat : this.requestFormat};
-      // parent is .referenceDatasetName
-
-      /** Currently passing datasetId as param 'parent', until requirements evolve.
-       * The VCF dataset directories are just a single level in $vcfDir;
-       * it may be desirable to interpose a parent level, e.g. 
-       * vcf/
-       *   Triticum_aestivum_IWGSC_RefSeq_v1.0/
-       *     Triticum_aestivum_IWGSC_RefSeq_v1.0_vcf_data
-       * It's not necessary because datasetId is unique.
-       * (also the directory name could be e.g.  lookupDatasetId ._meta.vcfFilename instead of the default datasetId).
-       */
-      let textP = this.auth.vcfGenotypeLookup(
-        this.apiServerSelectedOrPrimary, vcfDatasetId, scope, preArgs, this.rowLimit,
-        {} );
+      textP = vcfGenotypeLookup(this.auth, this.apiServerSelectedOrPrimary, samples, domainInteger,  this.requestFormat, vcfDatasetId, scope, this.rowLimit);
       textP.then(
-        (textObj) => {
-          const text = textObj.text;
+        (text) => {
           // displays vcfGenotypeText in textarea, which triggers this.vcfGenotypeTextSetWidth();
           this.vcfGenotypeText = text;
+
           /** .lookupDatasetId is derived from .lookupBlock so .lookupBlock must be defined here. */
           let blockV = this.lookupBlock;
           dLog(fnName, text.length, text && text.slice(0,200), blockV.get('id'));
@@ -370,6 +356,7 @@ export default class PanelManageGenotypeComponent extends Component {
             const added = addFeaturesJson(
               blockV, this.requestFormat, this.args.userSettings.replaceResults,
               this.args.selectedFeatures, text);
+
             if (added.createdFeatures && added.sampleNames) {
               const displayData = vcfFeatures2MatrixView(this.requestFormat, added);
               this.displayData.addObjects(displayData);
@@ -381,7 +368,8 @@ export default class PanelManageGenotypeComponent extends Component {
               this.selected.set('sampleNames', added.sampleNames);
             }
           }
-        });
+
+      });
     }
   }
 

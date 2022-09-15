@@ -35,6 +35,47 @@ const cellMultiFeatures = false;
 
 // -----------------------------------------------------------------------------
 
+/** Lookup the genotype for the selected samples in the interval of the brushed block.
+ * @param auth  auth service for ajax
+ * @param server store to add the features to
+ * @param samples to request, may be undefined or []
+ * @param domainInteger  [start,end] of interval, where start and end are integer values
+ * @param requestFormat 'CATG' (%TGT) or 'Numerical' (%GT for 01)
+ * @param vcfDatasetId  id of VCF dataset to lookup
+ * @param scope chromosome, e.g. 1A, or chr1A - match %CHROM chromosome in .vcf.gz file
+ * @param rowLimit
+ */
+function vcfGenotypeLookup(auth, server, samples, domainInteger, requestFormat, vcfDatasetId, scope, rowLimit) {
+  const
+  fnName = 'vcfGenotypeLookup',
+
+  region = scope + ':' + domainInteger.join('-'),
+  preArgs = {region, samples, requestFormat};
+  // parent is .referenceDatasetName
+
+  /** Currently passing datasetId as param 'parent', until requirements evolve.
+   * The VCF dataset directories are just a single level in $vcfDir;
+   * it may be desirable to interpose a parent level, e.g. 
+   * vcf/
+   *   Triticum_aestivum_IWGSC_RefSeq_v1.0/
+   *     Triticum_aestivum_IWGSC_RefSeq_v1.0_vcf_data
+   * It's not necessary because datasetId is unique.
+   * (also the directory name could be e.g.  lookupDatasetId ._meta.vcfFilename instead of the default datasetId).
+   */
+  const
+  textP = auth.vcfGenotypeLookup(server, vcfDatasetId, scope, preArgs, rowLimit, {} )
+    .then(
+      (textObj) => {
+        const text = textObj.text;
+        return text;
+      });
+  return textP;
+}
+
+
+//------------------------------------------------------------------------------
+
+
 /* sample data :
 
  * -------------------------------------
@@ -583,6 +624,7 @@ function featureSampleNames(sampleNamesSet, feature, filterFn) {
 
 export {
   refAlt,
+  vcfGenotypeLookup,
   addFeaturesJson, vcfFeatures2MatrixView, vcfFeatures2MatrixViewRows,
   featureSampleNames,
 };
