@@ -188,6 +188,7 @@ module.exports = function(app) {
       context.property == 'createComplete' ||
         // Feature
       context.property == 'search' ||
+      context.property == 'searchPost' ||
       context.property == 'aliasSearch' ||
       context.property == 'depthSearch' ||
       context.property == 'dnaSequenceSearch' ||

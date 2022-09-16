@@ -321,10 +321,13 @@ export default Service.extend({
     if (trace_paths)
       dLog('services/auth featureSearch', blockId, featureNames, options);
     let paramLimit = 200;
-    if (featureNames?.length > paramLimit) {
-      featureNames = featureNames.slice(0, paramLimit);
-    }
-    return this._ajax('Features/search', 'GET', {server : apiServer, blockId, filter : featureNames, options}, true);
+    const post = featureNames?.length > paramLimit;
+    const data = {blockId, filter : featureNames, options};
+    return this._ajax(
+      'Features/search' + (post ? 'Post' : ''),
+      post ? 'POST' : 'GET',
+      post ? JSON.stringify(data) : data,
+      true, apiServer);
   },
 
   /** Search for Aliases matching the given list of Feature names in featureNames[],

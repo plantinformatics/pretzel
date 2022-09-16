@@ -116,6 +116,9 @@ module.exports = function(Feature) {
       return process.nextTick(() => cb(null, features))
     })
   };
+  /** POST version of Feature.search, which is addressed by verb GET.
+   */
+  Feature.searchPost = Feature.search;
 
   /*--------------------------------------------------------------------------*/
 
@@ -278,6 +281,18 @@ module.exports = function(Feature) {
     returns: {arg: 'features', type: 'array'},
     description: "Returns features and their datasets given an array of feature names"
   });
+
+  Feature.remoteMethod('searchPost', {
+    accepts: [
+      {arg: 'blockId', type: 'string', required: false},
+      {arg: 'filter', type: 'array', required: true},
+      {arg: "options", type: "object", http: "optionsFromRequest"}
+    ],
+    http: {verb: 'post'},
+    returns: {arg: 'features', type: 'array'},
+    description: "Returns features and their datasets given an array of feature names"
+  });
+
 
   Feature.remoteMethod('aliasSearch', {
     accepts: [
