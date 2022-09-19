@@ -20,7 +20,7 @@ const { getAliases } = require('../utilities/localise-aliases');
 const { childProcess, dataOutReplyClosure, dataOutReplyClosureLimit } = require('../utilities/child-process');
 const { ArgsDebounce } = require('../utilities/debounce-args');
 const { ErrorStatus } = require('../utilities/errorStatus.js');
-const { vcfGenotypeLookup } = require('../utilities/vcf-genotype');
+const { vcfGenotypeLookup, vcfGenotypeFeaturesCounts } = require('../utilities/vcf-genotype');
 
 var ObjectId = require('mongodb').ObjectID
 
@@ -373,6 +373,44 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
   };
 
   /*--------------------------------------------------------------------------*/
+
+  /** @return promise yielding [block, dataset]
+   * @desc
+   * related : apiServer.datasetAndBlock()
+   */
+  Block.blockDatasetLookup = function(id, options) {
+    const fnName = 'blockDatasetLookup';
+    let
+    promise = 
+      this.blockRecordLookup(id)
+      .then((block) => {
+        if (! block) {
+          const errorText = ' Block ' + id + ' not found. ' + fnName;
+          throw new ErrorStatus(400, errorText);
+        } else {
+          const models = this.app.models;
+          const
+          datasetP =
+            models.Dataset.findById(block.datasetId, {}, options)
+            .then(dataset => {
+              if (! dataset) {
+                const errorText = 'Dataset ' + block.datasetId + ' not found for Block ' + id + '. ' + fnName;
+                throw new ErrorStatus(400, errorText);
+              } else {
+                return [block, dataset];
+              }
+            });
+          return datasetP;
+        }
+        /** each case above either throws or returns, so this is unreachable.   */
+        return null;
+      });
+
+    return promise;
+  };
+              
+
+  //----------------------------------------------------------------------------
 
   /** Lookup .namespace for the given blockIds.  Cached values are used if
    * available, since this is used in the high-use pathsaliases() api, and we
@@ -747,22 +785,35 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       }
       cb(null, result);
     } else {
-    let db = this.dataSource.connector;
-    let cursor =
-        blockFeatures.blockFeaturesCounts(db, blockId, interval, nBins, isZoomed, useBucketAuto);
-    cursor.toArray()
-    .then(function(featureCounts) {
-      if (useCache) {
-        if (trace_block > 1) {
-          console.log(fnName, cacheId, 'put', featureCounts[0]);
+      this.blockDatasetLookup(id, options)
+        .then(blockDatabaseFeatureCounts.bind(this));
+
+      function blockDatabaseFeatureCounts([block, dataset]) {
+        if (dataset.tags?.includes('VCF')) {
+          vcfGenotypeFeaturesCounts(block, interval, nBins, isZoomed)
+            .then((result) => cb(null, result))
+            .catch((error) => cb(error));
+
+        } else {
+          let db = this.dataSource.connector;
+          let cursor =
+              blockFeatures.blockFeaturesCounts(db, blockId, interval, nBins, isZoomed, useBucketAuto);
+          cursor.toArray()
+            .then(function(featureCounts) {
+              if (useCache) {
+                if (trace_block > 1) {
+                  console.log(fnName, cacheId, 'put', featureCounts[0]);
+                }
+                cache.put(cacheId, featureCounts);
+              }
+              cb(null, featureCounts);
+            }).catch(function(err) {
+              cb(err);
+            });
         }
-        cache.put(cacheId, featureCounts);
       }
-      cb(null, featureCounts);
-    }).catch(function(err) {
-      cb(err);
-    });
     }
+
   };
 
   /*--------------------------------------------------------------------------*/

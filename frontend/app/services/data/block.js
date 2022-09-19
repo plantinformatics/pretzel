@@ -502,6 +502,7 @@ export default Service.extend(Evented, {
   },
 
   getSummary: function (blockIds) {
+    const fnName = 'getSummary';
     // console.log("block getSummary", id);
     let
     /** true enables $bucketAuto as an alternative to $bucket using
@@ -625,6 +626,11 @@ export default Service.extend(Evented, {
                 result = {binSize, nBins, domain : interval, result : featuresCounts};
                 block.featuresCountsResultsMergeOrAppend(result);
                 block.set('featuresCounts', featuresCounts);
+                if ((block.featureCount === undefined) && block.hasTag('view') ) {
+                  const featureCount = featuresCounts.reduce((sum,x) => sum += x.count, 0);
+                  dLog(fnName, blockId, featureCount);
+                  block.set('featureCount', featureCount);
+              }
               }
             });
             }

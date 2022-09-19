@@ -126,6 +126,8 @@ function binEvenLengthRound(interval, nBins) {
   }
   return lengthRounded;
 };
+exports.binEvenLengthRound = binEvenLengthRound;
+
 /** Generate an array of even-sized bins to span the given interval.
  * Used for mongo aggregation pipeline : $bucket : boundaries.
  */
@@ -151,6 +153,7 @@ function binBoundaries(interval, lengthRounded) {
   }
   return b;
 };
+exports.binBoundaries = binBoundaries;
 
 
 
