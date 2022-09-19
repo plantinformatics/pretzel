@@ -9,7 +9,9 @@ var createIntervalTree = require("interval-tree-1d");
 
 const { ApiServer, apiServers, blockServer } = require('./api-server');
 const { ErrorStatus } = require('./errorStatus.js');
-const { childProcess, dataOutReplyClosure, dataOutReplyClosureLimit } = require('../utilities/child-process');
+const {
+ childProcess, dataOutReplyClosure, dataOutReplyClosureLimit, dataReduceClosure
+} = require('../utilities/child-process');
 const { binEvenLengthRound, binBoundaries } = require('../utilities/block-features');
 
 //------------------------------------------------------------------------------
@@ -18,11 +20,14 @@ const { binEvenLengthRound, binBoundaries } = require('../utilities/block-featur
 /**
  * @param parent  name of parent or view dataset, or vcf directory name
  * @param scope e.g. '1A'; identifies the vcf file, i.e. datasetId/scope.vcf.gz
- * @param nLines if defined, limit the output to nLines.
  * @param preArgs args to be inserted in command line, additional to the parent / vcf file name.
  * See comment in frontend/app/services/auth.js : vcfGenotypeLookup()
+ * @param nLines if defined, limit the output to nLines.
+ * @param dataOutCb passed to childProcess() - see comment there.
+ * If undefined, then dataOutReplyClosureLimit(cb, nLines) is used.
+ * @param cb
  */
-function vcfGenotypeLookup(parent, scope, preArgs, nLines, cb) {
+function vcfGenotypeLookup(parent, scope, preArgs, nLines, dataOutCb, cb) {
   const
   fnName = 'vcfGenotypeLookup',
   command = preArgs.requestFormat ? 'query' : 'view';
@@ -44,6 +49,9 @@ function vcfGenotypeLookup(parent, scope, preArgs, nLines, cb) {
     moreParams = moreParams.concat('-S', '/dev/null');
   }
   console.log(fnName, parent, preArgs, moreParams);
+  if (! dataOutCb) {
+    dataOutCb = dataOutReplyClosureLimit(cb, nLines);
+  }
 
   childProcess(
     'vcfGenotypeLookup.bash',
@@ -51,7 +59,7 @@ function vcfGenotypeLookup(parent, scope, preArgs, nLines, cb) {
     /* useFile */ false,
     /* fileName */ undefined,
     moreParams,
-    dataOutReplyClosureLimit(cb, nLines), cb, /*progressive*/ true);
+    dataOutCb, cb, /*progressive*/ true);
 
 };
 exports.vcfGenotypeLookup = vcfGenotypeLookup;
@@ -68,15 +76,16 @@ exports.vcfGenotypeLookup = vcfGenotypeLookup;
  * { "_id" : { "min" : 4000000, "max" : 160000000 }, "count" : 22 }
  * { "_id" : { "min" : 160000000, "max" : 400000000 }, "count" : 21 }
  */
-exports.vcfGenotypeFeaturesCounts = async function(block, interval, nBins = 10, isZoomed) {
+exports.vcfGenotypeFeaturesCounts = function(block, interval, nBins = 10, isZoomed, cb) {
   // header comment copied from block-features.js : blockFeaturesCounts()
   const fnName = 'vcfGenotypeFeaturesCounts';
   let result;
 
   // default interval can be the whole domain of the block
   if (! interval || interval.length !== 2) {
-    const errorText = 'Interval is required. ' + JSON.stringify(interval),
-          error = new ErrorStatus(400, errorText);
+    const
+    errorText = 'Interval is required. ' + JSON.stringify(interval),
+    error = new ErrorStatus(400, errorText);
     result = error;
   } else {
     if (interval[0] > interval[1]) {
@@ -87,77 +96,96 @@ exports.vcfGenotypeFeaturesCounts = async function(block, interval, nBins = 10, 
     }
 
     const
-      scope = block.name,
-      parent = block.datasetId,
+    scope = block.name,
+    parent = block.datasetId,
     // may be able to omit domainInteger if ! isZoomed 
-      domainInteger = interval.map((d) => d.toFixed(0)),
-      region = scope + ':' + domainInteger.join('-'),
-      preArgs = {region, samples : null, requestFormat : 'CATG'};
-
-      // %REF\t%ALT could be omitted in this case.
-
-      function lookupPromise(...args) {
-        return new Promise((resolve, reject) => {
-          vcfGenotypeLookup(...args, cb);
-          function cb(err, data) {
-            if (err) {
-              reject(err);
-            } else {
-              resolve(data);
-            }
-          }
-        });
+    domainInteger = interval.map((d) => d.toFixed(0)),
+    region = scope + ':' + domainInteger.join('-'),
+    preArgs = {region, samples : null, requestFormat : 'CATG'},
+    summary = new vcfToSummary(...arguments);
+    function sumCb(error, text) {
+      let result;
+      if (error) {
+        throw error;
+      } else if (text === undefined) {
+        result = summary.summarise();
+      } else {
+        summary.accumulateChunk(text);
       }
-    result = await util.promisify(vcfGenotypeLookup)(parent, scope, preArgs, /*nLines*/undefined)
-      .then((text) => vcfToSummary(text, domainInteger, nBins));
+      return result;
     }
+    const [blockArg, ...intervalArgs] = arguments;
+    const dataOutCb = dataReduceClosure(sumCb);
+    vcfGenotypeLookup(parent, scope, preArgs, /*nLines*/undefined, dataOutCb, cb);
+
+    /* vcfGenotypeLookup() includes %REF\t%ALT, which could be omitted in this case. */
+  }
 
   return result;
 };
 
-/**
- * @param interval  domainInteger
- */
-function vcfToSummary(text, interval, nBins) {
-  const
-  fnName = 'vcfToSummary',
-  lengthRounded = binEvenLengthRound(interval, nBins),
-  boundaries = binBoundaries(interval, lengthRounded),
-  /** map the boundaries into interval [start, end] pairs.  */
-  intervals = boundaries.map((b, i, a) => (i ? [a[i-1], b] : undefined))
-    .slice(1, boundaries.length-1),
-  symbolCount = Symbol.for('count');
-  intervals.forEach((interval) => interval[Symbol.for('count')] = 0);
-  console.log(fnName, lengthRounded, boundaries, intervals);
+const symbolCount = Symbol.for('count');
 
-  // set up bins and interval tree
-  let summaryTree = createIntervalTree(intervals);
+class vcfToSummary {
 
+  /**
+   * @param interval  domainInteger
+   */
+  constructor(block, interval, nBins) {
+    const
+    fnName = 'vcfToSummary',
+    lengthRounded = binEvenLengthRound(interval, nBins),
+    boundaries = binBoundaries(interval, lengthRounded),
+    /** map the boundaries into interval [start, end] pairs.  */
+    intervals = boundaries.map((b, i, a) => (i ? [a[i-1], b] : undefined))
+      .slice(1, boundaries.length-1);
+    intervals.forEach((interval) => interval[Symbol.for('count')] = 0);
+    // console.log(fnName, block.id, lengthRounded, boundaries, intervals);
+
+    // set up bins and interval tree
+    this.summaryTree = createIntervalTree(intervals);
+  }
+}
+
+vcfToSummary.prototype.accumulateChunk = function (text) {
   /** text has \n and \t, column format e.g. :
    * # [1]ID	[2]POS	[3]REF	[4]ALT
    * scaffold38755_1190119	1190119	C	T
    */
   text.split('\n')
     .forEach((line, i) => {
+      /* first line of first chunk is header line, for subsequent chunks match /^#/
+       * last line of chunk may be incomplete - save it to prepend to first line of next chunk.
+       */
       // skip header line
       if (i) {
         // add line to interval of summaryTree;
         const
         cols = line.split('\t'),
         position = +cols[1];
-        summaryTree.queryInterval(position, position, addToInterval);
+        this.summaryTree.queryInterval(position, position, addToInterval);
         function addToInterval(interval) {
           interval[symbolCount]++;
         }
       }
     });
-  const
-  summaryArray = summaryTree.intervals
-    .sort((a, b) => a[0] - b[0])
-    .map((interval) =>
-         ({ "_id" : { "min" : interval[0], "max" : interval[1] }, "count" : interval[symbolCount] }));
+};
 
-  return summaryArray;
-}
+    
+/**
+ * @return summary array, in the same format as block-features.js :
+ * blockFeaturesCounts(), @see vcfGenotypeFeaturesCounts()
+ */
+vcfToSummary.prototype.summarise = function() {
+  const
+  summaryArray = this.summaryTree.intervals
+    .sort((a, b) => a[0] - b[0])
+    .map(
+      (interval) =>
+        ({ "_id" : { "min" : interval[0], "max" : interval[1] }, "count" : interval[symbolCount] }));
+
+    return summaryArray;
+};
+
 
 //------------------------------------------------------------------------------

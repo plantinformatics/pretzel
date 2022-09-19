@@ -322,4 +322,25 @@ exports.dataOutReplyClosure = function dataOutReplyClosure(cb) {
   return exports.dataOutReplyClosureLimit(cb, /*nLines*/undefined);
 };
 
+/** @return a dataOutCb for childProcess()
+ * @param dataCb reduces the received data, and when called with text ===
+ * undefined (when chunk === null) it sends the result via cb.
+ */
+exports.dataReduceClosure = function dataReduceClosure(dataCb) {
+
+  return dataReduce;
+
+  function dataReduce(chunk, cb) {
+    const fnName = 'dataReduce';
+
+    const chunksText = chunk?.toString();
+    const result = dataCb(null, chunksText);
+    if (result) {
+      cb(null, result);
+    }
+    /* could return result instead of delivering via cb() (not implemented); */
+    // return result;
+  };
+};
+
 // -----------------------------------------------------------------------------

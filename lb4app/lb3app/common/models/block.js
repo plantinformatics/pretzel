@@ -790,10 +790,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
 
       function blockDatabaseFeatureCounts([block, dataset]) {
         if (dataset.tags?.includes('VCF')) {
-          vcfGenotypeFeaturesCounts(block, interval, nBins, isZoomed)
-            .then((result) => cb(null, result))
-            .catch((error) => cb(error));
-
+          vcfGenotypeFeaturesCounts(block, interval, nBins, isZoomed, cb);
         } else {
           let db = this.dataSource.connector;
           let cursor =
@@ -1316,7 +1313,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
   Block.vcfGenotypeLookup = function(parent, scope, preArgs, nLines, cb) {
     const
     fnName = 'vcfGenotypeLookup';
-    vcfGenotypeLookup(parent, scope, preArgs, nLines, cb);
+    vcfGenotypeLookup(parent, scope, preArgs, nLines, undefined, cb);
   };
 
   Block.remoteMethod('vcfGenotypeLookup', {
