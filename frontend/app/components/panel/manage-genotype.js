@@ -256,7 +256,7 @@ export default class PanelManageGenotypeComponent extends Component {
         .filter(
           (b) =>
             b.get('datasetId').content.hasTag('VCF') &&
-            (this.get('featuresCountIncludingBrush') <= this.get('featuresCountsThreshold'))),
+            (b.get('featuresCountIncludingBrush') <= b.get('featuresCountsThreshold'))),
       ab1 = vcfBlocks.map((vb) => [ab, vb]);
       return ab1;
     })
