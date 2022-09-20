@@ -73,8 +73,11 @@ exports.vcfGenotypeLookup = vcfGenotypeLookup;
  * @param nBins number of bins to group block's features into
  *
  * @return Promise yielding : Array	: binned feature counts
- * { "_id" : { "min" : 4000000, "max" : 160000000 }, "count" : 22 }
- * { "_id" : { "min" : 160000000, "max" : 400000000 }, "count" : 21 }
+ * in the same format as block-features.js :
+ * blockFeaturesCounts(), @see vcfGenotypeFeaturesCounts()
+ * $bucket :
+ * { "_id" : 33000000, "count" : 38201, "idWidth" : [ 1000000 ] }
+ * { "_id" : 34000000, "count" : 47323, "idWidth" : [ 1000000 ] }
  */
 exports.vcfGenotypeFeaturesCounts = function(block, interval, nBins = 10, isZoomed, cb) {
   // header comment copied from block-features.js : blockFeaturesCounts()
@@ -182,7 +185,11 @@ vcfToSummary.prototype.summarise = function() {
     .sort((a, b) => a[0] - b[0])
     .map(
       (interval) =>
-        ({ "_id" : { "min" : interval[0], "max" : interval[1] }, "count" : interval[symbolCount] }));
+        ({
+          _id : interval[0],
+          count : interval[symbolCount],
+          idWidth : [interval[1] - interval[0]]
+        }));
 
     return summaryArray;
 };

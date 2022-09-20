@@ -8,6 +8,10 @@
 const { spawn } = require('child_process');
 var fs = require('fs');
 
+//------------------------------------------------------------------------------
+
+const trace = 1;
+
 /*----------------------------------------------------------------------------*/
 
 
@@ -52,7 +56,11 @@ exports.childProcess = (scriptName, postData, useFile, fileName, moreParams, dat
   let cbOrig = cb,
       cbCalled = 0;
   function cbWrap(err, message, last) {
-    console.log('cbWrap', err && err.toString(), message?.slice(0, 200), last);
+    if (trace) {
+      // message may be string or (features counts) array.
+      const messageSlice = (typeof message === 'string') ? message?.slice(0, 200) : message?.slice(0, 3);
+      console.log('cbWrap', err && err.toString(), messageSlice, last);
+    }
     /* insert_features_recursive() "passes" last === undefined,
      * and when !err, message is datasetId (i.e. datasetName)
      */
