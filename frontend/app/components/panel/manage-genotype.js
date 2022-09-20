@@ -234,6 +234,9 @@ export default class PanelManageGenotypeComponent extends Component {
   }
 
   /** Return brushed VCF blocks
+   * which are ! isZoomedOut.  This enables featuresCountsThreshold to limit the
+   * number of rows displayed in the genotype table.
+   *
    * @return [[axisBrush, vcfBlock], ...]
    * axisBrush will be repeated when there are multiple vcfBlocks on the axis of that axisBrush.
    * @desc
@@ -248,7 +251,12 @@ export default class PanelManageGenotypeComponent extends Component {
     blocks = axisBrushes.map((ab) => {
       let
       axis1d = ab.block.get('axis1d'),
-      vcfBlocks = axis1d.brushedBlocks.filter((b) => b.get('datasetId').content.hasTag('VCF')),
+      /** related : block : isZoomedOut(), isBrushableFeatures(), featuresCountIncludingZoom() */
+      vcfBlocks = axis1d.brushedBlocks
+        .filter(
+          (b) =>
+            b.get('datasetId').content.hasTag('VCF') &&
+            (this.get('featuresCountIncludingBrush') <= this.get('featuresCountsThreshold'))),
       ab1 = vcfBlocks.map((vb) => [ab, vb]);
       return ab1;
     })
