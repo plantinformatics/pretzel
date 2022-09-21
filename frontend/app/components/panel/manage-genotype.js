@@ -96,10 +96,10 @@ export default class PanelManageGenotypeComponent extends Component {
 
     // possible values listed in comment before requestFormat
     this.requestFormat =
-      this.args.userSettings.requestFormat || 'CATG';
+      this.args.userSettings.requestFormat || 'Numerical';  // alternate : CATG
 
     if (this.args.userSettings.replaceResults === undefined) {
-      this.args.userSettings.replaceResults = true;
+      this.args.userSettings.replaceResults = false;
     }
 
     if (this.args.userSettings.showResultText === undefined) {
