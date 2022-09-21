@@ -302,7 +302,7 @@ export default class PanelManageGenotypeComponent extends Component {
     domain = this.axisBrush?.brushedDomain,
     domainInteger = domain && 
       (intervalSize(domain) <= this.intervalLimit * 1e6) &&
-      domain.map((d) => d.toFixed(0));
+      domain.map((d) => +d.toFixed(0));
     return domainInteger;
   }
 

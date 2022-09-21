@@ -2046,6 +2046,30 @@ div.genotype label
   margin-top : 2em;
 }
 
+.genotype-controls {
+  display: flex;
+  margin-top: 1em;
+}
+.lookup-line {
+  display: inline-flex;
+}
+.lookup-line > button {
+  margin-top: auto;
+  margin-bottom: 1em;
+}
+.lookup-line > .interval-group {
+  display: flex;
+  margin-left: 5em;
+}
+.lookup-line > .interval-group > label {
+  max-width: 10em;
+  margin-top : 0px;
+}
+.lookup-line > .interval-group > div > div {
+  display: flex;
+  justify-content: flex-end;
+}
+
 /* -------------------------------------------------------------------------- */
 
 .h-100 {
