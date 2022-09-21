@@ -2008,6 +2008,11 @@ div.metaeditor-panel div.jsoneditor-tree button.jsoneditor-contextmenu-button {
   border-spacing: 1em;
 }
 
+.select-wrap {
+  /* this prevents the left border of <select> and <textarea> being
+   * clipped when dataset name is long enough to widen the dialog. */
+  overflow-y: scroll;
+}
 /*#right-panel-content.right-panel-dataset >*/ .axis-brushes > table > div > textarea,
 textarea.vcfGenotypeText
 {
