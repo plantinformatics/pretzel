@@ -118,7 +118,11 @@ Genotypes
         {{!-- possibly : class="list-group" --}}
 
         <li> {{!-- possibly :  class="list-group-item" --}}
-          <label style="display:inline">Format to request :</label>
+          <label style="display:inline">Format :
+          {{#ember-tooltip side="right" delay=500}}
+            Format for request and display
+          {{/ember-tooltip}}
+          </label>
           {{radio-button value='CATG' groupValue=requestFormat
             changed=(action requestFormatChanged preventDefault=false)
           }}

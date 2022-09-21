@@ -485,7 +485,10 @@ function vcfFeatures2MatrixView(requestFormat, added) {
         .map((f) => {
         let
           sampleValue = Ember_get(f, 'values.' + sampleName),
-          fx = featureForMatrixColumn(f, sampleName, sampleValue, requestFormat);
+          refAltValues = refAlt
+            .map((ra, i) => f.values[refAlt[i]]),
+          valueInFormat = valueToFormat(requestFormat, refAltValues, sampleValue),
+          fx = featureForMatrixColumn(f, sampleName, valueInFormat, requestFormat);
         if ((f.get('blockId.id') === block.get('id')) && (sampleValue !== undefined)) {
           featuresMatchSample++;
         }
@@ -501,6 +504,69 @@ function vcfFeatures2MatrixView(requestFormat, added) {
   }, leftColumns);
   dLog(fnName, displayData);
   return displayData;
+}
+
+function valueIsCopies(alleleValue) {
+  return alleleValue?.match(/^[012]/);
+}
+
+/** convert valueIn to requestFormat, if not already in that format.
+ * @param requestFormat 'CATG', 'Numerical', ...
+ * @param refAltValues  [refValue, altValue]
+ * @param valueIn sampleValue.  possible values :
+ *  undefined
+ *  'A' 'C' 'T' 'G' '0' '1' '2'
+ *  '0/1' '1/0' './.' 
+ *  or matching /^[ACTG][/|][ACTG]$/, the 2 allele values are different.
+ * @return string value  in requestFormat
+ */
+function valueToFormat(requestFormat, refAltValues, valueIn) {
+  const
+  fnName = 'valueToFormat';
+  let valueOut;
+  if ((valueIn === undefined) || (valueIn === './.') || (valueIn === '')) {
+    valueOut = valueIn;
+  } else {
+    const
+    alleles = valueIn.split(/[/|]/),
+    separator = (alleles?.length === 2) && valueIn[2],
+    // alleles = valueIn.match(/^\([012CATG]\)[/|]\([012CATG]\)/),
+    formatIsNumeric = valueIsCopies(valueIn);
+    //      cellIsCATG = value.match(/[CATG]/),
+
+    if (formatIsNumeric && (requestFormat === 'CATG')) {
+      // convert Numerical to CATG
+      if (alleles?.length === 2) {
+        /**  valueIn matches /^[01][/|][01]$/; alleles[*] are both [01] */
+        valueOut = alleles.map((a) => refAltValues[+a])
+          .join(separator);
+      } else {
+        // expect that valueIn is '0' or '2', not '1'.
+        valueOut = refAltValues[+(+valueIn > 0)];
+      }
+    } else if (! formatIsNumeric && (requestFormat === 'Numerical')) {
+      // convert CATG to Numerical
+      const altValue = refAltValues[+true];
+      if (alleles?.length === 2) {
+        /** valueIn matches /^[ACTG][/|][ACTG]$/
+         * instead of mapping to '0/1' or '1/0', may go direct to '1'
+         * .join() converts number/s to string
+         */
+        valueOut = alleles.map((a) => +(a === altValue))
+          .join(separator);
+      } else {
+        // valueIn matches /^[ACTG]/
+        valueOut = (valueIn === altValue) ? '2' : '0';
+      }
+    } else {
+      valueOut = valueIn;
+    }
+  }
+  if (trace > 3) {
+    dLog(fnName, requestFormat, refAltValues, valueIn, valueOut);
+  }
+
+  return valueOut;
 }
 
 function featureForMatrixColumn(f, sampleName, sampleValue, requestFormat) {
@@ -626,5 +692,6 @@ export {
   refAlt,
   vcfGenotypeLookup,
   addFeaturesJson, vcfFeatures2MatrixView, vcfFeatures2MatrixViewRows,
+  valueIsCopies,
   featureSampleNames,
 };

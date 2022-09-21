@@ -178,6 +178,7 @@ export default class PanelManageGenotypeComponent extends Component {
 
   /** The user can choose the format of information to request from bcftools,
    * which is associated with a corresponding Renderer. */
+  @tracked
   requestFormat = undefined;
   requestFormatChanged(value) {
     dLog('requestFormatChanged', value);
@@ -447,7 +448,10 @@ export default class PanelManageGenotypeComponent extends Component {
     }
   }
 
-  @computed('axisBrush.brushedDomain', 'vcfGenotypeSamplesSelected', 'blockService.viewedVisible')
+  @computed(
+    'axisBrush.brushedDomain', 'vcfGenotypeSamplesSelected', 'blockService.viewedVisible',
+    'requestFormat'
+  )
   get selectedSampleEffect () {
     const fnName = 'selectedSampleEffect';
     const viewedVisible = this.blockService.viewedVisible;

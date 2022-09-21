@@ -20,6 +20,7 @@ import {
   highlightFeature,
 } from '../utils/panel/axis-table';
 import { afterSelectionFeatures } from '../utils/panel/feature-table';
+import { valueIsCopies } from '../utils/data/vcf-feature';
 import { toTitleCase } from '../utils/string';
 import { thenOrNow } from '../utils/common/promises';
 
@@ -56,9 +57,6 @@ function copiesColourClass(alleleValue) {
   return 'copyNum_' + alleleValue;
 }
 
-function valueIsCopies(alleleValue) {
-  return alleleValue?.match(/^[012]/);
-}
 
 // -----------------------------------------------------------------------------
 
@@ -173,11 +171,17 @@ export default Component.extend({
   // ---------------------------------------------------------------------------
 
   /** 
-   *    selectPhase : string : '0', '1'
+   *    selectPhase : string : '0', '1', 'both'
    */
 
-  /** The user can toggle the phase of a diploid which is shown by CATGRenderer. */
-  selectPhase : '0',
+  /** The user can toggle the phase of a diploid which is shown by CATGRenderer.
+   * or view both phases / alleles
+   *
+   * This could be @tracked, and added as dependency of rendererConfigEffect(),
+   * but that seems not required because changing .selectPhase (somehow) already
+   * triggers didRender().
+   */
+  selectPhase : 'both',
   selectPhaseChanged(value) {
     dLog('selectPhaseChanged', value);
     this.selectPhase = value;
@@ -415,11 +419,15 @@ export default Component.extend({
        */
       let alleles = value.split(/[/|]/);
       if (alleles?.length === 2) {
+        if (this.selectPhase === 'both') {
         diagonal = alleles[0] !== alleles[1];
         if (diagonal) {
           td.classList.add('diagonal-triangle');
         }
-        // value = alleles[+this.selectPhase];
+        } else {
+          value = alleles[+this.selectPhase];
+          $(td).text(value);
+        }
       }
       /** colour classes */
       let colours = alleles.map(valueToColourClass);
