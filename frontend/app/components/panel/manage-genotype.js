@@ -425,6 +425,7 @@ export default class PanelManageGenotypeComponent extends Component {
             this.displayDataRows = sampleGenotypes.rows;
             this.columnNames = ['Block', 'Name'].concat(sampleGenotypes.sampleNames);
           } else {
+            /** Omit Ref & Alt from sampleNames because vcfFeatures2MatrixView() prepends refAltColumns. */
             function omitRefAlt(sampleName) {
               return ! refAlt.includes(sampleName) && sampleName;
             }

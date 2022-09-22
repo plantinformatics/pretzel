@@ -398,6 +398,26 @@ function featureValues(feature, fieldName) {
   const value = featureValuesField(feature, fieldName);
   return featureNameValue(feature, value);
 }
+/** When in the 012 view, colour the ref/alt with the 2 colours used for the
+ * rest of the genotypes.
+ * Used when (requestFormat === 'Numerical').
+ */
+function refAltNumericalValue(fieldName) {
+  /** technically alt value is 1 copy of alt, so 1 makes sense, but 2 will have consistent colour.  */
+  return (fieldName === 'ref') ? '0' : '2';
+}
+/** As for featureValues(), but used for Ref & Alt values to show them according
+ * to requestFormat.
+ */
+function featureValuesRefAlt(requestFormat, feature, fieldName) {
+  let value;
+  if (requestFormat === 'Numerical') {
+    value = refAltNumericalValue(fieldName);
+  } else {
+    value = featureValuesField(feature, fieldName);
+  }
+  return featureNameValue(feature, value);
+}
 function featureBlockColour(feature, i) {
   /** preferably use : FeatureTicks:featureColour() (factor out of components/draw/axis-1d.js)  */
   const
@@ -460,7 +480,7 @@ function vcfFeatures2MatrixView(requestFormat, added) {
   const
   refAltColumns = refAlt
     .map((ra, i) => ({
-      features : sortedFeatures.map((f) => featureValues(f, ra)),
+      features : sortedFeatures.map((f) => featureValuesRefAlt(requestFormat, f, ra)),
       datasetId : {id : ''},
       name : refAltHeadings[i]}));
 
@@ -604,7 +624,8 @@ function vcfFeatures2MatrixViewRows(requestFormat, featuresArrays) {
   }, {rows : [], sampleNames : []});
   return result;
 }
-/**
+/** Similar to vcfFeatures2MatrixView(), but merge rows with identical position,
+ * i.e. implement gtMergeRows
  * @param features block.featuresInBrush. one array, one block.
  * @param result : {rows, sampleNames}. function can be called via .reduce()
  */
@@ -634,7 +655,11 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features) {
             }
             return sampleName;
           }
+          /* unchanged */ /* sampleNamesSet = */
           featureSampleNames(sampleNamesSet, feature, caseRefAlt);
+          if (refAlt.includes(sampleName)) {
+            sampleValue = refAltNumericalValue(sampleName);
+          }
           const 
           // featureNameValue(feature, sampleValue),
           fx = stringSetFeature(sampleValue, feature),
