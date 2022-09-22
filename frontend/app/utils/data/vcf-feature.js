@@ -625,7 +625,7 @@ function vcfFeatures2MatrixViewRows(requestFormat, featuresArrays) {
   return result;
 }
 /** Similar to vcfFeatures2MatrixView(), but merge rows with identical position,
- * i.e. implement gtMergeRows
+ * i.e. implement options.gtMergeRows
  * @param features block.featuresInBrush. one array, one block.
  * @param result : {rows, sampleNames}. function can be called via .reduce()
  */

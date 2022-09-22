@@ -4386,7 +4386,15 @@ export default Component.extend(Evented, {
       let yp = oa.y[brushedAxisID];
       ensureYscaleDomain(yp, oa.axes[brushedAxisID]);
       let brushedDomain = brushRange ? axisRange2Domain(brushedAxisID, brushRange) : undefined;
-      axisBrush.set('brushedDomain', brushedDomain);
+      /** brushHelper() may be called when brushedDomain has not changed :
+       * d3.select(gBrush).call(yp.brush.move, newBrushExtent);
+       * calls brushended(), which calls brushHelper().
+       * Don't set brushedDomain when it has not changed, because it is a
+       * dependency of many CPs.
+       */
+      if (! isEqual(brushedDomain, axisBrush.brushedDomain)) {
+        axisBrush.set('brushedDomain', brushedDomain);
+      }
 
       let axis = oa.axes[brushedAxisID],
           axis1d = axis && axis.axis1d;
