@@ -79,6 +79,7 @@ export default Service.extend(Evented, {
      */
     datasets.forEach(function(dataset) {
       let datasetName = dataset.get('name');
+      id2Server[datasetName] = server;
       let blocks = dataset.get('blocks');
       if (blocks) {
         blocks.forEach(function(block) {

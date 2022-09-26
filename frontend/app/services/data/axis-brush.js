@@ -47,7 +47,7 @@ export default Service.extend(Evented, {
       previous = this.get(previousName),
       unchanged = (blocks.length === previous?.length) &&
         ! blocks.find((b, i) => b.id !== previous[i].id);
-      // if (trace_axisBrush)
+      if (trace_axisBrush)
         dLog(fnName, blocks, unchanged);
       if (unchanged) {
         blocks = previous;

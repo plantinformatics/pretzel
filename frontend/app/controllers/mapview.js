@@ -199,7 +199,10 @@ export default Controller.extend(Evented, {
       return block;
     },
 
+    /** If block is not selected, select it.
+     */
     selectBlock: function(block) {
+      if (this.get('selectedBlock') !== block) {
       dLog('SELECT BLOCK mapview', block.get('name'), block.get('mapName'), block.id, block);
       this.set('selectedBlock', block);
       d3.selectAll("ul#maps_aligned > li").classed("selected", false);
@@ -215,6 +218,7 @@ export default Controller.extend(Evented, {
       /* if the block tab in right panel is not displayed then select the block's dataset. */
       if (! (queryParams.options && queryParams.parsedOptions.blockTab)) {
         this.send('selectDataset', block.datasetId);
+      }
       }
     },
     selectBlockById: function(blockId) {

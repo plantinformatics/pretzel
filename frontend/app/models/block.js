@@ -233,10 +233,10 @@ export default Model.extend({
     let isReference = this.isData || ! this.get('datasetId.parentName');
     return isReference;
   }),
-  currentDomain : computed('referenceBlock', 'range',  function () {
+  currentDomain : computed('zoomedDomain', 'referenceBlock', 'range',  function () {
     let domain = this.get('zoomedDomain');
     if (! domain)  {
-      let referenceBlock = this.get('referenceBlock');
+      let referenceBlock = this.get('referenceBlockOrSelf');
       if (referenceBlock) {
         domain = referenceBlock.get('range');
       } else {
