@@ -143,7 +143,13 @@ export default Component.extend({
  */
   numericalData: true,
 
+  /** This is passed in as a argument to matrix-view, so this initialisation
+   * seems out of place.
+   */
   selectedBlock: null,
+
+  selectedColumnName : null,
+  selectedSampleColumn : false,
 
   // ---------------------------------------------------------------------------
 
@@ -338,6 +344,20 @@ export default Component.extend({
     selectedRefAlt = refAltHeadings.includes(this.selectedColumnName);
     selectedSampleColumn = this.selectedColumnName && ! selectedRefAlt */
     this.set('selectedSampleColumn', col >= this.colSample0);
+
+    if (! this.firstSelectionDone) {
+      later(() => {
+        this.firstSelectionDone = true;
+        /** Render is not occurring on the first cell selection; current
+         * work-around is to get abValues and rendererConfigEffect, and call
+         * render().
+         * rendererConfigEffect depends on abValues.
+         */
+        this.get('abValues');
+        this.get('rendererConfigEffect');
+        this.table?.render();
+      });
+    }
   },
 
   // ---------------------------------------------------------------------------
@@ -355,7 +375,9 @@ export default Component.extend({
       block = this.get('columns')[col_name];
     }
     /* selectBlock() causes a switch to the Dataset tab, which is not desired
-     * when using the genotype tab. */
+     * when using the genotype tab.
+     * For genotype / blockSamples, see : afterSelection() :  .selectedColumnName,  .selectedSampleColumn
+     */
     if (block && ! this.blockSamples) {
       thenOrNow(block, (b) => this.attrs.selectBlock(b));
     }
@@ -681,6 +703,7 @@ export default Component.extend({
   }),
   /** For each row, collate an array of cell data for each column,
    * and determine [min, avg, max] of each row.
+   * For genotype / blockSamples : numeric value may be 0, 1, 2.
    * @return an array of, for each row, [min, avg, max]
    */
   rowRanges: computed('dataByRow', function() {
@@ -704,14 +727,17 @@ export default Component.extend({
       let avg = 0;
       let sum = 0;
       row.forEach(function(x) {
-        sum += x;
-        if (x < min) {
-          min = x;
-        }
-        if (x > max) {
-          max = x;
+        if (! isNaN(x)) {
+          sum += x;
+          if (x < min) {
+            min = x;
+          }
+          if (x > max) {
+            max = x;
+          }
         }
       });
+      // avg is not used
       avg = sum / row.length;
       ranges.push([min, avg, max]);
     });

@@ -23,7 +23,11 @@ const dLog = console.debug;
 
 
 /**
- * @param block selected data block
+ * @param selectBlock action
+ * @param selectedBlock selected data block
+ * @param selectedFeatures
+ * @param updatedSelectedFeatures 'updateSelectedFeatures'
+ * @param userSettings  userSettings.genotype
  */
 export default class PanelManageGenotypeComponent extends Component {
   @service() controls;
