@@ -239,8 +239,6 @@ export default class PanelManageGenotypeComponent extends Component {
   }
 
   /** Return brushed VCF blocks
-   * which are ! isZoomedOut.  This enables featuresCountsThreshold to limit the
-   * number of rows displayed in the genotype table.
    *
    * @return [[axisBrush, vcfBlock], ...]
    * axisBrush will be repeated when there are multiple vcfBlocks on the axis of that axisBrush.
@@ -256,17 +254,15 @@ export default class PanelManageGenotypeComponent extends Component {
     blocks = axisBrushes.map((ab) => {
       let
       axis1d = ab.block.get('axis1d'),
-      /** related : block : isZoomedOut(), isBrushableFeatures(), featuresCountIncludingZoom() */
       vcfBlocks = axis1d.brushedBlocks
         .filter(
-          (b) =>
-            b.get('datasetId').content.hasTag('VCF') &&
-            (b.get('featuresCountIncludingBrush') <= b.get('featuresCountsThreshold'))),
+          (b) => b.get('datasetId').content.hasTag('VCF')),
       ab1 = vcfBlocks.map((vb) => [ab, vb]);
       return ab1;
     })
       .flat();
     dLog(fnName, axisBrushes, blocks, this.blockService.viewed.length, this.blockService.params.mapsToView);
+
     if (blocks.length) {
       if (this.args.userSettings.lookupBlock !== undefined) {
         this.axisBrushBlockIndex = blocks.findIndex((abb) => abb[1] === this.args.userSettings.lookupBlock);
@@ -410,7 +406,14 @@ export default class PanelManageGenotypeComponent extends Component {
       referenceBlock = this.axisBrush?.get('block'),
       /** expect : block.referenceBlock.id === referenceBlock.id
        */
-      blocks = this.brushedVCFBlocks.map((abb) => abb[1]);
+      blocks = this.brushedVCFBlocks.map((abb) => abb[1])
+      /* Filter out blocks
+       * which are isZoomedOut.  This enables featuresCountsThreshold to limit the
+       * number of rows displayed in the genotype table.
+       * related : block : isZoomedOut(), isBrushableFeatures(), featuresCountIncludingZoom()
+       */
+        .filter((b) => 
+            b.get('featuresCountIncludingBrush') <= b.get('featuresCountsThreshold'));
       if (blocks.length === 0) {
         blocks = this.blockService.viewed.filter((b) => b.hasTag('VCF'));
       }
