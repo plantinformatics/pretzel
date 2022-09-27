@@ -8,11 +8,15 @@
   onClose=(action (mut this.showInputDialog) false)
   targetAttachment="center"
   translucentOverlay=true
+  clickOutsideToClose=false
+  onClickOverlay=(action this.userMessage "Use X to close Samples dialog")
 
   modal-id="split-container-dialog-modal"
   title="VCF Lookup Inputs"
   header-icon='search'
 }}
+
+<button class="close" onClick={{action (mut this.showInputDialog) false}} type="button">╳</button>
 
 Genotypes
 

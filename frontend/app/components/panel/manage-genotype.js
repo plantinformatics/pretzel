@@ -513,4 +513,11 @@ export default class PanelManageGenotypeComponent extends Component {
   }
 
   // ---------------------------------------------------------------------------
+
+  @action
+  userMessage(text) {
+    alert(text);
+  }
+
+  // ---------------------------------------------------------------------------
 }
