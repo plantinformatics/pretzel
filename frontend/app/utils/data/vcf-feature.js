@@ -346,11 +346,31 @@ function matchExtract(string, regexp, valueIndex) {
   return value;
 }
 
-function featureName(feature) {
+
+/** Passed from featureForMatrixColumn() to featureName(), which is also used by
+ * this whole suite of functions, so it will have to be passed through, maybe as
+ * formatOptions.  Defer until the formatting is settled.
+ *   featureNameValue(),
+ *   featurePosition(),
+ *   featureValues(),
+ *   featureValuesRefAlt(),
+ *   featureBlockColour(),
+ */
+let singleBlock;
+/**
+ * @param singleBlock
+ * If only 1 block / dataset, then dataset name is not required in column
+ * headings, and not required to disambiguate feature (row) names.
+ * @param feature
+ */
+function featureName(/*singleBlock,*/ feature) {
   /** Use first 5 chars of datasetId; will remove this from left column,
    * but retain prefix for uniqueness until row merging is implemented.
    */
-  let name = feature.get('blockId.brushName').slice(0, 5) + ' ' + feature.name;
+  let name = feature.name;
+  if (! singleBlock) {
+    name = feature.get('blockId.brushName').slice(0, 5) + ' ' + name;
+  }
   return name;
 }
 function featureValue(f) {
@@ -457,6 +477,11 @@ function vcfFeatures2MatrixView(requestFormat, added) {
     result.set(feature.get('blockId.content'), true);
     return result;
   }, new Map());
+  /** If only 1 block / dataset, then dataset name is not required in column
+   * headings, and not required to disambiguate feature (row) names.
+   * This can be passed featurePosition() -> featureNameValue() -> featureName()
+   */
+  singleBlock = blocks.size === 1;
 
   /** sort features by .value[0] */
   const
@@ -508,7 +533,7 @@ function vcfFeatures2MatrixView(requestFormat, added) {
           refAltValues = refAlt
             .map((ra, i) => f.values[refAlt[i]]),
           valueInFormat = valueToFormat(requestFormat, refAltValues, sampleValue),
-          fx = featureForMatrixColumn(f, sampleName, valueInFormat, requestFormat);
+          fx = featureForMatrixColumn(f, sampleName, valueInFormat, {requestFormat, singleBlock});
         if ((f.get('blockId.id') === block.get('id')) && (sampleValue !== undefined)) {
           featuresMatchSample++;
         }
@@ -516,7 +541,7 @@ function vcfFeatures2MatrixView(requestFormat, added) {
       });
       if (featuresMatchSample) {
         let
-        column = blockToMatrixColumn(block, sampleName, features);
+        column = blockToMatrixColumn(singleBlock, block, sampleName, features);
         result.push(column);
       }
     };
@@ -589,21 +614,25 @@ function valueToFormat(requestFormat, refAltValues, valueIn) {
   return valueOut;
 }
 
-function featureForMatrixColumn(f, sampleName, sampleValue, requestFormat) {
+function featureForMatrixColumn(f, sampleName, sampleValue, formatOptions) {
   const
-  value = requestFormat ? sampleValue : matchExtract(sampleValue, /^([^:]+):/, 1),
+  requestFormat = formatOptions.requestFormat,
+  value = requestFormat ? sampleValue : matchExtract(sampleValue, /^([^:]+):/, 1);
+  singleBlock = formatOptions.singleBlock;
+  const
   /** equivalent : featureNameValue(f, value) */
-  name = featureName(f);
+  name = featureName(/*formatOptions.singleBlock,*/ f);
   let
   fx = {name, value};
   fx[featureSymbol] = f;
   return fx;
 }
 
-function blockToMatrixColumn(block, sampleName, features) {
+function blockToMatrixColumn(singleBlock, block, sampleName, features) {
   const
-  datasetId = block ? Ember_get(block, 'datasetId.id') : '',
-  name = (block ? Ember_get(block, 'name') + ' ' : '') + sampleName,
+  showDatasetAndScope = ! singleBlock && block,
+  datasetId = showDatasetAndScope ? Ember_get(block, 'datasetId.id') : '',
+  name = (showDatasetAndScope ? Ember_get(block, 'name') + ' ' : '') + sampleName,
   column = {features,  datasetId : {id : datasetId}, name};
   return column;
 }
