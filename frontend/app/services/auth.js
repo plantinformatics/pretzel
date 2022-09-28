@@ -365,7 +365,16 @@ export default Service.extend({
    */
   vcfGenotypeLookup(apiServer, parent, scope, preArgs, nLines, options) {
     dLog('services/auth vcfGenotypeLookup', parent, scope, preArgs, nLines, options);
-    return this._ajax('Blocks/vcfGenotypeLookup', 'GET', {server : apiServer, parent, scope, preArgs, nLines, options}, true);
+    const
+    paramLimit = 5,
+    samples = preArgs.samples,
+    post = samples?.length > paramLimit,
+    data = {parent, scope, preArgs, nLines, options};
+    return this._ajax(
+      'Blocks/vcfGenotypeLookup' + (post ? 'Post' : ''),
+      post ? 'POST' : 'GET',
+      post ? JSON.stringify(data) : data,
+      true, apiServer);
   },
 
 

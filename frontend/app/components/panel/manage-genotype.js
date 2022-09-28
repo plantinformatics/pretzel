@@ -378,6 +378,11 @@ export default class PanelManageGenotypeComponent extends Component {
             }
           }
 
+      })
+      .catch((error) => {
+        const
+        message = error.responseJSON?.error?.message || error;
+        dLog(fnName, message, error.status, error.statusText);
       });
     }
   }

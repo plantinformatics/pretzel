@@ -1315,8 +1315,11 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     fnName = 'vcfGenotypeLookup';
     vcfGenotypeLookup(parent, scope, preArgs, nLines, undefined, cb);
   };
+  /** POST version of Feature.search, which is addressed by verb GET.
+   */
+  Block.vcfGenotypeLookupPost = Block.vcfGenotypeLookup;
 
-  Block.remoteMethod('vcfGenotypeLookup', {
+  const vcfGenotypeLookupOptions = {
     accepts: [
       {arg: 'parent', type: 'string', required: true},
       {arg: 'scope', type: 'string', required: true},
@@ -1326,7 +1329,14 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     http: {verb: 'get'},
     returns: {arg: 'text', type: 'string'},
     description: "VCF genotype Lookup e.g. samtools bcftools, returns subset of .vcf TSV table as text string"
-  });
+  };
+  Block.remoteMethod('vcfGenotypeLookup', vcfGenotypeLookupOptions);
+
+  const vcfGenotypeLookupPostOptions = Object.assign({}, vcfGenotypeLookupOptions);
+  // or delete vcfGenotypeLookupPostOptions.http, because 'post' is default for http.verb
+  vcfGenotypeLookupPostOptions.http = {verb: 'post'};
+  Block.remoteMethod('vcfGenotypeLookupPost', vcfGenotypeLookupPostOptions);
+
 
   // ---------------------------------------------------------------------------
 

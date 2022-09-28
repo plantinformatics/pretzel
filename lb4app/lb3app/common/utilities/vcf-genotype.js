@@ -48,7 +48,8 @@ function vcfGenotypeLookup(parent, scope, preArgs, nLines, dataOutCb, cb) {
     // There is not an option for 0 samples, except via using an empty file :
     moreParams = moreParams.concat('-S', '/dev/null');
   }
-  console.log(fnName, parent, preArgs, moreParams);
+  /** avoid tracing preArgs.samples, and moreParams[9] which is the samples. */
+  console.log(fnName, parent, preArgs.region, preArgs.requestFormat, preArgs.samples?.length, moreParams.slice(0, 9));
   if (! dataOutCb) {
     dataOutCb = dataOutReplyClosureLimit(cb, nLines);
   }

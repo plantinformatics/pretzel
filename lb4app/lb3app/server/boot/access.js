@@ -195,6 +195,7 @@ module.exports = function(app) {
       context.property == 'dnaSequenceLookup' ||
       context.property == 'vcfGenotypeSamples' ||
       context.property == 'vcfGenotypeLookup' ||
+      context.property == 'vcfGenotypeLookupPost' ||
         // Alias
       context.property == 'bulkCreate' ||
         // Block

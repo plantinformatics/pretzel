@@ -3,6 +3,9 @@
 # Based on dnaSequenceSearch.bash / dnaSequenceLookup.bash, and about 1/2 the code is common;
 # maybe factor to a library script in $resourcesDir/
 
+# called from : common/utilities/vcf-genotype.js : vcfGenotypeLookup()
+
+
 serverDir=$PWD
 # $inContainer is true (0) if running in a container.
 [ "$PWD" = / ]; inContainer=$?
@@ -89,6 +92,8 @@ then
   parent="$4"
   scope="$5"
   shift 5
+  # Switch off logging for preArgs, which contains samples which may be a large list.
+  set +x
   preArgs="$*"
   echo fileName="$fileName", useFile=$useFile, command="$command", parent="$parent", scope="$scope", preArgs=$preArgs  >> $logFile
 else
@@ -96,9 +101,12 @@ else
   parent="$2"
   scope="$3"
   shift 3
+  set +x
   preArgs="$*"
   echo command="$command", parent="$parent", scope="$scope", preArgs=$preArgs  >> $logFile
 fi
+set -x
+
 
 if [ -z "$scope" ]
 then
@@ -181,13 +189,18 @@ else
     fi
     if [ -f "$vcfGz".csi ]
     then
+      # Switch off logging for $command - contains preArgs, which contains samples which may be a large list.
+      # That won't be needed when preArgs.samples is output to a file, and -S (--samples-file) used instead.
+      # see vcf-genotype.js : vcfGenotypeLookup() : preArgs.samples
+      set +x
       # some elements in preArgs may contain white-space, e.g. format "%ID\t%POS[\t%TGT]\n"
-      if ! time "$bcftools" "$command" "$vcfGz" "${@}"
+      if ! time "$bcftools" "$command" "$vcfGz" "${@}" 2>&$F_ERR
       then
         echo 1>&$F_ERR 'Error:' "Unable to run bcftools $command $vcfGz $*"
       else
         status=$?	# 0
       fi
+      set -x
     fi
   fi
 
