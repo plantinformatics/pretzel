@@ -224,7 +224,8 @@ export default Component.extend({
    */
   customBorders : computed('colSample0', function () {
     let customBorders;
-    if (this.colSample0 > 1) {
+    const nRows = this.table?.countRows();
+    if ((this.colSample0 > 1) && nRows) {
     /** index of the column before the first sample column. */
     const colAlt = this.colSample0 - 1;
     customBorders
@@ -236,7 +237,7 @@ export default Component.extend({
           col: colAlt
         },
         to: {
-          row: 1000,
+          row: nRows,
           col: colAlt
         }
       },
