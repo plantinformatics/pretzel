@@ -83,6 +83,10 @@ export default class PanelManageGenotypeComponent extends Component {
   @alias('args.userSettings.showResultText')
   showResultText;
 
+  /** Warning message from failure of vcfGenotypeLookup or vcfGenotypeSamples API */
+  @tracked
+  lookupMessage = null;
+
   // ---------------------------------------------------------------------------
 
   constructor() {
@@ -321,6 +325,8 @@ export default class PanelManageGenotypeComponent extends Component {
       let
       preArgs = 'query -l';
 
+      this.lookupMessage = null;
+
       let textP = this.auth.vcfGenotypeSamples(
         this.apiServerSelectedOrPrimary, vcfDatasetId, scope,
         {} );
@@ -328,9 +334,24 @@ export default class PanelManageGenotypeComponent extends Component {
         (text) => {
           dLog(fnName, text);
           this.vcfGenotypeSamplesText =  text?.text;
-        });
+        })
+        .catch(this.showError.bind(this, fnName));
     }
   }
+
+  // ---------------------------------------------------------------------------
+
+  showError(fnName, error) {
+    let
+    message = error.responseJSON?.error?.message || error;
+    dLog(fnName, message, error.status, error.statusText);
+    const match = message?.split('Error: Unable to run bcftools');
+    if (match.length > 1) {
+      message = match[0];
+    }
+    this.lookupMessage = message;
+  }
+
 
   // ---------------------------------------------------------------------------
 
@@ -350,6 +371,7 @@ export default class PanelManageGenotypeComponent extends Component {
     domainInteger = this.vcfGenotypeLookupDomain,
     vcfDatasetId = this.lookupDatasetId;
     if (samples?.length && domainInteger && vcfDatasetId) {
+      this.lookupMessage = null;
       let
       scope = this.lookupScope,
       textP = vcfGenotypeLookup(this.auth, this.apiServerSelectedOrPrimary, samples, domainInteger,  this.requestFormat, vcfDatasetId, scope, this.rowLimit);
@@ -379,11 +401,7 @@ export default class PanelManageGenotypeComponent extends Component {
           }
 
       })
-      .catch((error) => {
-        const
-        message = error.responseJSON?.error?.message || error;
-        dLog(fnName, message, error.status, error.statusText);
-      });
+      .catch(this.showError.bind(this, fnName));
     }
   }
 

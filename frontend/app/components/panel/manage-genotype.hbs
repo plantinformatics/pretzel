@@ -203,6 +203,12 @@ Genotypes
 
 {{!-- --------------------------------------------------------------------- --}}
 
+{{#if lookupMessage}}
+  {{elem/panel-message warningMessage=lookupMessage}}
+{{/if}}
+
+{{!-- --------------------------------------------------------------------- --}}
+
   <div style="margin-top:2ex">
 
     {{#elem/panel-container state="primary" showComponent=showResultText as |panelContainer|}}
