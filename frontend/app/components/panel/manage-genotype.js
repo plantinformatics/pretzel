@@ -406,14 +406,17 @@ export default class PanelManageGenotypeComponent extends Component {
       referenceBlock = this.axisBrush?.get('block'),
       /** expect : block.referenceBlock.id === referenceBlock.id
        */
-      blocks = this.brushedVCFBlocks.map((abb) => abb[1])
+      blocks = this.brushedVCFBlocks.map((abb) => abb[1]);
       /* Filter out blocks
-       * which are isZoomedOut.  This enables featuresCountsThreshold to limit the
+       * which are isZoomedOut.  This is one way to enable .rowLimit
+       * (or block.featuresCountsThreshold) to limit the
        * number of rows displayed in the genotype table.
        * related : block : isZoomedOut(), isBrushableFeatures(), featuresCountIncludingZoom()
-       */
+       * (previously used : b.get('featuresCountsThreshold') in place of .rowLimit)
+       * Now featuresArrays[] are sliced to rowLimit, so this may not be required, trialling without.
         .filter((b) => 
-            b.get('featuresCountIncludingBrush') <= b.get('featuresCountsThreshold'));
+            b.get('featuresCountIncludingBrush') <= this.rowLimit);
+       */
       if (blocks.length === 0) {
         blocks = this.blockService.viewed.filter((b) => b.hasTag('VCF'));
       }
@@ -423,7 +426,8 @@ export default class PanelManageGenotypeComponent extends Component {
         featuresArrays = blocks
         .filterBy('visible')
           .map((b) => b.featuresInBrush)
-          .filter((features) => features.length);
+          .filter((features) => features.length)
+          .map((features) => features.slice(0, this.rowLimit));
         if (featuresArrays.length) {
           if (this.urlOptions.gtMergeRows) {
             /** {rows, sampleNames}; */
@@ -458,7 +462,7 @@ export default class PanelManageGenotypeComponent extends Component {
 
   @computed(
     'axisBrush.brushedDomain', 'vcfGenotypeSamplesSelected', 'blockService.viewedVisible',
-    'requestFormat'
+    'requestFormat', 'rowLimit'
   )
   get selectedSampleEffect () {
     const fnName = 'selectedSampleEffect';
