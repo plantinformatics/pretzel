@@ -267,6 +267,15 @@ export default class PanelManageGenotypeComponent extends Component {
     return {names, selected};
   }
 
+  /** @return number of sample names in .vcfGenotypeSamplesText
+   */
+  @computed('vcfGenotypeSamplesText')
+  get vcfGenotypeSamplesCount() {
+    const count = this.vcfGenotypeSamplesText?.split('\n').length;
+    return count;
+  }
+
+
   /** Return brushed VCF blocks
    *
    * @return [[axisBrush, vcfBlock], ...]
@@ -517,13 +526,15 @@ export default class PanelManageGenotypeComponent extends Component {
   @computed(
     'axisBrush.brushedDomain',
 
-    /* Currently all samples results received are displayed; probably will add
+    /* In vcfFeatures2MatrixViewRows() / gtMergeRows currently all samples
+     * results received are displayed; vcfFeatures2MatrixView() filters by the
+     * given added.sampleNames.   Probably will add
      * checkboxes in samples dialog in place of content-editable
      * vcfGenotypeSamplesSelected, then it would make sense to narrow the
      * display to just the samples the user currently selected, and then this
      * dependancy should be enabled :
-     *   'vcfGenotypeSamplesSelected',
      */
+    'vcfGenotypeSamplesSelected',
 
     'blockService.viewedVisible',
     'requestFormat', 'rowLimit'

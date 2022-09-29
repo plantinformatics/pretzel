@@ -800,7 +800,7 @@ export default Component.extend({
         timeMeasure =
           'rows : ' + table.countRows() +
           ', cols : ' + table.countCols() +
-          ', time : ' + (endTime - startTime);
+          ', time : ' + (endTime - startTime) + ' ms';
         /** displaying via { {this.timeMeasure}} in hbs causes re-render, so display using jQuery. */
         $('#timeMeasure').text(timeMeasure);
       }

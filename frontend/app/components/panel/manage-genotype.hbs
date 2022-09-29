@@ -17,10 +17,11 @@
 
 <button class="close" onClick={{action (mut this.showInputDialog) false}} type="button">╳</button>
 
-Genotypes
+{{!-- Genotypes --}}
 
 {{log 'flowsService.axisBrush' flowsService.axisBrush}}
 
+Server : 
 {{this.apiServerSelectedOrPrimary.name}}
 
 <div class="genotype">
@@ -73,7 +74,7 @@ Genotypes
   <button type="button" onclick={{action this.vcfGenotypeSamples}} class="btn btn-info btn-xs">Get samples list</button>
 
   <div>
-    <div>{{this.vcfGenotypeSamplesText.length}}</div>
+    <div>{{this.vcfGenotypeSamplesCount}}</div>
     <textarea class="vcfGenotypeSamplesText">{{this.vcfGenotypeSamplesText}}</textarea>
   </div>
 </div>
@@ -153,7 +154,7 @@ Genotypes
       <li class="list-group-item horiz-2">
         <div>
           <label>Interval limit</label>
-          <span class="sub-label">{{ this.intervalLimit }}</span>
+          <span class="sub-label">{{ this.intervalLimit }} Mb</span>
           <input type="range"
            value=0
            oninput={{action this.intervalLimitInput}}
@@ -162,7 +163,10 @@ Genotypes
         </div>
 
         <div>
-          <label>Result rows</label>
+          <label>Rows</label>
+          {{#ember-tooltip side="right" delay=500}}
+            Limit of rows in result, and rows displayed per dataset.
+          {{/ember-tooltip}}
           <span class="sub-label">{{ this.rowLimit }}</span>
           <input type="range"
            value=100
