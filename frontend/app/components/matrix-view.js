@@ -162,8 +162,11 @@ export default Component.extend({
   },
 
   didRender() {
-    once(() => ! this.isDestroying && this.createOrUpdateTable());
+    later(this.renderOnceTable, 500);
   },
+  renderOnceTable : computed( function() {
+    return () => ! this.isDestroying && this.createOrUpdateTable();
+  }),
 
   createOrUpdateTable() {
     if (! this.table) {
@@ -749,6 +752,7 @@ export default Component.extend({
    * column headings from keys(.data), .rows, .rowHeaderWidth, .colHeaderHeight.
    */
   updateTable: observer(/*'displayData.[]'*/ 'rows', 'selectedBlock', 'customBorders', function() {
+    const fnName = 'updateTable';
     let t = $("#observational-table");
     let rows = this.get('rows');
     let rowHeaderWidth = this.get('rowHeaderWidth');
@@ -764,7 +768,16 @@ export default Component.extend({
         return '<div class="head">' + x + '</div>';
       });
 
-      for(let i=0; i<2; i++) {
+      const
+      largeArea = (table.countRows() * table.countCols() > 300) || (data.length > 50),
+      /** Repeat of table.updateSettings() dates from the original version,
+       * e9fb0c0f; probably 2 rounds of rendering enabled handsontable to
+       * calculate required sizes for content. not clear if still required - try
+       * without and after updating handsontable.
+       * Disable it for performance when the table area is large.
+       */
+      repeat = largeArea ? 1 : 2;
+      for(let i=0; i<repeat; i++) {
         const settings = {
           colHeaders: columns,
           rowHeaders: rows,
@@ -778,7 +791,18 @@ export default Component.extend({
           let nRows = rows.length;
           settings.height = nRows2HeightEx(nRows) + 'ex';
         }
+        const startTime = Date.now();
+        console.time(fnName + ':updateSettings');
         table.updateSettings(settings);
+        const endTime = Date.now();
+        console.timeEnd(fnName + ':updateSettings');
+        const
+        timeMeasure =
+          'rows : ' + table.countRows() +
+          ', cols : ' + table.countCols() +
+          ', time : ' + (endTime - startTime);
+        /** displaying via { {this.timeMeasure}} in hbs causes re-render, so display using jQuery. */
+        $('#timeMeasure').text(timeMeasure);
       }
       const dataIsRows = !!this.displayDataRows;
       setRowAttributes(table, dataIsRows ? this.displayDataRows : this.displayData, dataIsRows);
@@ -796,6 +820,7 @@ export default Component.extend({
 
   updateTableTask: task(function * () {
     const fnName = 'updateTableTask';
+    dLog(fnName);
     try {
       this.updateTable();
     } catch(e) {
@@ -808,6 +833,7 @@ export default Component.extend({
     const
     fnName = 'updateTableOnce',
     table = this.get('table');
+    dLog(fnName);
     if (! table) {
       dLog(fnName, 'table', table);
       // in practice, a call will occur later after table is created.
