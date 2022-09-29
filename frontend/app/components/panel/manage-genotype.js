@@ -28,6 +28,17 @@ const dLog = console.debug;
  * @param selectedFeatures
  * @param updatedSelectedFeatures 'updateSelectedFeatures'
  * @param userSettings  userSettings.genotype
+ * user-selected values are preserved in args.userSettings
+ * (related : services/data/selected.js)
+ * Within userSettings (object) :
+ *
+ * Arrays of sample names selected by the user, per dataset. indexed by VCF datasetId
+ * .vcfGenotypeSamplesSelected = {}
+ *
+ * .requestFormat 'Numerical' (default), 'CATG'
+ * .replaceResults default: false
+ * .showResultText default: false
+ * @see userSettingsDefaults()
  */
 export default class PanelManageGenotypeComponent extends Component {
   @service() controls;
@@ -35,7 +46,7 @@ export default class PanelManageGenotypeComponent extends Component {
   /** used for axisBrush.brushedAxes to instantiate axis-brush s. */
   @service('data/flows-collate') flowsService;
   @service('data/block') blockService;
-  @service('data/selected') selected;
+  @service('data/vcf-genotype') sampleCache;
   @service('query-params') queryParamsService;
 
 
@@ -50,11 +61,27 @@ export default class PanelManageGenotypeComponent extends Component {
   vcfGenotypeText = '';
 
   @tracked
-  vcfGenotypeSamplesText = '';
+  receivedNamesCount = 0;
 
-  // @tracked
+  @alias('lookupBlockSamples.names')
+  vcfGenotypeSamplesText;
+
   @alias('args.userSettings.vcfGenotypeSamplesSelected')
-  vcfGenotypeSamplesSelected;
+  vcfGenotypeSamplesSelectedAll;
+
+  @computed('lookupBlockSamples.selected')
+  get vcfGenotypeSamplesSelected() {
+    let selected = this.lookupBlockSamples.selected;
+    /** content-editable value=this.vcfGenotypeSamplesSelected requires a defined value to bind to. */
+    if (selected === undefined) {
+      selected = "";
+      this.vcfGenotypeSamplesSelectedAll[this.lookupDatasetId] = selected;
+    }
+    return selected;
+  }
+  set vcfGenotypeSamplesSelected(selected) {
+    this.vcfGenotypeSamplesSelectedAll[this.lookupDatasetId] = selected;
+  }
 
   @tracked
   displayData = Ember_A();
@@ -97,21 +124,21 @@ export default class PanelManageGenotypeComponent extends Component {
   /** Provide default values for args.userSettings; used in constructor().
    */
   userSettingsDefaults() {
-    if (this.args.userSettings.vcfGenotypeSamplesSelected === undefined) {
-      this.args.userSettings.vcfGenotypeSamplesSelected =
-        'ExomeCapture-DAS5-003024\nExomeCapture-DAS5-003047';
+    const userSettings = this.args.userSettings;
+    if (userSettings.vcfGenotypeSamplesSelected === undefined) {
+      userSettings.vcfGenotypeSamplesSelected = {};
     }
 
     // possible values listed in comment before requestFormat
     this.requestFormat =
-      this.args.userSettings.requestFormat || 'Numerical';  // alternate : CATG
+      userSettings.requestFormat || 'Numerical';  // alternate : CATG
 
-    if (this.args.userSettings.replaceResults === undefined) {
-      this.args.userSettings.replaceResults = false;
+    if (userSettings.replaceResults === undefined) {
+      userSettings.replaceResults = false;
     }
 
-    if (this.args.userSettings.showResultText === undefined) {
-      this.args.userSettings.showResultText = false;
+    if (userSettings.showResultText === undefined) {
+      userSettings.showResultText = false;
     }
   }
 
@@ -164,21 +191,6 @@ export default class PanelManageGenotypeComponent extends Component {
 
   // ---------------------------------------------------------------------------
 
-  /** called when this component is inserted (as with didInsertElement).
-   * This can evolve to CPs once the requirements are established.
-   */
-  @computed // ('selected.sampleNames.length')
-  get initialDisplayEffect() {
-    let sampleNames = this.selected.get('sampleNames');
-    if (sampleNames?.length) {
-      set(this, 'args.userSettings.vcfGenotypeSamplesSelected', sampleNames.join('\n'));
-      if (this.axisBrushBlock) {
-        this.showBlockIntervalSamplesGenotype();
-      }
-    }
-  }
-
-  // ---------------------------------------------------------------------------
 
   /** 
    *    requestFormat : string : 'CATG', 'Numerical'
@@ -241,6 +253,19 @@ export default class PanelManageGenotypeComponent extends Component {
      */
     return b?.get('name');
   }
+  /** @return for .lookupDatasetId selected by user, the sampleNames array
+   * received, and the .selectedSamples the user has selected from those.
+   */
+  @computed('lookupDatasetId', 'receivedNamesCount')
+  get lookupBlockSamples() {
+    const names = this.sampleCache.sampleNames[this.lookupDatasetId];
+    let selected = this.vcfGenotypeSamplesSelectedAll[this.lookupDatasetId];
+    if (names?.length && ! selected) {
+      selected = names.slice(0, 256).split('\n').slice(0, 6).join('\n');
+      this.vcfGenotypeSamplesSelected = selected;
+    }
+    return {names, selected};
+  }
 
   /** Return brushed VCF blocks
    *
@@ -268,9 +293,13 @@ export default class PanelManageGenotypeComponent extends Component {
     dLog(fnName, axisBrushes, blocks, this.blockService.viewed.length, this.blockService.params.mapsToView);
 
     if (blocks.length) {
-      if (this.args.userSettings.lookupBlock !== undefined) {
-        this.axisBrushBlockIndex = blocks.findIndex((abb) => abb[1] === this.args.userSettings.lookupBlock);
-        dLog(fnName, this.axisBrushBlockIndex, blocks[this.axisBrushBlockIndex][1].id, blocks, this.args.userSettings.lookupBlock.id);
+      /** Update .axisBrushBlockIndex : find .lookupBlock in blocks[], or ensure
+       * .axisBrushBlockIndex is within blocks[].
+       */
+      const lookupBlock = this.args.userSettings.lookupBlock;
+      if (lookupBlock !== undefined) {
+        this.axisBrushBlockIndex = blocks.findIndex((abb) => abb[1] === lookupBlock);
+        dLog(fnName, this.axisBrushBlockIndex, blocks[this.axisBrushBlockIndex][1].id, blocks, lookupBlock.id);
       } else if ((this.axisBrushBlockIndex === undefined) || (this.axisBrushBlockIndex > blocks.length-1)) {
         /* first value is selected. if only 1 value then select onchange action will not be called.  */
         this.axisBrushBlockIndex = 0;
@@ -333,7 +362,8 @@ export default class PanelManageGenotypeComponent extends Component {
       textP.then(
         (text) => {
           dLog(fnName, text);
-          this.vcfGenotypeSamplesText =  text?.text;
+          this.sampleCache.sampleNames[vcfDatasetId] = text?.text;
+          this.receivedNamesCount++;
         })
         .catch(this.showError.bind(this, fnName));
     }
@@ -395,8 +425,9 @@ export default class PanelManageGenotypeComponent extends Component {
               if (added.createdFeatures.length) {
                 this.showInputDialog = false;
               }
-              /* Retain sampleNames for continuity when user is switching between tabs. */
-              this.selected.set('sampleNames', added.sampleNames);
+              /** added.sampleNames is from the column names of the result,
+               * which should match the requested samples (.vcfGenotypeSamplesSelected).
+               */
             }
           }
 
@@ -484,7 +515,17 @@ export default class PanelManageGenotypeComponent extends Component {
   }
 
   @computed(
-    'axisBrush.brushedDomain', 'vcfGenotypeSamplesSelected', 'blockService.viewedVisible',
+    'axisBrush.brushedDomain',
+
+    /* Currently all samples results received are displayed; probably will add
+     * checkboxes in samples dialog in place of content-editable
+     * vcfGenotypeSamplesSelected, then it would make sense to narrow the
+     * display to just the samples the user currently selected, and then this
+     * dependancy should be enabled :
+     *   'vcfGenotypeSamplesSelected',
+     */
+
+    'blockService.viewedVisible',
     'requestFormat', 'rowLimit'
   )
   get selectedSampleEffect () {
