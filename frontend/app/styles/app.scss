@@ -2059,6 +2059,9 @@ div.genotype label
   display: flex;
   margin-top: 1em;
 }
+.genotype-controls > div {
+  min-width: 28em;
+}
 .lookup-line {
   display: inline-flex;
 }
