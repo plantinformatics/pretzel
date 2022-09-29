@@ -431,7 +431,14 @@ function refAltNumericalValue(fieldName) {
  */
 function featureValuesRefAlt(requestFormat, feature, fieldName) {
   let value;
-  if (requestFormat === 'Numerical') {
+  /** As noted above in refAltNumericalValue() : When in the 012 view, colour
+   * the ref/alt with [012 colours]; in the first implementation the value was
+   * also shown as '0' or '2', using refAltNumericalValue().  Now instead the
+   * nucleotide value is shown, and only the colour is changed to 012; this is
+   * done via refAltCopyColour() in matrix-view
+   */
+  const showRefAltAsNumerical = false;
+  if (showRefAltAsNumerical && (requestFormat === 'Numerical')) {
     value = refAltNumericalValue(fieldName);
   } else {
     value = featureValuesField(feature, fieldName);

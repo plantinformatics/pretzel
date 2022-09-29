@@ -95,8 +95,16 @@ function nRows2HeightEx(nRows) {
  * @param displayData
  *  columns [] -> {features -> [{name, value}...],  datasetId.id, name }
  * 
+ * @desc optional params, passed by manage-genotype (blockSamples) but not
+ * routes/matrixview : components/matrix-view-page
+ *
  * @param blockSamples  true if blocks contain multiple samples (each column is a sample)
  * false if each column is a block (dataset : chromosome)
+ *
+ * @param displayDataRows
+ * @param columnNamesParam
+ * @param selectBlock action
+ * @param displayForm requestFormat
  *
  * @desc
  * Multiple blocks are loaded, from multiple datasets, via panel/left-panel :
@@ -419,11 +427,23 @@ export default Component.extend({
     }
     return colour;
   },
+  /** map prop : Ref / Alt -> copiesColourClass( 0 / 2)
+   */
+  refAltCopyColour(prop) {
+    const
+    copyNum = (prop === 'Ref') ? '0' : '2',
+    colour = copiesColourClass(copyNum);
+    return colour;
+  },
 
   CATGRenderer(instance, td, row, col, prop, value, cellProperties) {
     Handsontable.renderers.TextRenderer.apply(this, arguments);
     if (value) {
-      this.valueDiagonal(td, value, this.avToColourClass.bind(this));
+      const
+      valueToColourClass = (this.displayForm === 'Numerical') && refAltHeadings.includes(prop) ?
+        () => this.refAltCopyColour(prop) :
+        this.avToColourClass.bind(this);
+      this.valueDiagonal(td, value, valueToColourClass);
     }
   },
   /**
