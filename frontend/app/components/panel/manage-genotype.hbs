@@ -83,6 +83,7 @@ Server :
   <label>Selected samples to be requested in VCF Lookup</label>
   {{content-editable
     value=this.vcfGenotypeSamplesSelected
+    onChange=(fn (mut this.vcfGenotypeSamplesSelected))
     placeholder="Samples to be requested in VCF Lookup"
     escape-press="putContent"
     class="vcfGenotypeSamplesSelected"
