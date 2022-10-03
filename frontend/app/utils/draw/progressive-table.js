@@ -7,6 +7,10 @@ import {
   getRowAttribute,
  } from '../panel/axis-table';
 
+// -----------------------------------------------------------------------------
+
+const dLog = console.debug;
+
 //------------------------------------------------------------------------------
 
 const progressiveMergeLimit = 10;
@@ -15,13 +19,16 @@ const progressiveMergeLimit = 10;
  * Perform a maximum of progressiveMergeLimit changes.
  * @param table HandsOnTable instance
  * @param data  new row data to display
- * @param currentData current row data displayed by table
+ * Each row datum is in object form.
+ * @param currentData current row data displayed by table;
+ * Each row datum may be in array form, i.e. currentData may be table.getData().
  * @param columnNames column headers of table.
  *  Used to convert row data in object form to array form, i.e. one array element per cell.
  * @param colHeaders
  * @return true if merge is incomplete, i.e. this function should be called again.
  */
 function tableRowMerge(table, data, currentData, columnNames, colHeaders) {
+  const fnName = 'tableRowMerge';
   /** number of changes remaining in this cycle */
   let remainingChanges = progressiveMergeLimit;
   /** indexes into a0 and a1 respectively (data, currentData).
@@ -34,12 +41,13 @@ function tableRowMerge(table, data, currentData, columnNames, colHeaders) {
     (i0 < a0.length) && (i1 < a1.length) && (remainingChanges-- > 0); ) {
     let
     d0 = a0[i0], d1 = a1[i1],
-    cmp = dataRowCmp(d0, d1),
-    visualRowIndex1 = table.toVisualRow(i1),
+    d1IsArray = Array.isArray(d1),
     /** d0 and d1 may be (and currently are) in object form; convert d0 to
      * Array, to pass each cell datum to setDataAtCell().
      */
     d0Array = rowObjDataToArray(d0, columnNames),
+    cmp = d1IsArray ? dataRowArrayCmp(d0Array, d1) : dataRowCmp(d0, d1),
+    visualRowIndex1 = table.toVisualRow(i1),
     feature = d0[Symbol.for('feature')];
 
     if (visualRowIndex1 === null) {
@@ -48,10 +56,11 @@ function tableRowMerge(table, data, currentData, columnNames, colHeaders) {
     if (cmp === 0) {
       const
       k0 = dataRowKeyFn(d0),
-      k1 = dataRowKeyFn(d1);
+      k1 = d1IsArray ? dataRowArrayKeyFn(d1) : dataRowKeyFn(d1);
       if (k0 === k1) {
         // if more or less samples in the new data
-        if (! isEqual(d1, d0)) {
+        const sameData = d1IsArray ? isEqual(d1, d0Array) : isEqual(d1, d0);
+        if (! sameData) {
         // replace d1 with d0
           a1[i1] = d0;
           tableSetRowData(table, visualRowIndex1, d0Array, feature);
@@ -160,9 +169,17 @@ function tableInsertRow(table, row, rowData, feature) {
   tableSetRowData(table, row, rowData, feature);
 }
 
+/** In matrix-view, the first 4 columns are :
+ * Block, Position, Ref, Alt.
+ */
+const col_Position = 1;
+
 
 function dataRowKeyFn(d) {
   return d.Position;
+}
+function dataRowArrayKeyFn(d) {
+  return d[col_Position];
 }
 function featureKeyFn(f) {
   return f.get('value.0');
@@ -170,6 +187,9 @@ function featureKeyFn(f) {
 
 function dataRowCmp(d1, d2) {
   return d1.Position - d2.Position;
+}
+function dataRowArrayCmp(d1, d2) {
+  return d1[col_Position] - d2[col_Position];
 }
 
 

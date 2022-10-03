@@ -812,6 +812,9 @@ export default Component.extend({
       t.show();
       const
       columns = this.columnNames.map((name) => ({data : name}));
+      if (! this.columnNames.includes(this.selectedColumnName)) {
+        this.set('selectedColumnName', null);
+      }
 
       const
       largeArea = (table.countRows() * table.countCols() > 300) || (data.length > 50),
@@ -868,6 +871,22 @@ export default Component.extend({
   },
 
   progressiveRowMerge() {
+    const fnName = 'progressiveRowMerge';
+
+    /** .currentData somehow gets out of sync with table.getData(); in this case set
+     * .currentData from table data; this may help to identify the cause; also may switch
+     * to simply using table.getData() instead of .currentData, having added
+     * dataRowArrayCmp() and dataRowArrayKeyFn() to support currentData[*] being arrays.
+     */
+    const
+    tData = this.table.getData(),
+    currentData = this.currentData;
+    if ((currentData.length !== tData.length) /*||
+        (currentData.length && (currentData[0].Position !== tData[0][col_Position]))*/) {
+      dLog(fnName, 'currentData', currentData, tData);
+      this.set('currentData', tData);
+    }
+
     this.continueMerge =
       tableRowMerge(this.table, this.data, this.currentData, this.columnNames, this.colHeaders);
     if (this.continueMerge) {
