@@ -292,6 +292,7 @@ export default Component.extend({
       customBorders : this.customBorders,
       stretchH: 'none',
       cells: bind(this, this.cells),
+      afterScrollVertically: bind(this, this.afterScrollVertically),
       outsideClickDeselects: true,
       afterSelection : bind(this, this.afterSelection),
       afterOnCellMouseDown: bind(this, this.afterOnCellMouseDown),
@@ -858,6 +859,10 @@ export default Component.extend({
     }
   }),
 
+  afterScrollVertically() {
+    this.progressiveRowMergeInBatch();
+  },
+
   progressiveRowMergeInBatch() {
     this.table.batchRender(bind(this, this.progressiveRowMerge));
   },
@@ -868,10 +873,13 @@ export default Component.extend({
     if (this.continueMerge) {
       later(() => this.progressiveRowMergeInBatch(), 1000);
     } else {
-      /* planning to use afterScrollVertically() to drive setRowAttributes() in place of this. */
+      /* setRowAttributes() has no effect for rows outside the viewport;
+       * these are handled by afterScrollVertically() -> setRowAttributes().
+       */
 
-      // this.rowHeaders() is based on row reference to feature.
-      // this.table.updateSettings({rowHeaders: this.rows});
+      /* this.rowHeaders() is based on row reference to feature.
+       * after setRowAttributes(), they can be displayed.
+       */
 
       /** setRowAttribute() is already done by tableRowMerge(), so this
        * setRowAttributes() is nominal; this is too late (rowHeaders() is
@@ -880,8 +888,10 @@ export default Component.extend({
        */
       const dataIsRows = !!this.displayDataRows;
       setRowAttributes(this.table, dataIsRows ? this.displayDataRows : this.displayData, dataIsRows);
+      // required for initial display of rowHeaders
+      this.table?.render();
     }
-    },
+  },
 
   actions: {
     toggleLeftPanel() {
