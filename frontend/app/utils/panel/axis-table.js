@@ -44,20 +44,57 @@ function setRowAttributes(table, data, dataIsRows) {
     data = Object.values(data);
   }
   // expect that data.length matches  table.countRows()
-  data.forEach((feature, row) => {
+  data.forEach((feature, physicalRow) => {
+    const row = table.toVisualRow(physicalRow);
+    if (row === null) {
+    } else
     if (dataIsColumns) {
       feature = feature[featureSymbol];
-      /* original table-brushed.js setRowAttributes() used .setRowAttribute(),
-       * which used tr.__dataPretzelFeature__; CellMeta seems better. */
-      table.setCellMeta(row, 0, 'PretzelFeature', feature);
+
+      setRowAttribute(table, row, /*col*/undefined, feature);
     } else if (dataIsRows) {
-      Object.values(feature).forEach((value, col) => {
-        const feature = value[featureSymbol] || stringGetFeature(value);
-        table.setCellMeta(row, col, 'PretzelFeature', feature);
+      Object.values(feature).forEach((value, physicalcol) => {
+        const col = table.toVisualColumn(physicalCol);
+        if (col !== null) {
+          const feature = value[featureSymbol] || stringGetFeature(value);
+          setRowAttribute(table, row, col, feature);
+        }
       });
     }
   });
 }
+/**
+ * @param row visualRowIndex
+ * @param col visualColIndex
+ */
+function setRowAttribute(table, row, col, feature) {
+  /* original table-brushed.js setRowAttributes() used .setRowAttribute(),
+   * which used tr.__dataPretzelFeature__; CellMeta seems better.
+   * This will transition to use Symbol.for('feature') once all uses are going via this function.
+   */
+  table.setCellMeta(row, col || 0, 'PretzelFeature', feature);
+}
+/**
+ * @param row visualRowIndex
+ * @param col visualColIndex
+ */
+function getRowAttribute(table, row, col) {
+  const fnName = 'getRowAttribute';
+  /** The feature reference is constant for the row, and is only stored on col 0
+   * (except for setRowAttributes() : dataIsRows), but may have to store on all
+   * columns because for wide tables physical col 0 may have visual col null.
+   */
+  if (col === undefined) {
+    col = table.toVisualColumn(/*physical col*/0);
+    if (col === null) {
+      dLog(fnName, 'col 0 -> null', table.countRows(), table.countCols());
+    }
+  }
+  const
+  feature = (col === null) ? undefined : table.getCellMeta(row, col)?.PretzelFeature;;
+  return feature;
+}
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -66,6 +103,10 @@ function setRowAttributes(table, data, dataIsRows) {
  * required).
  */
 function afterOnCellMouseOverClosure(hasTable) {
+  /**
+   * @param coords 	CellCoords 	Hovered cell's visual coordinate object.
+   * refn : https://handsontable.com/docs/javascript-data-grid/api/hooks/#afteroncellmouseover
+   */
   function afterOnCellMouseOver(event, coords, TD) {
     let
     table = hasTable.table, // === this
@@ -80,6 +121,7 @@ function afterOnCellMouseOverClosure(hasTable) {
 /**
  * @param table HandsOnTable
  * @param coords {row, col}  as passed to afterOnCellMouseDown
+ *  coords 	CellCoords 	Hovered cell's visual coordinate object.
  * @return feature, or undefined if (coords.row === -1)
  */
 function tableCoordsToFeature(table, coords) {
@@ -96,8 +138,9 @@ function tableCoordsToFeature(table, coords) {
     /** The meta is associated with column 0.
      * The data is currently the selected feature, which refers to the Ember
      * data object as .feature
+     * coords.{row,col} are visual indexes, as required by getRowAttribute().
      */
-    feature = table?.getCellMeta(coords.row, 0)?.PretzelFeature;
+    feature = table && getRowAttribute(table, coords.row, /*col*/undefined);
     /*  for dataIsColumns (manage-genotype / matrix-view), this is the Ember
      *  data model feature object; for table-brushed this is the selection
      *  feature, which has attribute .feature which is the Ember object.
@@ -156,6 +199,8 @@ export {
   stringGetFeature,
   stringSetFeature,
   setRowAttributes,
+  setRowAttribute,
+  getRowAttribute,
   afterOnCellMouseOverClosure,
   tableCoordsToFeature,
   highlightFeature1,

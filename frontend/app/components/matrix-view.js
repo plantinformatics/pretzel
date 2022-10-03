@@ -15,6 +15,7 @@ import config from '../config/environment';
 
 import {
   setRowAttributes,
+  getRowAttribute,
   afterOnCellMouseOverClosure,
   tableCoordsToFeature,
   highlightFeature,
@@ -23,6 +24,7 @@ import { afterSelectionFeatures } from '../utils/panel/feature-table';
 import { valueIsCopies } from '../utils/data/vcf-feature';
 import { toTitleCase } from '../utils/string';
 import { thenOrNow } from '../utils/common/promises';
+import { tableRowMerge } from '../utils/draw/progressive-table';
 
 
 // -----------------------------------------------------------------------------
@@ -159,6 +161,12 @@ export default Component.extend({
   selectedColumnName : null,
   selectedSampleColumn : false,
 
+  /** current row data array which has been given to table.
+   * This is updated progressively from .data by progressiveRowMerge().
+   * .currentData is the reference / snapshot for the progress of data update.
+   */
+  currentData : [],
+
   // ---------------------------------------------------------------------------
 
   didInsertElement() {
@@ -277,7 +285,7 @@ export default Component.extend({
       licenseKey: config.handsOnTableLicenseKey,
       data: [],
       readOnly: true,
-      rowHeaders: true,
+      rowHeaders: bind(this, this.rowHeaders),
       manualColumnMove: true,
       height: this.fullPage ? '100%' : nRows2HeightEx(nRows) + 'ex',
       colWidths : bind(this, this.colWidths),
@@ -308,10 +316,22 @@ export default Component.extend({
 
   // ---------------------------------------------------------------------------
 
+  rowHeaders(visualRowIndex) {
+    const feature = this.table && getRowAttribute(this.table, visualRowIndex, /*col*/undefined);
+    let text = `${visualRowIndex}: `;
+    if (feature) {
+      text = feature?.name;
+    }
+    return text;
+  },
+
   cells(row, col, prop) {
     let cellProperties = {};
     let selectedBlock = this.get('selectedBlock');
     let numericalData = ! this.blockSamples && this.get('numericalData');
+    /** much of this would be better handled using table options.columns,
+     * as is done in table-brushed.js : createTable().
+     */
     if ((typeof prop === 'string') && (prop.endsWith('Position') || prop.endsWith('End'))) {
       // see also col_name_fn(), table-brushed.js : featureValuesColumnsAttributes
       cellProperties.type = 'numeric';
@@ -606,6 +626,12 @@ export default Component.extend({
     dLog('columnNames', columnNames, this.colSample0);
     return columnNames;
   }),
+  colHeaders : computed('columnNames', function() {
+    const colHeaders = this.get('columnNames').map(function(x) {
+        return '<div class="head">' + x + '</div>';
+    });
+    return colHeaders;
+  }),
   /** For each value in .rows (row names), measure the length of the text
    * rendering using #length_checker, and return the maximum length.
    */
@@ -779,14 +805,12 @@ export default Component.extend({
     let colHeaderHeight = this.get('colHeaderHeight');
     let table = this.get('table');
     let data = this.get('data');
-    dLog('matrix-view', 'updateTable', t, rows, rowHeaderWidth, colHeaderHeight, table, data, this.blockSamples && 'vcf');
+    dLog('matrix-view', 'updateTable', t, rows.length, rowHeaderWidth, colHeaderHeight, table, data, this.blockSamples && 'vcf');
 
     if (data.length > 0) {
       t.show();
       const
-      columns = this.get('columnNames').map(function(x) {
-        return '<div class="head">' + x + '</div>';
-      });
+      columns = this.columnNames.map((name) => ({data : name}));
 
       const
       largeArea = (table.countRows() * table.countCols() > 300) || (data.length > 50),
@@ -799,11 +823,12 @@ export default Component.extend({
       repeat = largeArea ? 1 : 2;
       for(let i=0; i<repeat; i++) {
         const settings = {
-          colHeaders: columns,
-          rowHeaders: rows,
+          colHeaders: this.colHeaders,
+          columns,
           rowHeaderWidth: rowHeaderWidth,
           customBorders : this.customBorders,
-          data: data
+          // this can be enabled as an alternative to progressiveRowMergeInBatch().
+          // data: data
         };
         if (this.fullPage) {
           settings.columnHeaderHeight = colHeaderHeight;
@@ -814,6 +839,7 @@ export default Component.extend({
         const startTime = Date.now();
         console.time(fnName + ':updateSettings');
         table.updateSettings(settings);
+        this.progressiveRowMergeInBatch();
         const endTime = Date.now();
         console.timeEnd(fnName + ':updateSettings');
         const
@@ -827,10 +853,36 @@ export default Component.extend({
       const dataIsRows = !!this.displayDataRows;
       setRowAttributes(table, dataIsRows ? this.displayDataRows : this.displayData, dataIsRows);
     } else {
+      this.progressiveRowMergeInBatch();
       t.hide();
     }
   }),
-  
+
+  progressiveRowMergeInBatch() {
+    this.table.batchRender(bind(this, this.progressiveRowMerge));
+  },
+
+  progressiveRowMerge() {
+    this.continueMerge =
+      tableRowMerge(this.table, this.data, this.currentData, this.columnNames, this.colHeaders);
+    if (this.continueMerge) {
+      later(() => this.progressiveRowMergeInBatch(), 1000);
+    } else {
+      /* planning to use afterScrollVertically() to drive setRowAttributes() in place of this. */
+
+      // this.rowHeaders() is based on row reference to feature.
+      // this.table.updateSettings({rowHeaders: this.rows});
+
+      /** setRowAttribute() is already done by tableRowMerge(), so this
+       * setRowAttributes() is nominal; this is too late (rowHeaders() is
+       * already called) and the call in updateTable() is too early - before
+       * table data is populated.
+       */
+      const dataIsRows = !!this.displayDataRows;
+      setRowAttributes(this.table, dataIsRows ? this.displayDataRows : this.displayData, dataIsRows);
+    }
+    },
+
   actions: {
     toggleLeftPanel() {
       $(".left-panel-shown").toggle();
