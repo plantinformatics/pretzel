@@ -2055,6 +2055,12 @@ div.genotype label
   margin-top : 2em;
 }
 
+.ember-modal-dialog div.genotype ul.list-group
+{
+  overflow-y: auto;
+  max-height: 40vh;
+}
+
 .genotype li.list-group-item
 {
   padding : inherit;
