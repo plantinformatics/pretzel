@@ -15,7 +15,6 @@
   header-icon='search'
 }}
 
-<button class="close" onClick={{action (mut this.showInputDialog) false}} type="button">╳</button>
 
 {{!-- Genotypes --}}
 
@@ -105,6 +104,11 @@ Server :
 
 </div>
 
+
+
+{{!---------------------------------------------------------------------------}}
+
+<BsButton @type="info" @onClick={{action (mut this.showInputDialog) false}}>OK</BsButton>
 
 {{!-- --------------------------------------------------------------------- --}}
 
