@@ -41,6 +41,7 @@ const dLog = console.debug;
  * .requestFormat 'Numerical' (default), 'CATG'
  * .replaceResults default: false
  * .showResultText default: false
+ * .filterBySelectedSamples default : true
  * @see userSettingsDefaults()
  */
 export default class PanelManageGenotypeComponent extends Component {
@@ -147,6 +148,11 @@ export default class PanelManageGenotypeComponent extends Component {
     if (userSettings.showResultText === undefined) {
       userSettings.showResultText = false;
     }
+
+    if (userSettings.filterBySelectedSamples === undefined) {
+      userSettings.filterBySelectedSamples = true;
+    }
+
   }
 
   // ---------------------------------------------------------------------------
@@ -548,20 +554,10 @@ export default class PanelManageGenotypeComponent extends Component {
             this.displayDataRows = sampleGenotypes.rows;
             this.columnNames = ['Block', 'Name'].concat(sampleGenotypes.sampleNames);
           } else {
-            /** Omit Ref & Alt from sampleNames because vcfFeatures2MatrixView() prepends refAltColumns. */
-            function omitRefAlt(sampleName) {
-              return ! refAlt.includes(sampleName) && sampleName;
-            }
             const
-            sampleNamesSet = featuresArrays
-              .reduce(
-                (sampleNamesSet, features) => features
-                  .reduce(
-                    (sampleNamesSet, feature) =>
-                      featureSampleNames(sampleNamesSet, feature, omitRefAlt),
-                    sampleNamesSet),
-                new Set()),
-            sampleNames = Array.from(sampleNamesSet.keys()),
+            sampleNames = this.args.userSettings.filterBySelectedSamples && this.selectedSamples?.length ?
+              this.selectedSamples :
+              this.featuresArraysToSampleNames(featuresArrays),
             features = featuresArrays.flat(),
             sampleGenotypes =  {createdFeatures : features, sampleNames},
             displayData = vcfFeatures2MatrixView(this.requestFormat, sampleGenotypes);
@@ -570,6 +566,28 @@ export default class PanelManageGenotypeComponent extends Component {
         }
       }
     }
+  }
+  /** A filterFn for featureSampleNames() : omit Ref & Alt.
+   * Used in showSamplesWithinBrush() to omit Ref & Alt
+   * from sampleNames because vcfFeatures2MatrixView() prepends
+   * refAltColumns.
+   * Does not use `this`, so bind is not required.
+   */
+  omitRefAlt(sampleName) {
+    return ! refAlt.includes(sampleName) && sampleName;
+  }
+  featuresArraysToSampleNames(featuresArrays) {
+    const
+    sampleNamesSet = featuresArrays
+      .reduce(
+        (sampleNamesSet, features) => features
+          .reduce(
+            (sampleNamesSet, feature) =>
+              featureSampleNames(sampleNamesSet, feature, this.omitRefAlt),
+            sampleNamesSet),
+        new Set()),
+    sampleNames = Array.from(sampleNamesSet.keys());
+    return sampleNames;
   }
 
   @computed(
@@ -586,7 +604,8 @@ export default class PanelManageGenotypeComponent extends Component {
     'vcfGenotypeSamplesSelected.[]',
 
     'blockService.viewedVisible',
-    'requestFormat', 'rowLimit'
+    'requestFormat', 'rowLimit',
+    'args.userSettings.filterBySelectedSamples',
   )
   get selectedSampleEffect () {
     const fnName = 'selectedSampleEffect';
