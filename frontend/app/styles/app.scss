@@ -2055,6 +2055,15 @@ div.genotype label
   margin-top : 2em;
 }
 
+.genotype li.list-group-item
+{
+  padding : inherit;
+}
+
+.sample-count
+{
+  margin-left : 1em;
+}
 .genotype-controls {
   display: flex;
   margin-top: 1em;

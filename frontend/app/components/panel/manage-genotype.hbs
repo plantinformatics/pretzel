@@ -71,23 +71,38 @@ Server :
 
 <div>
   <label>List of samples from VCF</label>
-  <button type="button" onclick={{action this.vcfGenotypeSamples}} class="btn btn-info btn-xs">Get samples list</button>
+  {{#if this.vcfGenotypeSamplesCount}}
+    <span class="sample-count">( {{this.vcfGenotypeSamplesCount}} )</span>
+  {{else}}
+    <button type="button" onclick={{action this.vcfGenotypeSamples}} class="btn btn-info btn-xs">Get samples list</button>
+  {{/if}}
 
-  <div>
-    <div>{{this.vcfGenotypeSamplesCount}}</div>
-    <textarea class="vcfGenotypeSamplesText">{{this.vcfGenotypeSamplesText}}</textarea>
+  <div class="genotype-controls">
+
+    <select style="height:100px" class="form-control" multiple onchange={{action this.selectSample}}>
+      {{#each this.samples as |sampleChoice|}}
+      <option value={{sampleChoice}} selected={{include this.selectedSamples sampleChoice}}>{{sampleChoice}}</option>
+      {{/each}}
+    </select>
+
   </div>
 </div>
 
 <div>
   <label>Selected samples to be requested in VCF Lookup</label>
-  {{content-editable
-    value=this.vcfGenotypeSamplesSelected
-    onChange=(fn (mut this.vcfGenotypeSamplesSelected))
-    placeholder="Samples to be requested in VCF Lookup"
-    escape-press="putContent"
-    class="vcfGenotypeSamplesSelected"
-    type="text"}}
+  {{#if this.selectedCount}}
+    <span class="sample-count">( {{selectedCount}} )</span>
+  {{/if}}
+  <div>
+    <ul class="list-group">
+      {{#each this.selectedSamples as |sample|}}
+        <li class="list-group-item">{{sample}}</li>
+      {{else}}
+        <li class="list-group-item">(No samples selected)</li>
+      {{/each}}
+    </ul>
+  </div>
+
 </div>
 
 

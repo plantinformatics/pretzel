@@ -1,8 +1,9 @@
 import Component from '@glimmer/component';
 import { computed, action, set } from '@ember/object';
-import { alias } from '@ember/object/computed';
+import { alias, reads } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
+import { later } from '@ember/runloop';
 import { A as Ember_A } from '@ember/array';
 
 import { intervalSize } from '../../utils/interval-calcs';
@@ -14,6 +15,8 @@ import {
   featureSampleNames,
  } from '../../utils/data/vcf-feature';
 import { stringCountString } from '../../utils/string';
+
+/* global $ */
 
 // -----------------------------------------------------------------------------
 
@@ -33,7 +36,7 @@ const dLog = console.debug;
  * Within userSettings (object) :
  *
  * Arrays of sample names selected by the user, per dataset. indexed by VCF datasetId
- * .vcfGenotypeSamplesSelected = {}
+ * .vcfGenotypeSamplesSelected = {} (aliased as vcfGenotypeSamplesSelectedAll)
  *
  * .requestFormat 'Numerical' (default), 'CATG'
  * .replaceResults default: false
@@ -57,26 +60,30 @@ export default class PanelManageGenotypeComponent extends Component {
 
   // ---------------------------------------------------------------------------
 
+  /** Raw text result from vcfGenotypeLookup() : bcftools query. */
   @tracked
   vcfGenotypeText = '';
 
+  /** Counter of results from vcfGenotypeSamples(). */
   @tracked
   receivedNamesCount = 0;
 
-  @alias('lookupBlockSamples.names')
-  vcfGenotypeSamplesText;
+  // @alias('lookupBlockSamples.names')
+  @computed('lookupDatasetId', 'receivedNamesCount')
+  get vcfGenotypeSamplesText() {
+    return this.sampleCache.sampleNames[this.lookupDatasetId];
+  }
+  set vcfGenotypeSamplesText(names) {
+    this.sampleCache.sampleNames[this.lookupDatasetId] = names;
+  }
 
   @alias('args.userSettings.vcfGenotypeSamplesSelected')
   vcfGenotypeSamplesSelectedAll;
 
-  @computed('lookupBlockSamples.selected')
+  // @computed('lookupBlockSamples.selected')
+  @computed('lookupDatasetId', 'receivedNamesCount')
   get vcfGenotypeSamplesSelected() {
-    let selected = this.lookupBlockSamples.selected;
-    /** content-editable value=this.vcfGenotypeSamplesSelected requires a defined value to bind to. */
-    if (selected === undefined) {
-      selected = "";
-      this.vcfGenotypeSamplesSelectedAll[this.lookupDatasetId] = selected;
-    }
+    let selected = this.vcfGenotypeSamplesSelectedAll[this.lookupDatasetId];
     return selected;
   }
   set vcfGenotypeSamplesSelected(selected) {
@@ -150,6 +157,11 @@ export default class PanelManageGenotypeComponent extends Component {
     this.axisBrushBlockIndex = value;
     /** save user setting for next component instance. */
     this.args.userSettings.lookupBlock = this.lookupBlock;
+    later(() => {
+      if (this.vcfGenotypeSamplesSelected === undefined) {
+        this.vcfGenotypeSamplesSelected = [];
+      }
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -260,7 +272,7 @@ export default class PanelManageGenotypeComponent extends Component {
   get lookupBlockSamples() {
     const names = this.sampleCache.sampleNames[this.lookupDatasetId];
     let selected = this.vcfGenotypeSamplesSelectedAll[this.lookupDatasetId];
-    if (names?.length && ! selected) {
+    if (false && names?.length && ! selected) {
       selected = names.slice(0, 256).split('\n').slice(0, 6).join('\n');
       this.vcfGenotypeSamplesSelected = selected;
     }
@@ -270,11 +282,45 @@ export default class PanelManageGenotypeComponent extends Component {
   /** @return number of sample names in .vcfGenotypeSamplesText
    */
   @computed('vcfGenotypeSamplesText')
+  get samples() {
+    const
+    samples = this.vcfGenotypeSamplesText?.split('\n')
+    ;//.map((name) => ({name, selected : false}));
+    return samples;
+  }
+  @computed('samples')
   get vcfGenotypeSamplesCount() {
-    const count = this.vcfGenotypeSamplesText?.split('\n').length;
+    const count = this.samples?.length;
     return count;
   }
 
+  //------------------------------------------------------------------------------
+
+  @alias('vcfGenotypeSamplesSelected')
+  selectedSamples;
+  /*
+  @tracked
+  selectedSamples = [];
+  */
+
+  @reads('selectedSamples.length')
+  selectedCount;
+
+  /** Use jQuery target.val() to map the multi-select to an array of selected sample names.
+   *
+   * This function, selectedCount(), and in hbs :
+   *  <select> #each this.samples <option>
+   *  <ul> #each .selectedSamples <li>
+   * are based on https://balinterdi.com/blog/select-in-ember-with-multiple-selection/ 25 September 2015
+   */
+  @action
+  selectSample(event) {
+    const selectedSamples = $(event.target).val();
+    this.selectedSamples = selectedSamples || [];
+  }
+
+
+  //------------------------------------------------------------------------------
 
   /** Return brushed VCF blocks
    *
@@ -370,8 +416,13 @@ export default class PanelManageGenotypeComponent extends Component {
         {} );
       textP.then(
         (text) => {
-          dLog(fnName, text);
-          this.sampleCache.sampleNames[vcfDatasetId] = text?.text;
+          const t = text?.text;
+          dLog(fnName, t?.length || Object.keys(text), t?.slice(0, 60));
+          this.sampleCache.sampleNames[vcfDatasetId] = t;
+          if ((vcfDatasetId === this.lookupDatasetId) &&
+              (this.vcfGenotypeSamplesSelected === undefined)) {
+            this.vcfGenotypeSamplesSelected = [];
+          }
           this.receivedNamesCount++;
         })
         .catch(this.showError.bind(this, fnName));
@@ -404,9 +455,7 @@ export default class PanelManageGenotypeComponent extends Component {
     store = this.apiServerSelectedOrPrimary?.store,
     samplesRaw = this.vcfGenotypeSamplesSelected,
     /** result is 1 string of names, separated by 1 newline.  */
-    samples = samplesRaw?.trimStart().trimEnd()
-      .replaceAll('\r\n', '\n')
-      .replaceAll(/[ \t\r]/g, '\n'),
+    samples = samplesRaw.join('\n'),
     domainInteger = this.vcfGenotypeLookupDomain,
     vcfDatasetId = this.lookupDatasetId;
     if (samples?.length && domainInteger && vcfDatasetId) {
@@ -528,13 +577,13 @@ export default class PanelManageGenotypeComponent extends Component {
 
     /* In vcfFeatures2MatrixViewRows() / gtMergeRows currently all samples
      * results received are displayed; vcfFeatures2MatrixView() filters by the
-     * given added.sampleNames.   Probably will add
-     * checkboxes in samples dialog in place of content-editable
+     * given added.sampleNames.   Added <select> for samples
+     * in samples dialog in place of content-editable
      * vcfGenotypeSamplesSelected, then it would make sense to narrow the
      * display to just the samples the user currently selected, and then this
      * dependancy should be enabled :
      */
-    'vcfGenotypeSamplesSelected',
+    'vcfGenotypeSamplesSelected.[]',
 
     'blockService.viewedVisible',
     'requestFormat', 'rowLimit'
