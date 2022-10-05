@@ -380,6 +380,7 @@ export default Component.extend({
 
     if (! this.firstSelectionDone) {
       later(() => {
+        if (this.isDestroying) { return; }
         this.firstSelectionDone = true;
         /** Render is not occurring on the first cell selection; current
          * work-around is to get abValues and rendererConfigEffect, and call
@@ -872,6 +873,7 @@ export default Component.extend({
 
   progressiveRowMerge() {
     const fnName = 'progressiveRowMerge';
+    if (this.isDestroying) { return; }
 
     /** .currentData somehow gets out of sync with table.getData(); in this case set
      * .currentData from table data; this may help to identify the cause; also may switch
@@ -890,7 +892,7 @@ export default Component.extend({
     this.continueMerge =
       tableRowMerge(this.table, this.data, this.currentData, this.columnNames, this.colHeaders);
     if (this.continueMerge) {
-      later(() => this.progressiveRowMergeInBatch(), 1000);
+      later(() => ! this.isDestroying && this.progressiveRowMergeInBatch(), 1000);
     } else {
       /* setRowAttributes() has no effect for rows outside the viewport;
        * these are handled by afterScrollVertically() -> setRowAttributes().

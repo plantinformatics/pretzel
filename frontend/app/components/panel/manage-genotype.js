@@ -647,6 +647,11 @@ export default class PanelManageGenotypeComponent extends Component {
     return description;
   }
 
+  @computed('auth.apiStats.vcfGenotypeLookup')
+  get vcfGenotypeLookupCount() {
+    const count = this.auth.apiStats['vcfGenotypeLookup'];
+    return count;
+  }
 
   @action
   vcfGenotypeTextWidthStyle() {

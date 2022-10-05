@@ -41,7 +41,29 @@ export default Service.extend({
   apiServers : service(),
   controls : service(),
 
+  //----------------------------------------------------------------------------
+
   apiServerSelectedOrPrimary : alias('controls.apiServerSelectedOrPrimary'),
+
+  /** indexed by API request name;  e.g. counts of current requests */
+  apiStats : {},
+
+  //----------------------------------------------------------------------------
+
+  /** Add increment to count for API apiName
+   * Initialise count for apiName to 0 if undefined.
+   * @param increment +/- integer
+   */
+  apiStatsCount(apiName, increment) {
+    if (this.apiStats[apiName] === undefined) {
+      this.apiStats[apiName] = 0;
+    }
+    // .apiStats[apiName] is tracked, so use .incrementProperty() or Ember.set().
+    this.incrementProperty('apiStats.' + apiName, increment);
+  },
+
+
+  //----------------------------------------------------------------------------
 
   changePassword(data) {
     return this._ajax('Clients/change-password', 'POST', JSON.stringify(data), true)

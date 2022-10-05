@@ -53,6 +53,10 @@ function vcfGenotypeLookup(auth, server, samples, domainInteger, requestFormat, 
   preArgs = {region, samples, requestFormat};
   // parent is .referenceDatasetName
 
+  /* reply time is generally too quick to see the non-zero count, so to see the
+   * count in operation use +2 here. */
+  auth.apiStatsCount(fnName, +1);
+
   /** Currently passing datasetId as param 'parent', until requirements evolve.
    * The VCF dataset directories are just a single level in $vcfDir;
    * it may be desirable to interpose a parent level, e.g. 
@@ -67,6 +71,7 @@ function vcfGenotypeLookup(auth, server, samples, domainInteger, requestFormat, 
     .then(
       (textObj) => {
         const text = textObj.text;
+        auth.apiStatsCount(fnName, -1);
         return text;
       });
   return textP;
@@ -132,8 +137,8 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
   /** The same features as createdFeatures[], in selectedFeatures format. */
   selectionFeatures = [],
   /** if the output is truncated by rowLimit aka nLines, the last line will not
-   * have a trailing \n, and is discarded.
-   * Otherwise values.length may be < 4, and feature.value may be undefined.
+   * have a trailing \n, and is discarded.  If incomplete lines were not
+   * discarded, values.length may be < 4, and feature.value may be undefined.
    */
   lines = text.split('\n'),
   meta = {},
@@ -269,7 +274,7 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
 
       /** If it is required for vcfFeatures2MatrixView() to create displayData
        * without creating model:Feature in the Ember data store, the following
-       * part can factor out as a separate function, returning an array of of
+       * part can factor out as a separate function, returning an array of
        * native JS objects at this point, and passing those to the 2nd function
        * for creation of model:Feature
        */
