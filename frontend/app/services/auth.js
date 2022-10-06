@@ -58,7 +58,7 @@ export default Service.extend({
     if (this.apiStats[apiName] === undefined) {
       this.apiStats[apiName] = 0;
     }
-    // .apiStats[apiName] is tracked, so use .incrementProperty() or Ember.set().
+    // .apiStats[apiName] is tracked (displayed), so use .incrementProperty() or Ember.set().
     this.incrementProperty('apiStats.' + apiName, increment);
   },
 

@@ -61,9 +61,9 @@ Server :
 <div>{{referenceDatasetName}}</div>
 
 <div class="select-wrap">
-  <select onchange={{action (mut this.axisBrushBlockIndex) value="target.value"}}>
-    {{#each this.brushedVCFBlocks as |abbChoice abbIndex|}}
-      <option value={{abbIndex}} selected={{eq this.axisBrushBlockIndex abbIndex}}>{{abbIndex}} : {{abbChoice.1.datasetId.id}} : {{abbChoice.1.scope}}</option>
+  <select onchange={{action this.mut_axisBrushBlockIndex value="target.value"}}>
+    {{#each this.brushedOrViewedVCFBlocks as |abbChoice abbIndex|}}
+      <option value={{abbIndex}} selected={{eq this.axisBrushBlockIndex abbIndex}}>{{abbIndex}} : {{abbChoice.block.datasetId.id}} : {{abbChoice.block.scope}}</option>
     {{/each}}
   </select>
 </div>

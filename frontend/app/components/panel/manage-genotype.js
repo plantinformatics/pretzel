@@ -1,5 +1,5 @@
 import Component from '@glimmer/component';
-import { computed, action, set } from '@ember/object';
+import EmberObject, { computed, action, set } from '@ember/object';
 import { alias, reads } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
@@ -157,17 +157,23 @@ export default class PanelManageGenotypeComponent extends Component {
 
   // ---------------------------------------------------------------------------
 
+  /** Called by user selecting a dataset from <select>,
+   * via <select onchange={{action this.mut_axisBrushBlockIndex value="target.value"}}>
+   * @param value is a string, because <option> values are strings.
+   */
   @action
   mut_axisBrushBlockIndex(value) {
     dLog('axisBrushBlockIndex', value, arguments, this);
-    this.axisBrushBlockIndex = value;
+    this.axisBrushBlockIndex = +value;
     /** save user setting for next component instance. */
     this.args.userSettings.lookupBlock = this.lookupBlock;
+    /*
     later(() => {
       if (this.vcfGenotypeSamplesSelected === undefined) {
         this.vcfGenotypeSamplesSelected = [];
       }
     });
+    */
   }
 
   // ---------------------------------------------------------------------------
@@ -225,13 +231,13 @@ export default class PanelManageGenotypeComponent extends Component {
 
   // ---------------------------------------------------------------------------
 
-  /** @return the [axisBrush, vcfBlock] selected via gui pull-down
+  /** @return the {axisBrush, vcfBlock} selected via gui pull-down
    */
-  @computed('brushedVCFBlocks', 'axisBrushBlockIndex')
+  @computed('brushedOrViewedVCFBlocks', 'axisBrushBlockIndex')
   get axisBrushBlock() {
     const
     fnName = 'axisBrushBlock',
-    axisBrushes = this.brushedVCFBlocks;
+    axisBrushes = this.brushedOrViewedVCFBlocks;
     let abb = axisBrushes &&
         ((this.axisBrushBlockIndex === undefined) ? undefined : 
          axisBrushes[this.axisBrushBlockIndex]);
@@ -245,13 +251,13 @@ export default class PanelManageGenotypeComponent extends Component {
   @computed('axisBrushBlock')
   get axisBrush() {
     const abb = this.axisBrushBlock;
-    return abb && abb[0];
+    return abb?.axisBrush;
   }
 
   @computed('axisBrushBlock')
   get lookupBlock() {
     const abb = this.axisBrushBlock;
-    return abb && abb[1];
+    return abb?.block;
   }
   /** axisBrushBlock -> lookupBlock is selected from a list which satisfies dataset .hasTag('view').
    * May later pass lookupDatasetId .meta.vcfFilename
@@ -328,9 +334,22 @@ export default class PanelManageGenotypeComponent extends Component {
 
   //------------------------------------------------------------------------------
 
+  /** @return selectedSamples of the given blocks
+   * @param blocks  VCF blocks, which may be brushed
+   */
+  blocksSelectedSamples(blocks) {
+    const
+    fnName = 'blocksSelectedSamples',
+    brushedVCFDatasetIds = blocks.map((block) => block.get('datasetId.id')),
+    selected = brushedVCFDatasetIds.map((datasetId) => this.vcfGenotypeSamplesSelectedAll[datasetId])
+      .flat();
+    return selected;
+  }
+
+
   /** Return brushed VCF blocks
    *
-   * @return [[axisBrush, vcfBlock], ...]
+   * @return [{axisBrush, vcfBlock}, ...]
    * axisBrush will be repeated when there are multiple vcfBlocks on the axis of that axisBrush.
    * @desc
    * Dependency on .viewed provides update when a data block is added to an axis which is brushed.
@@ -347,25 +366,66 @@ export default class PanelManageGenotypeComponent extends Component {
       vcfBlocks = axis1d.brushedBlocks
         .filter(
           (b) => b.get('datasetId').content.hasTag('VCF')),
-      ab1 = vcfBlocks.map((vb) => [ab, vb]);
+      ab1 = vcfBlocks.map((block) => ({axisBrush : ab, block}));
       return ab1;
     })
       .flat();
     dLog(fnName, axisBrushes, blocks, this.blockService.viewed.length, this.blockService.params.mapsToView);
-
+    return blocks;
+  }
+  /** Set .axisBrushBlockIndex from userSettings.lookupBlock, with the
+   * constraint that it is within the blocks in the dataset selector in the
+   * samples dialog.
+   * @param blocks  result of brushedOrViewedVCFBlocks :  [{axisBrush, vcfBlock}, ...]
+   */
+  lookupBlockWithinBlocks(blocks) {
+    const fnName = 'lookupBlockWithinBlocks';
     if (blocks.length) {
       /** Update .axisBrushBlockIndex : find .lookupBlock in blocks[], or ensure
        * .axisBrushBlockIndex is within blocks[].
        */
       const lookupBlock = this.args.userSettings.lookupBlock;
       if (lookupBlock !== undefined) {
-        this.axisBrushBlockIndex = blocks.findIndex((abb) => abb[1] === lookupBlock);
-        dLog(fnName, this.axisBrushBlockIndex, blocks[this.axisBrushBlockIndex][1].id, blocks, lookupBlock.id);
+        this.axisBrushBlockIndex = blocks.findIndex((abb) => abb.block === lookupBlock);
+        if (this.axisBrushBlockIndex === undefined) {
+          this.args.userSettings.lookupBlock = undefined;
+        }
+        dLog(fnName, this.axisBrushBlockIndex, blocks[this.axisBrushBlockIndex].block.id, blocks, lookupBlock.id);
       } else if ((this.axisBrushBlockIndex === undefined) || (this.axisBrushBlockIndex > blocks.length-1)) {
         /* first value is selected. if only 1 value then select onchange action will not be called.  */
         this.axisBrushBlockIndex = 0;
       }
     }
+  }
+  /** Return viewed (loaded) VCF blocks
+   *
+   * @return [{axisBrush, vcfBlock}, ...]
+   */
+  @computed('blockService.viewed.[]')
+  get viewedVCFBlocks() {
+    const
+    fnName = 'viewedVCFBlocks',
+    vcfBlocks = this.blockService.viewed.filter(
+      (b) => b.get('datasetId').content.hasTag('VCF')),
+    blocks = vcfBlocks.map((block) => ({
+      axisBrush : EmberObject.create({block : block.referenceBlock}),
+      block}));
+    dLog(fnName, blocks, this.blockService.viewed.length, this.blockService.params.mapsToView);
+    return blocks;
+  }
+
+  @computed('viewedVCFBlocks', 'brushedVCFBlocks')
+  get brushedOrViewedVCFBlocks() {
+    const fnName = 'brushedOrViewedVCFBlocks';
+    let blocks = this.brushedVCFBlocks;
+    const
+    brushedBlockSet = blocks.reduce((result, abb) => result.add(abb.block), new Set()),
+    unBrushedAndViewed = this.viewedVCFBlocks.filter((abb) => ! brushedBlockSet.has(abb.block));
+    if (unBrushedAndViewed.length) {
+      blocks = blocks.concat(unBrushedAndViewed);
+    }
+    this.lookupBlockWithinBlocks(blocks);
+    dLog(fnName, blocks.length);
     return blocks;
   }
 
@@ -524,7 +584,7 @@ export default class PanelManageGenotypeComponent extends Component {
       referenceBlock = this.axisBrush?.get('block'),
       /** expect : block.referenceBlock.id === referenceBlock.id
        */
-      blocks = this.brushedVCFBlocks.map((abb) => abb[1]);
+      blocks = this.brushedVCFBlocks.map((abb) => abb.block);
       /* Filter out blocks
        * which are isZoomedOut.  This is one way to enable .rowLimit
        * (or block.featuresCountsThreshold) to limit the
@@ -554,10 +614,21 @@ export default class PanelManageGenotypeComponent extends Component {
             this.displayDataRows = sampleGenotypes.rows;
             this.columnNames = ['Block', 'Name'].concat(sampleGenotypes.sampleNames);
           } else {
+            let sampleNames;
+            if (this.args.userSettings.filterBySelectedSamples) {
+              /** instead of this.selectedSamples (i.e. of lookupDatasetId), show
+               * selected samples of all .brushedVCFBlocks.
+               */
+              const selectedSamplesOfBrushed = this.blocksSelectedSamples(blocks);
+              if (selectedSamplesOfBrushed.length) {
+                sampleNames = selectedSamplesOfBrushed;
+              }
+            }
+            if (! sampleNames) {
+              sampleNames = this.featuresArraysToSampleNames(featuresArrays);
+            }
+
             const
-            sampleNames = this.args.userSettings.filterBySelectedSamples && this.selectedSamples?.length ?
-              this.selectedSamples :
-              this.featuresArraysToSampleNames(featuresArrays),
             features = featuresArrays.flat(),
             sampleGenotypes =  {createdFeatures : features, sampleNames},
             displayData = vcfFeatures2MatrixView(this.requestFormat, sampleGenotypes);
