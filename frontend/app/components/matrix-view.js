@@ -2,8 +2,7 @@ import { computed, observer } from '@ember/object';
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
 import { get as Ember_get, set as Ember_set } from '@ember/object';
-import { later, once, bind } from '@ember/runloop';
-
+import { later, once, bind, debounce } from '@ember/runloop';
 import { task, didCancel } from 'ember-concurrency';
 
 
@@ -322,6 +321,8 @@ export default Component.extend({
     let text = `${visualRowIndex}: `;
     if (feature) {
       text = feature?.name;
+    } else {
+      debounce(this, this.setRowAttributes, 1000);
     }
     return text;
   },
@@ -863,8 +864,13 @@ export default Component.extend({
     }
   }),
 
+  setRowAttributes() {
+    const dataIsRows = !!this.displayDataRows;
+    setRowAttributes(this.table, dataIsRows ? this.displayDataRows : this.displayData, dataIsRows);
+  },
+
   afterScrollVertically() {
-    this.progressiveRowMergeInBatch();
+    later(() => ! this.isDestroying && this.progressiveRowMergeInBatch(), 1000);
   },
 
   progressiveRowMergeInBatch() {

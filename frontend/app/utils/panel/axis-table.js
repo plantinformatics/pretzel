@@ -72,7 +72,9 @@ function setRowAttribute(table, row, col, feature) {
    * which used tr.__dataPretzelFeature__; CellMeta seems better.
    * This will transition to use Symbol.for('feature') once all uses are going via this function.
    */
-  table.setCellMeta(row, col || 0, 'PretzelFeature', feature);
+  if (getRowAttribute(table, row, col) !== feature) {
+    table.setCellMeta(row, col || 0, 'PretzelFeature', feature);
+  }
 }
 /**
  * @param row visualRowIndex
