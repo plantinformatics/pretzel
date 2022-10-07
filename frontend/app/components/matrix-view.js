@@ -15,6 +15,7 @@ import config from '../config/environment';
 import {
   setRowAttributes,
   getRowAttribute,
+  getRowAttributeFromData,
   afterOnCellMouseOverClosure,
   tableCoordsToFeature,
   highlightFeature,
@@ -317,12 +318,19 @@ export default Component.extend({
   // ---------------------------------------------------------------------------
 
   rowHeaders(visualRowIndex) {
-    const feature = this.table && getRowAttribute(this.table, visualRowIndex, /*col*/undefined);
+    let feature = this.table && getRowAttribute(this.table, visualRowIndex, /*col*/undefined);
     let text = `${visualRowIndex}: `;
+    if (! feature) {
+      /** or !!this.displayDataRows ... */
+      const dataIsRows = this.displayDataRows === this.get('dataByRow');
+      const data = dataIsRows ? this.displayDataRows : this.displayData;
+      feature = getRowAttributeFromData(this.table, data, dataIsRows, visualRowIndex);
+
+      debounce(this, this.setRowAttributes, 1000);
+    }
+
     if (feature) {
       text = feature?.name;
-    } else {
-      debounce(this, this.setRowAttributes, 1000);
     }
     return text;
   },

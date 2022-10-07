@@ -543,8 +543,20 @@ export default class PanelManageGenotypeComponent extends Component {
               this.args.selectedFeatures, text);
 
             if (added.createdFeatures && added.sampleNames) {
+              const showOtherBlocks = true;
+              if (showOtherBlocks) {
+                this.showSamplesWithinBrush();
+              } else {
+              /* use this to show just the result of this request in the table,
+               * not showing other blocks; the other rows are not cleaned out
+               * correctly by progressiveRowMerge(), leaving rows with no rowHeader
+               * and/or Block/Position/Alt/Ref, and added.createdFeatures[] is shorter
+               * than table data causing undefined / mis-aligned associated
+               * features.
+               */
               const displayData = vcfFeatures2MatrixView(this.requestFormat, added);
               this.displayData.addObjects(displayData);
+              }
               // equivalent : displayData[0].features.length
               if (added.createdFeatures.length) {
                 this.showInputDialog = false;

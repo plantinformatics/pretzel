@@ -53,7 +53,7 @@ function setRowAttributes(table, data, dataIsRows) {
 
       setRowAttribute(table, row, /*col*/undefined, feature);
     } else if (dataIsRows) {
-      Object.values(feature).forEach((value, physicalcol) => {
+      Object.values(feature).forEach((value, physicalCol) => {
         const col = table.toVisualColumn(physicalCol);
         if (col !== null) {
           const feature = value[featureSymbol] || stringGetFeature(value);
@@ -96,6 +96,27 @@ function getRowAttribute(table, row, col) {
   feature = (col === null) ? undefined : table.getCellMeta(row, col)?.PretzelFeature;;
   return feature;
 }
+
+
+function getRowAttributeFromData(table, data, dataIsRows, visualRowIndex) {
+  const
+  fnName = 'getRowAttributeFromData',
+  row = table.toPhysicalRow(visualRowIndex);
+  let feature;
+  /* based on related : setRowAttributes(table, data, dataIsRows), see comments there. */
+
+  const dataIsColumns = ! dataIsRows && data.length && Array.isArray(data[0].features);
+  if (dataIsColumns) {
+    data = data[0].features;
+  } else if (dataIsRows) {
+    data = Object.values(data);
+  }
+  feature = data[row];
+  feature = feature && feature[featureSymbol];
+
+  return feature;
+}
+
 
 
 /*----------------------------------------------------------------------------*/
@@ -203,6 +224,7 @@ export {
   setRowAttributes,
   setRowAttribute,
   getRowAttribute,
+  getRowAttributeFromData,
   afterOnCellMouseOverClosure,
   tableCoordsToFeature,
   highlightFeature1,
