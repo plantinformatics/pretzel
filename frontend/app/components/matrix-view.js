@@ -37,11 +37,11 @@ const featureSymbol = Symbol.for('feature');
 
 /**
  * bcftools %GT : numerical format
- * 0, 1, 2 is dosage of the alleles. 0 is no copies of alt, 1 is 1 copy and 2 is 2 copies. 
+ * 0, 1, 2 is dosage of the alleles. 0 is no copies of alt, 1 is 1 copy and 2 is 2 copies.
  * Instead of setting the colour of the element, classes are now used - see copiesColourClass(),
  * enabling easier consistent changes.
  */
-const copiesColours = [ /*0*/ 'orange', /*1*/ 'white', /*2*/ 'blue'];  
+const copiesColours = [ /*0*/ 'orange', /*1*/ 'white', /*2*/ 'blue'];
 
 /** indexed by +false / +true, or 0 / 1.   used in ABRenderer() */
 const coloursEqualsRef = ['red', 'green'];
@@ -53,6 +53,20 @@ const refAlt = ['ref', 'alt'];
 const refAltHeadings = refAlt.map(toTitleCase);
 
 // -----------------------------------------------------------------------------
+
+/** Considering the columns as 2 groups :
+ * . left columns, which are fixed, not variable / optional,
+ * . right columns, i.e. sample columns, which vary in number >=0
+ * @return true if column_name is one of the fixed left columns.
+ * @param column name
+ */
+function columnNameIsNotSample(column_name) {
+  /* 'Ref', 'Alt' columns are fixed not variable, but their headers are rotated
+   * like the sample columns, and they are formatted like the sample columns, so
+   * assign the class col-sample.
+   */
+  return ['Block', 'Name', 'Position', 'End'].includes(column_name);
+}
 
 function copiesColourClass(alleleValue) {
   // related : copiesColours[+alleleValue]
@@ -79,12 +93,16 @@ function col_name_fn(column) {
   return col_name;
 }
 
+/** 210 here is interdependent with : app.scss : #observational-table .head {  margin-top: 210px; }
+ * The header height could be reduced when there are no sample columns, and this switched off.
+ */
+const headerHeightEx = 32;  // for 210px
 /** For use when ! .fullPage, calculate ex height for the given number of rows,
  * with a maximum which gives a nearly full height table.
  */
 function nRows2HeightEx(nRows) {
   // 2 -> 6ex : only 1 row visible; may need an base offset - try adding 5ex
-  return 5 + Math.min(nRows || 2, 30) * 3;
+  return headerHeightEx + 5 + (+((nRows || 2) * 3.2).toFixed(0));
 }
 
 // -----------------------------------------------------------------------------
@@ -96,7 +114,7 @@ function nRows2HeightEx(nRows) {
  * if .blockSamples, this is a Block, otherwise {block : Block, sampleName : string}.
  * @param displayData
  *  columns [] -> {features -> [{name, value}...],  datasetId.id, name }
- * 
+ *
  * @desc optional params, passed by manage-genotype (blockSamples) but not
  * routes/matrixview : components/matrix-view-page
  *
@@ -117,7 +135,7 @@ function nRows2HeightEx(nRows) {
  *   col_name : col_name_fn(block)
  *
  * Computed properties :
- * 
+ *
  *   customBorders <- colSample0
  *   noData		<- displayData.[] or displayDataRows.[]
  *   columns		<- displayData.[]
@@ -195,7 +213,7 @@ export default Component.extend({
 
   // ---------------------------------------------------------------------------
 
-  /** 
+  /**
    *    selectPhase : string : '0', '1', 'both'
    */
 
@@ -229,7 +247,7 @@ export default Component.extend({
     width =
       columnIndex === 1 ? 80 :
       /* works, but padding-left is required also, to move the text.
-      columnIndex === this.colSample0 ? 
+      columnIndex === this.colSample0 ?
       25 + 3 :
       */
       25;
@@ -240,6 +258,7 @@ export default Component.extend({
 
   /** Show a white line between the Position [ / Ref / Alt] columns and the
    * first sample column.
+   * Replaced by : .col-Alt : border-right-width
    */
   customBorders : computed('colSample0', function () {
     let customBorders;
@@ -289,7 +308,6 @@ export default Component.extend({
       manualColumnMove: true,
       height: this.fullPage ? '100%' : nRows2HeightEx(nRows) + 'ex',
       colWidths : bind(this, this.colWidths),
-      customBorders : this.customBorders,
       stretchH: 'none',
       cells: bind(this, this.cells),
       afterScrollVertically: bind(this, this.afterScrollVertically),
@@ -375,7 +393,7 @@ export default Component.extend({
       if (columnNames) {
         col_name = columnNames[col];
         /* selectedColumnName may be Ref, Alt, or a sample column, not Block, Position, End. */
-        if (['Block', 'Name', 'Position', 'End'].includes(col_name)) {
+        if (columnNameIsNotSample(col_name)) {
           col_name = undefined;
         }
         dLog(fnName, col_name);
@@ -639,10 +657,33 @@ export default Component.extend({
   }),
   colHeaders : computed('columnNames', function() {
     const colHeaders = this.get('columnNames').map(function(x) {
-        return '<div class="head">' + x + '</div>';
+      let extraClassName = columnNameIsNotSample(x) ? '' : ' col-sample';
+      /** specific classes for Position and Alt :
+       * . Position column is wide, so set margin-left to centre the header text horizontally;
+       * . place a white border on the right side of 'Alt' column, i.e. between Alt and the sample columns.
+       */
+      if (['Position', 'Alt'].includes(x)) {
+        extraClassName +=  ' col-' + x;
+      }
+      return '<div class="head' + extraClassName + '">' + x + '</div>';
     });
     return colHeaders;
   }),
+  columnNamesToColumnOptions(columnNames) {
+    const
+    columns =
+      columnNames.map((name) => {
+        const options = {data : name};
+        if (! columnNameIsNotSample(name)) {
+          options.className = 'col-sample';
+        }
+        if (name === 'Alt') {
+          options.className += ' col-Alt';
+        }
+        return options;
+      });
+    return columns;
+  },
   /** For each value in .rows (row names), measure the length of the text
    * rendering using #length_checker, and return the maximum length.
    */
@@ -699,7 +740,7 @@ export default Component.extend({
           value = value[0];
         }
         rows[feature_name][col_name] = value;
-        
+
         if (isNaN(value)) {
           nonNumerical = true;
         }
@@ -802,13 +843,13 @@ export default Component.extend({
       avg = sum / row.length;
       ranges.push([min, avg, max]);
     });
-    return ranges;        
+    return ranges;
   }),
 
   /** Observe changes to .rows and .selectedBlock, and update table settings with
    * column headings from keys(.data), .rows, .rowHeaderWidth, .colHeaderHeight.
    */
-  updateTable: observer(/*'displayData.[]'*/ 'rows', 'selectedBlock', 'customBorders', function() {
+  updateTable: observer(/*'displayData.[]'*/ 'rows', 'selectedBlock', function() {
     const fnName = 'updateTable';
     let t = $("#observational-table");
     let rows = this.get('rows');
@@ -821,7 +862,7 @@ export default Component.extend({
     if (data.length > 0) {
       t.show();
       const
-      columns = this.columnNames.map((name) => ({data : name}));
+      columns = this.columnNamesToColumnOptions(this.columnNames);
       if (! this.columnNames.includes(this.selectedColumnName)) {
         this.set('selectedColumnName', null);
       }
@@ -840,7 +881,6 @@ export default Component.extend({
           colHeaders: this.colHeaders,
           columns,
           rowHeaderWidth: rowHeaderWidth,
-          customBorders : this.customBorders,
           // this can be enabled as an alternative to progressiveRowMergeInBatch().
           // data: data
         };

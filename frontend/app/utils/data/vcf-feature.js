@@ -600,8 +600,14 @@ function valueToFormat(requestFormat, refAltValues, valueIn) {
         valueOut = alleles.map((a) => refAltValues[+a])
           .join(separator);
       } else {
-        // expect that valueIn is '0' or '2', not '1'.
+        // handle valueIn : '0' or '2', and the end part of '1'
         valueOut = refAltValues[+(+valueIn > 0)];
+        if (valueIn === '1') {
+          /** map '1' to '<Ref>/<Alt>'
+           * refAltValues[] indices of ref, alt are : 0, 1.
+           */
+          valueOut = refAltValues[0] + '/' + valueOut;
+        }
       }
     } else if (! formatIsNumeric && (requestFormat === 'Numerical')) {
       // convert CATG to Numerical
