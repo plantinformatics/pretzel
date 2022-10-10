@@ -104,6 +104,7 @@ import {
   dragTransition
 } from '../utils/stacks-drag';
 import { subInterval, overlapInterval, wheelNewDomain } from '../utils/draw/zoomPanCalcs';
+import { intervalsEqual, intervalIntersect } from '../utils/interval-calcs';
 import { round_2, checkIsNumber } from '../utils/domCalcs';
 import { Object_filter, compareFields } from '../utils/Object_filter';
 import {
@@ -4163,6 +4164,34 @@ export default Component.extend(Evented, {
         brushedRegions[brushedAxisID] = brushRange;
       }
 
+      const
+      ab = brushRangeToDomain(brushRange),
+      axisBrush = ab.axisBrush,
+      /** equiv : axis.referenceBlock */
+      limits = axisBrush.get('block.limits')
+        || axisBrush.get('block.axis.domain')
+        || axisBrush.get('block.axis.referenceBlock.range');
+
+      function brushIntersectionChanged(axisBrush, brushedDomain) {
+        const
+        fnName = 'brushIntersectionChanged',
+        block = axisBrush.get('block.content') || axisBrush.get('block'),
+        domain = axisBrush.get('block.currentDomain'),
+        previousDomain = block[Symbol.for('previousDomain')],
+        changed = axisBrush.brushedDomain && domain && previousDomain ?
+          ! intervalsEqual(
+            intervalIntersect(brushedDomain, domain),
+            intervalIntersect(axisBrush.brushedDomain, previousDomain)
+          ) :
+          true;
+        dLog(fnName, changed, domain, previousDomain);
+        if (changed) {
+          block[Symbol.for('previousDomain')] = domain;
+        }
+        return changed;
+      }
+
+
       // selectedAxes is an array containing the IDs of the Axes that
       // have been selected.
       
@@ -4194,6 +4223,7 @@ export default Component.extend(Evented, {
          * This is used to efficiently implement featureNotSelected2() which implements .faded.
          */
         let selectedFeaturesSet = new Set();
+        let anyBrushIntersectionChanged = false;
         /**
          * @param p an axis selected by a current user brush
          * @param i index of the brush of p in brushExtents[]
@@ -4232,6 +4262,12 @@ export default Component.extend(Evented, {
             brushedDomain[0] = brushedDomain[1];
             brushedDomain[1] = swap;
           }
+
+          /** when components/draw/axis-brush.js : draw() calls into
+           * axisFeatureCirclesBrushed(), the limits and axisBrush calculated
+           * above are probably current.
+           */
+          anyBrushIntersectionChanged ||= brushIntersectionChanged(axisBrush, brushedDomain);
 
           if (enable_log)
             console.log("brushHelper", name, p, yp.domain(), yp.range(), brushExtents[i], axis.portion, brushedDomain);
@@ -4337,7 +4373,9 @@ export default Component.extend(Evented, {
           });
           });
         });
-        sendUpdatedSelectedFeatures();
+        if (anyBrushIntersectionChanged) {
+          sendUpdatedSelectedFeatures();
+        }
 
         function featureNotSelected2(d)
         {
@@ -4376,6 +4414,12 @@ export default Component.extend(Evented, {
          * brushedRegions = oa.brushedRegions = {};
          */
       }
+      /** Determine the axis-brush object and calculate brushedDomain from brushRange.
+       */
+      function brushRangeToDomain(brushRange) {
+       /** Related : axisBrushedDomain() which relies on brushExtents[i],
+        * whereas this uses brushRange more directly, from d3.event.selection.
+        */
       let axisBrush = me.get('store').peekRecord('axis-brush', brushedAxisID);
       if (!axisBrush) {
         let axis = Stacked.getAxis(brushedAxisID);
@@ -4386,11 +4430,22 @@ export default Component.extend(Evented, {
       let yp = oa.y[brushedAxisID];
       ensureYscaleDomain(yp, oa.axes[brushedAxisID]);
       let brushedDomain = brushRange ? axisRange2Domain(brushedAxisID, brushRange) : undefined;
-      axisBrush.set('brushedDomain', brushedDomain);
+        return {axisBrush, brushedDomain};
+      }
+      /** brushHelper() may be called when brushedDomain has not changed :
+       * d3.select(gBrush).call(yp.brush.move, newBrushExtent);
+       * calls brushended(), which calls brushHelper().
+       * Don't set brushedDomain when it has not changed, because it is a
+       * dependency of many CPs.
+       * Related : brushIntersectionChanged.
+       */
+      if (! isEqual(ab.brushedDomain, axisBrush.brushedDomain)) {
+        axisBrush.set('brushedDomain', ab.brushedDomain);
+      }
 
       let axis = oa.axes[brushedAxisID],
           axis1d = axis && axis.axis1d;
-      if (axis1d) {
+      if (axis1d && brushIntersectionChanged(axisBrush, ab.brushedDomain)) {
         bind(axis1d, axis1d.showZoomResetButtonState)();
       }
 

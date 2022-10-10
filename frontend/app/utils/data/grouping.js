@@ -55,10 +55,7 @@ function blocksParentAndScope(levelMeta, fieldName, blocksTraits) {
  */
 function parentOfBlock(block) {
   /** use .dataset : .parent.name or .parentName */
-  let
-  f = block.get('datasetId'),
-  p = f.get && f.get('parent');
-  return p ? p.get('name') : f.get('parentName');
+  return block.get('datasetParentName');
 }
 
 function scopeOfBlock(block) {

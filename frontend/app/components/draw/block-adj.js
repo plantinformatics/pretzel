@@ -102,7 +102,7 @@ export default Component.extend(Evented, AxisEvents, {
 
   needs: ['component:draw/path-data'],
 
-  controlsView : alias('controls.controls.view'),
+  controlsView : alias('controls.view'),
 
   /** counters to debounce CFs */
   heightChanged : 0,

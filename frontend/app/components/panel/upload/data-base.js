@@ -103,9 +103,12 @@ export default Component.extend({
         // through controller-level function
         this.get('refreshDatasets')();
       }, (err, status) => {
-        let errobj = err.responseJSON.error;
+        let errobj = err.responseJSON?.error;
         console.log(errobj);
         let errmsg = null;
+        if (! errobj) {
+          errmsg = err.responseJSON || ('' + err);
+        } else
         if (errobj.message) {
           errmsg = errobj.message;
         } else if (errobj.errmsg) {

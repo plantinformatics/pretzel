@@ -42,6 +42,9 @@ envNames =
     'EMAIL_VERIFY',
     'AUTH',
     'nBlockFeaturesCopy',
+    'scriptsDir',
+    'blastDir',
+    'vcfDir',
 
     'DEBUG',
     'DOTENV_CONFIG_DEBUG',

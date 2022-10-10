@@ -14,12 +14,12 @@ import { eltWidthResizable } from '../utils/domElements';
 import { eltIdGpRef }  from '../utils/draw/axis';
 import AxisEvents from '../utils/draw/axis-events';
 import { stacks, xScaleExtend } from '../utils/stacks';
+import { dLog } from '../utils/common/log';
 
 /* global d3 */
 
 /*----------------------------------------------------------------------------*/
 
-const dLog = console.debug;
 
 /*----------------------------------------------------------------------------*/
 

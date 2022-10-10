@@ -34,7 +34,7 @@ export default Model.extend(Evented, {
   apiServers: service(),
   controls : service(),
 
-  controlsView : alias('controls.controls.view'),
+  controlsView : alias('controls.view'),
 
 
   /** id is blockAdjId[0] + '_' + blockAdjId[1], as per.  serializers/block-adj.js : extractId()
@@ -126,18 +126,20 @@ export default Model.extend(Evented, {
   /** Result is, for each blockID in blockAdjId,  the axis on which the block is displayed.
    * May need to add dependency on stacks component, because block can be un-viewed then re-viewed.
    */
-  axes : computed('blocks', 'blocks.@each.axis', function () {
-    let blocks = this.get('blocks'),
-    axes = blocks.map(function (b) { return b.get('axis'); })
+  axes : computed('blocks', 'blocks.@each.axis', 'blocks.@each.isViewed', function () {
+    const
+    blocks = this.get('blocks'),
+    /** axis1d.axis is the block */
+    axes = blocks.mapBy('axis1d.axis.view.axis')
     /* When an axis is deleted, block.axis can become undefined before the
      * block-adj component is destroyed.  So handle axis === undefined. */
       .filter((b) => b);
     dLog('axes', blocks, axes);
     return axes;
   }),
-  axes1d : computed('axes', 'axes.@each', function () {
-    let axes = this.get('axes'),
-    axes1d = axes.mapBy('axis1d');
+  axes1d : computed('blocks.@each.axis1d', function () {
+    let
+    axes1d = this.blocks.mapBy('axis1d');
     return axes1d;
   }),
 
