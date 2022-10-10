@@ -180,9 +180,10 @@ export default class PanelManageGenotypeComponent extends Component {
 
   /** Maximum interval for VCF lookup request.
    * This initial default value is coordinated with hbs : <input ... value=1 ... intervalLimitInput >
+   * If ! gtIntervalLimit, don't apply a limit.
    */
   @tracked
-  intervalLimit = 1;
+  intervalLimit = this.urlOptions.gtIntervalLimit ? 1 : 1e5;
 
   @action
   intervalLimitInput(event) {

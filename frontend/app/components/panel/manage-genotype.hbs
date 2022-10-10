@@ -172,6 +172,7 @@ Server :
       </li>
 
       <li class="list-group-item horiz-2">
+        {{#if this.urlOptions.gtIntervalLimit}}
         <div>
           <label>Interval limit</label>
           <span class="sub-label">{{ this.intervalLimit }} Mb</span>
@@ -181,6 +182,7 @@ Server :
            min="1" max="100"
           />
         </div>
+        {{/if}}
 
         <div>
           <label>Rows</label>

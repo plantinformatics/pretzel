@@ -1,4 +1,5 @@
 import { computed, observer } from '@ember/object';
+import { alias } from '@ember/object/computed';
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
 import { get as Ember_get, set as Ember_set } from '@ember/object';
@@ -165,6 +166,12 @@ function nRows2HeightEx(nRows) {
  *   afterOnCellMouseDown -> selectBlock (column name)
  */
 export default Component.extend({
+  queryParamsService : service('query-params'),
+
+  urlOptions : alias('queryParamsService.urlOptions'),
+
+  //----------------------------------------------------------------------------
+
   /** this may move up to matrix-view-page
   style: 'height:100%; width:100%',
   attributeBindings: ['style:style'],
@@ -312,7 +319,6 @@ export default Component.extend({
       cells: bind(this, this.cells),
       afterScrollVertically: bind(this, this.afterScrollVertically),
       outsideClickDeselects: true,
-      afterSelection : bind(this, this.afterSelection),
       afterOnCellMouseDown: bind(this, this.afterOnCellMouseDown),
       afterOnCellMouseOver,
       headerTooltips: {
@@ -321,6 +327,9 @@ export default Component.extend({
         onlyTrimmed: true
       }
     };
+    if (this.urlOptions.gtSelectColumn) {
+      settings.afterSelection = bind(this, this.afterSelection);
+    }
     let table = new Handsontable(tableDiv, settings);
 
     Handsontable.renderers.registerRenderer('CATGRenderer', bind(this, this.CATGRenderer));
