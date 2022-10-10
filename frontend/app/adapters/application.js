@@ -16,11 +16,11 @@ import {
 } from '../utils/configuration';
 
 import { breakPoint } from '../utils/breakPoint';
+import { dLog } from '../utils/common/log';
 
 /*----------------------------------------------------------------------------*/
 
 let trace = 1;
-const dLog = console.debug;
 
 /*----------------------------------------------------------------------------*/
 

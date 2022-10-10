@@ -11,10 +11,11 @@ import DS from 'ember-data';
 
 import { axisFeatureCircles_selectOne, axisFeatureCircles_selectUnviewed } from '../utils/draw/axis';
 import { thenOrNow } from '../utils/common/promises';
+import { dLog } from '../utils/common/log';
+
 
 /*----------------------------------------------------------------------------*/
 
-const dLog = console.debug;
 
 dLog("controllers/mapview.js");
 
