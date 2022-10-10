@@ -9,7 +9,12 @@ import { later, bind } from '@ember/runloop';
 
 import { featureEdit } from '../components/form/feature-edit';
 import { eltClassName } from '../utils/domElements';
-import { axisFeatureCircles_selectOneInAxis } from '../utils/draw/axis';
+import {
+  // setRowAttributes,
+  afterOnCellMouseOverClosure,
+  highlightFeature,
+} from '../utils/panel/axis-table';
+import { afterSelectionFeatures } from '../utils/panel/feature-table';
 
 import config from '../config/environment';
 
@@ -115,6 +120,89 @@ class FeatureEditor extends Handsontable.editors.BaseEditor {
 
 /*----------------------------------------------------------------------------*/
 
+/** @return feature data of the table cell being edited */
+function getEditCellData(cell) {
+  let
+  td = cell.TD,
+  tr = td?.parentElement,
+  row = tr?.rowIndex - 1,
+  table = cell.hot,
+  tableBrushed = table.rootElement.__PretzelTableBrushed__;
+  // td.cellIndex
+  let feature = tableBrushed.data[row];
+  // feature.feature === tr.__dataPretzelFeature__
+  return feature;
+}
+
+let windowOpenAction;
+
+
+class FeatureUrlView extends Handsontable.editors.BaseEditor {
+  constructor(props) {
+    super(props);
+  }
+
+  createElements() {
+    // super.createElements();
+
+    this.anchor = this.hot.rootDocument.createElement('a');
+    dLog('FeatureUrlView', this.anchor, this);
+
+    this.anchor.setAttribute('target', '_blank');
+    this.anchor.setAttribute('data-hot-input', true); // Makes the element recognizable by HOT as its own component's element.
+    let aStyle = this.anchor.style;
+    aStyle.width = 0;
+    aStyle.height = 0;
+  }
+
+  beginEditing(newInitialValue, event) {
+    dLog('beginEditing', newInitialValue, event);
+    super.beginEditing(newInitialValue, event);
+
+    if (! this.anchor) {
+      this.createElements();
+    }
+
+    const
+    feature = getEditCellData(this),
+    base = 'http://www.sbg.bio.ic.ac.uk/phyre2/',
+    // e.g. 'afceadc4df2bf1e7'
+    Phyre2_ID = feature.feature.values.Phyre2_ID,
+    idUrl = base + 'phyre2_output/' + Phyre2_ID,
+    url = idUrl + '/summary.html';
+    /** other urls :
+     * base + '/webscripts/batchprogress.cgi?batchid=' + feature.values.Batch_ID
+     * idUrl + 'c6orbA_.1{.big,}.png', or 'c6orbA_.1.pdb'
+     */
+    this.anchor.setAttribute('href', url);
+    // this.anchor.click();
+    // window.open(url, '_blank');
+    windowOpenAction(url);
+    // return false;
+  }
+  getValue() {
+    dLog('getValue');
+    return this.originalValue;
+  }
+  setValue(newValue /* Mixed*/) {
+    dLog('setValue', newValue);
+  }
+  open() {
+    dLog('open', this, this.TD);
+  }
+  close() {
+    dLog('close', this);
+    /* This is called when user clicks into the feature-edit dialog;  no action required. */
+  }
+  focus() {
+    dLog('focus');
+  }
+
+}
+
+
+/*----------------------------------------------------------------------------*/
+
 /** Provide default types for feature .values fields
  */
 const featureValuesTypes = {
@@ -127,6 +215,7 @@ const featureValuesColumnsAttributes = {
   alt : { className: "htCenter"},
   Reference : {className : 'htNoWrap' },
   Ontology : { editor : FeatureEditor, className : 'editDialog' },
+  Phyre2_ID : { editor : FeatureUrlView},
 };
 /** Provide default widths for feature .values fields
  */
@@ -218,6 +307,7 @@ export default Component.extend({
     dLog("components/table-brushed.js: didInsertElement");
 
     formFeatureEditEnable = (enable) => later(() => this.set('formFeatureEditEnable', enable));
+    windowOpenAction = (url) => later(() => window.open(url, '_blank'));
   },
 
   /** Destroy the HandsOnTable so that it does not clash with the HandsOnTable
@@ -463,6 +553,8 @@ export default Component.extend({
       me.afterSelection(this, row, col);
     }
 
+    const afterOnCellMouseOver = afterOnCellMouseOverClosure(this);
+
       let data = this.get('dataForHoTable');
       /** if data is [], Handsontable appends {} to it, so pass it a new empty array instead of the CP result. */
       if (data.length === 0) {
@@ -510,23 +602,6 @@ export default Component.extend({
       /** application client data : this component */
       table.rootElement.__PretzelTableBrushed__ = this;
 
-    function afterOnCellMouseOver(event, coords, TD) {
-      if (coords.row === -1) {
-        return;
-      }
-      // getDataAtCell(coords.row, coords.col)
-      // table?.getDataAtRow(coords.row);
-      let
-      table = that.table,
-      /** The meta is associated with column 0.
-       * The data is currently the selected feature, which refers to the Ember
-       * data object as .feature
-       */
-      feature = table?.getCellMeta(coords.row, 0)?.PretzelFeature?.feature;
-      dLog('afterOnCellMouseOver', coords, TD, feature?.name, feature?.value);
-      /** clears any previous highlights if feature is undefined */
-      that.highlightFeature(feature);
-    }
     /* alternative :
     function afterOnCellMouseOut(event, coords, TD) {
       that.highlightFeature();
@@ -560,6 +635,7 @@ export default Component.extend({
       this.setRowAttribute(table, row, feature) ;
       /* this alternative is more specific to HoT, but is less brittle than setRowAttribute() using tr.__dataPretzelFeature__
        * Used by afterOnCellMouseOver().
+       * This function can be replaced by axis-table.js : setRowAttributes().
        */
       table.setCellMeta(row, 0, 'PretzelFeature', feature);
     });
@@ -593,32 +669,15 @@ export default Component.extend({
   },
 
   afterSelection(table, row, col) {
-    // ^A (Select All) causes row===-1, col===-1
-    if (row === -1) { return; }
+    /* no result if (row === -1), e.g. ^A (Select All) */
+    const features = afterSelectionFeatures.apply(this, arguments);
+    if (features) {
+      this.get('controls').set('tableSelectedFeatures', features);
 
-    const
-    ranges = table.selection?.selectedRange?.ranges,
-    data = this.get('data'),
-    features = data?.length && ranges && ranges.reduce((fs, r) => {
-      /** from,to are in the order selected by the user's click & drag.
-       * ^A can select row -1.
-       */
-      dLog('afterSelection', r.from.row, r.to.row);
-      let ft = [r.from.row, r.to.row].sort();
-      for (let i = Math.max(0, ft[0]); i <= ft[1]; i++) {
-        let f = data[i];
-        fs.push(f);
+      let feature = this.data[row];
+      if (feature) {
+        this.setRowAttribute(table, row, feature);
       }
-      return fs;
-    }, []);
-    dLog('afterSelection', features, table, row, col);
-    this.set('tableSelectedFeatures', features);
-    this.highlightFeature(features);
-    this.get('controls').set('tableSelectedFeatures', features);
-
-    let feature = this.data[row];
-    if (feature) {
-      this.setRowAttribute(table, row, feature);
     }
   },
 
@@ -638,43 +697,7 @@ export default Component.extend({
     }
   }),
 
-  /** @param feature may be name of one feature, or an array of features -
-   * selectedFeatures data : {
-   *   Chromosome: string : datasetId ':' block name (scope)
-   *   Feature: string : feature name
-   *   Position: number
-   *   feature: ember-data object
-   * }
-   */
-  highlightFeature: function(feature) {
-    const fnName = 'highlightFeature';
-    d3.selection.prototype.moveToFront = function() {
-      return this.each(function(){
-        this.parentNode.appendChild(this);
-      });
-    };
-    d3.selectAll("g.axis-outer > circle")
-      .attr("r", 2)
-      .style("fill", "red")
-      .style("stroke", "red");
-    if (feature) {
-      if (Array.isArray(feature)) {
-        feature.forEach(
-          (f, i) => f ? this.highlightFeature1(f.feature) : dLog(fnName, f, i, feature));
-      } else {
-        this.highlightFeature1(feature);
-      }
-    }
-  },
-  /** Highlight 1 feature, given feature */
-  highlightFeature1: function(feature) {
-      /** see also handleFeatureCircleMouseOver(). */
-      axisFeatureCircles_selectOneInAxis(undefined, feature)
-        .attr("r", 5)
-        .style("fill", "yellow")
-        .style("stroke", "black")
-        .moveToFront();
-  },
+  highlightFeature,
 
   closeFeatureEdit() {
     dLog('closeFeatureEdit', this);

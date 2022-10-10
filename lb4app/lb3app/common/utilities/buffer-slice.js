@@ -24,9 +24,10 @@ exports.bufferSlice = function(bufferData, position) {
     Math.max(position - sliceContextLength/2, 0),
     Math.min(position + sliceContextLength/2, bufferData.length)], // position is integer, not a string
     sliceLength = slice[1] - slice[0],
-  e0 = bufferData.asciiSlice(slice[0], position),
+  sliceName = bufferData.asciiSlice ? 'asciiSlice' : 'slice',
+  e0 = bufferData[sliceName](slice[0], position),
   e0m = e0.match(/(.*\n)(.*)/ms),
-  e1 = bufferData.asciiSlice(position, slice[1]),
+  e1 = bufferData[sliceName](position, slice[1]),
   e1m = /^([^\n]+)(.*)/ms .exec(e1);
 
   let result = [

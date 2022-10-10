@@ -116,6 +116,9 @@ module.exports = function(Feature) {
       return process.nextTick(() => cb(null, features))
     })
   };
+  /** POST version of Feature.search, which is addressed by verb GET.
+   */
+  Feature.searchPost = Feature.search;
 
   /*--------------------------------------------------------------------------*/
 
@@ -213,11 +216,14 @@ module.exports = function(Feature) {
         textLines = chunk.toString().split('\n')
           .filter((textLine) => filterBlastResults(
             minLengthOfHit, minPercentIdentity, minPercentCoverage, textLine));
-        textLines.forEach((textLine) => {
-          if (textLine !== "") {
-            console.log(fnName, 'stdout data',  "'", textLine,  "'");
-          }
-        });
+        if (trace) {
+          (trace > 3 ? textLines : textLines.slice(0, 2))
+            .forEach((textLine) => {
+              if (textLine !== "") {
+                console.log(fnName, 'stdout data',  "'", textLine,  "'");
+              }
+            });
+        };
         if (addDataset) {
           let jsonFile='tmp/' + datasetName + '.json';
           /** same as convertSearchResults2Json() in dnaSequenceSearch.bash */
@@ -275,6 +281,18 @@ module.exports = function(Feature) {
     returns: {arg: 'features', type: 'array'},
     description: "Returns features and their datasets given an array of feature names"
   });
+
+  Feature.remoteMethod('searchPost', {
+    accepts: [
+      {arg: 'blockId', type: 'string', required: false},
+      {arg: 'filter', type: 'array', required: true},
+      {arg: "options", type: "object", http: "optionsFromRequest"}
+    ],
+    http: {verb: 'post'},
+    returns: {arg: 'features', type: 'array'},
+    description: "Returns features and their datasets given an array of feature names"
+  });
+
 
   Feature.remoteMethod('aliasSearch', {
     accepts: [

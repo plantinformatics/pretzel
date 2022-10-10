@@ -72,7 +72,15 @@ export default Component.extend(Evented, AxisEvents, {
   /*--------------------------------------------------------------------------*/
 
   referenceDataset : computed('axis', function () {
-    let dataset = this.get('axis').referenceBlock.get('datasetId');
+    let dataset;
+    if (this.get('axis')) {
+      dataset = this.get('axis').referenceBlock.get('datasetId');
+    } else {
+      dataset = this.get('block.block.datasetId');
+      if (dataset.content) {
+        dataset = dataset.content;
+      }
+    }
     return dataset;
   }),
 
@@ -128,10 +136,12 @@ export default Component.extend(Evented, AxisEvents, {
     console.log('features', this.zoomCounter, this);
     let featuresP = this.get('axisBrush.features');
     featuresP.then((features) => {
-    this.receivedLengths(features);
-    /** features is now an array of results, 1 per block, so .length is the number of data blocks. */
-    if (features && features.length)
-      throttle(this, () => ! this.isDestroying && this.draw(features), 200, false);
+      if (features) {
+        this.receivedLengths(features);
+        /** features is now an array of results, 1 per block, so .length is the number of data blocks. */
+        if (features.length)
+          throttle(this, () => ! this.isDestroying && this.draw(features), 200, false);
+      }
     });
     return featuresP;
   }),
@@ -296,7 +306,9 @@ export default Component.extend(Evented, AxisEvents, {
     }
   },
 
+
   // ---------------------------------------------------------------------------
+
 
   
 });

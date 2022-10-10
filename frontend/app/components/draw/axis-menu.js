@@ -112,17 +112,25 @@ export default Ember.Component.extend({
     'block',
     'block.viewedChildBlocks.[]',
     'block.blockService.viewedBlocksByReferenceAndScopeUpdateCount',
+    'block.axis1d.dataBlocks',
     function () {
       let
-      dataBlocks;
+      dataBlocks,
+      axis1d;
       /** close menu when axis is removed, i.e. this.block is un-viewed. */
-      if (! this.block.isViewed || ! this.block.axis) {
+      if (! this.block.isViewed) {
         dLog('dataBlocks', this.block.isViewed, this.block.axis, this.block);
         /** wait until next cycle of run loop because this CP is called during render. */
         run_next(() => this.hide());
         /* returning undefined is also OK, result is used in axis-menu.hbs : #each dataBlocks */
         dataBlocks = [];
-      } else {
+      } else if ((axis1d = this.block.axis1d)) {
+        /* axis1d.dataBlocks returns ember data model objects, so map that to
+         * Stacks Blocks, until Stacks Blocks are absorbed into axis-1d and
+         * dataBlocks() can return model objects instead. */
+        dataBlocks = axis1d.dataBlocks
+          .map((b) => b.view);
+      } else if (this.block.axis) {
         /** skip the reference block, which is shown above the data block list,
          * if it is not a data block.  A GM (Genetic Map) is the first block of
          * its axis and it is data.
@@ -133,6 +141,9 @@ export default Ember.Component.extend({
         axisBlocks = this.block.axis.blocks,
         firstIsData = axisBlocks[0].block.isData;
         dataBlocks = axisBlocks.slice(firstIsData ? 0 : 1);
+      }
+      else {
+        dataBlocks = [];
       }
       return dataBlocks;
     }),
@@ -151,7 +162,9 @@ export default Ember.Component.extend({
   dataBlockColour(blockS) {
     let
     block = blockS.block,
-    axis1d = this.block.axis1d,
+    axis1d = this.block.axis1d ||
+      blockS.axis?.axis1d ||
+      block.get('view.axis.axis1d'),
     colour = axis1d.blockColourValue(block);
     return colour;
   },

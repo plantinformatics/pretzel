@@ -8,6 +8,7 @@ import { task, didCancel } from 'ember-concurrency';
 
 import { stacks, Stacked } from '../../utils/stacks';
 import { storeFeature } from '../../utils/feature-lookup';
+import { vcfGenotypeLookup, addFeaturesJson } from '../../utils/data/vcf-feature';
 import { updateDomain } from '../../utils/stacksLayout';
 
 import {
@@ -274,7 +275,7 @@ export default Service.extend({
           if (pathsViaStream)
             dLog('path request', 'pathsViaStream', blockA, blockB, me, err, status);
           else
-          dLog('path request', blockA, blockB, me, err.responseJSON[status] /* .error.message*/, status);
+          dLog('path request', blockA, blockB, me, err?.responseJSON && err.responseJSON[status] /* .error.message*/, status);
         });
     return promise;
   },
@@ -683,6 +684,10 @@ export default Service.extend({
     }
     else if (brushedDomain)
       paramAxis.domain = brushedDomain;
+    if (! axis || (axisBrush?.block.get('isViewed') === false)) {
+      dLog(apiName, axis, axisBrush?.block);
+      return Promise.resolve([]);
+    }
     let dataBlockIds =
         all ? [blockA] :
         axis.dataBlocks(true, false)
@@ -697,12 +702,40 @@ export default Service.extend({
      * this also simplifies API access-checking.
      */
     let promises =
-    dataBlockIds.map(function (blockId) {
-    let promise = 
+    dataBlockIds.map((blockId) => {
+      const block = this.get('blockService').peekBlock(blockId);
+      const
+      isView = block.hasTag('view'),
+      receivedDataFn = isView ? receivedDataVCF : receivedData;
+
+      let promise;
+      /* VCF blocks are a sub-set of 'view' blocks,
+       * i.e. hasTag('VCF') implies hasTag('view').
+       *
+       * View blocks don't have features in the database but define how features
+       * may be loaded from an external dataset e.g. bcftools loading from
+       * .vcf.gz files.
+       */
+      promise = isView ?
+        this.vcfGenotypeLookup(block, paramAxis) :
+
       // streaming version not added yet
       // pathsViaStream ?
       // this.get('auth').getPathsViaStream(blockA, blockB, intervalParams, /*options*/{dataEvent : receivedData}) :
       me.get('auth').getBlockFeaturesInterval(blockId, intervalParams, /*options*/{});
+
+        function receivedDataVCF(text) {
+          if (text && block) {
+            const
+            /** not used because 0 samples. */
+            requestFormat = 'CATG';
+            /** pass [] for selectedFeatures - don't update selectedFeatures */
+            const added = addFeaturesJson(
+              block, requestFormat, /*replaceResults*/ false,
+              /*selectedFeatures*/ [], text);
+          }
+        }
+
         function receivedData(res){
           if (trace_pathsP > 1)
             dLog(apiName, ' request then', res.length);
@@ -728,7 +761,7 @@ export default Service.extend({
     promise = 
     promise
       .then(
-        receivedData,
+        receivedDataFn,
         function(err, status) {
           // if (pathsViaStream)
           //  dLog(apiName, ' request', 'pathsViaStream', blockA, me, err, status);
@@ -740,7 +773,32 @@ export default Service.extend({
     let promise = allSettled(promises);
     return promise;
 
-  }
+  },
+
+  vcfGenotypeLookup(block, paramAxis) {
+    const
+    /** params for  */
+    vcfDatasetId = block.get('datasetId.id'),
+    domain = paramAxis.domain || block.get('axis1d.domain'),
+    /** as in vcfGenotypeLookupDomain() */
+    domainInteger = domain.map((d) => d.toFixed(0)),
+    vcParams = this.get('pathsDensityParams'),
+    rowLimit = vcParams.nSamples || vcParams.nFeatures || 400,
+    /** not used because 0 samples. */
+    requestFormat = 'CATG',
+
+    /* generally block.name and .scope are the same.
+     * To handle vcf files with e.g. %CHROM 'chr1A' instead of '1A',
+     * .name can be chr1A, and .name is used here for the 'scope' param of
+     * vcfGenotypeLookup().
+     */
+    textP = vcfGenotypeLookup(
+      this.auth, block.server, /*samples*/[], domainInteger,
+      requestFormat, vcfDatasetId, block.name, rowLimit
+    );
+
+    return textP;
+  },
 
 
 });

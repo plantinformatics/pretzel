@@ -1296,6 +1296,7 @@ DataConfig.prototype.rectWidth = function (scaleX, gIsData, d, i, g)
  */
 DataConfig.prototype.rectHeight = function (scaled, gIsData, d, i, g)
 {
+  const fnName = 'rectHeight';
   assert('rectHeight arguments.length === 5', arguments.length === 5);
   let height,
   d2l = (scaled ? this.datum2LocationScaled : this.datum2Location),
@@ -1334,6 +1335,9 @@ DataConfig.prototype.rectHeight = function (scaled, gIsData, d, i, g)
       if (! height)
         height = 1;
     }
+  }
+  if (trace && isNaN(height)) {
+    dLog(fnName, location, scaled, gIsData, d, i);
   }
   return height;
 };

@@ -11,11 +11,11 @@ import {
   ontologyIdFromIdText,
   mapTree,
  } from '../../utils/value-tree';
+import { dLog } from '../common/log';
 
 
 // -----------------------------------------------------------------------------
 
-const dLog = console.debug;
 
 // -----------------------------------------------------------------------------
 

@@ -67,6 +67,7 @@ function splitMetadata()
   # Select the first line. Trim off Field,. Trim spaces around , and |. Convert , to " ", prepend and append ".
   # Result is the headings of the dataset columns, e.g. Alignment|EST_SNP, Map|Red x Blue
   eval datasetNames=( $(< "$fileDir"/Metadata.csv head -1 | quotedHeadings) )
+  # (IFS=,; echo "datasetNames: ${datasetNames[*]}")
   # 
   for di in ${!datasetNames[*]};
   do
@@ -494,7 +495,12 @@ case $fileName in
       warningsFile="$fileDir"/warnings
 
       # i is worksheetFileName
-      for i in "$fileName".*'|'*csv
+      # the aim is to load the CSVs in worksheet order, or alternately in order of Metadata : Field row
+      # The latter can be derived from ${datasetNames[*]}.
+      # The inodes of the CSVs will generally reflect the order they are extracted, which is the worksheet order.
+      # Using datasetNames is probably a better long-term solution, but is more
+      # complex, and atm a sure and simple solution is needed in production now.
+      for i in $(ls -i "$fileName".*'|'*csv | sort | awk '{ print $2; }')
       do
         echo "i=$i" >> uploadSpreadsheet.log;
 

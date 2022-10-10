@@ -75,6 +75,9 @@ module.exports = function(Dataset) {
        */
       let cbOrig = cb,
           cbCalled = 0;
+      /**
+       * @param message if ! err, then message is result, i.e. dataset name
+       */
       function cbWrap(err, message, last) {
         console.log('cbWrap', err && err.toString(), message, last);
         /* insert_features_recursive() "passes" last === undefined,
@@ -85,6 +88,12 @@ module.exports = function(Dataset) {
             if (err && (errors.length || warnings.length)) {
               err = [err.toString()].concat(errors).concat(warnings).join("\n");
               errors = []; warnings = [];
+            } else if (err && (typeof err.message === 'string')) {
+              console.log(fnName, 'cbWrap', err.message);
+              err = ErrorStatus(400, err.message);
+              if (! message) {
+                message = err.message;
+              }
             }
             cbOrig(err, message);
           }
