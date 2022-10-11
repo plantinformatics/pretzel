@@ -33,7 +33,7 @@
     "openapi-spec": "node ./dist/openapi-spec",
     "prestart": "npm run rebuild",
     "start-no-pre": "node $NODE_INSPECT -r source-map-support/register .",
-    "start" : "npm run start-no-pre",
+    "start": "npm run start-no-pre",
     "clean": "lb-clean dist *.tsbuildinfo .eslintcache",
     "rebuild": "npm run clean && npm run build"
   },
@@ -67,6 +67,7 @@
     "dotenv": "^16.0.0",
     "express-sse": "^0.5.3",
     "helmet": "^5.0.2",
+    "interval-tree-1d": "^1.0.4",
     "jquery-param": "^1.1.8",
     "lodash": "^4.17.21",
     "loopback": "^3.28.0",

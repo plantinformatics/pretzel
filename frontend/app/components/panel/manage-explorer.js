@@ -551,32 +551,38 @@ export default ManageBase.extend({
     return combined;
   }),
   //----------------------------------------------------------------------------
-  dataPre1: computed('datasetsBlocks', 'datasetsBlocks.[]', 'filter', 'groupFilterSelected', function() {
-    let availableMaps = this.get('datasetsBlocks') || resolve([]);
-    let filter = this.get('filter')
-    dLog('dataPre', availableMaps, filter);
-    // perform filtering according to selectedChr
-    // let filtered = availableMaps //all
-    if (filter == 'private') {
-      let maps = availableMaps.filterBy('public', false)
-      return maps
-    } else if (filter == 'owner') {
-      return availableMaps.filterBy('owner', true)
-    } else {
-      if (trace_dataTree > 2)
-        availableMaps.then(function (value) { console.log('dataPre availableMaps ->', value); });
-      if (this.groupFilterSelected) {
+  dataPre1: computed(
+    'datasetsBlocks', 'datasetsBlocks.[]', 'filter', 'groupFilterSelected',
+    /* .groupsInIds is used as a proxy for
+     * 'datasetsBlocks.@each.groupIsVisible', which would require significantly
+     * greater computation. */
+    'apiServerSelectedOrPrimary.groups.groupsInIds',
+    function() {
+      let availableMaps = this.get('datasetsBlocks') || resolve([]);
+      let filter = this.get('filter');
+      dLog('dataPre', availableMaps, filter);
+      // perform filtering according to selectedChr
+      // let filtered = availableMaps //all
+      if (filter == 'private') {
+        let maps = availableMaps.filterBy('public', false);
+        return maps;
+      } else if (filter == 'owner') {
+        return availableMaps.filterBy('owner', true);
+      } else {
+        if (trace_dataTree > 2)
+          availableMaps.then(function (value) { console.log('dataPre availableMaps ->', value); });
+        if (this.groupFilterSelected) {
+          availableMaps = thenOrNow(
+            availableMaps,
+            (datasetsBlocks) => datasetsBlocks.filter((d) => {
+              let ok = d.get('groupId.id') === this.groupFilterSelected.id; return ok; }));
+        }
         availableMaps = thenOrNow(
           availableMaps,
-          (datasetsBlocks) => datasetsBlocks.filter((d) => {
-            let ok = d.get('groupId.id') === this.groupFilterSelected.id; return ok; }));
+          (datasetsBlocks) => datasetsBlocks.filterBy('isVisible'));
+        return availableMaps;
       }
-      availableMaps = thenOrNow(
-        availableMaps,
-        (datasetsBlocks) => datasetsBlocks.filterBy('isVisible'));
-      return availableMaps;
-    }
-  }),
+    }),
   dataPreHistory : computed('dataPre1.[]', 'historyView', function () {
     let data = this.get('dataPre1');
     let match;

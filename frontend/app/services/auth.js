@@ -41,7 +41,29 @@ export default Service.extend({
   apiServers : service(),
   controls : service(),
 
+  //----------------------------------------------------------------------------
+
   apiServerSelectedOrPrimary : alias('controls.apiServerSelectedOrPrimary'),
+
+  /** indexed by API request name;  e.g. counts of current requests */
+  apiStats : {},
+
+  //----------------------------------------------------------------------------
+
+  /** Add increment to count for API apiName
+   * Initialise count for apiName to 0 if undefined.
+   * @param increment +/- integer
+   */
+  apiStatsCount(apiName, increment) {
+    if (this.apiStats[apiName] === undefined) {
+      this.apiStats[apiName] = 0;
+    }
+    // .apiStats[apiName] is tracked (displayed), so use .incrementProperty() or Ember.set().
+    this.incrementProperty('apiStats.' + apiName, increment);
+  },
+
+
+  //----------------------------------------------------------------------------
 
   changePassword(data) {
     return this._ajax('Clients/change-password', 'POST', JSON.stringify(data), true)
@@ -320,7 +342,14 @@ export default Service.extend({
   featureSearch(apiServer, blockId, featureNames, options) {
     if (trace_paths)
       dLog('services/auth featureSearch', blockId, featureNames, options);
-    return this._ajax('Features/search', 'GET', {server : apiServer, blockId, filter : featureNames, options}, true);
+    let paramLimit = 200;
+    const post = featureNames?.length > paramLimit;
+    const data = {blockId, filter : featureNames, options};
+    return this._ajax(
+      'Features/search' + (post ? 'Post' : ''),
+      post ? 'POST' : 'GET',
+      post ? JSON.stringify(data) : data,
+      true, apiServer);
   },
 
   /** Search for Aliases matching the given list of Feature names in featureNames[],
@@ -331,6 +360,43 @@ export default Service.extend({
     if (trace_paths)
       dLog('services/auth featureAliasSearch', featureNames, options);
     return this._ajax('Features/aliasSearch', 'GET', {server : apiServer, featureNames, options}, true);
+  },
+
+
+  /** Request DNA sequence lookup (Blast).
+   * @param parent  datasetId of parent / reference of the blast db which is to be searched
+   * @param scope chromosome
+   * @param options not used yet, may be for streaming result
+   */
+  vcfGenotypeSamples(apiServer, parent, scope, options) {
+    dLog('services/auth vcfGenotypeSamples', parent, scope, options);
+    return this._ajax('Blocks/vcfGenotypeSamples', 'GET', {server : apiServer, parent, scope, options}, true);
+  },
+
+  /** Request DNA sequence lookup (Blast).
+   * @param parent  datasetId of parent / reference of the blast db which is to be searched
+   * @param scope chromosome
+   * This is also included in preArgs.region 
+   * @param preArgs args to be inserted in command line, this may be between
+   * 'bcftools' and parent (vcf file name), or after the file name.
+   *  e.g. region : -r 'chr6A:607200000-607200000'
+   *      samples : -s ...,...
+   * This will likely be replaced by specific params region and samples.
+   * @param nLines if defined, limit the output to nLines.
+   * @param options not used yet, may be for streaming result
+   */
+  vcfGenotypeLookup(apiServer, parent, scope, preArgs, nLines, options) {
+    dLog('services/auth vcfGenotypeLookup', parent, scope, preArgs, nLines, options);
+    const
+    paramLimit = 5,
+    samples = preArgs.samples,
+    post = samples?.length > paramLimit,
+    data = {parent, scope, preArgs, nLines, options};
+    return this._ajax(
+      'Blocks/vcfGenotypeLookup' + (post ? 'Post' : ''),
+      post ? 'POST' : 'GET',
+      post ? JSON.stringify(data) : data,
+      true, apiServer);
   },
 
 
@@ -365,7 +431,7 @@ export default Service.extend({
      * search is defined in backend/scripts/blastn_request.bash
      */
     if (options.timeout === undefined) {
-      options.timeout = 2 * 60 * 1000;
+      options.timeout = 3 * 60 * 1000;
     }
     /** Attach .server to JSON string, instead of using
      * requestServerAttr (.session.requestServer)
@@ -427,6 +493,7 @@ export default Service.extend({
    * (phasing out : requestServerAttr - .session.requestServer)
    */
   _ajax(route, method, dataIn, token, onProgress , apiServer) {
+    const fnName = '_ajax';
     let {server, data} = apiServer ?
         {server : apiServer, data : dataIn} :
         this._server(route, dataIn),
@@ -440,10 +507,23 @@ export default Service.extend({
       contentType: 'application/json'
     }
 
-    if (data) config.data = data
+    if (data) {
+      config.data = data;
+      const
+      /** data and dataIn may be already converted to JSON */
+      options = typeof data === "object" ? data.options : JSON.parse(data).options,
+      timeout = options?.timeout;
+      if (timeout !== undefined) {
+        dLog(fnName, 'timeout', timeout);
+        /* JSON.parse(data).options.timeout has no effect, but setting config.timeout does.
+         * Also limited by : nginx.conf : ... location / { ... proxy_read_timeout 180; }
+         */
+        config.timeout = timeout;
+      }
+    }
 
     if (trace) {
-      dLog('_ajax', arguments, (trace < 2) ? ',' : this);
+      dLog(fnName, arguments, (trace < 2) ? ',' : this);
     }
     if (token === true) {
       let accessToken = this._accessToken(server);
@@ -451,6 +531,9 @@ export default Service.extend({
     } else if (typeOf(token) == 'string') {
       config.headers.Authorization = token
     }
+
+
+
 
     // If an onProgress function passed, add progress event listeners
     if (onProgress instanceof Function) {

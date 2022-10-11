@@ -30,19 +30,30 @@ export default Service.extend(Evented, {
     'all.@each.brushedDomain',
     // 'all.@each.block.isViewed',
     function() {
-      if (trace_axisBrush)
-        dLog('brushedAxes', this);
       const fnName = 'brushedAxes';
+      if (trace_axisBrush)
+        dLog(fnName, this);
       let records = this.get('all');
       if (trace_axisBrush > 1)
         records.map(function (a) { dLog(fnName, a, a.get('brushedDomain')); } );
       if (trace_axisBrush)
-        dLog('viewed Blocks', records);
+        dLog(fnName, 'viewed Blocks', records);
       let blocks = records.filter(function (ab) {
         return ab.get('block.isViewed') && ab.get('brushedDomain'); } );
       blocks = blocks.toArray(); // Array.from(blocks);
+
+      const
+      previousName = fnName + '_Previous',
+      previous = this.get(previousName),
+      unchanged = (blocks.length === previous?.length) &&
+        ! blocks.find((b, i) => b.id !== previous[i].id);
       if (trace_axisBrush)
-        dLog(fnName, blocks);
+        dLog(fnName, blocks, unchanged);
+      if (unchanged) {
+        blocks = previous;
+      } else {
+        this.set(previousName, blocks);
+      }
 
       return blocks;
     }),

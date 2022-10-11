@@ -2,7 +2,7 @@ import { isArray } from '@ember/array';
 import { later } from '@ember/runloop';
 import { resolve, Promise } from 'rsvp';
 import { computed, get } from '@ember/object';
-import { alias } from '@ember/object/computed';
+import { alias, filterBy } from '@ember/object/computed';
 import Evented from '@ember/object/evented';
 import Ember from 'ember';
 import Service, { inject as service } from '@ember/service';
@@ -502,6 +502,7 @@ export default Service.extend(Evented, {
   },
 
   getSummary: function (blockIds) {
+    const fnName = 'getSummary';
     // console.log("block getSummary", id);
     let
     /** true enables $bucketAuto as an alternative to $bucket using
@@ -625,6 +626,11 @@ export default Service.extend(Evented, {
                 result = {binSize, nBins, domain : interval, result : featuresCounts};
                 block.featuresCountsResultsMergeOrAppend(result);
                 block.set('featuresCounts', featuresCounts);
+                if ((block.featureCount === undefined) && block.hasTag('view') ) {
+                  const featureCount = featuresCounts.reduce((sum,x) => sum += x.count, 0);
+                  dLog(fnName, blockId, featureCount);
+                  block.set('featureCount', featureCount);
+              }
               }
             });
             }
@@ -963,6 +969,12 @@ export default Service.extend(Evented, {
     let viewed = this.get('viewed'),
     viewedById = keyBy(viewed, (b) => b.id);
     return viewedById;
+  }),
+  // viewedVisible : filterBy('viewed', 'visible'),
+  viewedVisible : computed('viewed.@each.visible', function () {
+    const visible = this.viewed.filterBy('visible');
+    dLog('viewedVisible', visible.mapBy('id'));
+    return visible;
   }),
   /** Ensure that there is an axis for each viewed block.
    */
@@ -1440,9 +1452,9 @@ export default Service.extend(Evented, {
       let records =
         this.get('viewed')
         .filter(function (block) {
-          // hasFeatures indicates isData.  - change to use block.isData
+          /** see comment re. hasFeatures, isData{,Count} in @see mayHaveFeatures */
           return block.get('isLoaded') // i.e. !== undefined
-            && block.get('hasFeatures');
+            && block.get('mayHaveFeatures');
         });
       if (trace_block > 1)
         console.log(
@@ -1483,7 +1495,8 @@ export default Service.extend(Evented, {
    * @return Map : blockId -> [block]
    */
   dataBlocks : computed(
-    'loadedViewedChildBlocks.@each.hasFeatures',
+    /** loadedViewedChildBlocks is filtered by .@each.mayHaveFeatures */
+    'loadedViewedChildBlocks',
     function () {
       let records = this.get('loadedViewedChildBlocks'),
       map = records.reduce(
@@ -1499,8 +1512,7 @@ export default Service.extend(Evented, {
               map.set(id, blocks = []);
             /* non-data (reference) blocks are map indexes, but are not put in
              * the dataBlocks array. */
-            if (block.get('hasFeatures'))
-              blocks.push(block);
+            blocks.push(block);
           }
           return map; },
         new Map()

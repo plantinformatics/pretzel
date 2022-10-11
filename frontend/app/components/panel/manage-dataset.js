@@ -86,8 +86,10 @@ export default ManageBase.extend({
   updateViewer() {
     this.toggleProperty('toggleShowJsonViewer');
     run_later(() => {
-      this.toggleProperty('toggleShowJsonViewer');
-      run_later(() => $('a.jsoneditor-value').attr('target', '_blank'));
+      if (! this.isDestroying) {
+        this.toggleProperty('toggleShowJsonViewer');
+        run_later(() => $('a.jsoneditor-value').attr('target', '_blank'));
+      }
     });
   },
 
