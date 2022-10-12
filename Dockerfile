@@ -71,7 +71,7 @@ RUN wget https://github.com/samtools/bcftools/releases/download/${bcftoolsVer}/b
 # ${NODE_ALPINE_VERSION}
 FROM node:12-alpine as node-alpine-pretzel
 
-ARG PRETZEL_VERSION 2.14.2
+ARG PRETZEL_VERSION 2.15.0
 ARG NODE_ALPINE_VERSION 12
 
 # node-sass version is selected so that the binary can be downloaded;
@@ -181,7 +181,7 @@ ENTRYPOINT ["/usr/local/node16/bin/node", "/app/lb3app/server/server.js"]
 ARG NODE_ALPINE_VERSION 12
 ARG SAMTOOLS_VERSION=1.15.1
 ARG bcftoolsVer=1.15.1
-ARG PRETZEL_VERSION 2.14.2
+ARG PRETZEL_VERSION 2.15.0
 
 
 LABEL maintainer='github.com/plantinformatics'
