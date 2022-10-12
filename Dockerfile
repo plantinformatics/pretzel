@@ -25,13 +25,53 @@ RUN ./configure && \
     make -j${BUILD_NCPU}
 RUN strip samtools
 
+#---------------------------------------
+
+ARG bcftoolsVer=1.15.1
+
+
+# based on https://hub.docker.com/r/staphb/bcftools/dockerfile :
+#   LABEL software="bcftools"
+#   LABEL software.version="1.12"
+#   LABEL description="Variant calling and manipulating files in the Variant Call Format (VCF) and its binary counterpart BCF"
+#   LABEL website="https://github.com/samtools/bcftools"
+#   LABEL license="https://github.com/samtools/bcftools/blob/develop/LICENSE"
+#   LABEL maintainer="Erin Young"
+#   LABEL maintainer.email="eriny@utah.gov"
+
+
+# RUN apt-get update && apt-get install --no-install-recommends -y \
+#  wget \
+#  ca-certificates \
+#  perl \
+#  bzip2 \
+#  autoconf \
+#  automake \
+#  make \
+#  gcc \
+#  zlib1g-dev \
+#  libbz2-dev \
+#  liblzma-dev \
+#  libcurl4-gnutls-dev \
+#  libssl-dev \
+#  libperl-dev \
+#  libgsl0-dev && \
+#
+
+# get bcftools and make /data
+RUN wget https://github.com/samtools/bcftools/releases/download/${bcftoolsVer}/bcftools-${bcftoolsVer}.tar.bz2 && \
+ tar -vxjf bcftools-${bcftoolsVer}.tar.bz2 && \
+ rm bcftools-${bcftoolsVer}.tar.bz2 && \
+ cd bcftools-${bcftoolsVer} && \
+ make && \
+ make install
 
 # ------------------------------------------------------------------------------
 
 # ${NODE_ALPINE_VERSION}
 FROM node:12-alpine as node-alpine-pretzel
 
-ARG PRETZEL_VERSION 2.14.1
+ARG PRETZEL_VERSION 2.14.2
 ARG NODE_ALPINE_VERSION 12
 
 # node-sass version is selected so that the binary can be downloaded;
@@ -71,6 +111,13 @@ ARG SAMTOOLS_VERSION=1.15.1
 RUN apk add --no-cache libbz2 zlib libcurl xz-libs
 WORKDIR / 
 COPY --from=node-alpine-build-samtools /build/samtools-${SAMTOOLS_VERSION}/samtools /usr/local/bin/samtools
+COPY --from=node-alpine-build-samtools /usr/local/bin/bcftools /usr/local/bin/bcftools
+# /usr/local/bin already exists
+RUN mkdir -p -m 755   /usr/local/share/man/man1 /usr/local/libexec/bcftools
+ARG lB=/usr/local/bin
+COPY --from=node-alpine-build-samtools $lB/color-chrs.pl $lB/gff2gff.py $lB/guess-ploidy.py $lB/plot-vcfstats $lB/plot-roh.py $lB/run-roh.pl $lB/vcfutils.pl $lB/
+COPY --from=node-alpine-build-samtools /usr/local/share/man/man1/bcftools.1 /usr/local/share/man/man1/
+COPY --from=node-alpine-build-samtools /usr/local/libexec/bcftools/*.so /usr/local/libexec/bcftools/
 
 # ------------------------------------------------------------------------------
 
@@ -131,11 +178,16 @@ ENTRYPOINT ["/usr/local/node16/bin/node", "/app/lb3app/server/server.js"]
 
 # ------------------------------------------------------------------------------
 
+ARG NODE_ALPINE_VERSION 12
 ARG SAMTOOLS_VERSION=1.15.1
+ARG bcftoolsVer=1.15.1
+ARG PRETZEL_VERSION 2.14.2
+
 
 LABEL maintainer='github.com/plantinformatics'
 LABEL software.version=${PRETZEL_VERSION}
-LABEL samtools.version=${SAMTOOLS_VERSION}
 LABEL nodeAlpine.version=${NODE_ALPINE_VERSION}
+LABEL samtools.version=${SAMTOOLS_VERSION}
+LABEL bcftools.version=${bcftoolsVer}
 
 # ------------------------------------------------------------------------------
