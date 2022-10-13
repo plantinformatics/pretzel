@@ -107,7 +107,7 @@
     "ember-truth-helpers": "^3.0.0",
     "ember-wormhole": "^0.6.0",
     "interval-tree-1d": "github:mikolalysenko/interval-tree-1d",
-    "moment": "^2.29.1",
+    "moment": "^2.29.4",
     "node-sass": "^7.0.3",
     "normalize-wheel": "^1.0.1",
     "numeric": "github:lukaiser/numeric",
