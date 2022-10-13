@@ -108,7 +108,7 @@
     "ember-wormhole": "^0.6.0",
     "interval-tree-1d": "github:mikolalysenko/interval-tree-1d",
     "moment": "^2.29.1",
-    "node-sass": "^5.0.0",
+    "node-sass": "^7.0.3",
     "normalize-wheel": "^1.0.1",
     "numeric": "github:lukaiser/numeric",
     "phantom": "^6.3.0"
