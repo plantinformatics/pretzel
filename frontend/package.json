@@ -31,7 +31,7 @@
     "d3-scale-chromatic": "^3.0.0",
     "ember-3x-codemods": "^1.12.5",
     "ember-ajax": "^5.0.0",
-    "ember-auto-import": "^1.7.0",
+    "ember-auto-import": "^1.12.2",
     "ember-bootstrap": "^3.1.4",
     "ember-cli": "3.22.0",
     "ember-cli-app-version": "^4.0.0",
