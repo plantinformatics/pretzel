@@ -55,6 +55,16 @@ const dLog = console.debug;
 const trace_blockAdj = 0;
 const trace_pathTransform = 2;
 
+/** select use of pathIsColinear() or pathIsSyntenic() - different algorithms
+ * for the purpose of thresholding the synteny of display paths.
+ */
+const useColinear = false;
+
+const
+sortedEnd = 0,
+otherEnd = 1 - sortedEnd;
+
+
 /*----------------------------------------------------------------------------*/
 /* milliseconds duration of transitions in which alignment <path>-s between
  * features are drawn / changed, in particular the d attribute.
@@ -239,11 +249,19 @@ export default Component.extend(Evented, AxisEvents, {
     /** this is the number of paths in scope, which is relevant to the
      * check for incrementing pathsRequestCount. */
     let pathsResult_length = pathsResult.length;
-      if (! zeroDomain && pathsResult.length) {
         let pathGradient = this.get('controlsView.pathGradient'),
             pathGradientUpper = this.get('controlsView.pathGradientUpper');
         dLog('pathGradient', pathGradient, pathGradientUpper, pathsResult.length);
+        const pathEndOrder = this.pathEndOrder(pathsResult);
+    if (! useColinear && pathsResult.length) {
+      pathGradient = this.gradientThresholdToAxis(pathGradient);
+    }
+
+      if (! zeroDomain && pathsResult.length) {
         pathsResult = pathsResult.filter(
+          ! useColinear ?
+            (p) => this.pathIsSyntenic(
+              p, pathGradient, this.get('controlsView.pathGradientUpper'), pathEndOrder) :
           (p) => /*this.*/pathIsColinear(
             p, pathGradient, pathGradientUpper, this.scaled_pos));
         /**
@@ -253,13 +271,7 @@ export default Component.extend(Evented, AxisEvents, {
          */
         function pathIsColinear(p, pathGradient, pathGradientUpper, scaled_pos) {
           let
-          /** result format is different for direct and aliases requests;
-           * for either case, collate as an array the endpoint features of the path.
-           * Can use : [0,1].map((i) => prType.blocksFeatures(e, i)[0])
-           * Each alignment[].repeats may have multiple features;  only the first is considered here.
-           */
-          features = p.alignment ? p.alignment.map((a) => a.repeats.features[0]) :
-            [p.featureAObj, p.featureBObj],
+          features = this.pathFeatures(p),
           limits = features.map((f) => f.get('blockId.featureLimits')),
           /** if any of the limits are undefined (not yet known), don't filter. */
           ok = limits.any((l) => !l);
@@ -297,9 +309,9 @@ export default Component.extend(Evented, AxisEvents, {
           scope = this.get('scope' + prType.typeName),
         currentScope = {blockDomains, pathsDensityParams, nPaths};
         /** pathsFilterSmooth() tends to suppress the effect of pathGradient filter, so use one or the other. */
-        let pathGradient = this.get('controlsView.pathGradient'),
+        let
             pathGradientFilterEnabled = (pathGradient !== 0) && (pathGradient !== 1);
-        if (! scope || pathGradientFilterEnabled) {
+        if (! scope || ! pathGradientFilterEnabled) {
           /* first call, scope is not yet defined, there are no existing paths,
            * so use pathsFilter() instead of pathsFilterSmooth() */
           pathsResult = pathsFilter(prType, pathsResult, blockDomains, nPaths);
@@ -310,9 +322,13 @@ export default Component.extend(Evented, AxisEvents, {
         } else {
           let shown = this.get('shown' + prType.typeName);
           scope[1] = currentScope;
+          const shownArray = (shown instanceof Set) ? Array.from(shown.values()) : shown;
+          const pathEndOrder = this.pathEndOrder(shownArray);
           if (shown.length) {
-            let pathGradient = this.get('controlsView.pathGradient');
             shown = shown.filter(
+              ! useColinear ?
+              (p) => this.pathIsSyntenic(
+                p, pathGradient, this.get('controlsView.pathGradientUpper'), pathEndOrder) :
               (p) => /*this.*/pathIsColinear(
                 p, pathGradient, this.get('controlsView.pathGradientUpper'), this.scaled_pos));
           }
@@ -328,6 +344,146 @@ export default Component.extend(Evented, AxisEvents, {
     promise = this.draw(/*pathsApiResultType*/ prType, pathsResult);
     return promise;
   }).keepLatest(),
+
+  /** Convert pathGradient, which is [0, 1] to be proportional to axis length.
+   */
+  gradientThresholdToAxis(pathGradient) {
+    const
+    domain = this.blockAdj.axesDomains[otherEnd],
+    length = pathGradient * intervalSize(domain);
+    /** equivalent to axesDomains[] : this.pathFeatures(pathsResult[0]).mapBy('blockId.id').map((blockId) => blockDomains[blockId])
+*/
+    return length;
+  },
+
+  /** Lookup the endpoint feature pair of the path.
+   * Express them in the same order as this.blockAdj.blockAdjId,
+   * i.e. for the result features[end] where end is [0,1] 
+   * features[end].get('blockId.id') === this.blockAdj.blockAdjId[end]
+   * (equivalent : .block{0,1}.get('id') or  .blockId{0,1})
+   * @param p path, from path request results, not path-data
+   * @return [feature0, feature1]
+   */
+  pathFeatures(p) {
+    /** result format is different for direct and aliases requests;
+     * for either case, collate as an array the endpoint features of the path.
+     * Can use : [0,1].map((i) => prType.blocksFeatures(e, i)[0])
+     * Each alignment[].repeats may have multiple features;  only the first is considered here.
+     */
+    const
+    features =
+      p.alignment ? p.alignment.map((a) => a.repeats.features[0]) :
+      [p.featureAObj, p.featureBObj],
+    /** can compare either end */
+    end = sortedEnd,
+    parallel = p.alignment ? 
+      (p.alignment[end].blockId === this.blockAdj.blockAdjId[end]) :
+      (features[end].get('blockId.id') === this.blockAdj.blockAdjId[end]);
+    if (! parallel) {
+      // swap
+      [features[1], features[0]] = [features[0], features[1]];
+    }
+    return features;
+  },
+  pathFeature(p, end) {
+    return this.pathFeatures(p)[end];
+  },
+
+  /**
+looking at the currently displayed paths in a block_adj :
+  for the 2 end blocks of the block_adj, sort the endpoint positions of the paths, i.e. Features in the block which are in paths, sorted by position, enabling each path to look up the ordinal position of each of its 2 endpoints.
+  for each path : calculate ordinal position of its 2 endpoints, call these o1, o2
+    compare (o2-o1) against the (GUI slider) threshold
+ *
+ * Change : just sort one end (block) of the block_adj (adjacent pair) and threshold the distance to potential neighbour at the other end. 
+ * @param shown features from pathsResult which are to be shown
+ * @return {sorted, order}
+ *   sorted : paths sorted in order of the 0 end feature value; 
+ *   order : map from paths to index within sorted.
+ *
+ * To check the result, display in web inspector console :
+ *   result pathEndOrder.sorted.mapBy('0.alignment.0.repeats.features.0.value.0')
+ *   result pathEndOrder.sorted.map((sp) => pathEndOrder.order.get(sp[0]))
+ */
+  pathEndOrder(shown) {
+    const
+    fnName = 'pathEndOrder',
+    shownFeatures = shown.map(this.pathFeatures.bind(this)),
+    /** could sort both ends; instead try a proximity threshold on the other end */
+    sorted = shownFeatures.map((featurePair, i) => {
+      const y = featurePair[sortedEnd].get('value.0');
+      // {pathData : shown[i], featurePair, y}
+      return [shown[i], i, y];
+    })
+      .sortBy('2'),
+    /** after sort, omit y to make orderd pairs for Map(). leaving .y in .sorted just for devel checking. */
+    /** map from path-data to end order */
+    order = new Map(sorted
+      .map((piy) => piy.slice(0, 2)) );
+    if (trace_blockAdj > 2) {
+      dLog(fnName, sorted, order, shown);
+    }
+    return {sorted, order};
+  },
+  /** Alternative to pathIsColinear()
+   * @param threshold pathGradient converted to be proportional to the respective axis domain
+   */
+  pathIsSyntenic(p, threshold, pathGradientUpper, pathEndOrder) {
+    let okCount = 0;
+    const neighbourScope = 10; // 3;
+    for (let offset=1; offset <= neighbourScope; offset++)
+    {
+      this.neighbourIsClose(threshold, pathGradientUpper, pathEndOrder, +offset, p) && okCount++;
+      this.neighbourIsClose(threshold, pathGradientUpper, pathEndOrder, -offset, p) && okCount++;
+    }
+    // true if > half of tested neighbours are close
+    return okCount > neighbourScope;
+  },
+  /** 
+   * @param threshold
+   * @param offset current values are +/- 1
+   */
+  neighbourIsClose(threshold, pathGradientUpper, pathEndOrder, offset, p) {
+    const
+    /** index of 1 end of path in pathEndOrder.sorted */
+    endIndex = pathEndOrder.order.get(p),
+    neighbourIndex = endIndex + offset;
+    let close;
+    if ((neighbourIndex < 0) || (neighbourIndex >= pathEndOrder.sorted.length)) {
+      // close = true; ?
+    } else {
+      const
+      /** neighbour refers to the path which is adjacent by offset at one end;
+       * this function determines if it is a neighbour at the other end.
+       */
+      neighbour = pathEndOrder.sorted[neighbourIndex][0],
+      neighbourFeatures = this.pathFeatures(neighbour),
+      neighbourValue = neighbourFeatures[otherEnd].value[0],
+      pathFeatures = this.pathFeatures(p),
+      pathEndValue = pathFeatures[otherEnd].value[0];
+      close = Math.abs(neighbourValue - pathEndValue) < threshold;
+      if (trace_blockAdj > 2) {
+        dLog(close, endIndex, offset, pathEndValue, neighbourValue, pathFeatures, neighbourFeatures);
+      }
+      if (! pathGradientUpper) {
+        close = ! close;
+      }
+    }
+    return close;
+  },
+  /* are the path's features' orders contiguous with neighbours
+   * paths which neighbour path end0, are they (>0) neighbours on path end1
+   * path.features[end0], neighbouring features n[2], their paths 
+   * featurePaths.get(n[*]) -> np[2], np[*][end1] -> orders
+   * or :  delta gradient with n neighbours (either end) within threshold
+   * or similar, use feature value of other end in comparison instead of gradient
+  */
+  orderDelta(pathEnds, feature, end) {
+    const
+    orders = features.map((f, end) => pathEnds.orders[end].get(f)),
+    orderDelta = orders[1] - orders[0];
+  },
+
 
   pathsAliasesResultLength : computed(
     'blockAdj.pathsAliasesResultLengthThrottled', 'paths.alias.[]',
