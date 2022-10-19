@@ -413,9 +413,11 @@ looking at the currently displayed paths in a block_adj :
     sorted = shownFeatures.map((featurePair, i) => {
       const y = featurePair[sortedEnd].get('value.0');
       // {pathData : shown[i], featurePair, y}
-      return [shown[i], i, y];
+      return [shown[i], y];
     })
-      .sortBy('2'),
+      .sortBy('1')
+    // i is index within sorted
+      .map(([path, y], i) => [path, i, y]),
     /** after sort, omit y to make orderd pairs for Map(). leaving .y in .sorted just for devel checking. */
     /** map from path-data to end order */
     order = new Map(sorted
@@ -423,53 +425,85 @@ looking at the currently displayed paths in a block_adj :
     if (trace_blockAdj > 2) {
       dLog(fnName, sorted, order, shown);
     }
-    return {sorted, order};
+    return {shown, sorted, order};
   },
   /** Alternative to pathIsColinear()
    * @param threshold pathGradient converted to be proportional to the respective axis domain
    */
   pathIsSyntenic(p, threshold, pathGradientUpper, pathEndOrder) {
     let okCount = 0;
-    const neighbourScope = 10; // 3;
+    let reasons = [];
+    const neighbourScope = 3; // 10;
+    /** sum and count of distances added. */
+    let sum = 0, count = 0;
     for (let offset=1; offset <= neighbourScope; offset++)
     {
-      this.neighbourIsClose(threshold, pathGradientUpper, pathEndOrder, +offset, p) && okCount++;
-      this.neighbourIsClose(threshold, pathGradientUpper, pathEndOrder, -offset, p) && okCount++;
+      for (let sign=1; sign >= -1; sign -= 2) {
+        let distance = this.neighbourDistance(pathGradientUpper, pathEndOrder, sign * offset, p, reasons);
+        if (distance !== undefined) {
+          sum += distance;
+          count++;
+        }
+      }
     }
-    // true if > half of tested neighbours are close
-    return okCount > neighbourScope;
+    const average = sum / count;
+    let ok = average < threshold;
+    if (! pathGradientUpper) {
+      ok = ! ok;
+    }
+
+    if (ok) {
+      p[Symbol.for('syntenyEvidence')] = reasons;
+    }
+    return ok;
   },
-  /** 
-   * @param threshold
+  /** Calculate the distance from path p to the neighbour identified by offset.
+   * For distance : treat the 2 axes as perpendicular, and calculate Euclidean distance.
    * @param offset current values are +/- 1
+   * @param evidence gather data underlying the calculation
+   * @return distance, or undefined if the given offset is out of range
+   *
+   * @desc
+   * In 80f96096 this function was named neighbourIsClose() and calculated the
+   * distance between the opposite endpoints of p and neighbour, and returned
+   * true if within threshold.  This assumed that neighbours are close; this
+   * change aims to ignore support from distant neighbours.
    */
-  neighbourIsClose(threshold, pathGradientUpper, pathEndOrder, offset, p) {
+  neighbourDistance(pathGradientUpper, pathEndOrder, offset, p, evidence) {
     const
     /** index of 1 end of path in pathEndOrder.sorted */
     endIndex = pathEndOrder.order.get(p),
     neighbourIndex = endIndex + offset;
-    let close;
+    let distance;
     if ((neighbourIndex < 0) || (neighbourIndex >= pathEndOrder.sorted.length)) {
-      // close = true; ?
+      // result is undefined
     } else {
       const
       /** neighbour refers to the path which is adjacent by offset at one end;
        * this function determines if it is a neighbour at the other end.
+       *
+       * pathEndOrder.sorted[][0] are the path-data, corresponding to pathEndOrder.shown[]
        */
       neighbour = pathEndOrder.sorted[neighbourIndex][0],
       neighbourFeatures = this.pathFeatures(neighbour),
       neighbourValue = neighbourFeatures[otherEnd].value[0],
       pathFeatures = this.pathFeatures(p),
       pathEndValue = pathFeatures[otherEnd].value[0];
-      close = Math.abs(neighbourValue - pathEndValue) < threshold;
+      /** the 2 components can be adjusted relative to their axis. */
+      distance = Math.sqrt(
+        (neighbourValue - pathEndValue) ** 2 + 
+          (neighbourFeatures[sortedEnd].value[0] - pathFeatures[sortedEnd].value[0]) **2);
+
       if (trace_blockAdj > 2) {
-        dLog(close, endIndex, offset, pathEndValue, neighbourValue, pathFeatures, neighbourFeatures);
+        dLog(distance, endIndex, offset, pathEndValue, neighbourValue, pathFeatures, neighbourFeatures);
       }
-      if (! pathGradientUpper) {
-        close = ! close;
-      }
+      const
+      data = 
+        {endIndex, offset, neighbourIndex, neighbour, neighbourFeatures,
+         p, pathFeatures, pathEndValue, neighbourValue, distance};
+      evidence.push(data);
     }
-    return close;
+    return distance;
   },
   /* are the path's features' orders contiguous with neighbours
    * paths which neighbour path end0, are they (>0) neighbours on path end1
@@ -962,7 +996,10 @@ looking at the currently displayed paths in a block_adj :
         })
         ;//.then(() => { dLog('draw pathPosition then', pS.size(), pSE.size());  });
 
-      // setupMouseHover(pSE);
+      if (pSE.size()) {
+        const axisApi = this.get('drawMap.oa.axisApi');
+        axisApi.setupMouseHover(pSE);
+      }
       pS.exit().remove();
     }
     return promise;
