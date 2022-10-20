@@ -392,6 +392,8 @@ exports.handleJson = function(msg, uploadParsed, cb) {
    * @param options optionsFromRequest
    * @param id  datasetId
    * @param replaceDataset if false and dataset id exists, then fail - call replyCb() with Error.
+   * @param replyCb called with (error)
+   * @param okCallback called if OK
    */
   exports.removeExisting = function(models, options, id, replaceDataset, replyCb, okCallback) {
     const fnName = 'removeExisting';
@@ -450,6 +452,18 @@ exports.handleJson = function(msg, uploadParsed, cb) {
       }
     });
   };
+
+/** Call removeExisting() and return a promise instead of calling the replyCb or okCallback callbacks.
+  */
+exports.removeExistingP = function(models, options, id, replaceDataset) {
+  /** */
+  let promise = new Promise(function (resolve, reject) {
+    function replyCb(error) { reject(error); }
+    function okCallback() { resolve(); }
+    exports.removeExisting(models, options, id, replaceDataset, replyCb, okCallback);
+  });
+  return promise;
+};
 
 
 

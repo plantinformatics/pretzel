@@ -16,6 +16,7 @@ var acl = require('../utilities/acl');
 var { clientIsInGroup, clientOwnsGroup, groupIsWritable } = require('../utilities/identity');
 var upload = require('../utilities/upload');
 var load = require('../utilities/load');
+const { spreadsheetDataToJsObj } = require('../utilities/spreadsheet-read');
 const { cacheClearBlocks } = require('../utilities/localise-blocks');
 const { ErrorStatus } = require('../utilities/errorStatus.js');
 
@@ -58,6 +59,40 @@ module.exports = function(Dataset) {
       msg.fileName.endsWith('.xlsx') || msg.fileName.endsWith('.xls') || 
         msg.fileName.endsWith('.ods')
     ) {
+      // this.spreadsheetUploadExternal(msg, options, models, uploadParsedTry, cb);
+      this.spreadsheetUploadInternal(msg, options, models, cb);
+    } else {
+      cb(ErrorStatus(400, 'Unsupported file type'));
+    }
+  };
+
+  Dataset.spreadsheetUploadCbWrap = function(cb) {
+    let cbOrig = cb,
+        cbCalled = 0;
+    return cbWrapper;
+    /** See comment for spreadsheetUploadExternal() : cbOrig, re. cbWrap().
+     * @param result if ! err, then result is defined, i.e. dataset name/s
+     */
+    function cbWrapper(err, result) {
+      const fnName = 'cbWrapper';
+      if (cbCalled++ === 0) {
+        cbOrig(err, result);
+      } else {
+        console.log(fnName, 'cb already called', cbCalled, err, result);
+      }
+    }
+  };
+
+  /**
+   * @param msg
+   * @param options
+   * @param models
+   * @param uploadParsedTry
+   * @param cb
+   */
+  Dataset.spreadsheetUploadExternal = function(msg, options, models, uploadParsedTry, cb) {
+    const fnName = 'spreadsheetUploadExternal';
+
       /** messages from child via file descriptors 3 and 4 are
        * collated in these arrays and can be sent back to provide
        * detail for / explain an error.
@@ -167,6 +202,7 @@ module.exports = function(Dataset) {
               cb(ErrorStatus(400, fileName + " Dataset '" + datasetName + "'"));
             } else {
               console.log('before removeExisting "', datasetName, '"');
+              // utilities/upload
               upload.removeExisting(models, options, datasetName, replaceDataset, cb, loadAfterDelete);
             }
             function loadAfterDelete(err) {
@@ -194,9 +230,85 @@ module.exports = function(Dataset) {
           } // else check again after timeout
         }
       });
-    } else {
-      cb(ErrorStatus(400, 'Unsupported file type'));
+  };
+
+  /**
+   * @param msg
+   * @param options
+   * @param models
+   * @param cb
+   * @desc
+   * return via cb : {errors, warnings, datasetNames[]}
+   * .errors and .warnings may have [datasetNames] : [] text messages
+   */
+  Dataset.spreadsheetUploadInternal = function(msg, options, models, cb) {
+    const fnName = 'spreadsheetUploadExternal';
+    const fileName = msg.fileName;
+
+    console.log(fnName, msg.fileName, msg.data.length);
+    cb = this.spreadsheetUploadCbWrap(cb);
+
+    /** related : jsonData */
+    const dataObj = spreadsheetDataToJsObj(msg.data);
+    /** API result is currently text, but planning to return the object, and
+     * frontend can present these arrays of messages.
+     */
+    function messagesToText(label, messages) {
+      return messages?.length && (label + messages.join('\n'));
     }
+    const datasets = dataObj; // .datasets;
+    let messages = [];
+    if (dataObj.errors?.length) {
+      messages.push(messagesToText('Errors : ', dataObj.errors));
+    }
+    if (dataObj.warnings?.length) {
+      messages.push(messagesToText('Warnings : ', dataObj.warnings));
+    } else {
+      datasets.forEach((dataset) => {
+        const datasetName = dataset.name;
+        let datasetPrefix = " Dataset '" + datasetName + "'";
+        if (dataset.errors?.length) {
+          messages.push(messagesToText(datasetPrefix + ': Errors : ', dataset.errors));
+          datasetPrefix = '. ';
+        }
+        if (dataset.warnings?.length) {
+          messages.push(messagesToText(datasetPrefix + ': Warnings : ', dataset.warnings));
+        }
+      });
+    }
+    if (messages.length) {
+      cb(ErrorStatus(400, fileName + ':' + messages.join('.\n')));
+    } else {
+      let datasetRemovedPs =
+      datasets.map((dataset) => {
+        const
+        datasetName = dataset.name,
+        replaceDataset = !!msg.replaceDataset;
+        console.log('before removeExisting "', datasetName, '"');
+        /* This will upload all datasets after all removed.
+         * i.e. wait for all removes to succeeed, then upload all datasets.
+         */
+        const promise = upload.removeExistingP(models, options, datasetName, replaceDataset);
+        return promise;
+      });
+      Promise.all(datasetRemovedPs)
+        .catch((error) => cb(error))
+        .then(loadAfterDelete);
+      /* loadAfterDelete() in spreadsheetUploadExternal() is similar but also
+       * does loadAfterDeleteCb() : readFile() then uploadParsedTry() : JSON.parse().
+       */
+      function loadAfterDelete() {
+        datasets.forEach((dataset) =>  {
+          const dataObj = dataset;
+          /** related : uploadParsedTry(), upload.uploadParsedCb() */
+          upload.uploadParsedCb(models, dataObj, options, cb);
+        });
+        const datasetNames = datasets.map((dataset) => dataset.name);
+        cb(null, datasetNames);
+      }
+
+    }
+
   };
 
   /**
