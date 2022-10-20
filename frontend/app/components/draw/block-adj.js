@@ -141,7 +141,7 @@ export default Component.extend(Evented, AxisEvents, {
   pathsResultLength : computed(
     'blockAdj.pathsResultLengthThrottled', 'pathsAliasesResultLength',
     'pathsDensityParams.{densityFactor,nSamples,nFeatures}',
-    'controlsView.{pathGradientUpper,pathGradient}',
+    'controlsView.{pathGradientUpper,pathGradient,pathNeighbours}',
     function () {
       /** this CP may be evaluated before the first didRender(), which does
        * drawGroup{Container,}(); waiting for next render so that drawCurrent()
@@ -433,7 +433,7 @@ looking at the currently displayed paths in a block_adj :
   pathIsSyntenic(p, threshold, pathGradientUpper, pathEndOrder) {
     let okCount = 0;
     let reasons = [];
-    const neighbourScope = 3; // 10;
+    const neighbourScope = this.get('controlsView.pathNeighbours') || 3;
     /** sum and count of distances added. */
     let sum = 0, count = 0;
     for (let offset=1; offset <= neighbourScope; offset++)
@@ -522,7 +522,7 @@ looking at the currently displayed paths in a block_adj :
   pathsAliasesResultLength : computed(
     'blockAdj.pathsAliasesResultLengthThrottled', 'paths.alias.[]',
     'pathsDensityParams.{densityFactor,nSamples,nFeatures}',
-    'controlsView.{pathGradientUpper,pathGradient}',
+    'controlsView.{pathGradientUpper,pathGradient,pathNeighbours}',
     function () {
       /** the comments in pathsResultLength re. next and isComplete apply here also. */
       next(() => {
