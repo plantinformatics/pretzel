@@ -136,10 +136,14 @@ export default Component.extend(Evented, AxisEvents, {
    */
   parsedOptions : alias('queryParams.urlOptions'),
 
+  /** Enable pathIsSyntenic() for this block-adj. */
+  filterPathSynteny : true,
+
   pathsDensityParams : alias('pathsP.pathsDensityParams'),
   isComplete() { return this.blockAdj.isComplete(); },
   pathsResultLength : computed(
     'blockAdj.pathsResultLengthThrottled', 'pathsAliasesResultLength',
+    'blockAdj.filterPathSynteny',
     'pathsDensityParams.{densityFactor,nSamples,nFeatures}',
     'controlsView.{pathGradientUpper,pathGradient,pathNeighbours}',
     function () {
@@ -249,15 +253,16 @@ export default Component.extend(Evented, AxisEvents, {
     /** this is the number of paths in scope, which is relevant to the
      * check for incrementing pathsRequestCount. */
     let pathsResult_length = pathsResult.length;
+    const filterPathSynteny = this.get('blockAdj.filterPathSynteny');
         let pathGradient = this.get('controlsView.pathGradient'),
             pathGradientUpper = this.get('controlsView.pathGradientUpper');
         dLog('pathGradient', pathGradient, pathGradientUpper, pathsResult.length);
         const pathEndOrder = this.pathEndOrder(pathsResult);
-    if (! useColinear && pathsResult.length) {
+    if (filterPathSynteny && ! useColinear && pathsResult.length) {
       pathGradient = this.gradientThresholdToAxis(pathGradient);
     }
 
-      if (! zeroDomain && pathsResult.length) {
+      if (filterPathSynteny && ! zeroDomain && pathsResult.length) {
         pathsResult = pathsResult.filter(
           ! useColinear ?
             (p) => this.pathIsSyntenic(
@@ -324,7 +329,7 @@ export default Component.extend(Evented, AxisEvents, {
           scope[1] = currentScope;
           const shownArray = (shown instanceof Set) ? Array.from(shown.values()) : shown;
           const pathEndOrder = this.pathEndOrder(shownArray);
-          if (shown.length) {
+          if (filterPathSynteny && shown.length) {
             shown = shown.filter(
               ! useColinear ?
               (p) => this.pathIsSyntenic(
@@ -521,6 +526,7 @@ looking at the currently displayed paths in a block_adj :
 
   pathsAliasesResultLength : computed(
     'blockAdj.pathsAliasesResultLengthThrottled', 'paths.alias.[]',
+    'blockAdj.filterPathSynteny',
     'pathsDensityParams.{densityFactor,nSamples,nFeatures}',
     'controlsView.{pathGradientUpper,pathGradient,pathNeighbours}',
     function () {
