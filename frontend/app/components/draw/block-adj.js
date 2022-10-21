@@ -136,9 +136,6 @@ export default Component.extend(Evented, AxisEvents, {
    */
   parsedOptions : alias('queryParams.urlOptions'),
 
-  /** Enable pathIsSyntenic() for this block-adj. */
-  filterPathSynteny : true,
-
   pathsDensityParams : alias('pathsP.pathsDensityParams'),
   isComplete() { return this.blockAdj.isComplete(); },
   pathsResultLength : computed(
