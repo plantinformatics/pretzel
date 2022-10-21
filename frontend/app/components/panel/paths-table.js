@@ -259,6 +259,25 @@ export default Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** Store a mapping from the text of the Block cells to the block-adj of the
+   * path of the row.
+   * This is used to lookup block-adj from the row data, by toggleSyntenyFilter().
+   */
+  blockLabelsToBlockAdjs() {
+    const
+    blockLabelToBlockAdj = (this.blockLabelToBlockAdj ||= {}),
+    blockAdjs = this.get('flowsService.blockAdjs');
+    blockAdjs.forEach((blockAdj) => {
+      let
+      blocks = blockAdj.get('blocks'),
+      blockAdjLabel = blocks.map((block) => block.get('datasetNameAndScope'))
+        .join('_');
+      blockLabelToBlockAdj[blockAdjLabel] = blockAdj;
+    });
+  },
+
+  //----------------------------------------------------------------------------
+
   /**
    * also in utils/paths-filter.js @see pathInDomain()
    */
@@ -448,6 +467,7 @@ export default Component.extend({
         dLog('tableDataAliases', tableDataAliases);
       let data = concatOpt(tableData, tableDataAliases);
       this.sendUpdatePathsCount(data.length);
+      this.blockLabelsToBlockAdjs();
       return data;
     }),
 
@@ -673,6 +693,14 @@ export default Component.extend({
 
     let tableDiv = $('#' + hoTableId)[0];
 
+    const contextMenu = {
+      items: {
+        "toggleSyntenyFilter": {
+          name: 'Toggle synteny filter',
+          callback: this.toggleSyntenyFilter.bind(this),  // (name, range, event) => 
+        },
+      },
+    };
 
     dLog("tableDiv", tableDiv);
     var table = new Handsontable(tableDiv, {
@@ -699,7 +727,7 @@ export default Component.extend({
       },
       // disable editing, refn: https://stackoverflow.com/a/40801002
       readOnly: true, // make table cells read-only
-      contextMenu: false, // disable context menu to change things
+      contextMenu,
       comments: false, // prevent editing of comments
 
       sortIndicator: true,
@@ -771,6 +799,22 @@ export default Component.extend({
         .style("stroke", "black")
         .moveToFront();
     }
-  }
+  },
+
+  toggleSyntenyFilter(name, range, event) {
+    const
+    fnName = 'toggleSyntenyFilter',
+    row = range[0].start.row,
+    // related : getRowAttribute()
+    blockLabels = [0, 3].map((col) => this.table.getData(row, col, row, col)[0][0]),
+    /** matching format in blockLabelsToBlockAdjs() */
+    blockAdjLabel = blockLabels.join('_'),
+    blockAdj = this.blockLabelToBlockAdj[blockAdjLabel];
+    console.log(fnName, row, blockAdj?.blockAdjId, blockAdj?.filterPathSynteny);
+    if (blockAdj) {
+      // initial value of blockAdj.filterPathSynteny is true
+      blockAdj.toggleProperty('filterPathSynteny');
+    }
+  },
 
 });
