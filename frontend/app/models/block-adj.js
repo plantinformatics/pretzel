@@ -56,6 +56,9 @@ export default Model.extend(Evented, {
     return blockAdjId;
   }),
 
+  /** Enable pathIsSyntenic() (components/draw/block-adj.js) for this block-adj. */
+  filterPathSynteny : true,
+
   /*--------------------------------------------------------------------------*/
 
   init() {
