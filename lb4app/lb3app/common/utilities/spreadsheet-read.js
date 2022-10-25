@@ -1,3 +1,4 @@
+const { findLastIndex } = require('lodash/array');  // 'lodash.findlastindex'
 
 /* global exports */
 /* global require */
@@ -17,6 +18,7 @@ var XLSX = require("xlsx");
 //------------------------------------------------------------------------------
 
 /** identity function, used in .map when no change is required.
+ * and in .filter() to select truthy values, e.g. !== undefined.
  */
 const I = (x) => x;
 
@@ -56,12 +58,16 @@ function spreadsheetDataToJsObj(fileData) {
         const
         {sheetType, datasetName} = typeAndName,
         datasetMetadata = metadata && metadata[sheetName];
+        /** if parentName column, result may be array of datasets */
         dataset = sheetToDataset(
           sheetType, datasetName, sheet, datasetMetadata,
           chromosomeRenaming, chromosomesToOmit);
       }
       return dataset;
-    });
+    })
+    /** this handles ! typeAndName; in next commit will probably return .warnings in "dataset" */
+    .filter(I)
+    .flat();
 
   console.log(fileData.length, workbook?.SheetNames, datasets);
   return datasets;
@@ -115,13 +121,14 @@ Chromosome 	Start 	End
 
 /** Use the sheet header row as names for the feature object fields
  * @param sheetType sheetType and datasetName are extracted from sheetName
- * @param datasetName
- * @param sheet
+ * @param datasetName from sheetName, with sheetType split off by parseSheetName().
+ * @param sheet element of workbook.Sheets{}
  * @param metadata   for this sheet, aka datasetMetadata,
  * used for dataset.meta, apart from metadata.parent and .namespace which are moved to dataset.
  * @param chromosomeRenaming
  * @param chromosomesToOmit
- * @return array of blocks of features, i.e.  [ { name, features [ { } .. ] ]
+ * @return array of datasets, which contain :
+ * blocks : object {name : features },
  *  where features are JS object,
  */
 function sheetToDataset(
@@ -150,13 +157,16 @@ function sheetToDataset(
       }
   */
 
-  let dataset = {
-    name : datasetName,
+  let
+  datasetTemplate = {
     type: 'linear',
     tags: [
-        // -	$extraTags
+      // -	$extraTags
     ],
-    meta};
+    meta},
+  dataset = Object.assign({name : datasetName}, datasetTemplate),
+  datasets = [dataset];
+
   /** based on sub makeTemplates() */
   if (parentName) {
     dataset.parentName = parentName;
@@ -171,7 +181,7 @@ function sheetToDataset(
   const
   // -	check for overlap of header names caused by header rename : first check for the target names
   /** map headerRow using header renaming */
-  headerRow = sheet2RowArray(sheet, 0).map(normaliseHeader),
+  headerRow = trimRightUndefined(sheet2RowArray(sheet, 0)).map(normaliseHeader),
   rowIsComment = sheet2ColArray(sheet, 0)
     .map((ai) => (typeof ai === 'string') && ai.startsWith('#')),
   /** options.header        result    index
@@ -196,23 +206,47 @@ function sheetToDataset(
 
     .map(featureAttributes)
     .map(headerRow.includes('flankingMarkers') ? flankingMarkerValue : I)
-    .map(addValue0)
+    // .map(addValue0)
+  ;
 
   /* drop the .__rowNum__ which is part of the result from sheet_to_json();
    * .__rowNum__ is a property, so Object.assign() is sufficient to leave it behind.
    * Quoting __rowNum__ in error messages / warnings to the user would be useful.
    */
   // .map((f) => Object.assign({}, f)
-,
-  /* group features into blocks by [].Chromosome */
-  blocks = features.reduce(
-    (result, feature) => {
+
+  /* group features into blocks by [].Chromosome
+
+   * group by block or, if feature.parentName,  dataset+block with datasetName = sheetName + parentName
+   * result is .blocks[] and .datasets[].blocks[], those become dataset (sheetname) .blocks and datasets (*) respectively
+   */
+  datasets = features.reduce(
+    /* Uses imported variable dataset, which is the current dataset. */
+    (datasets, feature) => {
       const chr = feature.Chromosome;
-      let block = (result[chr] ||= []);
+      let blocks;
+      if (feature.parentName) {
+        const datasetNameChild = datasetName + ' - ' + parentName;
+        /** if parentName is unchanged, continue adding to dataset,
+         * else if dataset is empty, re-purpose it to datasetNameChild, otherwise create
+         * a new dataset. */
+        if (dataset.name === datasetNameChild) {
+        } else if (! dataset.blocks || ! Object.keys(dataset.blocks).length) {
+          dataset.name = datasetNameChild;
+        } else {
+          dataset = Object.assign({name : datasetNameChild}, datasetTemplate);
+          datasets.push(dataset);
+        }
+        delete feature.parentName;
+      }
+      /* {} enables blocks[chr].  convert later with blocksObjToArray() to []
+       * with chr -> .name, .scope */
+      blocks = (dataset.blocks ||= {});
+      /** array of features */
+      let block = (blocks[chr] ||= []);
       block.push(feature);
-      return result;
-    }, {});
-  // convert blocks {} to []
+      return datasets;
+    }, datasets);
 
   if (! features.length) {
     if (! dataset.warnings) {
@@ -220,11 +254,26 @@ function sheetToDataset(
     }
     dataset.warnings.push('Worksheet does not contain data rows');
   }
-  //  * . attribute names : .Chromosome -> block .name and .scope (latter with .* trimmed)
-  dataset.blocks = Object.entries(blocks)
-    .map(([name, features]) => ({name, scope: name, features}));
+
+  datasets.forEach((dataset) => {
+    if (dataset.blocks) {
+      dataset.blocks = blocksObjToArray(dataset.blocks);
+    }
+  });
+
   return dataset;
 };
+
+/** convert blocks {} to []
+ */
+function blocksObjToArray(blocks) {
+  //  * . attribute names : .Chromosome -> block .name and .scope (latter with .* trimmed)
+  const
+  blocksArray = Object.entries(blocks)
+    .map(([name, features]) => ({name, scope: name, features}));
+  return blocksArray;
+}
+
 
 /** Apply fn to sheets[sheetName] if it is not empty, and return the result.
  * @return false if sheet is undefined or empty
@@ -400,15 +449,17 @@ const headerRenaming = {
  
   # Check that the required columns are present
 name chr pos
-
-
-
 */
+/**
+ * @param header text of column header; may be undefined
+ */
 function normaliseHeader(header) {
-  header = trimOutsideQuotesAndSpaces(header);
-  const renamed = headerRenaming[header];
-  if (renamed) {
-    header = renamed;
+  if (header !== undefined) {
+    header = trimOutsideQuotesAndSpaces(header);
+    const renamed = headerRenaming[header];
+    if (renamed) {
+      header = renamed;
+    }
   }
   return header;
 }
@@ -577,6 +628,24 @@ function qtlList()
   return s;
 }
 
+//------------------------------------------------------------------------------
+
+/** @return true if cellValue is not undefined and not null.
+ * @desc
+ * note : sheet2Row() returns undefined for empty cells, not null.
+ */
+function valueIsDefined(cellValue) {
+  return cellValue !== undefined;
+}
+function trimRightUndefined(headerRow) {
+  const
+  lastDefined = findLastIndex(headerRow, valueIsDefined),
+  trimmed = headerRow.slice(0, lastDefined + 1);
+  return trimmed;
+}
+
+//------------------------------------------------------------------------------
+
 /**
  * Given a string (e.g. flanking marker cell value),
  * split at comma or space/s,
@@ -588,13 +657,13 @@ function splitToStringArray(s) {
 }
 
 
-/** if feature.flankingMarkers is a number, convert to a string in an array.
+/** if feature.values.flankingMarkers is a number, convert to a string in an array.
  * if it is a string, split into an array of strings.
  * @param feature
  * @return feature, with possibly modified .flankingMarkers
  */
 function flankingMarkerValue(feature) {
-  let fm = feature.flankingMarkers;
+  let fm = feature.values.flankingMarkers;
   if (fm) {
     let flankingMarkers;
     if (typeof fm === 'number') {
@@ -631,8 +700,11 @@ function featureAttributes(feature) {
    * moved to the block in sheetToDataset() : blocks = features.reduce() and
    * Object.entries(blocks) .map ... to { name, scope }
    * it could be dropped here instead ?
+   *
+   * Column names not matching the core values (pos, end, Chromosome, name, parentName)
+   * are placed in feature.values{}
    */
-  {pos, end, ...featureOut} = feature,
+  {pos, end, Chromosome, name, parentName, ...values} = feature,
   value = [];
   if (pos !== undefined) {
     value.push(pos);
@@ -640,7 +712,17 @@ function featureAttributes(feature) {
   if (end !== undefined) {
     value.push(end);
   }
+  let featureOut = {};
   featureOut.value = value;
+  ['Chromosome', 'name', 'parentName'].forEach((fieldName) => {
+    if (feature[fieldName] !== undefined) {
+      featureOut[fieldName] = feature[fieldName];
+    }
+  });
+
+  if (Object.keys(values).length) {
+    featureOut.values = values;
+  }
 
   /** Add .value_0 to feature */
   /** based on sub printFeature() */
@@ -651,6 +733,7 @@ function featureAttributes(feature) {
 }
 
 /** Add .value_0 to feature
+ * This is currently done by featureAttributes() - may split it out.
  */
 function addValue0(feature) {
 
