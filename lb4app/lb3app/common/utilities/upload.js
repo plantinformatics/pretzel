@@ -123,6 +123,10 @@ exports.uploadDataset = (data, models, options, cb) => {
   })
     .then(function(blocks) {
       uploadDatasetContent(dataset_id, blocks, models, options, cb);
+    })
+    .catch((error) => {
+      console.log(error);
+      cb(error);
     });
 };
 /**

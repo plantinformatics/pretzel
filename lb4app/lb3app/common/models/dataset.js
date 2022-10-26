@@ -9,7 +9,8 @@
 const { spawn } = require('child_process');
 var fs = require('fs');
 
-var _ = require('lodash');
+// var _ = require('lodash');
+const { pick } = require('lodash/object');
 
 
 var acl = require('../utilities/acl');
@@ -20,6 +21,13 @@ const { spreadsheetDataToJsObj } = require('../utilities/spreadsheet-read');
 const { cacheClearBlocks } = require('../utilities/localise-blocks');
 const { ErrorStatus } = require('../utilities/errorStatus.js');
 
+//------------------------------------------------------------------------------
+
+/** enables use of spreadsheetUploadExternal() : uploadSpreadsheet.bash and snps2Dataset.pl
+ */
+const spreadsheetUploadExternalEnabled = process.env.spreadsheetUploadExternalEnabled;
+
+//------------------------------------------------------------------------------
 
 module.exports = function(Dataset) {
 
@@ -59,8 +67,11 @@ module.exports = function(Dataset) {
       msg.fileName.endsWith('.xlsx') || msg.fileName.endsWith('.xls') || 
         msg.fileName.endsWith('.ods')
     ) {
-      // this.spreadsheetUploadExternal(msg, options, models, uploadParsedTry, cb);
-      this.spreadsheetUploadInternal(msg, options, models, cb);
+      if (spreadsheetUploadExternalEnabled) {
+        this.spreadsheetUploadExternal(msg, options, models, uploadParsedTry, cb);
+      } else {
+        this.spreadsheetUploadInternal(msg, options, models, cb);
+      }
     } else {
       cb(ErrorStatus(400, 'Unsupported file type'));
     }
@@ -250,35 +261,16 @@ module.exports = function(Dataset) {
 
     /** related : jsonData */
     const dataObj = spreadsheetDataToJsObj(msg.data);
-    /** API result is currently text, but planning to return the object, and
-     * frontend can present these arrays of messages.
-     */
-    function messagesToText(label, messages) {
-      return messages?.length && (label + messages.join('\n'));
-    }
-    const datasets = dataObj; // .datasets;
-    let messages = [];
-    if (dataObj.errors?.length) {
-      messages.push(messagesToText('Errors : ', dataObj.errors));
-    }
-    if (dataObj.warnings?.length) {
-      messages.push(messagesToText('Warnings : ', dataObj.warnings));
+    const datasets = dataObj.datasets;
+    let status = pick(datasets, ['warnings', 'errors']);
+    const datasetNames = datasets.map((dataset) => dataset.name);
+    status.datasetNames = datasetNames;
+
+    if (status.errors?.length) {
+      status.fileName = fileName;
+      cb(ErrorStatus(400, status));
     } else {
-      datasets.forEach((dataset) => {
-        const datasetName = dataset.name;
-        let datasetPrefix = " Dataset '" + datasetName + "'";
-        if (dataset.errors?.length) {
-          messages.push(messagesToText(datasetPrefix + ': Errors : ', dataset.errors));
-          datasetPrefix = '. ';
-        }
-        if (dataset.warnings?.length) {
-          messages.push(messagesToText(datasetPrefix + ': Warnings : ', dataset.warnings));
-        }
-      });
-    }
-    if (messages.length) {
-      cb(ErrorStatus(400, fileName + ':' + messages.join('.\n')));
-    } else {
+      let datasetsDone = 0;
       let datasetRemovedPs =
       datasets.map((dataset) => {
         const
@@ -291,25 +283,48 @@ module.exports = function(Dataset) {
         const promise = upload.removeExistingP(models, options, datasetName, replaceDataset);
         return promise;
       });
-      Promise.all(datasetRemovedPs)
-        .catch((error) => cb(error))
-        .then(loadAfterDelete);
+      /* Added removeExistingP() to enable  :
+       *   Promise.all(datasetRemovedPs)
+       * which enables all of datasets[] to be removed before re-loading them
+       * The requirement is currently : remove each dataset individually before it is loaded.
+       */
+      datasetRemovedPs.forEach((datasetRemovedP, i) => {
+        datasetRemovedP
+        .catch((error) => cbCountDone(error))
+          .then(() => loadAfterDelete(datasets[i]));
+      });
+    
+      function cbCountDone(error, result) {
+        if (error) {
+          cb(error, result);
+        } else {
+          /* if (! error) then result is dataset.name */
+          if (++datasetsDone === datasets.length) {
+            if (! error) {
+              /** If a dataset failed, then cb is already called and this will have
+               * no effect, so no need to filter out datasets which failed.
+               */
+              cb(null, datasetNames);
+            }
+          }
+        }
+      }
+
       /* loadAfterDelete() in spreadsheetUploadExternal() is similar but also
        * does loadAfterDeleteCb() : readFile() then uploadParsedTry() : JSON.parse().
        */
-      function loadAfterDelete() {
-        datasets.forEach((dataset) =>  {
-          const dataObj = dataset;
-          /** related : uploadParsedTry(), upload.uploadParsedCb() */
-          upload.uploadParsedCb(models, dataObj, options, cb);
-        });
-        const datasetNames = datasets.map((dataset) => dataset.name);
-        cb(null, datasetNames);
+      function loadAfterDelete(datasetObj) {
+        /** related : uploadParsedTry(), upload.uploadParsedCb() */
+        /** Delay sending result until all datasets are complete. */
+        function cbOneDataset(error, result) {
+          cbCountDone(null, datasetObj.name);
+        }
+        upload.uploadParsedCb(models, datasetObj, options, cbOneDataset);
       }
 
     }
-
   };
+
 
   /**
    * @param data  dataset, with .features with attributes :
@@ -503,7 +518,7 @@ module.exports = function(Dataset) {
       {arg: "options", type: "object", http: "optionsFromRequest"},
       {arg: "req", type: "object", http: {source: "req"}}
     ],
-    returns: {arg: 'status', type: 'string'},
+    returns: {arg: 'status', type: 'object'},
     description: "Perform a bulk upload of a dataset with associated blocks and features"
   });
   Dataset.remoteMethod('tableUpload', {

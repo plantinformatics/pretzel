@@ -1,4 +1,6 @@
 const { findLastIndex } = require('lodash/array');  // 'lodash.findlastindex'
+const { pick } = require('lodash/object');
+
 
 /* global exports */
 /* global require */
@@ -27,8 +29,15 @@ const I = (x) => x;
 
 /**
  * @param fileData
+ * @return : {errors, warnings, datasets[]}
+ * datasets[] may have .errors and .warnings
  */
 function spreadsheetDataToJsObj(fileData) {
+  const fnName = 'spreadsheetDataToJsObj';
+  let status = {
+    errors : [],
+    warnings : [] };
+
   // readFile uses fs.readFileSync under the hood:
   // .readFile(fileName);
   const
@@ -53,7 +62,8 @@ function spreadsheetDataToJsObj(fileData) {
       let dataset;
       const typeAndName = parseSheetName(sheetName);
       if (! typeAndName) {
-        /** -	warning : sheetName */
+        const warning = 'Sheet name "' + sheetName + '" does not identify a dataset type.';
+        dataset = {warnings : [warning], sheetName};
       } else {
         const
         {sheetType, datasetName} = typeAndName,
@@ -70,7 +80,22 @@ function spreadsheetDataToJsObj(fileData) {
     .flat();
 
   console.log(fileData.length, workbook?.SheetNames, datasets);
-  return datasets;
+
+  /** for those datasets which are not OK and contain .warnings and/or .errors
+   * drop the dataset and append the warnings / errors to status.{warnings,errors}
+   */
+  status.datasets = datasets
+    .filter((dataset) => {
+      const ok = /* ! dataset.sheetName || */  dataset.name;
+      ['warnings', 'errors'].forEach((fieldName) => {
+        if (! ok && dataset[fieldName]?.length) {
+          status[fieldName] = status[fieldName].concat(dataset[fieldName]);
+        }
+      });
+      return ok;
+    });
+
+  return status;
 }
 exports.spreadsheetDataToJsObj = spreadsheetDataToJsObj;
 
@@ -163,16 +188,18 @@ function sheetToDataset(
     tags: [
       // -	$extraTags
     ],
-    meta},
+    meta};
+  if (namespace) {
+    datasetTemplate.namespace = namespace;
+  }
+  let
+  /** Current dataset : blocks/features are added to this;  changes if .parentName changes. */
   dataset = Object.assign({name : datasetName}, datasetTemplate),
   datasets = [dataset];
 
   /** based on sub makeTemplates() */
   if (parentName) {
     dataset.parentName = parentName;
-  }
-  if (namespace) {
-    dataset.namespace = namespace;
   }
 
   /** if A1 starts with # then warn : 1st row must be headers
@@ -226,15 +253,20 @@ function sheetToDataset(
       const chr = feature.Chromosome;
       let blocks;
       if (feature.parentName) {
-        const datasetNameChild = datasetName + ' - ' + parentName;
+        const datasetNameChild = datasetName + ' - ' + feature.parentName;
         /** if parentName is unchanged, continue adding to dataset,
          * else if dataset is empty, re-purpose it to datasetNameChild, otherwise create
          * a new dataset. */
         if (dataset.name === datasetNameChild) {
         } else if (! dataset.blocks || ! Object.keys(dataset.blocks).length) {
           dataset.name = datasetNameChild;
+          dataset.parentName = feature.parentName;
+        } else if ((dataset = datasets.find((d) => (d.parentName == feature.parentName)))) {
+          /* if feature.parentName matches a row earlier in this sheet, then append to that dataset. */
+          // console.log('continuing to use', dataset);
         } else {
           dataset = Object.assign({name : datasetNameChild}, datasetTemplate);
+          dataset.parentName = feature.parentName;
           datasets.push(dataset);
         }
         delete feature.parentName;
@@ -261,7 +293,7 @@ function sheetToDataset(
     }
   });
 
-  return dataset;
+  return datasets;
 };
 
 /** convert blocks {} to []
@@ -712,13 +744,11 @@ function featureAttributes(feature) {
   if (end !== undefined) {
     value.push(end);
   }
-  let featureOut = {};
+  let featureOut = pick(feature, ['value', 'Chromosome', 'name', 'parentName']);
+  /* .value may be [], e.g.  paths-progressive.js : pushFeature() expects
+   * feature.value to be defined and to be an array.
+   */
   featureOut.value = value;
-  ['Chromosome', 'name', 'parentName'].forEach((fieldName) => {
-    if (feature[fieldName] !== undefined) {
-      featureOut[fieldName] = feature[fieldName];
-    }
-  });
 
   if (Object.keys(values).length) {
     featureOut.values = values;
