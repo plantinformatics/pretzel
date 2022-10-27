@@ -523,7 +523,7 @@ export default Service.extend({
     }
 
     if (trace) {
-      dLog(fnName, arguments, (trace < 2) ? ',' : this);
+      dLog(fnName, (trace < 2) ? [route, method, dataIn?.length] : [arguments, this]);
     }
     if (token === true) {
       let accessToken = this._accessToken(server);

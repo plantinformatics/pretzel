@@ -79,7 +79,7 @@ function spreadsheetDataToJsObj(fileData) {
     .filter(I)
     .flat();
 
-  console.log(fileData.length, workbook?.SheetNames, datasets);
+  console.log(fnName, fileData.length, workbook?.SheetNames, datasets);
 
   /** for those datasets which are not OK and contain .warnings and/or .errors
    * drop the dataset and append the warnings / errors to status.{warnings,errors}
@@ -227,7 +227,7 @@ function sheetToDataset(
   /** Skip blank lines */
   /** .Chromosome required (warning if values for other fields but no .Chromosome) */
     .filter((f) => f.Marker || f.Chromosome)
-    .map((f) => { f.Chromosome = trimAndDeletePunctuation(f.Chromosome); return f; })
+    .map((f) => { f.Chromosome = trimAndDeletePunctuation(ensureString(f.Chromosome)); return f; })
     .filter((f) => ! chromosomesToOmit || ! chromosomesToOmit.includes(f.Chromosome))  
     .map((f) => renameChromosome(f, chromosomeRenaming))
 
@@ -494,6 +494,14 @@ function normaliseHeader(header) {
     }
   }
   return header;
+}
+
+//------------------------------------------------------------------------------
+
+/** If cell value is not a string, e.g. a number, convert it to string.
+ */
+function ensureString(s) {
+  return (typeof s === 'string') ? s : '' + s;
 }
 
 const deletePunctuationRe = /[^-_.,\/\n |0-9A-Za-z]+/g;

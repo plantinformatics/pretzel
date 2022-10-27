@@ -253,7 +253,7 @@ module.exports = function(Dataset) {
    * .errors and .warnings may have [datasetNames] : [] text messages
    */
   Dataset.spreadsheetUploadInternal = function(msg, options, models, cb) {
-    const fnName = 'spreadsheetUploadExternal';
+    const fnName = 'spreadsheetUploadInternal';
     const fileName = msg.fileName;
 
     console.log(fnName, msg.fileName, msg.data.length);
@@ -262,7 +262,7 @@ module.exports = function(Dataset) {
     /** related : jsonData */
     const dataObj = spreadsheetDataToJsObj(msg.data);
     const datasets = dataObj.datasets;
-    let status = pick(datasets, ['warnings', 'errors']);
+    let status = pick(dataObj, ['warnings', 'errors']);
     const datasetNames = datasets.map((dataset) => dataset.name);
     status.datasetNames = datasetNames;
 
@@ -304,7 +304,7 @@ module.exports = function(Dataset) {
               /** If a dataset failed, then cb is already called and this will have
                * no effect, so no need to filter out datasets which failed.
                */
-              cb(null, datasetNames);
+              cb(null, status);
             }
           }
         }
@@ -317,7 +317,13 @@ module.exports = function(Dataset) {
         /** related : uploadParsedTry(), upload.uploadParsedCb() */
         /** Delay sending result until all datasets are complete. */
         function cbOneDataset(error, result) {
-          cbCountDone(null, datasetObj.name);
+          /* if ! error, expect that result === datasetObj.name  */
+          if (error?.message) {
+            error.message = datasetObj.name + ' : ' + error.message;
+          } else if (typeof error === 'string') {
+            error = datasetObj.name + ' : ' + error;
+          }
+          cbCountDone(error, result || datasetObj.name);
         }
         upload.uploadParsedCb(models, datasetObj, options, cbOneDataset);
       }

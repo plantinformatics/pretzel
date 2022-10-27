@@ -102,6 +102,7 @@ function createChunked (data, model, len) {
  * @param {Object} models - Loopback database models
  */
 exports.uploadDataset = (data, models, options, cb) => {
+  const fnName = 'uploadDataset';
   let dataset_id
   let json_blocks = []
 
@@ -125,7 +126,7 @@ exports.uploadDataset = (data, models, options, cb) => {
       uploadDatasetContent(dataset_id, blocks, models, options, cb);
     })
     .catch((error) => {
-      console.log(error);
+      console.log(fnName, dataset_id, error);
       cb(error);
     });
 };
@@ -241,7 +242,7 @@ function insert_features_recursive(db, dataset_id, features_to_insert, ordered, 
         return Promise.resolve(features_to_insert.length - dupCount);
       }
       else {
-        cb(err);
+        cb(ErrorStatus(400, err.message));
         return Promise.reject(err.message);
       }
     });
