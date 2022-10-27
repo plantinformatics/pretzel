@@ -610,10 +610,13 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     }
 
     req.on('close', () => {
+      function logClose(label, ) {
       /* absolute time : new Date().toISOString() */
       console.log(
-        'req.on(close)', 'reqStream', 
+        label, 'reqStream', 
         'The request processing time is', elapsedMs(startTime, 3), 'ms.', 'for', req.path, cacheId);
+      }
+      logClose('req.on(close)');
 
       // console.log('req.on(close)');
       if (cursor) {
@@ -628,7 +631,10 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
               if (c.push && c.destroy) {
                 console.log('c.push(null)');
                 c.push(null);
-                c.destroy();
+                // c.destroy();
+                /* maybe : */
+                c.destroy(/*err*/null, function () {
+                  logClose('cursor destroyed'); });
               }
               /* The client is closing the SSE, so close the database cursor.
                * c.close() often gets ERR_STREAM_PREMATURE_CLOSE;
@@ -643,18 +649,13 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
                 console.log('promise yielded cursor with .close' /*,c*/);
                 closeCursor(c);
               }
-              else
-                debugger;
             });
           }
           else
             closeCursor(cursor);
           function closeCursor(cursor) {
             cursor.close(function () {
-              console.log(
-                'cursor closed',
-                'reqStream', 
-                'The request processing time is', elapsedMs(startTime, 3), 'ms.', 'for', req.path, cacheId); });
+              logClose('cursor closed'); });
           }
         }
       }
