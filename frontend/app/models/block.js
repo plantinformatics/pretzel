@@ -1366,6 +1366,7 @@ export default Model.extend({
    * This enables calculation of the .value[] of the QTL features.
    */
   loadRequiredData : computed(function () {
+    const fnName = 'loadRequiredData';
     /* No dependency - will compute once.  */
     // possibly generalise the tag from 'QTL' to : 'valueComputed'
     if (this.get('isQTL')) {
@@ -1374,18 +1375,23 @@ export default Model.extend({
        */
       features = this.get('allFeatures')
         .then((f) => {
+          // dLog(fnName, 'allFeatures', this.name, this.id, f?.length);
           if (! f) {
             dLog('loadRequiredData', this.id, this.get('datasetId.id'),
                  this.get('datasetId.parent.id'), this.get('parentBlock.datasetId.id'));
           } else {
             f.forEach((fi) => fi?.value?.forEach((fii) => this.get('trait').traitAddQtl(fii)));
           }
-          return [f, this.get('referencedFeatures')];})
+          /** If there are values in f other than [0] then could use f.mapBy('value').flat() */
+          const features = f[0].value;
+          return [f, this.referencedFeaturesOf(features)];})
       // parentBlockFeatures = ;
       // parentBlockFeatures // allSettled([features, parentBlockFeatures])
         .then((ps) => {
           let parentFeatures = ps[1];
+          // dLog(fnName, 'parentFeatures', this.name, this.id, ps, parentFeatures);
           return parentFeatures && parentFeatures.then((pf) => {
+            // dLog(fnName, 'features', this.name, this.id, pf, ps[0][0].value);
             /** referencedFeatures() yields an array of Features : pf */
             let features = ps[0][0].value,
                 /** no return value, so result is a promise yielding undefined */
@@ -1493,8 +1499,17 @@ export default Model.extend({
    * @return a Promise yielding an array of Features
    */
   referencedFeatures : computed('parentBlock', function () {
+    const fnName = 'referencedFeatures'; // + ' (loadRequiredData)';
+    this.referencedFeaturesOf(this.get('features'));
+  }),
+  /** Same comment as @see referencedFeatures()
+   * @param features of this block, from loadRequiredData() via allFeatures()
+   * @return promise yielding features of .parentBlock which are referenced by features[].
+   */
+  referencedFeaturesOf(features) {
+    const fnName = 'referencedFeaturesOf'; // + ' (loadRequiredData)';
     let
-    featureNames = this.get('features')
+    featureNames = features
       .filterBy('values.flankingMarkers')
       .mapBy('values.flankingMarkers')
       .flat();
@@ -1505,6 +1520,7 @@ export default Model.extend({
      */
     let parentBlock = this.get('parentBlock');
     let blockTask;
+    // dLog(fnName, this.name, this.id, this.get('features.length'), featureNames.length,  parentBlock?.id);
     if (featureNames.length && parentBlock) {
       let apiServer = this.get('apiServers').servers[parentBlock.store.name];
 
@@ -1517,11 +1533,11 @@ export default Model.extend({
       blockTask = taskGet.perform(apiServer, /*matchAliases*/false, parentBlock.id, featureNames);
       blockTask
         .then((features) => {
-          dLog('referencedFeatures', featureNames[0], featureNames.length, features.length);
+          dLog(fnName, 'referencedFeatures', featureNames[0], featureNames.length, features.length);
         });
     }
     return blockTask;
-  }),
+  },
 
 
 

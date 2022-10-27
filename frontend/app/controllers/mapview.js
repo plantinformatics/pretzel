@@ -184,11 +184,7 @@ export default Controller.extend(Evented, {
        * feature.value location
        */
       if (block.get) {
-        /** this depends on axes, so delay to allow time for those to instantiate.
-         * Probably recent changes (0dcca1bd) affected the ordering; moving this
-         * to the actual dependency can replace the delay.
-         */
-        later(() => block.get('loadRequiredData'), 2000);
+        later(() => block.get('loadRequiredData'));
       }
     },
     blockFromId : function(blockId) {

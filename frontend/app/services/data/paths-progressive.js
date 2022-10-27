@@ -684,7 +684,21 @@ export default Service.extend({
     }
     else if (brushedDomain)
       paramAxis.domain = brushedDomain;
-    if (! axis || (axisBrush?.block.get('isViewed') === false)) {
+    if (! paramAxis.zoomed && paramAxis.domain) {
+      /** QTL features are loaded initially when viewed, and the axis may be not
+       * yet be constructed; it is not required because zoomed=false, and the
+       * domain is not sent.
+       * The call path for that case is : loadRequiredData : allFeatures :
+       * getBlockFeaturesInterval : getBlockFeaturesIntervalTask :
+       * requestBlockFeaturesInterval.
+       * 
+       * paths-aggr.js : blockFilter() omits a.domain if not defined
+       */
+      // dLog(apiName, 'not zoomed so omitting domain', paramAxis);
+      delete paramAxis.domain;
+    }
+    /** if ! all, then axis.dataBlocks() is used. */
+    if ((! axis && ! all) || (axisBrush?.block.get('isViewed') === false)) {
       dLog(apiName, axis, axisBrush?.block);
       return Promise.resolve([]);
     }

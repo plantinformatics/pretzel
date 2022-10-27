@@ -349,7 +349,7 @@ export default Service.extend({
       'Features/search' + (post ? 'Post' : ''),
       post ? 'POST' : 'GET',
       post ? JSON.stringify(data) : data,
-      true, apiServer);
+      true, /*onProgress*/null, apiServer);
   },
 
   /** Search for Aliases matching the given list of Feature names in featureNames[],
