@@ -19,6 +19,8 @@ var XLSX = require("xlsx");
 
 //------------------------------------------------------------------------------
 
+const trace = 1;
+
 /** identity function, used in .map when no change is required.
  * and in .filter() to select truthy values, e.g. !== undefined.
  */
@@ -59,6 +61,9 @@ function spreadsheetDataToJsObj(fileData) {
     .filter(([sheetName, sheet]) => ! nonDatasetSheets.includes(sheetName))
 
     .map(([sheetName, sheet]) => {
+      /** dataset is defined in both cases; when ! typeAndName .warnings are returned in "dataset".
+       * Otherwise filter undefined datasets with  .filter(I)
+       */
       let dataset;
       const typeAndName = parseSheetName(sheetName);
       if (! typeAndName) {
@@ -75,11 +80,15 @@ function spreadsheetDataToJsObj(fileData) {
       }
       return dataset;
     })
-    /** this handles ! typeAndName; in next commit will probably return .warnings in "dataset" */
-    .filter(I)
     .flat();
 
   console.log(fnName, fileData.length, workbook?.SheetNames, datasets);
+  if (trace) {
+    const
+    block0 = datasets.map((d) => d.blocks[0]),
+    feature0 =  block0.map((b) => b.features[0]);
+    console.log(fnName, 'block0', block0, 'feature0', feature0);
+  }
 
   /** for those datasets which are not OK and contain .warnings and/or .errors
    * drop the dataset and append the warnings / errors to status.{warnings,errors}
@@ -94,6 +103,9 @@ function spreadsheetDataToJsObj(fileData) {
       });
       return ok;
     });
+  if (trace && (status.warnings?.length || status.errors?.length)) {
+    console.log(fnName, status.errors.slice(0, 2), status.warnings.slice(0, 2));
+  }
 
   return status;
 }
@@ -208,7 +220,7 @@ function sheetToDataset(
   const
   // -	check for overlap of header names caused by header rename : first check for the target names
   /** map headerRow using header renaming */
-  headerRow = trimRightUndefined(sheet2RowArray(sheet, 0)).map(normaliseHeader),
+  headerRow = sheet2RowArray(sheet, 0).map(normaliseHeader),
   rowIsComment = sheet2ColArray(sheet, 0)
     .map((ai) => (typeof ai === 'string') && ai.startsWith('#')),
   /** options.header        result    index
@@ -343,7 +355,7 @@ function parseSheetName(sheetName) {
 function readMetadataSheet(sheet) {
   const
   data = sheet2Array(sheet),
-  d1 = data.filter((d) => !d[0].startsWith('#'))
+  d1 = data.filter((d) => ! d[0]?.startsWith('#'))
     .map((d) => d.map(trimAndDeletePunctuation)),
 
   /*
@@ -482,12 +494,17 @@ const headerRenaming = {
   # Check that the required columns are present
 name chr pos
 */
-/**
+/** Clean up a column header : remove outside whitespace, quotes and non-ascii characters,
+ * and convert . to _.
+ * '.' is accepted in cell values, whereas header names become feature.values
+ * field names, and '.' is not permitted in db field names as it is a field separator.
+ * 
  * @param header text of column header; may be undefined
  */
 function normaliseHeader(header) {
   if (header !== undefined) {
-    header = trimOutsideQuotesAndSpaces(header);
+    header = trimOutsideQuotesAndSpaces(header)
+      .replace('.', '_');
     const renamed = headerRenaming[header];
     if (renamed) {
       header = renamed;
@@ -498,6 +515,37 @@ function normaliseHeader(header) {
 
 //------------------------------------------------------------------------------
 
+
+/** Numeric cell values may present with an 18 digit mantissa instead of a few
+ * digits, i.e. they need to be rounded.
+ *
+ * If the number has a few decimal digits in the source spreadsheet, then
+ * the number of 0-s or 9-s to match here may be as few as 11. match a minimum of 6.
+ * The SNP / marker name may also contain 4 0-s, but that is a different column and they are unlikely to have 8.
+ *
+ * e.g. 62.9 -> 62.900000000000006
+ *
+ * Currently applied to pos,end columns in featureAttributes(), but could be
+ * applied to all columns, in cellValue().
+ * @param pos if type is not number then returned unchanged.
+ */
+function roundNumber(pos) {
+  /** based on snps2Dataset.pl : roundPosition()   */
+  if (typeof pos === 'number') {
+    const
+    posText = '' + pos;
+    if (posText.match(/000000|999999/)) {
+      // from perl : pos = (sprintf('%.8f', pos) =~ s/0+$//r =~ s/\.$//r);
+      const
+      roundedText = pos.toFixed(8),
+      rounded = roundedText
+        .replace(/0+$/, '')
+        .replace(/\.$/, '');
+      pos = rounded;
+    }
+  }
+  return pos;
+}
 /** If cell value is not a string, e.g. a number, convert it to string.
  */
 function ensureString(s) {
@@ -645,16 +693,22 @@ function trimOutsideSpaces(s) {
   return s.trim();
 }
 const
-/** match white-space (space or \t 	) or non-ascii */
-spaceNonAscii = '(\\s|[^\x00-\x7F])+',
+/** match white-space (space, \t\n\v\r), quotes (single, double, back) or non-ascii */
+spaceNonAscii = '([\\s"\']|[^\x00-\x7F])+',
 spaceNonAsciiStart = new RegExp('^' + spaceNonAscii),
 spaceNonAsciiEnd = new RegExp(spaceNonAscii + '$');
 
+/** Remove sequences of spaces, quote-like and non-ascii
+ * characters from each end of the string.
+ */
 function trimOutsideQuotesAndSpaces(s) {
   s = s
     .replace(spaceNonAsciiStart, '')
-    .replace(spaceNonAsciiEnd, '')
-    .replace(/^"(\S+)"$/, '$1');
+    .replace(spaceNonAsciiEnd, '');
+  /* could match matching quotes, e.g.
+   * .replace(/^"(\S+)"$/, '$1')
+   * but single-quotes are sometimes paired with the (non-Ascii) backquote : '...’
+    */
 
 /* from :
 sub trimOutsideQuotesAndSpaces($) {
@@ -677,10 +731,13 @@ function qtlList()
 function valueIsDefined(cellValue) {
   return cellValue !== undefined;
 }
-function trimRightUndefined(headerRow) {
+/** Remove trailing undefined values from the array, which is a row of cell values,
+ * e.g. headerRow.
+ */
+function trimRightUndefined(row) {
   const
-  lastDefined = findLastIndex(headerRow, valueIsDefined),
-  trimmed = headerRow.slice(0, lastDefined + 1);
+  lastDefined = findLastIndex(row, valueIsDefined),
+  trimmed = row.slice(0, lastDefined + 1);
   return trimmed;
 }
 
@@ -747,9 +804,11 @@ function featureAttributes(feature) {
   {pos, end, Chromosome, name, parentName, ...values} = feature,
   value = [];
   if (pos !== undefined) {
+    pos = roundNumber(pos);
     value.push(pos);
   }
   if (end !== undefined) {
+    end = roundNumber(end);
     value.push(end);
   }
   let featureOut = pick(feature, ['value', 'Chromosome', 'name', 'parentName']);
@@ -818,7 +877,9 @@ function sheet2RowArray(sheet, rowNum) {
   return row;
 };
 
-/** 
+/** Return an array of cell values in the row rowNum between range start and end columns.
+ * Apply trimRightUndefined() to the result, removing trailing undefined values.
+ * Used by sheet2Array(), sheet2RowArray().
  * @param sheet
  * @param range decoded range of the sheet
  * @param rowNum  integer >= 0
@@ -831,6 +892,7 @@ function sheet2Row(sheet, range, rowNum) {
     value = cellValue(sheet, rowNum, colNum);
     row.push(value);
   }
+  row = trimRightUndefined(row);
   return row;
 }
 

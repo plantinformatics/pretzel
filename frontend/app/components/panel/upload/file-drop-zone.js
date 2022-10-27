@@ -97,7 +97,7 @@ export default UploadBase.extend({
           datasetNames = [status];
         }
         datasetNames.forEach((datasetName) => this.unviewDataset(datasetName));
-        this.setSuccess("Dataset '" + datasetNames.join(', ') + "' " +  this.successMessage);
+        this.setSuccess("Dataset '" + datasetNames.join("', '") + "' " +  this.successMessage);
         this.set('warnings', status?.warnings || []);
         this.set('errors', status?.errors || []);
         this.get('blockService').featureSaved();
