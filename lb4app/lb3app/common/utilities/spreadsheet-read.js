@@ -188,6 +188,9 @@ function sheetToDataset(
   } else {
     meta = {};
   }
+  if (! namespace && meta.platform) {
+    namespace = parentName ? parentName + ':' + meta.platform : meta.platform;
+  }
   const metaType = (sheetType === 'Map') ? 'Genetic Map' : sheetType;
   meta.type ||= metaType;
   // -	$extraTags
@@ -378,31 +381,32 @@ function readMetadataSheet(sheet) {
     [[Prototype]]: Array(0)
   */
 
-  i = d1.findIndex((d) => d[0] ==='Field'),
+  nameRow = d1.findIndex((d) => d[0] ==='Field'),
   // 0
   // metadataFields : skip any rows before 'Field' in column A - the start of the metadata table
-  d2 = d1.slice(i),
+  table = d1.slice(nameRow),
 
   // columnNames
-  // dr = d2[0],
+  // dr = table[0],
   // (2) ['Field', 'Map| Template Map Dataset Name']
 
   /** uploadSpreadsheet.bash : readMetadata() accepts only these field names :
    * commonName|parentName|platform|shortName|namespace
-   * Instead :  -	remove punctuation from fieldNames
+   * Here instead : remove punctuation from fieldNames
+   * (trimAndDeletePunctuation() is already applied above)
    */
-  fieldNames = d2.map((d) => d[0]),
+  fieldNames = table.map((d) => normaliseFieldName(d[0])),
   // (4) ['Field', 'commonName', 'platform', 'shortName']
 
-  datasetNames = d2[0].slice(1),
+  datasetNames = table[0].slice(1),
   // ['Map| Template Map Dataset Name']
 
   // datasetsBase
-  d3 = datasetNames.map((n,i) => ({n, c : d2.map((d) => d[i+1])})),
+  datasetsColumns = datasetNames.map((n,i) => ({n, c : table.map((d) => d[i+1])})),
 
-  metadata = d3.map((d3i) => {
+  metadata = datasetsColumns.map((datasetColumn) => {
     const
-    metadataEntries = d3i.c.slice(1).map((v, i) => [fieldNames[i+1], v]),
+    metadataEntries = datasetColumn.c.slice(1).map((v, i) => [fieldNames[i+1], v]),
     /*
       (3) [Array(2), Array(2), Array(2)]
       0: (2) ['commonName', 'Template Common Name']
@@ -422,7 +426,7 @@ function readMetadataSheet(sheet) {
 
     return datasetMetadata;
   }),
-  datasetsEntries = d3.map((d3i, i) => [d3i.n, metadata[i]]),
+  datasetsEntries = datasetsColumns.map((datasetColumn, i) => [datasetColumn.n, metadata[i]]),
   /*
     [Array(2)]
     0: Array(2)
@@ -513,21 +517,35 @@ name chr pos
 */
 /** Clean up a column header : remove outside whitespace, quotes and non-ascii characters,
  * and convert . to _.
- * '.' is accepted in cell values, whereas header names become feature.values
- * field names, and '.' is not permitted in db field names as it is a field separator.
+ * Rename to a standard name those columns which allow multiple names, e.g. Position === pos === Start.
  * 
  * @param header text of column header; may be undefined
  */
 function normaliseHeader(header) {
   if (header !== undefined) {
-    header = trimOutsideQuotesAndSpaces(header)
-      .replace('.', '_');
+    header = normaliseFieldName(trimAndDeletePunctuation(header));
     const renamed = headerRenaming[header];
     if (renamed) {
       header = renamed;
     }
   }
   return header;
+}
+/** Column headers and metadata fields are used as names of fields in
+ * feature.values and dataset.meta respectively.
+ * This function removes punctuation from the given fieldName to ensure it is a
+ * valid database field name.
+ *
+ * '.' is accepted in cell values, whereas header names become feature.values
+ * field names, and '.' is not permitted in db field names as it is a field separator.
+ * @param fieldName has already been processed by trimAndDeletePunctuation()
+ */
+function normaliseFieldName(fieldName) {
+  if (fieldName !== undefined) {
+  fieldName = fieldName
+      .replace('.', '_');
+  }
+  return fieldName;
 }
 
 //------------------------------------------------------------------------------
