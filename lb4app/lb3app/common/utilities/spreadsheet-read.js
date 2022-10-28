@@ -72,7 +72,13 @@ function spreadsheetDataToJsObj(fileData) {
       } else {
         const
         {sheetType, datasetName} = typeAndName,
-        datasetMetadata = metadata && metadata[sheetName];
+        /** If user has entered space around | in the sheet name, and no space
+         * in the metadata, then looking up metadata[] via (sheetType + '|' +
+         * datasetName) will handle it.
+         * (perhaps issue a warning in that case).
+         */
+        datasetMetadata = metadata && (
+          metadata[sheetName] || metadata[sheetType + '|' + datasetName]);
         /** if parentName column, result may be array of datasets */
         dataset = sheetToDataset(
           sheetType, datasetName, sheet, datasetMetadata,
@@ -84,9 +90,10 @@ function spreadsheetDataToJsObj(fileData) {
 
   console.log(fnName, fileData.length, workbook?.SheetNames, datasets);
   if (trace) {
+    /** dataset may contain just a sheetName warning, instead of .blocks[].features[] */
     const
-    block0 = datasets.map((d) => d.blocks[0]),
-    feature0 =  block0.map((b) => b.features[0]);
+    block0 = datasets.map((d) => d.blocks ? d.blocks[0] : d.warnings),
+    feature0 =  block0.map((b) => b?.features && b.features[0]);
     console.log(fnName, 'block0', block0, 'feature0', feature0);
   }
 
@@ -234,7 +241,6 @@ function sheetToDataset(
     .filter((f, i) => ! rowIsComment[i])
   /** remove first (header) row */
     .filter((f, i) => i > 0)
-  /** -	commented-out columns */
   /** -	column renames */
   /** Skip blank lines */
   /** .Chromosome required (warning if values for other fields but no .Chromosome) */
@@ -834,7 +840,10 @@ function featureAttributes(feature) {
      * /000000/ pattern in roundNumber().
      */
     valuesKeys.forEach((key) => {
-      if (key !== 'flankingMarkers') {
+      /** delete values in commented-out columns */
+      if (key.startsWith('#')) {
+        delete values[key];
+      } else if (key !== 'flankingMarkers') {
         values[key] = roundNumber(values[key]);
       }
     });
@@ -873,13 +882,15 @@ function sheetIsEmpty(sheet) {
  * sheet2arr() by reviewher  https://github.com/SheetJS/sheetjs/issues/270#issuecomment-283992162
  */
 function sheet2Array(sheet) {
-  var result = [];
-  var row;
-  var rowNum;
-  var range = XLSX.utils.decode_range(sheet['!ref']);
-  for(rowNum = range.s.r; rowNum <= range.e.r; rowNum++){
-    row = sheet2Row(sheet, range, rowNum);
-    result.push(row);
+  let result = [];
+  /** empty sheet has no sheet['!ref'] */
+  const sheetRef = sheet['!ref'];
+  if (sheetRef) {
+    const range = XLSX.utils.decode_range(sheetRef);
+    for (let rowNum = range.s.r; rowNum <= range.e.r; rowNum++) {
+      const row = sheet2Row(sheet, range, rowNum);
+      result.push(row);
+    }
   }
   return result;
 };
@@ -889,10 +900,13 @@ function sheet2Array(sheet) {
  * @return row : array of cell values
 */
 function sheet2RowArray(sheet, rowNum) {
-  var row;
-  var range = XLSX.utils.decode_range(sheet['!ref']);
-  if ((rowNum >= range.s.r) && (rowNum <= range.e.r)) {
-    row = sheet2Row(sheet, range, rowNum);
+  let row;
+  const sheetRef = sheet['!ref'];
+  if (sheetRef) {
+    const range = XLSX.utils.decode_range(sheetRef);
+    if ((rowNum >= range.s.r) && (rowNum <= range.e.r)) {
+      row = sheet2Row(sheet, range, rowNum);
+    }
   }
   return row;
 };
