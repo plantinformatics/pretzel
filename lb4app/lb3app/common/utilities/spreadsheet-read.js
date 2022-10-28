@@ -400,7 +400,14 @@ function readMetadataSheet(sheet) {
       2: (2) ['shortName', 'Template ShortName']
     */
 
-    datasetMetadata = Object.fromEntries(metadataEntries);
+    /** There may be empty cells in the fieldNames column or in the dataset value column or both,
+     * resulting in e.g. datasetMetadata {DOI: ..., undefined: undefined}
+     * Undefined values are discarded by db insert, and probably undefined keys;
+     * it is cleaner to filter them out here.
+     */
+    metadataEntriesDefined = metadataEntries
+      .filter(([key, value]) => (key !== undefined) && (value !== undefined)),
+    datasetMetadata = Object.fromEntries(metadataEntriesDefined);
     // {commonName: 'Template Common Name', platform: 'Template_Platform_Name', shortName: 'Template ShortName'}
 
     return datasetMetadata;
@@ -817,7 +824,20 @@ function featureAttributes(feature) {
    */
   featureOut.value = value;
 
-  if (Object.keys(values).length) {
+  const valuesKeys = Object.keys(values);
+  if (valuesKeys.length) {
+    /** apply roundNumber() to numeric cell values.
+     *
+     * This could be done in cellValue(), but it is preferable to avoid the name
+     * and flankingMarkers columns : marker names may given as numbers, and some
+     * are e.g. 20000645 - as platform sizes increase that could match the
+     * /000000/ pattern in roundNumber().
+     */
+    valuesKeys.forEach((key) => {
+      if (key !== 'flankingMarkers') {
+        values[key] = roundNumber(values[key]);
+      }
+    });
     featureOut.values = values;
   }
 
