@@ -190,6 +190,12 @@ function sheetToDataset(
   }
   const metaType = (sheetType === 'Map') ? 'Genetic Map' : sheetType;
   meta.type ||= metaType;
+  // -	$extraTags
+  let tags = [];
+  if (sheetType === 'QTL') {
+    // QTL tag is required.
+    tags.push(sheetType);
+  }
 
   /*
       # If parentName is from Metadata worksheet instead of parentName column in
@@ -204,9 +210,7 @@ function sheetToDataset(
   let
   datasetTemplate = {
     type: 'linear',
-    tags: [
-      // -	$extraTags
-    ],
+    tags,
     meta};
   if (namespace) {
     datasetTemplate.namespace = namespace;
