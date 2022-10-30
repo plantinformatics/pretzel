@@ -50,6 +50,7 @@ exports.loadAliases = async function(dataset, models) {
     /** this has no effect - both insert a new copy of the alias regardless of
      * whether it is already in the database.  Can use bulkWrite / upsert. */
     options = replace ? {} : {ordered : false};
+    console.log(fnName, aliases.length, options);
     promise =
       aliasCollection.insertMany(aliases, options)
       .then((result) => result.insertedCount);

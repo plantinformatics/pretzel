@@ -318,7 +318,8 @@ module.exports = function(Dataset) {
                 .catch((error) => cb(error))
                 .then((aliasesDone) => {
                   // aliasesDone is [result.insertedCount, ..]
-                  console.log('aliasesDone', aliasesDone);
+                  // if delete, then array of undefined
+                  console.log('aliasesDone', Array.isArray(aliasesDone) ? aliasesDone.length : aliasesDone);
                   /** If a dataset failed, then cb is already called and this will have
                    * no effect, so no need to filter out datasets which failed.
                    */
