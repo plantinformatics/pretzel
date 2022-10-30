@@ -79,10 +79,18 @@ function spreadsheetDataToJsObj(fileData) {
          */
         datasetMetadata = metadata && (
           metadata[sheetName] || metadata[sheetType + '|' + datasetName]);
+
+        if (typeAndName.sheetType === 'Alias') {
+          /** Aliases are not a dataset (maybe in future);
+           * returning data in dataset.aliases[]
+           */
+          dataset = sheetToAliases(typeAndName.datasetName, sheet, datasetMetadata);
+        } else {
         /** if parentName column, result may be array of datasets */
         dataset = sheetToDataset(
           sheetType, datasetName, sheet, datasetMetadata,
           chromosomeRenaming, chromosomesToOmit);
+        }
       }
       return dataset;
     })
@@ -92,8 +100,8 @@ function spreadsheetDataToJsObj(fileData) {
   if (trace) {
     /** dataset may contain just a sheetName warning, instead of .blocks[].features[] */
     const
-    block0 = datasets.map((d) => d.blocks ? d.blocks[0] : d.warnings),
-    feature0 =  block0.map((b) => b?.features && b.features[0]);
+    block0 = datasets.map((d) => d.blocks?.[0] ?? d.aliases?.[0] ?? d.warnings),
+    feature0 =  block0.map((b) => b?.features?.[0]);
     console.log(fnName, 'block0', block0, 'feature0', feature0);
   }
 
@@ -228,27 +236,9 @@ function sheetToDataset(
     dataset.parentName = parentName;
   }
 
-  /** if A1 starts with # then warn : 1st row must be headers
-   * index of first row (A1-Z1) is 0
-   */
   const
-  // -	check for overlap of header names caused by header rename : first check for the target names
-  /** map headerRow using header renaming */
-  headerRow = sheet2RowArray(sheet, 0).map(normaliseHeader),
-  rowIsComment = sheet2ColArray(sheet, 0)
-    .map((ai) => (typeof ai === 'string') && ai.startsWith('#')),
-  /** options.header        result    index
-   *    'A'                 object    ['A1']
-   *    '1'                 array     [integer]  integer >= 0
-   *    [headerName, ...]   object    [headerName]
-   */
-  options = {header: headerRow},
-  features = XLSX.utils.sheet_to_json(sheet, options)
-  /** filter out comment rows */
-    .filter((f, i) => ! rowIsComment[i])
-  /** remove first (header) row */
-    .filter((f, i) => i > 0)
-  /** -	column renames */
+  { rowObjects, headerRow } = sheetToObj(sheet),
+  features = rowObjects
   /** Skip blank lines */
   /** .Chromosome required (warning if values for other fields but no .Chromosome) */
     .filter((f) => f.Marker || f.Chromosome)
@@ -321,6 +311,39 @@ function sheetToDataset(
   return datasets;
 };
 
+/** Translate sheet data to an array of row objects, using the required header
+ * row to name the object fields corresponding to columns.
+ * Used for features : sheetToDataset and aliases : sheetToAliases().
+ * @return { rowObjects, headerRow }
+ * rowObjects : array of row objects
+ * headerRow : array of column names parallel to sheet columns
+ */
+function sheetToObj(sheet) {
+  /** if A1 starts with # then warn : 1st row must be headers
+   * index of first row (A1-Z1) is 0
+   */
+  const
+  // -	check for overlap of header names caused by header rename : first check for the target names
+  /** map headerRow using header renaming */
+  headerRow = sheet2RowArray(sheet, 0).map(normaliseHeader),
+  rowIsComment = sheet2ColArray(sheet, 0)
+    .map((ai) => (typeof ai === 'string') && ai.startsWith('#')),
+  /** options.header        result    index
+   *    'A'                 object    ['A1']
+   *    '1'                 array     [integer]  integer >= 0
+   *    [headerName, ...]   object    [headerName]
+   */
+  options = {header: headerRow},
+  rowObjects = XLSX.utils.sheet_to_json(sheet, options)
+  /** filter out comment rows */
+    .filter((f, i) => ! rowIsComment[i])
+  /** remove first (header) row */
+    .filter((f, i) => i > 0)
+  ;
+  return {rowObjects, headerRow};
+}
+
+
 /** convert blocks {} to []
  */
 function blocksObjToArray(blocks) {
@@ -330,6 +353,55 @@ function blocksObjToArray(blocks) {
     .map(([name, features]) => ({name, scope: name, features}));
   return blocksArray;
 }
+
+//------------------------------------------------------------------------------
+
+/** Translate the sheet data into an array of aliases
+ * @param datasetName not used, but could in future support ownership (user and
+ * group) of a dataset of aliases.
+ * @param metadata undefined, or with namespace1 and namespace2 (if different)
+ * which can apply to all aliases in the sheet.
+ * @return "dataset" object : { aliases[] }, for insertion into database.
+ */
+function sheetToAliases(datasetName, sheet, metadata) {
+  const 
+  {rowObjects, headerRow} = sheetToObj(sheet),
+  /** column 'namespace' will be used as default for either namespace1 or namespace2.  */
+  namespace1meta = ensureString(metadata?.namespace1 || metadata?.namespace),
+  namespace2meta = ensureString(metadata?.namespace2 || namespace1meta),
+  /** augment row.namespace{1,2} from metadata.
+   * .namespace{1,2} are not required fields of Alias.
+   */
+  aliases = rowObjects.map((row) => {
+    /* Sometimes Marker names are given as numbers, e.g. 16 for IWB16,
+     * so string1, string2 can appear as numbers. ensureString() ensures they are strings.
+     */
+    /** field names from common/models/alias.json */
+    ['string1', 'string2', 'namespace1', 'namespace2'].forEach((fieldName) => {
+      if (row[fieldName] !== undefined) {
+        row[fieldName] = ensureString(row[fieldName]);
+      }
+    });
+    if (! row.namespace1 && namespace1meta) {
+      row.namespace1 = namespace1meta;
+    }
+    if (! row.namespace2 && namespace2meta) {
+      row.namespace2 = namespace2meta;
+    }
+    // There is no corresponding dataset; this is just for easy removal of test result.
+    row.datasetId = datasetName;
+    return row;
+  }),
+  /** may later create a dataset with {aliases, meta : metadata};
+   * currently only .aliases is inserted.
+   * Name is reported back in response, to GUI.
+   */
+  dataset = {name : datasetName, aliases, metadata};
+
+  return dataset;
+}
+
+//------------------------------------------------------------------------------
 
 
 /** Apply fn to sheets[sheetName] if it is not empty, and return the result.

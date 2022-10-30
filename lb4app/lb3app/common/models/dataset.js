@@ -18,6 +18,7 @@ var { clientIsInGroup, clientOwnsGroup, groupIsWritable } = require('../utilitie
 var upload = require('../utilities/upload');
 var load = require('../utilities/load');
 const { spreadsheetDataToJsObj } = require('../utilities/spreadsheet-read');
+const { loadAliases } = require('../utilities/load-aliases');
 const { cacheClearBlocks } = require('../utilities/localise-blocks');
 const { ErrorStatus } = require('../utilities/errorStatus.js');
 
@@ -261,7 +262,7 @@ module.exports = function(Dataset) {
 
     /** related : jsonData */
     const dataObj = spreadsheetDataToJsObj(msg.data);
-    const datasets = dataObj.datasets;
+    let datasets = dataObj.datasets;
     let status = pick(dataObj, ['warnings', 'errors']);
     const datasetNames = datasets.map((dataset) => dataset.name);
     status.datasetNames = datasetNames;
@@ -270,6 +271,18 @@ module.exports = function(Dataset) {
       status.fileName = fileName;
       cb(ErrorStatus(400, status));
     } else {
+      /* aliases don't have much overlap with datasets - handle separately. */
+      let aliasesP = [];
+      datasets = datasets
+        .filter((dataset) => {
+          /** true means filter out of datasets */
+          const out = dataset.aliases;
+          if (out) {
+            aliasesP.push(loadAliases(dataset, models));
+          }
+          return ! out;
+        });
+
       let datasetsDone = 0;
       let datasetRemovedPs =
       datasets.map((dataset) => {
@@ -301,10 +314,16 @@ module.exports = function(Dataset) {
           /* if (! error) then result is dataset.name */
           if (++datasetsDone === datasets.length) {
             if (! error) {
-              /** If a dataset failed, then cb is already called and this will have
-               * no effect, so no need to filter out datasets which failed.
-               */
-              cb(null, status);
+              Promise.all(aliasesP)
+                .catch((error) => cb(error))
+                .then((aliasesDone) => {
+                  // aliasesDone is [result.insertedCount, ..]
+                  console.log('aliasesDone', aliasesDone);
+                  /** If a dataset failed, then cb is already called and this will have
+                   * no effect, so no need to filter out datasets which failed.
+                   */
+                  cb(null, status);
+                });
             }
           }
         }
