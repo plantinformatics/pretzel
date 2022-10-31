@@ -314,12 +314,25 @@ exports.handleJson = function(msg, uploadParsed, cb) {
       if(!jsonMap.name){
         cb(Error('Dataset JSON has no "name" field (required)'));
       } else {
+        checkQtlThenUpload();
+        // This check is not required because uploadParsedCb() is called after removeExisting.
         // Check if dataset name already exists
         // Passing option of 'unfiltered: true' overrides filter for public/personal-only
+        if (false)
         models.Dataset.exists(jsonMap.name, { unfiltered: true }).then((exists) => {
           if (exists) {
             cb(ErrorStatus(400, `Dataset name "${jsonMap.name}" is already in use`));
           } else {
+            checkQtlThenUpload();
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+          cb(Error('Error checking dataset existence'));
+        });
+      }
+
+    function checkQtlThenUpload() {
             datasetParentContainsNamedFeatures(models, jsonMap, options, cb)
               .then((errorMsg) => {
                 if (errorMsg) {
@@ -329,14 +342,9 @@ exports.handleJson = function(msg, uploadParsed, cb) {
                   exports.uploadDataset(jsonMap, models, options, cb);
                 }
               });
-          }
-        })
-        .catch((err) => {
-          console.log(err);
-          cb(Error('Error checking dataset existence'));
-        });
-      }
+    }
     };
+
 
   exports.uploadParsedTryCb = 
     /** Wrap uploadParsed with try { } and pass error to cb().

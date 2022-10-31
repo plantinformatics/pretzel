@@ -231,9 +231,12 @@ function sheetToDataset(
   dataset = Object.assign({name : datasetName}, datasetTemplate),
   datasets = [dataset];
 
+  /** The spreadsheet value parentName corresponds to dataset.parent,
+   * i.e. in metadata sheet : metadata.parentName, and in dataset worksheet column feature.parentName
+   */
   /** based on sub makeTemplates() */
   if (parentName) {
-    dataset.parentName = parentName;
+    dataset.parent = parentName;
   }
 
   const
@@ -275,13 +278,13 @@ function sheetToDataset(
         if (dataset.name === datasetNameChild) {
         } else if (! dataset.blocks || ! Object.keys(dataset.blocks).length) {
           dataset.name = datasetNameChild;
-          dataset.parentName = feature.parentName;
+          dataset.parent = feature.parentName;
         } else if ((dataset = datasets.find((d) => (d.parentName == feature.parentName)))) {
           /* if feature.parentName matches a row earlier in this sheet, then append to that dataset. */
           // console.log('continuing to use', dataset);
         } else {
           dataset = Object.assign({name : datasetNameChild}, datasetTemplate);
-          dataset.parentName = feature.parentName;
+          dataset.parent = feature.parentName;
           datasets.push(dataset);
         }
         delete feature.parentName;
