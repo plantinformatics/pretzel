@@ -648,7 +648,7 @@ function roundNumber(pos) {
       rounded = roundedText
         .replace(/0+$/, '')
         .replace(/\.$/, '');
-      pos = rounded;
+      pos = +rounded;
     }
   }
   return pos;
