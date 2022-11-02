@@ -98,7 +98,11 @@ export default UploadBase.extend({
         }
         datasetNames.forEach((datasetName) => this.unviewDataset(datasetName));
         this.setSuccess("Dataset '" + datasetNames.join("', '") + "' " +  this.successMessage);
-        this.set('warnings', status?.warnings || []);
+        const
+        datasetWarnings  = status.datasetsWithErrorsOrWarnings?.map(
+          (d) => [d.name].concat(d.warnings)) || [],
+        warnings = status?.warnings.concat(datasetWarnings);
+        this.set('warnings', warnings);
         this.set('errors', status?.errors || []);
         this.get('blockService').featureSaved();
       });

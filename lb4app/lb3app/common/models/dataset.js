@@ -267,6 +267,10 @@ module.exports = function(Dataset) {
     const datasetNames = datasets.map((dataset) => dataset.name);
     status.datasetNames = datasetNames;
 
+    status.datasetsWithErrorsOrWarnings =
+      datasets.filter((d) => d.warnings?.length || d.errors?.length)
+      .map((dataset) => pick(dataset, ['name', 'errors', 'warnings']));
+
     if (status.errors?.length) {
       status.fileName = fileName;
       cb(ErrorStatus(400, status));
@@ -317,9 +321,10 @@ module.exports = function(Dataset) {
               Promise.all(aliasesP)
                 .catch((error) => cb(error))
                 .then((aliasesDone) => {
-                  // aliasesDone is [result.insertedCount, ..]
-                  // if delete, then array of undefined
-                  console.log('aliasesDone', Array.isArray(aliasesDone) ? aliasesDone.length : aliasesDone);
+                  /* aliasesDone is, per alias dataset:
+                   *   [result.insertedCount, ..], or if delete, then e.g. {n: 0, ok: 10}
+                   */
+                  console.log('aliasesDone', aliasesDone);
                   /** If a dataset failed, then cb is already called and this will have
                    * no effect, so no need to filter out datasets which failed.
                    */

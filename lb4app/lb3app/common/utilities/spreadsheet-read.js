@@ -230,6 +230,7 @@ function sheetToDataset(
   /** Current dataset : blocks/features are added to this;  changes if .parentName changes. */
   dataset = Object.assign({name : datasetName}, datasetTemplate),
   datasets = [dataset];
+  dataset.warnings = [];
 
   /** The spreadsheet value parentName corresponds to dataset.parent,
    * i.e. in metadata sheet : metadata.parentName, and in dataset worksheet column feature.parentName
@@ -242,9 +243,8 @@ function sheetToDataset(
   const
   { rowObjects, headerRow } = sheetToObj(sheet),
   features = rowObjects
-  /** Skip blank lines */
-  /** .Chromosome required (warning if values for other fields but no .Chromosome) */
-    .filter((f) => f.Marker || f.Chromosome)
+  /** Skip blank lines - done */
+    .filter((f) => requiredFields(f, sheetType, dataset.warnings))
     .map((f) => { f.Chromosome = trimAndDeletePunctuation(ensureString(f.Chromosome)); return f; })
     .filter((f) => ! chromosomesToOmit || ! chromosomesToOmit.includes(f.Chromosome))  
     .map((f) => renameChromosome(f, chromosomeRenaming))
@@ -299,15 +299,15 @@ function sheetToDataset(
     }, datasets);
 
   if (! features.length) {
-    if (! dataset.warnings) {
-      dataset.warnings = [];
-    }
     dataset.warnings.push('Worksheet does not contain data rows');
   }
 
   datasets.forEach((dataset) => {
     if (dataset.blocks) {
       dataset.blocks = blocksObjToArray(dataset.blocks);
+    }
+    if (! dataset.warnings.length) {
+      delete dataset.warnings;
     }
   });
 
@@ -886,9 +886,13 @@ function flankingMarkerValue(feature) {
   }
   return feature;
 }
-/** -	filter out features without required fields; report warnings and errors, for display in GUI.
+/** Check cell values of a row :
+ * filter out features without required fields; report warnings and errors, for display in GUI.
+ * @param warnings  output : a text warning for GUI may be pushed to this array if row is to be filtered out.
+ * @return false if this row should be filtered out
  */
-function requiredFields(feature, sheetType) {
+function requiredFields(feature, sheetType, warnings) {
+  const f = feature;
 /*
   # for QTL : allow blank Start/End fields, if flanking marker field is defined
   if (($#value == -1) && ! $hasFlankingMarkers)
@@ -896,6 +900,17 @@ function requiredFields(feature, sheetType) {
       print STDERR "In Dataset $datasetName, Feature $name has no Start/End, and no Flanking Markers\n";
     }
 */
+
+  /** .name and .Chromosome required (warning if values for other fields but no .Chromosome) */
+  const ok = f.name && f.Chromosome;
+  if (! ok && Object.keys(f).length) {
+    const
+    warning = 'Row ' + f.__rowNum__  +
+      ' is missing Marker name or Chromosome values but has other values : ' + 
+      JSON.stringify(f); 
+    warnings.push(warning);
+  }
+  return ok;
 }
 
 /** Adjust attribute names of feature :
