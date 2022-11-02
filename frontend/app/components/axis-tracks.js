@@ -702,6 +702,8 @@ export default InAxis.extend({
   },
 
   didRender() {
+    this._super.apply(this, arguments);
+
     console.log("components/axis-tracks didRender()");
   },
 

@@ -1,8 +1,10 @@
 {{!-- stacksCount : {{ stacksCount } }, {{ axesP.length --}}
 
-{{this.stacksNew.length}}
-{{#each this.stacksNew as | stack i | }}
-  <Draw::StackView stack>{{i}}</Draw::StackView>
+{{axesViewedEffect.length}}
+{{log 'stacks-view' this.stacks.length this.stacks this }}
+{{this.stacks.length}}
+{{#each this.axesViewedEffect as | stack i | }}
+  <Draw::StackView stacksView=this stack=stack>{{i}}</Draw::StackView>
 {{/each}}
 
 {{draw/axes-1d drawMap=drawMap axes2d=axes2d

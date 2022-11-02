@@ -53,6 +53,8 @@ import { updateDomain } from '../../utils/stacksLayout';
 
 /*------------------------------------------------------------------------*/
 
+const Stacked_p = Stacked.prototype;
+
 const trace_stack = 0;
 
 const dLog = console.debug;
@@ -639,6 +641,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   init() {
     this._super(...arguments);
 
+    // reference block -> axis-1d.  can change to a Symbol.
+    this.axis.set('axis1dR', this);
     let axisName = this.get('axis.id');
     /* axisS may not exist yet, so give Stacked a reference to this. */
     Stacked.axis1dAdd(axisName, this);
@@ -662,6 +666,58 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
 
     next(() => this.axis1dExists(this, true));
   },
+
+
+  // ---------------------------------------------------------------------------
+
+  referenceBlock : undefined,
+  axisName : undefined,
+  portion : undefined,
+
+  // ---------------------------------------------------------------------------
+
+  getAxis		: Stacked_p.getAxis,
+  axis1dAdd		: Stacked.axis1dAdd,
+  axis1dRemove		: Stacked.axis1dRemove,
+  getAxis1d		: Stacked_p.getAxis1d,
+  toString		: Stacked_p.toString,
+  log		: Stacked_p.log,
+  longName		: Stacked_p.longName,
+  logBlocks		: Stacked_p.logBlocks,
+  logElt		: Stacked_p.logElt,
+  referenceBlockS		: Stacked_p.referenceBlockS,
+  getStack		: Stacked_p.getStack,
+  getAxis		: Stacked.getAxis,
+  axisOfDatasetAndScope		: Stacked.axisOfDatasetAndScope,
+  getStack		: Stacked.getStack,
+  longName		: Stacked.longName,
+  removeBlock		: Stacked_p.removeBlock,
+  removeBlockByName		: Stacked_p.removeBlockByName,
+  move		: Stacked_p.move,
+  yOffset		: Stacked_p.yOffset,
+  yRange		: Stacked_p.yRange,
+  yRange2		: Stacked_p.yRange2,
+  domainCalc		: Stacked_p.domainCalc,
+  referenceDomain		: Stacked_p.referenceDomain,
+  getDomain		: Stacked_p.getDomain,
+  verify		: Stacked_p.verify,
+  children		: Stacked_p.children,
+  dataBlocks		: Stacked_p.dataBlocks,
+  keyFunction		: Stacked_p.keyFunction,
+  axisSide		: Stacked_p.axisSide,
+  axisTransform		: Stacked_p.axisTransform,
+  selectAll		: Stacked_p.selectAll,
+  selectAll		: Stacked.selectAll,
+  allocatedWidth		: Stacked_p.allocatedWidth,
+  extendedWidth		: Stacked_p.extendedWidth,
+  location		: Stacked_p.location,
+  axisTransformO		: Stacked_p.axisTransformO,
+  getY		: Stacked_p.getY,
+  currentPosition		: Stacked_p.currentPosition,
+  axisDimensions		: Stacked_p.axisDimensions,
+  setDomain		: Stacked_p.setDomain,
+  setZoomed		: Stacked_p.setZoomed,
+  unviewBlocks		: Stacked_p.unviewBlocks,
 
 
   /*--------------------------------------------------------------------------*/
@@ -1462,6 +1518,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     pS.remove();
   },
   didRender() {
+    this._super.apply(this, arguments);
+
     this.renderTicksDebounce();
   },
   constructFeatureTicks () {

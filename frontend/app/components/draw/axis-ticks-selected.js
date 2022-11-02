@@ -101,6 +101,8 @@ export default Component.extend(AxisEvents, {
   }),
 
   didRender() {
+    this._super.apply(this, arguments);
+
     let featuresInBlocks = this.get('featuresInBlocks');
     if (trace)
       dLog('didRender', featuresInBlocks, this.get('axisId'),
