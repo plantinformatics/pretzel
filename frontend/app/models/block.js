@@ -198,6 +198,22 @@ export default Model.extend({
     let count = this.get('featureCount') || this.get('featureValueCount');
     return count > 0;
   }),
+  /** True if a block has features, or is a view and hence may have features.
+   *
+   * If features have been requested without a constraining domain interval and
+   * 0 features were returned then .featureCount may be set to 0, indicating the
+   * block definitely has no features, and in this case this fucntion returns
+   * false.
+   *
+   * Role : to support dataBlocks definition, to enable requesting features.
+   * related : isDataCount, isData
+   */
+  get mayHaveFeatures() {
+    /* view blocks (e.g. VCF) have dynamic features - 0 in db, so initially ! hasFeatures. */
+    /** (.featureCount === undefined) indicates count is not known, so this result may be true. */
+    const mayHave = this.get('hasFeatures') || (this.hasTag('view') && (this.featureCount !== 0) );
+    return mayHave;
+  },
   /** Similar to isData(), but relies on .featureCount, which may not have been received. */
   isDataCount : and('isLoaded', 'hasFeatures'),
   isData : computed('referenceBlock', 'range', function (){
@@ -208,10 +224,19 @@ export default Model.extend({
     }
     return isData;
   }),
-  currentDomain : computed('referenceBlock', 'range',  function () {
+  /** @return true if this block is a reference or a GM (i.e. it is it's own reference).
+   * Each axis contains exactly 1 block for which .isReferenceForAxis is true.
+   * @desc related @see referenceBlockOrSelf
+   */
+  isReferenceForAxis : computed('isData', 'datasetId.parentName', function isReference () {
+    /** also : for a reference : this.get('range') !== undefined */
+    let isReference = this.isData || ! this.get('datasetId.parentName');
+    return isReference;
+  }),
+  currentDomain : computed('zoomedDomain', 'referenceBlock', 'range',  function () {
     let domain = this.get('zoomedDomain');
     if (! domain)  {
-      let referenceBlock = this.get('referenceBlock');
+      let referenceBlock = this.get('referenceBlockOrSelf');
       if (referenceBlock) {
         domain = referenceBlock.get('range');
       } else {
@@ -455,6 +480,28 @@ export default Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** server which this block was received from.
+   *
+   * It is possible that the block may be a copy from a secondary server which
+   * is not currently connected.
+   *
+   * block id is generally unique across servers, but a reference block may
+   * be copied from another server for use as test data, which would cause
+   * id2Server[] to return the most-recently-connected server with that
+   * block id, whereas servers[this.store.name] will handle that OK.
+   * Otherwise these 2 expressions are equivalent.
+   */
+  server : computed( function () {
+    /** no dependency needed because .server need only be calculated once.  */
+    const
+    apiServers = this.get('apiServers'),
+    server = apiServers.servers[this.store.name] || 
+      apiServers.id2ServerGet(this.id);
+    return server;
+  }),
+
+  //----------------------------------------------------------------------------
+
   /** This will be different to referenceBlock if the parent has a parent.
    * I.e. referenceBlock corresponds to the axis, and parentBlock is the list of
    * features which this blocks feature.value.flankingMarkers[] refer to
@@ -465,6 +512,14 @@ export default Model.extend({
     blocks = parent?.get('blocks'),
     pb = blocks && blocks.findBy('scope', this.scope);
     return pb;
+  }),
+
+  /** use .dataset : .parent.name or .parentName */
+  datasetParentName : computed('datasetId.{parent.name,parentName}', function () {
+    const
+    d = this.get('datasetId'),
+    p = d.get && d.get('parent');
+    return p ? p.get('name') : d.get('parentName');
   }),
 
   /** If the dataset of this block has a parent, return the name of that parent (reference dataset).
@@ -560,18 +615,7 @@ export default Model.extend({
      */
     if (parentName)
     {
-      /** it is possible that the block may be a copy from a secondary server which is not currently connected. */
-      let
-      apiServers = this.get('apiServers'),
-      /** server which this block was received from.
-       *
-       * block id is generally unique across servers, but a reference block may
-       * be copied from another server for use as test data, which would cause
-       * id2Server[] to return the most-recently-connected server with that
-       * block id, whereas servers[this.store.name] will handle that OK.
-       * Otherwise these 2 expressions are equivalent.
-       */
-      server = apiServers.servers[this.store.name] || apiServers.id2Server[this.id];
+      const server = this.get('server');
 
       /** this function is called for each block, e.g. when view / un-view a
        * block. Scanning all blocks is becoming too slow, so an alternate
@@ -1101,6 +1145,27 @@ export default Model.extend({
     return overlaps;
   },
 
+  // ---------------------------------------------------------------------------
+
+  /** @return features of this block, filtered by brushedDomain if the axis of
+   * this block is brushed.
+   */
+  featuresInBrush : computed('brushedDomain.{0,1}', 'features.[]', function() {
+    let
+    features,
+    interval = this.brushedDomain;
+    if (interval) {
+      const
+      // based on similar in featureInRange().
+      valueInInterval = this.controls.get('view.valueInInterval');
+      /** filter by axisBrush .brushedDomain */
+      features = this.features.filter((f) => valueInInterval(f.value, interval));
+    } else {
+      features = this.features.toArray();
+    }
+    return features;
+  }),
+
   /*--------------------------------------------------------------------------*/
 
   /**  @return undefined if this block is not the referenceBlock of an axis1d
@@ -1112,7 +1177,11 @@ export default Model.extend({
       axisBlocks = this.get('blockService.axis1dReferenceBlocks'),
       /** could calculate a hash in axis1dReferenceBlocks and lookup via that,
        * but this is a small array to scan. */
-      axis1d = axisBlocks.find((ab) => ab[1] === this);
+      /* also check for .id match, block object references may not match because
+       * axisBrush.block is in the wrong store;
+       * solution is to move model/axis-brush out of store, in a separate commit.
+       */
+      axis1d = axisBlocks.find((ab) => (ab[1] === this) || (ab[1].get('id') === this.get('id')));
       axis1d = axis1d && axis1d[0];
       return axis1d;
     }),
@@ -1135,6 +1204,12 @@ export default Model.extend({
         axis1d = this.get('crossServerAxis1d') || this.get('referenceBlock.crossServerAxis1d');
         dLog(fnName, axis1d, this);
       }
+      /* using .id match in referencedAxis1d (see comment there) is probably
+       * sufficient, this is just backup, probably not required.
+       */
+      if (! axis1d && this.axis) {
+        axis1d = this.axis.axis1d;
+      }
       if (axis1d?.isDestroying) {
         dLog('axis1d isDestroying', axis1d);
         axis1d = undefined;
@@ -1142,6 +1217,9 @@ export default Model.extend({
       let a1Check = this.verify_axis1d();
       if (axis1d !== a1Check) {
         dLog('axis1d', axis1d, a1Check);
+      }
+      if (! axis1d) {
+        dLog(fnName, axis1d, this.id, this.get('referenceBlock.id'), this.axis, a1Check);
       }
       return axis1d;
     }),
@@ -1288,6 +1366,7 @@ export default Model.extend({
    * This enables calculation of the .value[] of the QTL features.
    */
   loadRequiredData : computed(function () {
+    const fnName = 'loadRequiredData';
     /* No dependency - will compute once.  */
     // possibly generalise the tag from 'QTL' to : 'valueComputed'
     if (this.get('isQTL')) {
@@ -1296,18 +1375,23 @@ export default Model.extend({
        */
       features = this.get('allFeatures')
         .then((f) => {
+          // dLog(fnName, 'allFeatures', this.name, this.id, f?.length);
           if (! f) {
             dLog('loadRequiredData', this.id, this.get('datasetId.id'),
                  this.get('datasetId.parent.id'), this.get('parentBlock.datasetId.id'));
           } else {
             f.forEach((fi) => fi?.value?.forEach((fii) => this.get('trait').traitAddQtl(fii)));
           }
-          return [f, this.get('referencedFeatures')];})
+          /** If there are values in f other than [0] then could use f.mapBy('value').flat() */
+          const features = f[0].value;
+          return [f, this.referencedFeaturesOf(features)];})
       // parentBlockFeatures = ;
       // parentBlockFeatures // allSettled([features, parentBlockFeatures])
         .then((ps) => {
           let parentFeatures = ps[1];
+          // dLog(fnName, 'parentFeatures', this.name, this.id, ps, parentFeatures);
           return parentFeatures && parentFeatures.then((pf) => {
+            // dLog(fnName, 'features', this.name, this.id, pf, ps[0][0].value);
             /** referencedFeatures() yields an array of Features : pf */
             let features = ps[0][0].value,
                 /** no return value, so result is a promise yielding undefined */
@@ -1415,8 +1499,17 @@ export default Model.extend({
    * @return a Promise yielding an array of Features
    */
   referencedFeatures : computed('parentBlock', function () {
+    const fnName = 'referencedFeatures'; // + ' (loadRequiredData)';
+    this.referencedFeaturesOf(this.get('features'));
+  }),
+  /** Same comment as @see referencedFeatures()
+   * @param features of this block, from loadRequiredData() via allFeatures()
+   * @return promise yielding features of .parentBlock which are referenced by features[].
+   */
+  referencedFeaturesOf(features) {
+    const fnName = 'referencedFeaturesOf'; // + ' (loadRequiredData)';
     let
-    featureNames = this.get('features')
+    featureNames = features
       .filterBy('values.flankingMarkers')
       .mapBy('values.flankingMarkers')
       .flat();
@@ -1427,6 +1520,7 @@ export default Model.extend({
      */
     let parentBlock = this.get('parentBlock');
     let blockTask;
+    // dLog(fnName, this.name, this.id, this.get('features.length'), featureNames.length,  parentBlock?.id);
     if (featureNames.length && parentBlock) {
       let apiServer = this.get('apiServers').servers[parentBlock.store.name];
 
@@ -1439,11 +1533,11 @@ export default Model.extend({
       blockTask = taskGet.perform(apiServer, /*matchAliases*/false, parentBlock.id, featureNames);
       blockTask
         .then((features) => {
-          dLog('referencedFeatures', featureNames[0], featureNames.length, features.length);
+          dLog(fnName, 'referencedFeatures', featureNames[0], featureNames.length, features.length);
         });
     }
     return blockTask;
-  }),
+  },
 
 
 

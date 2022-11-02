@@ -102,6 +102,7 @@ function createChunked (data, model, len) {
  * @param {Object} models - Loopback database models
  */
 exports.uploadDataset = (data, models, options, cb) => {
+  const fnName = 'uploadDataset';
   let dataset_id
   let json_blocks = []
 
@@ -123,12 +124,17 @@ exports.uploadDataset = (data, models, options, cb) => {
   })
     .then(function(blocks) {
       uploadDatasetContent(dataset_id, blocks, models, options, cb);
+    })
+    .catch((error) => {
+      console.log(fnName, dataset_id, error);
+      cb(error);
     });
 };
 /**
  * @return promise
  */
 function uploadDatasetContent(dataset_id, blocks, models, options, cb) {
+  const fnName = 'uploadDatasetContent';
   let json_annotations = [];
   let json_intervals = [];
   let json_features = [];
@@ -164,7 +170,9 @@ function uploadDatasetContent(dataset_id, blocks, models, options, cb) {
   }).then(function(intervals) {
     //create features using connector for performance
     models.Feature.dataSource.connector.connect(function(err, db) {
-      insert_features_recursive(db, dataset_id, json_features, true, cb);
+      insert_features_recursive(db, dataset_id, json_features, true, cb)
+        /* cb already called. */
+        .catch((err) => console.log(fnName, err.message || err));
     });
   }).catch(cb);
   return promise;
@@ -181,7 +189,11 @@ exports.uploadDatasetContent = uploadDatasetContent;
 function insert_features_recursive(db, dataset_id, features_to_insert, ordered, cb) {
   // no more features
   if (features_to_insert.length == 0) {
-    return process.nextTick(() => cb(null, dataset_id));
+    /** this promise is only to satisfy the .catch() in uploadDatasetContent().
+     * result is not used, and resolve time doesn't matter.  */
+    return new Promise((resolve, reject) => {
+      process.nextTick(() => { cb(null, dataset_id); resolve();});
+    });
   }
 
   let next_level_features = [];
@@ -230,8 +242,8 @@ function insert_features_recursive(db, dataset_id, features_to_insert, ordered, 
         return Promise.resolve(features_to_insert.length - dupCount);
       }
       else {
-        cb(err);
-        return Promise.reject(err);
+        cb(ErrorStatus(400, err.message));
+        return Promise.reject(err.message);
       }
     });
   return promise;
@@ -302,12 +314,25 @@ exports.handleJson = function(msg, uploadParsed, cb) {
       if(!jsonMap.name){
         cb(Error('Dataset JSON has no "name" field (required)'));
       } else {
+        checkQtlThenUpload();
+        // This check is not required because uploadParsedCb() is called after removeExisting.
         // Check if dataset name already exists
         // Passing option of 'unfiltered: true' overrides filter for public/personal-only
+        if (false)
         models.Dataset.exists(jsonMap.name, { unfiltered: true }).then((exists) => {
           if (exists) {
             cb(ErrorStatus(400, `Dataset name "${jsonMap.name}" is already in use`));
           } else {
+            checkQtlThenUpload();
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+          cb(Error('Error checking dataset existence'));
+        });
+      }
+
+    function checkQtlThenUpload() {
             datasetParentContainsNamedFeatures(models, jsonMap, options, cb)
               .then((errorMsg) => {
                 if (errorMsg) {
@@ -317,14 +342,9 @@ exports.handleJson = function(msg, uploadParsed, cb) {
                   exports.uploadDataset(jsonMap, models, options, cb);
                 }
               });
-          }
-        })
-        .catch((err) => {
-          console.log(err);
-          cb(Error('Error checking dataset existence'));
-        });
-      }
+    }
     };
+
 
   exports.uploadParsedTryCb = 
     /** Wrap uploadParsed with try { } and pass error to cb().
@@ -385,6 +405,8 @@ exports.handleJson = function(msg, uploadParsed, cb) {
    * @param options optionsFromRequest
    * @param id  datasetId
    * @param replaceDataset if false and dataset id exists, then fail - call replyCb() with Error.
+   * @param replyCb called with (error)
+   * @param okCallback called if OK
    */
   exports.removeExisting = function(models, options, id, replaceDataset, replyCb, okCallback) {
     const fnName = 'removeExisting';
@@ -443,6 +465,18 @@ exports.handleJson = function(msg, uploadParsed, cb) {
       }
     });
   };
+
+/** Call removeExisting() and return a promise instead of calling the replyCb or okCallback callbacks.
+  */
+exports.removeExistingP = function(models, options, id, replaceDataset) {
+  /** */
+  let promise = new Promise(function (resolve, reject) {
+    function replyCb(error) { reject(error); }
+    function okCallback() { resolve(); }
+    exports.removeExisting(models, options, id, replaceDataset, replyCb, okCallback);
+  });
+  return promise;
+};
 
 
 

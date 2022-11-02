@@ -31,7 +31,7 @@ import { variableBands } from '../utils/variableBands';
 import { isOtherField } from '../utils/field_names';
 import { Object_filter } from '../utils/Object_filter';
 import { breakPoint, breakPointEnableSet } from '../utils/breakPoint';
-
+import { dLog } from './common/log';
 
 
 /*----------------------------------------------------------------------------*/
@@ -42,7 +42,6 @@ Object.filter = Object_filter;
 
 const trace_stack = 0;
 const trace_updatedStacks = true;
-const dLog = console.debug;
 
 /** px vertical gap between axes in a stack.
  * This can be made an attribute of Stack, and reduce it when

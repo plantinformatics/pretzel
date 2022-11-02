@@ -11,10 +11,11 @@ import DS from 'ember-data';
 
 import { axisFeatureCircles_selectOne, axisFeatureCircles_selectUnviewed } from '../utils/draw/axis';
 import { thenOrNow } from '../utils/common/promises';
+import { dLog } from '../utils/common/log';
+
 
 /*----------------------------------------------------------------------------*/
 
-const dLog = console.debug;
 
 dLog("controllers/mapview.js");
 
@@ -183,7 +184,7 @@ export default Controller.extend(Evented, {
        * feature.value location
        */
       if (block.get) {
-        block.get('loadRequiredData');
+        later(() => block.get('loadRequiredData'));
       }
     },
     blockFromId : function(blockId) {
@@ -195,22 +196,27 @@ export default Controller.extend(Evented, {
       return block;
     },
 
+    /** If block is not selected, select it.
+     */
     selectBlock: function(block) {
-      dLog('SELECT BLOCK mapview', block.get('name'), block.get('mapName'), block.id, block);
-      this.set('selectedBlock', block);
-      d3.selectAll("ul#maps_aligned > li").classed("selected", false);
-      d3.select('ul#maps_aligned > li[data-chr-id="' + block.id + '"]').classed("selected", true);
+      if (this.get('selectedBlock') !== block) {
+        dLog('SELECT BLOCK mapview', block.get('name'), block.get('mapName'), block.id, block);
+        this.set('selectedBlock', block);
+        d3.selectAll("ul#maps_aligned > li").classed("selected", false);
+        d3.select('ul#maps_aligned > li[data-chr-id="' + block.id + '"]').classed("selected", true);
 
-      function dataIs(id) { return function (d) { return d == id; }; }; 
-      d3.selectAll("g.axis-outer").classed("selected", dataIs(block.id));
-      if (trace_select)
-      d3.selectAll("g.axis-outer").each(function(d, i, g) { dLog(this); });
-      // this.send('setTab', 'right', 'block');
+        function dataIs(id) { return function (d) { return d == id; }; }; 
+        d3.selectAll("g.axis-outer").classed("selected", dataIs(block.id));
+        if (trace_select) {
+          d3.selectAll("g.axis-outer").each(function(d, i, g) { dLog(this); });
+        }
+        // this.send('setTab', 'right', 'block');
 
-      let queryParams = this.get('model.params');
-      /* if the block tab in right panel is not displayed then select the block's dataset. */
-      if (! (queryParams.options && queryParams.parsedOptions.blockTab)) {
-        this.send('selectDataset', block.datasetId);
+        let queryParams = this.get('model.params');
+        /* if the block tab in right panel is not displayed then select the block's dataset. */
+        if (! (queryParams.options && queryParams.parsedOptions.blockTab)) {
+          this.send('selectDataset', block.datasetId);
+        }
       }
     },
     selectBlockById: function(blockId) {
@@ -323,6 +329,11 @@ export default Controller.extend(Evented, {
 
   queryParams: ['mapsToView'],
   mapsToView: [],
+  /** GUI controls / settings changed by the user, preserved for components
+   * which exist only while their tab is visible.
+   * e.g. preserved settings for component panel/manage-genotype are in userSettings.genotype.
+   */
+  userSettings : {genotype : {}},
 
   selectedFeatures: [],
   /** counts of selected paths, from paths-table; shown in tab. */

@@ -368,6 +368,7 @@ function model2db(model) {
     }
   );
 }
+exports.model2db = model2db;
 
 /**
  * @param blockData .id is a string blockId and ._id is undefined

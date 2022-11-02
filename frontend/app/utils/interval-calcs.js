@@ -1,6 +1,9 @@
 import { intervalSign } from './draw/zoomPanCalcs';
 import { inInterval } from './draw/interval-overlap';
 import { maybeFlip }  from './draw/axis';
+import { equalWithinPrecision } from './domCalcs';
+import { subInterval } from './draw/zoomPanCalcs';
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -15,6 +18,26 @@ import { maybeFlip }  from './draw/axis';
 const dLog = console.debug;
 
 /*----------------------------------------------------------------------------*/
+
+/** @return true if the given intervals are equal to within the JavaScript
+ * floating point number precision,
+ * and the direction of the intervals is the same.
+ */
+function intervalsEqual(i1, i2) {
+  const different = i1.find((a, i) => ! equalWithinPrecision(a, i2[i]));
+  return ! different;
+}
+/** As for intervalsEqual(), but the params are arrays of intervals.
+ * Compare them in parallel
+ */
+function intervalsArraysEqual(i1, i2) {
+  const
+  different = (i1.length !== i2.length) || 
+    i1.find((a, i) => ! intervalsEqual(a, i2[i]));
+  return ! different;
+}
+
+//------------------------------------------------------------------------------
 
 /** Determine the absolute length of the given interval or domain.
  * @param interval  number[2]
@@ -193,6 +216,18 @@ function intervalSubtract2(i1, i2) {
   return interval;
 }
 
+/** @return the intersection of the given intervals
+ * @param i1, i2 are arrays [start, end], in the same direction
+ */
+function intervalIntersect(i1, i2) {
+  const
+  intersect =
+    subInterval(i1, i2) ? i1 :
+    subInterval(i2, i1) ? i2 :
+    intervalJoin('intersect', i1, i2);
+  return intersect;
+}
+
 /** @return true if the 2 intervals have a common endpoint.
  * Form of i1 and i2 is : [number, number].
  * The implementation will handle other vector lengths; if sameDir
@@ -236,6 +271,8 @@ function truncateMantissa(x)
 /*----------------------------------------------------------------------------*/
 
 export {
+  intervalsEqual,
+  intervalsArraysEqual,
   intervalSize, intervalLimit, intervalOutside, intervalMerge, intervalExtent,
   intervalOverlapCoverage,
   intervalOverlap,
@@ -243,6 +280,7 @@ export {
   intervalOrdered,
   intervalJoin,
   intervalSubtract2,
+  intervalIntersect,
   intervalsAbut,
   truncateMantissa
 };

@@ -78,17 +78,32 @@ export default UploadBase.extend({
       replaceDataset = this.replaceDataset,
       /** corresponds to the param msg in backend/common/models/dataset.js : upload(). */
       message = {fileName, data, replaceDataset};
+      this.set('warnings', []);
+      this.set('errors', []);
       /** a jQuery promise (jqXHR) */
       let promise =
       this.uploadData(message);
+      // .uploadData() .then( , onRejected) does .setError()
       promise.always(() => file.queue.remove(file));
       /** data-base:uploadData() calls setSuccess() (i.e. 'Uploaded successfully')
        * Prepend the datasetName to that message.
        */
       promise.then((res) => {
-        let datasetName = res.status;
-        this.unviewDataset(datasetName);
-        this.setSuccess("Dataset '" + datasetName + "' " +  this.successMessage);
+        const status = res.status;
+        let datasetNames;
+        if (status.datasetNames) {
+          datasetNames = status.datasetNames;
+        } else {
+          datasetNames = [status];
+        }
+        datasetNames.forEach((datasetName) => this.unviewDataset(datasetName));
+        this.setSuccess("Dataset '" + datasetNames.join("', '") + "' " +  this.successMessage);
+        const
+        datasetWarnings  = status.datasetsWithErrorsOrWarnings?.map(
+          (d) => [d.name].concat(d.warnings)) || [],
+        warnings = status?.warnings.concat(datasetWarnings);
+        this.set('warnings', warnings);
+        this.set('errors', status?.errors || []);
         this.get('blockService').featureSaved();
       });
     });

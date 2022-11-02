@@ -33,4 +33,20 @@ function checkIsNumber(l)
 
 /*----------------------------------------------------------------------------*/
 
-export { round_2, checkIsNumber };
+/** approximate JavaScript floating point number precision.
+ * Measured value in one test ~ 1e-16, so -15 seems safe.
+ */
+const precision = 1e-15;
+/** @return true if the given numbers are equal to within the JavaScript
+ * floating point number precision.
+ */
+function equalWithinPrecision(a, b) {
+  let
+  relativeDifference,
+  equal = (a === b) || (Math.abs(relativeDifference = 2 * (a - b) / (a + b)) < precision);
+  return equal;
+}
+
+//------------------------------------------------------------------------------
+
+export { round_2, checkIsNumber, equalWithinPrecision };

@@ -17,8 +17,10 @@ var pathsStream = require('../utilities/paths-stream');
 var { localiseBlocks, blockLocalId } = require('../utilities/localise-blocks');
 const { blockServer } = require('../utilities/api-server');
 const { getAliases } = require('../utilities/localise-aliases');
-const { childProcess } = require('../utilities/child-process');
+const { childProcess, dataOutReplyClosure, dataOutReplyClosureLimit } = require('../utilities/child-process');
 const { ArgsDebounce } = require('../utilities/debounce-args');
+const { ErrorStatus } = require('../utilities/errorStatus.js');
+const { vcfGenotypeLookup, vcfGenotypeFeaturesCounts } = require('../utilities/vcf-genotype');
 
 var ObjectId = require('mongodb').ObjectID
 
@@ -372,6 +374,44 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
 
   /*--------------------------------------------------------------------------*/
 
+  /** @return promise yielding [block, dataset]
+   * @desc
+   * related : apiServer.datasetAndBlock()
+   */
+  Block.blockDatasetLookup = function(id, options) {
+    const fnName = 'blockDatasetLookup';
+    let
+    promise = 
+      this.blockRecordLookup(id)
+      .then((block) => {
+        if (! block) {
+          const errorText = ' Block ' + id + ' not found. ' + fnName;
+          throw new ErrorStatus(400, errorText);
+        } else {
+          const models = this.app.models;
+          const
+          datasetP =
+            models.Dataset.findById(block.datasetId, {}, options)
+            .then(dataset => {
+              if (! dataset) {
+                const errorText = 'Dataset ' + block.datasetId + ' not found for Block ' + id + '. ' + fnName;
+                throw new ErrorStatus(400, errorText);
+              } else {
+                return [block, dataset];
+              }
+            });
+          return datasetP;
+        }
+        /** each case above either throws or returns, so this is unreachable.   */
+        return null;
+      });
+
+    return promise;
+  };
+              
+
+  //----------------------------------------------------------------------------
+
   /** Lookup .namespace for the given blockIds.  Cached values are used if
    * available, since this is used in the high-use pathsaliases() api, and we
    * don't yet have an api for altering .namespace.
@@ -570,10 +610,13 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     }
 
     req.on('close', () => {
+      function logClose(label, ) {
       /* absolute time : new Date().toISOString() */
       console.log(
-        'req.on(close)', 'reqStream', 
+        label, 'reqStream', 
         'The request processing time is', elapsedMs(startTime, 3), 'ms.', 'for', req.path, cacheId);
+      }
+      logClose('req.on(close)');
 
       // console.log('req.on(close)');
       if (cursor) {
@@ -588,7 +631,10 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
               if (c.push && c.destroy) {
                 console.log('c.push(null)');
                 c.push(null);
-                c.destroy();
+                // c.destroy();
+                /* maybe : */
+                c.destroy(/*err*/null, function () {
+                  logClose('cursor destroyed'); });
               }
               /* The client is closing the SSE, so close the database cursor.
                * c.close() often gets ERR_STREAM_PREMATURE_CLOSE;
@@ -603,18 +649,13 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
                 console.log('promise yielded cursor with .close' /*,c*/);
                 closeCursor(c);
               }
-              else
-                debugger;
             });
           }
           else
             closeCursor(cursor);
           function closeCursor(cursor) {
             cursor.close(function () {
-              console.log(
-                'cursor closed',
-                'reqStream', 
-                'The request processing time is', elapsedMs(startTime, 3), 'ms.', 'for', req.path, cacheId); });
+              logClose('cursor closed'); });
           }
         }
       }
@@ -745,22 +786,32 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       }
       cb(null, result);
     } else {
-    let db = this.dataSource.connector;
-    let cursor =
-        blockFeatures.blockFeaturesCounts(db, blockId, interval, nBins, isZoomed, useBucketAuto);
-    cursor.toArray()
-    .then(function(featureCounts) {
-      if (useCache) {
-        if (trace_block > 1) {
-          console.log(fnName, cacheId, 'put', featureCounts[0]);
+      this.blockDatasetLookup(id, options)
+        .then(blockDatabaseFeatureCounts.bind(this));
+
+      function blockDatabaseFeatureCounts([block, dataset]) {
+        if (dataset.tags?.includes('VCF')) {
+          vcfGenotypeFeaturesCounts(block, interval, nBins, isZoomed, cb);
+        } else {
+          let db = this.dataSource.connector;
+          let cursor =
+              blockFeatures.blockFeaturesCounts(db, blockId, interval, nBins, isZoomed, useBucketAuto);
+          cursor.toArray()
+            .then(function(featureCounts) {
+              if (useCache) {
+                if (trace_block > 1) {
+                  console.log(fnName, cacheId, 'put', featureCounts[0]);
+                }
+                cache.put(cacheId, featureCounts);
+              }
+              cb(null, featureCounts);
+            }).catch(function(err) {
+              cb(err);
+            });
         }
-        cache.put(cacheId, featureCounts);
       }
-      cb(null, featureCounts);
-    }).catch(function(err) {
-      cb(err);
-    });
     }
+
   };
 
   /*--------------------------------------------------------------------------*/
@@ -1197,7 +1248,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     /** Receive the results from the child process.
      * @param chunk is a Buffer
      * null / undefined indicates child process closed with status 0 (OK) and sent no output.
-     * @param cb is cbWrap of cb passed to dnaSequenceSearch().
+     * @param cb is cbWrap of cb passed to dnaSequenceLookup().
      */
     function dataOutReply(chunk, cb) {
       /** based on searchDataOut() */
@@ -1205,7 +1256,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
         cb(null, chunks);
       } else
       if (chunk && (chunk.length >= 6) && (chunk.asciiSlice(0,6) === 'Error:')) {
-        cb(new Error(chunk.toString()));
+        cb(new ErrorStatus(400, chunk.toString()));
       } else {
         // chunks.push(chunk)
         cb(null, chunk.toString());
@@ -1223,6 +1274,70 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     returns: {arg: 'sequence', type: 'string'},
     description: "DNA Sequence Lookup e.g. samtools faidx, returns nucleotide sequence output as text string"
   });
+
+  // ---------------------------------------------------------------------------
+
+  /**
+   * @param parent  name of parent or view dataset, or vcf directory name
+   * @param scope e.g. '1A'; identifies the vcf file, i.e. datasetId/scope.vcf.gz
+   */
+  Block.vcfGenotypeSamples = function(parent, scope, cb) {
+    childProcess(
+      'vcfGenotypeLookup.bash',
+      /* postData */ '', 
+      /* useFile */ false,
+      /* fileName */ undefined,
+      /* moreParams */ ['query', parent, scope, /*preArgs*/ '-l'],
+      dataOutReplyClosure(cb), cb, /*progressive*/ false);
+
+  };
+
+  Block.remoteMethod('vcfGenotypeSamples', {
+    accepts: [
+      {arg: 'parent', type: 'string', required: true},
+      {arg: 'scope', type: 'string', required: true},
+    ],
+    http: {verb: 'get'},
+    returns: {arg: 'text', type: 'string'},
+    description: "VCF genotype Samples e.g. samtools bcftools, returns list of samples defined in .vcf TSV table as text string"
+  });
+
+  // ---------------------------------------------------------------------------
+
+  /**
+   * @param parent  name of parent or view dataset, or vcf directory name
+   * @param scope e.g. '1A'; identifies the vcf file, i.e. datasetId/scope.vcf.gz
+   * @param nLines if defined, limit the output to nLines.
+   * @param preArgs args to be inserted in command line, additional to the parent / vcf file name.
+   * See comment in frontend/app/services/auth.js : vcfGenotypeLookup()
+   */
+  Block.vcfGenotypeLookup = function(parent, scope, preArgs, nLines, cb) {
+    const
+    fnName = 'vcfGenotypeLookup';
+    vcfGenotypeLookup(parent, scope, preArgs, nLines, undefined, cb);
+  };
+  /** POST version of Feature.search, which is addressed by verb GET.
+   */
+  Block.vcfGenotypeLookupPost = Block.vcfGenotypeLookup;
+
+  const vcfGenotypeLookupOptions = {
+    accepts: [
+      {arg: 'parent', type: 'string', required: true},
+      {arg: 'scope', type: 'string', required: true},
+      {arg: 'preArgs', type: 'object', required: false},
+      {arg: 'nLines', type: 'number', required: false},
+    ],
+    http: {verb: 'get'},
+    returns: {arg: 'text', type: 'string'},
+    description: "VCF genotype Lookup e.g. samtools bcftools, returns subset of .vcf TSV table as text string"
+  };
+  Block.remoteMethod('vcfGenotypeLookup', vcfGenotypeLookupOptions);
+
+  const vcfGenotypeLookupPostOptions = Object.assign({}, vcfGenotypeLookupOptions);
+  // or delete vcfGenotypeLookupPostOptions.http, because 'post' is default for http.verb
+  vcfGenotypeLookupPostOptions.http = {verb: 'post'};
+  Block.remoteMethod('vcfGenotypeLookupPost', vcfGenotypeLookupPostOptions);
+
 
   // ---------------------------------------------------------------------------
 

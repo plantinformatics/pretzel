@@ -675,6 +675,7 @@ div.colouredFeatures
   border: pink 3px dashed;
 }
 
+/* bootstrap has clearfix, but it is not present in current build.  */
 .clear-both,
 div.ExportFlowData
 {
@@ -1629,10 +1630,109 @@ div#goto-feature > div
   flex: 1;
 }
 
-#observational-table .head {
-  transform: rotate(90deg);
+#observational-table .wtHolder
+{
+  height : fit-content !important;
+}
+/* .col-sample */
+#observational-table .head
+{
+  margin-top: 210px;
+  margin-left: 7px;
+  transform-origin: left;
+  transform: rotate(-90deg);
+}
+#observational-table .head.col-Position
+{
+  margin-left: 40px;
 }
 
+#observational-table td.col-Alt
+{
+  border-right-width: 5px;
+}
+
+//------------------------------------------------------------------------------
+
+/* use specificity #observational-table to override .handsontable default
+ * (perhaps change to !important)
+ */
+
+/** colours representing N copies of Alt value */
+/* copyNum_0 : Ref */
+#observational-table td.copyNum_0 {
+  background-color : #5cb85c;  /*green, was orange*/
+}
+/* copyNum_1 : Het */
+#observational-table td.copyNum_1 {
+  background-color : #d9edf7;  /* near-white */
+}
+/* copyNum_2 : Alt */
+#observational-table td.copyNum_2 {
+  background-color : #337ab7; /*blue*/
+}
+
+#observational-table td.relativeColour_equal {
+  background-color : #5cb85c; /*green*/
+}
+#observational-table td.relativeColour_unequal {
+  background-color : red;
+}
+
+#observational-table td.nucleotide_A {
+  background-color : #5cb85c; /*green*/
+}
+#observational-table td.nucleotide_C {
+  background-color : #337ab7; /*blue*/
+}
+#observational-table td.nucleotide_G {
+  background-color : red;
+}
+#observational-table td.nucleotide_T {
+  background-color : black;
+}
+
+// -----------------------------------------------------------------------------
+
+// used in #observational-table / genotype view, to show colour of distinct alleles.
+// .diagonal-triangle.allele2-* applies for Het.
+.diagonal-triangle.allele2-nucleotide_A
+{
+  background-image : linear-gradient(130deg, #fff0 40%, #5cb85c 0%) !important;  /*green*/
+}
+.diagonal-triangle.allele2-nucleotide_C
+{
+  background-image : linear-gradient(130deg, #fff0 40%, #337ab7 0%) !important;  /*blue*/
+}
+.diagonal-triangle.allele2-nucleotide_G
+{
+  background-image : linear-gradient(130deg, #fff0 40%, red 0%) !important;
+}
+.diagonal-triangle.allele2-nucleotide_T
+{
+  background-image : linear-gradient(130deg, #fff0 40%, black 0%) !important;
+}
+
+/* copyNum_0 : Ref */
+.diagonal-triangle.allele2-.copyNum_0
+{
+  background-image : linear-gradient(130deg, #fff0 40%, #5cb85c 0%) !important;  /*green, was orange*/
+}
+/* copyNum_1 : Het */
+.diagonal-triangle.allele2-.copyNum_1
+{
+  background-image : linear-gradient(130deg, #fff0 40%, #d9edf7 0%) !important;  /* near-white */
+}
+/* copyNum_2 : Alt */
+.diagonal-triangle.allele2-.copyNum_2
+{
+  background-image : linear-gradient(130deg, #fff0 40%, #337ab7 0%) !important;  /*blue*/
+}
+
+
+// -----------------------------------------------------------------------------
+
+// used to fit names which may be long (dataset.name, trait.name) in regular spaces (ul / li)
 .truncate {
   overflow-wrap: break-word;
   /*white-space: nowrap;*/
@@ -1734,11 +1834,19 @@ ul.view-controls > li > div > .sub-label > span {
 {
   display : flex;
   gap : 7%;
-  & div
+  & > div
   {
     width : 50%;
   }
 }
+
+/* enable label to be inline with input checkbox.  used within .list-group-item */
+.inline-margin
+{
+  display: inline;
+  margin-left: 0.5em;
+}
+
 
 /*------------------------------------*/
 
@@ -1822,13 +1930,13 @@ body > div.ember-popover {
   flex-direction : column;
   justify-content : flex-start;
 }
-#right-panel-content
+#right-panel-content:not(.right-panel-genotype)
 {
   flex-grow : 1;
   flex-basis : calc(100% - 78px);
   max-height : calc(100% - 78px);
 }
-#right-panel-content.right-panel-paths
+#right-panel-content.right-panel-paths:not(.right-panel-genotype)
 {
   flex-basis : calc(100% - 220px);
   max-height : calc(100% - 220px);
@@ -1846,7 +1954,8 @@ body:not(.tablesPanelRight) .metaeditor-panel {
 }
 
 
-#right-panel-content.right-panel-dataset
+#right-panel-content.right-panel-dataset,
+#right-panel-content.right-panel-genotype,
 {
   overflow-y: auto;
 }
@@ -1923,6 +2032,95 @@ div.metaeditor-panel div.jsoneditor-tree button.jsoneditor-contextmenu-button {
 .axis-brushes table {
   border-collapse: initial;
   border-spacing: 1em;
+}
+
+.select-wrap {
+  /* this prevents the left border of <select> and <textarea> being
+   * clipped when dataset name is long enough to widen the dialog. */
+  overflow-y: scroll;
+}
+/*#right-panel-content.right-panel-dataset >*/ .axis-brushes > table > div > textarea,
+textarea.vcfGenotypeText
+{
+  width: 100%;
+  height: 20ex;
+  overflow: auto;
+}
+textarea.vcfGenotypeSamplesText
+{
+  height: 20ex;
+}
+div.genotype > div > div > textarea,
+.vcfGenotypeSamplesSelected
+{
+  width: 20em;
+}
+
+.vcfGenotypeSamplesSelected
+{
+ border: solid 4px lightblue;
+ overflow-y: auto;
+ max-height: 20ex;
+}
+.right-panel-genotype
+{
+  margin-top: 1em;
+}
+div.genotype
+{
+  margin-left : 1em;
+}
+/* vertical space above labelled inputs in manage-genotype : lookup inputs dialog.
+ * Don't apply to the x-toggle label (in div.x-toggle-component >) 
+  */
+div.genotype span.x-toggle-container > label {
+  margin-top : inherit;
+}
+div.genotype label
+{
+  margin-top : 2em;
+}
+
+.ember-modal-dialog div.genotype ul.list-group
+{
+  overflow-y: auto;
+  max-height: 40vh;
+}
+
+.genotype li.list-group-item
+{
+  padding : inherit;
+}
+
+.sample-count
+{
+  margin-left : 1em;
+}
+.genotype-controls {
+  display: flex;
+  margin-top: 1em;
+}
+.genotype-controls > div {
+  min-width: 28em;
+}
+.lookup-line {
+  display: inline-flex;
+}
+.lookup-line > button {
+  margin-top: auto;
+  margin-bottom: 1em;
+}
+.lookup-line > .interval-group {
+  display: flex;
+  margin-left: 5em;
+}
+.lookup-line > .interval-group > label {
+  max-width: 10em;
+  margin-top : 0px;
+}
+.lookup-line > .interval-group > div > div {
+  display: flex;
+  justify-content: flex-end;
 }
 
 /* -------------------------------------------------------------------------- */
