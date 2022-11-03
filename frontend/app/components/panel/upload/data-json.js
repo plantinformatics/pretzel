@@ -1,5 +1,7 @@
 import UploadBase from './data-base';
 
+/* global FileReader */
+
 export default UploadBase.extend({
   actions: {
     submitFile() {

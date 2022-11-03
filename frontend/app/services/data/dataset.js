@@ -52,7 +52,13 @@ export default Service.extend(Evented, {
       filter :  {'include': 'blocks'} }), /*;
     let */
     dP = store.query('dataset', adapterOptions)
-      .catch((err) => { dLog('taskGetList', err, store, adapterOptions, server, primaryServer, serverTabSelectedName, serverTabSelected); debugger; return [];});
+      .catch((err) => {
+        dLog(
+          'taskGetList', err.message || err, store.name || store, adapterOptions,
+          server.name || server, primaryServer.name || primaryServer,
+          serverTabSelectedName, serverTabSelected);
+        return [];
+      });
     if (trace_promise)
       dP.then(function (d) { console.log(d, d.toArray()[0].get('blocks').toArray());});
     let

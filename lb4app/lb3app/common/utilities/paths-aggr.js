@@ -420,11 +420,11 @@ exports.blockFilterValue0 = blockFilterValue0;
  * bugs if they are inadvertently used.
  */
 function parseIntervalFlags(intervals) {
-  intervals.axes.forEach(function (a) {
+  intervals?.axes?.forEach(function (a) {
     if (a.zoomed)
       a.zoomed = toBool(a.zoomed);
   });
-  if (intervals.dbPathFilter)
+  if (intervals?.dbPathFilter)
     intervals.dbPathFilter = toBool(intervals.dbPathFilter);
 }
 
