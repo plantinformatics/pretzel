@@ -10,6 +10,7 @@ import {
   axisId2Name
 } from '../../utils/stacks';
 
+import DrawStackModel from '../../models/draw/stack';
 
 // -----------------------------------------------------------------------------
 
@@ -80,11 +81,29 @@ export default class DrawStackViewComponent extends Component {
     this.redrawAdjacencies = p.redrawAdjacencies;
     this.extendedWidth = p.extendedWidth;
 
-    this.stacks = this.stacksView.stacksNew;
+    // this.stacks = this.args.stacksView.stacksNew;  // stacksTemp, stacksOld ?
     // parts of : Stack.apply(this, [axis1d]);
     this.stackID = stacks.nextStackID++;
     this.axes = [];
     this.add(axis1d);
+
+    const sp = DrawStackModel.prototype;
+    this.dropIn = sp.dropIn;
+    this.dropOut = sp.dropOut;
+    this.findIndex = sp.findIndex;
+    this.remove = sp.remove;
+    this.insert = sp.insert;
+
+    this.args.register?.(this, true);
+    // this.stacksView.stackViews.addObject(this);
+    /* in lieu of : onDestroy() { this.stacksView.stackViews.removeObject(this); }
+     *   or 
+     * stacks-view : updateStacksAxes() : arrayRemoveDestroyingObjects(this.stackViews)
+     */
+  }
+  willDestroy() {
+    console.log('willDestroy', this);
+    this.args.register?.(this, false);
   }
 }
 

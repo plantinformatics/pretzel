@@ -528,6 +528,13 @@ export default Component.extend(Evented, {
 
   },
 
+  getAxis1d(axisID) {
+    let axes1d = this.get('axes1d') || this.get('oa.stacks.axes1d');
+    let axis1d = axes1d[axisID];
+    return axis1d;
+  },
+
+
   /** set attribute name of this to value, if that is not the current value.
    * It is expected that value is not a complex type.
    */
@@ -4926,6 +4933,10 @@ export default Component.extend(Evented, {
                * with this exception : .dropIn() redraws the source stack of the axis.
                */
               stack.dropIn(d, zoneParent.axisIndex, top, t);
+              const
+              axis1d = me.getAxis1d(d),
+              targetAxis1d = me.getAxis1d(targetAxisName);
+              axis1d?.dropIn(targetAxis1d, top);
               breakPointEnableSet(1);
               deleteAfterDrag();
               // axisChangeGroupElt(d, t);
@@ -4951,6 +4962,8 @@ export default Component.extend(Evented, {
             {
               t = dragTransitionNew();
               stack.dropOut(d);
+              const axis1d = me.getAxis1d(d);
+              axis1d?.dropOut();
               Stack.log();
               // axisChangeGroupElt(d, t);
               collateStacks();

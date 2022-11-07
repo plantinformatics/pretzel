@@ -4,7 +4,10 @@
 {{log 'stacks-view' this.stacks.length this.stacks this }}
 {{this.stacks.length}}
 {{#each this.axesViewedEffect as | stack i | }}
-  <Draw::StackView stacksView=this stack=stack>{{i}}</Draw::StackView>
+  <Draw::StackView @stacksView={{this}} @stack={{stack}}>{{i}}</Draw::StackView>
+{{/each}}
+{{#each this.newStacks as | stack i | }}
+  <Draw::StackView @stacksView={{this}} @stack={{stack}} @register={{action this.registerStackView}}>{{i}}</Draw::StackView>
 {{/each}}
 
 {{draw/axes-1d drawMap=drawMap axes2d=axes2d

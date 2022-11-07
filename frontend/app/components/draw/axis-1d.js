@@ -819,6 +819,19 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
 */
   },
 
+
+  dropIn(targetAxis1d, top) {
+    const fnName = 'dropIn';
+    console.log(fnName, this.get('axis.id'), targetAxis1d, top);
+    targetAxis1d.stack.stackView.dropIn(this, targetAxis1d, top);
+  },
+  dropOut() {
+    const fnName = 'dropOut';
+    console.log(fnName, this.get('axis.id'));
+    /* updateStacksAxes() : createForReference() will create a new stack for this axis. */
+    this.stack.stackView.dropOut(this);
+  },
+
   /** @return the Stacked object corresponding to this axis. */
   axisS : computed(
     'axis.id', 'stacks.axesPCount', 'axis.view',
