@@ -107,10 +107,12 @@ function spreadsheetDataToJsObj(fileData) {
 
   /** for those datasets which are not OK and contain .warnings and/or .errors
    * drop the dataset and append the warnings / errors to status.{warnings,errors}
+   * Filter out empty datasets (no .blocks[] or .aliases[]).
    */
   status.datasets = datasets
     .filter((dataset) => {
-      const ok = /* ! dataset.sheetName || */  dataset.name;
+      const ok = /* ! dataset.sheetName || */  dataset.name &&
+            (dataset.blocks?.length || dataset.aliases?.length);
       ['warnings', 'errors'].forEach((fieldName) => {
         if (! ok && dataset[fieldName]?.length) {
           status[fieldName] = status[fieldName].concat(dataset[fieldName]);
@@ -339,8 +341,11 @@ function sheetToObj(sheet) {
    */
   options = {header: headerRow},
   rowObjects = XLSX.utils.sheet_to_json(sheet, options)
-  /** filter out comment rows */
-    .filter((f, i) => ! rowIsComment[i])
+  /** filter out comment rows
+   * Blank lines are present in rowIsComment[] but not in rowObjects[], so i may
+   * be different to f.__rowNum__
+   */
+    .filter((f, i) => ! rowIsComment[f.__rowNum__])
   /** remove first (header) row */
     .filter((f, i) => i > 0)
   ;
