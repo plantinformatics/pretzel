@@ -67,9 +67,15 @@ export default Component.extend({
 
   // ---------------------------------------------------------------------------
 
-  axesViewedEffect : computed('block.axesViewedBlocks2', function() {
-    this.updateStacksAxes();
-    return this.stacks;
+  axesViewedEffect : computed(
+    // /*'block.axesViewedBlocks2'*/'axes1d.axesP.[]',
+    'stacks.[]', 'newStacks',
+    function() {
+      const fnName = 'axesViewedEffect' + ' (axesP)';
+      this.updateStacksAxes();
+      console.log(fnName, 'stacks', this.stacks .mapBy('axis1d.axis.scope'), this.newStacks .mapBy('axis1d.axis.scope'));
+      let stacks = this.stacks.concat(this.newStacks || []);
+      return stacks;
   }),
 
   // ---------------------------------------------------------------------------
@@ -83,48 +89,92 @@ export default Component.extend({
     // s.stackView.isDestroying() || 
     const emptyStacks = stacks
           .filter((s) => ! s.stackView.axes.length);
+    if (emptyStacks.length) {
+      console.log(fnName, emptyStacks, stacks);
+    }
     this.stacks.removeObjects(emptyStacks);
 
-    /** Add stacks for axis-1d which do not have .stack */
-    /** check which of the viewed reference blocks have an axis-1d & stack-view. */
-    let newAxis1ds;
-    if (false) {
-    const
-    map = this.get('block.axesViewedBlocks2'),
-    /** viewed blocks without stacks */
-    blocks = Array.from(map.keys())
-    // .filter((b) => b.isViewed && ! b?.axis1d), // old : ?.axis
-        .filter((b) => b.isViewed && ! b?.axis1dR?.stack);
-    newAxis1ds = blocks.mapBy('axis1d')
-      .filter(I);
-      dLog(fnName, map, blocks);
-    } else {
-      newAxis1ds = this.axes1d?.axesP.mapBy('axis1d').filter(I) ?? [];
-    }
-    const
-    /* not : this.store.createRecord() because multi-store in axis.
-     *   maybe move DrawStackModel to utils as extend EmberObject.  */
-    newStacks = newAxis1ds.map((a1) => this.createForAxis(a1));
-    this.set('newStacks', newStacks);
-    dLog(fnName, newAxis1ds, stacks, newStacks);
+    dLog(fnName, stacks, emptyStacks, 'newStacks', this.newStacks);
     // this.stacks.pushObjects(newStacks);
 
     arrayRemoveDestroyingObjects(this.stackViews);
   },
+  newStacks : computed('newAxis1ds', function () {
+    const fnName = 'newStacks';
+    /** Add stacks for axis-1d which do not have .stack */
+    
+    const
+    newAxis1ds = this.newAxis1ds,
+    /* not : this.store.createRecord() because multi-store in axis.
+     *   maybe move DrawStackModel to utils as extend EmberObject.  */
+    newStacks = newAxis1ds.map((a1) => this.createForAxis(a1));
+    dLog(fnName, '(axesP)', newAxis1ds, stacks, newStacks);
+    return newStacks;
+  }),
+  newAxis1ds : computed('axes1d.axis1dArray.[]', function () {
+    const fnName = 'newAxis1ds';
+    let newAxis1ds = (this.get('axes1d.axis1dArray') ?? [])
+      .filter((axis1d) => ! axis1d.stack);
+    console.log(fnName, '(axesP)', newAxis1ds, this.get('axes1d.axis1dArray'));
+    return newAxis1ds;
+  }),
+  /** Same purpose as newAxis1ds, but result lags, because block without
+   * .axis1dR is filtered out.
+   */
+  newAxis1ds_late : computed( function () {
+    const fnName = 'newAxis1ds_late';
+    /** check which of the viewed reference blocks have an axis-1d & stack-view. */
+    let blocks;
+
+        if (false) {
+    const
+      map = this.get('block.axesViewedBlocks2');
+    /** viewed blocks without stacks */
+      blocks = Array.from(map.keys());
+    } else {
+      blocks = this.axes1d?.axesP ?? [];
+    }
+    const
+    newAxis1ds = blocks
+    // .filter((b) => b.isViewed && ! b?.axis1d), // old : ?.axis
+      .filter((b) => b.isViewed && ! b?.axis1dR?.stack)
+      .mapBy('axis1d')
+      .filter(I);
+      dLog(fnName, blocks);
+    return newAxis1ds;
+  }),
+
+
   // @action
   registerStackView(stackView, start) {
-    const fnName = 'registerStackView';
-    console.log(fnName, stackView, start);
-    const
-    stackViews = this.stackViews,
-    arrayObjectFn = start ? 'addObject' : 'removeObject';
     // modify this.stacks[] after render because it is used in .hbs
     later(() => {
-      stackViews[arrayObjectFn](stackView);
+      const fnName = 'registerStackView';
+      console.log(fnName, stackView, start);
       const stack = stackView.args.stack;
-      this.stacks[arrayObjectFn](stack);
-      stack.stackView = stackView;
-      stackView.stacksView = this;
+      if (! start && stackView.axes.length) {
+        console.warn(fnName, start, stackView.axes.length);
+      }
+      const stackIndex = this.stackViews.indexOf(stackView);
+      if (start !== (stackIndex === -1)) {
+        console.warn(fnName, start, stackIndex, this.stackViews);
+      }
+      if (! start || ! stack.stackView) {
+        const
+        stackViews = this.stackViews,
+        arrayObjectFn = start ? 'addObject' : 'removeObject';
+        stackViews[arrayObjectFn](stackView);
+        this.stacks[arrayObjectFn](stack);
+        console.log(
+          fnName, '(axesP)',
+          stackView.args.stack.axis1d.axis.scope,
+          this.stacks.length, stackViews.length,
+          this.stacks.mapBy('axis1d.axis.scope'),
+          stackViews.mapBy('args.stack') .mapBy('axis1d.axis.scope'),
+          stackView, start);
+        stack.stackView = stackView;
+        stackView.stacksView = this;
+      }
     });
   },
   /** Create a stack for a given reference block. */
@@ -151,7 +201,11 @@ export default Component.extend({
    * contains reference blocks
    */
   removeUnViewedAxes(axes) {
-    const unviewed = axes.filter((b) => b.isDestroying || ! b?.isViewed);
+    const fnName = 'removeUnViewedAxes';
+    const unviewed = axes.filter((axis1d) => axis1d.isDestroying || ! axis1d.axis?.isViewed);
+    if (unviewed.length) {
+      console.log(fnName, unviewed, axes);
+    }
     axes.removeObjects(unviewed);
   },
 

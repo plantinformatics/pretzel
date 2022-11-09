@@ -1,5 +1,7 @@
 import Component from '@glimmer/component';
 
+import { tracked } from '@glimmer/tracking';
+
 import {
   Block,
   Stacked,
@@ -28,11 +30,16 @@ export default class DrawStackViewComponent extends Component {
   static currentDrag = undefined;
 
 
+  @tracked
+  axes;
 
-  constructor(axis1d) {
+  constructor(app, args) {
+    const axis1d = args.stack.axis1d;
     super(...arguments);
 
     dLog('stack-view', this);
+
+    this.axes = [];
 
     /** mix-in selected functions from Stack:
      *  (replace-regexp "^\\([a-z].*\\)" "    this.\\1 = p.\\1;")
@@ -84,7 +91,6 @@ export default class DrawStackViewComponent extends Component {
     // this.stacks = this.args.stacksView.stacksNew;  // stacksTemp, stacksOld ?
     // parts of : Stack.apply(this, [axis1d]);
     this.stackID = stacks.nextStackID++;
-    this.axes = [];
     this.add(axis1d);
 
     const sp = DrawStackModel.prototype;
@@ -102,9 +108,42 @@ export default class DrawStackViewComponent extends Component {
      */
   }
   willDestroy() {
-    console.log('willDestroy', this);
+    console.log(
+      'willDestroy', '(axesP)', this,
+      this.args.stack.axis1d.axis.scope,
+      // ['stacksView', 'stack', 'register']
+      Array.from(Object.entries(this.args)).flat(),
+      // ['axis1d', 'stackView']
+      Array.from(Object.entries(this.args.stack)).flat() );
     this.args.register?.(this, false);
   }
+
+  //----------------------------------------------------------------------------
+
+  get portions() {
+    const length = this.axes.length,
+          portion = 1 / length;
+    let portions = [];
+    for (let i=0; i < length; i++) {
+      portions[i] = portion;
+      // used by  Stack.prototype.calculatePositions()
+      // this.axes[i].portion = portion;
+    }
+    console.log('portions', portions, this.axes.mapBy('axis.scope'));
+    return portions;
+  }
+  get positions() {
+    /** used by calculatePositions() */
+    const portions = this.portions;
+    return this.calculatePositions();
+  }
+
+  axisIndex(axis1d) {
+    let i = this.axes.indexOf(axis1d);
+    return i;
+  }
+
+  //----------------------------------------------------------------------------
 }
 
 // from fgrep Stack $MMVp.A1/frontend/app/utils/stacks.js | fgrep -v .prototype

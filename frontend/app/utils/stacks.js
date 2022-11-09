@@ -1354,8 +1354,9 @@ function Stack_add (sd)
 {
   dLog("Stack_add", this, sd);
   this.axes.push(sd);
-  sd.stack = this;
+  Ember_set(sd, 'stack', this);
 }
+Stack.prototype.add = Stack_add;
 /** Insert stacked into axes[] at i, moving i..axes.length up
  * @param i  same as param start of Array.splice()
  * @see {@link https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Array/splice | MDN Array Splice}
@@ -1761,6 +1762,7 @@ Stack.prototype.calculatePositions = function ()
   let sumPortion = 0;
   /** convert px to [0, 1] */
   let axisGapPortion = stacks.vc?.yRange ? axisGap / stacks.vc.yRange : 0;
+  let positions = [];
   this.axes.forEach(
     function (a, index)
     {
@@ -1772,12 +1774,14 @@ Stack.prototype.calculatePositions = function ()
        * not from portion.
        */
       let nextPosition = sumPortion + a.portion;
+      positions[index] =
       a.position = [sumPortion,  nextPosition /*- axisGapPortion*/];
       sumPortion = nextPosition;
     });
   if (! oa.eventBus.isDestroying) {
     oa.eventBus.send('stackPositionsChanged', this);
   }
+  return positions;
 };
 /** find / lookup Stack of given axis.
  * This is now replaced by axes[axisName]; could be used as a data structure
@@ -2169,11 +2173,25 @@ Block.prototype.axisTransformO = function ()
  */
 Stacked.prototype.axisTransformO = function ()
 {
+  let transform = this.axis1d?.axisTransformO();
+  return transform;
+};
+Stacked.prototype.axisTransformO_orig = function ()
+{
   let yRange = stacks.vc.yRange;
+  let stackView;
+  if ((this.position === undefined) && this.get &&
+      (stackView = this.get('stack.args.stack.stackView')))  {
+    /** cause draw/stack-view : positions() to evaluate this.calculatePositions();
+     * this can be handled via an added dependency */
+    const portions = stackView.portions,
+          positions = stackView.positions;
+  }
   if (this.position === undefined || yRange === undefined)
   {
     dLog("axisTransformO()", this.axisName, this, yRange);
-    breakPoint();
+    // breakPoint();
+    return undefined;
   }
   let yOffset = this.yOffset(),
   yOffsetText =  Number.isNaN(yOffset) ? "" : "," + this.yOffset();

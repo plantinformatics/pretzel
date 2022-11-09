@@ -40,17 +40,18 @@ export default Component.extend(Evented, /*AxisEvents,*/ {
   /** Maintain a list of child axis-1d components, .axis1dArray
    */
   axis1dExists(axis1d, exists) {
+    const fnName = 'axis1dExists' + '(axesP)';
     let axis1dArray = this.get('axis1dArray');
-    dLog('axis1dExists', axis1d, axis1dArray);
+    dLog(fnName, axis1d, axis1dArray);
     let i = axis1dArray.indexOf(axis1d);
     if (exists && (i === -1)) {
       /** since (i === -1) here we can use pushObject(); addObject() can be
        * used without checking indexOf().  */
       axis1dArray.pushObject(axis1d);
-      dLog('axis1dExists pushed', axis1d, axis1dArray);
+      dLog(fnName, ' pushed', axis1d, axis1dArray);
     } else if (! exists && (i !== -1)) {
       axis1dArray.removeAt(i, 1);
-      dLog('axis1dExists removed', axis1d, i, axis1dArray);
+      dLog(fnName, ' removed', axis1d, i, axis1dArray);
     }
   },
 
@@ -158,7 +159,7 @@ export default Component.extend(Evented, /*AxisEvents,*/ {
           }
         }
       }
-    dLog('axesBlocks', mapByDataset, mapByReferenceBlock);
+    dLog('axesBlocks', '(axesP)', mapByDataset, mapByReferenceBlock);
     return mapByReferenceBlock;
   }),
 

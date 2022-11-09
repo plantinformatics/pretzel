@@ -6,8 +6,10 @@ export default class DrawStackModel extends Model {
   //----------------------------------------------------------------------------
 
   dropIn(axis1d, targetAxis1d, top) {
-    const fnName = 'stack:dropIn';
+    const fnName = 'stack:dropIn' + '(axesP)';
     console.log(fnName, axis1d, targetAxis1d, top, this.axes.length);
+    logAxis1d(fnName, axis1d);
+    logAxis1d(fnName + ' target', targetAxis1d);
     const
     /** if ! top then insert after targetAxis1d */
     insertIndex = this.findIndex(targetAxis1d) + (top ? 0 : 1);
@@ -15,14 +17,21 @@ export default class DrawStackModel extends Model {
       console.log(fnName, axis1d, targetAxis1d, this.axes);
     } else {
       this.insert(insertIndex, axis1d);
-      axis1d.stack = this;
+      /** source stackView */
+      const stackView = axis1d.stack.args.stack.stackView;
+      axis1d.set('stack', this);
+      stackView.axes.removeObject(axis1d);
+      logAxis1d(fnName, axis1d);
+      logAxis1d(fnName + ' target', targetAxis1d);
     }
   }
-
+ 
   dropOut(axis1d) {
     const fnName = 'stack:dropOut';
     console.log(fnName, axis1d, this.axes.length);
+    logAxis1d(fnName, axis1d);
     this.axes.removeObject(axis1d);
+    logAxis1d(fnName, axis1d);
     axis1d.stack = undefined;
   }
 
@@ -42,4 +51,13 @@ export default class DrawStackModel extends Model {
 
   //----------------------------------------------------------------------------
 
+}
+
+/**  log the axis scope and scope of siblings on stack */
+function logAxis1d(label, axis1d) {
+  console.log(
+    label,
+    axis1d.axis.scope,
+    axis1d.stack.args.stack.axis1d.axis.scope,
+    axis1d.stack.args.stack.stackView.axes?.mapBy('axis.scope'));
 }

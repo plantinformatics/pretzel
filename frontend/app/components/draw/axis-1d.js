@@ -671,8 +671,23 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   // ---------------------------------------------------------------------------
 
   referenceBlock : undefined,
-  axisName : undefined,
-  portion : undefined,
+  axisName : alias('axis.id'),
+  portion : computed('stack.portions', function () {
+    let portion;
+    if (!this.stack || ! this.stack?.axisIndex) {
+      later(() => {
+        const portions = this.get('stack.portions');
+      }, 4000);
+    } else {
+      const
+      portions = this.stack.portions,
+      axisIndex = this.stack.axisIndex(this);
+      portion = (axisIndex === -1) ? undefined : portions[axisIndex];
+      console.log('portion', portion, this.axis.scope);
+    }
+    return portion;
+  }),
+  position : undefined,
 
   // ---------------------------------------------------------------------------
 
@@ -705,13 +720,13 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   dataBlocks		: Stacked_p.dataBlocks,
   keyFunction		: Stacked_p.keyFunction,
   axisSide		: Stacked_p.axisSide,
-  axisTransform		: Stacked_p.axisTransform,
+  // axisTransform		: Stacked_p.axisTransform,
   selectAll		: Stacked_p.selectAll,
   selectAll		: Stacked.selectAll,
   allocatedWidth		: Stacked_p.allocatedWidth,
   extendedWidth		: Stacked_p.extendedWidth,
   location		: Stacked_p.location,
-  axisTransformO		: Stacked_p.axisTransformO,
+  axisTransformO		: Stacked_p.axisTransformO_orig,
   getY		: Stacked_p.getY,
   currentPosition		: Stacked_p.currentPosition,
   axisDimensions		: Stacked_p.axisDimensions,
@@ -821,15 +836,15 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
 
 
   dropIn(targetAxis1d, top) {
-    const fnName = 'dropIn';
-    console.log(fnName, this.get('axis.id'), targetAxis1d, top);
-    targetAxis1d.stack.stackView.dropIn(this, targetAxis1d, top);
+    const fnName = 'dropIn' + '(axesP)';
+    console.log(fnName, this.get('axis.id'), this.axis.scope, targetAxis1d, top, targetAxis1d.get('stack.args.stack.axis1d.axis.scope'));
+    targetAxis1d.stack.args.stack.stackView.dropIn(this, targetAxis1d, top);
   },
   dropOut() {
     const fnName = 'dropOut';
     console.log(fnName, this.get('axis.id'));
     /* updateStacksAxes() : createForReference() will create a new stack for this axis. */
-    this.stack.stackView.dropOut(this);
+    this.stack.args.stack.stackView.dropOut(this);
   },
 
   /** @return the Stacked object corresponding to this axis. */
@@ -1324,7 +1339,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   zoomedAxis : function(axisID_t) { },
 
   /** position when last pathUpdate() drawn. */
-  position : alias('lastDrawn.yDomain'),
+  lastDrawnDomain : alias('lastDrawn.yDomain'),
   /** position as of the last zoom. */
   zoomedDomain : alias('currentPosition.yDomain'),
   zoomedDomainDebounced : alias('currentPosition.yDomainDebounced'),
