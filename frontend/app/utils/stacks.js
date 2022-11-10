@@ -33,6 +33,11 @@ import { Object_filter } from '../utils/Object_filter';
 import { breakPoint, breakPointEnableSet } from '../utils/breakPoint';
 import { dLog } from './common/log';
 
+/*
+import DrawStackObject from '../models/draw/stack';
+ causes module load order to make Stack undefined in :
+DrawStackViewComponent.log = Stack.log;
+*/
 
 /*----------------------------------------------------------------------------*/
 
@@ -2179,13 +2184,16 @@ Stacked.prototype.axisTransformO = function ()
 Stacked.prototype.axisTransformO_orig = function ()
 {
   let yRange = stacks.vc.yRange;
-  let stackView;
+  let stack;
+  // check that this.stack is DrawStackObject, not Stack
+  // stack instanceOf DrawStackObject
   if ((this.position === undefined) && this.get &&
-      (stackView = this.get('stack.args.stack.stackView')))  {
+      (stack = this.stack) &&
+      (stack._debugContainerKey !== undefined)) {
     /** cause draw/stack-view : positions() to evaluate this.calculatePositions();
      * this can be handled via an added dependency */
-    const portions = stackView.portions,
-          positions = stackView.positions;
+    const portions = stack.portions,
+          positions = stack.positions;
   }
   if (this.position === undefined || yRange === undefined)
   {

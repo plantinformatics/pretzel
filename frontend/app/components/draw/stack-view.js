@@ -12,7 +12,7 @@ import {
   axisId2Name
 } from '../../utils/stacks';
 
-import DrawStackModel from '../../models/draw/stack';
+import DrawStackObject from '../../models/draw/stack';
 
 // -----------------------------------------------------------------------------
 
@@ -93,7 +93,7 @@ export default class DrawStackViewComponent extends Component {
     this.stackID = stacks.nextStackID++;
     this.add(axis1d);
 
-    const sp = DrawStackModel.prototype;
+    const sp = DrawStackObject.prototype;
     this.dropIn = sp.dropIn;
     this.dropOut = sp.dropOut;
     this.findIndex = sp.findIndex;
@@ -121,15 +121,18 @@ export default class DrawStackViewComponent extends Component {
   //----------------------------------------------------------------------------
 
   get portions() {
-    const length = this.axes.length,
-          portion = 1 / length;
+    const fnName = 'portions' + '(axesP)';
+    const length = this.axes?.length;
     let portions = [];
+    if (length) {
+      const portion = 1 / length;          
     for (let i=0; i < length; i++) {
       portions[i] = portion;
       // used by  Stack.prototype.calculatePositions()
       // this.axes[i].portion = portion;
     }
-    console.log('portions', portions, this.axes.mapBy('axis.scope'));
+    console.log(fnName, portions, this.axes.mapBy('axis.scope'));
+    }
     return portions;
   }
   get positions() {

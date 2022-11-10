@@ -5,7 +5,6 @@ import Component from '@ember/component';
 import { inject as service } from '@ember/service';
 import { A as Ember_A } from '@ember/array';
 
-import DrawStackModel from '../../models/draw/stack';
 
 import {
   /* Block,
@@ -55,7 +54,6 @@ export default Component.extend({
   stacksTemp : alias('block.viewed'),  // axis1dReferenceBlocks
 
   stacks : Ember_A(), // alias('stacksTemp'),  // stacksOld
-  stackViews : Ember_A(),
 
   // ---------------------------------------------------------------------------
 
@@ -85,10 +83,10 @@ export default Component.extend({
 
     /** remove un-viewed axes, and then remove empty stacks. */
     let stacks = this.stacks;
-    stacks.forEach((s) => this.removeUnViewedAxes(s.stackView.axes));
-    // s.stackView.isDestroying() || 
+    stacks.forEach((s) => this.removeUnViewedAxes(s.axes));
+    // s.isDestroying() || 
     const emptyStacks = stacks
-          .filter((s) => ! s.stackView.axes.length);
+          .filter((s) => ! s.axes.length);
     if (emptyStacks.length) {
       console.log(fnName, emptyStacks, stacks);
     }
@@ -97,7 +95,8 @@ export default Component.extend({
     dLog(fnName, stacks, emptyStacks, 'newStacks', this.newStacks);
     // this.stacks.pushObjects(newStacks);
 
-    arrayRemoveDestroyingObjects(this.stackViews);
+    /* .stackViews were created / destroyed via hbs, .stacks are not yet destroyed. */
+    arrayRemoveDestroyingObjects(this.stacks);
   },
   newStacks : computed('newAxis1ds', function () {
     const fnName = 'newStacks';
@@ -105,9 +104,8 @@ export default Component.extend({
     
     const
     newAxis1ds = this.newAxis1ds,
-    /* not : this.store.createRecord() because multi-store in axis.
-     *   maybe move DrawStackModel to utils as extend EmberObject.  */
-    newStacks = newAxis1ds.map((a1) => this.createForAxis(a1));
+    /* not : this.store.createRecord() because multi-store in axis. */
+    newStacks = newAxis1ds.map((a1) => a1.createStackForAxis());
     dLog(fnName, '(axesP)', newAxis1ds, stacks, newStacks);
     return newStacks;
   }),
@@ -145,8 +143,13 @@ export default Component.extend({
   }),
 
 
+  /** may use this as a library utility;
+   * depends on :  stackViews : Ember_A(),
+   * which is now removed from this component.
+   */
   // @action
   registerStackView(stackView, start) {
+    console.warn('registerStackView', 'not used');
     // modify this.stacks[] after render because it is used in .hbs
     later(() => {
       const fnName = 'registerStackView';
@@ -187,12 +190,6 @@ export default Component.extend({
     } else {
       block.axis1dR.stack = s;
     }
-    return s;
-  },
-  /** Create a stack for a given axis-1d. */
-  createForAxis(axis1d) {
-    let s = EmberObject.create({axis1d /*,axes : [axis1d]*/});
-    axis1d.stack = s;
     return s;
   },
   /** remove axes from the array which are no longer viewed.

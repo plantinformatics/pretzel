@@ -14,6 +14,7 @@ import { isEqual } from 'lodash/lang';
 import { contentOf } from '../../utils/common/promises';
 import AxisEvents from '../../utils/draw/axis-events';
 import AxisPosition from '../../mixins/axis-position';
+import DrawStackObject from '../../models/draw/stack';
 import {
   /* Block,
   */ Stacked,
@@ -673,6 +674,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   referenceBlock : undefined,
   axisName : alias('axis.id'),
   portion : computed('stack.portions', function () {
+    const fnName = 'portion' + ' (axesP)';
     let portion;
     if (!this.stack || ! this.stack?.axisIndex) {
       later(() => {
@@ -683,11 +685,23 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
       portions = this.stack.portions,
       axisIndex = this.stack.axisIndex(this);
       portion = (axisIndex === -1) ? undefined : portions[axisIndex];
-      console.log('portion', portion, this.axis.scope);
+      console.log(fnName, portion, this.axis.scope);
     }
     return portion;
   }),
   position : undefined,
+
+  // ---------------------------------------------------------------------------
+
+  /** Create a stack for this axis-1d. */
+  createStackForAxis() {
+    const fnName = 'createStackForAxis' + ' (axesP)';
+    const axis1d = this;
+    let s = DrawStackObject.create({axes : [axis1d]});
+    axis1d.set('stack', s); // or Ember_set()
+    console.log(fnName, s);
+    return s;
+  },
 
   // ---------------------------------------------------------------------------
 
@@ -837,14 +851,14 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
 
   dropIn(targetAxis1d, top) {
     const fnName = 'dropIn' + '(axesP)';
-    console.log(fnName, this.get('axis.id'), this.axis.scope, targetAxis1d, top, targetAxis1d.get('stack.args.stack.axis1d.axis.scope'));
-    targetAxis1d.stack.args.stack.stackView.dropIn(this, targetAxis1d, top);
+    console.log(fnName, this.get('axis.id'), this.axis.scope, targetAxis1d, top, targetAxis1d.get('axis.scope'));
+    targetAxis1d.stack.dropIn(this, targetAxis1d, top);
   },
   dropOut() {
     const fnName = 'dropOut';
     console.log(fnName, this.get('axis.id'));
     /* updateStacksAxes() : createForReference() will create a new stack for this axis. */
-    this.stack.args.stack.stackView.dropOut(this);
+    this.stack.dropOut(this);
   },
 
   /** @return the Stacked object corresponding to this axis. */

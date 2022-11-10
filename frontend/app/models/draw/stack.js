@@ -1,7 +1,58 @@
-import Model, { attr } from '@ember-data/model';
+import EmberObject, { set as Ember_set } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 
-export default class DrawStackModel extends Model {
-  @attr('array') axes;
+import DrawStackViewComponent from '../../components/draw/stack-view';
+
+import {
+  Stack,
+} from '../../utils/stacks';
+
+// -----------------------------------------------------------------------------
+
+const dLog = console.debug;
+
+// -----------------------------------------------------------------------------
+
+    /** copy getter from source to target object. */
+function copyGetter(target, source, propertyName) {
+  Object.defineProperty(target, propertyName, {
+    get: function() { return Object.getOwnPropertyDescriptor(source, propertyName).get.call(this); }
+  });
+}
+
+// -----------------------------------------------------------------------------
+
+
+/**
+ * @param axes  [axis-1d, ...]
+ * @desc
+ * Caller axis-1d : createStackForAxis() sets axis1d.stack to the created object (DrawStackObject - draw/stack).
+ */
+export default class DrawStackObject extends EmberObject {
+  @tracked
+  axes;
+
+  //----------------------------------------------------------------------------
+
+  constructor() {
+    super(...arguments);
+
+    /* createForAxis() passes {axes} to DrawStackObject.create().
+     * .get portions (stack-view.js) may be called on this before
+     * system/core_object : create() does initialize(instance, props)
+     */
+    this.axes = [];
+
+    const cp = DrawStackViewComponent.prototype;
+    copyGetter(this, cp, 'portions');
+    copyGetter(this, cp, 'positions');
+    this.axisIndex = cp.axisIndex;
+
+    /** mix-in selected functions from Stack: */
+    const p = Stack.prototype;
+    this.calculatePositions = p.calculatePositions;
+
+  }
 
   //----------------------------------------------------------------------------
 
@@ -17,10 +68,11 @@ export default class DrawStackModel extends Model {
       console.log(fnName, axis1d, targetAxis1d, this.axes);
     } else {
       this.insert(insertIndex, axis1d);
-      /** source stackView */
-      const stackView = axis1d.stack.args.stack.stackView;
+      /** source stack */
+      const stack = axis1d.stack;
+      // or Ember_set() when upgrading to Ember 4.
       axis1d.set('stack', this);
-      stackView.axes.removeObject(axis1d);
+      stack.axes.removeObject(axis1d);
       logAxis1d(fnName, axis1d);
       logAxis1d(fnName + ' target', targetAxis1d);
     }
@@ -32,7 +84,7 @@ export default class DrawStackModel extends Model {
     logAxis1d(fnName, axis1d);
     this.axes.removeObject(axis1d);
     logAxis1d(fnName, axis1d);
-    axis1d.stack = undefined;
+    Ember_set(axis1d, 'stack', axis1d.createStackForAxis());
   }
 
   //----------------------------------------------------------------------------
@@ -58,6 +110,5 @@ function logAxis1d(label, axis1d) {
   console.log(
     label,
     axis1d.axis.scope,
-    axis1d.stack.args.stack.axis1d.axis.scope,
-    axis1d.stack.args.stack.stackView.axes?.mapBy('axis.scope'));
+    axis1d.stack.axes?.mapBy('axis.scope'));
 }
