@@ -34,7 +34,7 @@ import { breakPoint, breakPointEnableSet } from '../utils/breakPoint';
 import { dLog } from './common/log';
 
 /*
-import DrawStackObject from '../models/draw/stack';
+import DrawStackObject from '../utils/draw/stack';
  causes module load order to make Stack undefined in :
 DrawStackViewComponent.log = Stack.log;
 */

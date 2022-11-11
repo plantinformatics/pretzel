@@ -14,7 +14,7 @@ import { isEqual } from 'lodash/lang';
 import { contentOf } from '../../utils/common/promises';
 import AxisEvents from '../../utils/draw/axis-events';
 import AxisPosition from '../../mixins/axis-position';
-import DrawStackObject from '../../models/draw/stack';
+import DrawStackObject from '../../utils/draw/stack';
 import {
   /* Block,
   */ Stacked,

@@ -12,7 +12,7 @@ import {
   axisId2Name
 } from '../../utils/stacks';
 
-import DrawStackObject from '../../models/draw/stack';
+import DrawStackObject from '../../utils/draw/stack';
 
 // -----------------------------------------------------------------------------
 
