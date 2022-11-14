@@ -5,6 +5,7 @@ import DrawStackViewComponent from '../../components/draw/stack-view';
 
 import {
   Stack,
+  stacks,
 } from '../../utils/stacks';
 
 // -----------------------------------------------------------------------------
@@ -42,6 +43,8 @@ export default class DrawStackObject extends EmberObject {
      * system/core_object : create() does initialize(instance, props)
      */
     this.axes = [];
+    // nextStackID has already been incremented.
+    this.stackID = stacks.nextStackID-1;
 
     const cp = DrawStackViewComponent.prototype;
     copyGetter(this, cp, 'portions');

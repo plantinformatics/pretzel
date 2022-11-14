@@ -10,6 +10,7 @@ import { inject as service } from '@ember/service';
 import { sum } from 'lodash/math';
 import { isEqual } from 'lodash/lang';
 
+//------------------------------------------------------------------------------
 
 import { contentOf } from '../../utils/common/promises';
 import AxisEvents from '../../utils/draw/axis-events';
@@ -48,7 +49,7 @@ import { intervalExtent, intervalOverlapOrAbut }  from '../../utils/interval-cal
 import { inRange } from '../../utils/draw/zoomPanCalcs';
 import { updateDomain } from '../../utils/stacksLayout';
 import { FeatureTicks, FeatureTick_className, blockTickEltId } from '../../utils/draw/feature-ticks';
-
+import AxisDraw from '../../utils/draw/axis-draw';
 
 /* global d3 */
 /* global require */
@@ -340,6 +341,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
 */
   },
 
+  //----------------------------------------------------------------------------
 
   dropIn(targetAxis1d, top) {
     const fnName = 'dropIn' + '(axesP)';
@@ -352,6 +354,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     /* updateStacksAxes() : createForReference() will create a new stack for this axis. */
     this.stack.dropOut(this);
   },
+
+  //----------------------------------------------------------------------------
 
   /** @return the Stacked object corresponding to this axis. */
   axisS : computed(
@@ -948,6 +952,15 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   },
   drawTicksEffect : computed('controlsView.axisTicks', function () {
     later(() => this.drawTicks());
+  }),
+  axisDraw : computed( function () {
+    return new AxisDraw(/*oa*/null, this, /*stacks*/null, this.stacksView);
+  }),
+  drawAxis() {
+    this.axisDraw.draw();
+  },
+  drawAxisEffect : computed('stacksView.stacks.[]', function () {
+    this.drawAxis();
   }),
 
   ensureAxis : computed('viewedBlocks', function () {

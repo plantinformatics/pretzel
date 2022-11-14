@@ -62,7 +62,7 @@ import {
 } from '../utils/log-selection';
 import { configureHover } from '../utils/hover';
 import { Viewport } from '../utils/draw/viewport';
-import { AxisTitleLayout } from '../utils/draw/axisTitleLayout';
+import { axisFontSize, AxisTitleLayout } from '../utils/draw/axisTitleLayout';
 import { AxisTitleBlocksServers } from '../utils/draw/axisTitleBlocksServers_tspan';
 import {
   brushClip,
@@ -73,7 +73,8 @@ import {
 import {  Axes, maybeFlip, maybeFlipExtent,
           ensureYscaleDomain,
           /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform,
-          eltId, axisEltId, eltIdAll, axisEltIdTitle,
+          eltId, stackEltId, axisEltId, eltIdAll, axisEltIdTitle,
+          moveOrAdd,
           axisFeatureCircles_eltId,
           axisFeatureCircles_selectAll,
           axisFeatureCircles_selectOneInAxis,
@@ -138,6 +139,9 @@ function countPathsWithData() { }
 import { storeFeature, lookupFeature } from '../utils/feature-lookup';
 
 import { configureSyntenyBlockClicks } from './draw/synteny-blocks';
+import AxisDraw from '../utils/draw/axis-draw';
+import { DropTarget } from '../utils/draw/drop-target';
+
 
 
 /*----------------------------------------------------------------------------*/
@@ -766,9 +770,6 @@ export default Component.extend(Evented, {
     if (oa.axes2d === undefined)
       oa.axes2d = new Axes(oa);
 
-    let
-    /** font-size of y axis ticks */
-    axisFontSize = 12;
     /** default colour for paths; copied from app.css (.foreground path {
      * stroke: #808;}) so it can be returned from d3 stroke function.  Also
      * used currently to recognise features which are in colouredFeatures via
@@ -2359,23 +2360,8 @@ export default Component.extend(Evented, {
       });
       console.log('remnant', removedStacks.node());
     }
-    stackX
-      .transition().duration(500)
-      .remove();
 
-    /*
-     let st = newRender ? stackS :
-     stackS.transition().duration(dragTransitionTime);
-     let stackS_ = st
-     */
-    stackS
-      .attr("class", "stack")
-      .attr("id", stackEltId);
-
-    function stackEltId(s)
-    { if (s.stackID === undefined) breakPoint();
-      dLog("stackEltId", s.stackID, s.axes[0].mapName, s);
-      return eltId(s.stackID); }
+    // moved to ../utils/draw/axis.js : stackEltId()
 
     /** For the given Stack, return its axisIDs.
      * @return [] containing string IDs of reference blocks of axes of the Stack.
@@ -2388,97 +2374,13 @@ export default Component.extend(Evented, {
       return result;
     }
 
-    if (stackS && trace_stack >= 1.5)
-      logSelection(stackS);
+    const
+    axisDraw = new AxisDraw(oa, /*axis1d*/null, stacks, /*stacksView*/),
+    selections = {svgContainer, stackSd, stackS,  stackX};    
+    const resultSelections =  
+        axisDraw.draw2(selections, stack_axisIDs, newRender, stacksAxesDomVerify);
+    let {g, axisS, axisG, allG} = resultSelections;
 
-    // Add a group element for each axis.
-    // Stacks are selection groups in the result of this .selectAll()
-    let axisS =
-      stackSd.merge(stackS)
-      .selectAll(".axis-outer"),
-    /**
-     * @param d1	axisID (blockId)
-     * @param this	EnterNode
-     */
-    moveOrAdd = function (d1, i, g) {
-      let p = g[0]._parent,
-      r;
-      let gaExists = d3.selectAll("g.axis-outer#id" + d1);
-      if (gaExists.size()) {
-        r = gaExists.node();
-        dLog('gaExists', gaExists.nodes(), r, p);
-      }
-      else {
-        r = d3.creator('g').apply(this, [d1, i, g]);
-      }
-      return r;
-    },
-    axisG = axisS
-      .data(stack_axisIDs, Stacked.prototype.keyFunction)
-      .enter().append(moveOrAdd /*'g'*/),
-    axisX = axisS.exit();
-    dLog('stacks.length', stacks.length, axisG.size(), axisX.size());
-    axisG.each(function(d, i, g) { dLog(d, i, this); });
-    axisX.each(function(d, i, g) { dLog('axisX', d, i, this); });
-    axisX.remove();
-    let axisGE = axisG
-      .selectAll('g.axis-all')
-      .data((d) => [d])
-      .enter(),
-    /** filter axisG down to those elements without a g.axis-all child.
-     * This would be equivalent to those elements of axisG which are parents in
-     * the .enter() set axisGE, i.e. axisGE.nodes().mapBy('_parent')
-     */
-    axisGempty = 
-      axisG.filter( function (d) { return d3.select(this).selectAll('g > g.axis-all').empty(); }),
-    allG = axisGE
-      .append('g')
-      .attr("class", "axis-all")
-      .attr("id", eltIdAll);
-    // following code appends sub-elements to axisG, so use axisGempty.
-    axisG = axisGempty;
-    if (axisG.size())
-      dLog(allG.nodes(), allG.node());
-
-
-    if (trace_stack)
-    {
-      if (trace_stack > 1)
-        oa.stacks.forEach(function(s){console.log(s.axisIDs());});
-      let g = axisG;
-      console.log("g.axis-outer", g.enter().size(), g.exit().size(), stacks.length);
-    }
-    axisG
-      .attr("class", "axis-outer")
-      .attr("id", eltId);
-    let g = axisG;
-    /** stackS / axisG / g / gt is the newly added stack & axis.
-     * The X position of all stacks is affected by this addition, so
-     * re-apply the X transform of all stacks / axes, not just the new axis.
-     */
-    let ao =
-      svgContainer.selectAll('.axis-outer');  // equiv: 'g.stack > g'
-    /** apply the transform with a transition if changing an existing drawing. */
-    let gt = newRender ? ao :
-      ao.transition().duration(dragTransitionTime);
-    if (trace_stack > 2)
-    {
-      console.log('.axis-outer');
-      logSelectionNodes(gt);
-    }
-    /* could be used to verify ao selection. */
-    if (trace_stack > 3)
-    {
-      let ga =  selectImmediateChildNodes(svgContainer);
-      console.log('svgContainer > g');
-      logSelectionNodes(ga);
-      let ao1 = svgContainer.selectAll("g.stack > g");  //.axis-outer
-      logSelectionNodes(ao1);
-    }
-    Stack.verify();
-    stacksAxesDomVerify(stacks, oa.svgContainer, /*unviewedIsOK*/ true);
-    ao
-      .attr("transform", Stack.prototype.axisTransformO);
     g
       .call(
         d3.drag()
@@ -2490,189 +2392,9 @@ export default Component.extend(Evented, {
     if (g && trace_stack >= 1.5)
       logSelection(g);
 
-    //-components/axis
+
+    //- moved DropTarget to utils/draw/drop-target.js (considered : components/axis)
     /*------------------------------------------------------------------------*/
-    /** the DropTarget which the cursor is in, recorded via mouseover/out events
-     * on the DropTarget-s.  While dragging this is used to know the DropTarget
-     * into which the cursor is dragged.
-     */
-    // oa.currentDropTarget /*= undefined*/;
-
-    function DropTarget() {
-      let viewPort = oa.vc.viewPort;
-      let size = {
-        /** Avoid overlap, assuming about 5-7 stacks. */
-        w : Math.round(Math.min(axisHeaderTextLen, viewPort.w/15)),
-        // height of dropTarget at the end of an axis
-        h : Math.min(80, viewPort.h/10),
-        // height of dropTarget covering the adjacent ends of two stacked axes
-        h2 : Math.min(80, viewPort.h/10) * 2 /* + axis gap */
-      },
-      posn = {
-        X : Math.round(size.w/2),
-        Y : /*YMargin*/10 + size.h
-      },
-      /** top and bottom edges relative to the axis's transform.
-       */
-      edge = {
-        top : size.h,
-        /** Originally bottom() depended on the axis's portion, but now g.axis-outer
-         * has a transform with translate and scale which apply the axis's portion
-         * to the elements within g.axis-outer.
-         * So bottom() is now based on vc.yRange instead of axis.yRange().
-         * @param axis is not used - see comment re. edge.
-         */
-        bottom : function (axis) { return vc.yRange /* formerly axis.yRange() */ - size.h; }
-      };
-      /** Same as dropTargetY().
-       * Called via d3 .attr().
-       * @param this  <rect> DOM element in g.stackDropTarget
-       */
-      function dropTargetYresize () {
-        /** DOMTokenList. contains top or bottom etc */
-        let rect = this,
-        parentClasses = rect.parentElement.classList,
-        top = parentClasses.contains('top'),
-        bottom = parentClasses.contains('bottom'),
-        yVal = top ? -oa.vc.dropTargetYMargin : edge.bottom(undefined);
-        // console.log('dropTargetYresize', rect, parentClasses, top, bottom, yVal);
-        return yVal;
-      };
-
-      /** @return axis which this DropTarget is part of */
-      DropTarget.prototype.getAxis = function ()
-      {
-        /** The datum of the DropTarget is the axisName */
-        let axisName = this.datum(),
-        axis = oa.axes[axisName];
-        return axis;
-      };
-      /// @parameter top  true or false to indicate zone is positioned at top or
-      /// bottom of axis
-      /// uses g, a selection <g> of all Axes
-      DropTarget.prototype.add = function (top)
-      {
-        // Add a target zone for axis stacking drag&drop
-        let stackDropTarget = 
-          g.append("g")
-          .attr("class", "stackDropTarget" + " end " + (top ? "top" : "bottom"));
-        let
-          dropTargetY = function (datum/*, index, group*/) {
-            let axisName = datum,
-            axis = oa.axes[axisName],
-            yVal = top ? -oa.vc.dropTargetYMargin : edge.bottom(axis);
-            if (Number.isNaN(yVal))
-            {
-              console.log("dropTargetY", datum, axis, top, oa.vc.dropTargetYMargin, edge.bottom(axis));
-              breakPoint();
-            }
-            return yVal;
-          };
-        stackDropTarget
-          .append("rect")
-          .attr("x", -posn.X)
-          .attr("y", dropTargetY)
-          .attr("width", 2 * posn.X)
-          .attr("height", posn.Y)
-        ;
-
-        stackDropTarget
-          .on("mouseover", dropTargetMouseOver)
-          .on("mouseout", dropTargetMouseOut);
-      };
-
-      /** The original design included a drop zone near the middle of the axis,
-       * for dropping an axis out of its current stack; this is replaced by
-       * dropping past xDropOutDistance, so this is not enabled.
-       * @parameter left  true or false to indicate zone is positioned at left or
-       * right of axis
-       */
-      DropTarget.prototype.addMiddle = function (left)
-      {
-        // Add a target zone for axis stacking drag&drop
-        let stackDropTarget = 
-          g.append("g")
-          .attr("class", "stackDropTarget" + " middle " + (left ? "left" : "right"));
-        function dropTargetHeight(datum/*, index, group*/)
-        {
-          // console.log("dropTargetHeight", datum, index, group);
-          /** dropTargetHeight is axis height minus the height of the top and bottom drop zones.
-           * Translate and scale is provided by transform of g.axis-outer, so
-           * use vc yRange not axis.yRange().  More detailed comment in @see edge.bottom().
-           * So axis is not used :
-           let axisName = datum,
-           axis = oa.axes[axisName];
-           */
-          return vc.yRange - 2 * size.h;
-        }
-        stackDropTarget
-          .append("rect")
-          .attr("x", left ? -1 * (oa.vc.dropTargetXMargin + posn.X) : oa.vc.dropTargetXMargin )
-          .attr("y", edge.top)
-          .attr("width", posn.X /*- oa.vc.dropTargetXMargin*/)
-          .attr("height", dropTargetHeight)
-        ;
-
-        stackDropTarget
-          .on("mouseover", dropTargetMouseOver)
-          .on("mouseout", dropTargetMouseOut);
-      };
-
-      /** Show the affect of window resize on axis drop target zones.
-       * Only the y value of g.top > rect elements need be changed.
-       * Target zone width could be changed in response to window width change - that is not done.
-       */
-      DropTarget.prototype.showResize = function ()
-      {
-        oa.svgContainer.selectAll('g.stackDropTarget.bottom > rect')
-          .attr("y", dropTargetYresize)
-        // .each(function(d, i, g) { console.log(d, i, this); })
-        ;
-      };
-
-      function storeDropTarget(axisName, classList)
-      {
-        oa.currentDropTarget = {axisName: axisName, classList: classList};
-      }
-
-      function dropTargetMouseOver(data, index, group){
-        console.log("dropTargetMouseOver() ", this, data, index, group);
-        this.classList.add("dragHover");
-        storeDropTarget(data, this.classList);
-      }
-      function dropTargetMouseOut(d){
-        console.log("dropTargetMouseOut", d);
-        this.classList.remove("dragHover");
-        oa.currentDropTarget = undefined;
-      }
-
-    }
-    let dropTarget = new DropTarget();
-
-    [true, false].forEach(function (i) {
-      dropTarget.add(i);
-      // dropTarget.addMiddle(i);
-    });
-
-
-    /** from newly added g.axis-all : filter out those which have a parent which draws their axis. */
-    g = allG
-      .filter(function (d) { return oa.axesP[d]; } )
-    ;
-    if (trace_stack > 1)
-    {
-      console.log(oa.axesP, "filter", g.size(), allG.size());
-      logSelection(g);
-    }
-
-    // Add an axis and title
-    /** This g is referenced by the <use>. It contains axis path, ticks, title text, brush. */
-    let defG =
-      g.append("g")
-      .attr("class", "axis")
-      .each(function(d) {
-        let axis = Stacked.getAxis(d);
-        d3.select(this).attr("id",axisEltId(d)).call(axis.axisSide(y[d])); });  
 
     function axisTitle(chrID)
     {
@@ -2682,12 +2404,6 @@ export default Component.extend(Evented, {
       return cn.mapName + " " + cn.chrName;
     }
 
-    let axisTitleS = g.append("text")
-       /* id is used by axis-menu targetId */
-      .attr('id', axisEltIdTitle)
-      .attr("y", -2 * axisFontSize)
-      .style("font-size", axisFontSize);
-    axisTitleFamily(axisTitleS);
     /** true if any axes have children.  used to get extra Y space at top for multi-level axis title.
      * later can calculate this, roughly : oa.stacks.axesP.reduce(function (haveChildren, a) { return haveChildren || oa.stacks.axesP[a].blocks.length; } )
      * The maximum value of that can be used as the value of Viewport:calc(): axisNameRows.

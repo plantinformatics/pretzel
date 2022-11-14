@@ -5,6 +5,13 @@ const dLog = console.debug;
 
 /*----------------------------------------------------------------------------*/
 
+let
+/** font-size of y axis ticks */
+axisFontSize = 12;
+
+/*----------------------------------------------------------------------------*/
+
+
 function deg2Rad(degrees)
 {
   return degrees * Math.PI / 180;
@@ -127,4 +134,4 @@ AxisTitleLayout.prototype.transform = function()
 
 /*----------------------------------------------------------------------------*/
 
-export { AxisTitleLayout };
+export { axisFontSize, AxisTitleLayout };

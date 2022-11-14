@@ -1,3 +1,5 @@
+import { breakPoint } from '../breakPoint';
+
 /*----------------------------------------------------------------------------*/
 
 /*global d3 */
@@ -220,6 +222,12 @@ function eltId(name)
 {
   return "id" + name;
 }
+function stackEltId(s)
+{
+  if (s.stackID === undefined) breakPoint();
+  dLog("stackEltId", s.stackID, s.axes[0].mapName, s);
+  return eltId(s.stackID);
+}
 /** id of axis g element, based on axisName, with an "a" prefix. */
 function axisEltId(name)
 {
@@ -276,6 +284,27 @@ function highlightId(name)
 
 /** prefix for id of a g.tracks.  Used within split axis. see components/axis-tracks.js  */
 const trackBlockEltIdPrefix = 'tb-';
+
+//------------------------------------------------------------------------------
+
+
+/**
+ * @param d1	axisID (blockId)
+ * @param this	EnterNode
+ */
+function moveOrAdd(d1, i, g) {
+  let p = g[0]._parent,
+      r;
+  let gaExists = d3.selectAll("g.axis-outer#id" + d1);
+  if (gaExists.size()) {
+    r = gaExists.node();
+    dLog('gaExists', gaExists.nodes(), r, p);
+  }
+  else {
+    r = d3.creator('g').apply(this, [d1, i, g]);
+  }
+  return r;
+}
 
 /*----------------------------------------------------------------------------*/
 
@@ -422,10 +451,12 @@ export {
   ensureYscaleDomain,
   yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform,
   axisConfig,
-  eltId, axisEltId, eltIdAll, axisEltIdTitle, axisEltIdClipPath, axisEltIdClipPath2d,
+  eltId, stackEltId, axisEltId, eltIdAll,
+  axisEltIdTitle, axisEltIdClipPath, axisEltIdClipPath2d,
   selectAxisOuter, selectAxisUse, eltIdGpRef,
   highlightId,
   trackBlockEltIdPrefix,
+  moveOrAdd,
   axisFeatureCircles_eltId,
   axisFeatureCircles_selectAll,
   axisFeatureCircles_selectOne,

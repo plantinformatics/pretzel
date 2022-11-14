@@ -72,7 +72,15 @@ export default Component.extend({
       const fnName = 'axesViewedEffect' + ' (axesP)';
       this.updateStacksAxes();
       console.log(fnName, 'stacks', this.stacks .mapBy('axis1d.axis.scope'), this.newStacks .mapBy('axis1d.axis.scope'));
-      let stacks = this.stacks.concat(this.newStacks || []);
+      let stacks = this.stacks;
+      if (this.newStacks?.length) {
+        /* not currently using .newStacks <Draw::StackView ... registerStackView >
+         * so concat to .stacks here in lieu of
+         *   registerStackView() : this.stacks[arrayObjectFn](stack);
+         */
+        stacks = this.stacks.concat(this.newStacks || []);
+        this.set('stacks', stacks);
+      }
       return stacks;
   }),
 
