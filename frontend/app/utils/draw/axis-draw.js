@@ -1,6 +1,10 @@
 
 //------------------------------------------------------------------------------
 
+import {
+  ctrlKeyfilter,
+} from '../domElements';
+
 import { I, combineFilters } from './d3-svg';
 import {
   /*fromSelectionArray,
@@ -34,6 +38,8 @@ import {
   /*, axisTitleColour*/  }  from './axis';
 
 import { DropTarget } from './drop-target';
+import { AxisDrag } from '../stacks-drag';
+
 
 import { breakPoint } from '../breakPoint';
 
@@ -226,7 +232,19 @@ AxisDraw.prototype.draw2 = function draw2(selections, stack_axisIDs, newRender, 
   ao
     .attr("transform", Stack.prototype.axisTransformO);
 
-  // g ... d3.drag()
+  const axisDrag = /*new*/ AxisDrag(oa, oa.vc);
+  // .bind(axisDrag)
+  g
+    .call(
+      d3.drag()
+        .subject(function(d) { return {x: oa.stacks.x(d)}; }) //origin replaced by subject
+        .filter(ctrlKeyfilter)
+        .on("start", axisDrag.dragstarted) //start instead of dragstart in v4. 
+        .on("drag", axisDrag.dragged)
+        .on("end", axisDrag.dragended));//function(d) { dragend(d); d3.event.sourceEvent.stopPropagation(); }))
+  if (g && trace_stack >= 1.5)
+    logSelection(g);
+
 
 
   let dropTarget = new DropTarget(oa, oa.vc, g);

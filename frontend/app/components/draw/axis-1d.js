@@ -957,7 +957,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     return new AxisDraw(/*oa*/null, this, /*stacks*/null, this.stacksView);
   }),
   drawAxis() {
-    this.axisDraw.draw();
+    // this.axisDraw.draw();
   },
   drawAxisEffect : computed('stacksView.stacks.[]', function () {
     this.drawAxis();

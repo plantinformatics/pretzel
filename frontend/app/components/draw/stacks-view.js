@@ -16,6 +16,8 @@ import {
   axisId2Name*/
 } from '../../utils/stacks';
 
+import AxisDraw from '../../utils/draw/axis-draw';
+
 import ParentRefn from '../../utils/parent-refn';
 
 /* global d3 */
@@ -65,6 +67,16 @@ export default Component.extend({
 
   // ---------------------------------------------------------------------------
 
+  axisDraw : computed( function () {
+    return new AxisDraw(this.oa, /*axis1d*/null, this.stacks, this);
+  }),
+
+  draw() {
+    this.axisDraw.draw();
+  },
+
+  // ---------------------------------------------------------------------------
+
   axesViewedEffect : computed(
     // /*'block.axesViewedBlocks2'*/'axes1d.axesP.[]',
     'stacks.[]', 'newStacks',
@@ -81,6 +93,7 @@ export default Component.extend({
         stacks = this.stacks.concat(this.newStacks || []);
         this.set('stacks', stacks);
       }
+      this.draw();
       return stacks;
   }),
 
