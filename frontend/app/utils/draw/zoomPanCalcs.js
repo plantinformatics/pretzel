@@ -4,6 +4,13 @@
 
 import { isEqual } from 'lodash/lang';
 
+//------------------------------------------------------------------------------
+
+/* global d3 */
+/* global WheelEvent */
+
+//------------------------------------------------------------------------------
+
 import { maybeFlip, noDomain }  from './axis';
 import {
    AxisBrushZoom,
@@ -12,8 +19,6 @@ import {
 
 import normalizeWheel from 'normalize-wheel';
 
-
-/* global d3 */
 
 /*----------------------------------------------------------------------------*/
 const trace_zoom = 0;
@@ -341,9 +346,59 @@ function wheelNewDomain(axis, axisApi, inFilter) {
 
 /*----------------------------------------------------------------------------*/
 
+function ZoomFilter(oa) {
+
+  const result = {
+    wheelDelta,
+    zoomFilter,
+  };
+
+  /** default is 500.  "scaling applied in response to a WheelEvent ... is
+   * proportional to 2 ^ result of wheelDelta(). */
+  let wheelDeltaFactor = 500 * 3 * 8;
+  dLog('wheelDeltaFactor', wheelDeltaFactor);
+  function wheelDelta() {
+    return -d3.event.deltaY * (d3.event.deltaMode ? 120 : 1) / wheelDeltaFactor;
+  }
+  function zoomFilter(d) {
+    let  e = d3.event;
+    let  include;
+    /** WheelEvent is a subtype of MouseEvent; click to drag axis gets
+     * MouseEvent - this is filtered out here so it will be handle by dragged().
+     * ! d3.event.button is the default zoom.filter, possibly superfluous here.
+     */
+    let isMouseWheel = (d3.event instanceof WheelEvent) && ! d3.event.button;
+    if (isMouseWheel) {
+
+      if (e.shiftKey && trace_zoom > 1) {
+        dLog('zoom.filter shiftKey', this, arguments, d3.event, d);
+      }
+
+      let axisName = d,
+      axis = oa.axesP[axisName];
+
+      if ((oa.y[axisName] !== axis.y) || (oa.ys[axisName] !== axis.ys))
+        dLog('zoomFilter verify y', axisName, axis, oa);
+      if (axis.axisName !== d)
+        dLog('zoomFilter verify axisName', axisName, axis);
+
+      include = wheelNewDomain(axis, oa.axisApi, true); // uses d3.event
+    }
+    return include;
+  }
+
+  //----------------------------------------------------------------------------
+
+  return result;
+}
+
+
+//------------------------------------------------------------------------------
+
 export {
   inRange, inRangeEither, subInterval, overlapInterval,
   intervalSign,
   intervalDirection,
-  wheelNewDomain
+  wheelNewDomain,
+  ZoomFilter,
 };

@@ -93,7 +93,7 @@ import {
   dragTransitionNew,
   dragTransition
 } from '../utils/stacks-drag';
-import { subInterval, overlapInterval, wheelNewDomain } from '../utils/draw/zoomPanCalcs';
+import { subInterval, overlapInterval, wheelNewDomain, ZoomFilter } from '../utils/draw/zoomPanCalcs';
 import { intervalsEqual, intervalIntersect } from '../utils/interval-calcs';
 import { round_2, checkIsNumber } from '../utils/domCalcs';
 import { Object_filter, compareFields } from '../utils/Object_filter';
@@ -1259,43 +1259,10 @@ export default Component.extend(Evented, {
 
     if ((oa.zoomBehavior === undefined) || instanceChanged)
     {
-      /** default is 500.  "scaling applied in response to a WheelEvent ... is
-       * proportional to 2 ^ result of wheelDelta(). */
-      let wheelDeltaFactor = 500 * 3 * 8;
-      dLog('wheelDeltaFactor', wheelDeltaFactor);
-      function wheelDelta() {
-        return -d3.event.deltaY * (d3.event.deltaMode ? 120 : 1) / wheelDeltaFactor;
-      }
-      function zoomFilter(d) {
-        let  e = d3.event;
-        let  include;
-        /** WheelEvent is a subtype of MouseEvent; click to drag axis gets
-         * MouseEvent - this is filtered out here so it will be handle by dragged().
-         * ! d3.event.button is the default zoom.filter, possibly superfluous here.
-         */
-        let isMouseWheel = (d3.event instanceof WheelEvent) && ! d3.event.button;
-        if (isMouseWheel) {
-
-          if (e.shiftKey && trace_stack > 1) {
-            dLog('zoom.filter shiftKey', this, arguments, d3.event, d);
-          }
-
-          let axisName = d,
-          axis = oa.axesP[axisName];
-
-          if ((y[axisName] !== axis.y) || (oa.ys[axisName] !== axis.ys))
-            dLog('zoomFilter verify y', axisName, axis, oa);
-          if (axis.axisName !== d)
-            dLog('zoomFilter verify axisName', axisName, axis);
-
-          include = wheelNewDomain(axis, oa.axisApi, true); // uses d3.event
-        }
-        return include;
-      }
-
+      const zoomFilterApi = ZoomFilter(oa);
       oa.zoomBehavior = d3.zoom()
-        .filter(zoomFilter)
-        .wheelDelta(wheelDelta)
+        .filter(zoomFilterApi.zoomFilter)
+        .wheelDelta(zoomFilterApi.wheelDelta)
       /* use scaleExtent() to limit the max zoom (zoom in); the min zoom (zoom
        * out) is limited by wheelNewDomain() : axisReferenceDomain, so no
        * minimum scaleExtent is given (0).
