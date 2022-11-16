@@ -5,6 +5,10 @@
 import { isEqual } from 'lodash/lang';
 
 import { maybeFlip, noDomain }  from './axis';
+import {
+   AxisBrushZoom,
+} from './axisBrush';
+
 
 import normalizeWheel from 'normalize-wheel';
 
@@ -269,8 +273,9 @@ function wheelNewDomain(axis, axisApi, inFilter) {
       return false;
     }
     let
+    axisBrushZoom = new AxisBrushZoom(axisApi.drawMap.oa),
     /** This is the centre of zoom, i.e. the mouse position, not the centre of the axis.  */
-    centre = axisApi.axisRange2Domain(axis.axisName, rangeYCentre),
+    centre = axisBrushZoom.axisRange2Domain(axis.axisName, rangeYCentre),
 
     transform = inFilter ? elt.__zoom : d3.event.transform, // currently only used in trace
 

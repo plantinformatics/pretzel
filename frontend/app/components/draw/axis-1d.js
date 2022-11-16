@@ -25,6 +25,11 @@ import {
   axisRedrawText,
   axisId2Name*/
 } from '../../utils/stacks';
+
+import {
+   AxisBrushZoom,
+} from '../../utils/draw/axisBrush';
+
 import {
   noDomain,
   /* Axes, yAxisTextScale,  yAxisTicksScale,*/  yAxisBtnScale,
@@ -238,7 +243,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   currentPosition		: Stacked_p.currentPosition,
   axisDimensions		: Stacked_p.axisDimensions,
   setDomain		: Stacked_p.setDomain,
-  setZoomed		: Stacked_p.setZoomed,
+  // setZoomed() from mixin AxisPosition : setZoomed
   unviewBlocks		: Stacked_p.unviewBlocks,
 
 
@@ -295,8 +300,12 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     domain = this.get('domain'),
     zoomedDomain = this.get('zoomedDomain');
     if (zoomed) {
-      zoomed &= (domain[0] !== zoomedDomain[0]) ||
-        (domain[1] !== zoomedDomain[1]);
+      if (! zoomedDomain) {
+        // dLog('zoomed2', 'zoomed but not zoomedDomain');
+      } else {
+        zoomed &= (domain[0] !== zoomedDomain[0]) ||
+          (domain[1] !== zoomedDomain[1]);
+      }
     }
     return zoomed;
   }),
@@ -896,7 +905,6 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     let axisID = this.get('axis.id');
     dLog('notifyChanges', axisID);
 
-    let axisApi = stacks.oa.axisApi;
     let t = stacks.oa.svgContainer; // .transition().duration(750);
 
     let eventBus = stacks.oa.eventBus;
@@ -904,17 +912,18 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     let p = axisID;
     eventBus.trigger("zoomedAxis", [axisID, t]);
     // true does pathUpdate(t);
-    axisApi.axisScaleChanged(p, t, true);
+    let axisBrushZoom = new AxisBrushZoom(stacks.oa);
+    axisBrushZoom.axisScaleChanged(p, t, true);
 
-    axisApi.axisStackChanged(t);
+    axisBrushZoom.axisStackChanged(t);
   },
   updateAxis() {
     // subset of notifyChanges()
-    let axisApi = stacks.oa.axisApi;
     let axisID = this.get('axis.id');
     dLog('updateAxis', axisID);
     let t = stacks.oa.svgContainer; //.transition().duration(750);
-    axisApi.axisScaleChanged(axisID, t, true);
+    let axisBrushZoom = new AxisBrushZoom(stacks.oa);
+    axisBrushZoom.axisScaleChanged(axisID, t, true);
   },
   drawTicks() {
     /** based on extract from axisScaleChanged() */
