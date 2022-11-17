@@ -5,6 +5,7 @@ import { next as run_next, later } from '@ember/runloop';
 import { inject as service } from '@ember/service';
 import { htmlSafe } from '@ember/template';
 
+import { AxisMenuActions } from '../../utils/draw/axis-menu-actions';
 import { stacks  } from '../../utils/stacks';
 
 const FileName = "components/axis-menu";
@@ -29,7 +30,12 @@ export default Ember.Component.extend({
   block : computed.alias('blockS.block'),
   /** blockId of blockS */
   axisName : computed.alias('blockS.axisName'),
-  menuActions : computed.alias('axisApi.menuActions'),
+  menuActions : computed( function () {
+    const
+    oa = stacks.oa,
+    menuActions = AxisMenuActions(oa);
+    return menuActions;
+  }),
 
   hide() {
     let axes1d = this.parentView;

@@ -52,6 +52,11 @@ import { configureHover } from '../utils/hover';
 import { Viewport } from '../utils/draw/viewport';
 import { axisFontSize, AxisTitleLayout } from '../utils/draw/axisTitleLayout';
 import { AxisTitleBlocksServers } from '../utils/draw/axisTitleBlocksServers_tspan';
+
+import {
+  AxisTitle,
+} from '../utils/draw/axisTitle';
+
 import {
   brushClip,
   axisBrushSelect,
@@ -169,11 +174,6 @@ Object.filter = Object_filter;
  */
 const syntenyBlock_2Feature = true;
 
-/** enable display of multiple lines in axis title : for each data block :
- * name, block colour, feature counts, server colour; this is moving into axis
- * menu, replacing utils/draw/axisTitleBlocksServers{,_tspan}.js.
- */
-const axisTitle_dataBlocks = false;
 
 /*----------------------------------------------------------------------------*/
 
@@ -669,7 +669,6 @@ export default Component.extend(Evented, {
                     axisName2MapChr,
                     collateO,
                     updateXScale,
-                    updateAxisTitleSize,
                     axisStackChanged,
                     cmNameAdd,
                     makeMapChrName,
@@ -678,9 +677,20 @@ export default Component.extend(Evented, {
                     updateSyntenyBlocksPosition : () => this.get('updateSyntenyBlocksPosition').perform(),
                     setupMouseHover,
                     drawMap : this,  // for debug trace / check.
+                    pathUpdate,
+                       // temporary additions - the definitions will be moved out.
+                    sendUpdatedSelectedFeatures,
+                    selectedFeatures_clear,
+                    deleteAxisfromAxisIDs,
+                    removeAxisMaybeStack,
+                    selectedFeatures_removeAxis,
+                    selectedFeatures_removeBlock,
+                    configureAxisTitleMenu,
+                    configureAxisSubTitleMenu,
                    };
       Ember_set(oa, 'axisApi', axisApi);
     }
+    const axisTitle = AxisTitle(stacks.oa);
     dLog('draw-map stacks', stacks);
 
     /** Reference to all datasets by name.
@@ -1165,17 +1175,11 @@ export default Component.extend(Evented, {
 
     /** planning to move selectedFeatures out to a separate class/component;
      * these 2 functions would be actions on it. */
-    if (! oa.axisApi.sendUpdatedSelectedFeatures) {
-      oa.axisApi.sendUpdatedSelectedFeatures = sendUpdatedSelectedFeatures;
-    }
     //Reset the selected Feature region, everytime an axis gets deleted
     function sendUpdatedSelectedFeatures()
     {
       if (oa.drawOptions.showSelectedFeatures)
         me.send('updatedSelectedFeatures', selectedFeatures);
-    }
-    if (! oa.axisApi.selectedFeatures_clear) {
-      oa.axisApi.selectedFeatures_clear = selectedFeatures_clear;
     }
     function selectedFeatures_clear()
     {
@@ -1187,6 +1191,7 @@ export default Component.extend(Evented, {
           delete selectedFeatures[mapChrName];
         }
       }
+      // no-op because selectedFeatures reference has not changed.
       sendUpdatedSelectedFeatures();
     }
     /** When an axis is deleted, it is removed from selectedAxes and its features are removed from selectedFeatures.
@@ -1625,7 +1630,7 @@ export default Component.extend(Evented, {
               /** just the <text> which is immediate child of gAll;  could use selectImmediateChildNodes(gAll).
                */
               let axisTitleS = aStackS.select("g.axis-all > text");
-              axisTitleFamily(axisTitleS);
+              axisTitle.axisTitleFamily(axisTitleS);
 
               /** update the __data__ of those elements which refer to axis parent block name */
               let dataS = aStackS.selectAll("g.brush, g.brush > g[clip-path], g.stackDropTarget, g.stackDropTarget > rect");
@@ -1685,7 +1690,7 @@ export default Component.extend(Evented, {
             sBlock.parent = parentAxis.referenceBlockS();
             let aStackS1 = oa.svgContainer.select("g.axis-outer#" + eltId(parentAxis.axisName));
             let axisTitleS = aStackS1.select("g.axis-all > text");
-            axisTitleFamily(axisTitleS);
+            axisTitle.axisTitleFamily(axisTitleS);
           }
           else if (! adopt0)
           {
@@ -2346,186 +2351,7 @@ export default Component.extend(Evented, {
     //- moved DropTarget to utils/draw/drop-target.js (considered : components/axis)
     /*------------------------------------------------------------------------*/
 
-    function axisTitle(chrID)
-    {
-      let cn=oa.
-        cmName[chrID];
-      // console.log(".axis text", chrID, cn);
-      return cn.mapName + " " + cn.chrName;
-    }
-
-    /** true if any axes have children.  used to get extra Y space at top for multi-level axis title.
-     * later can calculate this, roughly : oa.stacks.axesP.reduce(function (haveChildren, a) { return haveChildren || oa.stacks.axesP[a].blocks.length; } )
-     * The maximum value of that can be used as the value of Viewport:calc(): axisNameRows.
-     */
-    let someAxesHaveChildBlocks = true;
-
-    if (! oa.axisApi.axisTitleFamily)
-      oa.axisApi.axisTitleFamily = axisTitleFamily;
-    /** Update the axis title, including the block sub-titles.
-     * If ! axisTitle_dataBlocks, don't show the data block sub-titles, only the first line;
-     * this is selected in axisName2Blocks().
-     *
-     * From the number of block sub-titles, calculate 'y' : move title up to
-     * allow for more block sub-titles.
-     * Create / update a <tspan> for each block, including the parent / reference block.
-     * Configure a hover menu for each <tspan>, either axis (parent) or subtitle (data block).
-     *
-     * @param axisTitleS  d3 selection of the <text> within g.axis-all
-     * In usage, axisTitleS is a selection of either a single axis, or all axes.
-     */
-    function axisTitleFamily(axisTitleS) {
-      if (axisTitle_dataBlocks) {
-      axisTitleS
-      // .text(axisTitle /*String*/)
-      // shift upwards if >1 line of text
-        .each(function (d) {
-          let axis = Stacked.getAxis(d),
-          length = axis && axis.blocks.length;
-          if (length && length > 1)
-          {
-            /** -2 * axisFontSize is the default for a single row. */
-            let y = '-' + (length+1) * (1.3 * axisFontSize);
-            d3.select(this)
-              .attr('y', y + 'px');
-          }
-        })
-      ;
-      }
-
-
-
-      let apiServers = me.get('apiServers');
-      let axisTitleBlocksServers = new AxisTitleBlocksServers(oa.svgContainer, oa.axisTitleLayout, apiServers);
-      let subTitleS =
-    axisTitleS.selectAll("tspan.blockTitle")
-      /** @return type Block[]. blocks of axisName.
-       * first block is parent, remainder are data (non-reference) */
-        .data(axisName2Blocks, (block) => block.getId()),
-      subTitleE = subTitleS
-      .enter()
-      .append("tspan")
-      .attr('class', 'blockTitle');
-      if (axisTitle_dataBlocks) {
-      subTitleE.each(AxisTitleBlocksServers.prototype.prependTspan);
-      }
-      subTitleS.exit()
-        // .each(AxisTitleBlocksServers.prototype.remove1)  // enable if axisTitle_dataBlocks
-        .remove();
-      let subTitleM =
-      subTitleE.merge(subTitleS)
-        .text(function (block) { return block.titleText(); })
-        .attr('x', '0px')
-        /* The tspan.blockServer is only displayed when there are multiple api servers.
-         * If the tspan.blockServer was not rendered, then this (tspan.blockTitle) should have the dy.
-         * It is simpler to hide/show tspan.blockServer with css rather than
-         * re-render when the number of api servers changes, but to produce a
-         * clean svg export for publication it may be worth doing that.
-         * .attr('dy',  function (d, i) { return "" + (i ? 1.5 : 0)  + "em"; })
-         */
-        .style('stroke', Block.axisTitleColour)
-        .style('fill', Block.axisTitleColour)
-        .style('opacity', function (block, i) { return (i > 0) && ! block.visible ? 0.5 : undefined; } )
-        .each(function (block, i) {
-          /** until ae114cf5, distinct menus were offered for the reference
-           * block (first line of title) and the data blocks (subsequent lines).
-           * Now each line has onclick for the same menu (showMenu -> axis-menu).
-           * So this could be changed to use a single listener, on the parent <text>.
-           */
-          let menuFn = true // (i == 0)
-            ? configureAxisTitleMenu
-            : configureAxisSubTitleMenu;
-          menuFn.apply(this, arguments);
-          /* register blockUnview() and blockVisible() in menuActions.  */
-          menuActions_block();
-        });
-
-      if (axisTitle_dataBlocks) {
-        axisTitleS.call(AxisTitleBlocksServers.prototype.render.bind(axisTitleBlocksServers));
-      }
-    };
-
-    function axisName2Blocks (axisName) {
-      let axis = Stacked.getAxis(axisName);
-      // equiv : axis.children(true, false)
-      return axis ? (axisTitle_dataBlocks ? axis.blocks : [axis.blocks[0]]) : [];
-    }
-
-
-    function updateAxisTitles()
-    {
-      let axisTitleS = oa.svgContainer.selectAll("g.axis-all > text");
-      axisTitleFamily(axisTitleS);
-    }
-
-    /** Called when the width available to each axis changes,
-     * i.e. when collateO() is called.
-     * Calculate the size and layout of axis titles.
-     * Based on that layout, apply text-anchor and transform to the <text>,
-     * and adjust svg viewBox and padding-top.
-     * @param axisTitleS  d3 selection of g.axis-all, for one or more axes;
-     * if undefined then g.axis-all is selected for all axes.
-     */
-    function updateAxisTitleSize(axisTitleS)
-    {
-      if (! stacks.length)
-        return;
-      if (! axisTitleS)
-        axisTitleS = oa.svgContainer.selectAll("g.axis-all")
-        .transition().duration(dragTransitionTime)
-      ;
-
-      oa.vc.calc(oa);
-      // vc.calc() calculates .axisXRange, which is used here.
-      console.log('vc.axisXRange', vc.axisXRange, axisTitleS.nodes(), stacks.length);
-    let axisXRange = vc.axisXRange;
-      /** axisXRange[] already allows for 1/2 title space either side, so use length-1.
-       * stacks.length is > 0 here */
-      let nStackAdjs = stacks.length > 1 ? stacks.length-1 : 1;
-    let axisSpacing = (axisXRange[1]-axisXRange[0])/nStackAdjs;
-    let titleLength = Block.titleTextMax(),
-      /** char width in px, ie. convert em to px.  Approx -	better to measure this. */
-      em2Px = 7,
-      titlePx = titleLength ? titleLength * em2Px : 0;
-    let titleText = vc.titleText || (vc.titleText = {});
-
-      oa.vc.axisHeaderTextLen = titlePx;
-      oa.axisTitleLayout.calc(axisSpacing, titlePx);
-
-
-      // applied to all axes consistently, not just appended axis.
-      // Update elements' class and transform when verticalTitle changes value.
-
-      // also incorporate extendedWidth() / getAxisExtendedWidth() in the
-      // calculation, perhaps integrated in xScaleExtend()
-      let axisTitleA =
-        axisTitleS.selectAll("g.axis-all > text");
-      axisTitleA
-        // this attr does not change, can be done for just axisG
-        .style("text-anchor", oa.axisTitleLayout.verticalTitle ? "start" : undefined)
-        .attr("transform", yAxisTitleTransform(oa.axisTitleLayout));
-
-      let t =
-      oa.svgRoot
-        .transition().duration(dragTransitionTime)
-        .attr("viewBox", oa.vc.viewBox.bind(oa.vc))
-      ;
-
-      if (axisTitle_dataBlocks) {
-      let axisTitleBlocksServers = new AxisTitleBlocksServers(oa.svgContainer, oa.axisTitleLayout, me.get('apiServers'));
-      t.on('end', () => axisTitleBlocksServers.position(axisTitleS));
-      }
-
-      /** showZoomResetButtonXPosn() is called in axis-1d and axis-2d,
-       * ideally the call will be only in axis-1d, but for now this
-       * picks up some cases not covered.  */
-      let 
-      axisIds = axisTitleS.nodes().mapBy('__data__'),
-      axes1 = axisIds.map((axisId) => oa.axes[axisId]);
-      axes1.forEach(
-        (a) => a && a.axis1d && bind(a.axis1d, a.axis1d.showZoomResetButtonXPosn)());
-    }
-    updateAxisTitleSize(axisG.merge(axisS));
+    axisTitle.updateAxisTitleSize(axisG.merge(axisS));
 
 //- moved to ../utils/draw/axis.js : yAxisTextScale(),  yAxisTicksScale(),  yAxisBtnScale()
 
@@ -3860,9 +3686,6 @@ getBrushExtents(),
       this.on('pathUpdateFlow', this, this.pathUpdateFlow);
     }
 
-    if (! oa.axisApi.pathUpdate) {
-      oa.axisApi.pathUpdate = pathUpdate;
-    }
     /** call pathUpdate(t) for each of the enabled flows. */
     function pathUpdate(t)
     {
@@ -4185,7 +4008,7 @@ getBrushExtents(),
      */
     function stacksAdjust(changedNum, t)
     {
-      updateAxisTitleSize(undefined);
+      axisTitle.updateAxisTitleSize(undefined);
       /* updateAxisTitleSize() uses vc.axisXRange but not o, so call it before collateO(). */
       if (changedNum)
         collateO();
@@ -4326,8 +4149,8 @@ getBrushExtents(),
       }
       else
       {
-        updateAxisTitles();
-        updateAxisTitleSize(undefined);
+        axisTitle.updateAxisTitles();
+        axisTitle.updateAxisTitleSize(undefined);
         /* The if-then case above calls removeAxisMaybeStack(), which calls stacksAdjust();
          * so here in the else case, use a selection of updates from stacksAdjust() to
          * ensure that pathData is updated.
@@ -4386,19 +4209,6 @@ getBrushExtents(),
              e, jQueryEventInfo);
         me.sendAction('selectBlock', block.block);
 
-        let menuActions = oa.axisApi.menuActions;
-        if (! menuActions) {
-          oa.axisApi.menuActions = {axisDelete, axisFlip, axisPerpendicular, axisExtend};
-        } else if (! menuActions.axisDelete) {
-          /** menuActions is assigned to only here and in
-           * configureAxisSubTitleMenu(), and these 2 sets of actions don't
-           * overlap, so '=' would be equivalent to '||='.
-           */
-          menuActions.axisDelete        ||= axisDelete;
-          menuActions.axisFlip          ||= axisFlip;
-          menuActions.axisPerpendicular ||= axisPerpendicular;
-          menuActions.axisExtend        ||= axisExtend;
-        }
         /** If the axis-menu is already displayed on a different axis,
          * reposition it to align with the axis of the clicked block title.
          */
@@ -4451,119 +4261,29 @@ getBrushExtents(),
           if (trace_gui)
             console.log(deleteButtonS.empty(), deleteButtonS.node());
           deleteButtonS
-            .on('click', );
+            .on('click', menuActions.axisDelete);
       */
-      /** lexical context enclosed by menuActions functions :
-       * functions :
-       *  deleteAxisfromAxisIDs
-       *  removeBrushExtent
-       *  removeAxisMaybeStack
-       *  selectedFeatures_removeAxis
-       *  sendUpdatedSelectedFeatures
-       *  maybeFlip
-       *  axisScaleChanged
-       * variables :
-       *  oa
-       *  Stacked
-       *  me
-       */
-      function axisDelete (axisName  /*buttonElt, i, g*/) {
-              console.log("delete", axisName, this);
-        // this overlaps with the latter part of blockIsUnviewed()
-              // and can be factored with that.
-              let axis = oa.axes[axisName], stack = axis && axis.stack;
-              // axes[axisName] is deleted by removeStacked1() 
-              let stackID = Stack.removeStacked(axisName);
-              deleteAxisfromAxisIDs(axisName);
-              let sBlock = oa.stacks.blocks[axisName];
-              let block = sBlock.block;
-              console.log('sBlock.axis', sBlock.axis);
-              sBlock.setAxis(undefined);
-              axisBrushZoom.removeBrushExtent(axisName);
-              removeAxisMaybeStack(axisName, stackID, stack);
-              me.send('removeBlock', axisName);
-              // filter axisName out of selectedFeatures and selectedAxes
-              selectedFeatures_removeAxis(axisName, sBlock?.block?.brushName);
-              sendUpdatedSelectedFeatures();
-            }
+
       /*
           let flipButtonS = d3.select("button.FlipAxis");
           flipButtonS
-            .on('click', ); */
-      function axisFlip (axisName /*buttonElt , i, g*/) {
-              console.log("flip", axisName, this);
-              /** Handle the possibility that axisName may have been adopted by
-               * another axis after this callback registration. */
-              let axis = Stacked.getAxis(axisName),
-              ya = oa.y[axisName = axis.axisName], ysa=oa.ys[axisName],
-              domain = maybeFlip(ya.domain(), true);
-              axis.flipped = ! axis.flipped;
-              /** if the axis is brushed, show the brush position updated by flip.
-               * Instead of using range (inverted to domain via
-               * axisRange2Domain); axisBrushShowSelection() uses
-               * axisBrush.brushedDomain (as commented in showResize)
-               */
-              let range = oa.brushedRegions[axisName];
+            .on('click', menuActions.axisFlip); */
 
-              if (axis.axis1d)
-                axis.axis1d.toggleProperty('flipped');
-              ya.domain(domain);
-              ysa.domain(domain);
-
-              /* after y domain update, map brushed domain to new position.  */
-              if (range) {
-                dLog('axisFlip', axisName, range);
-                let gBrush = axisBrushSelect(oa.svgContainer, axisName);
-                axisBrushZoom.axisBrushShowSelection(axisName, gBrush);
-              }
-
-              let t = oa.svgContainer.transition().duration(750);
-              axisBrushZoom.axisScaleChanged(axisName, t, true);
-            }
       /*
           let perpendicularButtonS = d3.select("button.PerpendicularAxis");
           perpendicularButtonS
-            .on('click', ); */
-      function axisPerpendicular (axisName /*buttonElt , i, g*/) {
-              console.log("perpendicular", axisName, this);
-              let axis = Stacked.getAxis(axisName);
-              axis.perpendicular = ! axis.perpendicular;
-
-              oa.showResize(true, true);
-            }
+            .on('click', menuActions.axisPerpendicular); */
 
       /*
           let extendButtonS = d3.select("button.ExtendMap");
           if (trace_gui)
             console.log(extendButtonS.empty(), extendButtonS.node());
           extendButtonS
-            .on('click', ); */
-      function axisExtend (axisName /*buttonElt , i, g*/) {
-              console.log("extend", axisName, this);
-              let axis = Stacked.getAxis(axisName), stack = axis && axis.stack;
-              // toggle axis.extended, which is initially undefined.
-              axis.extended = ! axis.extended;
-              // axisShowExtend(axis, axisName, undefined);
-              me.send('enableAxis2D', axisName, axis.extended);
-            }
-
+            .on('click', menuActions.axisExtend); */
 
     }
 
     /*------------------------------------------------------------------------*/
-
-    /** Register functions for block actions in axis-menu (menuActions).
-     */
-    function menuActions_block() {
-        /** see also comment in configureAxisTitleMenu() */
-        let menuActions = oa.axisApi.menuActions;
-        if (! menuActions) {
-          oa.axisApi.menuActions = {blockUnview, blockVisible}
-        } else if (! menuActions.blockUnview) {
-          menuActions.blockUnview  ||= blockUnview;
-          menuActions.blockVisible ||= blockVisible;
-        }
-    };
 
     /** Setup hover menus over axis child data block sub-titles.
      * Based on similar @see configureAxisTitleMenu()
@@ -4577,6 +4297,7 @@ getBrushExtents(),
       title = blockR
         ? blockR.get('namespace') + ' ' + blockR.get('scope')
         : block.longName();
+      const menuActions = AxisMenuActions(oa);
       if (true /* use axis-menu.hbs, not $.popover*/) {
         menuActions_block();
       } else
@@ -4611,7 +4332,7 @@ getBrushExtents(),
           if (trace_gui)
             console.log(deleteButtonS.empty(), deleteButtonS.node());
           deleteButtonS
-            .on('click',*/
+            .on('click', menuActions.blockUnview */
       /*buttonElt , i, g*/ /*);
 
           let visibleButtonS = d3.select("button.VisibleAxis");
@@ -4619,40 +4340,10 @@ getBrushExtents(),
             console.log(visibleButtonS.empty(), visibleButtonS.node());
 
           visibleButtonS
-            .on('click', */
+            .on('click', menuActions.blockVisible */
      /*buttonElt , i, g*/ /*);
 
         });*/
-    }
-
-    /** un-view the block.  (axis-menu : block) */
-    function blockUnview (block) {
-              console.log("blockUnview (deleteMap / removeBlock)", block.axisName, this);
-              // this will do : block.block.setViewed(false);
-              me.send('removeBlock', block.block);
-    }
-    /** Toggle the visibility of the block.  (axis-menu : block)
-     * Call functions to make corresponding update to display of axis title, selected features, paths.
-     */  
-    function blockVisible (block) {
-              console.log("blockVisible (VisibleAxis), visible", block.visible, block.longName(), this);
-              block.visible = ! block.visible;
-              /* copy to Ember Block object, for axis-menu to use as dependency in if. */
-              block?.block?.set('visible', block.visible);
-
-              updateAxisTitles();
-              updateAxisTitleSize(undefined);
-              collateStacks();  // does filterPaths();
-
-              if (! block.visible) {
-                selectedFeatures_removeBlock(block);
-              } else {
-                let ab = oa.axisApi?.axisFeatureCirclesBrushed;
-                ab && ab();
-              }
-                sendUpdatedSelectedFeatures();
-
-              pathUpdate(undefined);
     }
     
 
@@ -4699,7 +4390,7 @@ getBrushExtents(),
         collateO();
         me.axesShowXOffsets();
         if (widthChanged)
-          updateAxisTitleSize(undefined);
+          axisTitle.updateAxisTitleSize(undefined);
         let 
           duration = useTransition || (useTransition === undefined) ? 750 : 0,
         t = oa.svgContainer.transition().duration(duration);

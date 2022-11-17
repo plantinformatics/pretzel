@@ -5,6 +5,10 @@ import { inject as service } from '@ember/service';
 import { lookupService } from '../configuration';
 import { dragTransitionTime } from '../stacks-drag';
 
+import {
+  AxisTitle,
+} from './axisTitle';
+
 /* global d3 */
 
 const dLog = console.debug;
@@ -65,9 +69,11 @@ AxisTitleBlocksServers.prototype.render = function (axisTitleS, svgContainer, ax
   cS = AxisTitleBlocksServers.prototype.select(axisTitleS);
   dLog('AxisTitleBlocksServers cS.data()', cS.data().mapBy('__data__'), cS.enter().data());
 
+  /** AxisTitle.axisName2Blocks() uses Stacked.getAxis(), not oa */
+  const axisTitle = AxisTitle(/*oa*/null);
   let
     /* cS = gM.selectAll('circle')
-     .data(axisName2Blocks, (block) => block.getId()), */
+     .data(axisTitle.axisName2Blocks, (block) => block.getId()), */
     /** set in css : r, stroke-width */
     cE = cS
     .enter()

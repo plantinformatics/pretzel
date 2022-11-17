@@ -39,6 +39,11 @@ import {
   eltId,
   featureTraitColour,
 } from '../../utils/draw/axis';
+
+import {
+  AxisTitle,
+} from '../../utils/draw/axisTitle';
+
 import {
   DragTransition,
   dragTransitionTime,
@@ -663,7 +668,6 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
       this.updateBrushedFeatures();
     }),
   axisTitleFamily() {
-    let axisApi = stacks.oa.axisApi;
     let axis = this.get('axisS');
     if (axis) {
       let
@@ -672,16 +676,17 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
       dLog(
         'axisTitleFamily', axisTitleS.nodes(), axisTitleS.node(),
         gAxis.nodes(), gAxis.node());
-      axisApi.axisTitleFamily(axisTitleS);
+      const axisTitle = AxisTitle(stacks.oa);
+      axisTitle.axisTitleFamily(axisTitleS);
     }
   },
   updateAxisTitleSize() {
-    let axisApi = stacks.oa.axisApi;
     let axis = this.get('axisS');
     if (axis) {
       let
         gAxis = axis.selectAll();
-      axisApi.updateAxisTitleSize(gAxis);
+      const axisTitle = AxisTitle(stacks.oa);
+      axisTitle.updateAxisTitleSize(gAxis);
     }
   },
 

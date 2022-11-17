@@ -10,7 +10,7 @@ import {
 
 import {
   yAxisTitleTransform,
-}  from '../utils/draw/axis';
+}  from './axis';
 
 import {
   Stacked,
@@ -20,11 +20,11 @@ import {
 
 import {
   dragTransitionTime,
-} from '../utils/stacks-drag';
+} from '../stacks-drag';
 
 
 import { AxisTitleBlocksServers } from './axisTitleBlocksServers_tspan';
-import { axisFontSize, AxisTitleLayout } from '../utils/draw/axisTitleLayout';
+import { axisFontSize, AxisTitleLayout } from './axisTitleLayout';
 
 
 //------------------------------------------------------------------------------
@@ -42,7 +42,7 @@ function AxisTitle(oa) {
   const result = {
     // axisTitle,
     axisTitleFamily,
-    // axisName2Blocks,
+    axisName2Blocks,
     updateAxisTitles,
     updateAxisTitleSize,
     
@@ -97,6 +97,7 @@ function AxisTitle(oa) {
 
       const me = oa.eventBus;
       let apiServers = me.get('apiServers');
+      const axisApi = oa.axisApi;
       let axisTitleBlocksServers = new AxisTitleBlocksServers(oa.svgContainer, oa.axisTitleLayout, apiServers);
       let subTitleS =
     axisTitleS.selectAll("tspan.blockTitle")
@@ -127,19 +128,19 @@ function AxisTitle(oa) {
         .style('stroke', Block.axisTitleColour)
         .style('fill', Block.axisTitleColour)
         .style('opacity', function (block, i) { return (i > 0) && ! block.visible ? 0.5 : undefined; } )
-        .each(function (block, i) {
+        .each(configureAxisTitleMenus)
+      ;
+        function configureAxisTitleMenus(block, i) {
           /** until ae114cf5, distinct menus were offered for the reference
            * block (first line of title) and the data blocks (subsequent lines).
            * Now each line has onclick for the same menu (showMenu -> axis-menu).
            * So this could be changed to use a single listener, on the parent <text>.
            */
           let menuFn = true // (i == 0)
-            ? configureAxisTitleMenu
-            : configureAxisSubTitleMenu;
+            ? axisApi.configureAxisTitleMenu
+            : axisApi.configureAxisSubTitleMenu;
           menuFn.apply(this, arguments);
-          /* register blockUnview() and blockVisible() in menuActions.  */
-          menuActions_block();
-        });
+        }
 
       if (axisTitle_dataBlocks) {
         axisTitleS.call(AxisTitleBlocksServers.prototype.render.bind(axisTitleBlocksServers));

@@ -37,6 +37,10 @@ import {
   axisFeatureCircles_removeBlock,
   /*, axisTitleColour*/  }  from './axis';
 
+import {
+  AxisTitle,
+} from './axisTitle';
+
 import { DropTarget } from './drop-target';
 import { AxisDrag } from '../stacks-drag';
 
@@ -281,10 +285,8 @@ AxisDraw.prototype.draw2 = function draw2(selections, stack_axisIDs, newRender, 
     .attr('id', axisEltIdTitle)
     .attr("y", -2 * axisFontSize)
     .style("font-size", axisFontSize);
-  if (oa.axisApi.axisTitleFamily) {
-    oa.axisApi.axisTitleFamily(axisTitleS);
-  }
-
+  const axisTitle = AxisTitle(oa);
+  axisTitle.axisTitleFamily(axisTitleS);
 
   return resultSelections;
 };
