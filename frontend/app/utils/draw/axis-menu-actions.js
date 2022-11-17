@@ -31,7 +31,7 @@ const dLog = console.debug;
 //------------------------------------------------------------------------------
 
 function AxisMenuActions(oa) {
-  let axisBrushZoom = new AxisBrushZoom(oa);
+  let axisBrushZoom = AxisBrushZoom(oa);
 
   const result = {
     axisDelete, axisFlip, axisPerpendicular, axisExtend

@@ -374,7 +374,7 @@ export default Component.extend(Evented, {
   draw_flipRegion : undefined,
   flipRegion: function(features) {
     console.log("flipRegion in components/draw-map.js");
-    let axisBrushZoom = new AxisBrushZoom(this.oa);
+    let axisBrushZoom = AxisBrushZoom(this.oa);
     let flipRegion = axisBrushZoom.draw_flipRegion;
     if (flipRegion)
       flipRegion(features);
@@ -660,7 +660,7 @@ export default Component.extend(Evented, {
     /** Refresh axisApi when draw-map object instance changes, so the functions
      * do not refer to closures in the destroyed instance. */
     let instanceChanged;
-    let axisBrushZoom = new AxisBrushZoom(oa);
+    let axisBrushZoom = AxisBrushZoom(oa);
     if (! oa.axisApi || (instanceChanged = oa.axisApi.drawMap.isDestroying)) {
       const axisApi = {lineHoriz : lineHoriz,
                     inRangeI : inRangeI,

@@ -278,7 +278,7 @@ function wheelNewDomain(axis, axisApi, inFilter) {
       return false;
     }
     let
-    axisBrushZoom = new AxisBrushZoom(axisApi.drawMap.oa),
+    axisBrushZoom = AxisBrushZoom(axisApi.drawMap.oa),
     /** This is the centre of zoom, i.e. the mouse position, not the centre of the axis.  */
     centre = axisBrushZoom.axisRange2Domain(axis.axisName, rangeYCentre),
 

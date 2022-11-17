@@ -282,7 +282,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     brushedRegion = this.get('brushedRegion'),
     /** refBlockId */
     axisId = this.get('axis.id'),
-    brushedDomain = brushedRegion && this.get('axisApi').axisRange2Domain(axisId, brushedRegion);
+    axisBrushZoom = AxisBrushZoom(stacks.oa),
+    brushedDomain = brushedRegion && axisBrushZoom.axisRange2Domain(axisId, brushedRegion);
     return brushedDomain;
   }),
 
@@ -917,7 +918,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     let p = axisID;
     eventBus.trigger("zoomedAxis", [axisID, t]);
     // true does pathUpdate(t);
-    let axisBrushZoom = new AxisBrushZoom(stacks.oa);
+    let axisBrushZoom = AxisBrushZoom(stacks.oa);
     axisBrushZoom.axisScaleChanged(p, t, true);
 
     axisBrushZoom.axisStackChanged(t);
@@ -927,7 +928,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     let axisID = this.get('axis.id');
     dLog('updateAxis', axisID);
     let t = stacks.oa.svgContainer; //.transition().duration(750);
-    let axisBrushZoom = new AxisBrushZoom(stacks.oa);
+    let axisBrushZoom = AxisBrushZoom(stacks.oa);
     axisBrushZoom.axisScaleChanged(axisID, t, true);
   },
   drawTicks() {

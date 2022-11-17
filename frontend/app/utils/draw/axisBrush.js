@@ -200,8 +200,6 @@ function showAxisZoomResetButtons(svgContainer, getBrushExtents, zoom, resetZoom
 
 function AxisBrushZoom(oa) {
   const
-  brushedRegions = oa.brushedRegions,
-  axisApi = oa.axisApi,
   me = oa.eventBus,
   resetZooms = me.get('resetZooms');
 
@@ -247,6 +245,7 @@ function AxisBrushZoom(oa) {
 
   /** Map brushedRegions into an array parallel to selectedAxes[]. */
   function getBrushExtents() {
+    const brushedRegions = oa.brushedRegions;
     /** Extent of current brush (applied to y axis of a axis). */
     let
     selectedAxes = oa.selectedAxes,
@@ -377,6 +376,7 @@ function AxisBrushZoom(oa) {
    * 
    */
   function brushHelper(that) {
+    const axisApi = oa.axisApi;
     // Chromosome name, e.g. 32-1B
     /** name[0] is axisID of the brushed axis. name.length should be 1. */
     let name = d3.select(that).data();
@@ -732,6 +732,7 @@ function AxisBrushZoom(oa) {
        */
       function resetBrushes(axisId)
       {
+        const brushedRegions = oa.brushedRegions;
         let
         axisClipId = axisId ? '="url(#axis-clip-' + axisId + ')"' : '',
         brushSelector = "g.axis-all > g.brush > g[clip-path" + axisClipId + "]",
@@ -777,6 +778,7 @@ function AxisBrushZoom(oa) {
          */
         function resetZoom(axisID)
         {
+          const axisApi = oa.axisApi;
           let svgContainer = oa.svgContainer;
           let t = svgContainer.transition().duration(750);
           /** rather than all of axisIDs(), should be sufficient to use
@@ -1059,6 +1061,7 @@ function AxisBrushZoom(oa) {
    */
   function axisScaleChanged(p, t, updatePaths)
   {
+    const axisApi = oa.axisApi;
     let y = oa.y, svgContainer = oa.svgContainer;
     let yp = y[p],
     axis = oa.axes[p];
@@ -1095,6 +1098,7 @@ function AxisBrushZoom(oa) {
    * view-controls.js:flipRegion().
    */
   function draw_flipRegion(features) {
+    const axisApi = oa.axisApi;
     let brushedMap, zm,
     selectedAxes = oa.selectedAxes;
     let limits;
