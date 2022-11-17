@@ -120,6 +120,11 @@ import { collateStacks, countPaths, /*countPathsWithData,*/
          collateFeatureMap, concatAndUnique, featureStackAxes,
          collateMagm
        } from "../utils/draw/collate-paths";
+
+import {
+  unique_1_1_mapping 
+} from '../utils/paths-config';
+
 /** We can replace countPathsWithData() (which does a DOM search and is not
  * updated for progressive paths), with a sum of (pathsResult.length +
  * pathsAliasesResult.length) for all block-adj in flows.blockAdjs
