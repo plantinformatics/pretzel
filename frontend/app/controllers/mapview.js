@@ -26,6 +26,7 @@ export default Controller.extend(Evented, {
   dataset: service('data/dataset'),
   block: service('data/block'),
   view : service('data/view'),
+  selectedService : service('data/selected'),
   apiServers: service(),
   controlsService : service('controls'),
 
@@ -335,7 +336,7 @@ export default Controller.extend(Evented, {
    */
   userSettings : {genotype : {}},
 
-  selectedFeatures: [],
+  selectedFeatures : alias('selectedService.selectedFeatures'),
   /** counts of selected paths, from paths-table; shown in tab. */
   pathsTableSummary : {},
 

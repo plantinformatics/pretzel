@@ -141,6 +141,7 @@ import { configureSyntenyBlockClicks } from './draw/synteny-blocks';
 import AxisDraw from '../utils/draw/axis-draw';
 import { DropTarget } from '../utils/draw/drop-target';
 
+import { selectedBlocksFeaturesToArray } from '../services/data/selected';
 
 
 /*----------------------------------------------------------------------------*/
@@ -447,33 +448,11 @@ export default Component.extend(Evented, {
        */
       once(this, selectedFeaturesSendArray, selectedFeatures);
       function selectedFeaturesSendArray(selectedFeatures) {
-      let featuresAsArray = d3.keys(selectedFeatures)
-        .map(function (key) {
-          return selectedFeatures[key].map(function(feature) {
-            /** feature is now the Ember object models/feature 
-             * Until 0eeda0a7, feature contained feature name and position, separated by " ".
-             */
-            let selectedFeature = {
-              Chromosome : key,
-              Feature : feature.name,
-              Position : feature.location, /* i.e. .value[0]*/
-              /** Chromosome, Feature and Position can be derived from
-               * feature, so after the various uses of this are
-               * changed to use .feature, the structure can be
-               * replaced by simply feature.
-               */
-              feature
-            };
-            return selectedFeature;
-          });
-        })
-        .reduce(function(a, b) { 
-          return a.concat(b);
-        }, []);
-      // console.log(featuresAsArray);
-      console.log("updatedSelectedFeatures in draw-map component",
-                  selectedFeatures, featuresAsArray.length);
-      this.sendAction('updatedSelectedFeatures', featuresAsArray);
+        let featuresAsArray = selectedBlocksFeaturesToArray(selectedFeatures);
+        // console.log(featuresAsArray);
+        console.log("updatedSelectedFeatures in draw-map component",
+                    selectedFeatures, featuresAsArray.length);
+        this.sendAction('updatedSelectedFeatures', featuresAsArray);
       }
     },
 
@@ -680,7 +659,7 @@ export default Component.extend(Evented, {
                     pathUpdate,
                        // temporary additions - the definitions will be moved out.
                     sendUpdatedSelectedFeatures,
-                    selectedFeatures_clear,
+                    selectedFeatures_clear : () => this.get('selectedService').selectedFeatures_clear(),
                     deleteAxisfromAxisIDs,
                     removeAxisMaybeStack,
                     selectedFeatures_removeAxis,
@@ -1170,7 +1149,8 @@ export default Component.extend(Evented, {
     let pathFeatures = oa.pathFeatures || (oa.pathFeatures = {}); //For tool tip
 
     let selectedAxes = oa.selectedAxes || (oa.selectedAxes = []);;
-    let selectedFeatures = oa.selectedFeatures || (oa.selectedFeatures = {});
+    let selectedFeatures = oa.selectedFeatures ||
+        (oa.selectedFeatures = this.get('selectedService.blocksFeatures'));
     let brushedRegions = oa.brushedRegions || (oa.brushedRegions = {});
 
     /** planning to move selectedFeatures out to a separate class/component;
@@ -1180,19 +1160,6 @@ export default Component.extend(Evented, {
     {
       if (oa.drawOptions.showSelectedFeatures)
         me.send('updatedSelectedFeatures', selectedFeatures);
-    }
-    function selectedFeatures_clear()
-    {
-      /* delete properties instead of : selectedFeatures = {};
-       * to preserve the reference
-       */
-      for (const mapChrName in selectedFeatures){
-        if (selectedFeatures.hasOwnProperty(mapChrName)) {
-          delete selectedFeatures[mapChrName];
-        }
-      }
-      // no-op because selectedFeatures reference has not changed.
-      sendUpdatedSelectedFeatures();
     }
     /** When an axis is deleted, it is removed from selectedAxes and its features are removed from selectedFeatures.
      * Those features may be selected in another axis which is not deleted; in
