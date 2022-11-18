@@ -10,6 +10,10 @@ import { _internalModel_data,  blockInfo } from '../../utils/ember-devel';
 
 /* global d3 */
 
+import {
+  axisFeatureCircles_removeBlock,
+}  from '../../utils/draw/axis';
+
 // -----------------------------------------------------------------------------
 
 const dLog = console.debug;
@@ -33,6 +37,10 @@ export default Component.extend(Evented, /*AxisEvents,*/ {
 
     this.get('block').set('axes1d', this);
     this.set('axis1dArray', Ember.A());
+
+    const axisApi = this.drawMap.oa.axisApi;
+    axisApi.selectedFeatures_removeAxis = this.selectedFeatures_removeAxis;
+    axisApi.selectedFeatures_removeBlock = this.selectedFeatures_removeBlock;
   },
 
   /*--------------------------------------------------------------------------*/
@@ -219,6 +227,41 @@ export default Component.extend(Evented, /*AxisEvents,*/ {
     dLog('axesP2', axesP, axisIDs);
     return axesP;
   }),
+
+  // ---------------------------------------------------------------------------
+
+
+
+  /** When an axis is deleted, it is removed from selectedAxes and its features are removed from selectedFeatures.
+   * Those features may be selected in another axis which is not deleted; in
+   * which case they should not be deleted from selectedFeatures, but this is
+   * quicker, and may be useful.
+   * Possibly versions of the app did not update selectedAxes in some cases, e.g. when zooms are reset.
+   */
+  selectedFeatures_removeAxis(axisName, mapChrName)
+  {
+    const
+    selectedAxes = this.get('selected.selectedAxes'),
+    selectedFeatures = this.selected.selectedFeatures;
+    selectedAxes.removeObject(axisName);
+    axisFeatureCircles_removeBlock(selectedFeatures, mapChrName);
+    let p = mapChrName; // based on brushHelper()
+    delete selectedFeatures[p];
+  },
+  /** @param blockS stacks Block */
+  selectedFeatures_removeBlock(blockS)
+  {
+    let
+    selectedFeatures = this.selected.selectedFeatures,
+    mapChrName = blockS?.block?.brushName;
+    axisFeatureCircles_removeBlock(selectedFeatures, mapChrName);
+    /** axisFeatureCircles_removeBlock() uses selectedFeatures[mapChrName], so
+     * call it before the following which filters that.  */
+    if (selectedFeatures[mapChrName]) {
+      selectedFeatures[mapChrName] = selectedFeatures[mapChrName]
+        .filter((f) => f.get('blockId.id') !== blockS.block.id);
+    }
+  }
 
   // ---------------------------------------------------------------------------
 

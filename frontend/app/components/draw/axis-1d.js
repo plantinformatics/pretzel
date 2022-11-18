@@ -269,7 +269,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
      * it is used as a dependency, but it may not change when the user
      * brushes because it persists after the brush is cleared.
      */
-    'oa.brushedRegions', 'oa.selectedAxes.[]',
+    'oa.brushedRegions', 'selected.selectedAxes.[]',
     function () {
       let brushedRegions = this.get('oa.brushedRegions'),
       axisId = this.get('axis.id'),

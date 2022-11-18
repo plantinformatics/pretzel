@@ -662,8 +662,6 @@ export default Component.extend(Evented, {
                     selectedFeatures_clear : () => this.get('selectedService').selectedFeatures_clear(),
                     deleteAxisfromAxisIDs,
                     removeAxisMaybeStack,
-                    selectedFeatures_removeAxis,
-                    selectedFeatures_removeBlock,
                     configureAxisTitleMenu,
                     configureAxisSubTitleMenu,
                    };
@@ -1148,7 +1146,7 @@ export default Component.extend(Evented, {
 
     let pathFeatures = oa.pathFeatures || (oa.pathFeatures = {}); //For tool tip
 
-    let selectedAxes = oa.selectedAxes || (oa.selectedAxes = []);;
+    let selectedAxes = oa.selectedAxes || (oa.selectedAxes = this.get('selectedService.selectedAxes'));;
     let selectedFeatures = oa.selectedFeatures ||
         (oa.selectedFeatures = this.get('selectedService.blocksFeatures'));
     let brushedRegions = oa.brushedRegions || (oa.brushedRegions = {});
@@ -1161,32 +1159,7 @@ export default Component.extend(Evented, {
       if (oa.drawOptions.showSelectedFeatures)
         me.send('updatedSelectedFeatures', selectedFeatures);
     }
-    /** When an axis is deleted, it is removed from selectedAxes and its features are removed from selectedFeatures.
-     * Those features may be selected in another axis which is not deleted; in
-     * which case they should not be deleted from selectedFeatures, but this is
-     * quicker, and may be useful.
-     * Possibly versions of the app did not update selectedAxes in some cases, e.g. when zooms are reset.
-     */
-    function selectedFeatures_removeAxis(axisName, mapChrName)
-    {
-      selectedAxes.removeObject(axisName);
-      axisFeatureCircles_removeBlock(selectedFeatures, mapChrName);
-      let p = mapChrName; // based on brushHelper()
-      delete selectedFeatures[p];
-    }
-    /** @param blockS stacks Block */
-    function selectedFeatures_removeBlock(blockS)
-    {
-      let
-      mapChrName = blockS?.block?.brushName;
-      axisFeatureCircles_removeBlock(selectedFeatures, mapChrName);
-      /** axisFeatureCircles_removeBlock() uses selectedFeatures[mapChrName], so
-       * call it before the following which filters that.  */
-      if (selectedFeatures[mapChrName]) {
-        selectedFeatures[mapChrName] = selectedFeatures[mapChrName]
-          .filter((f) => f.get('blockId.id') !== blockS.block.id);
-      }
-    }
+    //- moved to axes-1d.js : selectedFeatures_removeAxis(), selectedFeatures_removeBlock()
 
     collateData();
 
@@ -4111,7 +4084,7 @@ getBrushExtents(),
 
       // filter axisName out of selectedFeatures and selectedAxes
       let mapChrName = axis.blocks[0]?.block?.brushName;
-      selectedFeatures_removeAxis(axisName, mapChrName);
+      oa.axisApi.selectedFeatures_removeAxis(axisName, mapChrName);
       sendUpdatedSelectedFeatures();
       }
       else
