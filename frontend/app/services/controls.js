@@ -13,18 +13,6 @@ const dLog = console.debug;
 export default Service.extend(Evented, {
   apiServers : service(),
 
-  /** this can change to a registry, e.g. 'view' for the view controls
-   */
-  controls : computed(function () {
-    let oa = stacks.oa,
-    /** This occurs after mapview.js: controls : Ember.Object.create({ view : {  } }),
-     * and draw-map : draw() setup of  oa.drawOptions.
-     */
-    controls = oa?.drawOptions.controls;
-    dLog('controls', controls);
-    return controls;
-  }),
-  view : alias('controls.view'),
   window : alias('view.controls.window'),
   /**
    *    ontologyClick : string : 'Level', ''Hierarchy'

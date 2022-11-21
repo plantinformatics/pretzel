@@ -94,8 +94,8 @@ AxisDraw.prototype.draw = function draw() {
       console.log("append g.stack", stackS.size(), stackSd.exit().size(), stackS.node(), stackS.nodes());
       if (oa.stacks.length > stackSd.size() + stackS.size())
       {
-        console.log("missed stack", oa.stacks.length, stackSd.size());
-        breakPoint();
+        console.log("missed stack", oa.stacks.length, stackSd.size(), stackX.data(), stacks);
+        // breakPoint();
       }
     }
     let removedStacks = 

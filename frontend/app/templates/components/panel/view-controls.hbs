@@ -142,16 +142,15 @@
 
     <li class="list-group-item">
       <input type="checkbox" 
-             id="checkbox-toggleModePathHover" 
-             name="toggleCheckbox" 
+        checked={{this.drawOptions.showPathHover}}
+        oninput={{action (mut this.drawOptions.showPathHover) value="target.checked"}} 
       />
       <label>Path Hover info</label>
     </li>
     <li class="list-group-item">
       <input type="checkbox" 
-             id="checkbox-togglePathUpdate"
-             name="toggleCheckbox" 
-       checked="checked"
+        checked={{this.drawOptions.continuousPathUpdate}}
+        oninput={{action this.continuousPathUpdateChanged value="target.checked"}}
       />
       <label>Path update during drag</label>
     </li>
@@ -180,9 +179,8 @@
 
     <li class="list-group-item">
       <input type="checkbox" 
-             id="checkbox-toggleModePublish" 
-             name="toggleCheckbox" 
-             checked="checked"
+        checked={{not this.drawOptions.publishMode}}
+        oninput={{action this.publishModeChanged value="target.checked"}}
       />
       <label>Show Zoom/Reset buttons</label>
     </li>
@@ -221,9 +219,8 @@
 
     <li class="list-group-item">
       <input type="checkbox" 
-       id="checkbox-toggleShowSelectedFeatures" 
-       name="toggleShowSelectedFeatures" 
-       checked="checked"
+       checked={{this.drawOptions.showSelectedFeatures}}
+       oninput={{action this.showSelectedFeaturesChanged value="target.checked"}}
       />
       <label>List Selected Features</label>
       {{#ember-tooltip side="bottom-start"  delay=500}}
@@ -265,8 +262,7 @@
     <li class="list-group-item">
       <label>Path Opacity</label>
       <input type="range" 
-       id="range-pathOpacity" 
-       name="pathOpacity" 
+       oninput={{action this.pathOpacityInput}}
        min="0" max="100"
        value="100"
       />
@@ -274,8 +270,7 @@
     <li class="list-group-item">
       <label>Path Width</label>
       <input type="range" 
-       id="range-pathWidth" 
-       name="pathWidth" 
+       oninput={{action this.pathWidthInput}}
        min="0" max="300"
        value="75"
       />

@@ -594,17 +594,7 @@ export default Component.extend(Evented, {
     if (this.drawControlsLifeC === undefined)
     {
       console.log("set(drawControlsLife) (drawActions)", this, oa.stacks === undefined);
-      /** It is sufficient to connect the graph drawing control panel life cycle
-       * events to setupVariousControls() within the draw() closure, and it then
-       * references other functions within that closure.
-       * The individual controls can be factored out, e.g. creating an event API
-       * for each control to deliver events from the component to the drawing.
-       */
-      this.set('drawControlsLifeC', function(start) {
-        console.log("drawControlsLife in components/draw-map  (drawActions)", start);
-        if (start)
-          setupVariousControls();
-      });
+      this.set('drawControlsLifeC', true);
 
       /** currently have an instance of goto-feature in mapview.hbs (may remove
        * this - also have it via draw-map.hbs -> path-hover.hbs with data=oa ->
@@ -983,32 +973,11 @@ export default Component.extend(Evented, {
      */
     let featureAxisSets = flowsService.featureAxisSets;
 
+    //- moved to view-controls : drawOptions
     if (oa.drawOptions === undefined)
     {
-      oa.drawOptions =
-        {
-          /** true enables display of info when mouse hovers over a path.
-           * A subsequent iteration will show reduced hover info in a fixed location below the graph when false.
-           */
-          showPathHover : false,
-          /** true enables display of info when mouse hovers over a brushed feature position (marked with a circle) on an axis.
-           * A subsequent iteration will show reduced hover info in a fixed location below the graph when false.
-           */
-          showCircleHover : false,
-          /** Draw a horizontal notch at the feature location on the axis,
-           * when the feature is not in a axis of an adjacent Stack.
-           * Makes the feature location visible, because otherwise there is no path to indicate it.
-           */
-          showAll : true,
-          /** Show brushed features, i.e. pass them to updatedSelectedFeatures().
-           * The purpose is to save processing time; this is toggled by 
-           * setupToggleShowSelectedFeatures() - #checkbox-toggleShowSelectedFeatures.
-           */
-          showSelectedFeatures : true,
-
-          controls : this.get('controls')
-
-        };
+      // replaced in view-controls init()
+      oa.drawOptions = {};
     }
 
     /** Alias groups : aliasGroup[aliasGroupName] : [ feature ]    feature references axis and array of aliases */
@@ -2525,18 +2494,26 @@ export default Component.extend(Evented, {
              * Enable this via drawOptions : showPathHover : true
              */
             console.log(fnName, 'syntenyEvidence', syntenyEvidence);
-            return;
+            // return;
           }
           let
-          [feature0, feature1, a0, a1] = ffaa;
+          featureNames, features;
+          if (Array.isArray(ffaa)) {
+            const [feature0, feature1, a0, a1] = ffaa;
+            [featureNames[0], featureNames[1]] = [feature0, feature1];
+            let z = oa.z;
+            [features[0], features[1]] = [z[a0.axisName][feature0], z[a1.axisName][feature1]];
+          } else {
+            features = ffaa.alignment.mapBy('repeats.features.0');
+            featureNames = features.mapBy('name');
+          }
           let direction, aliasGroupName;
           if (ffaa.length == 6)
           {
             direction = ffaa[4];
             aliasGroupName = ffaa[5];
           }
-          let z = oa.z;
-          pathFeatureStore(sLine, feature0, feature1, z[a0.axisName][feature0], z[a1.axisName][feature1], aliasGroupName);
+          pathFeatureStore(sLine, featureNames[0], featureNames[1], features[0], features[1], aliasGroupName);
           pathFeaturesHash = pathFeatures[sLine];
         }
         // can also append the list of aliases of the 2 features
@@ -3776,8 +3753,21 @@ getBrushExtents(),
          * so colouring by AliasGroup may not be useful.
          */
         // collateStacks() / maInMaAG() could record in pathsUnique the alias group of the path.
-        let [feature0, feature1, a0, a1] = da;
-        let classSet = colouredAg(a0.axisName, feature0) || colouredAg(a1.axisName, feature1);
+        let
+        /** based on similar in handleMouseOver(). */
+          featureNames, blockIds;
+          if (Array.isArray(da)) {
+            const [feature0, feature1, a0, a1] = da;
+            featureNames = [feature0, feature1];
+            blockIds = [a0.axisName, a1.axisName];
+          } else {
+            featureNames = da.alignment.mapBy('repeats.features.0.name');
+            blockIds = da.alignment.mapBy('blockId');
+          }
+        const
+        classSet =
+          colouredAg(blockIds[0], featureNames[0]) ||
+          colouredAg(blockIds[1], featureNames[1]);
         classes = classSet;
       }
       return classes;
@@ -4399,124 +4389,10 @@ getBrushExtents(),
           showSynteny(oa.syntenyBlocks, undefined); });
       };
 
-//- brush-menu
-    function setupToggle(checkboxId, onToggle)
-    {
-      let 
-      checkbox = $("#" + checkboxId);
-      checkbox.on('click', function (event) {
-        let checked = checkbox[0].checked;
-        console.log(checkboxId, checked, event.originalEvent);
-        onToggle(checked);
-      });
-    }
-//- draw-controls
-    function setupTogglePathUpdate()
-    {
-      /* initial value of continuousPathUpdate is true, so .hbs has : checked="checked" */
-      setupToggle
-      ("checkbox-togglePathUpdate",
-      function (checked) {
-        oa.drawOptions.continuousPathUpdate = checked;
-      }
-      );
-    }
-    /** The Zoom & Reset buttons (g.btn) can be hidden by clicking the 'Publish
-     * Mode' checkbox, now called 'Show Zoom/Reset buttons' and the logic is inverted.
-     * This provides a clear view of the visualisation
-     * uncluttered by buttons and other GUI mechanisms
-     */
-    function setupToggleModePublish()
-    {
-      setupToggle
-      ("checkbox-toggleModePublish",
-      function (checked) {
-        let svgContainer = oa.svgContainer;
-        console.log(svgContainer._groups[0][0]);
-        /** the checkbox is 'Show', so hide if ! checked. */
-        svgContainer.classed("publishMode", ! checked);
-      }
-      );
-    }
-    function setupToggleShowPathHover()
-    {
-      /* initial value of showPathHover is false */
-      setupToggle
-      ("checkbox-toggleModePathHover",
-      function (checked) {
-        oa.drawOptions.showPathHover = checked;
-      }
-      );
-    }
-    function setupToggleShowAll()
-    {
-      /* initial value of showAll is true, so .hbs has : checked="checked" */
-      setupToggle
-      ("checkbox-toggleShowAll",
-      function (checked) {
-        oa.drawOptions.showAll = checked;
-        pathUpdate(undefined);
-      }
-      );
-    }
-    function setupToggleShowSelectedFeatures()
-    {
-      /* initial value of showSelectedFeatures is true, so .hbs has : checked="checked" */
-      setupToggle
-      ("checkbox-toggleShowSelectedFeatures",
-      function (checked) {
-        oa.drawOptions.showSelectedFeatures = checked;
-        pathUpdate(undefined);
-      }
-      );
-    }
-    /** The stroke -opacity and -width can be adjusted using these sliders.
-     * In the first instance this is for the .manyPaths rule, but
-     * it could be used to factor other rules (.faded, .strong), or they may have separate controls.
-     * @param varName string : name of css variable to set the input value into,
-     * or otherwise a function to call with the input value.
-     * (this will be split into 2 functions with different signatures, the varName version calling the function version)
-     * @param factor  scale the input (integer) value down by factor.
-     * (perhaps change this to # decimal-digits, and display a value with decimal places)
-     */
-    function setupInputRange(inputId, varName, factor)
-    {
-      let input = $("#" + inputId);
-      input.on('input', function (event) {
-        let value = input[0].value / factor;
-        console.log(inputId, value, event.originalEvent, oa.svgRoot._groups[0][0]);
-        if (typeof varName == "string")
-          setCssVariable(varName, value);
-        else
-          later(function () { varName(value); });
-      });
-    }
-    function setupPathOpacity()
-    {
-      setupInputRange("range-pathOpacity", "--path-stroke-opacity", 100);
-    }
-    function setupPathWidth()
-    {
-      setupInputRange("range-pathWidth", "--path-stroke-width", 100);
-    }
-    function setupVariousControls()
-    {
-      setupToggleShowPathHover();
-      setupTogglePathUpdate();
-      setupToggleShowAll();
-      setupToggleShowSelectedFeatures();
-      setupPathOpacity();
-      setupPathWidth();
-
-      setupToggleModePublish();
-    }
+   //- moved extracts to view-controls, replaced these functions using oninput=(action )  :  setupToggle(), setupTogglePathUpdate(), setupToggleModePublish(), setupToggleShowPathHover(), setupToggleShowAll(), setupToggleShowSelectedFeatures(), setupPathOpacity(), setupPathWidth(), setupVariousControls(),
 
 //- moved to flows-controls.js : flows_showControls()
 
-    if (newRender)
-    {
-    setupVariousControls();
-    }
 
 //- draw-map
     /** After chromosome is added, draw() will update elements, so

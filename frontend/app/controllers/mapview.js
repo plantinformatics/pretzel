@@ -326,7 +326,10 @@ export default Controller.extend(Evented, {
   },
 
 
-  controls : EmberObject.create({ view : {  }, window : {tablesPanelRight : false } }),
+  controls : EmberObject.create({
+    view : {  },
+    viewControls : () => this.get('controlsService.viewControls'),
+    window : {tablesPanelRight : false } }),
 
   queryParams: ['mapsToView'],
   mapsToView: [],
