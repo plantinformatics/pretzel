@@ -34,7 +34,9 @@ function AxisMenuActions(oa) {
   let axisBrushZoom = AxisBrushZoom(oa);
 
   const result = {
-    axisDelete, axisFlip, axisPerpendicular, axisExtend
+    axisDelete, axisFlip, axisPerpendicular, axisExtend,
+    // Block sub-menu
+    blockUnview,  blockVisible,
   };
 
   /** lexical context enclosed by menuActions functions :

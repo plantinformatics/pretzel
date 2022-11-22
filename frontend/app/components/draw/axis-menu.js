@@ -21,7 +21,10 @@ const closeAfterAction = false;
 export default Ember.Component.extend({
   apiServers : service(),
   controls : service(),
-  controlsView : alias('controls.controls.view'),
+  controlsView : alias('controls.view'),
+  queryParamsService: service('query-params'),
+
+  urlOptions : alias('queryParamsService.urlOptions'),
 
 
   classNames: ['axis-menu'],
@@ -239,3 +242,23 @@ export default Ember.Component.extend({
 
 });
 
+//------------------------------------------------------------------------------
+
+/** icons used in axis-menu.hbs :
+ * unicode :
+ *      dec   hex
+ *	╳	9587	2573	 	BOX DRAWINGS LIGHT DIAGONAL CROSS
+ *	⇅	8645	21C5	 	UPWARDS ARROW LEFTWARDS OF DOWNWARDS ARROW
+ *	↷	8631	21B7	 	CLOCKWISE TOP SEMICIRCLE ARROW
+ *	⇲	8690	21F2	 	SOUTH EAST ARROW TO CORNER
+ *
+ * related, glyphicon alternatives :
+ *   glyphicon-arrow-right
+ *   glyphicon-remove-sign
+ *   glyphicon-retweet
+ *
+ * dataBlocks :
+ *  &#x1F441;  Unicode Character 'EYE'  glyphicon-eye-close
+ */
+
+//------------------------------------------------------------------------------

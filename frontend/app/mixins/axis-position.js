@@ -30,7 +30,7 @@ export default Mixin.create({
   store: service('store'),
   controls : service(),
 
-  controlsView : alias('controls.controls.view'),
+  controlsView : alias('controls.view'),
 
   /** true if currentPosition.yDomain is a subset of the axis domain.  */
   zoomed : false,

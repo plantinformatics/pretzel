@@ -222,8 +222,13 @@ export default Service.extend(Evented, {
 
   updateSelectedFeatures: function(features) {
     const fnName = 'updateSelectedFeatures';
-    // dLog(fnName, features.length);
-    this.set('selectedFeatures', features);
+    const
+    selectedSummary =
+      Object.entries(features).map(([mapChrName, features]) => [mapChrName, features.length]);
+    console.log(fnName, selectedSummary);
+    if (this.blocksFeatures !== features) {
+      this.set('blocksFeatures', features);
+    }
   },
 
   selectedFeatures_add(mapChrName, feature) {
@@ -232,6 +237,10 @@ export default Service.extend(Evented, {
 
   selectedFeatures_clear()
   {
+    if (this.selectedFeatures.length) {
+      this.selectedFeatures.removeAt(0, this.selectedFeatures.length);
+    }
+
     const selectedFeatures = this.blocksFeatures;
     /* delete properties instead of '= {}'
      * to preserve the reference
@@ -242,7 +251,7 @@ export default Service.extend(Evented, {
       }
     }
     // no-op because selectedFeatures reference has not changed.
-    this.updateSelectedFeatures();
+    this.updateSelectedFeatures(selectedFeatures);
   }
 
 

@@ -653,7 +653,7 @@ export default Component.extend({
 
     //--------------------------------------------------------------------------
 
-    // controls : drawMap.get('controls')
+    // controls : () => this.drawMap.get('controls')
 
   },
 

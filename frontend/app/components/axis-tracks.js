@@ -630,7 +630,7 @@ export default InAxis.extend({
   trait : service('data/trait'),
   ontology : service('data/ontology'),
 
-  controlsView : alias('controls.controls.view'),
+  controlsView : alias('controls.view'),
   controlsViewed : alias('controls.viewed'),
 
 

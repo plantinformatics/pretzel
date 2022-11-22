@@ -39,8 +39,8 @@ export default Component.extend(Evented, /*AxisEvents,*/ {
     this.set('axis1dArray', Ember.A());
 
     const axisApi = this.drawMap.oa.axisApi;
-    axisApi.selectedFeatures_removeAxis = this.selectedFeatures_removeAxis;
-    axisApi.selectedFeatures_removeBlock = this.selectedFeatures_removeBlock;
+    axisApi.selectedFeatures_removeAxis = this.selectedFeatures_removeAxis.bind(this);
+    axisApi.selectedFeatures_removeBlock = this.selectedFeatures_removeBlock.bind(this);
   },
 
   /*--------------------------------------------------------------------------*/

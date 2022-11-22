@@ -53,7 +53,7 @@ export default Controller.extend(Evented, {
       this.set(`layout.${side}.tab`, tab);
     },
     updateSelectedFeatures: function(features) {
-    	// dLog("updateselectedFeatures in mapview", features.length);
+      // dLog("updateselectedFeatures in mapview", features.length);
       this.set('selectedFeatures', features);
       /** results of a selection impact on the selection (selectedFeatures) tab
        * and the paths tab, so if neither of these is currently shown, show the
