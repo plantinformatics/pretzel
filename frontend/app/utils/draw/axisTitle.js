@@ -81,7 +81,8 @@ function AxisTitle(oa) {
       // .text(axisTitle /*String*/)
       // shift upwards if >1 line of text
         .each(function (d) {
-          let axis = Stacked.getAxis(d),
+          const
+          axis = Stacked.getAxis(d),
           length = axis && axis.blocks.length;
           if (length && length > 1)
           {
@@ -99,7 +100,8 @@ function AxisTitle(oa) {
     let apiServers = me.get('apiServers');
     const axisApi = oa.axisApi;
     let axisTitleBlocksServers = new AxisTitleBlocksServers(oa.svgContainer, oa.axisTitleLayout, apiServers);
-    let subTitleS =
+    const
+    subTitleS =
       axisTitleS.selectAll("tspan.blockTitle")
     /** @return type Block[]. blocks of axisName.
      * first block is parent, remainder are data (non-reference) */
@@ -114,8 +116,9 @@ function AxisTitle(oa) {
     subTitleS.exit()
       // .each(AxisTitleBlocksServers.prototype.remove1)  // enable if axisTitle_dataBlocks
       .remove();
-    let subTitleM =
-    subTitleE.merge(subTitleS)
+    const
+    subTitleM =
+      subTitleE.merge(subTitleS)
       .text(function (block) { return block.titleText(); })
       .attr('x', '0px')
       /* The tspan.blockServer is only displayed when there are multiple api servers.
@@ -136,7 +139,8 @@ function AxisTitle(oa) {
        * Now each line has onclick for the same menu (showMenu -> axis-menu).
        * So this could be changed to use a single listener, on the parent <text>.
        */
-      let menuFn = true // (i == 0)
+      let
+      menuFn = true // (i == 0)
         ? axisApi.configureAxisTitleMenu
         : axisApi.configureAxisSubTitleMenu;
       menuFn.apply(this, arguments);
@@ -186,7 +190,8 @@ function AxisTitle(oa) {
      * stacks.length is > 0 here */
     let nStackAdjs = stacks.length > 1 ? stacks.length-1 : 1;
     let axisSpacing = (axisXRange[1]-axisXRange[0])/nStackAdjs;
-    let titleLength = Block.titleTextMax(),
+    const
+    titleLength = Block.titleTextMax(),
     /** char width in px, ie. convert em to px.  Approx -	better to measure this. */
     em2Px = 7,
     titlePx = titleLength ? titleLength * em2Px : 0;
@@ -201,15 +206,17 @@ function AxisTitle(oa) {
 
     // also incorporate extendedWidth() / getAxisExtendedWidth() in the
     // calculation, perhaps integrated in xScaleExtend()
-    let axisTitleA =
+    const
+    axisTitleA =
       axisTitleS.selectAll("g.axis-all > text");
     axisTitleA
       // this attr does not change, can be done for just axisG
       .style("text-anchor", oa.axisTitleLayout.verticalTitle ? "start" : undefined)
       .attr("transform", yAxisTitleTransform(oa.axisTitleLayout));
 
-    let t =
-    oa.svgRoot
+    let
+    t =
+      oa.svgRoot
       .transition().duration(dragTransitionTime)
       .attr("viewBox", oa.vc.viewBox.bind(oa.vc))
     ;
@@ -223,7 +230,7 @@ function AxisTitle(oa) {
     /** showZoomResetButtonXPosn() is called in axis-1d and axis-2d,
      * ideally the call will be only in axis-1d, but for now this
      * picks up some cases not covered.  */
-    let 
+    const 
     axisIds = axisTitleS.nodes().mapBy('__data__'),
     axes1 = axisIds.map((axisId) => oa.axes[axisId]);
     axes1.forEach(
