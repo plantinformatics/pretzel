@@ -1,12 +1,16 @@
 import {
+  later,
   bind,
 } from '@ember/runloop';
+
 
 //------------------------------------------------------------------------------
 
 /* global d3 */
 
 //------------------------------------------------------------------------------
+
+import config from '../../config/environment';
 
 import {
   yAxisTitleTransform,
@@ -35,6 +39,10 @@ import { axisFontSize, AxisTitleLayout } from './axisTitleLayout';
  * in commits be2660da .. 221f86fa.
  */
 const axisTitle_dataBlocks = false;
+
+const trace = 0;
+
+const dLog = console.debug;
 
 //------------------------------------------------------------------------------
 
@@ -138,11 +146,14 @@ function AxisTitle(oa) {
        * block (first line of title) and the data blocks (subsequent lines).
        * Now each line has onclick for the same menu (showMenu -> axis-menu).
        * So this could be changed to use a single listener, on the parent <text>.
+       *
+       * configureAxisTitleMenu() and configureAxisSubTitleMenu() implemented
+       * the axis title menu via (Bootstrap) .popover(); this was replaced by
+       * components/draw/axis-menu.{js,hbs} in c4a39538..cb6c75b5 and the
+       * popover configuration is dropped after bf4ceded.
        */
       let
-      menuFn = true // (i == 0)
-        ? axisApi.configureAxisTitleMenu
-        : axisApi.configureAxisSubTitleMenu;
+      menuFn = configureAxisTitleMenu;
       menuFn.apply(this, arguments);
     }
 
@@ -150,6 +161,66 @@ function AxisTitle(oa) {
       axisTitleS.call(AxisTitleBlocksServers.prototype.render.bind(axisTitleBlocksServers));
     }
   };
+
+  //----------------------------------------------------------------------------
+
+  /** Setup click action to show Axis title menu.
+   * @see based on similar configurejQueryTooltip()
+   */
+  function  configureAxisTitleMenu(block) {
+    const me = oa.eventBus;
+    let options = me.get('urlOptions'),
+    /** the __data__ of the element triggering the menu was axisName, but is
+     * now block; the axis and stack lookups below could now go more directly
+     * via block. */
+    axisName = block.axisName,
+    /** PerpendicularAxis */
+    dotPlot = options && options.dotPlot,
+    /** The first stage of split axes is enabled by options.splitAxes1,
+     * the remainder by options.splitAxes.
+     * In development, splitAxes1 is enabled by default; in production it is disabled by default. 
+     */
+    splitAxes1 = options && options.splitAxes1 || (config.environment !== 'production');
+    if (trace)
+    console.log("configureAxisTitleMenu", axisName, this, this.outerHTML);
+      let node_ = this;
+      let showMenuFn = me.functionHandle('showMenu', showMenu);
+    /** originally used hover event, showing .popover() menu. */
+    node_.onclick = showMenuFn;
+    /** Even though showMenuFn is constant, jQuery.on does : handlers.push(handleObj)
+     * each call, perhaps it avoids duplicate registrations only when selector
+     * is passed.
+     * So node_.onclick is used instead of :
+      $(node_)
+      .on('click', showMenuFn);
+      */
+    /** @param e DOM event */
+    function showMenu(e) {
+      let block = this.__data__;
+      if (block.axis.blocks[0] !== block) {
+        dLog('showMenu', 'data block', block, block.axis.blocks);
+        block = block.axis.blocks[0];
+      }
+      /** defined when called via jQuery.on(click) */
+      let jQueryEventInfo = e.originalEvent && [e.originalEvent.path, e.originalEvent.srcElement, e.handleObj.type];
+      dLog('showMenu', this, axisName, this.__data__, this.parentElement, this.parentElement.parentElement,
+           e, jQueryEventInfo);
+      me.sendAction('selectBlock', block.block);
+
+      /** If the axis-menu is already displayed on a different axis,
+       * reposition it to align with the axis of the clicked block title.
+       */
+      if (me.get('menuAxis') && (me.get('menuAxis') !== block)) {
+        me.set('menuAxis', undefined);
+        later(() => me.set('menuAxis', block));
+      } else {
+        me.set('menuAxis', block);
+      }
+      return false; /* for preventDefault(), stopPropagation() */
+    }
+  }
+
+  //----------------------------------------------------------------------------
 
   function axisName2Blocks (axisName) {
     let axis = Stacked.getAxis(axisName);
