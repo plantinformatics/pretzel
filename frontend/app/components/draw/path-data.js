@@ -13,6 +13,12 @@ import {
   selectBlockAdj
 } from '../../utils/draw/stacksAxes';
 
+import {
+  AxisChrName,
+ } from '../../utils/utility-chromosome';
+
+//------------------------------------------------------------------------------
+
 /* global d3 */
 
 /*----------------------------------------------------------------------------*/
@@ -80,7 +86,8 @@ export default Component.extend({
     block1 = pathData.get('blockId1');
       // pathData.get('block0'), pathData.get('block1');
     p[0] = axisApi.patham(block0, block1, pathData.get('feature0.name'), pathData.get('feature1.name'));
-    let axisName2MapChr = axisApi.axisName2MapChr;
+    const axisChrName = AxisChrName(stacks.oa);
+    let axisName2MapChr = axisChrName.axisName2MapChr;
     if (trace_path > 1)
       console.log(
         "pathU",

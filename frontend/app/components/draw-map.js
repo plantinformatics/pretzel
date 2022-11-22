@@ -29,7 +29,14 @@ import { debounce as lodash_debounce, throttle as lodash_throttle } from 'lodash
 
 import config from '../config/environment';
 import { EventedListener } from '../utils/eventedListener';
-import { chrData, cmNameAdd } from '../utils/utility-chromosome';
+
+import {
+  chrData, cmNameAdd,
+  AxisChrName,
+  makeMapChrName,
+  makeIntervalName,
+ } from '../utils/utility-chromosome';
+
 import {
   eltWidthResizable,
   eltResizeToAvailableWidth,
@@ -635,12 +642,10 @@ export default Component.extend(Evented, {
                     inRangeI : inRangeI,
                     featureInRange,
                     patham,
-                    axisName2MapChr,
                     collateO,
                     updateXScale,
                     axisStackChanged,
                     cmNameAdd,
-                    makeMapChrName,
                     axisIDAdd,
                     stacksAxesDomVerify : function (unviewedIsOK = false) { stacksAxesDomVerify(stacks, oa.svgContainer, unviewedIsOK); } ,
                     updateSyntenyBlocksPosition : () => this.get('updateSyntenyBlocksPosition').perform(),
@@ -655,7 +660,8 @@ export default Component.extend(Evented, {
                    };
       Ember_set(oa, 'axisApi', axisApi);
     }
-    const axisTitle = AxisTitle(stacks.oa);
+    const axisTitle = AxisTitle(oa);
+    const axisChrName = AxisChrName(oa);
     dLog('draw-map stacks', stacks);
 
     /** Reference to all datasets by name.
@@ -1044,31 +1050,8 @@ export default Component.extend(Evented, {
     //-    import { inRange } from "../utils/graph-maths.js";
     //-    import { } from "../utils/elementIds.js";
 
-    function mapChrName2Axis(mapChrName)
-    {
-      let axisName = mapChr2Axis[mapChrName];
-      return axisName;
-    }
-    /** @return chromosome name of axis id. */
-    function axisName2Chr(axisName)
-    {
-      let c = oa.cmName[axisName];
-      return c.chrName;
-    }
-    /** @return chromosome name of axis id, prefixed with mapName. */
-    function axisName2MapChr(axisName)
-    {
-      let c = oa.cmName[axisName];
-      return c && makeMapChrName(c.mapName, c.chrName);
-    }
-    function makeMapChrName(mapName, chrName)
-    {
-      return mapName + ':' + chrName;
-    }
-    function makeIntervalName(chrName, interval)
-    {
-      return chrName + "_" + interval[0] + "_" + interval[1];
-    }
+    //- moved to utils/utility-chromosome.js : mapChrName2Axis(), axisName2Chr(), axisName2MapChr(), makeMapChrName(), makeIntervalName(),
+
     //-    moved to "../utils/stacks-drag.js" : dragTransitionNew(), dragTransition(), dragTransitionEnd().
 
     /*------------------------------------------------------------------------*/
@@ -1842,7 +1825,7 @@ export default Component.extend(Evented, {
               {
                 let col=featureNames[i].split(/[ \t]+/),
                 mapChrName = col[0], interval = [col[1], col[2]];
-                let axisName = mapChrName2Axis(mapChrName);
+                let axisName = axisChrName.mapChrName2Axis(mapChrName);
                 if (intervals[axisName] === undefined)
                   intervals[axisName] = [];
                 intervals[axisName].push(interval);
@@ -1865,7 +1848,7 @@ export default Component.extend(Evented, {
               {
                 let col=featureNames[i].split(/[ \t]+/),
                 mapChrName = col[0], tickLocation = col[1];
-                let axisName = mapChrName2Axis(mapChrName);
+                let axisName = axisChrName.mapChrName2Axis(mapChrName);
                 if (axisName === undefined)
                   console.log("axis not found for :", featureNames[i], mapChr2Axis);
                 else
@@ -1887,7 +1870,7 @@ export default Component.extend(Evented, {
                 for (let j=0; j < 2; j++)
                 {
                   /** Axes of syntenyBlock may not be loaded yet. */
-                  let mapChr2Axis = cols[j], axisName = mapChrName2Axis(mapChr2Axis);
+                  let mapChr2Axis = cols[j], axisName = axisChrName.mapChrName2Axis(mapChr2Axis);
                   cols[j] = axisName;
                   if (axisName === undefined)
                     console.log("axis not found for :", featureNames[i], mapChr2Axis);
@@ -3388,7 +3371,7 @@ export default Component.extend(Evented, {
       {
         tracedAxisScale[axisID] = true;
         let yDomain = ysa.domain();
-        console.log("featureY_", axisID,  axisName2MapChr(axisID), parentName, d,
+        console.log("featureY_", axisID,  axisChrName.axisName2MapChr(axisID), parentName, d,
                       z[axisID][d].location, aky, axisY, yDomain, ysa.range());
       }
       return aky + axisY;
@@ -3663,7 +3646,7 @@ getBrushExtents(),
       let classes,
       f = oa.z[axisName][featureName],
       location = f.location,
-      chrName = axisName2Chr(axisName),
+      chrName = axisChrName.axisName2Chr(axisName),
       mapChrName = axisId2Name(axisName) + ":" + chrName,
       it = intervalTree[axisName];
 
