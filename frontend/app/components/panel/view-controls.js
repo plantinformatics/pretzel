@@ -76,7 +76,13 @@ export default Component.extend({
   feed: service(),
 
   /*--------------------------------------------------------------------------*/
-  /** paths are calculated in the backend if both blocks of block-adj are from
+
+  /** Enable frontend collation of paths : pathUpdate_() / collate-paths.js
+   * The user sets this via GUI input in panel/view-controls.
+   * Same effect as me.get('urlOptions.pathsCheck'); if pathJoinClient is
+   * available in GUI, then urlOptions.pathsCheck is not required.
+   *
+   * paths are calculated in the backend if both blocks of block-adj are from
    * the same server;  otherwise they may be calculated in the frontend (client)
    * and / or in the backend via localiseBlocks().
   */
@@ -170,6 +176,17 @@ export default Component.extend({
     dLog('tickOrPathChanged', value);
     this.updateSyntenyBlocksPosition();
   },
+
+  //----------------------------------------------------------------------------
+
+  /** Draw paths between features on Axes even if one end of the path is outside the svg.
+   * This was the behaviour of an earlier version of this Feature Map Viewer, and it
+   * seems useful, especially with a transition, to show the progressive exclusion of
+   * paths during zoom.
+   * Users also report this is useful when viewing synteny blocks.
+   */
+  allowPathsOutsideZoom : computed('tickOrPath', function () {
+    return this.get('tickOrPath') === 'path'; }),
 
   /*--------------------------------------------------------------------------*/
 

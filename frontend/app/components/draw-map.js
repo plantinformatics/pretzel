@@ -16,8 +16,6 @@ import { A as Ember_array_A } from '@ember/array';
 
 import { task, timeout, didCancel } from 'ember-concurrency';
 
-import createIntervalTree from 'interval-tree-1d';
-
 import { isEqual } from 'lodash/lang';
 import { debounce as lodash_debounce, throttle as lodash_throttle } from 'lodash/function';
 
@@ -55,7 +53,7 @@ import {
   logSelectionNodes,
   selectImmediateChildNodes
 } from '../utils/log-selection';
-import { configureHover } from '../utils/hover';
+import { configureHover, configureHorizTickHover_orig } from '../utils/hover';
 import { Viewport } from '../utils/draw/viewport';
 import { axisFontSize, AxisTitleLayout } from '../utils/draw/axisTitleLayout';
 import { AxisTitleBlocksServers } from '../utils/draw/axisTitleBlocksServers_tspan';
@@ -105,7 +103,6 @@ import {
   dragTransitionNew,
   dragTransition
 } from '../utils/stacks-drag';
-import { syntenyBlock_2Feature } from '../utils/draw/synteny-blocks-draw';
 import { subInterval, overlapInterval, wheelNewDomain, ZoomFilter } from '../utils/draw/zoomPanCalcs';
 import { intervalsEqual, intervalIntersect } from '../utils/interval-calcs';
 import { round_2, checkIsNumber } from '../utils/domCalcs';
@@ -143,12 +140,19 @@ import {
  * pathsAliasesResult.length) for all block-adj in flows.blockAdjs
  */
 function countPathsWithData() { }
-import { storeFeature, lookupFeature } from '../utils/feature-lookup';
+import { storeFeature } from '../utils/feature-lookup';
 
 import AxisDraw from '../utils/draw/axis-draw';
 import { DropTarget } from '../utils/draw/drop-target';
+import { PathClasses } from '../utils/draw/path-classes';
+import { PathDataUtils } from '../utils/draw/path-data';
+import { PathInfo } from '../utils/draw/path-info';
+import { showTickLocations } from '../utils/draw/feature-info';
 
 import { selectedBlocksFeaturesToArray } from '../services/data/selected';
+
+import { showSynteny } from '../utils/draw/synteny-blocks-draw';
+
 
 
 /*----------------------------------------------------------------------------*/
@@ -367,6 +371,11 @@ export default Component.extend(Evented, {
       // easing : 'linear', // default is swing
       offset : -60
     }).then(function () {
+      /* Could invert this control by using the same PathClasses instance as is
+       * used for .configurePathColour() which sets .colouredFeaturesChanged,
+       * and could instead set an enable flag, and here call
+       * pathClasses.colouredFeaturesChanged().
+       */
       let colouredFeaturesChanged = self.get('colouredFeaturesChanged');
       if (colouredFeaturesChanged)
         colouredFeaturesChanged(features);
@@ -415,24 +424,8 @@ export default Component.extend(Evented, {
 
   axisTicks : alias('controls.view.axisTicks'),
 
-  /** Enable frontend collation of paths : pathUpdate_() / collate-paths.js
-   * The user sets this via GUI input in panel/view-controls.
-   * Same effect as me.get('urlOptions.pathsCheck'); if pathJoinClient is
-   * available in GUI, then urlOptions.pathsCheck is not required.
-   */
-  pathJoinClient : alias('controls.view.pathJoinClient'),
-
   /** initialised to default value in components/panel/view-controls.js */
   sbSizeThreshold : alias('controls.view.sbSizeThreshold'),
-
-  /** Draw paths between features on Axes even if one end of the path is outside the svg.
-   * This was the behaviour of an earlier version of this Feature Map Viewer, and it
-   * seems useful, especially with a transition, to show the progressive exclusion of
-   * paths during zoom.
-   * Users also report this is useful when viewing synteny blocks.
-   */
-  allowPathsOutsideZoom : computed('controls.view.tickOrPath', function () {
-    return this.get('controls.view.tickOrPath') === 'path'; }),
 
   /*------------------------------------------------------------------------*/
 
@@ -503,6 +496,11 @@ export default Component.extend(Evented, {
     {
       console.log("resizeView()");
       // resize();
+    },
+
+    closeToolTipA() {
+      const pathInfo = PathInfo(this.oa);
+      pathInfo.closeToolTip();
     }
 
   },
@@ -632,10 +630,7 @@ export default Component.extend(Evented, {
     let instanceChanged;
     let axisBrushZoom = AxisBrushZoom(oa);
     if (! oa.axisApi || (instanceChanged = oa.axisApi.drawMap.isDestroying)) {
-      const axisApi = {lineHoriz : lineHoriz,
-                    inRangeI : inRangeI,
-                    featureInRange,
-                    patham,
+      const axisApi = {
                     collateO,
                     updateXScale,
                     axisStackChanged,
@@ -643,9 +638,7 @@ export default Component.extend(Evented, {
                     axisIDAdd,
                     stacksAxesDomVerify : function (unviewedIsOK = false) { stacksAxesDomVerify(stacks, oa.svgContainer, unviewedIsOK); } ,
                     updateSyntenyBlocksPosition : () => this.get('updateSyntenyBlocksPosition').perform(),
-                    setupMouseHover,
                     drawMap : this,  // for debug trace / check.
-                    pathUpdate,
                        // temporary additions - the definitions will be moved out.
                     sendUpdatedSelectedFeatures,
                     selectedFeatures_clear : () => this.get('selectedService').selectedFeatures_clear(),
@@ -656,6 +649,8 @@ export default Component.extend(Evented, {
     }
     const axisTitle = AxisTitle(oa);
     const axisChrName = AxisChrName(oa);
+    const pathDataUtils = PathDataUtils(oa);
+    const pathInfo = PathInfo(oa);
     dLog('draw-map stacks', stacks);
 
     /** Reference to all datasets by name.
@@ -739,14 +734,7 @@ export default Component.extend(Evented, {
     if (oa.axes2d === undefined)
       oa.axes2d = new Axes(oa);
 
-    /** default colour for paths; copied from app.css (.foreground path {
-     * stroke: #808;}) so it can be returned from d3 stroke function.  Also
-     * used currently to recognise features which are in colouredFeatures via
-     * path_colour_scale(), which is a useful interim measure until scales are
-     * set up for stroke-width of colouredFeatures, or better a class.
-     */
-    let pathColourDefault = "#808";
-
+    //- moved to utils/draw/path-classes.js : pathColourDefault, use_path_colour_scale, path_colour_scale_domain_set, path_colour_scale
     //- moved to utils/draw/viewport.js : xDropOutDistance_update()
 
 
@@ -756,43 +744,9 @@ export default Component.extend(Evented, {
      * chromosomes in API requests.
      */
     const filter_location = false;
-    /** true means the <path> datum is the text of the SVG line, otherwise it is
-     * the "ffaa" data and the "d" attr is the text of the SVG line.
-     * @see featureNameOfPath().
-     */
-    let pathDataIsLine;
-    /** true means the path datum is not used - its corresponding data is held in its parent g
-     */
-    const pathDataInG = true;
-
-    /** Apply colours to the paths according to their feature name (datum); repeating ordinal scale.
-     * meaning of values :
-     *  set path_colour_domain to
-     *   1 : features
-     *   2 : d3.keys(aliasGroup)
-     *  colour according to input from colouredFeatures; just the listed featureNames is coloured :
-     *  each line of featureNames is         domain is
-     *   3: featureName                      featureName-s
-     *   4: scaffoldName\tfeatureName        scaffoldName-s
-     *      scaffoldName can be generalised as class name.
-     */
-    let use_path_colour_scale = 4;
-    let path_colour_scale_domain_set = false;
 
 
-    //-	?
-    /** export scaffolds and scaffoldFeatures for use in selected-features.hbs */
-    let showScaffoldFeatures = this.get('showScaffoldFeatures');
-    dLog("showScaffoldFeatures", showScaffoldFeatures);
-
-    let showAsymmetricAliases = this.get('showAsymmetricAliases');
-    dLog("showAsymmetricAliases", showAsymmetricAliases);
-
-    /** Enable display of extra info in the path hover (@see hoverExtraText).
-     * Currently a debugging / devel feature, will probably re-purpose to display metadata.
-     */
-    let showHoverExtraText = true;
-
+    //- moved to path-classes : showScaffoldFeatures (showScaffoldMarkers), showAsymmetricAliases
 
     let svgContainer;
 
@@ -873,12 +827,13 @@ export default Component.extend(Evented, {
           oa.datasets[datasetName] = dataset;
           console.log(datasetName, dataset.get('_meta.shortName'));
         }
-        cmName[axis] = {mapName : c.mapName, chrName : c.chrName
-                        , parent: parentName
-                        , name : c.name, range : c.range
-                        , scope: c.scope, featureType: c.featureType
-                        , dataset : dataset
-                       };
+        cmName[axis] = {
+          mapName : c.mapName, chrName : c.chrName,
+          parent: parentName,
+          name : c.name, range : c.range,
+          scope: c.scope, featureType: c.featureType,
+          dataset,
+        };
         
         let mapChrName = makeMapChrName(c.mapName, c.chrName);
         mapChr2Axis[mapChrName] = axis;
@@ -1019,20 +974,6 @@ export default Component.extend(Evented, {
       line = d3.line(),
     foreground;
     // brushActives = [],
-    /** trace scale of each axis just once after this is cleared.  enabled by trace_scale_y.  */
-    let tracedAxisScale = {};
-
-
-    /**
-     * @return true if a is in the closed interval range[]
-     * @param a value
-     * @param range array of 2 values - limits of range.
-     */
-    function inRange(a, range)
-    {
-      return range[0] <= a && a <= range[1];
-    }
-
 
     //- moved to ../utils/draw/axis.js :  eltId(), axisEltId(), highlightId()
 
@@ -1041,6 +982,7 @@ export default Component.extend(Evented, {
     //- moved to ../utils/domCalcs.js : checkIsNumber()
 
     /*------------------------------------------------------------------------*/
+    // inRange() replaced by a later / equivalent version available from utils/draw/zoomPanCalcs.js
     //-    import { inRange } from "../utils/graph-maths.js";
     //-    import { } from "../utils/elementIds.js";
 
@@ -1060,9 +1002,6 @@ export default Component.extend(Evented, {
     const trace_drag = 0;
     //- moved to ../utils/draw/collate-paths.js : trace_alias, trace_adj
     const trace_path = 0;
-    let trace_path_count = 0;
-    const trace_path_colour = 0;
-    let trace_synteny = 1;
     const trace_gui = 0;
     /*------------------------------------------------------------------------*/
     //- moved to utils/stacks.js
@@ -1201,7 +1140,7 @@ export default Component.extend(Evented, {
             console.log(b.longName(), 'add to orphaned :', Block_list_longName(add));
           orphaned = orphaned.concat(add);
         }
-        return filterChildren == ! isParent;
+        return filterChildren !== Boolean(isParent);
       });
       dLog('filterChildren', filterChildren, generationBlocksUnviewed);
       if (filterChildren && orphaned.length) {
@@ -1695,7 +1634,7 @@ export default Component.extend(Evented, {
         // could filter the selection - just those right of the extended axis
         oa.svgContainer.selectAll(".axis-outer").attr("transform", Stack.prototype.axisTransformO);
         stack.axes.forEach( function (a, index) { axisRedrawText(oa.axes[a.axisName]); });
-        pathUpdate(undefined);
+        pathDataUtils.pathUpdate(undefined);
       }
     };
     function updateXScale()
@@ -1720,15 +1659,8 @@ export default Component.extend(Evented, {
 
     //-    import { } from "../utils/intervals.js";
 
-    var path_colour_scale;
-    let featureScaffold = oa.featureScaffold || (oa.featureScaffold = {}),
-    scaffolds = new Set(), scaffoldFeatures = {};
-    let intervals = {}, intervalNames = new Set(), intervalTree = {};
-    //-scaffolds
-    /** scaffoldTicks[axisID] is a set of y locations, relative to the y axis of axisID, of horizontal tick marks.
-     * General purpose; first use is for scaffold edges.
-     */
-    let scaffoldTicks =  oa.scaffoldTicks || (oa.scaffoldTicks = {});
+    //- moved to path-classes : featureScaffold, scaffolds, scaffoldFeatures, intervals, intervalNames, intervalTree, scaffoldTicks
+
     //-sb
     /** syntenyBlocks is an array, each element defines a synteny block which
      * can be seen as a parallelogram connecting 2 axes (Axes); the range on each
@@ -1744,167 +1676,11 @@ export default Component.extend(Evented, {
      * (the genes could instead be features on a genetic map, but the planned use of
      * synteny block display is physical maps / genes).
      */
-    let syntenyBlocks =  oa.syntenyBlocks || (oa.syntenyBlocks = []);
-    //- paths-classes
-    if (use_path_colour_scale)
-    {
-      let path_colour_domain;
-      switch (use_path_colour_scale)
-      {
-      case 1 : path_colour_domain = oa.features; break;
-      case 2 : path_colour_domain = d3.keys(oa.aliasGroup); break;
-      default:
-      case 4:
-      case 3 : path_colour_domain = ["unused"];
-        this.set('colouredFeaturesChanged', function(colouredFeatures_) {
-          console.log('colouredFeatures changed, length : ', colouredFeatures_.length);
-          let val;
-          if ((colouredFeatures_.length !== 0) &&
-              ((val = getUsePatchColour()) !== undefined))
-          {
-            /** use_path_colour_scale manages the effect of the path colouring
-             * date entered here; this doesn't allow the different modes
-             * selected by use_path_colour_scale to co-exist effectively, but
-             * scaffoldTicks is separate, so by distinguishing
-             * input_path_colour_scale from use_path_colour_scale, it is
-             * possible to use 6 with e.g. 4.
-             * ditto 7.
-             */
-            let input_path_colour_scale = val;
-            if ((val != 6) && (val != 7))
-              use_path_colour_scale = val;
+    oa.syntenyBlocks || (oa.syntenyBlocks = []);
 
-            /** depending on use_path_colour_scale === 3, 4 each line of featureNames is 
-             * 3: featureName 
-             * 4: scaffoldName\tfeatureName
-             */
-            let featureNames = colouredFeatures_
-            // .split('\n');
-            // .match(/\S+/g) || [];
-              .match(/[^\r\n]+/g);
-            path_colour_scale_domain_set = featureNames.length > 0;
-            if (input_path_colour_scale === 3)
-              path_colour_scale.domain(featureNames);
-            else if (input_path_colour_scale === 4)
-            {
-              for (let i=0; i<featureNames.length; i++)
-              {
-                let col=featureNames[i].split(/[ \t]+/),
-                scaffoldName = col[0], featureName = col[1];
-                featureScaffold[featureName] = scaffoldName;
-                // for the tooltip, maybe not required.
-                if (scaffoldFeatures[scaffoldName] === undefined)
-                  scaffoldFeatures[scaffoldName] = [];
-                scaffoldFeatures[scaffoldName].push(featureName);
-                scaffolds.add(scaffoldName);
-              }
-              collateFeatureClasses(featureScaffold);
-              if (showScaffoldFeatures !== me.get('showScaffoldFeatures'))
-              {
-                showScaffoldFeatures = me.get('showScaffoldFeatures');
-                console.log("showScaffoldFeatures", showScaffoldFeatures);
-              }
-              if (showScaffoldFeatures)
-              {
-                me.set('scaffolds', scaffolds);
-                me.set('scaffoldFeatures', scaffoldFeatures);
-              }
-              let domain = Array.from(scaffolds.keys());
-              console.log("domain.length", domain.length);
-              path_colour_scale.domain(domain);
-            }
-            else if (input_path_colour_scale === 5)
-            {
-              for (let i=0; i<featureNames.length; i++)
-              {
-                let col=featureNames[i].split(/[ \t]+/),
-                mapChrName = col[0], interval = [col[1], col[2]];
-                let axisName = axisChrName.mapChrName2Axis(mapChrName);
-                if (intervals[axisName] === undefined)
-                  intervals[axisName] = [];
-                intervals[axisName].push(interval);
-                let intervalName = makeIntervalName(mapChrName, [col[1], + col[2]]);
-                intervalNames.add(intervalName);
-              }
-              d3.keys(intervals).forEach(function (axisName) {
-                //Build tree
-                intervalTree[axisName] = createIntervalTree(intervals[axisName]);
-              });
-
-              // scaffolds and intervalNames operate in the same way - could be merged or factored.
-              let domain = Array.from(intervalNames.keys());
-              console.log("domain.length", domain.length);
-              path_colour_scale.domain(domain);
-            }
-            else if (input_path_colour_scale === 6)
-            {
-              for (let i=0; i<featureNames.length; i++)
-              {
-                let col=featureNames[i].split(/[ \t]+/),
-                mapChrName = col[0], tickLocation = col[1];
-                let axisName = axisChrName.mapChrName2Axis(mapChrName);
-                if (axisName === undefined)
-                  console.log("axis not found for :", featureNames[i], mapChr2Axis);
-                else
-                {
-                  if (scaffoldTicks[axisName] === undefined)
-                    scaffoldTicks[axisName] = new Set();
-                  scaffoldTicks[axisName].add(tickLocation);
-                }
-              }
-              console.log(scaffoldTicks);
-              showTickLocations(scaffoldTicks, undefined);
-            }
-            else if (input_path_colour_scale === 7)
-            {
-              for (let i=0; i<featureNames.length; i++)
-              {
-                let cols=featureNames[i].split(/[ \t]+/);
-                let ok = true;
-                for (let j=0; j < 2; j++)
-                {
-                  /** Axes of syntenyBlock may not be loaded yet. */
-                  let mapChr2Axis = cols[j], axisName = axisChrName.mapChrName2Axis(mapChr2Axis);
-                  cols[j] = axisName;
-                  if (axisName === undefined)
-                    console.log("axis not found for :", featureNames[i], mapChr2Axis);
-                  for (let k = 0; k < 2; k++)
-                  {
-                    let f = cols[2 + 2*j + k];
-                    if (oa.z[axisName][f] === undefined)
-                    {
-                      console.log(f, "not in", axisName, axisId2Name(axisName));
-                      ok = false;
-                    }
-                  }
-                  ok &= axisName !== undefined;
-                }
-                if (ok)
-                {
-                  syntenyBlocks.push(cols);
-                }
-              }
-              if (trace_synteny)
-                console.log(syntenyBlocks.length, syntenyBlocks);
-              showSynteny(syntenyBlocks, undefined);
-            }
-            else if (trace_path_colour > 2)
-              console.log("use_path_colour_scale", use_path_colour_scale);
-
-            pathColourUpdate(undefined, undefined);
-            scaffoldLegendColourUpdate();
-          }
-        });
-        break;
-      }
-      path_colour_scale = d3.scaleOrdinal();
-      path_colour_scale_domain_set = (use_path_colour_scale !== 3) && (use_path_colour_scale !== 4);
-      if (path_colour_scale_domain_set)
-        path_colour_scale.domain(path_colour_domain);
-      else
-        path_colour_scale.unknown(pathColourDefault);
-      path_colour_scale.range(d3.schemeCategory10);
-    }
+    //- moved to path-classes : configurePathColour()
+    const pathClasses = PathClasses(oa);
+    pathClasses.configurePathColour();
 
     //- moved to utils/draw/axis.js : maybeFlip(), maybeFlipExtent()
 
@@ -2058,33 +1834,8 @@ export default Component.extend(Evented, {
       }
     });
 
-    //- paths
-    //Add foreground lines.
-    /** pathData is the data of .foreground > g > g, not .foreground > g > g > path */
-
-    /** Determine class name of path or g, @see pathDataInG.
-     * Value is currently just concatenation of names of endpoint features, could be aliasGroupName.
-     * If Flow.direct then use I for pathClass, otherwise pathClassA()
-     */
-    function pathClassA(d)
-    { let d0=d[0], d1=d[1], c = d1 && (d1 != d0) ? d0 + "_" + d1: d0;
-      return c; }
-    /**  If unique_1_1_mapping then path data is ffaa, i.e. [feature0, feature1, a0, a1]
-     */
-    function featureNameOfData(da)
-    {
-      let featureName = (da.length === 4)  // i.e. ffaa (enabled by unique_1_1_mapping)
-        ? da[0]  //  ffaa, i.e. [feature0, feature1, a0, a1]
-        : da;
-      return featureName;
-    }
-    /** @see also pathsUnique_log()  */
-    function data_text(da)
-    {
-      return unique_1_1_mapping   // ! flow.direct
-        ? [da[0], da[1], da[2].mapName, da[3].mapName]
-        : da;
-    }
+    //- moved to utils/draw/path-classes.js : pathClassA()
+    //- moved to utils/draw/path-data.js : featureNameOfData(), data_text()
 
     function flowName(flow)
     {
@@ -2225,7 +1976,7 @@ export default Component.extend(Evented, {
     }
 
     const
-    axisDraw = new AxisDraw(oa, /*axis1d*/null, stacks, /*stacksView*/),
+    axisDraw = new AxisDraw(oa, /*axis1d*/null, stacks, /*stacksView*/ null),
     selections = {svgContainer, stackSd, stackS,  stackX};    
     const resultSelections =  
         axisDraw.draw2(selections, stack_axisIDs, newRender, stacksAxesDomVerify);
@@ -2277,20 +2028,8 @@ export default Component.extend(Evented, {
      * above, but that can be moved following this, when split out). */
     /*------------------------------------------------------------------------*/
 
-    // Setup the path hover tool tip.
-    let toolTipCreated = ! oa.toolTip;
-    let toolTip = oa.toolTip || (oa.toolTip =
-      d3.tip()
-        .attr("class", "toolTip d3-tip")
-        .attr("id","toolTip")
-    );
-    if (toolTipCreated)
-    {
-      me.ensureValue("toolTipCreated", true);
-    }
-    toolTip.offset([-15,0]);
-    svgRoot.call(toolTip);
-
+    //- moved toolTip to utils/draw/path-info.js
+    pathInfo.setupToolTip();
 
     //Probably leave the delete function to Ember
     //function deleteAxis(){
@@ -2352,10 +2091,10 @@ export default Component.extend(Evented, {
      */
     function axisStackChanged_(t)
     {
-      showTickLocations(oa.scaffoldTicks, t);
+      showTickLocations(pathClasses.scaffoldTicks, t);
       if (oa.syntenyBlocks) {
         /** time for the axis positions to update */
-        later(() => ! me.isDestroying && showSynteny(oa.syntenyBlocks, t), 500);
+        later(() => ! me.isDestroying && showSynteny(oa.syntenyBlocks, t, oa), 500);
       }
 
       me.trigger('axisStackChanged', t);
@@ -2366,221 +2105,11 @@ export default Component.extend(Evented, {
     }
 
 //-components/paths
-    //d3.selectAll(".foreground > g > g").selectAll("path")
-    /* (Don, 2017Mar03) my reading of handleMouse{Over,Out}() is that they are
-     * intended only for the paths connecting features in adjacent Axes, not
-     * e.g. the path in the y axis. So I have narrowed the selector to exclude
-     * the axis path.  More exactly, these are the paths to include and exclude,
-     * respectively :
-     *   svgContainer > g.foreground > g.flowName > g.<featureName> >  path
-     *   svgContainer > g.stack > g.axis-outer > g.axis#<axisEltId(axisName)> > path    (axisEltId() prepends "a"))
-     * (axisName is e.g. 58b504ef5230723e534cd35c_MyChr).
-     * This matters because axis path does not have data (observed issue : a
-     * call to handleMouseOver() with d===null; reproduced by brushing a region
-     * on an axis then moving cursor over that axis).
+    //- moved to utils/draw/path-info.js : 
+    /* setupMouseHover(), toolTipMouseOver(), toolTipMouseOut(), closeToolTip(),
+     * setupToolTipMouseHover(), handleMouseOver(), hidePathHoverToolTip(),
+     * handleMouseOut(),
      */
-    setupMouseHover(
-      d3.selectAll(".foreground > g > g > path")
-    );
-
-    /** Setup the functions handleMouse{Over,Out}() on events mouse{over,out}
-     * on elements in the given selection.
-     * The selected path elements are assumed to have __data__ which is either
-     * sLine (svg line text) which identifies the hover text, or ffaa data
-     * which enables hover text to be calculated.
-     * @param pathSelection	<path> elements
-     */
-    function setupMouseHover(pathSelection)
-    {
-      pathSelection
-        .on("mouseover",handleMouseOver)
-        .on("mouseout",handleMouseOut);
-    }
-
-    function toolTipMouseOver()
-    {
-      let toolTipHovered = me.get('toolTipHovered') ;
-      console.log("toolTipMouseOver", toolTipHovered);
-      if (! toolTipHovered)
-        me.set('toolTipHovered', true);
-    }
-    function toolTipMouseOut()
-    {
-      let toolTipHovered = me.get('toolTipHovered') ;
-      console.log("toolTipMouseOut", toolTipHovered);
-      if (toolTipHovered)
-        me.set('toolTipHovered', false);
-      hidePathHoverToolTip();
-    }
-    function closeToolTip() 
-    {
-      console.log("draw-map closeToolTip");
-      me.ensureValue('toolTipHovered', false);
-      hidePathHoverToolTip();
-    }
-    if (this.actions.closeToolTipA === undefined)
-    {
-      this.actions.closeToolTipA = closeToolTip;
-    }
-    function setupToolTipMouseHover()
-    {
-      // may need to set toolTipHovered if toolTip already contains cursor when it is shown - will toolTipMouseOver() occur ?.
-      // me.ensureValue('toolTipHovered', true);
-
-      d3.select("div.toolTip.d3-tip#toolTip")
-        .on("mouseover", toolTipMouseOver)
-        .on("mouseout", toolTipMouseOut);
-
-      $("div.toolTip.d3-tip#toolTip button#toolTipClose")
-        .on("click", closeToolTip);
-    }
-
-
-    /**
-     * @param d   SVG path data string of path
-     * @param this  path element
-     */
-    function handleMouseOver(d, i){
-      const fnName = 'handleMouseOver';
-      let sLine, pathFeaturesHash;
-      let pathFeatures = oa.pathFeatures;
-      let hoverFeatures;
-      /** d is either sLine (pathDataIsLine===true) or array ffaa. */
-      let pathDataIsLine = typeof(d) === "string";
-      // don't interrupt dragging with pathHover
-      if (Stack.currentDrag || ! oa.drawOptions.showPathHover)
-        return;
-      if (pathDataIsLine)
-      {
-        pathFeaturesHash = pathFeatures[d];
-        hoverFeatures = Object.keys(pathFeaturesHash);
-        console.log("hoverFeatures 1", hoverFeatures);
-      }
-      else
-      {
-        sLine = this.getAttribute("d");
-        pathFeaturesHash = pathFeatures[sLine];
-        if ((pathFeaturesHash === undefined) && ! pathDataIsLine)
-        {
-          let ffaa = dataOfPath(this),
-              syntenyEvidence = ffaa[Symbol.for('syntenyEvidence')];
-          if (syntenyEvidence) {
-            /** show path-data syntenyEvidence in console when mouse hover.
-             * Enable this via drawOptions : showPathHover : true
-             */
-            console.log(fnName, 'syntenyEvidence', syntenyEvidence);
-            // return;
-          }
-          let
-          featureNames, features;
-          if (Array.isArray(ffaa)) {
-            const [feature0, feature1, a0, a1] = ffaa;
-            [featureNames[0], featureNames[1]] = [feature0, feature1];
-            let z = oa.z;
-            [features[0], features[1]] = [z[a0.axisName][feature0], z[a1.axisName][feature1]];
-          } else {
-            features = ffaa.alignment.mapBy('repeats.features.0');
-            featureNames = features.mapBy('name');
-          }
-          let direction, aliasGroupName;
-          if (ffaa.length == 6)
-          {
-            direction = ffaa[4];
-            aliasGroupName = ffaa[5];
-          }
-          pathFeatureStore(sLine, featureNames[0], featureNames[1], features[0], features[1], aliasGroupName);
-          pathFeaturesHash = pathFeatures[sLine];
-        }
-        // can also append the list of aliases of the 2 features
-        hoverFeatures = Object.keys(pathFeaturesHash)
-          .reduce(function(all, a){
-            // console.log(all, a, a.split(','));
-            return  all.concat(a.split(","));
-          }, []);
-        console.log("hoverFeatures 2,3", hoverFeatures);
-      }
-      /** pathClasses uses this datum instead of d.  */
-      let classSet = pathClasses(this, d), classSetText;
-      if (classSet)
-      {
-        if (typeof classSet == "string")
-        {
-          console.log(this, d, classSet, classSetText);
-          classSetText = "<br />" + classSet;
-        }
-        else if (classSet.size && classSet.size > 0)
-        {
-          classSet.forEach(function (className) {
-            console.log(className);
-            classSetText = "<br />" + className;
-          });
-        }
-      }
-
-      // console.log(d, featureNameOfData(d), sLine, pathFeaturesHash);
-      let listFeatures  = "";
-      // stroke attributes of this are changed via css rule for path.hovered
-      d3.select(this)
-        .classed("hovered", true);
-      Object.keys(pathFeaturesHash).map(function(a){
-        let hoverExtraText = pathFeaturesHash[a];
-        if (hoverExtraText === 1) hoverExtraText = "";
-        else if (classSetText) hoverExtraText += classSetText;
-        listFeatures = listFeatures + a + hoverExtraText + "<br />";
-      });
-
-      let hoveredPath = this;
-      toolTip.offset(function() {
-        return [hoveredPath.getBBox().height / 2, 0];
-      });
-
-      /** If path-hover currently exists in toolTip, avoid insert error by detaching it while updating html of parent toolTip */
-      let
-        pt=$('.toolTip.d3-tip#toolTip'),
-      ph = pt.find('.pathHover');
-      console.log(pt[0], "pathHover:", ph[0] || ph.length);
-      if (ph.length)
-      {
-        console.log("pathHover detaching");
-      }
-      let
-        ph1=ph.detach();
-
-      listFeatures += '\n<button id="toolTipClose">&#x2573;</button>\n'; // ╳
-      toolTip.html(listFeatures);
-
-      toolTip.show(d, i);
-      let ph2=ph1.appendTo(pt);
-      once(me, function() {
-        let ph3= $('.pathHover');
-        console.log(".pathHover", ph2[0] || ph2.length, ph3[0] || ph3.length);
-        me.set("hoverFeatures", hoverFeatures);
-        // me.ensureValue("pathHovered", true);
-        me.trigger("pathHovered", true, hoverFeatures);
-      });
-      later(me, function() {
-        setupToolTipMouseHover();
-      }, 1000);
-    }
-
-    function hidePathHoverToolTip() {
-      console.log("hidePathHoverToolTip", me.get('toolTipHovered'));
-      debounce(me, function () {
-      if (! me.get('toolTipHovered'))
-      {
-        toolTip.hide();
-        // me.ensureValue("pathHovered", false);
-        me.trigger("pathHovered", false);
-      }
-      }, 1000);
-    }
-
-    function handleMouseOut(d){
-      // stroke attributes of this revert to default, as hover ends
-      d3.select(this)
-        .classed("hovered", false);
-      debounce(me, hidePathHoverToolTip, 2000);
-    }
 
 //- axis
 
@@ -2592,79 +2121,8 @@ export default Component.extend(Evented, {
     }
 
     /*------------------------------------------------------------------------*/
-    /** Draw horizontal ticks on the axes, representing scaffold boundaries.
-     * @param t transition or undefined
-     */
-    function showTickLocations(scaffoldTicks, t)
-    {
-      d3.keys(scaffoldTicks).forEach
-      (function(axisName)
-       {
-         let tickLocations = Array.from(scaffoldTicks[axisName].keys());
-         /** -  if axisName matches nothing, then skip this. */
-        let aS = d3.select("#" + axisEltId(axisName));
-        if (!aS.empty())
-        {
-          let pS = aS.selectAll("path.horizTick")
-             .data(tickLocations),
-             pSE = pS.enter()
-             .append("path")
-            .attr("class", "horizTick fromInput");
-          pSE
-            .each(configureHorizTickHover);
-         let pSM = pSE.merge(pS);
-
-          /* update attr d in a transition if one was given.  */
-          let p1 = (t === undefined) ? pSM
-            : pSM.transition(t);
-          p1.attr("d", function(tickY) {
-           // based on axisFeatureTick(ai, d)
-           /** shiftRight moves right end of tick out of axis zone, so it can
-            * receive hover events.
-            */
-           const xOffset = 25, shiftRight=5;
-           let ak = axisName,
-               sLine = lineHoriz(ak, tickY, xOffset, shiftRight);
-           return sLine;
-         });
-        }
-       }
-      );
-    }
-
-    /** Setup hover info text over scaffold horizTick-s.
-     * Based on similar @see configureAxisTitleMenu()
-     * @desc These are being factored to utils/hover.js :
-     * @see configureHover, configureHorizTickHover
-     */
-    function  configureHorizTickHover(location)
-    {
-      console.log("configureHorizTickHover", location, this, this.outerHTML);
-      /** typeof location may also be "number" or "object" - array : syntenyBlocks[x] */
-      let text = (location == "string") ? location :  "" + location;
-      let node_ = this;
-      if ($(node_).popover)
-      $(node_)
-        .popover({
-          trigger : "click hover",
-          sticky: true,
-          delay: {show: 200, hide: 3000},
-          container: 'div#holder',
-          placement : "auto right",
-          /* The popover placement is 65px too high (might depend on window size).
-           * As a simple fix, offset was tried with no apparent effect, possibly
-           * depends on a recent version.  An alternative would be to use a
-           * placement function.
-           * offset : "0 65px",
-           */
-          /* Could show location in content or title; better in content because
-           * when content is undefined a small content area is still displayed,
-           * whereas undefined title takes no visual space.
-           * title : location,
-           */
-           content : text
-        });
-    }
+    //- moved to utils/draw/feature-info.js : showTickLocations()
+    //- moved to hover.js : configureHorizTickHover() as configureHorizTickHover_orig
 
     //--------------------------------------------------------------------------
     //- moved showSynteny() to utils/draw/synteny-blocks-draw.js  (related : components/draw/synteny-blocks.js)
@@ -2688,580 +2146,15 @@ export default Component.extend(Evented, {
      * collateFeatureMap(), concatAndUnique(), featureStackAxes(),
      */
 
-
-    /** This is equivalent to o[ak].
-     * Whereas o[] keys are only axisIDs, this function handles block IDs.
-     *
-     * Where the feature d is in a child data block, featureY_(ak, d) requires
-     * the block id not the id of the axis which contains the block.  So
-     * functions which use featureY_() also use blockO().
-     *
-     * o[] contains x Offsets; the o may also have abbreviated Original, because
-     * it caches axis positions.  Blocko can be renamed when axes are split out;
-     * it is reminiscent of a bloco - a Carnival block party
-     * (https://en.wikipedia.org/wiki/Carnival_block)
+    //- moved to utils/draw/path-data.js :
+    /* blockO(), featureLine2(), inside(), pointSegment(), featureLineS2(),
+     * featureLineS3(), featureLineS(), lineHoriz(), featureLine(), path(),
+     * pathU(), pathUg(), pathAliasGroup(), inRangeI(), inRangeI2(),
+     * featureAliasesText(), pathFeatureStore(), featureNameInRange(),
+     * featureInRange(), patham(), axisFeatureTick(), patham2(), featureY_(),
+     * featureY2(), log_path_data(), pathUpdate_(), log_foreground_g(),
+     * pathUpdate(), dataOfPath(), featureNameOfPath(),
      */
-    function blockO(ak)
-    {
-      let axis = Stacked.getAxis(ak);
-      return o[axis.axisName];
-    }
-
-    /** A line between a feature's location in adjacent Axes.
-     * @param ak1, ak2 block IDs
-     * @param d feature name
-     * Replaced by the stacks equivalent : @see featureLineS2()
-     */
-    function featureLine2(ak1, ak2, d)
-    {
-      let
-        o = oa.o,
-      /** use blockO() in place of o[] lookup to handle ak1,2 being child blocks */
-      ends = [ak1, ak2].map(function (ak) {
-        return [blockO(ak), featureY_(ak, d)]; });
-      return line(ends);
-    }
-    /**  Return the x positions of the given axes; if the leftmost is split, add
-     *  its width to the corresponding returned axis position.
-     * The purpose is to give the x positions which paths between the 2 axes
-     * should terminate at, hence the name 'inside' - it is concerned with the
-     * inside edges of the axes from the perspective of the space between them.
-     * @param ak1, ak2  axis IDs  (i.e. oa.axes[ak1] is Stacked, not Block)
-     * @param cached  true means use the "old" / cached positions o[ak], otherwise use the current scale x(ak).
-     * @return 2 x-positions, in an array, in the given order (ak1, ak2).
-     */
-    function inside(ak1, ak2, cached)
-    {
-      let xi = cached
-        ? [o[ak1], o[ak2]]
-        : [x(ak1), x(ak2)],
-      /** true if ak1 is left of ak2 */
-      order = xi[0] < xi[1],
-      /** If the rightmost axis is split it does not affect the endpoint, since its left side is the axis position.
-       * This is the index of the left axis. */
-      left = order ? 0 : 1,
-      akL = order ? ak1 : ak2,
-      aL = oa.axes[akL];
-      if (aL.extended)
-      {
-        // console.log("inside", ak1, ak2, cached, xi, order, left, akL);
-        xi[left] += aL.extendedWidth();
-      }
-      return xi;
-    }
-    /** @return a short line segment, length approx 1, around the given point.
-     */
-    function pointSegment(point)
-    {
-      let  floor = Math.floor, ceil = Math.ceil,
-      s = [[floor(point[0]), floor(point[1])],
-               [ceil(point[0]), ceil(point[1])]];
-      if (s[0][0] == s[1][0])
-        s[1][0] += 1;
-      if (s[0][1] == s[1][1])
-        s[1][1] += 1;
-      return s;
-    }
-    /** Stacks version of featureLine2().
-     * A line between a feature's location in Axes in adjacent Stacks.
-     * @param ak1, ak2 axis names, (exist in axisIDs[])
-     * @param d1, d2 feature names, i.e. ak1:d1, ak1:d1
-     * If d1 != d2, they are connected by an alias.
-     */
-    function featureLineS2(ak1, ak2, d1, d2)
-    {
-      let o = oa.o,
-      axis1 = Stacked.getAxis(ak1),
-      axis2 = Stacked.getAxis(ak2),
-      /** x endpoints of the line;  if either axis is split then the side closer the other axis is used.  */
-      xi = inside(axis1.axisName, axis2.axisName, true);
-      let l;
-      if (axis1.perpendicular && axis2.perpendicular)
-      { /* maybe a circos plot :-) */ }
-      else if (axis1.perpendicular)
-      {
-        let point = [xi[0] + vc.yRange/2 - featureY_(ak1, d1), featureY_(ak2, d2)];
-        l =  line(pointSegment(point));
-      }
-      else if (axis2.perpendicular)
-      {
-        let point = [xi[1] + vc.yRange/2 - featureY_(ak2, d2), featureY_(ak1, d1)];
-        l =  line(pointSegment(point));
-      }
-      else
-      // o[p], the map location,
-      l =  line([
-        [xi[0], featureY_(ak1, d1)],
-        [xi[1], featureY_(ak2, d2)]]);
-      return l;
-    }
-    /** Show a parallelogram between 2 axes, defined by
-     * 4 feature locations in Axes in adjacent Stacks.
-     * Like @see featureLineS2().
-     * @param ak1, ak2 axis names, (exist in axisIDs[])
-     * @param d[0 .. 3] feature names, i.e. ak1:d[0] and d[1], ak2:d[2] and d[3]
-     * update : see comment in patham2()
-     */
-    function featureLineS3(ak1, ak2, d)
-    {
-      let o = oa.o,
-      axis1 = Stacked.getAxis(ak1),
-      axis2 = Stacked.getAxis(ak2),
-      xi = inside(axis1.axisName, axis2.axisName, false),
-      oak = xi, // o[ak1], o[ak2]],
-      my = syntenyBlock_2Feature ?
-          [featureY2(ak1, d[0]), featureY2(ak2, d[2])] :
-          [[featureY_(ak1, d[0]), featureY_(ak1, d[1])],
-            [featureY_(ak2, d[2]), featureY_(ak2, d[3])]];
-      let sLine;
-
-      /** if one of the axes is perpendicular, draw a line segment using the d
-       * values of the perpendicular axes as the x values, and the other as the
-       * y values. */
-      if (axis1.perpendicular && axis2.perpendicular)
-      {  }
-      else if (axis1.perpendicular)
-      {
-        xi[0] += vc.yRange/2;
-        let s = [[xi[0] - my[0][0], my[1][0]],
-                 [xi[0] - my[0][1], my[1][1]]];
-        sLine =  line(s);
-      }
-      else if (axis2.perpendicular)
-      {
-        xi[1] += vc.yRange/2;
-        let s = [[xi[1] - my[1][0], my[0][0]],
-                 [xi[1] - my[1][1], my[0][1]]];
-        sLine =  line(s);
-      }
-      else
-      {
-        let
-        /** can use my here, with perhaps swapped my[1][0] and my[1][1] (because of swapped d[2] and d[3]).   */
-        p = syntenyBlock_2Feature ?
-          [
-            [oak[0], my[0][0]],
-            [oak[0], my[0][1]],
-            [oak[1], my[1][1]],
-            [oak[1], my[1][0]]] :
-          [[oak[0], featureY_(ak1, d[0])],
-           [oak[0], featureY_(ak1, d[1])],
-           // order swapped in ak2 so that 2nd point of ak1 is adjacent 2nd point of ak2
-           [oak[1], featureY_(ak2, d[3])],
-           [oak[1], featureY_(ak2, d[2])],
-          ];
-        sLine = line(p) + "Z";
-      }
-      if (trace_synteny > 4)
-        console.log("featureLineS3", ak1, ak2, d, oak, /*p,*/ sLine);
-      return sLine;
-    }
-
-    /** Similar to @see featureLine().
-     * Draw a horizontal notch at the feature location on the axis.
-     * Used when showAll and the feature is not in a axis of an adjacent Stack.
-     * @param ak axisID
-     * @param d feature name
-     * @param xOffset add&subtract to x value, measured in pixels
-     */
-    function featureLineS(ak, d, xOffset)
-    {
-      let akY = featureY_(ak, d);
-      let shiftRight = 9;
-      let o = oa.o,
-      oak = blockO(ak);
-      return line([[oak-xOffset + shiftRight, akY],
-                   [oak+xOffset + shiftRight, akY]]);
-    }
-    /** calculate SVG line path for an horizontal line.
-     *
-     * Currently this is used for paths within axis group elt,
-     * which is within stack elt, which has an x translation,
-     * so the path x position is relative to 0.
-     *
-     * @param ak axisID.
-     * @param akY Y	position (relative to axis of ak?)
-     * @param xOffset add&subtract to x value, measured in pixels
-     * Tick length is 2 * xOffset, centred on the axis + shiftRight.
-     * @return line path for an horizontal line.
-     * Derived from featureLineS(), can be used to factor it and featureLine()
-     */
-    function lineHoriz(ak, akY, xOffset, shiftRight)
-    {
-      /** scaled to axis */
-      let akYs = oa.y[ak](akY);
-      /* If the path was within g.foreground, which doesn't have x translation
-       * for the stack, would calculate x position :
-       * o = oa.o;  x position of axis ak : o[ak]
-       */
-      return line([[-xOffset + shiftRight, akYs],
-                   [+xOffset + shiftRight, akYs]]);
-    }
-    /** Similar to @see featureLine2().
-     * Only used in path_pre_Stacks() which will is now discarded;
-     * the apparent difference is the param xOffset, to which path_pre_Stacks()
-     * passed 5.
-     * @param ak blockId containing feature
-     * @param d feature name
-     * @param xOffset add&subtract to x value, measured in pixels
-     */
-    function featureLine(ak, d, xOffset)
-    {
-      let
-      akY = featureY_(ak, d);
-      let o = oa.o, oak = blockO(ak);
-      return line([[oak-xOffset, akY],
-                   [oak+xOffset, akY]]);
-    }
-    //- moved to collate-paths.js : collateMagm()
-
-//- paths
-    /** This is the stacks equivalent of path() / zoompath().
-     * Returns an array of paths (links between Axes) for a given feature.
-     */
-    function path(featureName) {
-      let r = [];
-      // TODO : discard features of the paths which change
-      // pathFeatures = {};
-
-      /** 1 string per path segment */
-      let
-        ffNf = flowsService.featureAxes[featureName];
-      if (ffNf !== undefined)
-        /* console.log("path", featureName);
-         else */
-        if ((unique_1_1_mapping === 2) && (ffNf.length > 1))
-      { /* console.log("path : multiple", featureName, ffNf.length, ffNf); */ }
-      else
-        for (let i=0; i < ffNf.length; i++)
-      {
-          let [featureName, a0_, a1_, za0, za1] = ffNf[i];
-          let a0 = a0_.axisName, a1 = a1_.axisName;
-          if ((za0 !== za1) && (a0 == a1))
-            console.log("path", i, featureName, za0, za1, a0, a1);
-          if (a0_.axis && a1_.axis)
-          {
-            let paths = patham(a0, a1, featureName, undefined);
-            r.push(paths);
-          }
-        }
-      if (trace_path > 3)
-        console.log("path", featureName, ffNf, r);
-      if (r.length == 0)
-        r.push("");
-      return r;
-    }
-
-    /** for unique paths between features, which may be connected by alias,
-     * data is [feature0, feature1, a0, a1]
-     * Enabled by unique_1_1_mapping.
-     * @param ffaa  [feature0, feature1, a0, a1]
-     */
-    function pathU(ffaa) {
-      if ((ffaa === undefined) || (ffaa.length === undefined))
-      { console.log("pathU", this, ffaa); breakPoint(); }
-      let [feature0, feature1, a0, a1] = ffaa;
-      let p = [];
-      p[0] = patham(a0.axisName, a1.axisName, feature0, feature1);
-      if (trace_path > 2)
-        console.log("pathU", ffaa, a0.mapName, a1.mapName, p[0]);
-      return p;
-    }
-    function pathUg(d) {
-      let ffaa = dataOfPath(this),
-      p = pathU(ffaa);
-      if (trace_path > 2)
-        console.log(this, d);
-      return p;
-    }
-
-    /** TODO : for paths with alias group as data
-     * @param aliasGroup   alias group (name)?
-     */
-    function pathAliasGroup(aliasGroup) {
-      /** 1 string per path segment */
-      let p = [],
-      agafa = aliasGroupAxisFeatures[aliasGroup]; // to be passed from collateStacks().
-      if (agafa === undefined)
-        console.log("pathAliasGroup", aliasGroup);
-      else
-        for (let i=0; i < agafa.length; i++)
-      {
-          let [featureName, a0, a1, za0, za1] = agafa[i];
-          p[i] = patham(a0.axisName, a1.axisName, featureName, undefined);
-        }
-      return p.join();
-    }
-
-    /** Calculate relative location of feature featureName in the axis axisID, and
-     * check if it is inRange 
-     * @param axisID  ID of Axis Piece
-     * @param featureName  feature within axisID
-     * @param range e.g. [0, yRange]
-     */
-    function inRangeI(axisID, featureName, range)
-    {
-      return inRange(featureY_(axisID, featureName), range);
-    }
-    /** as for inRangeI(), but param is a Feature, which is an interval (i.e. .values.length === 2) 
-     * @return true if the interval of the feature overlaps range.
-     */
-    function inRangeI2(axisID, feature, range)
-    {
-      let ir = featureY2(axisID, feature)
-          .some((vi) => inRange(vi, range));
-      return ir;
-    }
-
-//- paths-text
-    /** @param f  feature reference i.e. z[axisName][featureName]]
-     * @return text for display in path hover tooltip */
-    function featureAliasesText(fName, f)
-    {
-      let
-        fas = f.aliases,
-      s = fName + ":" + (fas ? f.aliases.length : "") + ":";
-      if (fas)
-      for (let i=0; i<fas.length; i++)
-      {
-        s += fas[i] + ",";
-      }
-      // console.log("featureAliasesText", fName, f, fas, s);
-      return s;
-    }
-
-    /** Prepare a tool-tip for the line.
-     * The line / path may be either connecting 2 axes, or a tick on one axis;
-     * in the latter case fa1 will be undefined.
-     * @param sLine svg path text
-     * @param d0, d1 feature names, i.e. a0:f0 , a1:f1 .
-     * Iff d1!==undefined, they are connected by an alias.
-     * @param fa0, fa1  feature objects.
-     * fa1 will be undefined when called from axisFeatureTick()
-     * @param aliasDescription  undefined or text identifying the basis of the alias connection
-     */
-    function pathFeatureStore(sLine, d0, d1, fa0, fa1, aliasDescription)
-    {
-      let pathFeatures = oa.pathFeatures;
-      if (pathFeatures[sLine] === undefined)
-        pathFeatures[sLine] = {};
-
-      /** Show the x,y coords of the endpoints of the path segment.  Useful during devel. */
-      const showHoverLineCoords = false;
-      const showHoverAliases = true;
-      /** 1 signifies the normal behaviour - handleMouseOver() will show just the feature name.
-       * Values other than 1 will be appended as text. */
-      let hoverExtraText = showHoverExtraText ?
-        " " + fa0.location +
-        (fa1 ?  "-" + fa1.location : "")
-        + (showHoverLineCoords ? " " + sLine : "")
-      : 1;
-      if (showHoverExtraText && showHoverAliases && aliasDescription)
-        hoverExtraText += "<div><pre>" + aliasDescription + "</pre></div>";
-      if (false)
-      {
-        hoverExtraText += 
-          "<div>" + featureAliasesText(d0, fa0) + "</div>" +
-          (d1 && fa1 ? 
-           "<div>" + featureAliasesText(d1, fa1) + "</div>" : "");
-      }
-      // these are split (at ",") when assigned to hoverFeatures
-      let d = d1 && (d1 != d0) ? d0 + "," + d1: d0;
-      pathFeatures[sLine][d] = hoverExtraText; // 1;
-    }
-
-    /** Determine if the feature interval overlaps the zoomedDomain of its axis,
-     * identified by axisName.
-     * Equivalent to featureInRange() - see comments there also.
-     *
-     * @param  a0  axis name
-     * @param d0 feature name, i.e. a0:d0
-     */
-    function featureNameInRange(a0, d0) {
-      /** To allow lines which spread onto other axes in the same stack, but
-       * still remain within the stack limits, unlike allowPathsOutsideZoom, use
-       * [0, vc.yRange];
-       */
-      let
-      a0_ = Stacked.getAxis(a0);
-      /** If the block containing one end of the path is un-viewed, block.axis
-       * may be undefined if render occurs before block-adj is destroyed . */
-      if (!a0_) return undefined;
-      let  range0 = a0_.yRange2();
-      let ir = inRangeI(a0, d0, range0);
-      return ir;
-    }
-    /** Equivalent to featureNameInRange(); param is feature instead of feature name.
-     * @param  axisName ID of reference block of axis
-     * @param feature ember data store object
-     */
-    function featureInRange(axisName, feature) {
-      let a0 = axisName, d0 = feature;
-      /** To allow lines which spread onto other axes in the same stack, but
-       * still remain within the stack limits, unlike allowPathsOutsideZoom, use
-       * [0, vc.yRange];
-       */
-      let
-      ir,
-      valueInInterval = me.get('controls').get('view.valueInInterval'),
-      /** If the block containing one end of the path is un-viewed, block.axis
-       * may be undefined if render occurs before block-adj is destroyed . */
-      a0_ = Stacked.getAxis(a0);
-      if (a0_) {
-        let
-        domain = a0_.axis1d?.zoomedDomain;
-        ir = ! domain || valueInInterval(feature.value, domain);
-      }
-      return ir;
-    }
-    /**
-     * @param  a0, a1  axis names
-     * @param d0, d1 feature names, i.e. a0:d0, a1:d1.
-     * Iff d1!==undefined, they are connected by an alias.
-     */
-    function patham(a0, a1, d0, d1) {
-      // let [stackIndex, a0, a1] = featureAliasGroupAxes[d];
-      let r;
-
-      /** if d1 is undefined, then its value is d0 : direct connection, not alias. */
-      let d1_ = d1 || d0;
-      // can skip the inRangeLR[] calc if allowPathsOutsideZoom.
-      /** Filter out those paths that either side locates out of the svg. */
-      let
-          inRangeLR = 
-            [featureNameInRange(a0, d0),
-             featureNameInRange(a1, d1_)],
-
-        lineIn = me.get('allowPathsOutsideZoom') ||
-            (inRangeLR[0]
-             && inRangeLR[1]);
-      // console.log("path()", stackIndex, a0, allowPathsOutsideZoom, inRangeI(a0), inRangeI(a1), lineIn);
-      if (lineIn)
-      {
-        let sLine = featureLineS2(a0, a1, d0, d1_);
-        let cmName = oa.cmName;
-        let z = oa.z;
-        let feature0 = d0, feature1 = d1,
-        /** used for targeted debug trace (to filter, reduce volume)
-         * e.g. = feature0 == "featureK" && feature1 == "featureK" &&
-         cmName[a0].mapName == "MyMap5" && cmName[a1].mapName == "MyMap6"; */
-        traceTarget = 
-          ((trace_path_count !== undefined) && (trace_path_count-- > 0))
-           || (trace_path > 4);
-        if (traceTarget)
-          console.log("patham()", d0, d1, cmName[a0] && cmName[a0].mapName, cmName[a1] && cmName[a1].mapName, a0, a1, z && z[a0] && z[a0][d0] && z[a0][d0].location, d1 && z && z[a1] && z[a1][d1] && z[a1][d1].location, sLine);
-        r = sLine;
-        if (pathDataIsLine)
-          /* Prepare a tool-tip for the line. */
-          pathFeatureStore(sLine, d0, d1, z[a0][d0], z[a1][d1_]);
-      }
-      else if (me.get('controls.view.tickOrPath') === 'tick') {
-        // tickOrPath replaces oa.drawOptions.showAll
-        const featureTickLen = 10; // orig 5
-        function axisFeatureTick(ai, d) {
-          let z = oa.z;
-          if (d in z[ai])
-          {
-            r = featureLineS(ai, d, featureTickLen);
-            pathFeatureStore(r, d, d, z[ai][d], undefined);
-          }
-        }
-        // Filter these according to inRangeI() as above : return 0 or 1 ticks, not 2 because at least one is out of range.
-          if (inRangeLR[0])
-              axisFeatureTick(a0, d0);
-          if (inRangeLR[1])
-              axisFeatureTick(a1, d1_);
-      }
-      return r;
-    }
-    /** patham() draws a line (1-d object),  patham2 draws a parallelogram (2-d object).
-     * @param  a0, a1  axis names
-     * @param d[0 .. 3], feature names, i.e. a0:d[0]-d[1], a1:d[2]-d[3].
-     * Unlike patham(), d does not contain undefined.
-     * added : for syntenyBlock_2Feature, d is [d0, undefined, d2, undefined]
-     * i.e. features d0 and d2 are intervals not points.
-     */
-    function patham2(a0, a1, d) {
-      let r;
-      let range = [0, vc.yRange];
-
-      /** Filter out those parallelograms which are wholly outside the svg, because of zooming on either end axis. */
-      let
-      lineIn = me.get('allowPathsOutsideZoom') ||
-        (syntenyBlock_2Feature ?
-         inRangeI2(a0, d[0], range) ||
-         inRangeI2(a1, d[2], range) : 
-        (inRangeI(a0, d[0], range)
-         || inRangeI(a0, d[1], range)
-         || inRangeI(a1, d[2], range)
-         || inRangeI(a1, d[3], range)));
-      if (lineIn)
-      {
-        let sLine = featureLineS3(a0, a1, d);
-        let cmName = oa.cmName;
-        if (trace_synteny > 4)
-          console.log(
-            "patham2()", d, cmName[a0] && cmName[a0].mapName, cmName[a1] && cmName[a1].mapName, a0, a1,
-            z && z[a0] && z[a0][d[0]] /*&& z[a0][d[0]].location*/,
-            d[2] && z && z[a1] && z[a1][d[2]] /*&& z[a1][d[2]].location*/, sLine);
-        r = sLine;
-      }
-      /* for showAll, perhaps change the lineIn condition : if one end is wholly
-       * in and the other wholly out then show an open square bracket on the
-       * axis which is in. */
-
-      return r;
-    }
-
-    /** Calculate relative feature location in the axis.
-     * Result Y is relative to the stack, not the axis,
-     * because .foreground does not have the axis transform (Axes which are ends
-     * of path will have different Y translations).
-     *
-     * @param axisID name of axis or block  (if it is an axis it will be in axisIDs[])
-     * This parameter is the difference with the original featureY() which this function replaces.
-     * @param d feature name
-     */
-    function featureY_(axisID, d)
-    {
-      // z[p][f].location, actual position of feature f in the axis p, 
-      // y[p](z[p][f].location) is the relative feature position in the svg
-      // ys is used - the y scale for the stacked position&portion of the axis.
-      let parentName = Block.axisName_parent(axisID),
-      ysa = oa.ys[parentName],
-      /** if d is object ID instead of name then featureIndex[] is used */
-      feature = oa.z[axisID][d] || lookupFeature(oa, flowsService, oa.z, axisID, d), // || oa.featureIndex[d],
-      aky = ysa(feature.location),
-      /**  As noted in header comment, path Y value requires adding axisY = ... yOffset().
-       * parentName not essential here because Block yOffset() follows .parent reference. */
-      axisY = oa.stacks.blocks[axisID].yOffset();
-      // can use parentName here, but initially good to have parent and child traced.
-      if (trace_scale_y && ! tracedAxisScale[axisID])
-      {
-        tracedAxisScale[axisID] = true;
-        let yDomain = ysa.domain();
-        console.log("featureY_", axisID,  axisChrName.axisName2MapChr(axisID), parentName, d,
-                      z[axisID][d].location, aky, axisY, yDomain, ysa.range());
-      }
-      return aky + axisY;
-    }
-    /** as for featureY_(), but param is a Feature, with value.length === 2.
-     * @param feature
-     * @return [start,end]  feature interval Y relative to the stack.
-     */
-    function featureY2(axisID, feature)
-    {
-      let
-      // axisID = feature.get('blockId'),
-      /** or .view.axisName */
-      parentName = Block.axisName_parent(axisID),
-      ysa = oa.ys[parentName],
-      v = feature.value,
-      aky = v.map((location) => ysa(location)),
-      axisY = oa.stacks.blocks[axisID].yOffset();
-
-      return aky.map((y) => y + axisY);
-    }
 
 
 //- moved to axisBrush.js (considered axis-brush-zoom.js) : getBrushExtents() ... brushended()
@@ -3277,496 +2170,9 @@ getBrushExtents(),
 
 //- moved to utils/log-selection : fromSelectionArray(), logSelectionLevel(), logSelection()
 
-//- paths
-    function log_path_data(g)
-    {
-      let p3 = g.selectAll("g").selectAll("path");  // equiv : g.selectAll("g > path")
-      console.log(p3._groups.length && p3._groups[0][0].__data__);
-    }
 
-    /** Update the paths connecting features present in adjacent stacks.
-     * @param t undefined, or a d3 transition in which to perform the update.
-     * @param flow  configures the data sources, processing, and output presentation
-     */
-    function pathUpdate_(t, flow)
-    {
-      let pathData = flow.pathData,
-      unique_1_1_mapping = flow.direct ? false : (flow.unique ? true : 3),
-      // pathDataInG = true,
-      pathClass = flow.direct ? I : pathClassA;
-      // "exported" to patham().
-      pathDataIsLine = flow.direct;
-      // console.log("pathUpdate");
-      tracedAxisScale = {};  // re-enable trace, @see trace_scale_y
-      /** flow.g may not be rendered yet; could use an empty selection in place
-       * of flow.g, but flow.g is used several times here. */
-      let flow_g = flow.gf;
-      if (! flow_g) return;
-      let g = flow_g ? flow_g.selectAll("g") :  d3.selectAll();
-      let gn;
-      /* if (unique_1_1_mapping)
-       {*/
-      if (trace_path)
-        console.log("pathUpdate() pathData", flow.name, pathData.length, g.size()); // , pathData
-      if (trace_path > 2)
-        for (let pi=0; pi < pathData.length; pi++)
-          log_ffaa(pathData[pi]);
-      g = g.data(pathData);
-      if (trace_path)
-        console.log("exit", g.exit().size(), "enter", g.enter().size());
-      if (trace_path && pathData.length === 0)
-      {
-        console.log("pathData.length === 0");
-      }
-      g.exit().remove();
-      function log_foreground_g(selector)
-      {
-        let gg = oa.foreground.selectAll(selector);
-        console.log("gg", selector, (trace_path > 2) ? gg._groups[0] : gg.node(), gg.size());
-        if (trace_path > 2)
-        {
-          let gg0 = gg._groups[0];
-          for (let gi=0; (gi < gg0.length) && (gi < 10); gi++)
-          {
-            log_ffaa(gg0[gi].__data__);
-            console.log(gg0[gi]);
-          }
-        }
-      }
-      gn = g.enter().append("g");
-      // insert data into path elements (each line of the "map" is a path)
-      let pa;
-      if (flow.direct)
-      {
-        if (trace_path)
-          console.log(flow.name, gn.size(), gn);
-        // pa = gn.append("path");
-        // log_path_data(flow_g);
-        let p2 = flow_g.selectAll("g").selectAll("path").data(path);
-        // log_path_data(flow_g);
-        // pa = g.selectAll("path").data(path)
-        pa = p2.enter().append("path");
-        let p2x = p2.exit();
-        if (! p2x.empty())
-        {
-          console.log("pathUpdate_", "p2x", p2x._groups[0]);
-          p2x.remove();
-        }
+    //- moved to utils/draw/path-classes.js : colouredAg(), classFromSet(), locationClasses(), pathClasses(), pathColourUpdate(), scaffoldLegendColourUpdate(),
 
-      }
-      else
-      {
-        pa =
-          gn.append("path");
-        let gx = g.exit();
-        if (! gx.empty())
-        {
-          console.log("pathUpdate_", "gx", gx._groups[0]);
-          gx.remove();
-        }
-        if (! pathDataInG)
-          g.selectAll("path").data(pathData);
-      }
-      if (trace_path > 1)
-        log_foreground_g("g." + flow.name + " > g > path");
-      (pathDataInG ? gn : pa)
-      //.merge()
-        .attr("class", pathClass);
-      //}
-      // trace_path_count = 10;
-      let
-        path_ = unique_1_1_mapping ? (pathDataInG ? pathUg : pathU) : path,
-      /** The data of g is feature name, data of path is SVG path string. */
-      keyFn =function(d) { let featureName = featureNameOfPath(this); 
-                           console.log("keyFn", d, 'parent', this, featureName); 
-                           return featureName; };
-      /* The ffaa data of path's parent g is accessed from path attribute
-       * functions (i.e. style(stroke), classed(reSelected), gKeyFn(), d, etc.);
-       * alternately it could be stored in the path's datum and accessed
-       * directly.  This would be needed if there were multiple path's within a
-       * g elt.  There is incomplete draft of this (changing the data of path to
-       * ffaa) in branch devel-path-data),
-       *
-       * Here the SVG line string is calculated by path_ from the parent g data,
-       * and the attr d function is identity (I) to copy the path datum.
-       */
-      if (false)
-      {
-        let gd = /*g.selectAll("path")*/gn/*pa*/.data(path_/*, keyFn*/);
-        let en = gd.enter();
-        if (trace_stack > 1)
-        {
-          let ex = gd.exit();
-          if (ex.size())
-            console.log("gd.exit()", ex);
-          if (en.size())
-            console.log("gd.enter()", en);
-        }
-        gd.exit().remove();
-      }
-      if (trace_path && pathData.length > 0 &&  g.size() === 0)
-      {
-        console.log("pathUpdate", pathData.length, g.size(), gn.enter().size(), t);
-      }
-      let gp;
-      if ((trace_path > 1) && (pathData.length != (gp = d3.selectAll(".foreground > g." + flow.name + " > g > path")).size()))
-      {
-        console.log("pathData.length", pathData.length, "!= gp.size()", gp.size());
-      }
-
-      // .merge() ...
-      if (true)
-      {
-        /** attr d function has not changed, but the data has.
-         * even where the datum is the same, the axes may have moved.
-         * So update all paths.
-         */
-        let t1= (t === undefined) ? oa.foreground.select(" g." + flow.name)  : flow_g.transition(t),
-        p1 = t1.selectAll("g > path"); // pa
-        p1.attr("d", pathDataIsLine ? I : path_);
-        if (trace_path > 3)
-        {
-          console.log(t1.nodes(), t1.node(), p1.nodes(), p1.node());
-          log_path_data(flow_g);
-        }
-        setupMouseHover(pa);
-      }
-      else
-      {
-        if (t === undefined) {t = d3; }
-        t.selectAll(".foreground > g." + flow.name + "> g > path").attr("d", function(d) { return d; });
-        setupMouseHover(
-          flow_g.selectAll("g > path")
-        );
-      }
-      pathColourUpdate(pa, flow);
-    }
-    if (! this.pathUpdateFlow)
-    {
-      /** Call pathUpdate_().  Used for calls from collate-paths.
-       * @param t transition, which is likely to be undefined here.
-       */
-      this.pathUpdateFlow = function(t, flow) {
-        if (me.get('pathJoinClient'))
-          pathUpdate_(t, flow);
-      };
-      this.on('pathUpdateFlow', this, this.pathUpdateFlow);
-    }
-
-    /** call pathUpdate(t) for each of the enabled flows. */
-    function pathUpdate(t)
-    {
-      if (me.get('pathJoinClient'))
-      d3.keys(flows).forEach(function(flowName) {
-        let flow = flows[flowName];
-        if (flow.enabled)
-          pathUpdate_(t, flow);
-      });
-    }
-//- paths-classes
-    /** Get the data corresponding to a path element, from its datum or its parent element's datum.
-     * In the case of using aliases, the parent g's data is [f, f, axis, axis, ...] "ffaa".
-     */
-    function dataOfPath(path)
-    {
-      let pa = pathDataInG
-        ? path.parentElement || path._parent /* EnterNode has _parent not parentElement */
-        : path,
-      da = pa.__data__;
-      return da;
-    }
-    /** Get the featureName of a path element, from its corresponding data accessed via dataOfPath().
-     */
-    function featureNameOfPath(path)
-    {
-      let da = dataOfPath(path),
-      featureName = featureNameOfData(da);
-      return featureName;
-    }
-    /** If featureName has an alias group with a feature with an assigned class (colour) then return the classes.
-     * @return undefined otherwise
-     */
-    function colouredAg(axisName, featureName)
-    {
-      let classSet,
-      feature = oa.z[axisName][featureName], //  || oa.featureIndex[featureName],  // use featureIndex[] if featureName was ID, but instead have converted IDs -> names.
-      aliasGroupName = feature.aliasGroupName;
-      if (aliasGroupName)
-      {
-        classSet = aliasGroupClasses[aliasGroupName];
-      }
-      return classSet;
-    }
-    function classFromSet(classSet)
-    {
-      /** can use any element of set; later may cycle through them with slider. */
-      let colourOrdinal = classSet.values().next().value;
-      return colourOrdinal;
-    }
-    /** @param axisName could be chrName : feature name is looked up via axisName,
-     * but intervals might be defined in terms of chrName; which is currently
-     * the same thing, but potentially 1 chr could be presented by multiple axes.
-     * see axisName2Chr();
-     * @return name of interval, as per makeIntervalName()
-     * Later maybe multiple results if intervals overlap.
-     */
-    function locationClasses(axisName, featureName)
-    {
-      let classes,
-      f = oa.z[axisName][featureName],
-      location = f.location,
-      chrName = axisChrName.axisName2Chr(axisName),
-      mapChrName = axisId2Name(axisName) + ":" + chrName,
-      it = intervalTree[axisName];
-
-      if (it)
-        //Find all intervals containing query point
-        it.queryPoint(location, function(interval) {
-          /* later return Set or array of classes.  */
-          classes = makeIntervalName(mapChrName, interval);
-          if (trace_path_colour > 2)
-            console.log("locationClasses", "axisName", axisName, "mapChrName", mapChrName, "featureName", featureName, ", scaffold/class", classes);
-        });
-      
-      return classes;  
-    }
-    /** Access featureName/s from d or __data__ of parent g of path.
-     * Currently only used when (use_path_colour_scale === 4), but aims to be more general.
-     * Lookup featureScaffold to find class, or if (use_path_colour_scale === 4)
-     * also look up colouredAg().  @see use_path_colour_scale
-
-     * The scaffold of a feature was the first use; this has been generalised to a "class";
-     * i.e. feature names are mapped (via colouredFeatures) to class names.
-     * This function is used by stroke (todo) and class functions of path.
-     * (based on a blend & update of those 2, mostly a copy of stroke).
-     * @param pathElt <path> element which is to be coloured / classed
-     * @param d datum of pathElt
-     */
-    function pathClasses(pathElt, d)
-    {
-      let classes;
-      /** d is path SVG line text if pathDataIsLine */
-      let da = dataOfPath(pathElt);
-      /** similar to : (da.length === 4) or unique_1_1_mapping */
-      let dataIsMmaa = typeof(da) === "object";
-      let featureName = dataIsMmaa ? da[0] : da, // also @see featureNameOfPath(pathElt)
-      colourOrdinal;
-      if (use_path_colour_scale < 4)
-      {
-        colourOrdinal = featureName;
-      }
-      else if ((use_path_colour_scale === 4) && featureScaffold)
-      {
-        colourOrdinal = featureScaffold[featureName];
-        /* colour the path if either end has a class mapping defined.
-         * if d[0] does not then check d[1].
-         */
-        if ((colourOrdinal === undefined) && dataIsMmaa
-            && (da[0] != da[1]))
-        {
-          colourOrdinal = /*featureScaffold[da[0]] ||*/ featureScaffold[da[1]];
-        }
-        if (trace_path_colour > 2)
-          console.log("featureName", featureName, ", scaffold/class", colourOrdinal);
-      }
-      else if (use_path_colour_scale === 5)
-      {
-        // currently, result of locationClasses() is a string identifying the interval,
-        // and matching the domain value.
-        if (dataIsMmaa)
-        {
-          classes = locationClasses(da[2].axisName, featureName)
-            || locationClasses(da[3].axisName, da[1]);
-        }
-        else
-        {
-          let Axes = oa.featureAxisSets[featureName], axisName;
-          // choose the first chromosome;  may be unique.
-          // if not unique, could colour by the intervals on any of the Axes,
-          // but want just the Axes which are points on this path.
-          for (axisName of Axes) { break; }
-          classes = locationClasses(axisName, featureName);
-        }
-      }
-      if (classes !== undefined)
-      {
-      }
-      else if (colourOrdinal)
-        classes = colourOrdinal;
-      else if (dataIsMmaa)
-      {
-        /* Like stroke function above, after direct lookup of path end
-         * features in featureScaffold finds no class defined, lookup via
-         * aliases of end features - transitive.
-         */
-        /* if ! dataIsMmaa then have featureName but no Axes; is result of a direct flow,
-         * so colouring by AliasGroup may not be useful.
-         */
-        // collateStacks() / maInMaAG() could record in pathsUnique the alias group of the path.
-        let
-        /** based on similar in handleMouseOver(). */
-          featureNames, blockIds;
-          if (Array.isArray(da)) {
-            const [feature0, feature1, a0, a1] = da;
-            featureNames = [feature0, feature1];
-            blockIds = [a0.axisName, a1.axisName];
-          } else {
-            featureNames = da.alignment.mapBy('repeats.features.0.name');
-            blockIds = da.alignment.mapBy('blockId');
-          }
-        const
-        classSet =
-          colouredAg(blockIds[0], featureNames[0]) ||
-          colouredAg(blockIds[1], featureNames[1]);
-        classes = classSet;
-      }
-      return classes;
-    }
-    function pathColourUpdate(gd, flow)
-    {
-      if (trace_path_colour)
-      {
-        console.log
-        ("pathColourUpdate", flow && flow.name, flow,
-         use_path_colour_scale, path_colour_scale_domain_set, path_colour_scale.domain());
-        if (gd && (trace_path_colour > 2))
-          logSelection(gd);
-      }
-      let flowSelector = flow ? "." + flow.name : "";
-      if (gd === undefined)
-        gd = d3.selectAll(".foreground > g" + flowSelector + "> g").selectAll("path");
-
-      if (use_path_colour_scale && path_colour_scale_domain_set)
-        if (use_path_colour_scale >= 4)
-          gd.style('stroke', function(d) {
-            let colour;
-            /** d is path SVG line text if pathDataIsLine */
-            let da = dataOfPath(this);
-            /** similar to : (da.length === 4) or unique_1_1_mapping */
-            let dataIsMmaa = typeof(da) === "object";
-            let featureName = dataIsMmaa ? da[0] : da, // also @see featureNameOfPath(this)
-            colourOrdinal = featureName;
-            if ((use_path_colour_scale === 4) && featureScaffold)
-            {
-              colourOrdinal = featureScaffold[featureName];
-              /* colour the path if either end has a class mapping defined.
-               * if d[0] does not then check d[1].
-               */
-              if ((colourOrdinal === undefined) && dataIsMmaa
-                  && (da[0] != da[1]))
-              {
-                colourOrdinal = featureScaffold[da[0]] || featureScaffold[da[1]];
-              }
-            }
-            else if (use_path_colour_scale === 5)
-            {
-              let classSet = pathClasses(this, d);
-              colourOrdinal = (classSet === undefined) ||
-                (typeof classSet == "string")
-                ? classSet : classFromSet(classSet);
-            }
-            // path_colour_scale(undefined) maps to pathColourDefault
-            if ((colourOrdinal === undefined) && dataIsMmaa)
-            {
-              /* if ! dataIsMmaa then have featureName but no Axes; is result of a direct flow,
-               * so colouring by AliasGroup may not be useful.
-               */
-              // collateStacks() / maInMaAG() could record in pathsUnique the alias group of the path.
-              let [feature0, feature1, a0, a1] = da;
-              let classSet = colouredAg(a0.axisName, feature0) || colouredAg(a1.axisName, feature1);
-              if (classSet)
-                colourOrdinal = classFromSet(classSet);
-              if (false && colourOrdinal)
-                console.log(featureName, da, "colourOrdinal", colourOrdinal);
-            }
-            if (colourOrdinal === undefined)
-              colour = undefined;
-            else
-              colour = path_colour_scale(colourOrdinal);
-
-            if (false && (colour !== pathColourDefault))  // change false to enable trace
-              console.log("stroke", featureName, colourOrdinal, colour);
-            return colour;
-          });
-
-      if (use_path_colour_scale === 3)
-        gd.classed("reSelected", function(d, i, g) {
-          /** d is path SVG line text */
-          let da = dataOfPath(this);
-          let dataIsMmaa = typeof(da) === "object";
-          let featureName = dataIsMmaa ? da[0] : da;
-
-          let pathColour = path_colour_scale(featureName);
-
-          // console.log(featureName, pathColour, d, i, g);
-          let isReSelected = pathColour !== pathColourDefault;
-          return isReSelected;
-        });
-
-      if (use_path_colour_scale >= 4)
-        gd.attr("class", function(d) {
-          let scaffold, c,
-          classes = pathClasses(this, d),
-          simpleClass;
-          if ((simpleClass = ((typeof(classes) != "object"))))
-          {
-            scaffold = classes;
-          }
-          else  // classes is a Set
-          {
-            let classSet = classes;
-            scaffold = "";
-            for (let cl of classSet)
-            {
-              scaffold += " " + cl;
-            }
-            // console.log("class", da, classSet, scaffold);
-          }
-
-          if (scaffold)
-          {
-            c = (simpleClass ? "" : "strong" + " ") + scaffold;
-            if (trace_path_colour > 2)
-              console.log("class", scaffold, c, d, this);
-          }
-          else if (false)
-          {
-            console.log("class", this, featureNameOfPath(this), featureScaffold, scaffold, c, d);
-          }
-
-          return c;
-        });
-    }
-
-    function scaffoldLegendColourUpdate()
-    {
-      console.log("scaffoldLegendColourUpdate", use_path_colour_scale);
-      if (use_path_colour_scale === 4)
-      {
-        let da = Array.from(scaffolds),
-        ul = d3.select("div#scaffoldLegend > ul");
-        // console.log(ul, scaffolds, da);
-        let li_ = ul.selectAll("li")
-          .data(da);
-        // console.log(li_);
-        let la = li_.enter().append("li");
-        // console.log(la);
-        let li = la.merge(li_);
-        li.html(I);
-        li.style("color", function(d) {
-          // console.log("color", d);
-          let scaffoldName = d,
-          colourOrdinal = scaffoldName;
-          let colour = path_colour_scale(colourOrdinal);
-
-          if (false && (colour != pathColourDefault)) // change false to enable trace
-          {
-            console.log("color", scaffoldName, colour, d);
-          }
-          return colour;
-        });
-      }
-    }
 
 //- moved  deleteAfterDrag() to stacks-drag (considered axis/)
 
@@ -3812,7 +2218,7 @@ getBrushExtents(),
       // pathUpdate() uses flow.gf, which is set after oa.foreground.
       if (oa.foreground && ysLength())
       {
-        pathUpdate(t);
+        pathDataUtils.pathUpdate(t);
         countPathsWithData(oa.svgRoot);
       }
       else {
@@ -3840,13 +2246,7 @@ getBrushExtents(),
 //- moved to axisBrush.js (considered axis-brush-zoom) : draw_flipRegion(), (containing) features2Limits(), flipRegionInLimits(),
 
 
-//- paths-classes
-    this.set('clearScaffoldColours', function() {
-      console.log("clearScaffoldColours");
-      featureScaffold = oa.featureScaffold = {}, scaffolds = new Set(), scaffoldFeatures = {};
-      aliasGroupClasses = {};
-      pathColourUpdate(undefined, undefined);
-    });
+//- moved to path-classes : clearScaffoldColours()
 
 //- axis-menu
     let apTitleSel = "g.axis-outer > text";
@@ -3938,10 +2338,10 @@ getBrushExtents(),
         collateStacks();
         if (oa.foreground && ysLength())
         {
-          pathUpdate(/*t*/ undefined);
+          pathDataUtils.pathUpdate(/*t*/ undefined);
           countPathsWithData(oa.svgRoot);
         }
-        pathUpdate(undefined);
+        pathDataUtils.pathUpdate(undefined);
       }
 
     }
@@ -4013,7 +2413,7 @@ getBrushExtents(),
         {
         t.selectAll(".axis-outer").attr("transform", Stack.prototype.axisTransformO);
           // also xDropOutDistance_update (),  update DropTarget().size
-          pathUpdate(t /*st*/);
+          pathDataUtils.pathUpdate(t /*st*/);
         }
 
         if (heightChanged)
@@ -4059,7 +2459,7 @@ getBrushExtents(),
               console.log('showResize', 'resized', me, me.resized, widthChanged, heightChanged, useTransition, graphDim, /*brushedDomains,*/ exc.stack || exc);
             }
           // axisShowExtendAll();
-          showSynteny(oa.syntenyBlocks, undefined); });
+          showSynteny(oa.syntenyBlocks, undefined, oa); });
       };
 
    //- moved extracts to view-controls, replaced these functions using oninput=(action )  :  setupToggle(), setupTogglePathUpdate(), setupToggleModePublish(), setupToggleShowPathHover(), setupToggleShowAll(), setupToggleShowSelectedFeatures(), setupPathOpacity(), setupPathWidth(), setupVariousControls(),
@@ -4089,24 +2489,7 @@ getBrushExtents(),
       //- moved code to app/utils/draw/flow-controls.js: updateSelections_flowControls() (new function)
     };
 
-//- paths-classes, should be getUsePathColour() ?
-    function getUsePatchColour()
-    {
-      let inputParent = '#choose_path_colour_scale',
-      inputs = $(inputParent + ' input'), val;
-      for (let ii = 0;
-           (ii < inputs.length) && (val === undefined);
-           ii++)
-      {
-        if (inputs[ii].checked)
-        {
-          val = inputs[ii].getAttribute("data-value"); // .value;
-          val = parseInt(val);
-        }
-      }
-      console.log(inputParent + " value", val);
-      return val;
-    }
+//- moved to path-classes : getUsePatchColour() as getUsePathColour()
 
 //- moved to flows-controls.js : Flow.prototype.ExportDataToDiv()
 
@@ -4161,10 +2544,6 @@ getBrushExtents(),
     }
     // eltWidthResizable('.resizable');
 
-    // initial test data for axis-tracks - will discard this.
-    let oa = this.get('oa');
-    oa.tracks  = [{start: 10, end : 20, description : "track One"}];
-    this.set('toolTipHovered', false);
     later(() => {
       $('.left-panel-shown')
         .on('toggled', (event) => this.readLeftPanelToggle() );

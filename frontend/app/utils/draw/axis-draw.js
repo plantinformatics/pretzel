@@ -80,7 +80,7 @@ AxisDraw.prototype.draw = function draw() {
   console.log(fnName);
   const
   oa = this.oa || this.axis1d.drawMap.oa,
-  stacks = this.stacksView.stacks;
+  stacks = this.stacksView?.stacks || this.stacks;
 
   // can move this to stacks-view (and possibly stack-view)
     let stackSd = oa.svgContainer.selectAll(".stack")
@@ -139,7 +139,7 @@ AxisDraw.prototype.draw2 = function draw2(selections, stack_axisIDs, newRender, 
   }
   const
   oa = this.oa || this.axis1d.drawMap.oa,
-  stacks = this.stacks || this.stacksView.stacks;
+  stacks = this.stacksView?.stacks || this.stacks;
 
   stackX
     .transition().duration(500)

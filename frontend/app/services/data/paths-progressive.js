@@ -6,6 +6,10 @@ import Service, { inject as service } from '@ember/service';
 
 import { task, didCancel } from 'ember-concurrency';
 
+/* global Promise */
+
+//------------------------------------------------------------------------------
+
 import { stacks, Stacked } from '../../utils/stacks';
 import { storeFeature } from '../../utils/feature-lookup';
 import { vcfGenotypeLookup, addFeaturesJson } from '../../utils/data/vcf-feature';

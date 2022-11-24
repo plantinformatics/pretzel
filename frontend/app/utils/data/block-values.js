@@ -1,9 +1,12 @@
 import { resolve, all } from 'rsvp';
 
+/* global Promise */
+
 import { singularize, pluralize } from 'ember-inflector';
 
+//------------------------------------------------------------------------------
 
-import { toPromiseProxy, toArrayPromiseProxy } from '../../utils/ember-devel';
+import { toPromiseProxy, toArrayPromiseProxy } from '../ember-devel';
 
 import { blocksParentAndScope } from './grouping';
 import {

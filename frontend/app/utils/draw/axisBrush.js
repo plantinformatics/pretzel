@@ -57,6 +57,8 @@ import {
   unique_1_1_mapping 
 } from '../paths-config';
 
+import { PathInfo } from './path-info';
+import { PathDataUtils } from './path-data';
 
 //------------------------------------------------------------------------------
 
@@ -201,7 +203,9 @@ function showAxisZoomResetButtons(svgContainer, getBrushExtents, zoom, resetZoom
 function AxisBrushZoom(oa) {
   const
   me = oa.eventBus,
+  pathDataUtils = PathDataUtils(oa),
   resetZooms = me.get('resetZooms');
+  
 
   const result = {
     brushUpdates,
@@ -804,7 +808,7 @@ function AxisBrushZoom(oa) {
           // axisStackChanged(t);
           throttledZoomedAxis(axisID, t);
 
-          axisApi.pathUpdate(t);
+          pathDataUtils.pathUpdate(t);
           let axisS;
           let resetScope = axisID ? (axisS = selectAxisOuter(axisID)) : svgContainer;
             resetScope.selectAll(".btn").remove();
@@ -838,7 +842,8 @@ function AxisBrushZoom(oa) {
       }
       else
       {
-        const toolTip = oa.toolTip;
+        const pathInfo = PathInfo(oa);
+        const toolTip = pathInfo.toolTip;
         toolTip.html('<span id="AxisCircleHoverTarget">AxisCircleHoverTarget</span>');
         toolTip.show(d, i);
         targetId = "devel-visible";
@@ -860,7 +865,10 @@ function AxisBrushZoom(oa) {
       10000);
     else
     {
-      function hidePathHoverToolTip() { oa.toolTip.hide(d); }
+      function hidePathHoverToolTip() {
+        const pathInfo = PathInfo(/*oa*/null);
+        pathInfo.toolTip.hide(d);
+      }
       debounce(hidePathHoverToolTip, 1000);
     }
   }
@@ -969,6 +977,7 @@ function AxisBrushZoom(oa) {
         // The need for brushExtents[] is not clear; it retains earlier values from brushedRegions, but is addressed relative to selectedAxes[].
         if (brushExtents[i] === undefined)
         {
+          const brushedRegions = oa.brushedRegions;
           console.log("zoom() brushExtents[i]===undefined", axisName, p, i, "use", brushedRegions[p]);
           brushExtents[i] = brushedRegions[p];
         }
@@ -1061,7 +1070,6 @@ function AxisBrushZoom(oa) {
    */
   function axisScaleChanged(p, t, updatePaths)
   {
-    const axisApi = oa.axisApi;
     let y = oa.y, svgContainer = oa.svgContainer;
     let yp = y[p],
     axis = oa.axes[p];
@@ -1074,7 +1082,7 @@ function AxisBrushZoom(oa) {
         .duration(me.get('axisZoom.axisTransitionTime'));
       axisS.call(yAxis);
       if (updatePaths)
-        axisApi.pathUpdate(t);
+        pathDataUtils.pathUpdate(t);
       let axisGS = svgContainer.selectAll("g.axis#" + axisEltId(p) + " > g.tick > text");
       axisGS.attr("transform", yAxisTicksScale);
     }
@@ -1098,7 +1106,6 @@ function AxisBrushZoom(oa) {
    * view-controls.js:flipRegion().
    */
   function draw_flipRegion(features) {
-    const axisApi = oa.axisApi;
     let brushedMap, zm,
     selectedAxes = oa.selectedAxes;
     let limits;
@@ -1200,7 +1207,7 @@ function AxisBrushZoom(oa) {
           }
         });
       });
-      axisApi.pathUpdate(undefined);
+      pathDataUtils.pathUpdate(undefined);
     }
   }
 

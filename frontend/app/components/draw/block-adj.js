@@ -37,6 +37,8 @@ import {
   pathsOfFeature,
   locationPairKeyFn
 } from '../../utils/paths-api';
+import { PathInfo } from '../../utils/draw/path-info';
+
 
 import { getTransform, transform2Css } from '../../utils/draw/direct-linear-transform';
 import { thenOrNow } from '../../utils/common/promises';
@@ -1000,8 +1002,8 @@ looking at the currently displayed paths in a block_adj :
         ;//.then(() => { dLog('draw pathPosition then', pS.size(), pSE.size());  });
 
       if (pSE.size()) {
-        const axisApi = this.get('drawMap.oa.axisApi');
-        axisApi.setupMouseHover(pSE);
+        const pathInfo = PathInfo(this.get('drawMap.oa'));
+        pathInfo.setupMouseHover(pSE);
       }
       pS.exit().remove();
     }

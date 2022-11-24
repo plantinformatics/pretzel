@@ -346,7 +346,7 @@ Stacked.prototype.getAxis1d = function () {
   let axis1d = this.axis1d,
       a1;
   if (! axis1d && (a1 = axes1d[this.axisName])) {
-    Ember.set(this, 'axis1d', a1);
+    Ember_set(this, 'axis1d', a1);
   }
   if (axis1d && (axis1d.isDestroying || axis1d.isDestroying)) {
     dLog('getAxis1d() isDestroying', axis1d, this);

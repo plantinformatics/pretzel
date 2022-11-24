@@ -3,6 +3,10 @@ import EmberObject, { computed } from '@ember/object';
 import { later } from '@ember/runloop';
 import { A } from '@ember/array';
 
+/* global Promise */
+
+//------------------------------------------------------------------------------
+
 import { toArrayPromiseProxy } from '../ember-devel';
 import { getGroups, clientGroupsToGroups } from './group';
 

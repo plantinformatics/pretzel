@@ -1,14 +1,16 @@
 import {
   axisId2Name,
-} from '../utils/stacks';
+} from '../stacks';
 
 import {
   isAdjacent
-} from './stacks-adj';
+} from '../stacks-adj';
 
 import { configureSyntenyBlockClicks } from '../../components/draw/synteny-blocks';
 
-import { configureHover } from './hover';
+import { configureHover } from '../hover';
+
+import { PathDataUtils } from './path-data';
 
 //------------------------------------------------------------------------------
 
@@ -79,7 +81,8 @@ function showSynteny(syntenyBlocks, t, oa)
   }
 
   function blockLine (s) {
-    let sLine = patham2(s[0], s[1], s.slice(2));
+    const pathDataUtils = PathDataUtils(oa);
+    let sLine = pathDataUtils.patham2(s[0], s[1], s.slice(2));
     if (trace_synteny > 3)
     dLog("blockLine", s, sLine);
     return sLine;
@@ -154,8 +157,6 @@ function showSynteny(syntenyBlocks, t, oa)
 } // showSynteny()
 
 //------------------------------------------------------------------------------
-
-// this.oa.axisApi.showSynteny ||= showSynteny;
 
 export {
   syntenyBlock_2Feature,
