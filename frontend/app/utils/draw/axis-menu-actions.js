@@ -16,6 +16,8 @@ import {
   AxisTitle,
 } from './axisTitle';
 
+import { PathDataUtils } from './path-data';
+
 import {
   maybeFlip,
 }  from './axis';
@@ -158,7 +160,8 @@ function AxisMenuActions(oa) {
       }
       axisApi.sendUpdatedSelectedFeatures();
 
-      axisApi.pathUpdate(undefined);
+      const pathDataUtils = PathDataUtils(oa);
+      pathDataUtils.pathUpdate(undefined);
     }
 
   //----------------------------------------------------------------------------

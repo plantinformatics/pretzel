@@ -43,6 +43,7 @@ import {
 
 import { DropTarget } from './drop-target';
 import { AxisDrag } from '../stacks-drag';
+import { AxisBrushZoom } from './axisBrush';
 
 
 import { breakPoint } from '../breakPoint';
@@ -115,7 +116,9 @@ AxisDraw.prototype.draw = function draw() {
     }
 
   let selections = { svgContainer : oa.svgContainer, stackSd, stackS,  stackX };
-  this.draw2(selections, stack_axisIDs, /*newRender*/false, null);
+  const resultSelections = this.draw2(selections, stack_axisIDs, /*newRender*/false, null);
+  const axisBrushZoom = AxisBrushZoom(oa);
+  axisBrushZoom.setupBrushZoom(resultSelections.allG);
 };
 
 /** Parallel to draw-map.js : stack_axisIDs().

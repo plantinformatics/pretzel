@@ -39,7 +39,7 @@ let toolTipHovered = false;
 
 function PathInfo(oa) {
 
-  const pathDataUtils = PathDataUtils(oa);
+  const pathDataUtils = oa && PathDataUtils(oa);
 
   const result = {
     toolTip : oa.toolTip,
@@ -110,19 +110,28 @@ function PathInfo(oa) {
     if (! toolTipHovered)
       toolTipHovered = true;
   }
+  /**
+   * @param this is PathInfo
+   */
   function toolTipMouseOut()
   {
     console.log("toolTipMouseOut", toolTipHovered);
     if (toolTipHovered)
       toolTipHovered = false;
-    hidePathHoverToolTip();
+    this.hidePathHoverToolTip();
   }
+  /**
+   * @param this is PathInfo
+   */
   function closeToolTip() 
   {
     console.log("draw-map closeToolTip");
     toolTipHovered = false;
-    hidePathHoverToolTip();
+    this.hidePathHoverToolTip();
   }
+  /**
+   * @param this is PathInfo
+   */
   function setupToolTipMouseHover()
   {
     // may need to set toolTipHovered if toolTip already contains cursor when it is shown - will toolTipMouseOver() occur ?.
@@ -130,10 +139,10 @@ function PathInfo(oa) {
 
     d3.select("div.toolTip.d3-tip#toolTip")
       .on("mouseover", toolTipMouseOver)
-      .on("mouseout", toolTipMouseOut);
+      .on("mouseout", toolTipMouseOut.apply(this));
 
     $("div.toolTip.d3-tip#toolTip button#toolTipClose")
-      .on("click", closeToolTip);
+      .on("click", closeToolTip.apply(this));
   }
 
 
@@ -256,16 +265,14 @@ function PathInfo(oa) {
 
     let ph2=ph1.appendTo(pt);
     const me = oa.eventBus;
-    once(me, function() {
+    once(function() {
       let ph3= $('.pathHover');
       console.log(".pathHover", ph2[0] || ph2.length, ph3[0] || ph3.length);
       me.set("hoverFeatures", hoverFeatures);
       // me.ensureValue("pathHovered", true);
       me.trigger("pathHovered", true, hoverFeatures);
     });
-    later(me, function() {
-      setupToolTipMouseHover();
-    }, 1000);
+    later(pathInfo, pathInfo.setupToolTipMouseHover, 1000);
   }
 
   /**
@@ -284,6 +291,9 @@ function PathInfo(oa) {
     }, 1000);
   }
 
+  /**
+   * @param this  path element
+   */
   function handleMouseOut(pathInfo, d){
     // stroke attributes of this revert to default, as hover ends
     d3.select(this)

@@ -16,6 +16,8 @@ import { stacks } from '../../utils/stacks';
 
 import { subInterval, overlapInterval, inRange } from '../../utils/draw/zoomPanCalcs';
 
+import { PathDataUtils } from '../../utils/draw/path-data';
+
 
 /* global d3 */
 /* global DocumentTimeline */
@@ -686,15 +688,15 @@ export default Component.extend({
   continuousPathUpdateChanged(checked) {
     console.log('continuousPathUpdateChanged', checked, this.drawOptions.continuousPathUpdate);
     this.drawOptions.continuousPathUpdate = checked;
-    const axisApi = stacks.oa.axisApi;
-    axisApi.pathUpdate(undefined);
+    const pathDataUtils = PathDataUtils(stacks.oa);
+    pathDataUtils.pathUpdate(undefined);
   },
 
   showSelectedFeaturesChanged(checked) {
     console.log('showSelectedFeaturesChanged', checked, this.drawOptions.showSelectedFeatures);
     this.drawOptions.showSelectedFeatures = checked;
-    const axisApi = stacks.oa.axisApi;
-    axisApi.pathUpdate(undefined);
+    const pathDataUtils = PathDataUtils(stacks.oa);
+    pathDataUtils.pathUpdate(undefined);
   },
 
   pathOpacityInput(event) {

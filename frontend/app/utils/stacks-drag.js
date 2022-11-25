@@ -21,6 +21,7 @@ import {
   collateStacks,
 } from "./draw/collate-paths";
 
+import { PathDataUtils } from './draw/path-data';
 
 
 /* global d3 */
@@ -309,7 +310,6 @@ function AxisDrag(oa, vc) {
   function draggedAxisRedraw(axisElt, d, t)
   {
     // const oa = this.oa;
-    const axisApi = oa.axisApi;
     let st0 = d3.select(axisElt);
     if (! st0.empty())
     {
@@ -321,8 +321,10 @@ function AxisDrag(oa, vc) {
       // st.duration(dragTransitionTime);
       st.attr("transform", Stack.prototype.axisTransformO);
       // zoomed affects transform via path() : axisTransform.
-      if (oa.drawOptions.continuousPathUpdate && (trace_path < 2))
-        axisApi.pathUpdate(t || st);
+      if (oa.drawOptions.continuousPathUpdate && (trace_path < 2)) {
+        const pathDataUtils = PathDataUtils(oa);
+        pathDataUtils.pathUpdate(t || st);
+      }
       //Do we need to keep the brushed region when we drag the axis? probably not.
       //The highlighted features together with the brushed regions will be removed once the dragging triggered.
       // st0.select(".brush").call(y[d].brush.move,null);

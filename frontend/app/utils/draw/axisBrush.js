@@ -1,5 +1,6 @@
 import {
   once,
+  later,
   debounce,
   bind,
 } from '@ember/runloop';
@@ -208,6 +209,8 @@ function AxisBrushZoom(oa) {
   
 
   const result = {
+    setupBrushZoom,
+    brushClipSize,
     brushUpdates,
     getBrushExtents,
     getBrushedRegions, axisBrushedDomain, axisRange2DomainFn, axisRange2Domain, axisBrushShowSelection,
@@ -217,6 +220,41 @@ function AxisBrushZoom(oa) {
     triggerZoomedAxis, throttledZoomedAxis,
   };
   
+
+  //----------------------------------------------------------------------------
+
+  function setupBrushZoom(allG) {
+    // Add a brush for each axis.
+    let gBrushParent =
+        allG.append("g")
+        .attr("class", "brush");
+
+    /** brushClip() uses getBBox(), so call again after the geometry has settled.
+     * If this works reliably, it might suggest splitting the append(clipPath)
+     * from the geometry setting.
+     * The 2sec call should be fine for most computers, some might take until
+     * 5sec to settle the geometry.
+     */
+    brushClipSize(gBrushParent);
+    later(() => ! me.isDestroying && this.brushClipSize(gBrushParent), 2000);
+    later(() => ! me.isDestroying && this.brushClipSize(gBrushParent), 5000);
+
+
+    if (allG.nodes().length)
+      console.log('zoomBehavior', allG.nodes(), allG.node());
+    allG
+      .call(oa.zoomBehavior);
+
+  }
+
+  /** Ensure there is clipPath & rect in gBrushParent, and set its geometry. */
+  function brushClipSize(gBrushParent) {
+    gBrushParent
+      .each(function(axisID) {
+        brushClip(d3.select(this), axisID)
+          .each(function(d) { d3.select(this).call(oa.y[d].brush); });
+      });
+  }
 
   //----------------------------------------------------------------------------
 
