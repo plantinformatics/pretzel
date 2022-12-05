@@ -236,6 +236,14 @@ Server :
 
 {{!-- --------------------------------------------------------------------- --}}
 
+<div class="genotype">
+  {{#if this.vcfExportText.length}}
+    <button type="button" class="btn btn-info btn-xs">
+      {{#component "ember-csv@file-anchor" data=this.vcfExportText}} VCF Download{{/component}}
+    </button>
+  {{/if}}
+</div>
+
   <div style="margin-top:2ex">
 
     {{#elem/panel-container state="primary" showComponent=showResultText as |panelContainer|}}
@@ -246,6 +254,9 @@ Server :
 
       {{#if panelContainer.showComponent}}
 
+        {{#if this.headerText}}
+          <textarea class="vcfGenotypeText" >{{this.headerText}}</textarea>
+        {{/if}}
       <div>
         <textarea class="vcfGenotypeText"
           style={{compute (action this.vcfGenotypeTextWidthStyle)}} >
