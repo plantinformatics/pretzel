@@ -542,6 +542,8 @@ export default class PanelManageGenotypeComponent extends Component {
       requestFormat = this.requestFormat,
       requestOptions = {requestFormat},
       textP = vcfGenotypeLookup(this.auth, this.apiServerSelectedOrPrimary, samples, domainInteger,  requestOptions, vcfDatasetId, scope, this.rowLimit);
+      // re-initialise file-anchor with the new @data
+      this.vcfExportText = null;
       textP.then(
         (text) => {
           // displays vcfGenotypeText in textarea, which triggers this.vcfGenotypeTextSetWidth();
@@ -553,8 +555,7 @@ export default class PanelManageGenotypeComponent extends Component {
              */
                   .map((row) => [row]);
             // re-initialise file-anchor with the new @data
-            this.vcfExportText = null;
-            later(() => this.vcfExportText = combined, 2000);
+            later(() => this.vcfExportText = combined, 1000);
           });
 
           /** .lookupDatasetId is derived from .lookupBlock so .lookupBlock must be defined here. */
