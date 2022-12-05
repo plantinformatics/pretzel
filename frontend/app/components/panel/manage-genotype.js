@@ -552,7 +552,9 @@ export default class PanelManageGenotypeComponent extends Component {
              * expects each row to be an array of cells.
              */
                   .map((row) => [row]);
-            this.vcfExportText = combined;
+            // re-initialise file-anchor with the new @data
+            this.vcfExportText = null;
+            later(() => this.vcfExportText = combined, 2000);
           });
 
           /** .lookupDatasetId is derived from .lookupBlock so .lookupBlock must be defined here. */
@@ -591,6 +593,24 @@ export default class PanelManageGenotypeComponent extends Component {
       })
       .catch(this.showError.bind(this, fnName));
     }
+  }
+
+  @computed(
+    'lookupDatasetId', 'lookupScope', 'vcfGenotypeLookupDomain',
+    'vcfGenotypeSamplesSelected', 'requestFormat')
+  get vcfExportFileName() {
+    const
+    scope = this.lookupScope,
+    vcfDatasetId = this.lookupDatasetId,
+    domainText = this.vcfGenotypeLookupDomain.join('-'),
+    samplesLength = this.vcfGenotypeSamplesSelected ? this.vcfGenotypeSamplesSelected.length : '',
+    fileName = vcfDatasetId +
+      '_' + scope +
+      '_' + domainText +
+      '_' + this.requestFormat +
+      '_' + samplesLength +
+      '.vcf' ;
+    return fileName;
   }
 
   // ---------------------------------------------------------------------------
@@ -789,7 +809,9 @@ export default class PanelManageGenotypeComponent extends Component {
     return combined;
   }
 
-  /**
+  /** The vcf-genotype.js : vcfGenotypeLookup() format omits CHROM because it is
+   * constant - each request is specific to a chromosome.
+   * This function re-inserts the CHROM column in the conventional (left) position.
    * @param vcfGenotypeText string
    * @return array of strings, 1 per line
    */
@@ -802,8 +824,16 @@ export default class PanelManageGenotypeComponent extends Component {
       .map((line, rowIndex) => {
         let result;
         if (rowIndex === 0) {
-          result = line.replace(/# /, '#CHROM\t');
+          // insert CHROM column header
+          result = line
+            .replace(/# /, '#CHROM\t')
+          /* Strip out the column numbers [1] etc which are shown before column
+           * headers by bcftools query -H.
+           * Could match [ \t], but previous line changes that initial space to \t
+           */
+            .replaceAll(/\t\[\d+\]/g, '\t');
         } else {
+          // insert chromosome / scope column value.
           result = this.lookupScope + '\t' + line;
         }
         return result;

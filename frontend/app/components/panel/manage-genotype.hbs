@@ -239,7 +239,7 @@ Server :
 <div class="genotype">
   {{#if this.vcfExportText.length}}
     <button type="button" class="btn btn-info btn-xs">
-      {{#component "ember-csv@file-anchor" data=this.vcfExportText}} VCF Download{{/component}}
+      {{#component "ember-csv@file-anchor" data=this.vcfExportText fileName=this.vcfExportFileName}} VCF Download{{/component}}
     </button>
   {{/if}}
 </div>
