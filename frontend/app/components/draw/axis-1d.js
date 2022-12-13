@@ -1,4 +1,4 @@
-import { later, next, once as run_once, throttle } from '@ember/runloop';
+import { later, next, once as run_once, throttle, debounce } from '@ember/runloop';
 import { A } from '@ember/array';
 import { computed, observer } from '@ember/object';
 import { alias } from '@ember/object/computed';
@@ -12,10 +12,13 @@ import { isEqual } from 'lodash/lang';
 
 //------------------------------------------------------------------------------
 
+import {
+  noKeyfilter,
+} from '../../utils/domElements';
+
 import { contentOf } from '../../utils/common/promises';
 import AxisEvents from '../../utils/draw/axis-events';
 import AxisPosition from '../../mixins/axis-position';
-import DrawStackObject from '../../utils/draw/stack';
 import {
   /* Block,
   */ Stacked,
@@ -31,6 +34,7 @@ import {
 } from '../../utils/draw/axisBrush';
 
 import {
+  maybeFlip,
   noDomain,
   /* Axes, yAxisTextScale,  yAxisTicksScale,*/  yAxisBtnScale,
   /* yAxisTitleTransform, eltId,*/ axisEltId /*, eltIdAll, highlightId*/,
@@ -51,7 +55,7 @@ import {
   dragTransition
 } from '../../utils/stacks-drag';
 import { selectAxis } from '../../utils/draw/stacksAxes';
-import { selectGroup, nowOrAfterTransition } from '../../utils/draw/d3-svg';
+import { I, combineFilters, selectGroup, nowOrAfterTransition } from '../../utils/draw/d3-svg';
 import { breakPoint } from '../../utils/breakPoint';
 import { configureHover } from '../../utils/hover';
 import { getAttrOrCP } from '../../utils/ember-devel';
@@ -80,6 +84,8 @@ const axisTickTransitionTime = 750;
 
 /** if true, assign colours to block.get('dataset'), otherwise block. */
 const colourByDataset = true;
+
+const draw_orig = false;
 
 /*------------------------------------------------------------------------*/
 
@@ -147,9 +153,17 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
 
     // reference block -> axis-1d.  can change to a Symbol.
     this.axis.set('axis1dR', this);
+    if (! this.stack) {
+      later(() => {
+        this.isDestroying || this.stack || this.createStackForAxis();
+      });
+    }
+
     let axisName = this.get('axis.id');
     /* axisS may not exist yet, so give Stacked a reference to this. */
     Stacked.axis1dAdd(axisName, this);
+
+    if (draw_orig) {
     let axisS = this.get('axisS');
     if (! axisS) {
       dLog('axis-1d:init', this, axisName, this.get('axis'));
@@ -167,6 +181,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
         dLog('axis-1d:init', this, this.get('axis.id'), axisS); axisS.log();
       }
     }
+    }
 
     next(() => this.axis1dExists(this, true));
   },
@@ -174,15 +189,19 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
 
   // ---------------------------------------------------------------------------
 
-  referenceBlock : undefined,
+  referenceBlock : alias('axis'),
   axisName : alias('axis.id'),
+  axisID : alias('axis.id'),
+
   portion : computed('stack.portions', function () {
     const fnName = 'portion' + ' (axesP)';
     let portion;
-    if (!this.stack || ! this.stack?.axisIndex) {
+    if (! this.stack || (this.stack.axes.length < 2) || ! this.stack?.axisIndex) {
       later(() => {
         const portions = this.get('stack.portions');
       }, 4000);
+      // portion is 1 until another axis is added to the same stack.
+      portion = 1;
     } else {
       const
       portions = this.stack.portions,
@@ -194,35 +213,47 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   }),
   position : undefined,
 
-  // ---------------------------------------------------------------------------
+  //------------------------------------------------------------------------------
+
+  z : alias('axis'),
+  longName()
+  {
+    const
+    block = this.axis,
+    name = this.axisName + ":" + block.mapName +
+      ((this.z && this.z.scope) ? ":" + this.z.scope : '');
+    return name;
+  },
+
+  //----------------------------------------------------------------------------
 
   /** Create a stack for this axis-1d. */
   createStackForAxis() {
     const fnName = 'createStackForAxis' + ' (axesP)';
-    const axis1d = this;
-    let s = DrawStackObject.create({axes : [axis1d]});
-    axis1d.set('stack', s); // or Ember_set()
-    console.log(fnName, s);
+    const
+    stacksView = this.stacksView,
+    s = stacksView.createStackForAxis(this);
     return s;
   },
 
-  // ---------------------------------------------------------------------------
+
+  //----------------------------------------------------------------------------
 
   getAxis		: Stacked_p.getAxis,
   axis1dAdd		: Stacked.axis1dAdd,
   axis1dRemove		: Stacked.axis1dRemove,
-  getAxis1d		: Stacked_p.getAxis1d,
+  getAxis1d()		{ return this; },
   toString		: Stacked_p.toString,
   log		: Stacked_p.log,
-  longName		: Stacked_p.longName,
+  // longName		: Stacked_p.longName,
   logBlocks		: Stacked_p.logBlocks,
   logElt		: Stacked_p.logElt,
   referenceBlockS		: Stacked_p.referenceBlockS,
   getStack		: Stacked_p.getStack,
-  getAxis		: Stacked.getAxis,
+  getAxis		: () => this,   // Stacked.getAxis
   axisOfDatasetAndScope		: Stacked.axisOfDatasetAndScope,
   getStack		: Stacked.getStack,
-  longName		: Stacked.longName,
+  // longName		: Stacked.longName, // static
   removeBlock		: Stacked_p.removeBlock,
   removeBlockByName		: Stacked_p.removeBlockByName,
   move		: Stacked_p.move,
@@ -235,24 +266,52 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   verify		: Stacked_p.verify,
   children		: Stacked_p.children,
   dataBlocks		: Stacked_p.dataBlocks,
-  keyFunction		: Stacked_p.keyFunction,
+  keyFunction		: (axis1d) => axis1d.axis.id,
   axisSide		: Stacked_p.axisSide,
   // axisTransform		: Stacked_p.axisTransform,
   selectAll		: Stacked_p.selectAll,
-  selectAll		: Stacked.selectAll,
+  selectAll_static		: Stacked.selectAll,
   allocatedWidth		: Stacked_p.allocatedWidth,
   extendedWidth		: Stacked_p.extendedWidth,
   location		: Stacked_p.location,
-  axisTransformO		: Stacked_p.axisTransformO_orig,
+  axisTransformO() { 
+    return ! this.isDestroying && Stacked_p.axisTransformO_orig.apply(this);
+  },
   getY		: Stacked_p.getY,
   currentPosition		: Stacked_p.currentPosition,
   axisDimensions		: Stacked_p.axisDimensions,
-  setDomain		: Stacked_p.setDomain,
+  // Stacked_p.setDomain() calls back to axis-1d : setDomain() which is already defined by AxisPosition mixin.
+  // setDomain		: Stacked_p.setDomain,
   // setZoomed() from mixin AxisPosition : setZoomed
   unviewBlocks		: Stacked_p.unviewBlocks,
 
+  /** @return all the blocks in this axis which are data blocks, not reference blocks.
+   * Data blocks are recognised by having a .namespace;
+   * @param visible if true then exclude blocks which are not visible
+   * @param showPaths if true then exclude blocks which are not for paths alignment
+   */
+  dataBlocksFiltered(visible, showPaths) {
+    const
+    stacked = {blocks : this.dataBlocks, axisName : this.axisName, mapName : this.axis.mapName},
+    blocks = Stacked.prototype.dataBlocks.apply(stacked, [...arguments]);
+    return blocks;
+  },
+  /** Same as dataBlocksFiltered(), but return the BlockAxisView-s of the blocks. */
+  dataBlockViewsFiltered(visible, showPaths) {
+    const
+    blocks = this.dataBlocksFiltered(visible, showPaths)
+      .mapBy('view');
+    return blocks;
+  },
 
   /*--------------------------------------------------------------------------*/
+
+  get axisBrushObj() {
+    const axisBrushZoom = AxisBrushZoom(stacks.oa);
+    return axisBrushZoom.axisBrushRefn.call(this, 'axisName');
+  },
+
+  //----------------------------------------------------------------------------
 
   /** @return true if there is a brush on this axis.
    */
@@ -260,30 +319,14 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     let brushed = !! this.get('brushedRegion');
     return brushed;
   }),
-  brushedRegion : computed(
-    'axis.id',
-    'axisBrush.brushedAxes.[]',
-    /** oa.brushedRegions is a hash, and it is updated not replaced,
-     * so as a dependency key it will not signal changes; selectedAxes
-     * is an array and is changed when brushedRegions is changed, so
-     * it is used as a dependency, but it may not change when the user
-     * brushes because it persists after the brush is cleared.
-     */
-    'oa.brushedRegions', 'selected.selectedAxes.[]',
-    function () {
-      let brushedRegions = this.get('oa.brushedRegions'),
-      axisId = this.get('axis.id'),
-      brushed = brushedRegions[axisId];
-      dLog('brushed', axisId, brushedRegions[axisId], this.get('axisBrush.brushedAxes'));
-      return brushed;
-    }),
+  /** pixel range of brush selection / thumb, or undefined if no current selection. */
+  brushedRegion : undefined,
+  /** expect this is the same as : .axisBrushObj.brushedDomain */
   brushedDomain : computed('brushedRegion', function () {
     let
     brushedRegion = this.get('brushedRegion'),
-    /** refBlockId */
-    axisId = this.get('axis.id'),
     axisBrushZoom = AxisBrushZoom(stacks.oa),
-    brushedDomain = brushedRegion && axisBrushZoom.axisRange2Domain(axisId, brushedRegion);
+    brushedDomain = brushedRegion && axisBrushZoom.axisRange2Domain(this, brushedRegion);
     return brushedDomain;
   }),
 
@@ -333,6 +376,48 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     return out;
   },
 
+  //----------------------------------------------------------------------------
+
+  /** Setup .y and .ys 
+   * calculate axis domain if not already done;
+   * ensure it has a y scale,
+   *   make a copy of the y scale - use 1 for the brush
+   */
+  y : computed('axis.featureLimits', function() { return this.setupYScale(); }),
+  setupYScale() {
+    const
+    fnName = 'setupYScale',
+    a = this,
+    d = this.axisName,
+    a_parent = this.referenceBlock;
+    // now a is Stacked not Block, so expect ! a_parent
+    if (a_parent && ! a_parent.getDomain)
+      breakPoint('domain and ys', d, a, a_parent);
+    const
+    /** similar domain calcs in resetZoom().  */
+    domain = a_parent ? a_parent.getDomain() : a.getDomain(),
+    myRange = a.yRange();
+    dLog(fnName, domain, myRange, this.axisName);
+    let y;
+    if (domain)
+    {
+      const ys = d3.scaleLinear()
+        .domain(maybeFlip(domain, a.flipped))
+        .range([0, myRange]); // set scales for each axis
+      this.ys = ys;
+
+      // y and ys are the same until the axis is stacked.
+      // The brush is on y.
+      y = ys.copy();
+      const axisBrushZoom = AxisBrushZoom(stacks.oa);
+      y.brush = d3.brushY()
+        .extent([[-8,0], [8,myRange]])
+        .filter(combineFilters(noKeyfilter, this.controls.noGuiModeFilter))
+        .on("end", axisBrushZoom.brushended);
+    }
+    return y;
+  },
+  
   /*--------------------------------------------------------------------------*/
 
   /** axis-1d receives axisStackChanged and zoomedAxis from draw-map
@@ -366,14 +451,23 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   dropOut() {
     const fnName = 'dropOut';
     console.log(fnName, this.get('axis.id'));
-    /* updateStacksAxes() : createForReference() will create a new stack for this axis. */
+    /* updateStacksAxes() : newStacks() : createStackForAxis() will create a new stack for this axis. */
     this.stack.dropOut(this);
+  },
+
+  stackIndex() {
+    return this.stacksView.stackIndex(this.stack);
+  },
+
+  axisIndex() {
+    return this.stack.axisIndex(this);
   },
 
   //----------------------------------------------------------------------------
 
+  axisS : computed(function() { return this; }),
   /** @return the Stacked object corresponding to this axis. */
-  axisS : computed(
+  axisS_orig : computed(
     'axis.id', 'stacks.axesPCount', 'axis.view',
     function () {
       let
@@ -407,6 +501,38 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   is2d : computed('extended', 'dataBlocksQtl.[]', function () {
     return !! this.get('extended') || this.get('dataBlocksQtl.length');
   }),
+  /** @return the BlockAxisView (block-axis-view.js) of all blocks of this axis,
+   * with .referenceBlock in [0], and .dataBlocks in [1], ..., if different from
+   * .referenceBlock
+   */
+  blockViews : computed('referenceBlock', 'dataBlocks', function () {
+    const
+    fnName = 'blockViews',
+    /** .viewedBlocks is equivalent if it puts referenceBlock always in [0] */
+    blocks = [this.referenceBlock].concat(this.dataBlocks),
+    /** evaluating .view instantiates BlockAxisView (block-axis-view) for this block
+     * Apply .uniq() because referenceBlock may be dataBlocks[0].
+     * blocks[] may contain proxies, so apply uniq later in the pipeline.
+     */
+    blockViews = blocks
+      .map((b) => b.view)
+      .uniq();
+    /** could instead : visible : alias('view.visible'); */
+    blocks.forEach((b) => { if (b.visible === undefined) { b.visible = true; }});
+    blockViews.forEach((bav) => {
+      if (bav.axis !== this) {
+        if (bav.axisName !== this.axisName) {
+          dLog(fnName, bav.axisName, this.axisName, bav, this);
+        }
+        bav.setAxis(this);
+        // or Ember.set(bav, 'axis', a);
+      }
+    });
+    console.log(fnName, blocks, blockViews, this.dataBlocks.length);
+    return blockViews;
+  }),
+  /** provide transitional support for Stacked interface. */
+  blocks : alias('blockViews'),
   /** viewed blocks on this axis.
    * For just the data blocks (depends on .hasFeatures), @see dataBlocks()
    * @desc
@@ -417,8 +543,11 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     blocks,
     axesBlocks = this.get('blockService.axesViewedBlocks2'),
     referenceBlock = this.get('axis');
-      blocks = axesBlocks.get(referenceBlock);
+      blocks = referenceBlock.isViewed && axesBlocks.get(referenceBlock);
       dLog('viewedBlocks', referenceBlock, axesBlocks, blocks);
+    if (blocks) {
+      this.stacksView.blocksInAxis(this, blocks);
+    }
     return blocks || [];
   }),
   dataBlocks : computed('viewedBlocks.@each.isData', function () {
@@ -492,11 +621,13 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     return colourSlots;
   }),
   colourSlotsEffect : computed('colourSlots.[]', 'dataBlocks.[]', function () {
-    let colourSlots = this.get('colourSlots');
-    if (trace_stack)
-      dLog('colourSlotsEffect', colourSlots, 'colourSlots', 'dataBlocks');
-    /** Update the block titles text colour. */
-    this.axisTitleFamily();
+    if (! this.isDestroying && this.stack) {
+      let colourSlots = this.get('colourSlots');
+      if (trace_stack)
+        dLog('colourSlotsEffect', colourSlots, 'colourSlots', 'dataBlocks');
+      /** Update the block titles text colour. */
+      this.axisTitleFamily();
+    }
   }),
   /** @return the colour index of this block
    */
@@ -511,6 +642,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   },
   /** @return a colour value for .attr 'color'
    * @desc uses axisTitleColour(), which uses this.blockColour()
+   * @param block model:block
    */
   blockColourValue(block) {
     let
@@ -519,7 +651,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
      * featurePathStroke(), but i is only used when axisTitleColourBy is .index,
      * and currently it is configured as .slot.
      */
-    colour = axisTitleColour(blockId, /*i*/undefined) || 'black';
+    colour = axisTitleColour(block.view, /*i*/undefined) || 'black';
     return colour;
     },
 
@@ -536,7 +668,6 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
       .filter(d => d !== undefined);
     return dataBlockDomains;
   }),
-  referenceBlock : alias('axis'),
   /** @return the domains of all the blocks of this axis, including the reference block if any.
    * @description related @see axesDomains() (draw/block-adj)
    */
@@ -655,7 +786,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     /** defined after first brushHelper() call. */
     axisFeatureCirclesBrushed = axisApi.axisFeatureCirclesBrushed;
     if (axisFeatureCirclesBrushed) {
-      next(axisFeatureCirclesBrushed);
+      next(() => axisFeatureCirclesBrushed(this));
     }
   },
   /** When values change on user controls which configure the brush,
@@ -670,7 +801,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     }),
   axisTitleFamily() {
     let axis = this.get('axisS');
-    if (axis) {
+    if (axis && ! axis.isDestroying) {
       let
         gAxis = axis.selectAll(),
       axisTitleS = gAxis.select("g.axis-outer > g.axis-all > text");
@@ -746,11 +877,10 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
    */
   axisSelect : computed('axis.id', function () {
     let 
-      axisId = this.get('axis.id'),
     /** could narrow this to svgContainer, but probably not a performance
      * improvement, and if we have multiple draw-maps later, the map id can be
      * included in eltId() etc. */
-    as = d3.selectAll(".axis-outer#" + eltId(axisId));
+    as = d3.selectAll(".axis-outer#" + eltId(this));
     return as;
   }),
 
@@ -884,11 +1014,16 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
         // use the VLinePosition:toString() for the position-s
         dLog('domainChanged', domain, this.get('axisS'), ''+this.get('currentPosition'), ''+this.get('lastDrawn'));
         // this.notifyChanges();
-        if (! this.get('axisS'))
+        // post-draw_orig : axisS is now this, so it must be defined.
+        if (! this.get('axisS')) {
           dLog('domainChanged() no axisS yet', domain, this.get('axis.id'));
+        } else if (! this.y) {
+          dLog('domainChanged() no axisS y scale yet', domain, this);
+        }
         else {
           this.updateScaleDomain();
-          throttle(this, this.updateAxis, this.get('controlsView.throttleTime'));
+          /* if this.stack is not yet defined then defer, so use debounce instead of throttle */
+          debounce(this, this.updateAxis, this.get('controlsView.throttleTime'));
         }
       }
       return domainDefined && domain;
@@ -915,11 +1050,10 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
 
     let eventBus = stacks.oa.eventBus;
 
-    let p = axisID;
     eventBus.trigger("zoomedAxis", [axisID, t]);
     // true does pathUpdate(t);
     let axisBrushZoom = AxisBrushZoom(stacks.oa);
-    axisBrushZoom.axisScaleChanged(p, t, true);
+    axisBrushZoom.axisScaleChanged(this, t, true);
 
     axisBrushZoom.axisStackChanged(t);
   },
@@ -929,7 +1063,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     dLog('updateAxis', axisID);
     let t = stacks.oa.svgContainer; //.transition().duration(750);
     let axisBrushZoom = AxisBrushZoom(stacks.oa);
-    axisBrushZoom.axisScaleChanged(axisID, t, true);
+    axisBrushZoom.axisScaleChanged(this, t, true);
+    this.stacksView.stacksAdjust();
   },
   drawTicks() {
     /** based on extract from axisScaleChanged() */
@@ -949,7 +1084,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
        * The d3 axis function is called on the g.axis.
        */
       let gAxis = this.get('axisSelect')
-        .select("#" + axisEltId(axisId))
+        .select("#" + axisEltId(this))
         /*.transition().duration(750)*/;
       gAxis.call(yAxis);
       dLog('drawTicks', axisId, axisS, gAxis.nodes(), gAxis.node());
@@ -965,8 +1100,16 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
         .on('mouseout', showText.bind(this, ''));
     }
   },
+  /** @return true if y scale of this axis has been set up.
+   * @desc
+   * render depends on y scale, and setupYScale() uses referenceBlock domain (limits).
+   * Also noted in extendedEffect(); see also setupYScale().
+   */
+  get yScaleIsDefined() {
+    return this.axis.featureLimits && this.y;
+  },
   drawTicksEffect : computed('controlsView.axisTicks', function () {
-    later(() => this.drawTicks());
+    later(() => this.yScaleIsDefined && this.drawTicks());
   }),
   axisDraw : computed( function () {
     return new AxisDraw(/*oa*/null, this, /*stacks*/null, this.stacksView);
@@ -979,6 +1122,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   }),
 
   ensureAxis : computed('viewedBlocks', function () {
+    breakPoint('axis-1d:ensureAxis');
     let viewedBlocks = this.get('viewedBlocks');
     let axisApi = stacks.oa.axisApi;
     let count = viewedBlocks.length;
@@ -992,23 +1136,47 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   }),
 
   extendedEffect : computed('extended', function () {
-    let
+    const
+    fnName = 'extendedEffect',
     extended = this.get('extended'),
     axisID = this.get('axis.id');
-    dLog('extended', extended, axisID);
+    dLog(fnName, extended, axisID);
     // possibly ... pass an action param.
     let axis2d = this.get('axis2d');
     if (axis2d) {
       next(() => ! axis2d.isDestroyed && axis2d.axisWidthResizeEnded());
     }
+    const
+    showFn = () => ! this.isDestroying && this.showExtended(extended),
+    limitsRequest = this.blockService.taskGetLimits?.lastPerformed;
+    if (limitsRequest) {
+      /** render depends on y scale, and setupYScale() uses domain (limits),
+       * so delay until after blockFeatureLimits result.
+       */
+      limitsRequest.then(showFn);
+    } else if (! this.yScaleIsDefined) {
+      dLog(fnName, 'taskGetLimits');
+      const limitsP = this.axis.get('taskGetLimits').perform();
+      limitsP.then(showFn);
+    } else {
+      // initially called before this.stacks is defined, so defer render.
+      later(showFn);
+    }
 
+    return extended;
+  }),
+
+  /** render elements which are affected by .extended */
+  showExtended(extended) {
     this.showExtendedClass();
+    if (this.stack && this.yScaleIsDefined) {
     this.drawTicks();
 
     if (extended)
       this.removeTicks();
     else
     {
+      const axisID = this.get('axis.id');
       let axisID_t = [axisID, undefined];
       this.renderTicksDebounce(axisID_t);
     }
@@ -1019,9 +1187,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
      */
 
     this.widthEffects();
-
-    return extended;
-  }),
+    }
+  },
 
   extendedWidthEffect : computed(/*'extended',*/ 'axis2d.allocatedWidthsMax.centre', function () {
     this.widthEffects();
@@ -1031,7 +1198,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
 
     let axisApi = stacks.oa.axisApi;
     axisApi.updateXScale();
-    axisApi.collateO();
+    this.stacksView.collateO();
 
     /** .extended has changed, so the centre of the axisTitle is changed. */
     this.axisTitleFamily();
@@ -1043,7 +1210,9 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     'referenceBlock.datasetId._meta.shortName',
     'controlsView.axisTitleChrOnly',
     function () {
-      this.axisTitleFamily();
+      if (this.stack) {
+        this.axisTitleFamily();
+      }
     }),
 
   /*--------------------------------------------------------------------------*/
@@ -1060,10 +1229,12 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   willDestroyElement() {
     dLog('willDestroyElement', this.get('axis.id'));
     this.removeTicks();
+    if (draw_orig) {
     let axisS = this.get('axisS');
     if (axisS) {
       if (axisS.axis1d === this)
         delete axisS.axis1d;
+    }
     }
     let axisName = this.get('axis.id');
     Stacked.axis1dRemove(axisName, this);
@@ -1095,9 +1266,10 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     dLog('constructFeatureTicks', blockId, this);
     let axisApi = this.get('drawMap.oa.axisApi');
     let oa = this.get('drawMap.oa');
-    let axis = oa.axes[blockId];
+    let axis = this;
     // dLog('axis-1d renderTicks', block, blockId, axis);
 
+    // draw_orig
     /* If block is a child block, don't render, expect to get an event for the
      * parent (reference) block of the axis. */
     if (! axis)

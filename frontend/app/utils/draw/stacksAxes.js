@@ -35,7 +35,7 @@ function stacksAxesDomVerify(stacks, svgContainer, unviewedIsOK)
           || ! (axis = Stacked.getAxis(d))
           || ! ((isViewed = block.block.get('isViewed')) || unviewedIsOK)
          )
-        breakPoint('fnName', d, i, this, block, axis, isViewed);
+        dLog/*breakPoint*/(fnName, d, i, this, block, axis, isViewed);
       if (axis) {
         let rightStack = this.parentElement.__data__ === axis.stack;
         if (! rightStack)
@@ -69,8 +69,7 @@ function stacksAxesDomLog(svgContainer = undefined) {
 
 function selectAxis(axis)
 {
-  let axisName = axis.axisName;
-  let aS = d3.select("#" + axisEltId(axisName));
+  let aS = d3.select("#" + axisEltId(axis));
   return aS;
 }
 

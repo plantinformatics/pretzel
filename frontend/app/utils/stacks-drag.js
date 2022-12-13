@@ -118,9 +118,12 @@ function AxisDrag(oa, vc) {
 
 // AxisDrag.prototype.dragstarted = dragstarted;
 
-  function dragstarted(start_d /*, start_index, start_group*/) {
-    const /*oa = this.oa,*/ x = oa.stacks.x;
+  function dragstarted(start_axis1d /*, start_index, start_group*/) {
+    const
+    stacks = start_axis1d.stacksView.stacks,
+    x = oa.stacks.x;
     Stack.currentDrop = undefined;
+    const start_d = start_axis1d.axisName;
     Stack.currentDrag = start_d;
     // unique_1_1_mapping = me.get('isShowUnique'); // disable until button click does not redraw all.
     /** disable this as currently togglePathColourScale() sets pathColourScale as a boolean
@@ -131,8 +134,9 @@ function AxisDrag(oa, vc) {
     let svgContainer = oa.svgContainer;
     svgContainer.classed("axisDrag", true);
     d3.select(this).classed("active", true);
+    /** start_axis1d === d3.event.subject */
     console.log(d3.event.subject.fx, d3.event.subject.x);
-    d3.event.subject.fx = d3.event.subject.x;
+    d3.event.subject.fx = x(start_axis1d);
     let axisS = svgContainer.selectAll(".stack > .axis-outer");
     if (axisS && trace_stack >= 1.5)
       logSelection(axisS);
@@ -146,9 +150,10 @@ function AxisDrag(oa, vc) {
      */
     axisS.selectAll('g.axis-outer > g.stackDropTarget').classed
     ("current",
-     function(d /*, index, group*/)
+     function(axis1d /*, index, group*/)
      {
-       let xd = x(d),
+       const d = axis1d.axisName;
+       let xd = x(axis1d),
        /** d3.event has various x,y values, which are sufficient for this
         * purpose, e.g. x, subject.x, sourceEvent.clientX, sourceEvent.x */
        startX = d3.event.x,
@@ -165,7 +170,8 @@ function AxisDrag(oa, vc) {
   /** @param  d (datum) name of axis being dragged.
    * @see stacks.log() for description of stacks.changed
    */
-  function dragged(d) {
+  function dragged(axis1d) {
+    const d = axis1d.axisName;
     const /*oa = this.oa,*/ me = oa.eventBus, vc = oa.vc, axisApi = oa.axisApi;
     /** Transition created to manage any changes. */
     let t;
@@ -201,24 +207,24 @@ function AxisDrag(oa, vc) {
       {
         if (dropTargetEnd)
         {
-          let targetAxisName = currentDropTarget.axisName,
+          const
+          targetAxis1d = currentDropTarget.axisName,
+          targetAxisName = targetAxis1d.axisName,
           top = currentDropTarget.classList.contains("top"),
-          zoneParent = Stack.axisStackIndex2(targetAxisName);
+          zoneParent = Stack.axisStackIndex2(targetAxis1d);
           /** destination stack */
-          let stack = oa.stacks[zoneParent.stackIndex];
-          if (! stack.contains(d))
+          const stacks = axis1d.stacksView.stacks;
+          let stack = stacks[zoneParent.stackIndex];
+          if (! stack.contains(axis1d))
           {
             t = dragTransitionNew();
             /*  .dropIn() and .dropOut() don't redraw the stacks they affect (source and destination), that is done here,
              * with this exception : .dropIn() redraws the source stack of the axis.
              */
-            stack.dropIn(d, zoneParent.axisIndex, top, t);
-            const
-            axis1d = me.getAxis1d(d),
-            targetAxis1d = me.getAxis1d(targetAxisName);
+            // if (draw_orig) stack.dropIn(d, zoneParent.axisIndex, top, t);
             axis1d?.dropIn(targetAxis1d, top);
             breakPointEnableSet(1);
-            deleteAfterDrag();
+            deleteAfterDrag(stacks);
             // axisChangeGroupElt(d, t);
             collateStacks();
             // number of stacks has decreased - not essential to recalc the domain.
@@ -233,7 +239,7 @@ function AxisDrag(oa, vc) {
                  && ((xDistance = Math.abs(d3.event.x - xDistanceRef)) > vc.xDropOutDistance))
         {
           /** dragged axis, source stack */
-          let axis = oa.axes[d], stack = axis.stack;
+          const stack = axis1d.stack;
           if (currentDrop && currentDrop.stack !== stack)
           {
             console.log("dragged", d, currentDrop.stack, stack);
@@ -241,8 +247,7 @@ function AxisDrag(oa, vc) {
           if (stack.axes.length > 1)
           {
             t = dragTransitionNew();
-            stack.dropOut(d);
-            const axis1d = me.getAxis1d(d);
+            stack.dropOut(axis1d);
             axis1d?.dropOut();
             Stack.log();
             // axisChangeGroupElt(d, t);
@@ -255,7 +260,7 @@ function AxisDrag(oa, vc) {
             /* if axis is dropped out to a new stack, redraw now for
              * continuity, instead of waiting until dragended().
              */
-            axisRedrawText(axis);
+            axisRedrawText(axis1d);
             /* Following code will set o[d] and sort the Stack into location. */
           }
         }
@@ -304,11 +309,12 @@ function AxisDrag(oa, vc) {
    * but when dropIn/dropOut(), paths to other axes can be changed when stacking / adjacencies change.
    *
    * @param axisElt  node/DOM element corresponding of axis. this of dragged()
-   * @param d axisName
+   * @param axis1d
    * @param t transition in which to make changes
    */
-  function draggedAxisRedraw(axisElt, d, t)
+  function draggedAxisRedraw(axisElt, axis1d, t)
   {
+    const d = axis1d.axisName;
     // const oa = this.oa;
     let st0 = d3.select(axisElt);
     if (! st0.empty())
@@ -333,6 +339,7 @@ function AxisDrag(oa, vc) {
     }
   }
 
+  // not used now.  part of draw_orig.
   /** Called when axisID has been dragged from one stack to another.
    * It is expected that the group element of the axis, g.axis-outer#<eltId(axisID)>,
    * needs to be moved from the source g.stack to destination.
@@ -378,10 +385,10 @@ function AxisDrag(oa, vc) {
 //------------------------------------------------------------------------------
 
 // AxisDrag.prototype.dragended = dragended;
-  function dragended(/*d*/) {
-    deleteAfterDrag();
+  function dragended(axis1d /*, i, g*/) {
+    const stacks = axis1d.stacksView.stacks;
+    deleteAfterDrag(stacks);
     const /*oa = this.oa,*/ vc = oa.vc, axisApi = oa.axisApi;
-    let stacks = oa.stacks;
     stacks.sortLocation();
 
     // in the case of dropOut(),
@@ -427,8 +434,8 @@ function AxisDrag(oa, vc) {
 
   //----------------------------------------------------------------------------
 
-  function deleteAfterDrag() {
-    let stacks = oa.stacks;
+  function deleteAfterDrag(stacks) {
+    // draw_orig : let stacks = oa.stacks;
     if (trace_stack)
       console.log("deleteAfterDrag", stacks.toDeleteAfterDrag);
 

@@ -52,8 +52,8 @@ function DropTarget(oa, vc, g) {
   DropTarget.prototype.getAxis = function ()
   {
     /** The datum of the DropTarget is the axisName */
-    let axisName = this.datum(),
-    axis = oa.axes[axisName];
+    const
+    axis = this.datum();
     return axis;
   };
   /// @parameter top  true or false to indicate zone is positioned at top or
@@ -67,8 +67,8 @@ function DropTarget(oa, vc, g) {
       .attr("class", "stackDropTarget" + " end " + (top ? "top" : "bottom"));
     let
       dropTargetY = function (datum/*, index, group*/) {
-        let axisName = datum,
-        axis = oa.axes[axisName],
+        const
+        axis = datum,
         yVal = top ? -oa.vc.dropTargetYMargin : edge.bottom(axis);
         if (Number.isNaN(yVal))
         {
@@ -139,6 +139,9 @@ function DropTarget(oa, vc, g) {
     ;
   };
 
+  /**
+   * @param axisName is an element of stackDropTarget.data(), i.e. axis1d
+   */
   function storeDropTarget(axisName, classList)
   {
     oa.currentDropTarget = {axisName: axisName, classList: classList};

@@ -116,7 +116,7 @@ AxisDraw.prototype.draw = function draw() {
     }
 
   let selections = { svgContainer : oa.svgContainer, stackSd, stackS,  stackX };
-  const resultSelections = this.draw2(selections, stack_axisIDs, /*newRender*/false, null);
+  const resultSelections = this.draw2(selections, stack_axes, /*newRender*/false, null);
   const axisBrushZoom = AxisBrushZoom(oa);
   axisBrushZoom.setupBrushZoom(resultSelections.allG);
 };
@@ -128,6 +128,14 @@ AxisDraw.prototype.draw = function draw() {
 function stack_axisIDs(stack) {
   const axisIDs = stack.axes.mapBy('axis.id');
   return axisIDs;
+}
+
+/** Replacing stack_axisIDs(), return references to axis-1d instead of .axis.id (blockId).
+ * For the given Stack, return its .axes[].
+ * @return [] containing axes of the Stack.
+ */
+function stack_axes(stack) {
+  return stack.axes;
 }
 
 AxisDraw.prototype.draw2 = function draw2(selections, stack_axisIDs, newRender, stacksAxesDomVerify) {
@@ -199,8 +207,9 @@ AxisDraw.prototype.draw2 = function draw2(selections, stack_axisIDs, newRender, 
 
   if (trace_stack)
   {
-    if (trace_stack > 1)
-      oa.stacks.forEach(function(s){console.log(s.axisIDs());});
+    if (trace_stack > 1) {
+      stacks.forEach(function(s){ s.log(); });
+    }
     let g = axisG;
     console.log("g.axis-outer", g.enter().size(), g.exit().size(), stacks.length);
   }
@@ -236,6 +245,9 @@ AxisDraw.prototype.draw2 = function draw2(selections, stack_axisIDs, newRender, 
   if (stacksAxesDomVerify) {
     stacksAxesDomVerify(stacks, oa.svgContainer, /*unviewedIsOK*/ true);
   }
+  if (! oa.o) {
+    oa.axisApi.collateO?.();
+  }
   ao
     .attr("transform", Stack.prototype.axisTransformO);
 
@@ -244,7 +256,8 @@ AxisDraw.prototype.draw2 = function draw2(selections, stack_axisIDs, newRender, 
   g
     .call(
       d3.drag()
-        .subject(function(d) { return {x: oa.stacks.x(d)}; }) //origin replaced by subject
+      // datum axis1d defines x scale,vline-position.js so default subject is OK.
+        // .subject(function(d) { return {x: oa.stacks.x(d)}; }) //origin replaced by subject
         .filter(ctrlKeyfilter)
         .on("start", axisDrag.dragstarted) //start instead of dragstart in v4. 
         .on("drag", axisDrag.dragged)
@@ -263,8 +276,9 @@ AxisDraw.prototype.draw2 = function draw2(selections, stack_axisIDs, newRender, 
 
 
   /** from newly added g.axis-all : filter out those which have a parent which draws their axis. */
+  // i.e. filter out data blocks, which are not primary (referenceBlock of an axis)
   g = allG
-    .filter(function (d) { return oa.axesP[d]; } )
+    // .filter(function (d) { return oa.axesP[d]; } )
   ;
   if (trace_stack > 1)
   {
@@ -278,9 +292,8 @@ AxisDraw.prototype.draw2 = function draw2(selections, stack_axisIDs, newRender, 
   let defG =
     g.append("g")
     .attr("class", "axis")
-    .each(function(d) {
-      let axis = Stacked.getAxis(d);
-      d3.select(this).attr("id",axisEltId(d)).call(axis.axisSide(y[d])); });  
+    .each(function(axis1d) {
+      d3.select(this).attr("id", axisEltId).call(axis1d.axisSide(axis1d.y)); });  
 
 
   let axisTitleS = g.append("text")

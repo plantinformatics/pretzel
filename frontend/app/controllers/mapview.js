@@ -9,6 +9,7 @@ import DS from 'ember-data';
 
 /* global d3 */
 
+import { stacks } from '../utils/stacks';
 import { axisFeatureCircles_selectOne, axisFeatureCircles_selectUnviewed } from '../utils/draw/axis';
 import { thenOrNow } from '../utils/common/promises';
 import { dLog } from '../utils/common/log';
@@ -343,6 +344,8 @@ export default Controller.extend(Evented, {
   /** counts of selected paths, from paths-table; shown in tab. */
   pathsTableSummary : {},
 
+  /** bundle of references  (object attributes) */
+  oa : {},
 
   scaffolds: undefined,
   scaffoldFeatures: undefined,
@@ -360,6 +363,8 @@ export default Controller.extend(Evented, {
         next(message, options);
       }
     });
+
+    stacks.oa = this.oa;
 
     this._super.apply(this, arguments);
   },

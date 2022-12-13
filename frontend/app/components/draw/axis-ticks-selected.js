@@ -116,7 +116,7 @@ export default Component.extend(AxisEvents, {
     let
     axis1d = this.get('axis1d'),
     featureTicks = axis1d.get('featureTicks');
-    if (featureTicks) {
+    if (! axis1d.isDestroying && featureTicks) {
     let block = axis1d.axis,
     clickedFeaturesMap = this.get('selected.clickedFeaturesByAxis'),
     /** clickedFeatures will be undefined or an array with .length > 1

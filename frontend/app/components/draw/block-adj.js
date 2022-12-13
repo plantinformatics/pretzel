@@ -235,10 +235,11 @@ export default Component.extend(Evented, AxisEvents, {
       blockDomains =
         axes.mapBy('blocks')
         .reduce(function (bd, bb) {
-          // if b.axis.axis1d.get('zoomed') is false, then domain will be undefined.
-          // also b.axis.axis1d can be undefined, probably because of new axis, in which case it won't be zoomed yet (except when we add zoom domain to the URL).
+          /* draw_orig : axes[].blocks[] were Block, now BlockAxisView / block-axis-view,
+           * so b.axis.axis1d is now b.axis
+           */
           // if axis is deleted, blocks are un-viewed, i.e. b.block.get('isViewed') is false, and b.axis === undefined
-          bb.forEach(function (b) { bd[b.axisName] = b.axis && b.axis.axis1d && b.axis.axis1d.get('domain'); }); return bd; }, {}),
+          bb.forEach(function (b) { bd[b.axisName] = b.axis?.get('domain'); }); return bd; }, {}),
       axesRanges = axes.map((a) => a.yRange()),
       axisLengthPx = Math.max.apply(null, axesRanges),
       nPaths = targetNPaths(pathsDensityParams, axisLengthPx);
@@ -1132,7 +1133,7 @@ looking at the currently displayed paths in a block_adj :
     axesBlocks = axes.mapBy('blocks');
     dLog('updateAxesScale', axesBlocks.map((blocks) => blocks.mapBy('axisName')));
     axesBlocks.forEach(function (blocks) {
-      blocks[0].axis.axis1d.updateAxis();
+      blocks[0].axis.updateAxis();
     });
   },
 

@@ -56,21 +56,25 @@ function AxisMenuActions(oa) {
    *  me
    */
 
-  function axisDelete (axisName  /*buttonElt, i, g*/) {
+  function axisDelete (axis1d) {
+    const axisName = axis1d.axisName;
     console.log("delete", axisName, this);
     // this overlaps with the latter part of blockIsUnviewed()
     // and can be factored with that.
-    let axis = oa.axes[axisName], stack = axis && axis.stack;
+    let axis = axis1d, stack = axis && axis.stack;
+    // draw_orig
     // axes[axisName] is deleted by removeStacked1() 
     let stackID = Stack.removeStacked(axisName);
     const axisApi = oa.axisApi;
+    // draw_orig
     axisApi.deleteAxisfromAxisIDs(axisName);
-    let sBlock = oa.stacks.blocks[axisName];
-    let block = sBlock.block;
+    let sBlock = axis1d.referenceBlock.view;
+    let block = axis1d.referenceBlock;
     console.log('sBlock.axis', sBlock.axis);
     sBlock.setAxis(undefined);
-    axisBrushZoom.removeBrushExtent(axisName);
-    axisApi.removeAxisMaybeStack(axisName, stackID, stack);
+    axisBrushZoom.removeBrushExtent(axis1d);
+    // draw_orig
+    // axisApi.removeAxisMaybeStack(axisName, stackID, stack);
     const me = oa.eventBus;
     me.send('removeBlock', axisName);
     // filter axisName out of selectedFeatures and selectedAxes
@@ -78,50 +82,56 @@ function AxisMenuActions(oa) {
     axisApi.sendUpdatedSelectedFeatures();
   }
 
-  function axisFlip (axisName /*buttonElt , i, g*/) {
-    console.log("flip", axisName, this);
+  function axisFlip(axis1d) {
+    console.log("flip", axis1d.axisName, this);
     /** Handle the possibility that axisName may have been adopted by
      * another axis after this callback registration. */
-    let axis = Stacked.getAxis(axisName),
-        ya = oa.y[axisName = axis.axisName], ysa=oa.ys[axisName],
+    let
+        ya = axis1d.y, ysa = axis1d.ys,
         domain = maybeFlip(ya.domain(), true);
-    axis.flipped = ! axis.flipped;
+    axis1d.flipped = ! axis1d.flipped;
     /** if the axis is brushed, show the brush position updated by flip.
      * Instead of using range (inverted to domain via
      * axisRange2Domain); axisBrushShowSelection() uses
      * axisBrush.brushedDomain (as commented in showResize)
      */
-    let range = oa.brushedRegions[axisName];
+    let range = axis1d.brushedRegion;
 
-    if (axis.axis1d)
-      axis.axis1d.toggleProperty('flipped');
     ya.domain(domain);
     ysa.domain(domain);
 
     /* after y domain update, map brushed domain to new position.  */
     if (range) {
-      dLog('axisFlip', axisName, range);
-      let gBrush = axisBrushSelect(oa.svgContainer, axisName);
-      axisBrushZoom.axisBrushShowSelection(axisName, gBrush);
+      dLog('axisFlip', axis1d.axisName, range);
+      let gBrush = axisBrushSelect(oa.svgContainer, axis1d);
+      axisBrushZoom.axisBrushShowSelection(axis1d, gBrush);
     }
 
     let t = oa.svgContainer.transition().duration(750);
-    axisBrushZoom.axisScaleChanged(axisName, t, true);
+    axisBrushZoom.axisScaleChanged(axis1d, t, true);
   }
 
-  function axisPerpendicular (axisName /*buttonElt , i, g*/) {
-    console.log("perpendicular", axisName, this);
-    let axis = Stacked.getAxis(axisName);
-    axis.perpendicular = ! axis.perpendicular;
+  function axisPerpendicular(axis1d) {
+    console.log("perpendicular", axis1d.axisName, this);
+    axis1d.perpendicular = ! axis1d.perpendicular;
 
     oa.showResize(true, true);
   }
 
-  function axisExtend (axisName /*buttonElt , i, g*/) {
+  function axisExtend (axis1d) {
+    const axisName = axis1d.axisName;
     console.log("extend", axisName, this);
-    let axis = Stacked.getAxis(axisName), stack = axis && axis.stack;
+    let axis = axis1d;
     // toggle axis.extended, which is initially undefined.
-    axis.extended = ! axis.extended;
+    /* toggleProperty() will change undefined to true.
+     * .extended values are : undefined, true, false, width; where true indicates
+     * the default width, and false indicates 0 width.
+     * Using ! does not update CPs which depend on this, whereas
+     * toggleProperty() does; ! can be used when axis-1d is converted from
+     * Ember.Object to Native Object.
+     */
+    // axis.extended = ! axis.extended;
+    axis.toggleProperty('extended');
     // axisShowExtend(axis, axisName, undefined);
     const me = oa.eventBus;
     me.send('enableAxis2D', axisName, axis.extended);
@@ -130,7 +140,9 @@ function AxisMenuActions(oa) {
   //----------------------------------------------------------------------------
 
 
-    /** un-view the block.  (axis-menu : block) */
+    /** un-view the block.  (axis-menu : block)
+     * @param BlockAxisView (block-axis-view.js)
+     */
     function blockUnview (block) {
       console.log("blockUnview (deleteMap / removeBlock)", block.axisName, this);
       // this will do : block.block.setViewed(false);
@@ -139,6 +151,7 @@ function AxisMenuActions(oa) {
     }
     /** Toggle the visibility of the block.  (axis-menu : block)
      * Call functions to make corresponding update to display of axis title, selected features, paths.
+     * @param BlockAxisView (block-axis-view.js)
      */  
     function blockVisible (block) {
       console.log("blockVisible (VisibleAxis), visible", block.visible, block.longName(), this);
@@ -156,7 +169,9 @@ function AxisMenuActions(oa) {
         axisApi.selectedFeatures_removeBlock(block);
       } else {
         let ab = oa.axisApi?.axisFeatureCirclesBrushed;
-        ab && ab();
+        const blockView = block;
+        const axis1d = blockView.axis;
+        ab && ab(axis1d);
       }
       axisApi.sendUpdatedSelectedFeatures();
 

@@ -129,7 +129,7 @@ export default Model.extend(Evented, {
   /** Result is, for each blockID in blockAdjId,  the axis on which the block is displayed.
    * May need to add dependency on stacks component, because block can be un-viewed then re-viewed.
    */
-  axes : computed('blocks', 'blocks.@each.axis', 'blocks.@each.isViewed', function () {
+  axes_orig : computed('blocks', 'blocks.@each.axis', 'blocks.@each.isViewed', function () {
     const
     blocks = this.get('blocks'),
     /** axis1d.axis is the block */
@@ -140,6 +140,7 @@ export default Model.extend(Evented, {
     dLog('axes', blocks, axes);
     return axes;
   }),
+  axes : alias('axes1d'),
   axes1d : computed('blocks.@each.axis1d', function () {
     let
     axes1d = this.blocks.mapBy('axis1d');

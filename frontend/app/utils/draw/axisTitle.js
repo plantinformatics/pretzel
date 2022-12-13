@@ -50,12 +50,13 @@ function AxisTitle(oa) {
   const result = {
     // axisTitle,
     axisTitleFamily,
-    axisName2Blocks,
+    axis1d2BlockViews,
     updateAxisTitles,
     updateAxisTitleSize,
     
   };
 
+  /** not used */
   function axisTitle(chrID)
   {
     let cn=oa.
@@ -73,7 +74,7 @@ function AxisTitle(oa) {
 
   /** Update the axis title, including the block sub-titles.
    * If ! axisTitle_dataBlocks, don't show the data block sub-titles, only the first line;
-   * this is selected in axisName2Blocks().
+   * this is selected in axis1d2BlockViews().
    *
    * From the number of block sub-titles, calculate 'y' : move title up to
    * allow for more block sub-titles.
@@ -88,10 +89,9 @@ function AxisTitle(oa) {
       axisTitleS
       // .text(axisTitle /*String*/)
       // shift upwards if >1 line of text
-        .each(function (d) {
+        .each(function (axis1d) {
           const
-          axis = Stacked.getAxis(d),
-          length = axis && axis.blocks.length;
+          length = axis1d.viewedBlocks.length;
           if (length && length > 1)
           {
             /** -2 * axisFontSize is the default for a single row. */
@@ -113,7 +113,7 @@ function AxisTitle(oa) {
       axisTitleS.selectAll("tspan.blockTitle")
     /** @return type Block[]. blocks of axisName.
      * first block is parent, remainder are data (non-reference) */
-      .data(axisName2Blocks, (block) => block.getId()),
+      .data(axis1d2BlockViews, (block) => block.getId()),
     subTitleE = subTitleS
       .enter()
       .append("tspan")
@@ -222,10 +222,14 @@ function AxisTitle(oa) {
 
   //----------------------------------------------------------------------------
 
-  function axisName2Blocks (axisName) {
-    let axis = Stacked.getAxis(axisName);
-    // equiv : axis.children(true, false)
-    return axis ? (axisTitle_dataBlocks ? axis.blocks : [axis.blocks[0]]) : [];
+  function axis1d2BlockViews (axis1d) {
+    const
+    // .blockViews[0].block is .referenceBlock.
+    blockViews =
+      ! axis1d ? [] :
+      axis1d.isDestroying ? [] :
+      (axisTitle_dataBlocks ? axis1d.blockViews : axis1d.blockViews.slice(0,1));
+    return blockViews;
   }
 
 
@@ -245,6 +249,7 @@ function AxisTitle(oa) {
    */
   function updateAxisTitleSize(axisTitleS)
   {
+    const stacks = oa.axisApi.stacksView.stacks;
     if (! stacks.length)
       return;
     if (! axisTitleS)
@@ -268,7 +273,9 @@ function AxisTitle(oa) {
     titlePx = titleLength ? titleLength * em2Px : 0;
     let titleText = vc.titleText || (vc.titleText = {});
 
-    oa.vc.axisHeaderTextLen = titlePx;
+    if (titlePx) {
+      oa.vc.axisHeaderTextLen = titlePx;
+    }
     oa.axisTitleLayout.calc(axisSpacing, titlePx);
 
 

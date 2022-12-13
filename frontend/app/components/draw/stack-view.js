@@ -43,7 +43,7 @@ export default class DrawStackViewComponent extends Component {
 
     /** mix-in selected functions from Stack:
      *  (replace-regexp "^\\([a-z].*\\)" "    this.\\1 = p.\\1;")
-     *  (replace-string "Stacked.prototype" this)
+     *  (replace-string "Stack.prototype" this)
      */
     const p = Stack.prototype;
 

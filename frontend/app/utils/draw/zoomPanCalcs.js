@@ -158,7 +158,7 @@ function intervalDirection(interval, direction) {
  * Uses : d3.event,
  * d3.event.sourceEvent (! inFilter), d3.event.currentTarget (! inFilter && ! isPan)
  *
- * @param axis  Stacked
+ * @param axis  axis1d (was Stacked)
  * @param axisApi for axisRange2Domain()
  * @param inFilter  true when called from zoomFilter() (d3.zoom().filter()),
  * false when called from zoom() (d3.zoom().on('zoom')); this indicates
@@ -168,6 +168,7 @@ function intervalDirection(interval, direction) {
  * newDomain is the new domain resulting from the zoom change.
  */
 function wheelNewDomain(axis, axisApi, inFilter) {
+  const axis1d = axis;
   let yp = axis.y;
   /* if the axis does not yet have a domain then it won't have a scale.
    * The domain should be received before the user can excercise the scroll
@@ -207,7 +208,7 @@ function wheelNewDomain(axis, axisApi, inFilter) {
   include;
 
   let
-    axis1dReferenceDomain = axis.axis1d && axis.axis1d.get('blocksDomain'),
+    axis1dReferenceDomain = axis1d?.get('blocksDomain'),
     /** the whole domain of the axis reference block.
      * If the axis does not have a reference block with a range, as in the case
      * of GMs, use the domain of the reference Block
@@ -220,8 +221,7 @@ function wheelNewDomain(axis, axisApi, inFilter) {
      * reverse order.
      */
     axisReferenceDomain = axis1dReferenceDomain ||
-    (axis.referenceBlock && axis.referenceBlock.get('range')) ||
-    axis.referenceBlockS().domain;
+    (axis.referenceBlock && axis.referenceBlock.get('range'));
   
   if (noDomain(axisReferenceDomain)) {
     if (trace_zoom)
@@ -283,7 +283,7 @@ function wheelNewDomain(axis, axisApi, inFilter) {
     let
     axisBrushZoom = AxisBrushZoom(axisApi.drawMap.oa),
     /** This is the centre of zoom, i.e. the mouse position, not the centre of the axis.  */
-    centre = axisBrushZoom.axisRange2Domain(axis.axisName, rangeYCentre),
+    centre = axisBrushZoom.axisRange2Domain(axis1d, rangeYCentre),
 
     transform = inFilter ? elt.__zoom : d3.event.transform, // currently only used in trace
 
@@ -378,12 +378,7 @@ function ZoomFilter(oa) {
       }
 
       let axisName = d,
-      axis = oa.axesP[axisName];
-
-      if ((oa.y[axisName] !== axis.y) || (oa.ys[axisName] !== axis.ys))
-        dLog('zoomFilter verify y', axisName, axis, oa);
-      if (axis.axisName !== d)
-        dLog('zoomFilter verify axisName', axisName, axis);
+      axis = d;
 
       include = wheelNewDomain(axis, oa.axisApi, true); // uses d3.event
     }

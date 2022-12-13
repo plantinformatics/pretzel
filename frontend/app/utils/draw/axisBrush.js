@@ -76,6 +76,15 @@ const trace_gui = 0;
 
 //------------------------------------------------------------------------------
 
+/** Select paths.
+ * selects the g which may have .faded added.  Exclude g.progress because
+ * featureNotSelected2() does not yet support its datum type, and we
+ * should check with users if this feature should be maintained or varied.
+ */
+const fadedSelector = ".foreground > g:not(.progress) > g";
+
+//------------------------------------------------------------------------------
+
 // let  bbox  = { x: 1, y : 2, width: 20, height : undefined };
 
 /** Add <clipPath><rect /><g clip-path= />
@@ -127,9 +136,9 @@ function brushClip(gp, axisID) {
 /** Select the brush of brushedAxisID.
  * @return d3 selection of the brushed axis.
  */
-function axisBrushSelect(svgContainer, brushedAxisID) {
+function axisBrushSelect(svgContainer, brushedAxis1d) {
   // copied from showAxisZoomResetButtons()
-  let axisS = svgContainer.selectAll("#" + eltId(brushedAxisID));
+  let axisS = svgContainer.selectAll("#" + eltId(brushedAxis1d));
   /** this is the element which is passed when called via
    * zoomBehavior.on('zoom', zoom)
    * so pass the same element when calling via g.btn .Zoom .on('click' ).
@@ -139,10 +148,10 @@ function axisBrushSelect(svgContainer, brushedAxisID) {
 }
 
 
-function showAxisZoomResetButtons(svgContainer, getBrushExtents, zoom, resetZoom, brushedAxisID, drawMap) {
+function showAxisZoomResetButtons(svgContainer, zoom, resetZoom, brushedAxis1d, drawMap) {
   // `used as the basis of axisBrushSelect
   /** d3 selection of the brushed axis. */
-  let axisS = svgContainer.selectAll("#" + eltId(brushedAxisID));
+  let axisS = svgContainer.selectAll("#" + eltId(brushedAxis1d));
   /** this is the element which is passed when called via
    * zoomBehavior.on('zoom', zoom)
    * so pass the same element when calling via g.btn .Zoom .on('click' ).
@@ -181,8 +190,10 @@ function showAxisZoomResetButtons(svgContainer, getBrushExtents, zoom, resetZoom
     .selectAll('.Zoom')
     .on('click', function () {
       d3.event.stopPropagation();
-      let brushExtents = getBrushExtents();
-      zoom(that,brushExtents);
+      const brushedDomain = brushedAxis1d.brushedDomain;
+      if (brushedDomain) {
+        zoom(that, /*i*/undefined, /*g*/undefined, brushedDomain);
+      }
       // zoomed = true; // not used.
 
       //reset function
@@ -193,7 +204,7 @@ function showAxisZoomResetButtons(svgContainer, getBrushExtents, zoom, resetZoom
   let
   resetSwitch = g.selectAll('.Reset');
   resetSwitch
-    .on('click',function(){resetZoom(brushedAxisID); });
+    .on('click',function(){resetZoom(brushedAxis1d); });
  
  dLog("showAxisZoomResetButtons g", g.nodes());
 }
@@ -211,9 +222,7 @@ function AxisBrushZoom(oa) {
   const result = {
     setupBrushZoom,
     brushClipSize,
-    brushUpdates,
-    getBrushExtents,
-    getBrushedRegions, axisBrushedDomain, axisRange2DomainFn, axisRange2Domain, axisBrushShowSelection,
+    getBrushedRegions, axisRange2DomainFn, axisRange2Domain, axisBrushRefn, axisBrushShowSelection,
     brushHelper, resetZooms, resetBrushes, removeBrushExtent, resetZoom,
     axisFeatureCircles_selectAll, handleFeatureCircleMouseOver, handleFeatureCircleMouseOut, brushEnableFeatureHover, zoom, axisScaleChangedRaf, axisScaleChanged, brushended, 
     draw_flipRegion, /* containing : features2Limits, flipRegionInLimits, */
@@ -229,146 +238,119 @@ function AxisBrushZoom(oa) {
         allG.append("g")
         .attr("class", "brush");
 
-    /** brushClip() uses getBBox(), so call again after the geometry has settled.
-     * If this works reliably, it might suggest splitting the append(clipPath)
-     * from the geometry setting.
-     * The 2sec call should be fine for most computers, some might take until
-     * 5sec to settle the geometry.
-     */
-    brushClipSize(gBrushParent);
-    later(() => ! me.isDestroying && this.brushClipSize(gBrushParent), 2000);
-    later(() => ! me.isDestroying && this.brushClipSize(gBrushParent), 5000);
+    if (! gBrushParent.empty()) {
+      /** brushClip() uses getBBox(), so call again after the geometry has settled.
+       * If this works reliably, it might suggest splitting the append(clipPath)
+       * from the geometry setting.
+       * The 2sec call should be fine for most computers, some might take until
+       * 5sec to settle the geometry.
+       */
+      brushClipSize(gBrushParent);
+      later(() => ! me.isDestroying && this.brushClipSize(gBrushParent), 2000);
+      later(() => ! me.isDestroying && this.brushClipSize(gBrushParent), 5000);
+    }
 
-
-    if (allG.nodes().length)
+    if (! allG.empty()) {
       console.log('zoomBehavior', allG.nodes(), allG.node());
-    allG
-      .call(oa.zoomBehavior);
-
+      allG
+        .call(oa.zoomBehavior);
+    }
   }
 
   /** Ensure there is clipPath & rect in gBrushParent, and set its geometry. */
   function brushClipSize(gBrushParent) {
     gBrushParent
-      .each(function(axisID) {
-        brushClip(d3.select(this), axisID)
-          .each(function(d) { d3.select(this).call(oa.y[d].brush); });
+      .each(function(axis1d) {
+        brushClip(d3.select(this), axis1d)
+          .each(function(d) { d3.select(this).call(axis1d.y.brush); });
       });
   }
 
   //----------------------------------------------------------------------------
 
-  function brushUpdates() {
-    /* axes removed via manage-view : removeBlock don't remove any brush of
-     * that axis from brushedRegions, so check for that here.
-     * This check could be done when services/data/blocks:viewed.[] updates.
-     */
-    Object.keys(oa.brushedRegions).forEach(
-      (refBlockId) => { if (! oa.axes[refBlockId]) removeBrushExtent(refBlockId); } 
-    );
-
-    /** As in zoom(), note the brushedDomains before the scale change, for
-     * updating the brush selection position.
-     * This could be passed to axisBrushShowSelection() and used in place of
-     * axisBrush.brushedDomain; the current intention is to shift to using
-     * just axisBrush.brushedDomain and brushedRegions / brushExtents can be retired.
-     * oa.brushedRegions is equivalent to getBrushedRegions() - could use that for verification.
-     */
-    let brushedDomains = {};
-    Object.entries(oa.brushedRegions).forEach(
-      // similar to axisBrushedDomain().
-      ([refBlockId, region]) => brushedDomains[refBlockId] = axisRange2Domain(refBlockId, region)
-    );
-    dLog('brushedDomains', brushedDomains);
-  }
-
-
-  //----------------------------------------------------------------------------
-
-  /** Map brushedRegions into an array parallel to selectedAxes[]. */
-  function getBrushExtents() {
-    const brushedRegions = oa.brushedRegions;
-    /** Extent of current brush (applied to y axis of a axis). */
-    let
-    selectedAxes = oa.selectedAxes,
-      brushExtents = selectedAxes.map(function(p) { return brushedRegions[p]; }); // extents of active brushes
-    return brushExtents;
-  }
   /** Could use this instead of maintaining oa.brushedRegions :
    */
   function getBrushedRegions() {
-    let brushedRegions = d3.selectAll('g.brush > g[clip-path]').nodes().reduce((br, e) => { let s = e.__brush.selection; br[e.__data__] = [s[0][1], s[1][1]]; return br; }, {});
+    /** e.__brush :
+     *   dim: Object { name: "y", handles: (2) [], input: input(y, e),  } // configuration
+     *   extent: Array [ (2) [], (2) [] ]     // rect which can be brushed i.e. maximum range of thumb
+     *   selection: Array [ (2) [], (2) [] ]    // current selection, i.e. range of thumb
+     */
+    let brushedRegions = d3.selectAll('g.brush > g[clip-path]').nodes().reduce((br, e) => {
+      let s = e.__brush.selection;
+      br[e.__data__] = [s[0][1], s[1][1]];
+      return br;
+    }, {});
     return brushedRegions;
   }
 
-  /** Return the brushed domain of axis p
-   * Factored from brushHelper(); can use axisBrushedDomain() to replace that code in brushHelper().
-   */
-  function axisBrushedDomain(p, i)
-  {
-    let brushExtents = getBrushExtents();
-
-    if (! brushExtents[i]) {
-      dLog('axisBrushedDomain no brush for', p, i, brushExtents);
-      return undefined;
-    }
-    let brushedDomain = axisRange2Domain(p, brushExtents[i]);
-    console.log('axisBrushedDomain', p, i, brushExtents, brushedDomain);
-    return brushedDomain;
-  }
   /** Convert the given brush extent (range) to a brushDomain.
-   * @param p axisID
+   * @param axis1d
    * @return function to convert range a value to a domain value.
    * undefined if scale has no domain.
    */
-  function axisRange2DomainFn(p)
+  function axisRange2DomainFn(axis1d)
   {
     let
-      yp = oa.y[p];
+      yp = axis1d.y;
     let ypDomain = yp.domain();
     if (! ypDomain || ! ypDomain.length)
       return undefined;
-    function fn(ypx) { return yp.invert(ypx /* *axis.portion */); };
+    function fn(ypx) { return yp.invert(ypx /* *axis1d.portion */); };
     return fn;
   }
   /** Convert the given brush extent (range) to a brushDomain.
-   * @param p axisID
+   * @param axis1d
    * @param range a value or an interval in the axis range.  This may be e.g. a brush extent
    * @return domain the (reverse) mapping of range into the axis domain.
    * undefined if range is undefined.
    */
-  function axisRange2Domain(p, range)
+  function axisRange2Domain(axis1d, range)
   {
     // axisRange2Domain{,Fn} are factored from axisBrushedDomain(), and brushHelper()
     let
-      r2dFn = axisRange2DomainFn(p);
+      r2dFn = axisRange2DomainFn(axis1d);
     if (! r2dFn) {
-      dLog('axisRange2Domain', p, range, 'scale has no domain', oa.y[p].domain());
+      dLog('axisRange2Domain', axis1d.axisName, range, 'scale has no domain', axis1d.y.domain());
       return undefined;
     }
     if (! range) {
       return undefined;
     }
     let
-    axis = oa.axes[p],
     brushedDomain = range.length ? range.map(r2dFn) : r2dFn(range);
-    if (range.length && axis.flipped)
+    if (range.length && axis1d.flipped)
     {
+      // similar maybeFlip(brushedDomain, axis1d.flipped), defines a new array.
       let swap = brushedDomain[0];
       brushedDomain[0] = brushedDomain[1];
       brushedDomain[1] = swap;
     }
     if (trace_scale_y)
-      dLog('axisRange2Domain', p, range, brushedDomain);
+      dLog('axisRange2Domain', axis1d.axisName, range, brushedDomain);
     return brushedDomain;
+  }
+
+  /**
+   * @param axisBrushIdField name of field in this which provides axisBrushId to
+   * identify the axis-brush.
+   * @param this is the object on which .axisBrushMemo is stored, and is the source of axisBrushId, 
+   * set via .call(), e.g. axisBrushZoom.axisBrushRefn.call(this, 'axisName');
+   */
+  function axisBrushRefn(axisBrushIdField) {
+    const
+    store = me.get('store'),
+    axisBrush = this.axisBrushMemo ||
+      (this.axisBrushMemo = store.peekRecord('axis-brush', this[axisBrushIdField]));
+    return axisBrush;
   }
 
   /** update brush selection position for window / element height resize.
    * @param gBrush  <g clip-path> within <g.brush>
    */
-  function axisBrushShowSelection(p, gBrush) {
-    let yp = oa.y[p],
-    brushedAxisID = p;
+  function axisBrushShowSelection(axis1d, gBrush) {
+    let yp = axis1d.y,
+    brushedAxisID = axis1d.axisName;
     /* based on similar functionality in zoom() which updates brush
      * extent/position for (zoom) scale change (brushedDomain does not change).
      *
@@ -377,7 +359,7 @@ function AxisBrushZoom(oa) {
      */
     let brushedDomain;
     if (! brushedDomain) {
-      let axisBrush = me.get('store').peekRecord('axis-brush', brushedAxisID);
+      let axisBrush = axis1d.axisBrushObj;
       brushedDomain = axisBrush && axisBrush.get('brushedDomain');
     }
     if (brushedDomain) {
@@ -385,8 +367,8 @@ function AxisBrushZoom(oa) {
       console.log('axisBrushShowSelection', brushedAxisID, brushedDomain, gBrush, newBrushSelection);
       if ((newBrushSelection[0] < -1e3) || (newBrushSelection[1] > 1e4)) {
         // when zoomedDomain is set by setDomainFromDawn(), the current brush is likely to be way out of scope.
-        dLog('brush selection is large after scale change - removing', p);
-        removeBrushExtent(p);
+        dLog('brush selection is large after scale change - removing', brushedAxisID);
+        removeBrushExtent(axis1d);
         newBrushSelection = null; // clear the brush selection
       }
       if (newBrushSelection) {
@@ -398,19 +380,20 @@ function AxisBrushZoom(oa) {
   }
 
   /** Used when the user completes a brush action on the axis axis.
-   * The datum of g.brush is the ID/name of its axis, call this axisID.
-   * If null selection then remove axisID from selectedAxes[], otherwise add it.
-   * Update selectedFeatures{}, brushedRegions{} : if selectedAxes[] is empty, clear them.
-   * Otherwise, set brushedRegions[axisID] to the current selection (i.e. of the brush).
-   * Set brushExtents[] to the brushedRegions[] of the Axes in selectedAxes[].
+   * The datum of g.brush is the axis-1d of its axis, call this axis1d.
+   * If null selection then remove axis1d from selectedAxes[], otherwise add it.
+   * Update selectedFeatures{}, axis1d.brushedRegion : if selectedAxes[] is empty, clear them.
+   * Otherwise, set axis1d.brushedRegion to the current selection (i.e. of the brush).
+   * Set axis1d.brushedRegion and .brushedDomain to the (pixel) range and domain
+   * respectively of the brush selection / thumb.
    * For each axis in selectedAxes[], clear selectedFeatures{} then store in it the
    * names + locations of features which are within the brush extent of the axis.
    * Add circle.axisID for those feature locations.
-   * Remove circles of features (on all Axes) outside brushExtents[axisID].
+   * Remove circles of features (on all Axes) outside axis1d.brushedDomain.
    * For elements in '.foreground > g.flowName > g', set class .faded iff the feature (which
    * is the datum of the element) is not in the selectedFeatures[] of any axis.
    *
-   * Draw buttons to zoom to the brushExtents (zoomSwitch) or discard the brush : resetSwitch.
+   * Draw buttons to zoom to the axis1d-s .brushedDomain (zoomSwitch) or discard the brush : resetSwitch.
    * Called from brushended(), which is called on(end) of axis brush.
    *
    * @param that  the brush g element.
@@ -420,15 +403,18 @@ function AxisBrushZoom(oa) {
   function brushHelper(that) {
     const axisApi = oa.axisApi;
     // Chromosome name, e.g. 32-1B
-    /** name[0] is axisID of the brushed axis. name.length should be 1. */
+    /** name[0] is axis1d of the brushed axis. name.length should be 1. */
     let name = d3.select(that).data();
-    let brushedAxisID = name[0];
+    const
+    brushedAxis1d = name[0],
+    axis1d = brushedAxis1d;
+
+    let brushedAxisID = axis1d.axisName;
 
     const selectedAxes = oa.selectedAxes;
     let svgContainer = oa.svgContainer;
     //Remove old circles.
     axisFeatureCircles_selectAll().remove();
-    let brushedRegions = oa.brushedRegions;
     let
     brushRange = d3.event.selection,
     /** d3.mouse() calls : function point(node, event) { .. point.x = event.clientX, point.y = event.clientY;
@@ -440,14 +426,9 @@ function AxisBrushZoom(oa) {
     let brush_ = that.__brush,
     brushSelection_ = brush_.selection,
     brushExtent_ = brush_.extent;
-    /** selects the g which may have .faded added.  Exclude g.progress because
-     * featureNotSelected2() does not yet support its datum type, and we
-     * should check with users if this feature should be maintained or varied.
-     */
-    const fadedSelector = ".foreground > g:not(.progress) > g";
 
     if (trace_gui)
-      console.log("brushHelper", that, brushedAxisID, selectedAxes, brushRange, brushedRegions,
+      console.log("brushHelper", that, brushedAxisID, selectedAxes, brushRange, axis1d.brushedRegion,
                   brushSelection, mouse,
                   brushSelection_ ? '' + brushSelection_[0] + '' + brushSelection_[1] : '', ', ',
                   brushExtent_ ? '' + brushExtent_[0] + ',' + brushExtent_[1] : ''
@@ -457,242 +438,34 @@ function AxisBrushZoom(oa) {
      * This causes selectedAxes to update here; when an axis is zoomed its brush is removed.
      */
     if (brushRange == null) {
-      removeBrushExtent(brushedAxisID);
+      removeBrushExtent(axis1d);
     }
     else {
-      selectedAxes.addObject(name[0]); 
-      brushedRegions[brushedAxisID] = brushRange;
+      selectedAxes.addObject(axis1d);
+      axis1d.brushedRegion = brushRange;
     }
 
     const
-    ab = brushRangeToDomain(brushRange),
+    ab = brushRangeToDomain(axis1d, brushRange),
     axisBrush = ab.axisBrush,
     /** equiv : axis.referenceBlock */
     limits = axisBrush.get('block.limits')
       || axisBrush.get('block.axis.domain')
       || axisBrush.get('block.axis.referenceBlock.range');
 
-    function brushIntersectionChanged(axisBrush, brushedDomain) {
-      const
-      fnName = 'brushIntersectionChanged',
-      block = axisBrush.get('block.content') || axisBrush.get('block'),
-      domain = axisBrush.get('block.currentDomain'),
-      previousDomain = block[Symbol.for('previousDomain')],
-      changed = axisBrush.brushedDomain && domain && previousDomain ?
-        ! intervalsEqual(
-          intervalIntersect(brushedDomain, domain),
-          intervalIntersect(axisBrush.brushedDomain, previousDomain)
-        ) :
-        true;
-      dLog(fnName, changed, domain, previousDomain);
-      if (changed) {
-        block[Symbol.for('previousDomain')] = domain;
-      }
-      return changed;
-    }
-
 
     // selectedAxes is an array containing the IDs of the Axes that
     // have been selected.
 
     if (selectedAxes.length > 0) {
-      axisFeatureCirclesBrushed();
+      axisFeatureCirclesBrushed(axis1d);
 
       if (! oa.axisApi.axisFeatureCirclesBrushed) {
         oa.axisApi.axisFeatureCirclesBrushed = axisFeatureCirclesBrushed;
       }
 
-      /** For those axes in selectedAxes, if the axis has a brushed region,
-       * draw axis circles for features within the brushed region.
-       */
-      function axisFeatureCirclesBrushed() {
-        /* This function can be split out similarly to axis-1d.js :
-         * FeatureTicks; possibly a sub-component of axis-1d.
-         */
 
-        let valueInInterval = me.get('controls').get('view.valueInInterval');
-
-        let selectedAxes = oa.selectedAxes;
-      console.log("Selected: ", " ", selectedAxes.length);
-      // Axes have been selected - now work out selected features.
-
-      let brushExtents = getBrushExtents();
-
-      axisApi.selectedFeatures_clear();
-      /** selectedFeaturesSet contains feature f if selectedFeatures[d_b][f] for any dataset/block d_b.
-       * This is used to efficiently implement featureNotSelected2() which implements .faded.
-       */
-      let selectedFeaturesSet = new Set();
-      let anyBrushIntersectionChanged = false;
-      /**
-       * @param p an axis selected by a current user brush
-       * @param i index of the brush of p in brushExtents[]
-       */
-      selectedAxes.forEach(function(p, i) {
-        /** d3 selection of one of the Axes selected by user brush on axis. */
-        let axisS = oa.svgContainer.selectAll("#" + eltId(p));
-
-        // blockS = oa.stacks.axes[p],
-
-        let notBrushed = brushExtents[i] === undefined,
-        enable_log = notBrushed;
-          if (enable_log)
-          console.log("brushHelper", p, i);
-        /* brushExtents[i] is required for the following calculation of
-         * brushedDomain and hence the filtering, so return if it is undefined.
-         * The above selectedAxes.removeObject() is intended to prevent this but it seems to miss some case.
-         * And selectedAxes[] does not only derive from brushes - an axis can be selected in the data explorer.
-         * The whole flow of calculation in brushHelper() needs to be changed :
-         * it is unnecessary to traverse selectedAxes[] - only 1 axis has
-         * been brushed, and p is known via (thisElement.__data__, name[0], brushedAxisID).
-         * brushExtents[] is not required, and brushedRegions[] can be
-         * independent of selectedAxes[].
-         */
-        if (notBrushed)
-          return;
-
-        // this can use axisRange2Domain() which is based on this function.
-        // if yp.domain() is [], then this won't be useful.
-        let yp = oa.y[p],
-        axis = oa.axes[p],
-        brushedDomain = brushExtents[i].map(function(ypx) { return yp.invert(ypx /* *axis.portion */); });
-        if (axis.flipped)
-        {
-          let swap = brushedDomain[0];
-          brushedDomain[0] = brushedDomain[1];
-          brushedDomain[1] = swap;
-        }
-
-        /** when components/draw/axis-brush.js : draw() calls into
-         * axisFeatureCirclesBrushed(), the limits and axisBrush calculated
-         * above are probably current.
-         */
-        anyBrushIntersectionChanged ||= brushIntersectionChanged(axisBrush, brushedDomain);
-
-        if (enable_log)
-          console.log("brushHelper", name, p, yp.domain(), yp.range(), brushExtents[i], axis.portion, brushedDomain);
-
-        /** for all data blocks in the axis; reference blocks don't contain
-         * features so don't brush them. */
-        /* can pass visible=true here - a slight optimisation; it depends on the
-         * expression in dataBlocks() which distinguishes data blocks. */
-        let childBlocks = axis.dataBlocks(true, false)
-            /** Until d398e98e, this was filtered by .isBrushableFeatures; changed because
-             * if there are paths (& hence features) loaded, then it makes sense to brush those.
-             * (isBrushableFeatures() is concerned with whether more features should be requested, which is different).
-             */
-            ; // .filter((blockS) => blockS.block.get('isBrushableFeatures'));
-        let range = [0, axis.yRange()];
-        console.log(axis, 'childBlocks', childBlocks, range);
-        /*
-         * The circles have class feature.name (which should be prefixed with
-         * a letter), which may not be unique between sibling blocks of an
-         * axis.
-         * Using combinedId below is sufficient to implement transitions,
-         * but a more structured design is preferable to insert a layer : a <g> for
-         * each block, with datum blockId or block, to wrap the <circle>s, and
-         * a featuresOfBlock(blockId)->blockFeatures[] for the circle data.
-         */
-        childBlocks.map(function (block) {
-
-        let
-          blockR = block && block.block,
-        /** compound name dataset:block (i.e. map:chr) for the selected axis p.  */
-        mapChrName = blockR.get('brushName');
-        const selectedFeatures = oa.selectedFeatures;
-        selectedFeatures[mapChrName] = [];
-
-        /** The initial application, Marker Map Viewer, was for genetic maps,
-         * for which marker names are unique within a chromosome, and the data
-         * structure reflected this : (z[axisName][featureName] -> location).
-         * Now block.get('features') is used - providing the full array of
-         * features, regardless of uniqueness of names.
-         */
-        let blockFeatures = block.block.get('features');  // was oa.z[block.axisName];
-        /*d3.keys()*/ blockFeatures.forEach(function(feature) {
-          let f = feature.name;
-          // let feature = blockFeatures[f];
-          let value = feature?.value;
-          /** fLocation is value[0], i.e. the start position. The circles are placed
-           * at fLocation, and the end position is not currently shown.
-           * A feature is selected if its interval [start,end], i.e. .value,
-           * overlaps the brush thumb [start,end].
-           */
-          let fLocation;
-          if (/*! isOtherField[f] && */ ((fLocation = feature.location) !== undefined))
-          {
-            /** range is from yRange() which incorporates .portion, so use ys rather than axis.y. */
-            let yScale = oa.ys[p];
-            let yPx;
-            /** the brushedDomain may be out of the current zoom scope, so intersect .value with range also.
-             */
-          if (block.visible &&
-              valueInInterval(feature.value, brushedDomain) &&
-              valueInInterval(value.map(yScale), range)
-             ) {
-            //selectedFeatures[p].push(f);
-            selectedFeaturesSet.add(f);
-            // previously pushed : f + " " + fLocation
-            selectedFeatures[mapChrName].push(feature);
-            /** Highlight the features in the brushed regions
-             * o[p] : the axis location;  now use 0 because the translation of parent g.axis-outer does x offset of stack.
-             * fLocation :  actual feature position in the axis, 
-             * yp(fLocation) :  is the relative feature position in the svg
-             */
-            /** lacking the g.block structure which would enable f (feature.name) to be
-             * unique within its parent g, this combinedId enables transition
-             * to be implemented in an improvised way.
-             * Update : originally (Genetic Maps) feature.name was unique within block,
-             * now use feature.id because feature.name can be repeated within block.
-             */
-            let combinedId = axisFeatureCircles_eltId(feature),
-            dot = axisS.selectAll('circle#' + combinedId);
-            if (! dot.empty()) {
-              dot
-                .transition().duration(200)
-                .attr("cy", yp(fLocation));
-            }
-            else {
-            dot = axisS
-              .append("circle")
-              .attr('id', combinedId)
-              .attr("class", eltClassName(f))
-              .attr("cx",0)   /* was o[p], but g.axis-outer translation does x offset of stack.  */
-              .attr("cy", yp(fLocation))
-              .attr("r",2)
-              .style("fill", "red");
-              brushEnableFeatureHover(dot);
-            /* This can be done via an added class and css :
-             * r, fill, stroke are toggled (to 5,yellow,black) by
-             * @see table-brushed.js: highlightFeature() */
-            }
-          } else {
-             axisFeatureCircles_selectOneInAxis(axisS, feature)
-              .remove();
-          }
-          }
-        });
-        });
-      });
-      if (anyBrushIntersectionChanged) {
-        axisApi.sendUpdatedSelectedFeatures();
-      }
-      function featureNotSelected2(d)
-      {
-        let sel =
-          unique_1_1_mapping && (typeof d != 'string') ?
-          ( selectedFeaturesSet.has(d[0]) ||
-            selectedFeaturesSet.has(d[1]) )
-          : selectedFeaturesSet.has(d);
-        /* if (sel)
-          console.log("featureNotSelected2", unique_1_1_mapping, d, selectedFeaturesSet); */
-        return ! sel;
-      }
-
-      d3.selectAll(fadedSelector).classed("faded", featureNotSelected2);
-    } // axisFeatureCirclesBrushed()
-
-      showAxisZoomResetButtons(svgContainer, getBrushExtents, zoom, bind(me, me.get('resetZooms')), brushedAxisID, me);
+      showAxisZoomResetButtons(svgContainer, zoom, bind(me, me.get('resetZooms')), axis1d, me);
 
     } else {
       // brushHelper() is called from brushended() after zoom, with selectedAxes.length===0
@@ -706,32 +479,12 @@ function AxisBrushZoom(oa) {
       axisFeatureCircles_selectAll().remove();
       d3.selectAll(fadedSelector).classed("faded", false);
       axisApi.selectedFeatures_clear();
-      /* clearing brushedRegions is not needed here because resetBrushes() (by
-       * clearing the brushes) causes brushHelper() to remove brushes from
-       * brushedRegions.
-       * (and changing the value of brushedRegions in draw() closure would
-       * require using oa.brushedRegions instead).
-       * brushedRegions = oa.brushedRegions = {};
+      /* clearing .brushedRegion is not needed here because resetBrushes() (by
+       * clearing the brushes) causes brushHelper() to reset brushedAxis1d.brushedRegion
        */
     }
-    /** Determine the axis-brush object and calculate brushedDomain from brushRange.
-     */
-    function brushRangeToDomain(brushRange) {
-     /** Related : axisBrushedDomain() which relies on brushExtents[i],
-      * whereas this uses brushRange more directly, from d3.event.selection.
-      */
-    let axisBrush = me.get('store').peekRecord('axis-brush', brushedAxisID);
-    if (!axisBrush) {
-      let axis = Stacked.getAxis(brushedAxisID);
-      let block = me.peekBlock(brushedAxisID);
-      axisBrush = me.get('pathsP').ensureAxisBrush(block);
-      console.log('axis', axis, axis.block, block, 'axisBrush', axisBrush);
-    }
-    let yp = oa.y[brushedAxisID];
-    ensureYscaleDomain(yp, oa.axes[brushedAxisID]);
-    let brushedDomain = brushRange ? axisRange2Domain(brushedAxisID, brushRange) : undefined;
-      return {axisBrush, brushedDomain};
-    }
+
+
     /** brushHelper() may be called when brushedDomain has not changed :
      * d3.select(gBrush).call(yp.brush.move, newBrushExtent);
      * calls brushended(), which calls brushHelper().
@@ -743,16 +496,249 @@ function AxisBrushZoom(oa) {
       axisBrush.set('brushedDomain', ab.brushedDomain);
     }
 
-    let axis = oa.axes[brushedAxisID],
-        axis1d = axis && axis.axis1d;
     if (axis1d && brushIntersectionChanged(axisBrush, ab.brushedDomain)) {
       bind(axis1d, axis1d.showZoomResetButtonState)();
     }
 
-    me.attrs.selectChromById(brushedAxisID);
+    /* me.attrs.selectBlock is currently 'selectBlock'; when changed to a
+     * closure action it can be called directly.
+     * selectChromById() (selectBlockById) is no longer used here because
+     * changing axis element data from axisName (blockId) to axis1d provides the
+     * block reference.
+     */
+    me.sendAction('selectBlock', axis1d.axis);
 
   } // brushHelper
 
+  //----------------------------------------------------------------------------
+
+  function brushIntersectionChanged(axisBrush, brushedDomain) {
+    const
+    fnName = 'brushIntersectionChanged',
+    block = axisBrush.get('block.content') || axisBrush.get('block'),
+    domain = axisBrush.get('block.currentDomain'),
+    previousDomain = block[Symbol.for('previousDomain')],
+    changed = axisBrush.brushedDomain && domain && previousDomain ?
+      ! intervalsEqual(
+        intervalIntersect(brushedDomain, domain),
+        intervalIntersect(axisBrush.brushedDomain, previousDomain)
+      ) :
+      true;
+    dLog(fnName, changed, domain, previousDomain);
+    if (changed) {
+      block[Symbol.for('previousDomain')] = domain;
+    }
+    return changed;
+  }
+
+
+
+  /** For those axes in selectedAxes, if the axis has a brushed region,
+   * draw axis circles for features within the brushed region.
+   */
+  function axisFeatureCirclesBrushed(axis1d) {
+    /* This function can be split out similarly to axis-1d.js :
+     * FeatureTicks; possibly a sub-component of axis-1d.
+     */
+
+    let valueInInterval = me.get('controls').get('view.valueInInterval');
+
+    let selectedAxes = oa.selectedAxes;
+    console.log("Selected: ", " ", selectedAxes.length);
+    // Axes have been selected - now work out selected features.
+
+    let brushExtent = axis1d.brushedRegion;
+
+    oa.axisApi.selectedFeatures_clear();
+    /** selectedFeaturesSet contains feature f if selectedFeatures[d_b][f] for any dataset/block d_b.
+     * This is used to efficiently implement featureNotSelected2() which implements .faded.
+     */
+    let selectedFeaturesSet = new Set();
+    let anyBrushIntersectionChanged = false;
+
+    /* re-process all of selectedAxes, because it is (currently) easier to clear
+     * selectedFeaturesSet and re-accumulate all of it.
+     * Changing data structure to e.g. selected : blocksFeatures would enable
+     * re-filtering just 1 axis or block.
+     */
+    /**
+     * @param p an axis selected by a current user brush
+     * @param i index of the brush of p in brushExtents[]
+     */
+    selectedAxes.forEach(function(axis1d, i) {
+      const brushExtent = axis1d.brushedRegion;
+      if (! brushExtent) {
+        return;
+      }
+
+      /** d3 selection of one of the Axes selected by user brush on axis. */
+      let axisS = oa.svgContainer.selectAll("#" + eltId(axis1d));
+
+      let notBrushed = brushExtent === undefined,
+      enable_log = notBrushed;
+
+      // this can use axisRange2Domain() which is based on this function.
+      // if yp.domain() is [], then this won't be useful.
+      const
+      yp = axis1d.y,
+      brushedDomain = brushExtent.map(function(ypx) { return yp.invert(ypx /* *axis1d.portion */); });
+      if (axis1d.flipped)
+      {
+        let swap = brushedDomain[0];
+        brushedDomain[0] = brushedDomain[1];
+        brushedDomain[1] = swap;
+      }
+
+      const axisBrush = axis1d.axisBrushObj;
+      /** when components/draw/axis-brush.js : draw() calls into
+       * axisFeatureCirclesBrushed(), the limits and axisBrush calculated
+       * above are probably current.
+       */
+      anyBrushIntersectionChanged ||= brushIntersectionChanged(axisBrush, brushedDomain);
+
+      if (enable_log)
+        console.log("brushHelper", axis1d.axisName, yp.domain(), yp.range(), axis1d.brushedRegion, axis1d.portion, brushedDomain);
+
+      /** for all data blocks in the axis; reference blocks don't contain
+       * features so don't brush them. */
+      /* can pass visible=true here - a slight optimisation; it depends on the
+       * expression in dataBlocks() which distinguishes data blocks.
+       * related axis1d.brushedBlocks
+       */
+      let childBlocks = axis1d.dataBlocksFiltered(true, false)
+          /** Until d398e98e, this was filtered by .isBrushableFeatures; changed because
+           * if there are paths (& hence features) loaded, then it makes sense to brush those.
+           * (isBrushableFeatures() is concerned with whether more features should be requested, which is different).
+           */
+          ; // .filter((blockS) => blockS.block.get('isBrushableFeatures'));
+      let range = [0, axis1d.yRange()];
+      console.log(axis1d, 'childBlocks', childBlocks, range);
+      /*
+       * The circles have class feature.name (which should be prefixed with
+       * a letter), which may not be unique between sibling blocks of an
+       * axis.
+       * Using combinedId below is sufficient to implement transitions,
+       * but a more structured design is preferable to insert a layer : a <g> for
+       * each block, with datum blockId or block, to wrap the <circle>s, and
+       * a featuresOfBlock(blockId)->blockFeatures[] for the circle data.
+       */
+      childBlocks.forEach(function (block) {
+        let
+        /** compound name dataset:block (i.e. map:chr) for the selected axis p.  */
+        mapChrName = block.get('brushName');
+        const selectedFeatures = oa.selectedFeatures;
+        selectedFeatures[mapChrName] = [];
+
+        /** The initial application, Marker Map Viewer, was for genetic maps,
+         * for which marker names are unique within a chromosome, and the data
+         * structure reflected this : (z[axisName][featureName] -> location).
+         * Now block.get('features') is used - providing the full array of
+         * features, regardless of uniqueness of names.
+         */
+        let blockFeatures = block.get('features');  // was oa.z[block.axisName];
+        /*d3.keys()*/ blockFeatures.forEach(function(feature) {
+          let f = feature.name;
+          // let feature = blockFeatures[f];
+          let value = feature?.value;
+          /** fLocation is value[0], i.e. the start position. The circles are placed
+           * at fLocation, and the end position is not currently shown.
+           * A feature is selected if its interval [start,end], i.e. .value,
+           * overlaps the brush thumb [start,end].
+           */
+          let fLocation;
+          if (/*! isOtherField[f] && */ ((fLocation = feature.location) !== undefined))
+          {
+            /** range is from yRange() which incorporates .portion, so use ys rather than axis.y. */
+            let yScale = axis1d.ys;
+            let yPx;
+            /** the brushedDomain may be out of the current zoom scope, so intersect .value with range also.
+             */
+            if (block.visible &&
+                valueInInterval(feature.value, brushedDomain) &&
+                valueInInterval(value.map(yScale), range)
+               ) {
+              //selectedFeatures[p].push(f);
+              selectedFeaturesSet.add(f);
+              // previously pushed : f + " " + fLocation
+              selectedFeatures[mapChrName].push(feature);
+              /** Highlight the features in the brushed regions
+               * o[p] : the axis location;  now use 0 because the translation of parent g.axis-outer does x offset of stack.
+               * fLocation :  actual feature position in the axis, 
+               * yp(fLocation) :  is the relative feature position in the svg
+               */
+              /** lacking the g.block structure which would enable f (feature.name) to be
+               * unique within its parent g, this combinedId enables transition
+               * to be implemented in an improvised way.
+               * Update : originally (Genetic Maps) feature.name was unique within block,
+               * now use feature.id because feature.name can be repeated within block.
+               */
+              let combinedId = axisFeatureCircles_eltId(feature),
+              dot = axisS.selectAll('circle#' + combinedId);
+              if (! dot.empty()) {
+                dot
+                  .transition().duration(200)
+                  .attr("cy", yp(fLocation));
+              }
+              else {
+                dot = axisS
+                  .append("circle")
+                  .attr('id', combinedId)
+                  .attr("class", eltClassName(f))
+                  .attr("cx",0)   /* was o[p], but g.axis-outer translation does x offset of stack.  */
+                  .attr("cy", yp(fLocation))
+                  .attr("r",2)
+                  .style("fill", "red");
+                  brushEnableFeatureHover(dot);
+                /* This can be done via an added class and css :
+                 * r, fill, stroke are toggled (to 5,yellow,black) by
+                 * @see table-brushed.js: highlightFeature() */
+              }
+            } else {
+              axisFeatureCircles_selectOneInAxis(axisS, feature)
+                .remove();
+            }
+          }
+        });
+      });
+    });
+
+    if (anyBrushIntersectionChanged) {
+      oa.axisApi.sendUpdatedSelectedFeatures();
+    }
+    function featureNotSelected2(d)
+    {
+      let sel =
+        unique_1_1_mapping && (typeof d != 'string') ?
+        ( selectedFeaturesSet.has(d[0]) ||
+          selectedFeaturesSet.has(d[1]) )
+        : selectedFeaturesSet.has(d);
+      /* if (sel)
+        console.log("featureNotSelected2", unique_1_1_mapping, d, selectedFeaturesSet); */
+      return ! sel;
+    }
+
+    d3.selectAll(fadedSelector).classed("faded", featureNotSelected2);
+  } // axisFeatureCirclesBrushed()
+
+
+    /** Determine the axis-brush object and calculate brushedDomain from brushRange.
+     * param  brushRange from d3.event.selection
+     */
+    function brushRangeToDomain(axis1d, brushRange) {
+      let axisBrush = axis1d.axisBrushObj;
+      if (!axisBrush) {
+        let block = axis1d.axis;
+        axisBrush = me.get('pathsP').ensureAxisBrush(block);
+        console.log('axis', axis1d, axis1d.view, block, 'axisBrush', axisBrush, axisBrush === axis1d.axisBrushObj);
+      }
+      let yp = axis1d.y;
+      ensureYscaleDomain(yp, axis1d);
+      let brushedDomain = brushRange ? axisRange2Domain(axis1d, brushRange) : undefined;
+        return {axisBrush, brushedDomain};
+    }
+
+
+  //----------------------------------------------------------------------------
 
         /** Call resetZoom(axisId) - reset the zoom of one or all zoomed axes (selectedAxes).
          * Applies to the specified axis, or all brushes if axisId is undefined.
@@ -763,62 +749,61 @@ function AxisBrushZoom(oa) {
          */
       // console.log("me.get('resetZooms')", me.get('resetZooms') !== undefined);
         if (! me.get('resetZooms'))
-        me.set('resetZooms', function(axisId) {
-          console.log('resetZooms', axisId, oa.selectedAxes, oa.brushedRegions);
-          resetBrushes(axisId);
-          resetZoom(axisId);
-          console.log('after resetZoom', axisId, oa.selectedAxes, oa.brushedRegions);
+        me.set('resetZooms', function(axis1d) {
+          console.log('resetZooms', axis1d.axisName, oa.selectedAxes, axis1d.brushedRegion);
+          resetBrushes(axis1d);
+          resetZoom(axis1d);
+          console.log('after resetZoom', axis1d.axisName, oa.selectedAxes, axis1d.brushedRegion);
         });
       /** Clear the brush of the specified axis, or all brushes if axisId is undefined.
        * @param  axisId  db id of reference block of axis (i.e. .axisName) or undefined
        */
-      function resetBrushes(axisId)
+      function resetBrushes(axis1d)
       {
-        const brushedRegions = oa.brushedRegions;
-        let
-        axisClipId = axisId ? '="url(#axis-clip-' + axisId + ')"' : '',
-        brushSelector = "g.axis-all > g.brush > g[clip-path" + axisClipId + "]",
-        brushExtents;
-        if (axisId) {
-          brushExtents = [brushedRegions[axisId]];
+        if (axis1d === undefined) {
+          oa.axisApi.stacksView.axes().forEach(resetBrush);
         } else {
-          /** brushed[j] may correspond to oa.selectedAxes[j] and hence
-           * brushExtents[j], but it seems possible for their order to not
-           * match.  This is only used in trace anyway.
-           */
-          brushExtents = getBrushExtents();
+          resetBrush(axis1d);
         }
+      }
+      function resetBrush(axis1d)
+      {
+        /* `this` not used here */
+        const brushedRegion = axis1d.brushedRegion;
+        let
+        axisClipId = axis1d ? '="url(#' + axisEltIdClipPath(axis1d) + ')"' : '',
+        brushSelector = "g.axis-all > g.brush > g[clip-path" + axisClipId + "]";
         let brushed = d3.selectAll(brushSelector);
-        brushed.each(function (axisName, i, g) {
+        brushed.each(function (axis1d, i, g) {
           /* `this` refers to the brush g element.
            * pass selection==null to clear the brush.
            * clearing the brush triggers brushHelper() which removes the brush from selectedAxes[] and brushedRegions.
            * and hence index is 0.
            */
-          let j = i;
-          dLog('resetBrushes', axisId, this, axisName, oa.selectedAxes[j], oa.brushedRegions[axisName], brushExtents[j]);
+          const axisName = axis1d.axisName;
+          dLog('resetBrushes', this, axisName, oa.selectedAxes, brushedRegion);
           if (this.__brush)
-            d3.select(this).call(oa.y[axisName].brush.move, null);
+            d3.select(this).call(axis1d.y.brush.move, null);
           let brushedAxisID = axisName;
           /* the above call(brush.move, null) causes
            * brushedRegions[brushedAxisID] to be deleted, via :
            * brushended() -> brushHelper() -> removeBrushExtent()
            . */
-          if (oa.brushedRegions[brushedAxisID])
-            removeBrushExtent(brushedAxisID);
+          if (brushedRegion)
+            removeBrushExtent(axis1d);
         });
       }
 
-  /** remove the brush extent of brushedAxisID from brushedRegions[] */
-  function removeBrushExtent(brushedAxisID) {
-      console.log('removeBrush', brushedAxisID);
-      oa.selectedAxes.removeObject(brushedAxisID);
-      delete oa.brushedRegions[brushedAxisID];
+  /** remove the brush extent of brushedAxis1d from brushedRegions[] */
+  function removeBrushExtent(brushedAxis1d) {
+    console.log('removeBrushExtent', brushedAxis1d.axisName);
+    brushedAxis1d.brushedRegion = null;
+    oa.selectedAxes.removeObject(brushedAxis1d);
   }
         /** Reset 1 or all zooms.
-         * @param axisID  axis id to reset; undefined means reset all zoomed axes.
+         * @param axis1d  axis to reset; undefined means reset all zoomed axes.
          */
-        function resetZoom(axisID)
+        function resetZoom(axis1d)
         {
           const axisApi = oa.axisApi;
           let svgContainer = oa.svgContainer;
@@ -826,31 +811,31 @@ function AxisBrushZoom(oa) {
           /** rather than all of axisIDs(), should be sufficient to use
            * selectedAxes (related to brushedRegions)
            */
-          let axisIDs = axisID ? [axisID] : oa.stacks.axisIDs();
-          axisIDs.forEach(function(d) {
-            let idName = axisEltId(d); // axis ids have "a" prefix
-              if (d != axisID)
-                console.log('resetZoom', d, axisID);
-            let a = oa.axes[d],
+          let axes = axis1d ? [axis1d] : axisApi.stacksView.axes();
+          axes.forEach(function(a) {
+            let idName = axisEltId(a); // axis ids have "a" prefix
+            let
             domain = a.parent ? a.parent.domain : a.getDomain();
             domain = maybeFlip(domain, a.flipped);
             a.setZoomed(false);
-            oa.y[d].domain(domain);
-            oa.ys[d].domain(domain);
+            a.y.domain(domain);
+            a.ys.domain(domain);
             a.setDomain(domain);
-            let yAxis = a.axisSide(oa.y[d]).ticks(10);
+            let yAxis = a.axisSide(a.y).ticks(10);
             oa.svgContainer.select("#"+idName).transition(t).call(yAxis);
           });
           let axisTickS = svgContainer.selectAll("g.axis > g.tick > text");
           axisTickS.attr("transform", yAxisTicksScale);
           // axisStackChanged(t);
-          throttledZoomedAxis(axisID, t);
+          if (axis1d) {
+            throttledZoomedAxis(axis1d, t);
+          }
 
           pathDataUtils.pathUpdate(t);
           let axisS;
-          let resetScope = axisID ? (axisS = selectAxisOuter(axisID)) : svgContainer;
+          let resetScope = axis1d ? (axisS = selectAxisOuter(axis1d)) : svgContainer;
             resetScope.selectAll(".btn").remove();
-          if (axisID === undefined)
+          if (axis1d === undefined)
           {
             // reset zoom of all axes clears selectedFeatures - check if this was the intention; also should selectedAxes be cleared ?
             axisApi.selectedFeatures_clear();
@@ -904,7 +889,10 @@ function AxisBrushZoom(oa) {
     else
     {
       function hidePathHoverToolTip() {
-        const pathInfo = PathInfo(/*oa*/null);
+        const
+        axis1d = d,
+        oa = axis1d.drawMap.oa,
+        pathInfo = PathInfo(oa);
         pathInfo.toolTip.hide(d);
       }
       debounce(hidePathHoverToolTip, 1000);
@@ -924,10 +912,13 @@ function AxisBrushZoom(oa) {
    * Set the y domain of the axis, from the inverse mapping of the brush extent limits.
    * Remove the zoom button, redraw the axis, ticks, zoomPath. Move the brush.
    * @param that  the brush g element.
-   * The datum of `that` is the name of the axis which owns the brushed axis.
-   * @param brushExtents  limits of the current brush, to which we are zooming
+   * The datum of `that` is the axis-1d of the brushed axis.
+   * @param brushedDomainClick  limits of the current brush, to which we are zooming
+   * (brushedAxis1d.brushedDomain)
+   * defined when called via .Zoom .on('click' )
+   * undefined when called via .on('zoom' ), i.e. mousewheel zoom
    */
-  function zoom(that, brushExtents) {
+  function zoom(that, i, g, brushedDomainClick) {
     const fnName = 'zoom';
     const trace_zoom = 0;
     const selectedAxes = oa.selectedAxes;
@@ -937,11 +928,11 @@ function AxisBrushZoom(oa) {
     let timeStamp = e && e.timeStamp;
     me.set('axisZoom.zoomPan', {isWheelEvent, timeStamp});
     if (trace_zoom > 0 + isWheelEvent)
-    console.log('zoom', that, brushExtents, arguments, this);
-    let axisName;
+    console.log('zoom', that, brushedDomainClick, arguments, this);
+    let axis1d;
     if (isWheelEvent) {
-      axisName = arguments[0];
-      brushExtents = undefined;
+      axis1d = arguments[0];
+      // expect that brushedDomainClick === undefined;
       let w = e;
       if (trace_zoom > 1) 
       console.log(
@@ -965,7 +956,7 @@ function AxisBrushZoom(oa) {
        * . it is not apparent to the user that they should clear it,
        * by clicking on axis, to remove class .faded.
        */
-       selectedAxes.addObject(axisName);
+       selectedAxes.addObject(axis1d);
     }
     else if (e instanceof MouseEvent) {
       console.log(
@@ -973,20 +964,11 @@ function AxisBrushZoom(oa) {
     }
     else
     {
-    axisName = d3.select(that).data();
-    if (axisName.length == 1)
-      axisName = axisName[0];
+      axis1d = d3.select(that).data();
+      if (axis1d.length == 1)
+        axis1d = axis1d[0];
     }
-    /* if parent (reference) block arrives after child (data) block, the brush
-     * datum is changed from child to parent in adoption.  This code verifies
-     * that.
-     */
-    let axis = oa.axesP[axisName],
-    parentName = Block.axisName_parent(axisName);
-    if (! axis || (parentName != axisName))
-      breakPoint('zoom changing datum', axisName, 'to', parentName);
-    else
-      axis.verify();
+    const axisName = axis1d.axisName;
 
     let t = oa.svgContainer; // .transition().duration(750);
     /** The response to mousewheel zoom is direct, no transition delay.  requestAnimationFrame() is used. */
@@ -999,52 +981,41 @@ function AxisBrushZoom(oa) {
      * #afterRelease, selectedAxes / brushExtents / brushedRegions can be
      * better integrated, simplifying this calc and others.
      */
-    let selectedAxes_i = 
+  let selectedAxes_i = 
       selectedAxes.reduce(function(result, p, i) {
-        if(p == axisName){
+        if(p === axis1d){
           result.push([p, i]);
         }
         return result;
       }, []);
     selectedAxes_i.forEach(function(p_i) {
       let [p, i] = p_i;
-      {
-        let y = oa.y, svgContainer = oa.svgContainer;
-        if (brushExtents)
-        // possibly selectedAxes changed after this callback was registered
-        // The need for brushExtents[] is not clear; it retains earlier values from brushedRegions, but is addressed relative to selectedAxes[].
-        if (brushExtents[i] === undefined)
-        {
-          const brushedRegions = oa.brushedRegions;
-          console.log("zoom() brushExtents[i]===undefined", axisName, p, i, "use", brushedRegions[p]);
-          brushExtents[i] = brushedRegions[p];
+      const axis1d = p;
+        let y = axis1d.y, svgContainer = oa.svgContainer;
+        if (! axis1d.brushedRegion) {
+          dLog(fnName, axisName, 'brushedRegion', axis1d.brushedRegion);
         }
-        let yp = y[p],
+
+        let yp = y,
         ypDomain = yp.domain(),
-        axis = oa.axes[p],
         domain,
         brushedDomain;
-        ensureYscaleDomain(yp, axis);
-        if (brushExtents && brushExtents[i]) {
-        brushedDomain = brushExtents[i].map(function(ypx) { return yp.invert(ypx /* *axis.portion*/); });
+        ensureYscaleDomain(yp, axis1d);
+        if (axis1d.brushedRegion) {
+        brushedDomain = axis1d.brushedRegion.map(function(ypx) { return yp.invert(ypx /* *axis1d.portion*/); });
         // brushedDomain = [yp.invert(brushExtents[i][0]), yp.invert(brushExtents[i][1])];
-        console.log("zoom", axisName, p, i, yp.domain(), yp.range(), brushExtents[i], axis.portion, brushedDomain);
+        console.log("zoom", axisName, yp.domain(), yp.range(), axis1d.brushedRegion, axis1d.portion, brushedDomain);
           domain = brushedDomain;
         }
         else if (d3.event.sourceEvent)  // if there is a mousewheel event
         {
           /** note the brushedDomain before the scale change, for updating the brush position */
-          let brushExtent = oa.brushedRegions[p];
+          let brushExtent = axis1d.brushedRegion;
           if (brushExtent)
-            brushedDomain = axisRange2Domain(p, brushExtent);
+            brushedDomain = axisRange2Domain(axis1d, brushExtent);
 
-          domain = wheelNewDomain(axis, oa.axisApi, false);  // uses d3.event, d3.mouse()
+          domain = wheelNewDomain(axis1d, oa.axisApi, false);  // uses d3.event, d3.mouse()
         }
-        if (! axis.axis1d) {
-          let a1 = axis?.blocks?.mapBy('block.axis1d');
-          dLog(fnName, axisName, axis, a1, a1?.mapBy('isDestroying'));
-          // axis.log();
-        } else
         if (domain) {
           domainChanged = true;
           /** mousewheel zoom out is limited by javascript
@@ -1053,17 +1024,17 @@ function AxisBrushZoom(oa) {
           function limitPrecision(x) { return ('' + x).substr(0,7); };
           let 
           /** total domain */
-          domainAll = axis.axis1d.get('blocksDomain').toArray(),
+          domainAll = axis1d.get('blocksDomain').toArray(),
           domainAllS = domainAll.map(limitPrecision),
-          domainFS = maybeFlip(domain, axis.flipped).map(limitPrecision),
+          domainFS = maybeFlip(domain, axis1d.flipped).map(limitPrecision),
           /** true if (mousewheel) zoomed out to the limit of the whole domain. */
           zoomedOut = isEqual(domainAllS, domainFS);
 
-          axis.setZoomed(! zoomedOut);
-          y[p].domain(domain);
-          oa.ys[p].domain(domain);
+          axis1d.setZoomed(! zoomedOut);
+          y.domain(domain);
+          axis1d.ys.domain(domain);
           // scale domain is signed. currently .zoomedDomain is not, so maybeFlip().
-          axis.setDomain(maybeFlip(domain, axis.flipped));
+          axis1d.setDomain(maybeFlip(domain, axis1d.flipped));
 
           /* was updatePaths true, but pathUpdate() is too long for RAF.
            * No transition required for RAF.
@@ -1071,13 +1042,16 @@ function AxisBrushZoom(oa) {
           debounce(
             undefined,
             me.functionHandle('axisScaleChangedRaf', axisScaleChangedRaf),
-            p, tRaf, false,  // args
+            axis1d, tRaf, false,  // args
             me.get('controls.view.debounceTime')
           );
-          let brushExtent = oa.brushedRegions[p];
-          if (brushExtents)
+          let brushExtent = axis1d.brushedRegion;
+          if (brushedDomainClick) {
+            /* on Zoom button click, clear the brush selection, because we have
+             * zoomed to the brush selection.  */
             // `that` refers to the brush g element, i.e. <g clip-path> within <g.brush>
-            d3.select(that).call(y[p].brush.move,null);
+            d3.select(that).call(y.brush.move,null);
+          }
           else if (brushExtent) {
             let gBrush = d3.event.sourceEvent.target.parentElement;
             let newBrushExtent = brushedDomain.map(function (r) { return yp(r);});
@@ -1085,12 +1059,13 @@ function AxisBrushZoom(oa) {
             d3.select(gBrush).call(yp.brush.move, newBrushExtent);
           }
         }
-      }
     });
+
+
     debounce(
       undefined,
       me.functionHandle('showAxisZoomResetButtons', showAxisZoomResetButtons),
-      oa.svgContainer, getBrushExtents, zoom, bind(me, me.get('resetZooms')), axisName, me,  // args
+      oa.svgContainer, zoom, bind(me, me.get('resetZooms')), axis1d, me,  // args
       me.get('controls.view.debounceTime')
     );
 
@@ -1099,21 +1074,20 @@ function AxisBrushZoom(oa) {
       throttledZoomedAxis(axisName, t);
     }
   } // end of zoom()
-  function axisScaleChangedRaf(p, t, updatePaths) {
+
+  function axisScaleChangedRaf(axis1d, t, updatePaths) {
     const job = 
-    scheduler.schedule('affect', () => axisScaleChanged(p, t, updatePaths));
+    scheduler.schedule('affect', () => axisScaleChanged(axis1d, t, updatePaths));
   }
-  /** @param p  axisName
+  /** @param axis1d
    * @param updatePaths true : also update foreground paths.
    */
-  function axisScaleChanged(p, t, updatePaths)
+  function axisScaleChanged(axis1d, t, updatePaths)
   {
-    let y = oa.y, svgContainer = oa.svgContainer;
-    let yp = y[p],
-    axis = oa.axes[p];
-    if (yp && axis) {
-      let yAxis = axis.axisSide(y[p]).ticks(me.axisTicks * axis.portion);
-      let idName = axisEltId(p),
+    let y = axis1d.y, svgContainer = oa.svgContainer;
+    if (y) {
+      let yAxis = axis1d.axisSide(y).ticks(me.axisTicks * axis1d.portion);
+      let idName = axisEltId(axis1d),
       axisS = svgContainer.select("#"+idName);
       if (t)
         axisS = axisS.transition(t)
@@ -1121,7 +1095,7 @@ function AxisBrushZoom(oa) {
       axisS.call(yAxis);
       if (updatePaths)
         pathDataUtils.pathUpdate(t);
-      let axisGS = svgContainer.selectAll("g.axis#" + axisEltId(p) + " > g.tick > text");
+      let axisGS = svgContainer.selectAll("g.axis#" + idName + " > g.tick > text");
       axisGS.attr("transform", yAxisTicksScale);
     }
   }
@@ -1138,6 +1112,9 @@ function AxisBrushZoom(oa) {
    * This is done for each of selectedAxes[], except if param features is
    * defined, it is done just for selectedAxes[0].
    *
+   * If the param features is defined, the interval limits of those features is
+   * determined, and used as the region to flip.
+   *
    * @param features is an array of feature names, created via (zoom) brush,
    * and input via text box
    * features are passed by selected-markers.js : flipRegion(), but not
@@ -1153,8 +1130,6 @@ function AxisBrushZoom(oa) {
       brushedMap = axes && axes.length && axes[axes.length-1]; */
     else if ((brushedMap = selectedAxes[0]) === undefined)
       console.log('draw_flipRegion', 'selectedAxes[0] is undefined', selectedAxes);
-    else if ((zm = oa.z[brushedMap]) === undefined)
-      console.log('draw_flipRegion', 'z[', brushedMap, '] is undefined', selectedAxes, oa.z);
     else
     {
       if (features && features.length)
@@ -1167,43 +1142,46 @@ function AxisBrushZoom(oa) {
       else
       {
         console.log(oa.selectedAxes);
-        selectedAxes.forEach(function(p, i) {
+        selectedAxes.forEach(function(axis1d, i) {
           // p is selectedAxes[i], including brushedMap === selectedAxes[0]
-          limits = axisBrushedDomain(p, i);
-          //  oa.brushedRegions[brushedMap];
-          console.log('flipRegion', p, i, brushedMap, limits);
-          /* Generally for p in selectedAxes[], brushedRegions[p] is
+          limits = axis1d.brushedDomain;
+          console.log('flipRegion', axis1d.axisName, i, brushedMap, limits, axis1d.brushedRegion);
+          /* Generally for axis1d in selectedAxes[], axis1d.brushedRegion is
            * defined; but if axis 'Reset' the brush is cleared but
            * the axis remains selected. */
           if (limits) {
-            flipRegionInLimits(p, limits);
-            flipRegionSignalAxis(p);
+            flipRegionInLimits(axis1d, limits);
+            flipRegionSignalAxis(axis1d);
           }
         });
       }
       /** Flag the flip event for the axis - increment axis1d flipRegionCounter.
-       * @param axisID  brushedMap / selectedAxes[i]
+       * @param axis1d  brushedMap / selectedAxes[i]
        */
-      function flipRegionSignalAxis(axisID) {
-      let axis = Stacked.getAxis(axisID),
-      axis1d = axis && axis.axis1d;
+      function flipRegionSignalAxis(axis1d) {
       if (axis1d)
         axis1d.incrementProperty('flipRegionCounter');
       }
     }
-    function features2Limits()
+    function features2Limits(features)
     {
       /** the first and last features have the minimum and maximum position
-       * values, except where flipRegion has already been applied. */
+       * values, except where flipRegion has already been applied.
+       * So this could simply look at [features[0], features[features.length-1]].mapBy('value').
+       *
+       * Instead of reduce, could use d3.extent(), as in e.g. block.js:valueCompute() :
+       *   locations = features.filter((fi) => features.includes(fi.name)
+       *               .map((fm) => fm.value).flat(),
+       *   extent = d3.extent(locations);
+       */
       let limits = [undefined, undefined];
       limits = features
+      // could use .filter() d3.extent()
         .reduce(function(limits_, fi) {
+          if (features.includes(fi.name))
           // console.log("reduce", fi, limits_, zm[fi]);
-          // feature aliases may be in the selection and yet not in the map
-          let zmi = zm[fi];
-          if (zmi)
           {
-            let l = zmi.location;
+            let l = fi.location;
             if (limits_[0] === undefined || limits_[0] > l)
               limits_[0] = l;
             if (limits_[1] === undefined || limits_[1] < l)
@@ -1219,8 +1197,9 @@ function AxisBrushZoom(oa) {
       return limits;
     }
 
-    function flipRegionInLimits(p, locationRange)
+    function flipRegionInLimits(axis1d, locationRange)
     {
+      const fnName = 'flipRegionInLimits';
       let
       /** delta of the locationRange interval */
       rd = locationRange[1] - locationRange[0],
@@ -1230,18 +1209,18 @@ function AxisBrushZoom(oa) {
         // console.log("invert", l, i);
         return i;
       };
-      console.log("flipRegionInLimits", locationRange, rd);
-      let axis = oa.stacks.axesP[p],
-      blocks = axis && axis.blocks;
-      console.log(axis, blocks);
+      console.log(fnName, locationRange, rd);
+      let
+      blocks = axis1d?.dataBlocks;
+      console.log(axis1d, blocks);
       (blocks || []).map(function (block) {
-        zm = oa.z[block.axisName];
-        console.log(block.axisName, zm);
-        d3.keys(zm).forEach(function(feature) {
-          if (! isOtherField[feature]) {
-            let feature_ = zm[feature], fl = feature_.value;
+        zm = block.get('features');
+        console.log(block.axisName, zm.length);
+        zm.forEach(function(feature) {
+          {
+            const fl = feature.value;
             if (subInterval(fl, locationRange))
-              fl.forEach((v, i) => { feature_.value[i] = invert(v); });
+              fl.forEach((v, i) => { feature.value[i] = invert(v); });
           }
         });
       });

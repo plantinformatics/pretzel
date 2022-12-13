@@ -118,9 +118,14 @@ Viewport.prototype.calc = function(oa)
   /** use width of div#holder, not document.documentElement.clientWidth because of margins L & R. */
 
   let eltHeight;
+  const
+  controls = oa.axisApi.drawMap.controls,
+  /** component:panel/view-controls */
+  controlsView = controls.view;
+  this.controlsView = controlsView;
   let
   componentGeometry = oa?.eventBus?.get('componentGeometry'),
-  controls_window = this.drawOptions?.controls?.window,
+  controls_window = controls.window,
   tablesPanelRight = controls_window ? controls_window.tablesPanelRight : componentGeometry.get('tablesPanelRight');
   /** iniiially .sizes and .tablesPanelRight are not defined; initial value of
    * controllers/mapview : tablesPanelRight is false.
@@ -164,7 +169,6 @@ Viewport.prototype.calc = function(oa)
     console.log("viewPort=", viewPort, ", w=", w, ", h=", h, ", graphDim=", graphDim, ", yRange=", yRange);
 
   let
-  controlsView = oa.drawOptions?.controls?.view,
   /** input range value is string */
   extraOutsideMargin = +controlsView?.extraOutsideMargin || 0;
 
@@ -205,8 +209,8 @@ Viewport.prototype.viewBox = function()
     ((this.axisTitleLayout && (this.axisTitleLayout.increaseRightMargin() / 2 - shiftLeft)) || 0) : 0;
 
   let
-  controls = this.drawOptions?.controls,
-  showAxisText = controls ? controls.view.showAxisText : true,
+  controlsView = this.controlsView,
+  showAxisText = controlsView ? controlsView.showAxisText : true,
   axisTitleHeight = showAxisText ?
     ((this.axisTitleLayout && this.axisTitleLayout.height !== undefined) ? this.axisTitleLayout.height : 0) :
     80;

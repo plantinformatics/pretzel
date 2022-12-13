@@ -252,9 +252,8 @@ export default Service.extend({
      */
 
     /** this could be used as the basis for adjAxes */
-    let blockForPaths = this.get('blockForPaths');
-    let axesP = this.get('oa.axesP');
-    dLog('blockAdjIds', blockForPaths, axesP);
+    let viewedForPaths = this.get('viewedForPaths');
+    dLog('blockAdjIds', viewedForPaths);
     let blockAdjIds = run(this, convert);
     /** Convert the hash adjAxes, e.g. adjAxes[b0] === b1, to an array of ordered pairs [b0, b1]
      */

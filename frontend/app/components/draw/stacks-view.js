@@ -5,20 +5,27 @@ import Component from '@ember/component';
 import { inject as service } from '@ember/service';
 import { A as Ember_A } from '@ember/array';
 
+import { isEqual } from 'lodash/lang';
+
+//------------------------------------------------------------------------------
 
 import {
   /* Block,
   Stacked,
   Stack,
-  */ stacks /*,
+  */ stacks,
   xScaleExtend,
+ /*
   axisRedrawText,
   axisId2Name*/
 } from '../../utils/stacks';
 
+import DrawStackObject from '../../utils/draw/stack';
 import AxisDraw from '../../utils/draw/axis-draw';
 
 import ParentRefn from '../../utils/parent-refn';
+import { breakPoint } from '../../utils/breakPoint';
+import { checkIsNumber } from '../../utils/domCalcs';
 
 /* global d3 */
 
@@ -28,6 +35,8 @@ const dLog = console.debug;
 
 /** identity function, same comment as in spreadsheet-read.js */
 const I = (x) => x;
+
+const trace_stack = 0;
 
 //------------------------------------------------------------------------------
 
@@ -57,6 +66,11 @@ export default Component.extend({
 
   stacks : Ember_A(), // alias('stacksTemp'),  // stacksOld
 
+  /** counter, incremented to signal changes in stacks[*].axes[]  */
+  axisChanges : 0,
+
+  nextStackID : 0,
+
   // ---------------------------------------------------------------------------
 
 /*
@@ -64,6 +78,54 @@ export default Component.extend({
     this._super.apply(this, arguments);
   },
 */
+
+  //----------------------------------------------------------------------------
+
+  init() {
+    this._super(...arguments);
+
+    this.oa.axes = new Proxy({}, this.axesHandler);
+    this.stacks.blocks = new Proxy({}, this.blocksHandler);
+    this.stacks.sortLocation = this.oa.stacks.sortLocation;
+    this.stacks.log = this.oa.stacks.log;
+
+    const axisApi = this.oa.axisApi;
+    axisApi.stacksView = this;
+    axisApi.collateO = () => this.collateO();
+    axisApi.updateXScale = () => this.updateXScale();
+  },
+
+  //----------------------------------------------------------------------------
+
+  /** Handle : stacks.blocks[axisID], after element data changes from axisID to axis1d.
+   * @return BlockAxisView / block-axis-view.js
+   * @param prop axis1d
+   */
+  blocksHandler : computed( () => ({
+   get(obj, prop) {
+    const
+     fnName = 'blocksHandler',
+     //blockId = prop,
+     axis1d = prop,
+     block = axis1d.axis, // this.block.peekBlock(blockId),
+     blockView = block.view;
+     console.log(fnName, /*blockId,*/ block?.id, blockView);
+     return blockView;
+   },
+  })),
+
+  /** Maintain oa.axes[] as a facade, to smooth the transition away from draw_orig.
+   * @return axis-1d
+   * @param prop axisID
+   */
+  axesHandler : computed( () => ({
+   get(obj, prop) {
+    const
+     axisID = prop,
+     axis1d = this.axesByBlockId[axisID];
+     return axis1d;
+   },
+  })),
 
   // ---------------------------------------------------------------------------
 
@@ -77,9 +139,12 @@ export default Component.extend({
 
   // ---------------------------------------------------------------------------
 
+  stacks_orig : alias('oa.stacks'),
+
   axesViewedEffect : computed(
     // /*'block.axesViewedBlocks2'*/'axes1d.axesP.[]',
-    'stacks.[]', 'newStacks',
+    'stacks.[]', 'newStacks', 'axisChanges',
+    'stacks_orig.changed',
     function() {
       const fnName = 'axesViewedEffect' + ' (axesP)';
       this.updateStacksAxes();
@@ -90,15 +155,46 @@ export default Component.extend({
          * so concat to .stacks here in lieu of
          *   registerStackView() : this.stacks[arrayObjectFn](stack);
          */
-        stacks = this.stacks.concat(this.newStacks || []);
-        this.set('stacks', stacks);
+        stacks.addObjects(this.newStacks);
       }
-      this.draw();
+      if (! this.xScaleContainsAxes()) {
+        this.updateXScale();
+      }
+      this.collateO();
+      // this.updateStacksAxes();
+      if (this.yScalesAreDefined) {
+        this.draw();
+      } else {
+        const {availableMapsTask /*datasetsTask*/, blocksLimitsTask} = this.model;
+        (blocksLimitsTask || availableMapsTask).then(() => {
+          if (this.yScalesAreDefined) {
+            this.draw();
+          } else {
+            dLog(fnName, 'not yScalesAreDefined', 'blocksLimitsTask', blocksLimitsTask);
+            later(() => this.draw(), 10000);
+          } 
+        });
+      }
       return stacks;
   }),
 
+  /** @return true if y scales of all axes are defined.
+   */
+  get yScalesAreDefined() {
+    const
+    yScales = this.axes().mapBy('yScaleIsDefined'),
+    incomplete = yScales.any((y) => !y);
+    return ! incomplete;
+  },
+
   // ---------------------------------------------------------------------------
 
+  /**
+   * @param stack empty, i.e. stack.axes.length === 0
+   */
+  removeStack(stack) {
+    this.stacks.removeObject(stack);
+  },
   updateStacksAxes() {
     const fnName = 'updateStacksAxes';
 
@@ -118,6 +214,14 @@ export default Component.extend({
 
     /* .stackViews were created / destroyed via hbs, .stacks are not yet destroyed. */
     arrayRemoveDestroyingObjects(this.stacks);
+
+    if (emptyStacks.length || this.newStacks.length) {
+      this.stacksAdjust();
+    }
+  },
+  stacksAdjust() {
+      const axisApi = this.oa.axisApi;
+      axisApi.stacksAdjust(true, /*t*/ undefined);
   },
   newStacks : computed('newAxis1ds', function () {
     const fnName = 'newStacks';
@@ -201,6 +305,10 @@ export default Component.extend({
       }
     });
   },
+
+  //----------------------------------------------------------------------------
+
+  // not used
   /** Create a stack for a given reference block. */
   createForReference(block) {
     let s = EmberObject.create({block /*,axes : [block]*/});
@@ -213,6 +321,25 @@ export default Component.extend({
     }
     return s;
   },
+
+  /** Create a stack for axis1d. */
+  createStackForAxis(axis1d) {
+    const fnName = 'createStackForAxis' + ' (axesP)';
+    const stackID = this.nextStackID++;
+    let s = DrawStackObject.create({
+      stackID,
+      axes : [axis1d],
+      stacksView : this,
+      /* stacks, */
+    });
+    axis1d.set('stack', s); // or Ember_set()
+    this.stacks.addObject(s);
+    console.log(fnName, s);
+    return s;
+  },
+
+  //----------------------------------------------------------------------------
+
   /** remove axes from the array which are no longer viewed.
    * The array is modified in-situ via .removeObjects().
    * @param axes  axis-1d[] from stack.axes
@@ -227,6 +354,33 @@ export default Component.extend({
     axes.removeObjects(unviewed);
   },
 
+  //----------------------------------------------------------------------------
+
+  stackIndex(stack) {
+    const stackIndex = this.stacks.indexOf(stack);
+    return stackIndex;
+  },
+
+  //----------------------------------------------------------------------------
+
+  axesByBlockId : {},
+  /** Record the most recent assignment of blocks to an axis1d.
+   */
+  blocksInAxis(axis1d, blocks) {
+    const refId = axis1d.axisName;
+    blocks?.forEach((block) => {
+      this.axesByBlockId[block.id] = {axis1d, block};
+    });
+  },
+  /** Possible replacement for Stacked.getAxis(axisID).
+   * Install via : init() : Stacked.getAxis = this.getAxis;
+   */
+  getAxis(blockId) {
+    let found = this.axesByBlockId[blockId];
+    return found?.axis1d;
+  },
+
+
   // ---------------------------------------------------------------------------
 
     //dLog('stacks-view', this);
@@ -238,10 +392,9 @@ export default Component.extend({
   append : stacks.append,
   insert : stacks.insert,
   stackIDs : stacks.stackIDs,
-  axisIDs : stacks.axisIDs,
   blockIDs : stacks.blockIDs,
   sortLocation : stacks.sortLocation,
-
+  x : stacks.x,
 
   // ---------------------------------------------------------------------------
 
@@ -286,6 +439,69 @@ export default Component.extend({
   }),
 
   // ---------------------------------------------------------------------------
+
+  axes() {
+    return this.stacks.mapBy('axes').flat();
+  },
+  axisIDs() {
+    return this.stacks.mapBy('axes').flat().mapBy('axisName');
+  },
+
+  xScaleContainsAxes() {
+    const
+    scaleDomain = this.oa.xScaleExtend?.domain(),
+    axisIDs = this.axisIDs(),
+    notContains = axisIDs.length && (
+      ! scaleDomain ||
+        (scaleDomain.length !== axisIDs.length) ||
+        (axisIDs.find((aid) => ! scaleDomain.includes(aid))));
+    return ! notContains;
+  },
+
+  /** For all Axes, store the x value of its axis, according to the current scale. */
+  collateO() {
+    const
+    fnName = 'collateO',
+    oa = this.oa,
+    me = oa.eventBus,
+    stacks = this.stacks,
+    x = this.x;
+    // if (me.isDestroying) { return; }
+    dLog(fnName, stacks.length, stacks.mapBy('axes.length'), this.axisIDs());
+    stacks.mapBy('axes').flat().forEach(function(axis){
+      let o = oa.o;
+      const
+      d = axis.axisName,
+      xa = x(axis);
+      if (trace_stack > 1)
+        console.log(d, axis.longName(), o[d], xa);
+      if (xa === undefined) {
+        // breakPoint(fnName);
+      } else {
+        checkIsNumber(xa);
+        o[d] = xa;
+      }
+    });
+    /** scaled x value of each axis, with its axisID. */
+    let offsetArray = this.axisIDs().map((d) => ({axisId : d, xOffset : oa.o[d]}));
+    let previous = me.get('xOffsets'),
+        changed = ! isEqual(previous, offsetArray);
+    if (changed) {
+      me.set('xOffsets', offsetArray);
+      me.incrementProperty('xOffsetsChangeCount');
+    }
+  },
+
+  /** Update the X scale / horizontal layout of stacks
+   */
+  updateXScale()
+  {
+    // xScale() uses stacks.keys().
+    this.oa.xScaleExtend = xScaleExtend(this.stacks); // or xScale();
+  },
+
+  //----------------------------------------------------------------------------
+
 
 });
 

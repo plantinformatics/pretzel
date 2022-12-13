@@ -31,6 +31,7 @@ export default Ember.Component.extend({
 
   /** the parameter will likely change from blockS (stacks) to block. */
   block : computed.alias('blockS.block'),
+  axis1d : computed.alias('blockS.axis'),
   /** blockId of blockS */
   axisName : computed.alias('blockS.axisName'),
   menuActions : computed( function () {
@@ -54,26 +55,29 @@ export default Ember.Component.extend({
     /** button actions : axis / block : */
     /** axis actions */
 
+    /**
+     * @param click MouseEvent
+     */
     deleteMap : function() {
       console.log("deleteMap in ", FileName);
-      this.menuActions.axisDelete(this.axisName);
+      this.menuActions.axisDelete(this.axis1d);
       this.hide();
     },
     flipAxis : function() {
       console.log("flipAxis in ", FileName);
-      this.menuActions.axisFlip(this.axisName);
+      this.menuActions.axisFlip(this.axis1d);
       if (closeAfterAction)
         this.hide();
     },
     perpendicularAxis : function() {
       console.log("perpendicularAxis in ", FileName);
-      this.menuActions.axisPerpendicular(this.axisName);
+      this.menuActions.axisPerpendicular(this.axis1d);
       if (closeAfterAction)
         this.hide();
     },
     extendMap : function() {
       console.log("extendMap in ", FileName);
-      this.menuActions.axisExtend(this.axisName);
+      this.menuActions.axisExtend(this.axis1d);
       if (closeAfterAction)
         this.hide();
     },
@@ -121,7 +125,7 @@ export default Ember.Component.extend({
     'block',
     'block.viewedChildBlocks.[]',
     'block.blockService.viewedBlocksByReferenceAndScopeUpdateCount',
-    'block.axis1d.dataBlocks',
+    'axis1d.dataBlocks',
     function () {
       let
       dataBlocks,
@@ -133,7 +137,7 @@ export default Ember.Component.extend({
         run_next(() => this.hide());
         /* returning undefined is also OK, result is used in axis-menu.hbs : #each dataBlocks */
         dataBlocks = [];
-      } else if ((axis1d = this.block.axis1d)) {
+      } else if ((axis1d = this.axis1d)) {
         /* axis1d.dataBlocks returns ember data model objects, so map that to
          * Stacks Blocks, until Stacks Blocks are absorbed into axis-1d and
          * dataBlocks() can return model objects instead. */
@@ -171,9 +175,7 @@ export default Ember.Component.extend({
   dataBlockColour(blockS) {
     let
     block = blockS.block,
-    axis1d = this.block.axis1d ||
-      blockS.axis?.axis1d ||
-      block.get('view.axis.axis1d'),
+    axis1d = this.axis1d,
     colour = axis1d.blockColourValue(block);
     return colour;
   },

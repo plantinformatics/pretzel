@@ -37,6 +37,7 @@ import { stacks } from '../utils/stacks';
 
 import { promiseText } from '../utils/ember-devel';
 
+import BlockAxisView from '../utils/draw/block-axis-view';
 
 /* global d3 */
 
@@ -104,7 +105,11 @@ export default Model.extend({
   /** undefined if ! isViewed, otherwise handle of Block in Stacked axis which displays this block.
    * This attribute can split out into a mixin, in that case could merge with stacks.js : Block.
    */
-  view : undefined,
+  view : //undefined,
+  /** the display of a block in an axis. */
+  computed( function() {
+    return new BlockAxisView(this);
+  }),
   
   /** when a block is selected, it is highlighted wherever it is displayed, and
    * it is used as the identifier for the block being edited in the panel
@@ -1204,11 +1209,13 @@ export default Model.extend({
         axis1d = this.get('crossServerAxis1d') || this.get('referenceBlock.crossServerAxis1d');
         dLog(fnName, axis1d, this);
       }
+      if (/*draw_orig*/ false) {
       /* using .id match in referencedAxis1d (see comment there) is probably
        * sufficient, this is just backup, probably not required.
        */
       if (! axis1d && this.axis) {
         axis1d = this.axis.axis1d;
+      }
       }
       if (axis1d?.isDestroying) {
         dLog('axis1d isDestroying', axis1d);
@@ -1219,7 +1226,8 @@ export default Model.extend({
         dLog('axis1d', axis1d, a1Check);
       }
       if (! axis1d) {
-        dLog(fnName, axis1d, this.id, this.get('referenceBlock.id'), this.axis, a1Check);
+        // this.axis is now aliased to this function
+        dLog(fnName, axis1d, this.id, this.get('referenceBlock.id'), /*this.axis,*/ a1Check);
       }
       return axis1d;
     }),
@@ -1243,7 +1251,8 @@ export default Model.extend({
     return axis1d;
   },
 
-  axis : computed(/*'view.axis'*/'isViewed', 'referenceBlock', function () {
+  axis : alias('axis1d'),
+  axis_orig : computed(/*'view.axis'*/'isViewed', 'referenceBlock', function () {
     let axesP = stacks.axesP;
     let axis = this.get('view.axis') || axesP[this.get('id')];
     let referenceBlock;
@@ -1256,6 +1265,8 @@ export default Model.extend({
       dLog('block axis', this.get('id'), this.get('view'), 'no view.axis for block or referenceBlock', referenceBlock, axesP);
     return axis;
   }),
+
+  axisName : alias('referenceBlockOrSelf.id'),
 
   zoomedDomain : alias('axis1d.zoomedDomain'),
   zoomedDomainDebounced : alias('axis1d.zoomedDomainDebounced'),

@@ -63,9 +63,6 @@ import {
 } from '../utils/draw/axisTitle';
 
 import {
-  brushClip,
-  axisBrushSelect,
-  showAxisZoomResetButtons,
   AxisBrushZoom,
 } from '../utils/draw/axisBrush';
 
@@ -324,7 +321,6 @@ export default Component.extend(Evented, {
       f.on('resetZooms', this, 'resetZooms');
     }
 
-    this.oa = {};
     this.drawControlsListen(true);
     this.localBus(true);
     let blockService = this.get('blockService');
@@ -422,7 +418,12 @@ export default Component.extend(Evented, {
   scroller: service(),
 
   axes1d : computed( function () { return stacks.axes1d; }),
-  splitAxes: filterBy('axes1d', 'extended', true),
+  /* draw_orig :
+   * stacks.axes1d is [axisID] -> axis-1d, so splitAxes: filterBy('axes1d', ...)
+   * does not seem to apply, should have been Object.values(this.stacks.axes1d).
+   */
+  axis1dArray : alias('oa.axisApi.stacksView.axes1d.axis1dArray'),
+  splitAxes: filterBy('axis1dArray', 'extended', true),
 
   axisTicks : alias('controls.view.axisTicks'),
 
@@ -465,7 +466,7 @@ export default Component.extend(Evented, {
       stack.axes.forEach(
         function (a, index)
         {
-          updateRange(oa.y, oa.ys, oa.vc, a);
+          updateRange(a.y, a.ys, oa.vc, a);
         });
     },
 
@@ -633,8 +634,6 @@ export default Component.extend(Evented, {
     let axisBrushZoom = AxisBrushZoom(oa);
     if (! oa.axisApi || (instanceChanged = oa.axisApi.drawMap.isDestroying)) {
       const axisApi = {
-                    collateO,
-                    updateXScale,
                     axisStackChanged,
                     cmNameAdd,
                     axisIDAdd,
@@ -1034,7 +1033,6 @@ export default Component.extend(Evented, {
     let selectedAxes = oa.selectedAxes || (oa.selectedAxes = this.get('selectedService.selectedAxes'));;
     let selectedFeatures = oa.selectedFeatures ||
         (oa.selectedFeatures = this.get('selectedService.blocksFeatures'));
-    let brushedRegions = oa.brushedRegions || (oa.brushedRegions = {});
 
     /** planning to move selectedFeatures out to a separate class/component;
      * these 2 functions would be actions on it. */
@@ -1048,31 +1046,11 @@ export default Component.extend(Evented, {
 
     collateData();
 
-    /** For all Axes, store the x value of its axis, according to the current scale. */
-    function collateO() {
-      // if (me.isDestroying) { return; }
-      dLog("collateO", oa.axisIDs.length, oa.stacks.axisIDs());
-      oa.stacks.axisIDs().forEach(function(d){
-        let o = oa.o;
-        if (trace_stack > 1)
-          console.log(d, axisId2Name(d), o[d], stacks.x(d));
-        o[d] = stacks.x(d);
-        checkIsNumber(oa.o[d]);
-        if (o[d] === undefined) { breakPoint("collateO"); }
-      });
-      /** scaled x value of each axis, with its axisID. */
-      let offsetArray = oa.stacks.axisIDs().map((d) => ({axisId : d, xOffset : oa.o[d]}));
-      let previous = me.get('xOffsets'),
-          changed = ! isEqual(previous, offsetArray);
-      if (changed) {
-        me.set('xOffsets', offsetArray);
-        me.incrementProperty('xOffsetsChangeCount');
-      }
-    }
     /** Map an Array of Block-s to their longNames(), useful in log trace. */
     function Block_list_longName(blocks) {
       return blocks.map(function (b) { return b.longName(); });
     }
+    if (draw_orig) {
     let blocksToDraw = oa.axisIDs,
     viewedBlocks = me.get('blockService').get('viewedIds'),
     stackedBlocks = stacks.blockIDs(),
@@ -1091,6 +1069,7 @@ export default Component.extend(Evented, {
     let duplicates = blocksToDraw.filter(function (v, i) { return blocksToDraw.indexOf(v, i+1) != -1; });
     if (duplicates.length)
       dLog/*breakPoint*/('duplicates', duplicates, blocksToDraw, blocksToAdd, oa.axisIDs);
+    }
 
     if ((oa.zoomBehavior === undefined) || instanceChanged)
     {
@@ -1109,7 +1088,7 @@ export default Component.extend(Evented, {
       // console.log('zoomBehavior', oa.zoomBehavior);
     }
 
-
+    if (draw_orig)
     /* may have parent and child blocks in the same axis becoming unviewed in
      * the same run-loop cycle, so ensure that the children are unviewed
      * before the parents.
@@ -1181,6 +1160,8 @@ export default Component.extend(Evented, {
      * @return axis (Stacked)
      */
     function ensureAxis(d) {
+      console.log('ensureAxis', d);
+      return;
       /** dBlock should be !== undefined.
        */
       let dBlock = me.peekBlock(d),
@@ -1474,7 +1455,7 @@ export default Component.extend(Evented, {
               const axis = oa.axes[d];
               gAxisS
                 .datum(d)
-                .attr('id', axisEltId(d))
+                .attr('id', axisEltId(axis))
                 .call(oa.zoomBehavior)
                 .call(axis.scale(y[d]));
 
@@ -1639,20 +1620,15 @@ export default Component.extend(Evented, {
         pathDataUtils.pathUpdate(undefined);
       }
     };
-    function updateXScale()
-    {
-      // xScale() uses stacks.keys().
-      oa.xScaleExtend = xScaleExtend(); // or xScale();
-    }
     let x = stacks.x;
-    updateXScale();
+    oa.axisApi.updateXScale?.();
     //let dynamic = d3.scaleLinear().domain([0,1000]).range([0,1000]);
     //console.log(axis.scale(y[axisIDs))
     //- stacks_for_axisIDs(); //- added during split
 
     //- moved to utils/stacks.js: oa.xScaleExtend = xScale();
 
-    collateO();
+    oa.axisApi.collateO?.();
     vc.xDropOutDistance_update(oa);
 
     //- moved updateRange() to utils/stacksLayout
@@ -1688,45 +1664,10 @@ export default Component.extend(Evented, {
 
     //-components/stacks 
     /* for each axis :
-     * calculate its domain if not already done; 
-     * ensure it has a y scale,
-     *   make a copy of the y scale - use 1 for the brush
      */
     oa.stacks.axisIDs().forEach(function(d) {
-      let a = oa.axes[d];
-      // now a is Stacked not Block, so expect ! a.parent
-      if (a.parent && ! a.parent.getDomain)
-        breakPoint('domain and ys', d, a, a.parent);
-      let
-        /** similar domain calcs in resetZoom().  */
-        domain = a.parent ? a.parent.getDomain() : a.getDomain();
-      if (false)      //  original, replaced by domainCalc().
-      {
-        /** Find the max of locations of all features of axis name d. */
-        let yDomainMax = d3.max(Object.keys(oa.z[d]), function(a) { return oa.z[d][a].location; } );
-        domain = [0, yDomainMax];
-      }
-      let myRange = a.yRange(), ys = oa.ys, y = oa.y;
-      if (ys[d])  // equivalent to (y[d]==true), y[d] and ys[d] are created together
-      {
-        if (trace_stack > 1)
-          console.log("ys exists", d, ys[d].domain(), y[d].domain(), ys[d].range());
-      }
-      else if (domain)
-      {
-        ys[d] = d3.scaleLinear()
-          .domain(maybeFlip(domain, a.flipped))
-          .range([0, myRange]); // set scales for each axis
-        
-        //console.log("OOO " + y[d].domain);
-        // y and ys are the same until the axis is stacked.
-        // The brush is on y.
-        y[d] = ys[d].copy();
-        y[d].brush = d3.brushY()
-          .extent([[-8,0],[8,myRange]])
-          .filter(combineFilters(noKeyfilter, me.controlsService.noGuiModeFilter))
-          .on("end", axisBrushZoom.brushended);
-      }
+      let a = oa.axes[d],
+      y = a.axis.axis1d.y;
     });
     /** when draw( , 'dataReceived'), pathUpdate() is not valid until ys is updated.
      * ysUpdated is roughly equivalent to ysLength(), but on entry to a new
@@ -1926,7 +1867,7 @@ export default Component.extend(Evented, {
           console.log('removedStacks', 'axis no longer in a stack', d);
         }
         else
-          if (! (sDest = ras && oa.svgContainer.select("g.stack#" + eltId(ras.stackID)))
+          if (! (sDest = ras && oa.svgContainer.select("g.stack#" + stackEltId(ras)))
               || sDest.empty()) {
             dLog('removedStacks', 'No stack for axis', ras, ras.stackID, this);
           }
@@ -2026,10 +1967,10 @@ export default Component.extend(Evented, {
     }
     /** remove g.stack#id<stackID
      */
-    function removeStack(stackID, t)
+    function removeStack(stack, t)
     {
-      let stackS = oa.svgContainer.select("g.stack#" + eltId(stackID));
-      console.log("removeStack", stackID, stackS.empty(), stackS.node());
+      let stackS = oa.svgContainer.select("g.stack#" + stackEltId(stack));
+      console.log("removeStack", stack.stackID, stackS.empty(), stackS.node());
       stackS.remove();
     }
     /** remove axis, and if it was only child, the parent stack;  pathUpdate
@@ -2044,7 +1985,7 @@ export default Component.extend(Evented, {
       let changedNum = stackID != -1;
       if (changedNum)
       {
-        removeStack(stackID, t);
+        removeStack(stack, t);
       }
       else
       {
@@ -2162,9 +2103,10 @@ getBrushExtents(),
      */
     function stacksAdjustY(t)
     {
-      oa.stacks.forEach(function (s) { s.calculatePositions(); });
-      oa.stacks.axisIDs().forEach(function(axisName) {
-        axisBrushZoom.axisScaleChanged(axisName, t, false);
+      const stacksView = oa.axisApi.stacksView;
+      stacksView.stacks.forEach(function (s) { s.calculatePositions(); });
+      stacksView.axes().forEach(function(axis1d) {
+        axisBrushZoom.axisScaleChanged(axis1d, t, false);
       });
     }
     /** recalculate stacks X position and show via transition
@@ -2177,7 +2119,7 @@ getBrushExtents(),
       axisTitle.updateAxisTitleSize(undefined);
       /* updateAxisTitleSize() uses vc.axisXRange but not o, so call it before collateO(). */
       if (changedNum)
-        collateO();
+        oa.axisApi.collateO();
       collateStacks();
       if (changedNum)
       {
@@ -2190,8 +2132,10 @@ getBrushExtents(),
           a.nodes().map(function(c) { console.log(c);});
           console.log('stacksAdjust', changedNum, a.nodes().length);
         }
+        const stacksView = oa.axisApi.stacksView;
+        stacksView.updateStacksAxes();
         if (oa.svgContainer)
-          oa.stacks.forEach(function (s) { s.redrawAdjacencies(); });
+          stacksView.stacks.forEach(function (s) { s.redrawAdjacencies(); });
       }
       // could limit this to axes for which dataBlocks has changed
       // axisShowExtendAll();
@@ -2369,10 +2313,10 @@ getBrushExtents(),
           viewPort.w.toFixed(),
           viewPort.h.toFixed(),
           500);
-        updateXScale();
-        collateO();
+        oa.axisApi.updateXScale?.();
+        oa.axisApi.collateO();
         me.axesShowXOffsets();
-        if (widthChanged)
+        if (widthChanged || (oa.axisTitleLayout?.verticalTitle === undefined))
           axisTitle.updateAxisTitleSize(undefined);
         let 
           duration = useTransition || (useTransition === undefined) ? 750 : 0,
@@ -2381,8 +2325,6 @@ getBrushExtents(),
         oa.svgRoot
         .attr("viewBox", oa.vc.viewBox.bind(oa.vc))
           .attr('height', graphDim.h /*"auto"*/);
-
-      axisBrushZoom.brushUpdates();
 
       // recalculate Y scales before pathUpdate().
         if (heightChanged)
@@ -2401,8 +2343,9 @@ getBrushExtents(),
           // let traceCount = 1;
           oa.svgContainer.selectAll('g.axis-all > g.brush > clipPath > rect')
             .each(function(d) {
-              let a = oa.axesP[d],
-              ya = oa.y[d],
+              const
+              a = d,
+              ya = a.y,
               yaRange = ya.range();
               // dLog('axis-brush', this, this.getBBox(), yaRange);
               // see also brushClip().
@@ -2414,8 +2357,9 @@ getBrushExtents(),
           oa.svgContainer.selectAll('g.axis-all > g.brush > g[clip-path]')
             .each(function(d) {
               /* if (traceCount-->0) console.log(this, 'brush extent', oa.y[d].brush.extent()()); */
-              let a = oa.axesP[d],
-              ya = oa.y[d],
+              const
+              a = d,
+              ya = a.y,
               b = ya.brush;
               // draw the brush overlay using the changed scale
               d3.select(this).call(b);

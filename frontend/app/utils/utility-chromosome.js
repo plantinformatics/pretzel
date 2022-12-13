@@ -102,12 +102,12 @@ function cmNameAdd(oa, block) {
 
   cmName[axis] = {mapName : c.mapName, chrName : c.chrName
                   , parent: parentName
-                  , name : c.name, range : c.range
+                  , name : c.chrName, range : c.range
                   , scope: c.scope, featureType: c.featureType
                   , dataset : dataset
                  };
 
-  let mapChrName = oa.axisApi.makeMapChrName(c.mapName, c.chrName);
+  let mapChrName = makeMapChrName(c.mapName, c.chrName);
   mapChr2Axis[mapChrName] = axis;
 
   oa.axisApi.axisIDAdd(axis);

@@ -151,7 +151,8 @@ class AxisCharts {
    dom;  // .gs, .gsa, 
    */
 
-  constructor(axisID) {
+  constructor(axis1d, axisID) {
+    this.axis1d = axis1d;
     this.axisID = axisID;
     this.ranges = { };
     this.dom = { };
@@ -985,6 +986,7 @@ ChartLine.prototype.scaledConfig = function ()
 ChartLine.prototype.blockColour = function ()
 {
   const fnName = 'ChartLine blockColour';
+  /** BlockAxisView / block-axis-view (was Stacks : Block) */
   let blockS = this.block && this.block.get('view');
 
   if (! blockS) {
@@ -992,7 +994,7 @@ ChartLine.prototype.blockColour = function ()
   } else  {
     let 
     axis = blockS.axis,
-    axis1d = axis && axis.axis1d;
+    axis1d = axis;
     if (! (axis && axis1d) || axis1d.isDestroying ) {
       breakPoint(fnName, blockS, blockS.axisName, axis, axis1d, this.block.get('id'),
       this.block, this, axis1d && [axis1d.isDestroying, axis1d.isDestroyed]);

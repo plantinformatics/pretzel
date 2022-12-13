@@ -56,7 +56,7 @@ function blockWithTicks(block)
 function inRangeBlock(range0, block) {
   return function (feature) {
     let
-    axis1d = block.axis.axis1d;
+    axis1d = block.axis;
     return axis1d.inRangeR(feature, range0);
   };
 }
@@ -167,7 +167,7 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
 
       /** data blocks of the axis, for calculating blockIndex i.e. colour.
        * colour assignment includes non-visible blocks . */
-      let blocksUnfiltered = extended ? [] : axis.dataBlocks(false, false);
+      let blocksUnfiltered = extended ? [] : axis.dataBlockViewsFiltered(false, false);
       if (trace_stack)
         dLog('blockIndex', axisName, axis, axis.blocks);
       blocksUnfiltered.forEach(storeBlockIndex);
@@ -192,7 +192,7 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
       function featurePathStroke (feature, i2) {
         /** Similar : FeatureTicks.prototype.featureColour() */
         let colour;
-        /** Stacks : Block */
+        /** BlockAxisView / block-axis-view (was Stacks : Block) */
         let block = this.parentElement.__data__;
         let qtlColourBy = block.block.get('useFeatureColour');
         if (qtlColourBy) {
@@ -205,7 +205,7 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
           i = blockIndex[blockId];
           if (i2 < 2)
             dLog(this, 'stroke', blockId, i);
-          colour = axisTitleColour(blockId, i+1) || 'black';
+          colour = axisTitleColour(block, i+1) || 'black';
         }
         return colour;
       }
@@ -295,7 +295,8 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
     // instead of lineHoriz(), use horizTrianglePath().
     /** scaled to axis.
      * could instead use featureY_(ak, feature.id);     */
-    akYs = stacks.oa.y[ak](tickY),
+    axis1d = feature.get('blockId.axis1d'),
+    akYs = axis1d.y(tickY),
     sLine = horizTrianglePath(akYs, 10, xOffset / 2, 1);
     return sLine;
   };

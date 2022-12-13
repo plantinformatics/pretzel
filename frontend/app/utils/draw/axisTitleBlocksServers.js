@@ -69,11 +69,11 @@ AxisTitleBlocksServers.prototype.render = function (axisTitleS, svgContainer, ax
   cS = AxisTitleBlocksServers.prototype.select(axisTitleS);
   dLog('AxisTitleBlocksServers cS.data()', cS.data().mapBy('__data__'), cS.enter().data());
 
-  /** AxisTitle.axisName2Blocks() uses Stacked.getAxis(), not oa */
+  /** AxisTitle.axis1d2BlockViews() does not use oa */
   const axisTitle = AxisTitle(/*oa*/null);
   let
     /* cS = gM.selectAll('circle')
-     .data(axisTitle.axisName2Blocks, (block) => block.getId()), */
+     .data(axisTitle.axis1d2BlockViews, (block) => block.getId()), */
     /** set in css : r, stroke-width */
     cE = cS
     .enter()

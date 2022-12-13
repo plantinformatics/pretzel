@@ -44,7 +44,7 @@ export default class DrawStackObject extends EmberObject {
      */
     this.axes = [];
     // nextStackID has already been incremented.
-    this.stackID = stacks.nextStackID-1;
+    // this.stackID = stacks.nextStackID-1;
 
     const cp = DrawStackViewComponent.prototype;
     copyGetter(this, cp, 'portions');
@@ -54,7 +54,34 @@ export default class DrawStackObject extends EmberObject {
     /** mix-in selected functions from Stack: */
     const p = Stack.prototype;
     this.calculatePositions = p.calculatePositions;
+    this.extendedWidth = p.extendedWidth;
+    this.sideClasses = p.sideClasses;
+    this.location = p.location;
+    this.redraw = p.redraw;
+    this.redrawAdjacencies = p.redrawAdjacencies;
+    this.dataBlocks = p.dataBlocks;
+  }
 
+  //----------------------------------------------------------------------------
+
+  /** @param axis1d
+   * @return true if this Stack contains axis1d
+   * @desc
+   * based on Stack.prototype.contains(axisName)
+   */
+  contains(axis1d) {
+    return axis1d.stack === this;
+  }
+
+
+  //----------------------------------------------------------------------------
+
+  log() {
+    /**  [] containing string IDs of reference blocks of axes of the Stack.
+     * equivalent : stack_axisIDs(this)
+     */
+    const axisIDs = this.axes.mapBy('referenceBlock.id'); // i.e. axis.id
+    console.log(this.stackID, this.stackID, this.stackIndex(), axisIDs);
   }
 
   //----------------------------------------------------------------------------
@@ -72,10 +99,10 @@ export default class DrawStackObject extends EmberObject {
     } else {
       this.insert(insertIndex, axis1d);
       /** source stack */
-      const stack = axis1d.stack;
+      const sourceStack = axis1d.stack;
       // or Ember_set() when upgrading to Ember 4.
       axis1d.set('stack', this);
-      stack.axes.removeObject(axis1d);
+      sourceStack.removeAxis(axis1d);
       logAxis1d(fnName, axis1d);
       logAxis1d(fnName + ' target', targetAxis1d);
     }
@@ -88,20 +115,40 @@ export default class DrawStackObject extends EmberObject {
     this.axes.removeObject(axis1d);
     logAxis1d(fnName, axis1d);
     Ember_set(axis1d, 'stack', axis1d.createStackForAxis());
+    this.axisChangesSignal();
   }
 
   //----------------------------------------------------------------------------
 
+  stackIndex() {
+    return this.stacksView.stackIndex(this);
+  }
+
+  /** equivalent : stack-view:axisIndex()
+   */
   findIndex(axis1d) {
-    /** or if .axes[] contains axis-1d instead of (reference) block : (a1) => a1 */
-    let index = this.axes.findIndex((b) => b.axis1d === axis1d);
+    /** now .axes[] contains axis-1d instead of (reference) block */
+    let index = this.axes.findIndex((axis1d) => axis1d === axis1d);
     return index;
   }
+  axisChangesSignal() {
+    this.stacksView.incrementProperty('axisChanges');
+  }
   remove(index) {
-    this.axes = this.axes.removeAt(index, 1);
+    this.axes.removeAt(index, 1);
+    this.axisChangesSignal();
   }
   insert(insertIndex, axis1d) {
     this.axes.insertAt(insertIndex, axis1d);
+    this.axisChangesSignal();
+  }
+  removeAxis(axis1d) {
+    this.axes.removeObject(axis1d);
+    this.axisChangesSignal();
+    // or :
+    if (this.axes.length === 0) {
+      this.stacksView.removeStack(this);
+    }
   }
 
   //----------------------------------------------------------------------------

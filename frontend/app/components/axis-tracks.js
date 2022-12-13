@@ -358,16 +358,16 @@ function nonOverlap(i0, i1) {
 
 
 /** select the g.axis-outer which contains g.axis-use. */
-function selectAxis(axisID)
+function selectAxis(axis1d)
 {
-  let aS = d3.select("#" + eltId(axisID));
+  let aS = d3.select("#" + eltId(axis1d));
   return aS;
 }
 
-function setClipWidth(axisID, width)
+function setClipWidth(axis1d, width)
 {
   let
-  aS = selectAxis(axisID),
+  aS = selectAxis(axis1d),
   cp = aS.select("g.axis-use > clipPath > rect");
   /** If the user has resized to a larger width, don't reduce it.
    * The role of this is to automatically increase the width if layout requires it.
@@ -379,7 +379,7 @@ function setClipWidth(axisID, width)
   gh
     .attr("transform", "translate(" + width + ")");
   dLog(
-    'setClipWidth', axisID, width, aS.node(), cp.node(),
+    'setClipWidth', axis1d.axisID, width, aS.node(), cp.node(),
     ! cp.empty() && cp.attr("width"),  gh.node());
 }
 
@@ -629,6 +629,7 @@ export default InAxis.extend({
   axisZoom: service('data/axis-zoom'),
   trait : service('data/trait'),
   ontology : service('data/ontology'),
+  blockService : service('data/block'),
 
   controlsView : alias('controls.view'),
   controlsViewed : alias('controls.viewed'),
@@ -723,12 +724,9 @@ export default InAxis.extend({
     }
     return axis1d;
   }),
-  /** @return the corresponding stacks.js axis / Stacked object. */
-  axisS : alias('axis.axis'),
   /** Current Y interval within the total domain of the axis reference block. */
   currentPosition : alias('axis1d.currentPosition'),
   yDomain : alias('currentPosition.yDomain'),
-  stackBlocks : alias('axis1d.drawMap.oa.stacks.blocks'),
 
   /** From the Ember block objects, derive the stack Blocks. */
   trackBlocks : computed('trackBlocksR.@each.view', function () {
@@ -942,8 +940,7 @@ export default InAxis.extend({
      * related : axis-1d.js : selectGroup()
      */
     let
-    axisID = this.get('axisID'),
-    aS = selectAxis(axisID),
+    aS = selectAxis(this.axis1d),
     gp = aS.select("g.axis-use")
       .selectAll("g.tracks");
     if (! gp.empty()) {
@@ -977,14 +974,15 @@ export default InAxis.extend({
      * (initial version supported only 1 split axis).  Could prefix selection with stack id.
      * <g class="axis-use">
      */
-    let axisID = this.get('axisID'),
-    aS = selectAxis(axisID);
-    let
-    oa = this.get('axis1d.drawMap.oa'),
-    axis = oa.axes[axisID];
+    const
+    // equivalent : this.axis1d.stacksView.axesByBlockId[axisID];
+    axis1d = this.get('axis1d'),
+    axisID = axis1d.axisID,
+    aS = selectAxis(axis1d);
+
     /* if parent is un-viewed, this function may be called after axis is removed
      * from stacks. */
-    if (! axis || ! Ember.get(axis, 'axis1d.is2d'))
+    if (! axis1d || ! Ember.get(axis1d, 'is2d'))
     {
       let gp = 
         // <g.axis-use> may already be gone.
@@ -1006,7 +1004,7 @@ export default InAxis.extend({
     let
     /** For parseIntervals(), blockId is "1"; otherwise expect that blockId is a child of axisID.
         axisID = gAxis.node().parentElement.__data__, */
-    y = oa.y[axisID],
+    y = this.axis1d.y,
     yDomain = y.domain();
     /* bbox was originally (up until 1116292) used to calculate yrange, yDomain, pxSize;
      * now use y.range(),.domain() instead because bbox.height is affected by zoom.
@@ -1021,9 +1019,7 @@ export default InAxis.extend({
     function trackBlocksData(blockId) {
       let
       t = tracks.intervalTree[blockId],
-      block = oa.stacks.blocks[blockId],
-      axis = block.getAxis(),
-      zoomed = axis && axis.axis1d && axis.axis1d.zoomed,
+      zoomed = axis1d?.zoomed,
       /** if zoomed in, tracks are not filtered by sizeThreshold.
        * The logic is : if the user is zooming in, they are interested in
        * features regardless of size, e.g. smaller than a pixel.
@@ -1194,7 +1190,7 @@ export default InAxis.extend({
            * equivalent, but maybe not updated : thisAt.get('allocatedWidths.centre.1')
            */
           let rightEdge = thisAt.axis1d.get('axis2d.allocatedWidthsMax.centre');
-          let side = thisAt.axis1d.axisS.stack.sideClasses();
+          let side = thisAt.axis1d.stack.sideClasses();
           if (thisAt.axis1d.get('extended') && (rightEdge !== undefined)) {
             dLog('blockOffset', rightEdge, xOffset, widthSum, side);
             xOffset += rightEdge;
@@ -1329,7 +1325,7 @@ export default InAxis.extend({
      * sub-elements should be shown. */
     function blockTagSubElements(blockId) {
       let
-      block = oa.stacks.blocks[blockId],
+      block = thisAt.lookupBlockView(blockId),
       tags = block.block.get('datasetId.tags'),
       subElements = tags && (tags.indexOf("geneElements") >= 0);
       return subElements;
@@ -1582,7 +1578,7 @@ export default InAxis.extend({
         if (t0) {
           /** may not be blockId, e.g subElements, so default to false. */
           let blockId = t0.parentElement.__data__,
-              block = blockId && oa.stacks.blocks[blockId],
+              block = blockId && thisAt.lookupBlockView(blockId),
               out = block && ! block.block.get('isQTL') && block.block.isZoomedRightOut();
           /** if selection is a transition */
           if (out && selection.selection) {
@@ -1947,7 +1943,12 @@ export default InAxis.extend({
         // can check that parent has clip-path, and data is string
       }
       let
-      blockId = parent.__data__,
+      data = parent.__data__,
+      /** in axis-tracks <g> data is still blockId, but elsewhere they have been
+       * changed to blockView, and blockTrackColourI() is used for both
+       * cases.  */
+      blockView = (typeof data === 'string') ? thisAt.lookupBlockView(/*blockId*/data) : data,
+      blockId = blockView.block.id,
       blockIndex = thisAt.get('axis1d.blockIndexes'),
       /** If blockIndex{} is not collated yet, can scan through blockIds[] to get index.
        * Actually, the number of blocks will be 1-10, so collating a hash is
@@ -1959,7 +1960,7 @@ export default InAxis.extend({
       // console.log(d,i,b);
       // colour is calculated from i, not blockId.
       // index into axis.blocks[] = <g.tracks> index + 1
-      return axisTitleColour(blockId, i+1) || 'black';
+      return axisTitleColour(blockView, i+1) || 'black';
     }
     /** This has a similar role to the above blockTrackColourI(); it
      * is simpler but it creates its own selection instead of working
@@ -2149,8 +2150,12 @@ export default InAxis.extend({
 
   lookupBlock(blockId) {
     let
-    blockS = this.get('stackBlocks')[blockId],
-    block = blockS && blockS.block;
+    block = this.blockService.peekBlock(blockId);
+    return block;
+  },
+  lookupBlockView(blockId) {
+    let
+    block = this.blockService.peekBlock(blockId).view;
     return block;
   },
 
@@ -2175,7 +2180,7 @@ export default InAxis.extend({
   },
   constructAxisTracksBlock(blockId) {
     let blockState = EmberObject.create();
-    let blockS = this.get('stackBlocks')[blockId];
+    let blockS = this.lookupBlockView(blockId);
     blockState.subElements = blockS.block.get('isSubElements');
     blockState.region = (blockS.block.get('datasetId._meta.type') === 'QTL') ? 'right' : 'centre';
     blockState.useAxisBlocks = (blockState.region === 'centre') ? useAxisBlocks : false;

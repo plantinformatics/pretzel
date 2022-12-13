@@ -379,13 +379,13 @@ export default Component.extend(Evented, AxisEvents, {
   show() {
     let
     axisID = this.get('axisID'),
-    axis1d = this.get('axis1d'),
+    axis1d = this.get('axis1d'); /* , draw_orig :
     axisS = axis1d.get('axisS'), view;
     if (axis1d && ! axisS && (view = axis1d.get('axis.view'))) {
       dLog('show', axisID, axis1d, view, 'axisShowExtend');
       axisS = view;
-    }
-    this.axisShowExtend(axisS, axis1d, axisID, /*axisG*/ undefined);
+    } */
+    this.axisShowExtend(axis1d, axis1d, axisID, /*axisG*/ undefined);
   },
 
   didInsertElement() {
@@ -436,7 +436,7 @@ export default Component.extend(Evented, AxisEvents, {
     this.widthEffects();
   },
   widthEffects() {
-    this.updateXScale();
+    this.axis1d.stacksView.updateXScale();
     stacks.changed = 0x10;
     let oa = this.get('oa');
     /* Number of stacks hasn't changed, but X position needs to be
@@ -448,20 +448,10 @@ export default Component.extend(Evented, AxisEvents, {
     // may trigger this differently, could be action.
     next(() => ! this.get('axis1d').isDestroying && this.get('axis1d').widthEffects());
   },
-  /** Update the X scale / horizontal layout of stacks
-   * copied from draw-map; the x scale will likely move to stacks-view, and this will likely be dropped.
-   */
-  updateXScale()
-  {
-    let oa = this.get('oa');
-    // xScale() uses stacks.keys().
-    oa.xScaleExtend = xScaleExtend(); // or xScale();
-  },
 
-  getAxisExtendedWidth(axisID)
+  getAxisExtendedWidth(axis1d)
   {
-    let oa = this.get('oa');
-    let axis = oa.axes[axisID],
+    let axis = axis1d,
     /** duplicates the calculation in axis-tracks.js : layoutWidth() */
     blocks = axis && axis.blocks,
     /** could also use : axis.axis1d.get('dataBlocks.length');
@@ -489,6 +479,8 @@ export default Component.extend(Evented, AxisEvents, {
 
   /**
    * @param axis  Stacks axis, optional, used by axisShowExtended() for yRange().
+   * Now (after draw_orig) === axis1d
+   * @param axis1d
    */
   axisShowExtend(axis, axis1d, axisID, axisG)
   {
@@ -496,8 +488,8 @@ export default Component.extend(Evented, AxisEvents, {
     /** x translation of right axis */
     let 
     /** value of .extended may be false, so || 0.  */
-      initialWidth = /*50*/ this.getAxisExtendedWidth(axisID) || 0,
-    axisData = axis1d.get('is2d') ? [axisID] : [];
+      initialWidth = /*50*/ this.getAxisExtendedWidth(axis1d) || 0,
+    axisData = axis1d.get('is2d') ? [axis1d] : [];
     let oa = this.get('oa');
     if (axisG === undefined)
       axisG = oa.svgContainer.selectAll("g.axis-outer#id" + axisID);
@@ -629,8 +621,13 @@ export default Component.extend(Evented, AxisEvents, {
 
     /** this clipPath is created in AxisCharts:frame(), id is axisClipId(). */
     let axisClipRect = em.selectAll("g.chart > clipPath > rect");
+    if (! axisClipRect.empty()) {
+      console.log('axisClipRect', 'width', axisClipRect.attr('width'));
+    }
+    /*
     axisClipRect
       .attr("width", initialWidth);
+*/
   },
 
   /*--------------------------------------------------------------------------*/

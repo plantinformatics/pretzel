@@ -258,8 +258,9 @@ export default Component.extend(Evented, /*AxisEvents,*/ {
     /** axisFeatureCircles_removeBlock() uses selectedFeatures[mapChrName], so
      * call it before the following which filters that.  */
     if (selectedFeatures[mapChrName]) {
+      const blockId = blockS.block.id;
       selectedFeatures[mapChrName] = selectedFeatures[mapChrName]
-        .filter((f) => f.get('blockId.id') !== blockS.block.id);
+        .filter((f) => f.get('blockId.id') !== blockId);
     }
   }
 

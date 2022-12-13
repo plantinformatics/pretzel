@@ -10,15 +10,20 @@ import { task, didCancel } from 'ember-concurrency';
 
 import { keyBy } from 'lodash/collection';
 
+//------------------------------------------------------------------------------
+
 import { stacks } from '../../utils/stacks';
 import { intervalSize, truncateMantissa }  from '../../utils/interval-calcs';
+import { breakPoint } from '../../utils/breakPoint';
 
+//------------------------------------------------------------------------------
 
 let trace_block = 1;
 const dLog = console.debug;
 /** trace the (array) value or just the length depending on trace level. */
 function valueOrLength(value) { return (trace_block > 1) ? value : value.length; }
 
+const draw_orig = false;
 
 /*----------------------------------------------------------------------------*/
 
@@ -470,9 +475,10 @@ export default Service.extend(Evented, {
     this.trigger('receivedBlock', blocksToView);
   },
 
-  featuresCountsNBins : alias('controls.controls.view.featuresCountsNBins'),
+  controlsView : alias('controls.view'),
+  featuresCountsNBins : alias('controlsView.featuresCountsNBins'),
   /** This does have a dependency on the parameter values.  */
-  pathsDensityParams : alias('controls.controls.view.pathsDensityParams'),
+  pathsDensityParams : alias('controlsView.pathsDensityParams'),
   /** Calculate nBins for featuresCounts request based on pathsDensityParams.
    * A separate slider is now added for featuresCountsNBins, so this is not
    * currently used, and may be dropped; it is possible that density calculation
@@ -774,7 +780,7 @@ export default Service.extend(Evented, {
       });
     }
     block.set('isViewed', viewed);
-    if (viewed) {
+    if (viewed && draw_orig) {
       this.ensureAxis(block);
     }
     this.endPropertyChanges();
@@ -1383,6 +1389,9 @@ export default Service.extend(Evented, {
     }),
   /** collate references (blocks) of viewed blocks
    * @return map from reference (block object) to [block object]
+   * @desc
+   * Similar : axesBlocks (components/draw/axes-1d.js) which maps from
+   * referenceBlockId to [block, ..].
    */
   axesViewedBlocks2 : computed(
     'viewedBlocksReferences.[]',
@@ -1478,6 +1487,7 @@ export default Service.extend(Evented, {
   },
   /** Call axisApi.ensureAxis() for block. */
   ensureAxis(block) {
+    breakPoint('axis-1d:ensureAxis');
     /* stacks-view will map URL params configuring stacks for viewed blocks to
      * rendered DOM elements with associated Stack .__data and these 2 functions
      * (blockAxis and ensureAxis) can be absorbed into that.

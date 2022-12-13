@@ -184,7 +184,7 @@ function PathDataUtils(oa) {
      * This is the index of the left axis. */
     left = order ? 0 : 1,
     akL = order ? ak1 : ak2,
-    aL = oa.axes[akL];
+    aL = oa.axisApi.stacksView.axesByBlockId[akL];    // draw_orig : oa.axes[akL];
     if (aL.extended)
     {
       // console.log("inside", ak1, ak2, cached, xi, order, left, akL);
@@ -688,14 +688,18 @@ function PathDataUtils(oa) {
     // z[p][f].location, actual position of feature f in the axis p, 
     // y[p](z[p][f].location) is the relative feature position in the svg
     // ys is used - the y scale for the stacked position&portion of the axis.
-    let parentName = Block.axisName_parent(axisID),
-    ysa = oa.ys[parentName],
+    const
+ parentName = Block.axisName_parent(axisID),
+    stacksView = oa.axisApi.stacksView,
+    parentAxisBlock = stacksView.axesByBlockId[parentName],
+    ysa = parentAxisBlock.axis1d.ys,
     /** if d is object ID instead of name then featureIndex[] is used */
     feature = oa.z[axisID][d] || lookupFeature(oa, flowsService, oa.z, axisID, d), // || oa.featureIndex[d],
     aky = ysa(feature.location),
     /**  As noted in header comment, path Y value requires adding axisY = ... yOffset().
      * parentName not essential here because Block yOffset() follows .parent reference. */
-    axisY = oa.stacks.blocks[axisID].yOffset();
+    axis1d = stacksView.axesByBlockId[axisID].axis1d,
+    axisY = axis1d.yOffset();
     // can use parentName here, but initially good to have parent and child traced.
     if (trace_scale_y && ! tracedAxisScale[axisID])
     {

@@ -70,7 +70,7 @@ export default InAxis.extend({
       this.set('blocksData', EmberObject.create());
       this.set('charts', EmberObject.create());
       // axisID isn't planned to change for this component
-      this.set('axisCharts',  new AxisCharts(this.get('axisID')));
+      this.set('axisCharts',  new AxisCharts(this.axis.axis1d, this.get('axisID')));
     }
   },
 
@@ -110,15 +110,11 @@ export default InAxis.extend({
     return gAxis;
   }),
 
-  yAxesScales : computed('data', function () {
-    let oa = this.get('data');
-    return oa.y;
-  }),
-  yAxisScale : computed('axisID', 'yAxesScales', function () {
-    let yAxesScales = this.get('yAxesScales'),
-    axisID = this.get('axisID'),
-    yAxis = yAxesScales[axisID];
-    dLog('yAxisScale', axisID, yAxis && yAxis.domain());
+  yAxisScale : computed(function () {
+    const
+    axis1d = this.axis.axis1d,
+    yAxis = axis1d.y;
+    dLog('yAxisScale', yAxis && yAxis.domain());
     return yAxis;
   }),
 

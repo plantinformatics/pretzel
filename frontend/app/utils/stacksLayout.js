@@ -57,17 +57,18 @@ function updateRange(y, ys, vc, a)
 
   // dLog("updateRange", a, a.axisName, ys.length, ys[a.axisName]);
   // if called before ys is set up, do nothing.
-  if (ys && ys[a.axisName])
+  // draw_orig : y and ys were indexed by [a.axisName], now they are axis-1d.y, .ys, no de-reference required.
+  if (ys)
   {
     let myRange = a.yRange();
     let axisName = a.axisName;
     dLog("updateRange", a.axisName, a.position, a.portion, myRange, vc.yRange, 'yRange');
-    ys[a.axisName].range([0, myRange]);
+    ys.range([0, myRange]);
     /** a.yRange() incorporates axisGap; this can be factored to a similar function. */
     let yRange = vc.yRange - axisGap;
-    y[a.axisName].range([0, yRange]);
+    y.range([0, yRange]);
 
-    y[axisName].brush
+    y.brush
       .extent([[-8,0],[8, yRange /* not myRange */]]);
   }
 }
