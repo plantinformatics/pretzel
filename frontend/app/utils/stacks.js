@@ -2039,7 +2039,8 @@ Stack.prototype.redrawAdjacencies = function ()
 Stacked.prototype.allocatedWidth = function()
 {
   let width;
-  let axis2d = this.axis1d && this.axis1d.get('axis2d');
+  // draw_orig : this.axis1d.axis2d
+  const axis2d = this.get('axis2d');
   if (axis2d && ! axis2d.isDestroyed) {
     width = axis2d.get('allocatedWidthRect');
   }

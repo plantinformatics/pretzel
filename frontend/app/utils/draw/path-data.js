@@ -184,7 +184,7 @@ function PathDataUtils(oa) {
      * This is the index of the left axis. */
     left = order ? 0 : 1,
     akL = order ? ak1 : ak2,
-    aL = oa.axisApi.stacksView.axesByBlockId[akL];    // draw_orig : oa.axes[akL];
+    aL = oa.axisApi.stacksView.axesByBlockId[akL].axis1d;    // draw_orig : oa.axes[akL];
     if (aL.extended)
     {
       // console.log("inside", ak1, ak2, cached, xi, order, left, akL);
