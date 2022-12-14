@@ -1155,6 +1155,7 @@ looking at the currently displayed paths in a block_adj :
     'drawMap.stacksWidthChanges',
     'blockAdj.axes1d.0.flipRegionCounter',
     'blockAdj.axes1d.1.flipRegionCounter',
+    'blockAdj.axes1d.{0,1}.flipped',
     /* Paths end X position is affected when an adjacent axis opens/closes (split).  */
     'blockAdj.axes1d.{0,1}.extended',
     /* will change scaleChanged to return {range: [from,to], domain : [from, to]}

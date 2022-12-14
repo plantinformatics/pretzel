@@ -629,7 +629,8 @@ Stacked.prototype.yRange = function ()
 Stacked.prototype.yRange2 = function ()
 {
   let yRange = stacks.vc.yRange,
-  range = this.position.map(function (p) { return yRange * p; });
+  position = this.position || [0, 1],
+  range = position.map(function (p) { return yRange * p; });
   return range;
 };
 /** Access the features hash of this block.
@@ -720,9 +721,8 @@ Stacked.prototype.getDomain = function ()
     || (this.domain = this.referenceDomain())
     || (this.domain = this.domainCalc())
   ;
-  if (noDomain(domain))
+  if (noDomain(domain)) {
     domain = [];
-  {
     /* shifting the responsibility of domain calculation from Stacks to blocks.js and axis-1d.
      * domainCalc() should be equivalent to axis1d.blocksDomain, but
      * resetZooms() was setting the domains to [0, 0] so possibly there has been
@@ -734,6 +734,9 @@ Stacked.prototype.getDomain = function ()
     let blocksDomain = axis1d && axis1d.get('blocksDomain');
     if (blocksDomain && blocksDomain.length) {
       dLog('getDomain()', this.axisName, domain, blocksDomain);
+      /* domain.concat() is not needed, can ignore domain because noDomain() is true,
+       * i.e. just d3.extent(blocksDomain)
+       */
       domain = d3.extent(domain.concat(blocksDomain));
     }
   }

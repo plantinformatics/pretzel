@@ -328,8 +328,10 @@ export default Controller.extend(Evented, {
 
 
   controls : EmberObject.create({
+    // .view becomes a reference to components/panel/view-controls
     view : {  },
-    viewControls : () => this.get('controlsService.viewControls'),
+    /** to add .viewed, use computed() to provide `this`
+    viewed : () => this.get('controlsService.viewed'),  */
     window : {tablesPanelRight : false } }),
 
   queryParams: ['mapsToView'],

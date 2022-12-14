@@ -104,6 +104,8 @@ function PathDataUtils(oa) {
     pathUpdate, 
     dataOfPath, 
     featureNameOfPath, 
+
+    get controlsView() { return oa.eventBus.controls.view; },
   };
 
   //----------------------------------------------------------------------------
@@ -404,6 +406,7 @@ function PathDataUtils(oa) {
    * data is [feature0, feature1, a0, a1]
    * Enabled by unique_1_1_mapping.
    * @param ffaa  [feature0, feature1, a0, a1]
+   * @param this  <path>
    */
   function pathU(ffaa) {
     if ((ffaa === undefined) || (ffaa.length === undefined))
@@ -415,6 +418,9 @@ function PathDataUtils(oa) {
       console.log("pathU", ffaa, a0.mapName, a1.mapName, p[0]);
     return p;
   }
+  /**
+   * @param this  <path>
+   */
   function pathUg(d) {
     let ffaa = dataOfPath(this),
     p = pathU(ffaa);
@@ -548,7 +554,7 @@ function PathDataUtils(oa) {
    * @param feature ember data store object
    */
   function featureInRange(axisName, feature) {
-    const controlsView = oa.controls?.view;
+    const controlsView = this.controlsView;
     let a0 = axisName, d0 = feature;
     /** To allow lines which spread onto other axes in the same stack, but
      * still remain within the stack limits, unlike allowPathsOutsideZoom, use
@@ -573,7 +579,7 @@ function PathDataUtils(oa) {
    * Iff d1!==undefined, they are connected by an alias.
    */
   function patham(a0, a1, d0, d1) {
-    const controlsView = oa.controls?.view;
+    const controlsView = this.controlsView;
     // let [stackIndex, a0, a1] = featureAliasGroupAxes[d];
     let r;
 
@@ -903,7 +909,7 @@ function PathDataUtils(oa) {
      * @param t transition, which is likely to be undefined here.
      */
     eventBus.pathUpdateFlow = function(t, flow) {
-      const controlsView = oa.controls?.view;
+      const controlsView = this.controlsView;
       if (controlsView?.get('pathJoinClient'))
         pathUpdate_(t, flow);
     };
@@ -913,7 +919,7 @@ function PathDataUtils(oa) {
   /** call pathUpdate(t) for each of the enabled flows. */
   function pathUpdate(t)
   {
-    const controlsView = oa.controls?.view;
+    const controlsView = this.controlsView;
     const flows = oa.flows;
     if (controlsView?.get('pathJoinClient'))
     d3.keys(flows).forEach(function(flowName) {

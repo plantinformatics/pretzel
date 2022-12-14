@@ -89,7 +89,9 @@ function AxisMenuActions(oa) {
     let
         ya = axis1d.y, ysa = axis1d.ys,
         domain = maybeFlip(ya.domain(), true);
-    axis1d.flipped = ! axis1d.flipped;
+    /** same comment applies here as for axis.toggleProperty('extended') in axisExtend(). */
+    // axis1d.flipped = ! axis1d.flipped;
+    axis1d.toggleProperty('flipped');
     /** if the axis is brushed, show the brush position updated by flip.
      * Instead of using range (inverted to domain via
      * axisRange2Domain); axisBrushShowSelection() uses

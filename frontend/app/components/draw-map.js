@@ -1675,9 +1675,11 @@ export default Component.extend(Evented, {
      * contains existing axis scales.
      */
     let ysUpdated = true;
+    /** @return the number of axis y scales, which is equivalent to the number of axes. */
     function ysLength()
     {
-      return oa && oa.ys && d3.keys(oa.ys).length;
+      // could use  ... axes1d.axesP.length
+      return me.get('axis1dArray.length');
     }
 
     let svgRoot;

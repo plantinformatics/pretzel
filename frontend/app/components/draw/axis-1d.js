@@ -147,6 +147,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
    */
   flipRegionCounter : 0,
 
+  flipped : undefined,
 
   init() {
     this._super(...arguments);
@@ -262,6 +263,9 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   yRange2		: Stacked_p.yRange2,
   domainCalc		: Stacked_p.domainCalc,
   referenceDomain		: Stacked_p.referenceDomain,
+  /* .domain can replace getDomain(); the latter does not incorporate .flipped,
+   * ditto this.axis (block) .getDomain().
+   */
   getDomain		: Stacked_p.getDomain,
   verify		: Stacked_p.verify,
   children		: Stacked_p.children,
@@ -299,7 +303,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   /** Same as dataBlocksFiltered(), but return the BlockAxisView-s of the blocks. */
   dataBlockViewsFiltered(visible, showPaths) {
     const
-    blocks = this.dataBlocksFiltered(visible, showPaths)
+    blocks = this.isDestroying ? [] :
+      this.dataBlocksFiltered(visible, showPaths)
       .mapBy('view');
     return blocks;
   },
@@ -383,7 +388,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
    * ensure it has a y scale,
    *   make a copy of the y scale - use 1 for the brush
    */
-  y : computed('axis.featureLimits', function() { return this.setupYScale(); }),
+  y : computed('axis.featureLimits', 'flipped', function() { return this.setupYScale(); }),
   setupYScale() {
     const
     fnName = 'setupYScale',
