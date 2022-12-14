@@ -359,8 +359,9 @@ FeatureTicks.prototype.showSpanningLine = function (featuresOfBlockLookup) {
     // .filter((b) => axis1d.selected.shiftClickedFeaturesByBlock(block.block)
 
     let gSA = this.selectGroup(groupName);
+    /* selection / element data is BlockAxisView. */
     gSA
-      .attr("clip-path", (block) => "url(#" + axisEltIdClipPath(block.block.get('referenceBlockOrSelf.id')) + ")");
+      .attr("clip-path", (blockView) => "url(#" + axisEltIdClipPath(blockView.axis) + ")");
 
     if (!gSA.empty()) {
 

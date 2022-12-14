@@ -250,9 +250,18 @@ function axisEltIdTitle(axis1d) { return 't' + axis1d.axisName; }
 
 const axisClipEip = 'axis-clip-';
 const axisClip2dEip = 'axis-clip-2d-';
-/** id of <g clippath> element, based on axisName, with an "axis-clip" prefix. */
+/** id of <g clippath> element, based on axisName, with an "axis-clip" prefix.
+ * Used by axisBrush.js and feature-ticks.js.
+ * @param axis1d
+ */
 function axisEltIdClipPath(axis1d) { return "axis-clip-" + axis1d.axisName; }
-function axisEltIdClipPath2d(axis1d) { return "axis-clip-2d-" + axis1d.axisName; }
+/**
+ * Used by axis-tracks.js, which still has axisID in element data; when that
+ * changes to axis1d, the param can change from axisID to axis1d, as in
+ * axisEltIdClipPath().
+ * @param axisID
+ */
+function axisEltIdClipPath2d(axisID) { return "axis-clip-2d-" + axisID; }
 
 /** @return a d3 selection of the svg <g> element which encloses all
  * elements of an axis; its position is :

@@ -91,9 +91,10 @@ const fadedSelector = ".foreground > g:not(.progress) > g";
  * This is used within an axis to wrap the content of g.brush, provided a clip
  * rect for the brush elements.
  * @param gp  <g.brush>
+ * @param axis1d
  * @return selection of g[clip-path], used by the caller to insert the brush elements.
  */
-function brushClip(gp, axisID) {
+function brushClip(gp, axis1d) {
 
   let gpp = gp.node().parentElement;
 
@@ -105,7 +106,7 @@ function brushClip(gp, axisID) {
 
   let
     gc = gp.selectAll("g > clipPath")
-    .data([axisID]),
+    .data([axis1d]),
   gr = gc.enter()
   // define the clipPath
     .append("clipPath")       // define a clip path
@@ -120,13 +121,13 @@ function brushClip(gp, axisID) {
   let gg = 
     gp.selectAll("g > [clip-path]"),
   g = gg
-    .data([axisID])
+    .data([axis1d])
     .enter()
     .append("g")
-    .attr("clip-path", (axisID) => "url(#" + axisEltIdClipPath(axisID) + ")") // clip with the rectangle
+    .attr("clip-path", (axis1d) => "url(#" + axisEltIdClipPath(axis1d) + ")") // clip with the rectangle
     .merge(gg);
 
-  dLog(axisID, bbox, 'brushClip', gp.node(), gprm.node(), gg.node(), g.node());
+  dLog(axis1d, bbox, 'brushClip', gp.node(), gprm.node(), gg.node(), g.node());
 
   return g;
 }
