@@ -82,8 +82,20 @@ function AxisMenuActions(oa) {
     axisApi.sendUpdatedSelectedFeatures();
   }
 
+  /**  testing of stacks-view.js : blocksHandler and axesHandler */
+  function arrayHandlerTest(axis1d) {
+    const fnName = 'arrayHandlerTest',
+          axisID = axis1d.axis.id;
+    console.log(fnName, oa.axisApi.stacksView.stacks.blocks[axisID]);
+    // equivalent : oa.stacks.axesP[]
+    console.log(fnName, oa.axes[axisID]);
+  }
   function axisFlip(axis1d) {
-    console.log("flip", axis1d.axisName, this);
+    const fnName = 'axisFlip';
+    console.log(fnName, axis1d.axisName, this);
+
+    // arrayHandlerTest(axis1d);
+
     /** Handle the possibility that axisName may have been adopted by
      * another axis after this callback registration. */
     let
@@ -104,7 +116,7 @@ function AxisMenuActions(oa) {
 
     /* after y domain update, map brushed domain to new position.  */
     if (range) {
-      dLog('axisFlip', axis1d.axisName, range);
+      dLog(fnName, axis1d.axisName, range);
       let gBrush = axisBrushSelect(oa.svgContainer, axis1d);
       axisBrushZoom.axisBrushShowSelection(axis1d, gBrush);
     }

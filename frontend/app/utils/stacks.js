@@ -185,6 +185,9 @@ Block.prototype.setAxis = function(a)
 /** @return axis of this block or if it has a parent, its parent's axis */
 Block.prototype.getAxis = function()
 {
+  if (this.isDestroying || this.axis?.isDestroying) {
+    return undefined;
+  }
   let axis = this.axis;
   /* This guards against this.axis being a former axis of `this` (may have been
    * retired during adoption), which seems to happen but perhaps should not.
@@ -244,7 +247,7 @@ Block.prototype.datasetHasParent = function() {
 /** @return true if this Block is a data block, not the reference block.
  */
 Block.prototype.isData = function(showPaths) {
-  let axis = this.getAxis(),
+  let
   blockR = this.block,
   /** The most significant check here is blockR.get('featureCount'); now that we
    * have this information readily information in the frontend that is the best

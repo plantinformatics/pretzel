@@ -915,8 +915,9 @@ function storePath(blockA, blockB, featureName, fi, aliasGroupName)
      */
     let // aliasGroupName = featureA.aliasGroupName,
       direction = axisName < aj,
-    blockA_ = oa.stacks.blocks[blockA],
-    blockB_ = oa.stacks.blocks[blockB],
+    blocks = oa.axisApi.stacksView.stacks.blocks,
+    blockA_ = blocks[blockA],
+    blockB_ = blocks[blockB],
     /** indexed with direction to produce featureToAxis_[],
      * from which ffaa is extracted so that .axis0 < .axis1.
      */

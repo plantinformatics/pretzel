@@ -58,6 +58,62 @@ function isDestroying(object) {
 
 //------------------------------------------------------------------------------
 
+/** See comment for blocksHandler().
+ * Enclose stacksView with getter for stacks.blocks[]
+ */
+function blocksHandlerConfig(stacksView) {
+  const handlerConfig = {
+    /**
+     * @return BlockAxisView / block-axis-view.js
+     * @param prop axis1d or axisID     
+     */
+    get(obj, prop) {
+      const
+      fnName = 'blocksHandler';
+      let blockView;
+      if (typeof prop === 'string') {
+        const
+        blockId = prop,
+        ab = stacksView.axesByBlockId[blockId],
+        block = ab?.block;
+        blockView = block.view;
+      } else {
+        const
+        axis1d = prop,
+        block = axis1d.axis; // stacksView.block.peekBlock(blockId),
+        blockView = block.view;
+      }
+      // console.log(fnName, /*blockId,*/ prop, blockView);
+      return blockView;
+    },
+  };
+  return handlerConfig;
+}
+
+/** See comment for axesHandler().
+ */
+function axesHandlerConfig(stacksView) {
+  const handlerConfig = {
+    /**
+     * @return axis-1d
+     * @param prop axisID
+     */
+   get(obj, prop) {
+    const
+     fnName = 'axesHandler',
+     axisID = prop,
+     ab = stacksView.axesByBlockId[axisID],
+     axis1d = ab.axis1d;
+     // dLog(fnName, axisID, axis1d);
+     return axis1d;
+   },
+  };
+  return handlerConfig;
+}
+
+
+//------------------------------------------------------------------------------
+
 export default Component.extend({
   block: service('data/block'),
   previous : {},
@@ -84,7 +140,7 @@ export default Component.extend({
   init() {
     this._super(...arguments);
 
-    this.oa.axes = new Proxy({}, this.axesHandler);
+    this.oa.stacks.axesP = new Proxy({}, this.axesHandler);
     this.stacks.blocks = new Proxy({}, this.blocksHandler);
     this.stacks.sortLocation = this.oa.stacks.sortLocation;
     this.stacks.log = this.oa.stacks.log;
@@ -98,34 +154,16 @@ export default Component.extend({
   //----------------------------------------------------------------------------
 
   /** Handle : stacks.blocks[axisID], after element data changes from axisID to axis1d.
-   * @return BlockAxisView / block-axis-view.js
-   * @param prop axis1d
    */
-  blocksHandler : computed( () => ({
-   get(obj, prop) {
-    const
-     fnName = 'blocksHandler',
-     //blockId = prop,
-     axis1d = prop,
-     block = axis1d.axis, // this.block.peekBlock(blockId),
-     blockView = block.view;
-     console.log(fnName, /*blockId,*/ block?.id, blockView);
-     return blockView;
-   },
-  })),
+  blocksHandler : computed( function() {
+    return blocksHandlerConfig(this);
+  }),
 
   /** Maintain oa.axes[] as a facade, to smooth the transition away from draw_orig.
-   * @return axis-1d
-   * @param prop axisID
    */
-  axesHandler : computed( () => ({
-   get(obj, prop) {
-    const
-     axisID = prop,
-     axis1d = this.axesByBlockId[axisID];
-     return axis1d;
-   },
-  })),
+  axesHandler : computed( function() {
+    return axesHandlerConfig(this);
+  }),
 
   // ---------------------------------------------------------------------------
 
@@ -363,6 +401,7 @@ export default Component.extend({
 
   //----------------------------------------------------------------------------
 
+  /** [blockId or axisID] -> {axis1d, model:block}  */
   axesByBlockId : {},
   /** Record the most recent assignment of blocks to an axis1d.
    */
