@@ -120,6 +120,12 @@ export default class DrawStackObject extends EmberObject {
 
   //----------------------------------------------------------------------------
 
+  /** @return .axes[], with .isDestroying components filtered out.
+   */
+  get liveAxes() {
+    return this.axes.filter((a) => ! a.isDestroying);
+  }
+
   stackIndex() {
     return this.stacksView.stackIndex(this);
   }

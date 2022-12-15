@@ -267,6 +267,7 @@ function AxisTitle(oa) {
     let nStackAdjs = stacks.length > 1 ? stacks.length-1 : 1;
     let axisSpacing = (axisXRange[1]-axisXRange[0])/nStackAdjs;
     const
+    // equivalent : BlockAxisView.titleTextMax()
     titleLength = Block.titleTextMax(),
     /** char width in px, ie. convert em to px.  Approx -	better to measure this. */
     em2Px = 7,
@@ -309,10 +310,9 @@ function AxisTitle(oa) {
      * ideally the call will be only in axis-1d, but for now this
      * picks up some cases not covered.  */
     const 
-    axisIds = axisTitleS.nodes().mapBy('__data__'),
-    axes1 = axisIds.map((axisId) => oa.axes[axisId]);
-    axes1.forEach(
-      (a) => a && a.axis1d && bind(a.axis1d, a.axis1d.showZoomResetButtonXPosn)());
+    axis1ds = axisTitleS.nodes().mapBy('__data__');
+    axis1ds.forEach(
+      (axis1d) => axis1d.showZoomResetButtonXPosn());
   }
 
   return result;

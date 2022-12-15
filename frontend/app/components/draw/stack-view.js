@@ -73,7 +73,7 @@ export default class DrawStackViewComponent extends Component {
     this.findIndex = p.findIndex;
     this.remove = p.remove;
     this.remove2 = p.remove2;
-    this.removeStacked1 = p.removeStacked1;
+    // this.removeStacked1 = p.removeStacked1;
     this.delete = p.delete;
     this.move = p.move;
     this.shift = p.shift;
@@ -155,7 +155,7 @@ DrawStackViewComponent.log = Stack.log;
 DrawStackViewComponent.verify = Stack.verify;
 DrawStackViewComponent.axisStackIndex = Stack.axisStackIndex;
 DrawStackViewComponent.axisStackIndex2 = Stack.axisStackIndex2;
-DrawStackViewComponent.removeStacked = Stack.removeStacked;
+// DrawStackViewComponent.removeStacked = Stack.removeStacked;
 DrawStackViewComponent.axisStack = Stack.axisStack;
 DrawStackViewComponent.axisStackIndexAll = Stack.axisStackIndexAll;
 

@@ -62,9 +62,6 @@ function AxisMenuActions(oa) {
     // this overlaps with the latter part of blockIsUnviewed()
     // and can be factored with that.
     let axis = axis1d, stack = axis && axis.stack;
-    // draw_orig
-    // axes[axisName] is deleted by removeStacked1() 
-    let stackID = Stack.removeStacked(axisName);
     const axisApi = oa.axisApi;
     // draw_orig
     axisApi.deleteAxisfromAxisIDs(axisName);

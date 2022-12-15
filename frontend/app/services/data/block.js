@@ -1299,6 +1299,8 @@ export default Service.extend(Evented, {
     return result;
   }),
 
+  blockCopyLogged : [],
+
   /** map the given feature JSON values to store object references.
    */
   pushFeatureSearchResults : function(apiServer, featureValues) {
@@ -1320,7 +1322,11 @@ export default Service.extend(Evented, {
         /** filter out result features whose blocks are copies. */
         if (! storefb && block.isCopy) {
           feature = undefined;
-          dLog(fnName, 'result feature is a copy', f, block._meta._origin, store && store.name);
+          /* limit trace : only report each block once */
+          if (! this.blockCopyLogged.includes(block)) {
+            this.blockCopyLogged.addObject(block);
+            dLog(fnName, 'result feature is a copy', f, block.brushName, block.id, block._meta._origin, store && store.name);
+          }
         }
         else {
           if (store !== storefb) {

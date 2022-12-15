@@ -480,7 +480,7 @@ export default Component.extend({
   // ---------------------------------------------------------------------------
 
   axes() {
-    return this.stacks.mapBy('axes').flat();
+    return this.stacks.mapBy('liveAxes').flat();
   },
   axisIDs() {
     return this.stacks.mapBy('axes').flat().mapBy('axisName');

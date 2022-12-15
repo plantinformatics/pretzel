@@ -928,19 +928,22 @@ Block.prototype.titleText = function ()
 Block.titleTextMax = function (axisName)
 { 
   // later can use .get('blockService').get('viewed')
-  let
-    lengthMax = d3.keys(stacks.blocks).reduce(function (result, a) {
-      let block = stacks.blocks[a],
-      isViewed = block && block.block.get('isViewed'),
-      /** during axisDelete() -> removeAxisMaybeStack(), updateAxisTitleSize()
-       * is called, and the block being un-viewed is ignored here via ! block.axis */
-      title = isViewed && block.axis && block.titleText(),
-      length = title && title.length;
-      // dLog('titleTextMax', result, a, block, isViewed, title, length);
-      if (length > result)
-        result = length;
-      return result;
-    }, 0);
+  const
+  stacksView = stacks.oa.axisApi.stacksView,
+  axes = stacksView.axes(),
+  blockViews = axes.mapBy('blocks').flat(),
+  lengthMax = blockViews.reduce(function (result, blockView) {
+    const
+    isViewed = blockView && blockView.block.get('isViewed'),
+    /** during axisDelete() -> removeAxisMaybeStack(), updateAxisTitleSize()
+     * is called, and the block being un-viewed is ignored here via ! block.axis */
+    title = isViewed && blockView.axis && blockView.titleText(),
+    length = title && title.length;
+    // dLog('titleTextMax', result, blockView, isViewed, title, length);
+    if (length > result)
+      result = length;
+    return result;
+  }, 0);
   return lengthMax;
 };
 

@@ -1025,8 +1025,8 @@ looking at the currently displayed paths in a block_adj :
     if (trace_blockAdj > 1)
       blockAdjId.forEach(function (blockId) {
         let axis = Stacked.getAxis(blockId);
-        let y = stacks.oa.y[axis.axisName];
-        dLog('updatePathsPosition axis', axis.axisName, y.domain(), axis, y.domain());
+        let y = axis.y;
+        dLog('updatePathsPosition axis', axis.axisName, y.domain(), y.range(), axis);
       });
     let baS = selectBlockAdj(dpS, blockAdjId);
     // let groupAddedClass = featurePaths[0]._id.name;
