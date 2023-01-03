@@ -703,7 +703,12 @@ function AxisBrushZoom(oa) {
       });
     });
 
-    if (anyBrushIntersectionChanged) {
+    const x = !oa.eventBus.selectedService.selectedFeatures.length;
+    /* The aim of anyBrushIntersectionChanged was to skip
+     * sendUpdatedSelectedFeatures(); perhaps remove the above
+     * selectedFeatures_clear() to enable this.
+     if (anyBrushIntersectionChanged)
+    */ {
       oa.axisApi.sendUpdatedSelectedFeatures();
     }
     function featureNotSelected2(d)
