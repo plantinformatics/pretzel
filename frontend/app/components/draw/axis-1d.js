@@ -148,6 +148,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   flipRegionCounter : 0,
 
   flipped : undefined,
+  perpendicular : false,
 
   init() {
     this._super(...arguments);
@@ -193,6 +194,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   referenceBlock : alias('axis'),
   axisName : alias('axis.id'),
   axisID : alias('axis.id'),
+  /** mapName was defined in Stacked(), used in some trace. */
+  mapName : alias('axis.mapName'),
 
   portion : computed('stack.portions', function () {
     const fnName = 'portion' + ' (axesP)';
@@ -212,7 +215,13 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     }
     return portion;
   }),
-  position : undefined,
+  /** .position is accumulated from .portion.
+   * .position is [start, end], relative to the same space as portion.
+   * i.e. .portion = (end - start) / (sum of .portion for all Axes in the same Stack).
+   * Initially, each axis is in a Stack by itself, .portion === 1, so
+   * .position is the whole axis [0, 1].
+   */
+  position : [0, 1],
 
   //------------------------------------------------------------------------------
 
