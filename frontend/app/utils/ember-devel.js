@@ -45,6 +45,36 @@ function getAttrOrCP(object, attrName) {
  */
 const _internalModel_data = '_internalModel._recordData.__data';
 
+//------------------------------------------------------------------------------
+
+/** ms per second */
+const SecondMs = 1000;
+
+/** Poll until condition() is true, then do action().
+ * Initial poll wait time is pollTime, increasing by backOffFactor for each poll.
+ * @param label text to identify use in trace
+ * @param taskGetter  function returning task which performs this function
+ * @param condition function
+ * @param action  function to execute when condition() is true
+ * @param pollTime  ms to wait for each poll
+ * @param backOffFactor increase pollTime after each poll, up to max 60sec
+ * @desc
+ * Usage e.g. :   pollTask : task(pollTaskFn).keepLatest(), ...  this.pollTask.perform();
+ *
+ * Muliple uses are not yet supported or required;  could wrap in a closure or class.
+ */
+const  pollTaskFn = function * (label, taskGetter, condition, action, pollTime, backOffFactor) {
+  const fnName = 'pollTaskFn';
+  if (condition()) {
+    dLog(fnName, 'action', label, pollTime);
+    action();
+  } else {
+    dLog(fnName, label, 'wait', pollTime);
+    pollTime = Math.min(60 * SecondMs, pollTime * backOffFactor);
+    const pollTask = taskGetter();
+    run_later(() => pollTask.isRunning || pollTask.perform(label, taskGetter, condition, action, pollTime, backOffFactor), pollTime);
+  }
+};
 
 /*----------------------------------------------------------------------------*/
 
@@ -157,7 +187,9 @@ function blockInfo(block) { return block && [block.id, block.store.name, block.g
 
 
 export {
-  parentOfType, elt0, getAttrOrCP, _internalModel_data, nowOrLater,  promiseText, toPromiseProxy,
+  parentOfType, elt0, getAttrOrCP, _internalModel_data,
+  pollTaskFn,
+  nowOrLater,  promiseText, toPromiseProxy,
   toArrayPromiseProxy,
   compareDependencies,
   findParent,

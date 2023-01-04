@@ -5,6 +5,8 @@ import Component from '@ember/component';
 import { inject as service } from '@ember/service';
 import { A as Ember_A } from '@ember/array';
 
+import { task } from 'ember-concurrency';
+
 import { isEqual } from 'lodash/lang';
 
 //------------------------------------------------------------------------------
@@ -26,6 +28,7 @@ import AxisDraw from '../../utils/draw/axis-draw';
 import ParentRefn from '../../utils/parent-refn';
 import { breakPoint } from '../../utils/breakPoint';
 import { checkIsNumber } from '../../utils/domCalcs';
+import { pollTaskFn } from '../../utils/ember-devel';
 
 /* global d3 */
 
@@ -209,12 +212,19 @@ export default Component.extend({
             this.draw();
           } else {
             dLog(fnName, 'not yScalesAreDefined', 'blocksLimitsTask', blocksLimitsTask);
-            later(() => this.draw(), 10000);
+            this.pollTask.perform(
+              'stacks-view draw when yScalesAreDefined',
+              () => this.pollTask,
+              () => this.yScalesAreDefined,
+              () => this.draw(),
+              1000, 1.5);
           } 
         });
       }
       return stacks;
   }),
+
+  pollTask : task(pollTaskFn).keepLatest(),
 
   /** @return true if y scales of all axes are defined.
    */

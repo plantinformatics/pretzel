@@ -397,7 +397,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
    * ensure it has a y scale,
    *   make a copy of the y scale - use 1 for the brush
    */
-  y : computed('axis.featureLimits', 'flipped', function() { return this.setupYScale(); }),
+  y : computed('domain.{0,1}', 'flipped', function() { return this.setupYScale(); }),
   setupYScale() {
     const
     fnName = 'setupYScale',
@@ -415,6 +415,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     let y;
     if (domain)
     {
+      /** equivalent this.domain can be used instead.  */
       const ys = d3.scaleLinear()
         .domain(maybeFlip(domain, a.flipped))
         .range([0, myRange]); // set scales for each axis
@@ -1072,6 +1073,9 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     axisBrushZoom.axisStackChanged(t);
   },
   updateAxis() {
+    if (this.isDestroying) {
+      return;
+    }
     // subset of notifyChanges()
     let axisID = this.get('axis.id');
     dLog('updateAxis', axisID);
@@ -1120,7 +1124,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
    * Also noted in extendedEffect(); see also setupYScale().
    */
   get yScaleIsDefined() {
-    return this.axis.featureLimits && this.y;
+    // .featureLimits is undefined for reference.
+    return this.axis.limits && this.y;
   },
   drawTicksEffect : computed('controlsView.axisTicks', function () {
     later(() => this.yScaleIsDefined && this.drawTicks());

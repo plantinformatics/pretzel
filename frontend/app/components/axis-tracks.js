@@ -993,7 +993,12 @@ export default InAxis.extend({
         .remove();
       return;
     }
-    let gAxis = aS.select("g.axis-use"),
+    let gAxis = aS.select("g.axis-use");
+    /** possibly gAxis not drawn yet.  */
+    if (! gAxis.node()) {
+      return;
+    }
+    let
     /** relative to the transform of parent g.axis-outer */
     bbox = gAxis.node().getBBox(),
     yrange = [bbox.y, bbox.height];

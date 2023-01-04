@@ -2358,6 +2358,10 @@ getBrushExtents(),
             });
           oa.svgContainer.selectAll('g.axis-all > g.brush > g[clip-path]')
             .each(function(d) {
+              /** d is axis-1d */
+              if (d.isDestroying) {
+                return;
+              }
               /* if (traceCount-->0) console.log(this, 'brush extent', oa.y[d].brush.extent()()); */
               const
               a = d,

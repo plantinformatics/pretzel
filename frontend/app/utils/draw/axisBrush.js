@@ -1091,7 +1091,7 @@ function AxisBrushZoom(oa) {
   function axisScaleChanged(axis1d, t, updatePaths)
   {
     let y = axis1d.y, svgContainer = oa.svgContainer;
-    if (y) {
+    if (! axis1d.isDestroying && y) {
       let yAxis = axis1d.axisSide(y).ticks(me.axisTicks * axis1d.portion);
       let idName = axisEltId(axis1d),
       axisS = svgContainer.select("#"+idName);

@@ -23,6 +23,8 @@ import { dLog } from '../utils/common/log';
 
 /*----------------------------------------------------------------------------*/
 
+/** ms per second */
+const SecondMs = 1000;
 const axisTransitionTime = 750;
 /** 0 or 1 to disable or enable transitions */
 const transitionEnable = 1;
@@ -392,25 +394,40 @@ export default Component.extend(Evented, AxisEvents, {
     this._super(...arguments);
     dLog('axis-2d didInsertElement', this.get('axisID'));
 
-    this.getUse();
+    this.getUseTask.perform(1 * SecondMs);
 
     later(() => this.dragResizeListen(), 1000);
   },
-  getUse(backoffTime) {
+  getUseTask: task(function * (backoffTime) {
+    dLog('getUseTask', backoffTime);
+    if (! this.get('axisUse')) {
+      const ok = this.getUse();
+      if (! ok) {
+        backoffTime = Math.min(60 * SecondMs, backoffTime * 2);
+        later(() => this.getUseTask.isRunning || this.getUseTask.perform(backoffTime), backoffTime);
+      }
+    }
+  }).keepLatest(),
+
+  /** initialise .axisUse, .use, .subComponents
+   * @return false if <g> .axis-outer is not rendered yet
+   */
+  getUse() {
     let oa = this.get('data'),
     /** This is g.axis-outer, which contains g.axis-use.  */
     axisUse = oa.svgContainer.selectAll("g.axis-outer#id"+this.get('axisID')),
     /** <use> is present iff dualAxis */
     use = axisUse.selectAll("use");
-    if (axisUse.empty()) {
-      dLog('getUse', backoffTime);
-      later(() => this.getUse(backoffTime ? backoffTime * 2 : 1000));
+    const ok = ! axisUse.empty();
+    if (! ok) {
+      dLog('getUse', ok);
     } else {
       this.set('axisUse', axisUse);
       this.set('use', use);
       dLog("axis-2d didInsertElement getUse", this, this.get('axisID'), axisUse.node(), use.node());
       this.set('subComponents', []);
     }
+    return ok;
   },
 
   /** receive notification of draw-map resize. */
@@ -645,7 +662,7 @@ export default Component.extend(Evented, AxisEvents, {
  * Making this a task with .drop() enables avoiding conflicting transitions.
  * (as in draw/block-adj.js : pathPosition() )
  */
-  positionRightEdge: task(function * (pathSelection, thenFn) {
+  positionRightEdge: task(function * () {
     let axisUse, width;
     if (! this.get('dualAxis') && (axisUse = this.get('axisUse'))) {
       if (! this.get('axis1d.extended')) {

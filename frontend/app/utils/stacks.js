@@ -1298,6 +1298,9 @@ Stack.prototype.keyFunction = function (stack, i, group)
  */
 Stack.prototype.sideClasses = function ()
 {
+  if (this.isDestroying || ! this.axes.length) {
+    return '';
+  }
   const stacks = this.axes[0].stacksView.stacks;
   let i = this.stackIndex(), n = stacks.length;
   let axisTicksOutside = oa.drawOptions?.controls?.view?.axisTicksOutside;
