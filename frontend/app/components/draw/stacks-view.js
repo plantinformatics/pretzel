@@ -189,6 +189,7 @@ export default Component.extend({
     function() {
       const fnName = 'axesViewedEffect' + ' (axesP)';
       this.updateStacksAxes();
+      this.updateStacksAxesDraw();
       console.log(fnName, 'stacks', this.stacks .mapBy('axis1d.axis.scope'), this.newStacks .mapBy('axis1d.axis.scope'));
       let stacks = this.stacks;
       if (this.newStacks?.length) {
@@ -263,13 +264,30 @@ export default Component.extend({
     /* .stackViews were created / destroyed via hbs, .stacks are not yet destroyed. */
     arrayRemoveDestroyingObjects(this.stacks);
 
-    if (emptyStacks.length || this.newStacks.length) {
+  },
+  updateStacksAxesDraw() {
+    const fnName = 'updateStacksAxesDraw';
+    /** stack.dropIn() has already done removeStack() (so it is not seen in
+     * emptyStacks.length), and .axisChangesSignal() which increments
+     * .axisChanges, so this condition also gauges change of .axisChanges.
+     */
+    console.log(fnName, 'stacksAdjust', this.stacksAdjust);
+    const changes = this.axisChanges !== this.axisChangesPrev;
+    if (changes) {
+      this.axisChangesPrev = this.axisChanges;
+    }
+    if (this.stacks.length || changes || /*emptyStacks.length ||*/ this.newStacks.length) {
+      this.stacksAdjustY();
       this.stacksAdjust();
     }
   },
   stacksAdjust() {
       const axisApi = this.oa.axisApi;
       axisApi.stacksAdjust(true, /*t*/ undefined);
+  },
+  stacksAdjustY() {
+      const axisApi = this.oa.axisApi;
+      axisApi.stacksAdjustY(/*t*/ undefined);
   },
   newStacks : computed('newAxis1ds', function () {
     const fnName = 'newStacks';

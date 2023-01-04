@@ -2106,11 +2106,14 @@ getBrushExtents(),
     function stacksAdjustY(t)
     {
       const stacksView = oa.axisApi.stacksView;
-      stacksView.stacks.forEach(function (s) { s.calculatePositions(); });
+      /** evaluate s.positions instead of .calculatePositions(), so that .portions is calculated first. */
+      stacksView.stacks.forEach(function (s) { return s.positions; });
       stacksView.axes().forEach(function(axis1d) {
         axisBrushZoom.axisScaleChanged(axis1d, t, false);
       });
     }
+    if (! oa.axisApi.stacksAdjustY)
+      oa.axisApi.stacksAdjustY = stacksAdjustY;
     /** recalculate stacks X position and show via transition
      * @param changedNum  true means the number of stacks has changed.
      * @param t undefined or transition to use for axisTransformO change
@@ -2118,6 +2121,7 @@ getBrushExtents(),
      */
     function stacksAdjust(changedNum, t)
     {
+      const fnName = 'stacksAdjust';
       axisTitle.updateAxisTitleSize(undefined);
       /* updateAxisTitleSize() uses vc.axisXRange but not o, so call it before collateO(). */
       if (changedNum)
@@ -2131,8 +2135,8 @@ getBrushExtents(),
         if (trace_stack > 2)
         {
           let a=t.selectAll(".axis-outer");
-          a.nodes().map(function(c) { console.log(c);});
-          console.log('stacksAdjust', changedNum, a.nodes().length);
+          a.nodes().map(function(c) { console.log(c, fnName);});
+          console.log(fnName, changedNum, a.nodes().length);
         }
         const stacksView = oa.axisApi.stacksView;
         stacksView.updateStacksAxes();
@@ -2148,12 +2152,12 @@ getBrushExtents(),
         countPathsWithData(oa.svgRoot);
       }
       else {
-        console.log('stacksAdjust skipped pathUpdate', changedNum, oa.foreground, ysLength());
+        console.log(fnName, 'skipped pathUpdate', changedNum, oa.foreground, ysLength());
       }
 
       if (stacks.changed & 0x10)
       {
-        console.log("stacksAdjust", "stacks.changed 0x", stacks.changed.toString(16));
+        console.log(fnName, "stacks.changed 0x", stacks.changed.toString(16));
         stacks.changed ^= 0x10;
         if (oa.svgContainer === undefined)
           later(function () {

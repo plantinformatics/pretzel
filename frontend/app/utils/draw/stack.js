@@ -91,6 +91,19 @@ export default class DrawStackObject extends EmberObject {
     console.log(fnName, axis1d, targetAxis1d, top, this.axes.length);
     logAxis1d(fnName, axis1d);
     logAxis1d(fnName + ' target', targetAxis1d);
+
+    // setup of currentDrop is copied from stacks.js : drop{In,Out}().
+    /** Store both the cursor x and the stack x; the latter is used, and seems
+     * to give the right feel. */
+    const
+    oa = this.stacksView.oa,
+    o = oa.o,
+    anAxisName = targetAxis1d.axisName,
+    axisName = axis1d.axisName,
+    /** dropX.stack is current / original X position of target stack / targetAxis1d */
+    dropX = {event: d3.event.x, stack: oa.o[anAxisName]};
+    Stack.currentDrop = {out : false, stack: this, 'axisName': axisName, dropTime : Date.now(), x : dropX};
+
     const
     /** if ! top then insert after targetAxis1d */
     insertIndex = this.findIndex(targetAxis1d) + (top ? 0 : 1);
@@ -112,6 +125,11 @@ export default class DrawStackObject extends EmberObject {
     const fnName = 'stack:dropOut';
     console.log(fnName, axis1d, this.axes.length);
     logAxis1d(fnName, axis1d);
+
+    const
+    axisName = axis1d.axisName;
+    Stack.currentDrop = {out : true, stack: this, 'axisName': axisName, dropTime : Date.now()};
+
     this.axes.removeObject(axis1d);
     logAxis1d(fnName, axis1d);
     Ember_set(axis1d, 'stack', axis1d.createStackForAxis());

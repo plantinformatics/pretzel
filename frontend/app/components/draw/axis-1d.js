@@ -197,7 +197,10 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   /** mapName was defined in Stacked(), used in some trace. */
   mapName : alias('axis.mapName'),
 
-  portion : computed('stack.portions', function () {
+  /** Look up the portion of the stack which this axis occupies, based on stack.portions.
+   */
+  portion : computed('stack.portions', 'stack.axes.length', function () {
+    /** dependency on stack.portions is not effective; stack.axes.length works */
     const fnName = 'portion' + ' (axesP)';
     let portion;
     if (! this.stack || (this.stack.axes.length < 2) || ! this.stack?.axisIndex) {
