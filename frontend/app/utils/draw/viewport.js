@@ -156,12 +156,13 @@ Viewport.prototype.calc = function(oa)
 
   this.yRange = 
     yRange = graphDim.h - 40;
+  const stacks = oa.axisApi.stacksView?.stacks;
   /* Same calculation in @see Viewport.prototype.xDropOutDistance_update().
    * Based on stacks.length;  (formerly used axisIDs.length until the stacks were formed).
    * See also DropTarget.size.w.
    */
   this.xDropOutDistance =
-    xDropOutDistance = viewPort.w/((oa.stacks.length || 1)*6);
+    xDropOutDistance = viewPort.w/((stacks?.length || 1)*6);
 
   this.dragLimit =
     dragLimit = {min:-50, max:graphDim.w+70};
@@ -231,8 +232,9 @@ Viewport.prototype.viewBox = function()
  */
 Viewport.prototype.xDropOutDistance_update = function (oa) {
   let viewPort = this.viewPort;
+  const stacks = oa.axisApi.stacksView?.stacks;
   /** If no stacks then result is not used; avoid divide-by-zero. */
-  let nStacks = oa.stacks.length || 1;
+  let nStacks = stacks?.length || 1;
   let previous = this.xDropOutDistance;
   this.xDropOutDistance =
     viewPort.w/(nStacks*6);
