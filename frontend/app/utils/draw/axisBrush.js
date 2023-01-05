@@ -262,6 +262,9 @@ function AxisBrushZoom(oa) {
   function brushClipSize(gBrushParent) {
     gBrushParent
       .each(function(axis1d) {
+        if (axis1d.isDestroying) {
+          return;
+        }
         brushClip(d3.select(this), axis1d)
           .each(function(d) { d3.select(this).call(axis1d.y.brush); });
       });

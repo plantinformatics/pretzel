@@ -104,6 +104,8 @@ function blockColourObj(block) {
 
 function blockKeyFn(block) { return block.axisName; }
 
+/** replaces Stacked.prototype.keyFunction (draw_orig) */
+function axisKeyFn(axis1d) { return axis1d.axis.id; }
 
 /*------------------------------------------------------------------------*/
 
@@ -200,6 +202,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   /** Look up the portion of the stack which this axis occupies, based on stack.portions.
    */
   portion : computed('stack.portions', 'stack.axes.length', function () {
+    console.log('portion', this);
+    console.log('portion', this.stack?.axes, this.stack?.portions);
     /** dependency on stack.portions is not effective; stack.axes.length works */
     const fnName = 'portion' + ' (axesP)';
     let portion;
@@ -282,7 +286,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   verify		: Stacked_p.verify,
   children		: Stacked_p.children,
   dataBlocks		: Stacked_p.dataBlocks,
-  keyFunction		: (axis1d) => axis1d.axis.id,
+  // not used. keyFunction		: axisKeyFn,
   axisSide		: Stacked_p.axisSide,
   // axisTransform		: Stacked_p.axisTransform,
   selectAll		: Stacked_p.selectAll,
@@ -413,7 +417,11 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     const
     /** similar domain calcs in resetZoom().  */
     domain = a_parent ? a_parent.getDomain() : a.getDomain(),
-    myRange = a.yRange();
+    /** Currently a transform y scale is used to apply .portion (will likely drop that because it complicates the text size).
+     * a.yRange() also incorporates .portion, so compensate by /.portion
+     * Equivalent : in Stacked.prototype.axisTransformO_orig(), stacks.vc.yRange is used directly, without *.portion
+     */
+    myRange = a.yRange() / a.portion;
     dLog(fnName, domain, myRange, this.axisName);
     let y;
     if (domain)
@@ -1366,3 +1374,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   
 });
 
+//------------------------------------------------------------------------------
+
+export {
+  axisKeyFn
+};

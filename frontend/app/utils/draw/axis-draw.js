@@ -45,6 +45,7 @@ import { DropTarget } from './drop-target';
 import { AxisDrag } from '../stacks-drag';
 import { AxisBrushZoom } from './axisBrush';
 
+import { axisKeyFn } from '../../components/draw/axis-1d';
 
 import { breakPoint } from '../breakPoint';
 
@@ -177,7 +178,7 @@ AxisDraw.prototype.draw2 = function draw2(selections, stack_axisIDs, newRender, 
 
 
   axisG = axisS
-    .data(stack_axisIDs, Stacked.prototype.keyFunction)
+    .data(stack_axisIDs, axisKeyFn) // draw_orig : Stacked.prototype.keyFunction
     .enter().append(moveOrAdd /*'g'*/),
   axisX = axisS.exit();
   dLog('stacks.length', stacks.length, axisG.size(), axisX.size());

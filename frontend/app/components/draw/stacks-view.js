@@ -79,11 +79,17 @@ function blocksHandlerConfig(stacksView) {
         blockId = prop,
         ab = stacksView.axesByBlockId[blockId],
         block = ab?.block;
+        if (! block) {
+          console.log(fnName, prop, ab);
+        }
         blockView = block.view;
       } else {
         const
         axis1d = prop,
         block = axis1d.axis; // stacksView.block.peekBlock(blockId),
+        if (! block) {
+          console.log(fnName, prop);
+        }
         blockView = block.view;
       }
       // console.log(fnName, /*blockId,*/ prop, blockView);

@@ -369,8 +369,10 @@ Stacked.prototype.toString = function ()
 {
   let s = this.stack,
   stackLength = (s ? s.length : ''),
+  /** don't evaluate CP when destroying */
+  portion = this.isDestroying ? 'isDestroying' : round_2(this.portion),
   a =
-    [ "{axisName=", this.axisName, ":", this.axisName, ", portion=" + round_2(this.portion),
+    [ "{axisName=", this.axisName, ":", this.axisName, ", portion=" + portion,
       positionToString(this.position) + stackLength, "}" ];
   return a.join("");
 };

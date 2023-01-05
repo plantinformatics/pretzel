@@ -28,12 +28,14 @@ function stacksAxesDomVerify(stacks, svgContainer, unviewedIsOK)
   (svgContainer || d3.select("#holder svg > g"))
    .selectAll(".axis-outer")
     .each(function(d, i, g) {
-      let block = stacks.blocks[d],
-      axis,
-      isViewed;
+      const
+      axis = d,
+      block = d.axis; // draw_orig : blockS = stacks.blocks[d],
+      let isViewed;
       if (! block
-          || ! (axis = Stacked.getAxis(d))
-          || ! ((isViewed = block.block.get('isViewed')) || unviewedIsOK)
+          || ! axis
+          || (block.view.block !== block)
+          || ! ((isViewed = block.get('isViewed')) || unviewedIsOK)
          )
         dLog/*breakPoint*/(fnName, d, i, this, block, axis, isViewed);
       if (axis) {

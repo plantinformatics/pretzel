@@ -186,6 +186,9 @@ function yAxisBtnScale(d/*, i, g*/)
 function yAxisTitleTransform(axisTitleLayout)
 {
   return function (d /*, i, g*/) {
+    if (d.isDestroying) {
+      return null;
+    }
     // order : scale then rotate then translate.
     let 
     gAxis = this.parentElement,
