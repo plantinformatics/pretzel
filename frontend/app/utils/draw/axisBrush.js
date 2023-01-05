@@ -545,6 +545,10 @@ function AxisBrushZoom(oa) {
      * FeatureTicks; possibly a sub-component of axis-1d.
      */
 
+    if (axis1d.isDestroying) {
+      return;
+    }
+
     let valueInInterval = me.get('controls').get('view.valueInInterval');
 
     let selectedAxes = oa.selectedAxes;
@@ -570,6 +574,9 @@ function AxisBrushZoom(oa) {
      * @param i index of the brush of p in brushExtents[]
      */
     selectedAxes.forEach(function(axis1d, i) {
+      if (axis1d.isDestroying) {
+        return;
+      }
       const brushExtent = axis1d.brushedRegion;
       if (! brushExtent) {
         return;
