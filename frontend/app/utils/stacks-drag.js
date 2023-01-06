@@ -1,4 +1,10 @@
 import {
+  later,
+} from '@ember/runloop';
+
+//------------------------------------------------------------------------------
+
+import {
   logSelection,
 } from './log-selection';
 
@@ -418,6 +424,11 @@ function AxisDrag(oa, vc) {
     svgContainer.classed("axisDrag", false);
     d3.event.subject.fx = null;
     Stack.currentDrag = undefined;
+    /* collateO() is deferred while .currentDrag, so do it now. */
+    axisApi.collateO?.();
+    later(() => {
+      let t = axisApi.stacksAdjust(true, undefined);
+    });
     /** This could be updated during a drag, whenever dropIn/Out(), but it is
      * not critical.  */
     vc.xDropOutDistance_update(oa);

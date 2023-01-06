@@ -14,8 +14,9 @@ import { isEqual } from 'lodash/lang';
 import {
   /* Block,
   Stacked,
+  */
   Stack,
-  */ stacks,
+  stacks,
   xScaleExtend,
  /*
   axisRedrawText,
@@ -533,6 +534,12 @@ export default Component.extend({
 
   /** For all Axes, store the x value of its axis, according to the current scale. */
   collateO() {
+    /** If the user is still dragging, then defer this until mouse button is released.
+     *  dragended() will do stacksAdjust() -> collateO().
+     */
+    if (Stack.currentDrag) {
+      return;
+    }
     const
     fnName = 'collateO',
     oa = this.oa,
