@@ -242,7 +242,7 @@ export default Component.extend(Evented, /*AxisEvents,*/ {
   {
     const
     selectedAxes = this.get('selected.selectedAxes'),
-    selectedFeatures = this.selected.selectedFeatures;
+    selectedFeatures = this.selected.blocksFeatures;
     selectedAxes.removeObject(axisName);
     axisFeatureCircles_removeBlock(selectedFeatures, mapChrName);
     let p = mapChrName; // based on brushHelper()
@@ -252,7 +252,7 @@ export default Component.extend(Evented, /*AxisEvents,*/ {
   selectedFeatures_removeBlock(blockS)
   {
     let
-    selectedFeatures = this.selected.selectedFeatures,
+    selectedFeatures = this.selected.blocksFeatures,
     mapChrName = blockS?.block?.brushName;
     axisFeatureCircles_removeBlock(selectedFeatures, mapChrName);
     /** axisFeatureCircles_removeBlock() uses selectedFeatures[mapChrName], so

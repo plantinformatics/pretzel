@@ -261,6 +261,9 @@ export default Service.extend(Evented, {
 
 //------------------------------------------------------------------------------
 
+/** Map selectedService.blocksFeatures to .selectedFeatures format (single array).
+ * @param selectedFeatures  selectedService.blocksFeatures (not .selectedFeatures)
+ */
 function selectedBlocksFeaturesToArray(selectedFeatures) {
   const
   featuresAsArray = Object.keys(selectedFeatures)

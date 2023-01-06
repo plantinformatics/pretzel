@@ -484,6 +484,11 @@ export default Controller.extend(Evented, {
 
   /*--------------------------------------------------------------------------*/
 
+  /** Filter out of .selectedFeatures[] features of un-viewed blocks.
+   * Also : axis-menu-actions.js : blockVisible() and axisDelete() update .blocksFeatures and :
+   * sendUpdatedSelectedFeatures() -> updatedSelectedFeatures() -> selectedBlocksFeaturesToArray()
+   * which will remove the block's features from .selectedFeatures
+   */
   removeUnviewedBlockFeaturesFromSelected() {
     const fnName = 'removeUnviewedBlockFeaturesFromSelected';
     // 'blockService.viewed'

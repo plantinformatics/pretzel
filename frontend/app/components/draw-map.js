@@ -2180,85 +2180,11 @@ getBrushExtents(),
 
 //- after 60cc0419 : removed apTitleSel, glyphIcon(), iconButton()
 
-    /** The given block has become unviewed, e.g. via manage-explorer.
-     * Update the stacks and the display.
-     * @param blockId may be a reference or child block; if the former then delete its axis.
-     */
-    function blockIsUnviewed(blockId) {
-      let axisName = blockId;
-      let axis, sBlock;
-
-      /* prior to unview of the parent block of a non-empty axis, the child data blocks are unviewed.
-       * This is a verification check.
-       */
-      axis = oa.axes[axisName];
-      console.log("blockIsUnviewed", axisName, axis);
-      if (axis && axis.blocks.length > 1)
-      {
-        console.log(
-          'blockIsUnviewed', blockId,
-          'is the parent block of an axis which has child data blocks', axis.blocks, axis);
-        axis.log();
-        // augment blockId with name and map axis.blocks to names.
-        let cn = oa.cmName[blockId], blockName = cn && (cn.mapName + ':' + cn.chrName);
-        let blockNames = axis.blocks.map(function (block) { return block.longName(); } );
-        alert(blockId + '/' + blockName + ' is the parent block of an axis which has child data blocks ' + blockNames);
-      }
-
-      axis = Stacked.getAxis(blockId);
-      if (axis) {
-        sBlock = axis.removeBlockByName(blockId);
-        console.log(axis, sBlock);
-        axis.log();
-        // delete oa.stacks.blocks[blockId];
-        /* if the axis has other blocks then don't remove the axis.
-         * -  To handle this completely, the adoption would have to be reversed -
-         * i.e. split the children into single-block axes.
-         */
-        if (axis.blocks.length)
-          axis = undefined;
-      }
-
-      // verify : oa.axes[axisName]
-      if (axis)
-      {
-        // removeBlockByName() is already done above
-
-        // this can be factored with : deleteButtonS.on('click', ... )
-        let stack = axis && axis.stack;
-        // axes[axisName] is deleted by removeStacked1() 
-        let stackID = Stack.removeStacked(axisName);
-        console.log('removing axis', axisName, sBlock, stack, stackID);
-        stack.log();
-        deleteAxisfromAxisIDs(axisName);
-        removeAxisMaybeStack(axisName, stackID, stack);
-        // already done in removeStacked1() : delete oa.axesP[axisName];
-
-      // already done, removeMap() triggers blockIsUnviewed()  : me.send('mapsToViewDelete', axisName);
-
-      // filter axisName out of selectedFeatures and selectedAxes
-      let mapChrName = axis.blocks[0]?.block?.brushName;
-      oa.axisApi.selectedFeatures_removeAxis(axisName, mapChrName);
-      sendUpdatedSelectedFeatures();
-      }
-      else
-      {
-        axisTitle.updateAxisTitles();
-        axisTitle.updateAxisTitleSize(undefined);
-        /* The if-then case above calls removeAxisMaybeStack(), which calls stacksAdjust();
-         * so here in the else case, use a selection of updates from stacksAdjust() to
-         * ensure that pathData is updated.
-         */
-        collateStacks();
-        if (oa.foreground && ysLength())
-        {
-          pathDataUtils.pathUpdate(/*t*/ undefined);
-          countPathsWithData(oa.svgRoot);
-        }
-        pathDataUtils.pathUpdate(undefined);
-      }
-
-    }
+//- removed blockIsUnviewed(), replaced by stacksAdjust() and axis-1d : axisTitleFamily() ...
+/* ... and axis-menu-actions.js : axisDelete() and blockVisible() do
+ * selectedFeatures_remove{Axis,Block}; sendUpdatedSelectedFeatures() to update
+ * selectedService .blocksFeatures and .selectedFeatures
+ */
 
     //- e3c3d5a3 moved extract of configureAxisTitleMenu() to axisTitle.js and removed configureAxisSubTitleMenu()
 

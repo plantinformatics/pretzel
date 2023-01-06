@@ -389,6 +389,7 @@ function axisFeatureCircles_selectUnviewed() {
   return circleS;
 }
 /** Remove features of chrName from selectedFeatures and from the axisFeatureCircles.
+ * @param selectedFeatures  selectedService.blocksFeatures (not .selectedFeatures)
  * @param chrName i.e. mapChrName, blockR.brushName
  */
 function axisFeatureCircles_removeBlock(selectedFeatures, mapChrName) {
