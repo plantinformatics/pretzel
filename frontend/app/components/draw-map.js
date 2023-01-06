@@ -2178,23 +2178,7 @@ getBrushExtents(),
 
 //- moved to path-classes : clearScaffoldColours()
 
-//- axis-menu
-    let apTitleSel = "g.axis-outer > text";
-      function glyphIcon(glyphiconName) {
-        return ''
-          + '<span class="glyphicon ' + glyphiconName + '" aria-hidden=true></span>';
-      }
-    /** 
-     * @param useGlyphIcon  selects glyphicon or html icon. optional param : undefined implies false
-     */
-    function iconButton(className, id, htmlIcon, glyphiconName, href, useGlyphIcon)
-    {
-        return ''
-        + '<button class="' + className + '" id="' + id + '" href="' + href + '">'
-        + (useGlyphIcon ? glyphIcon(glyphiconName) : htmlIcon)
-        + '</button>';
-    }
-
+//- after 60cc0419 : removed apTitleSel, glyphIcon(), iconButton()
 
     /** The given block has become unviewed, e.g. via manage-explorer.
      * Update the stacks and the display.
@@ -2276,7 +2260,7 @@ getBrushExtents(),
 
     }
 
-    //- moved extract of configureAxisTitleMenu() to axisTitle.js and removed configureAxisSubTitleMenu() 
+    //- e3c3d5a3 moved extract of configureAxisTitleMenu() to axisTitle.js and removed configureAxisSubTitleMenu()
 
 
 
