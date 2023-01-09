@@ -4,6 +4,10 @@ import { alias } from '@ember/object/computed';
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
 import { A as Ember_A } from '@ember/array';
+import {
+  throttle
+} from '@ember/runloop';
+
 
 import { task } from 'ember-concurrency';
 
@@ -22,9 +26,27 @@ import {
   axisRedrawText,
   axisId2Name*/
 } from '../../utils/stacks';
+import {
+  dragTransitionTime,
+} from '../../utils/stacks-drag';
+import {
+  collateStacks,
+  countPathsWithData,
+} from "../../utils/draw/collate-paths";
+import { PathDataUtils } from '../../utils/draw/path-data';
+import { showTickLocations } from '../../utils/draw/feature-info';
+import { PathClasses } from '../../utils/draw/path-classes';
 
 import DrawStackObject from '../../utils/draw/stack';
 import AxisDraw from '../../utils/draw/axis-draw';
+import {
+  AxisTitle,
+} from '../../utils/draw/axisTitle';
+import {
+  AxisBrushZoom,
+} from '../../utils/draw/axisBrush';
+import { showSynteny } from '../../utils/draw/synteny-blocks-draw';
+
 
 import ParentRefn from '../../utils/parent-refn';
 import { breakPoint } from '../../utils/breakPoint';
@@ -159,6 +181,8 @@ export default Component.extend({
     axisApi.stacksView = this;
     axisApi.collateO = () => this.collateO();
     axisApi.updateXScale = () => this.updateXScale();
+    axisApi.stacksAdjustY = () => this.stacksAdjustY();
+    axisApi.stacksAdjust = () => this.stacksAdjust();
   },
 
   //----------------------------------------------------------------------------
@@ -288,14 +312,123 @@ export default Component.extend({
       this.stacksAdjust();
     }
   },
-  stacksAdjust() {
-      const axisApi = this.oa.axisApi;
-      axisApi.stacksAdjust(true, /*t*/ undefined);
+  //----------------------------------------------------------------------------
+
+  /** recalculate all stacks' Y position.
+   * Recalculate Y scales.
+   * Used after drawing / window (height) resize.
+   * @param t undefined or transition to use for axisTransformO change
+   */
+  stacksAdjustY(t)
+  {
+    const
+    oa = this.oa,
+    axisBrushZoom = AxisBrushZoom(oa);
+    const stacksView = this;
+
+    /** evaluate s.positions instead of .calculatePositions(), so that .portions is calculated first. */
+    stacksView.stacks.forEach(function (s) { return s.positions; });
+    stacksView.axes().forEach(function(axis1d) {
+      axisBrushZoom.axisScaleChanged(axis1d, t, false);
+    });
   },
-  stacksAdjustY() {
-      const axisApi = this.oa.axisApi;
-      axisApi.stacksAdjustY(/*t*/ undefined);
+  /** recalculate stacks X position and show via transition
+   * @param changedNum  true means the number of stacks has changed.
+   * @param t undefined or transition to use for axisTransformO change
+   * @see stacks.log() for description of stacks.changed
+   */
+  stacksAdjust(changedNum, t)
+  {
+    const fnName = 'stacksAdjust';
+    const
+    oa = this.oa,
+    axisTitle = AxisTitle(stacks.oa);
+    axisTitle.updateAxisTitleSize(undefined);
+    /* updateAxisTitleSize() uses vc.axisXRange but not o, so call it before collateO(). */
+    if (changedNum)
+      oa.axisApi.collateO();
+    collateStacks();
+    if (changedNum)
+    {
+      if (t === undefined)
+        t = d3.transition().duration(dragTransitionTime);
+      t.selectAll(".axis-outer").attr("transform", Stack.prototype.axisTransformO);
+      if (trace_stack > 2)
+      {
+        let a=t.selectAll(".axis-outer");
+        a.nodes().map(function(c) { console.log(c, fnName);});
+        console.log(fnName, changedNum, a.nodes().length);
+      }
+      const stacksView = this;
+      stacksView.updateStacksAxes();
+      if (oa.svgContainer)
+        stacksView.stacks.forEach(function (s) { s.redrawAdjacencies(); });
+    }
+    // could limit this to axes for which dataBlocks has changed
+    // axisShowExtendAll();
+    // pathUpdate() uses flow.gf, which is set after oa.foreground.
+    const haveBlockAdjs = this.get('axes1d.axis1dArray.length') > 1;
+    if (oa.foreground && haveBlockAdjs)
+    {
+      const pathDataUtils = PathDataUtils(oa);
+      pathDataUtils.pathUpdate(t);
+      /** We can replace countPathsWithData() (which does a DOM search and is not
+       * updated for progressive paths), with a sum of (pathsResult.length +
+       * pathsAliasesResult.length) for all block-adj in flows.blockAdjs
+       */
+      if (false) {
+        countPathsWithData(oa.svgRoot);
+      }
+    }
+    else {
+      console.log(fnName, 'skipped pathUpdate', changedNum, oa.foreground, this.get('axes1d.axis1dArray.length'));
+    }
+
+    if (stacks.changed & 0x10)
+    {
+      console.log(fnName, "stacks.changed 0x", stacks.changed.toString(16));
+      stacks.changed ^= 0x10;
+      if (oa.svgContainer === undefined)
+        later(function () {
+          this.axisStackChanged(t);
+        });
+      else
+        this.axisStackChanged(t);
+    }
+
+    return t;
   },
+
+  //----------------------------------------------------------------------------
+
+  /** Called when an axis and/or stack has change position.
+   * This can affect Axis positions, and because data is filtered by the
+   * current adjacencies, the displayed data.
+   * Update the drawing to reflect those changes.
+   * @param t undefined or transition to use for d3 element updates.
+   */
+  axisStackChanged_(t)
+  {
+    const
+    oa = this.oa,
+    pathClasses = PathClasses(oa);
+
+    showTickLocations(pathClasses.scaffoldTicks, t);
+    if (oa.syntenyBlocks) {
+      /** time for the axis positions to update */
+      later(() => ! this.isDestroying && showSynteny(oa.syntenyBlocks, t, oa), 500);
+    }
+
+    oa.eventBus.trigger('axisStackChanged', t);
+  },
+  axisStackChanged(t)
+  {
+    throttle(this, this.axisStackChanged_, [t], 500);
+  },
+
+
+  //----------------------------------------------------------------------------
+
   newStacks : computed('newAxis1ds', function () {
     const fnName = 'newStacks';
     /** Add stacks for axis-1d which do not have .stack */

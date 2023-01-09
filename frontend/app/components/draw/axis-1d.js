@@ -1093,7 +1093,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     let t = stacks.oa.svgContainer; //.transition().duration(750);
     let axisBrushZoom = AxisBrushZoom(stacks.oa);
     axisBrushZoom.axisScaleChanged(this, t, true);
-    this.stacksView.stacksAdjust();
+    this.stacksView.stacksAdjust(true);
   },
   drawTicks() {
     /** based on extract from axisScaleChanged() */

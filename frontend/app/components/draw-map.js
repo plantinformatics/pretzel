@@ -96,9 +96,11 @@ import {
 import { updateRange } from '../utils/stacksLayout';
 import {
   DragTransition,
+/*
   dragTransitionTime,
   dragTransitionNew,
   dragTransition
+*/
 } from '../utils/stacks-drag';
 import { subInterval, overlapInterval, wheelNewDomain, ZoomFilter } from '../utils/draw/zoomPanCalcs';
 import { intervalsEqual, intervalIntersect } from '../utils/interval-calcs';
@@ -117,26 +119,15 @@ import {
   configurejQueryTooltip,
   flows_showControls
 } from "../utils/draw/flow-controls";
-import { collateStacks, countPaths, /*countPathsWithData,*/
-         collateData, collateFeatureClasses, maInMaAG, collateStacks1,
-         pathsUnique_log, log_maamm, log_ffaa, mmaa2text,
-         getAliased, collateStacksA, objPut,
-         aliasesText, aliasText,
+import {
+         collateData,
          addPathsToCollation, addPathsByReferenceToCollation,
-         storePath, filterPaths,
-         collateFeatureMap, concatAndUnique, featureStackAxes,
-         collateMagm
        } from "../utils/draw/collate-paths";
 
 import {
   unique_1_1_mapping 
 } from '../utils/paths-config';
 
-/** We can replace countPathsWithData() (which does a DOM search and is not
- * updated for progressive paths), with a sum of (pathsResult.length +
- * pathsAliasesResult.length) for all block-adj in flows.blockAdjs
- */
-function countPathsWithData() { }
 import { storeFeature } from '../utils/feature-lookup';
 
 import AxisDraw from '../utils/draw/axis-draw';
@@ -144,7 +135,6 @@ import { DropTarget } from '../utils/draw/drop-target';
 import { PathClasses } from '../utils/draw/path-classes';
 import { PathDataUtils } from '../utils/draw/path-data';
 import { PathInfo } from '../utils/draw/path-info';
-import { showTickLocations } from '../utils/draw/feature-info';
 
 import { selectedBlocksFeaturesToArray } from '../services/data/selected';
 
@@ -350,6 +340,7 @@ export default Component.extend(Evented, {
     /* not registered in willInsertElement(). registered in draw() : drawControlsLifeC */
     if (this.has('paths')) {
       this.off('paths', addPathsToCollation);
+      this.off('pathsByReference', addPathsByReferenceToCollation);
     }
 
     let blockService = this.get('blockService');
@@ -634,7 +625,6 @@ export default Component.extend(Evented, {
     let axisBrushZoom = AxisBrushZoom(oa);
     if (! oa.axisApi || (instanceChanged = oa.axisApi.drawMap.isDestroying)) {
       const axisApi = {
-                    axisStackChanged,
                     cmNameAdd,
                     axisIDAdd,
                     stacksAxesDomVerify : function (unviewedIsOK = false) { stacksAxesDomVerify(stacks, oa.svgContainer, unviewedIsOK); } ,
@@ -2006,26 +1996,7 @@ export default Component.extend(Evented, {
        */
       stacksAdjust(changedNum, t);
     }
-    /** Called when an axis and/or stack has change position.
-     * This can affect Axis positions, and because data is filtered by the
-     * current adjacencies, the displayed data.
-     * Update the drawing to reflect those changes.
-     * @param t undefined or transition to use for d3 element updates.
-     */
-    function axisStackChanged_(t)
-    {
-      showTickLocations(pathClasses.scaffoldTicks, t);
-      if (oa.syntenyBlocks) {
-        /** time for the axis positions to update */
-        later(() => ! me.isDestroying && showSynteny(oa.syntenyBlocks, t, oa), 500);
-      }
-
-      me.trigger('axisStackChanged', t);
-    }
-    function axisStackChanged(t)
-    {
-      throttle(this, axisStackChanged_, [t], 500);
-    }
+//- moved to stacks-view.js : axisStackChanged_(), axisStackChanged()
 
 //-components/paths
     //- moved to utils/draw/path-info.js : 
@@ -2099,79 +2070,7 @@ getBrushExtents(),
 
 //- moved  deleteAfterDrag() to stacks-drag (considered axis/)
 
-    /** recalculate all stacks' Y position.
-     * Recalculate Y scales.
-     * Used after drawing / window (height) resize.
-     */
-    function stacksAdjustY(t)
-    {
-      const stacksView = oa.axisApi.stacksView;
-      /** evaluate s.positions instead of .calculatePositions(), so that .portions is calculated first. */
-      stacksView.stacks.forEach(function (s) { return s.positions; });
-      stacksView.axes().forEach(function(axis1d) {
-        axisBrushZoom.axisScaleChanged(axis1d, t, false);
-      });
-    }
-    if (! oa.axisApi.stacksAdjustY)
-      oa.axisApi.stacksAdjustY = stacksAdjustY;
-    /** recalculate stacks X position and show via transition
-     * @param changedNum  true means the number of stacks has changed.
-     * @param t undefined or transition to use for axisTransformO change
-     * @see stacks.log() for description of stacks.changed
-     */
-    function stacksAdjust(changedNum, t)
-    {
-      const fnName = 'stacksAdjust';
-      axisTitle.updateAxisTitleSize(undefined);
-      /* updateAxisTitleSize() uses vc.axisXRange but not o, so call it before collateO(). */
-      if (changedNum)
-        oa.axisApi.collateO();
-      collateStacks();
-      if (changedNum)
-      {
-        if (t === undefined)
-          t = d3.transition().duration(dragTransitionTime);
-        t.selectAll(".axis-outer").attr("transform", Stack.prototype.axisTransformO);
-        if (trace_stack > 2)
-        {
-          let a=t.selectAll(".axis-outer");
-          a.nodes().map(function(c) { console.log(c, fnName);});
-          console.log(fnName, changedNum, a.nodes().length);
-        }
-        const stacksView = oa.axisApi.stacksView;
-        stacksView.updateStacksAxes();
-        if (oa.svgContainer)
-          stacksView.stacks.forEach(function (s) { s.redrawAdjacencies(); });
-      }
-      // could limit this to axes for which dataBlocks has changed
-      // axisShowExtendAll();
-      // pathUpdate() uses flow.gf, which is set after oa.foreground.
-      if (oa.foreground && ysLength())
-      {
-        pathDataUtils.pathUpdate(t);
-        countPathsWithData(oa.svgRoot);
-      }
-      else {
-        console.log(fnName, 'skipped pathUpdate', changedNum, oa.foreground, ysLength());
-      }
-
-      if (stacks.changed & 0x10)
-      {
-        console.log(fnName, "stacks.changed 0x", stacks.changed.toString(16));
-        stacks.changed ^= 0x10;
-        if (oa.svgContainer === undefined)
-          later(function () {
-            axisStackChanged(t);
-          });
-        else
-          axisStackChanged(t);
-      }
-
-      return t;
-    }
-    if (! oa.axisApi.stacksAdjust)
-      oa.axisApi.stacksAdjust = stacksAdjust;
-    
+//- moved to stacks-view.js : stacksAdjustY(), stacksAdjust()
 
 //- moved to axisBrush.js (considered axis-brush-zoom) : draw_flipRegion(), (containing) features2Limits(), flipRegionInLimits(),
 
@@ -2244,7 +2143,7 @@ getBrushExtents(),
 
       // recalculate Y scales before pathUpdate().
         if (heightChanged)
-          stacksAdjustY(t);
+          oa.axisApi.stacksAdjustY(t);
 
       // for stacked axes, window height change affects the transform.
         if (widthChanged || heightChanged)
