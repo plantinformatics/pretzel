@@ -1008,22 +1008,14 @@ function AxisBrushZoom(oa) {
       let [p, i] = p_i;
       const axis1d = p;
         let y = axis1d.y, svgContainer = oa.svgContainer;
-        if (! axis1d.brushedRegion) {
-          dLog(fnName, axisName, 'brushedRegion', axis1d.brushedRegion);
-        }
 
         let yp = y,
         ypDomain = yp.domain(),
         domain,
         brushedDomain;
         ensureYscaleDomain(yp, axis1d);
-        if (axis1d.brushedRegion) {
-        brushedDomain = axis1d.brushedRegion.map(function(ypx) { return yp.invert(ypx /* *axis1d.portion*/); });
-        // brushedDomain = [yp.invert(brushExtents[i][0]), yp.invert(brushExtents[i][1])];
-        console.log("zoom", axisName, yp.domain(), yp.range(), axis1d.brushedRegion, axis1d.portion, brushedDomain);
-          domain = brushedDomain;
-        }
-        else if (d3.event.sourceEvent)  // if there is a mousewheel event
+
+        if (d3.event.sourceEvent)  // if there is a mousewheel event
         {
           /** note the brushedDomain before the scale change, for updating the brush position */
           let brushExtent = axis1d.brushedRegion;
@@ -1031,7 +1023,15 @@ function AxisBrushZoom(oa) {
             brushedDomain = axisRange2Domain(axis1d, brushExtent);
 
           domain = wheelNewDomain(axis1d, oa.axisApi, false);  // uses d3.event, d3.mouse()
+        } else if (axis1d.brushedRegion) {
+          brushedDomain = axis1d.brushedRegion.map(function(ypx) { return yp.invert(ypx /* *axis1d.portion*/); });
+          // brushedDomain = [yp.invert(brushExtents[i][0]), yp.invert(brushExtents[i][1])];
+          dLog(fnName, axisName, yp.domain(), yp.range(), axis1d.brushedRegion, axis1d.portion, brushedDomain);
+          domain = brushedDomain;
+        } else {
+          dLog(fnName, axisName, 'no mouse-wheel zoom or brushedRegion');
         }
+
         if (domain) {
           domainChanged = true;
           /** mousewheel zoom out is limited by javascript
@@ -1071,7 +1071,9 @@ function AxisBrushZoom(oa) {
           else if (brushExtent) {
             let gBrush = d3.event.sourceEvent.target.parentElement;
             let newBrushExtent = brushedDomain.map(function (r) { return yp(r);});
-            console.log(brushExtent, brushedDomain, gBrush, newBrushExtent);
+            if (trace_zoom > 1) {
+              dLog(fnName, brushExtent, brushedDomain, gBrush, newBrushExtent);
+            }
             d3.select(gBrush).call(yp.brush.move, newBrushExtent);
           }
         }
