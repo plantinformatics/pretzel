@@ -813,7 +813,7 @@ function AxisBrushZoom(oa) {
   /** remove the brush extent of brushedAxis1d from brushedRegions[] */
   function removeBrushExtent(brushedAxis1d) {
     console.log('removeBrushExtent', brushedAxis1d.axisName);
-    brushedAxis1d.brushedRegion = null;
+    brushedAxis1d.set('brushedRegion', null);
     oa.selectedAxes.removeObject(brushedAxis1d);
   }
         /** Reset 1 or all zooms.
