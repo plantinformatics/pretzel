@@ -341,7 +341,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     return brushed;
   }),
   /** pixel range of brush selection / thumb, or undefined if no current selection. */
-  brushedRegion : undefined,
+  brushedRegion : null,
   /** expect this is the same as : .axisBrushObj.brushedDomain */
   brushedDomain : computed('brushedRegion', function () {
     let

@@ -446,7 +446,7 @@ function AxisBrushZoom(oa) {
     }
     else {
       selectedAxes.addObject(axis1d);
-      axis1d.brushedRegion = brushRange;
+      axis1d.set('brushedRegion', brushRange);
     }
 
     const
