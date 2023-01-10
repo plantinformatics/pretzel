@@ -94,9 +94,13 @@ export default Component.extend(Evented, AxisEvents, {
   }),
 
   datasetName : computed('block', 'id', function () {
+    if (! this.block.block.get('isViewed')) {
+      dLog('axis-brush:datasetName', this, this.blockId);
+    }
     let
     axis1d = this.get('axis1d'),
-    name = axis1d.get('referenceBlock.datasetId.id');
+    name = this.block.get('block.referenceBlockOrSelf.datasetId.id') || 
+      this.get('referenceDataset.id');
     dLog('datasetName', name, axis1d);
     return name;
   }),

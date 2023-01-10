@@ -677,7 +677,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
      * featurePathStroke(), but i is only used when axisTitleColourBy is .index,
      * and currently it is configured as .slot.
      */
-    colour = axisTitleColour(block.view, /*i*/undefined) || 'black';
+    colour = axisTitleColour(block.get('view'), /*i*/undefined) || 'black';
     return colour;
     },
 
