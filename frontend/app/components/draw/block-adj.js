@@ -115,6 +115,7 @@ export default Component.extend(Evented, AxisEvents, {
   needs: ['component:draw/path-data'],
 
   controlsView : alias('controls.view'),
+  graphFrame : alias('drawMap.oa.graphFrame'),
 
   /** counters to debounce CFs */
   heightChanged : 0,
@@ -1152,7 +1153,7 @@ looking at the currently displayed paths in a block_adj :
     'block.stacksWidthsSum',
     'block.axesExtendedCount',
     'xOffsets.@each',
-    'drawMap.stacksWidthChanges',
+    'graphFrame.stacksWidthChanges',
     'blockAdj.axes1d.0.flipRegionCounter',
     'blockAdj.axes1d.1.flipRegionCounter',
     'blockAdj.axes1d.{0,1}.flipped',
@@ -1183,7 +1184,7 @@ looking at the currently displayed paths in a block_adj :
     }),
     updatePathsPositionDebounced : function () {
       let count = this.get('axisStackChangedCount'),
-      stacksWidthChanges = this.get('drawMap.stacksWidthChanges'),
+      stacksWidthChanges = this.get('graphFrame.stacksWidthChanges'),
       flips = [this.get('blockAdj.axes1d.0.flipRegionCounter'),
                this.get('blockAdj.axes1d.1.flipRegionCounter')],
       scaleChanges = [this.get('blockAdj.axes1d.0.scaleChanged'),

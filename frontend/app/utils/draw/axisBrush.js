@@ -47,8 +47,9 @@ import {
 } from '../stacks';
 
 import { breakPoint } from '../breakPoint';
-import { subInterval, wheelNewDomain } from './zoomPanCalcs';
+import { subInterval, wheelNewDomain, ZoomFilter } from './zoomPanCalcs';
 import { intervalsEqual, intervalIntersect } from '../interval-calcs';
+
 
 import {
   isOtherField
@@ -233,6 +234,27 @@ function AxisBrushZoom(oa) {
 
   //----------------------------------------------------------------------------
 
+  const zoomBehavior = zoomBehaviorSetup(oa);
+
+  function zoomBehaviorSetup(oa) {
+    const zoomFilterApi = ZoomFilter(oa);
+    const zoomBehaviorLocal = d3.zoom()
+      .filter(zoomFilterApi.zoomFilter)
+      .wheelDelta(zoomFilterApi.wheelDelta)
+    /* use scaleExtent() to limit the max zoom (zoom in); the min zoom (zoom
+     * out) is limited by wheelNewDomain() : axisReferenceDomain, so no
+     * minimum scaleExtent is given (0).
+     * scaleExtent() constrains the result of transform.k * 2^wheelData( ),
+     */
+      .scaleExtent([0, 1e8])
+      .on('zoom', zoom)
+    ;
+    // console.log('zoomBehavior', zoomBehaviorLocal);
+    return zoomBehaviorLocal;
+  }
+
+  //----------------------------------------------------------------------------
+
   function setupBrushZoom(allG) {
     // Add a brush for each axis.
     let gBrushParent =
@@ -254,7 +276,7 @@ function AxisBrushZoom(oa) {
     if (! allG.empty()) {
       console.log('zoomBehavior', allG.nodes(), allG.node());
       allG
-        .call(oa.zoomBehavior);
+        .call(zoomBehavior);
     }
   }
 

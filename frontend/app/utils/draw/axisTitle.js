@@ -178,7 +178,9 @@ function AxisTitle(oa) {
     dotPlot = options && options.dotPlot,
     /** The first stage of split axes is enabled by options.splitAxes1,
      * the remainder by options.splitAxes.
-     * In development, splitAxes1 is enabled by default; in production it is disabled by default. 
+     * In development, splitAxes1 is enabled by default here; 
+     * also it is now enabled by default generally (i.e. in production) in
+     * services/query-params.js : urlOptions
      */
     splitAxes1 = options && options.splitAxes1 || (config.environment !== 'production');
     if (trace)

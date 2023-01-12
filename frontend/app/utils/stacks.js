@@ -83,8 +83,9 @@ stacks.init = function (oa_)
 {
   let initData = stacks.nextStackID === undefined;
   oa = oa_;
+  /** initialised in controllers/mapview.js : init() */
   if (stacks.oa !== oa_) {
-    Ember_set(stacks, 'oa', oa_);
+    dLog('stacks.init', stacks, 'oa', oa_);
   }
   if (initData)
   {

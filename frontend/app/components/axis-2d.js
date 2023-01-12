@@ -367,7 +367,7 @@ export default Component.extend(Evented, AxisEvents, {
 
   /*--------------------------------------------------------------------------*/
 
-  resizeEffect : alias('drawMap.resizeEffect'),
+  resizeEffect : alias('drawMap.oa.graphFrame.resizeEffect'),
 
   /*--------------------------------------------------------------------------*/
 

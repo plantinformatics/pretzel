@@ -7,17 +7,13 @@ import {
   bind,
   throttle
 } from '@ember/runloop';
-import { computed, get, set as Ember_set, observer } from '@ember/object';
+import { computed, get, set as Ember_set, setProperties, observer } from '@ember/object';
 import { alias, filterBy } from '@ember/object/computed';
 import Evented from '@ember/object/evented';
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
 import { A as Ember_array_A } from '@ember/array';
 
-import { task, timeout, didCancel } from 'ember-concurrency';
-
-import { isEqual } from 'lodash/lang';
-import { debounce as lodash_debounce, throttle as lodash_throttle } from 'lodash/function';
 
 
 /* global require */
@@ -54,7 +50,6 @@ import {
   selectImmediateChildNodes
 } from '../utils/log-selection';
 import { configureHover, configureHorizTickHover_orig } from '../utils/hover';
-import { Viewport } from '../utils/draw/viewport';
 import { axisFontSize, AxisTitleLayout } from '../utils/draw/axisTitleLayout';
 import { AxisTitleBlocksServers } from '../utils/draw/axisTitleBlocksServers_tspan';
 
@@ -94,15 +89,6 @@ import {
   isAdjacent
 } from '../utils/stacks-adj';
 import { updateRange } from '../utils/stacksLayout';
-import {
-  DragTransition,
-/*
-  dragTransitionTime,
-  dragTransitionNew,
-  dragTransition
-*/
-} from '../utils/stacks-drag';
-import { subInterval, overlapInterval, wheelNewDomain, ZoomFilter } from '../utils/draw/zoomPanCalcs';
 import { intervalsEqual, intervalIntersect } from '../utils/interval-calcs';
 import { round_2, checkIsNumber } from '../utils/domCalcs';
 import { Object_filter, compareFields } from '../utils/Object_filter';
@@ -112,7 +98,6 @@ import {
   isOtherField
 } from '../utils/field_names';
 import { breakPoint, breakPointEnableSet } from '../utils/breakPoint';
-import { highlightFeature_drawFromParams } from './draw/highlight-feature';
 import { Flow } from "../utils/flows";
 import {
   flowButtonsSel,
@@ -131,14 +116,12 @@ import {
 import { storeFeature } from '../utils/feature-lookup';
 
 import AxisDraw from '../utils/draw/axis-draw';
-import { DropTarget } from '../utils/draw/drop-target';
 import { PathClasses } from '../utils/draw/path-classes';
 import { PathDataUtils } from '../utils/draw/path-data';
 import { PathInfo } from '../utils/draw/path-info';
 
 import { selectedBlocksFeaturesToArray } from '../services/data/selected';
 
-import { showSynteny } from '../utils/draw/synteny-blocks-draw';
 
 
 
@@ -176,19 +159,8 @@ const draw_orig = false;
 
 /*----------------------------------------------------------------------------*/
 
-/** compareFn param for compareFields */
-function compareViewport(keyName, a, b) {
-  let different;
-  if (keyName === 'viewportWidth') {
-    /** viewportWidth may cycle due to the rendering affecting the geometry (seen once, in Firefox). */
-    different = ((a === undefined) !== (b === undefined)) || Math.abs(a - b) > 5;
-  } else {
-    different = a !== b;
-  }
-  return different;
-}
-/*----------------------------------------------------------------------------*/
 
+//- moved to graph-frame.js : compareViewport()
 
 
 
@@ -414,7 +386,6 @@ export default Component.extend(Evented, {
    * does not seem to apply, should have been Object.values(this.stacks.axes1d).
    */
   axis1dArray : alias('oa.axisApi.stacksView.axes1d.axis1dArray'),
-  splitAxes: filterBy('axis1dArray', 'extended', true),
 
   axisTicks : alias('controls.view.axisTicks'),
 
@@ -601,11 +572,6 @@ export default Component.extend(Evented, {
       this.on('pathsByReference', addPathsByReferenceToCollation);
     }
 
-    // instanceChanged is defined below;  not needed because setting to the same value is harmless.
-    // if ((oa.showResize === undefined) || instanceChanged)
-    {
-      oa.showResize = showResize;
-    }
 
     /*------------------------------------------------------------------------*/
 
@@ -615,7 +581,9 @@ export default Component.extend(Evented, {
       this.set('stacks', stacks);
     else
       oa.stacks = stacks;
-    stacks.init(oa);
+    if (stacks.nextStackID === undefined) {
+      stacks.init(oa);
+    }
     // stacks.axes[] is a mix of Stacked & Block; shouldn't be required & planning to retire it in these changes.
     oa.axes = stacks.axesP;
     oa.axesP = stacks.axesP;
@@ -623,8 +591,8 @@ export default Component.extend(Evented, {
      * do not refer to closures in the destroyed instance. */
     let instanceChanged;
     let axisBrushZoom = AxisBrushZoom(oa);
-    if (! oa.axisApi || (instanceChanged = oa.axisApi.drawMap.isDestroying)) {
-      const axisApi = {
+    if (! oa.axisApi.drawMap || (instanceChanged = oa.axisApi.drawMap.isDestroying)) {
+      const axisApiAdd = {
                     cmNameAdd,
                     axisIDAdd,
                     stacksAxesDomVerify : function (unviewedIsOK = false) { stacksAxesDomVerify(stacks, oa.svgContainer, unviewedIsOK); } ,
@@ -636,7 +604,7 @@ export default Component.extend(Evented, {
                     deleteAxisfromAxisIDs,
                     removeAxisMaybeStack,
                    };
-      Ember_set(oa, 'axisApi', axisApi);
+      setProperties(oa.axisApi, axisApiAdd);
     }
     const axisTitle = AxisTitle(oa);
     const axisChrName = AxisChrName(oa);
@@ -695,32 +663,11 @@ export default Component.extend(Evented, {
 
 
     //- moved to utils/draw/viewport.js : Viewport(), viewPort, graphDim, dragLimit
-    let vc = oa.vc || (oa.vc = new Viewport());
-    if (vc.count < 2)
-    {
-      console.log(oa, vc);
-      vc.count++;
-      vc.calc(oa);
-      if (vc.count > 1)
-      {
-        /** could use equalFields(). */
-        let
-          widthChanged = oa.vc.viewPort.w != oa.vc.viewPortPrev.w,
-        heightChanged = oa.vc.viewPort.h != oa.vc.viewPortPrev.h;
-        // showResize() -> collateO() uses .o
-        if (oa.svgContainer && oa.o)
-          oa.showResize(widthChanged, heightChanged);
-      }
-      stacks.vc = vc; //- perhaps create vc earlier and pass vc to stacks.init()
-    }
+    //- moved to graph-frame.js as setupViewport()
+    oa.graphFrame.setupViewport();
+
     if (! oa.axisTitleLayout)
       oa.axisTitleLayout = new AxisTitleLayout();
-
-    let
-      axisHeaderTextLen = vc.axisHeaderTextLen,
-    margins = vc.margins,
-    marginIndex = vc.marginIndex;
-    let yRange = vc.yRange;
 
     if (oa.axes2d === undefined)
       oa.axes2d = new Axes(oa);
@@ -1061,22 +1008,7 @@ export default Component.extend(Evented, {
       dLog/*breakPoint*/('duplicates', duplicates, blocksToDraw, blocksToAdd, oa.axisIDs);
     }
 
-    if ((oa.zoomBehavior === undefined) || instanceChanged)
-    {
-      const zoomFilterApi = ZoomFilter(oa);
-      oa.zoomBehavior = d3.zoom()
-        .filter(zoomFilterApi.zoomFilter)
-        .wheelDelta(zoomFilterApi.wheelDelta)
-      /* use scaleExtent() to limit the max zoom (zoom in); the min zoom (zoom
-       * out) is limited by wheelNewDomain() : axisReferenceDomain, so no
-       * minimum scaleExtent is given (0).
-       * scaleExtent() constrains the result of transform.k * 2^wheelData( ),
-       */
-        .scaleExtent([0, 1e8])
-        .on('zoom', axisBrushZoom.zoom)
-      ;
-      // console.log('zoomBehavior', oa.zoomBehavior);
-    }
+    //- moved to axisBrush.js as zoomBehaviorSetup()
 
     if (draw_orig)
     /* may have parent and child blocks in the same axis becoming unviewed in
@@ -1575,7 +1507,6 @@ export default Component.extend(Evented, {
         }
     }
 
-    stacksAxesDomVerify(stacks, oa.svgContainer);
     /**  add width change to the x translation of axes to the right of this one.
      */
     function axisWidthResizeRight(axisID, width, dx)
@@ -1618,8 +1549,7 @@ export default Component.extend(Evented, {
 
     //- moved to utils/stacks.js: oa.xScaleExtend = xScale();
 
-    oa.axisApi.collateO?.();
-    vc.xDropOutDistance_update(oa);
+    //- moved code to graph-frame : renderFrame()
 
     //- moved updateRange() to utils/stacksLayout
 
@@ -1672,77 +1602,12 @@ export default Component.extend(Evented, {
       return me.get('axis1dArray.length');
     }
 
-    let svgRoot;
-    /** Diverting to the login component removes #holder and hence <svg>, so
-     * check if oa.svgRoot refers to a DOM element which has been removed. */
-    let newRender = ((svgRoot = oa.svgRoot) === undefined)
-      ||  (oa.svgRoot.node().getRootNode() !== window.document);
-    if (newRender)
-    {
-      if (oa.svgRoot)
-        console.log('newRender old svgRoot', oa.svgRoot.node(), oa.svgContainer.node(), oa.foreground.node());
-      
-      // Use class in selector to avoid removing logo, which is SVG.
-      d3.select("svg.FeatureMapViewer").remove();
-      d3.select("div.d3-tip").remove();
-    }
-    let translateTransform = "translate(" + margins[marginIndex.left] + "," + margins[marginIndex.top] + ")";
-    if (newRender)
-    {
-      let graphDim = oa.vc.graphDim;
-      oa.svgRoot = 
-        svgRoot = d3.select('#holder').append('svg')
-        .attr("class", "FeatureMapViewer")
-        .attr("viewBox", oa.vc.viewBox.bind(oa.vc))
-        .attr("preserveAspectRatio", "none"/*"xMinYMin meet"*/)
-        .attr('width', "100%" /*graphDim.w*/)
-        .attr('height', graphDim.h /*"auto"*/);
-      oa.svgContainer =
-        svgContainer = svgRoot
-        .append("svg:g")
-        .attr("transform", translateTransform);
-
-      stacks.dragTransition = new DragTransition(oa.svgContainer);
-
-      console.log(oa.svgRoot.node(), '.on(resize', this.resize);
-
-      let resizeThis =
-        // this.resize.bind(oa);
-        function(transition) {
-          if (trace_stack)
-            dLog("resizeThis", transition);
-          debounce(oa, me.resize, [transition], 500);
-        };
-      /** d3 dispatch.on() does not take arguments, and similarly for eltWidthResizable() param resized. */
-      function resizeThisWithTransition() { resizeThis(true); }
-      function resizeThisWithoutTransition() { resizeThis(false); }
-
-      // This detects window resize, caused by min-/max-imise/full-screen.
-      if (true)
-        d3.select(window)
-        .on('resize', resizeThisWithTransition);
-      else  // also works, can drop if further testing doesn't indicate one is better.
-        $( window )
-        .resize(function(e) {
-          console.log("window resize", e);
-          // see notes in domElements.js regarding  .resize() debounce
-          debounce(resizeThisWithTransition, 300);
-        });
-
-      /* 2 callbacks on window resize, register in the (reverse) order that they
-       * need to be called (reorganise this).
-       * Revert .resizable flex-grow before Viewport().calc() so the latter gets the new size.  */
-      eltWidthResizable('.resizable', undefined, resizeThisWithoutTransition);
-    }
-    else
-      svgContainer = oa.svgContainer;
+    //- moved to graph-frame.js as renderFrame()
+    oa.graphFrame.renderFrame();
 
     let options = this.get('urlOptions');
 
-    function setCssVariable(name, value)
-    {
-      oa.svgRoot.style(name, value);
-    }
+    //- moved to graph-frame.js : setCssVariable()
 
     //- moved to ../utils/draw/collate-paths.js : countPaths(), countPathsWithData()
 
@@ -1772,39 +1637,8 @@ export default Component.extend(Evented, {
     //- moved to utils/draw/path-classes.js : pathClassA()
     //- moved to utils/draw/path-data.js : featureNameOfData(), data_text()
 
-    function flowName(flow)
-    {
-      return flow.name;
-    }
-    function flowHidden(flow)
-    {
-      let hidden = ! flow.visible;
-      return hidden;
-    }
-
-    // if (oa.foreground && newRender), oa.foreground has been removed; commented above.
-    if (((foreground = oa.foreground) === undefined) || newRender)
-    {
-      oa.foreground =
-        foreground = oa.svgContainer.append("g") // foreground has as elements "paths" that correspond to features
-        .attr("class", "foreground");
-      let flowValues = d3.values(flows),
-      flowsg = oa.foreground.selectAll("g")
-        .data(flowValues)
-        .enter()
-        .append("g")
-        .attr("class", flowName)
-        .classed("hidden", flowHidden)
-        .each(function (flow, i, g) {
-          /** separate attributes g and .gf, the latter for paths collated in frontend */
-          flow.gf = d3.select(this);
-          /* related : drawGroupContainer() and updateSelections_flowControls() */
-          if (! flow.g) {
-            flow.g = d3.select();
-          }
-        })
-      ;
-    }
+    //- moved to graph-frame.js : flowName(), flowHidden(), if-block as renderForeground()
+    oa.graphFrame.renderForeground();
 
     if (draw_orig) {
     // pathUpdate(undefined);
@@ -2091,119 +1925,7 @@ getBrushExtents(),
 
     /*------------------------------------------------------------------------*/
 
-    /** Record the viewport Width and Height for use as dependencies of
-     * @see resizeEffect()
-     */
-    function recordViewport(w, h) {
-      later(
-        () => 
-          ! this.isDestroying &&
-      this.setProperties({
-        viewportWidth : w,
-        viewportHeight : h
-      }));
-    };
-
-      /** Render the affect of resize on the drawing.
-       * @param widthChanged   true if width changed
-       * @param heightChanged   true if height changed
-       * @param useTransition  undefined (default true), or false for no transition
-       */
-    function showResize(widthChanged, heightChanged, useTransition)
-    {
-        console.log('showResize', widthChanged, heightChanged, useTransition);
-      console.log('showResize',   me.get('viewportWidth'), oa.vc.viewPort.w, me.get('viewportHeight'), oa.vc.viewPort.h);
-      let viewPort = oa && oa.vc && oa.vc.viewPort;
-      if (viewPort)
-        /* When visibility of side panels (left, right) is toggled, width of
-         * those panels changes in a transition (uses flex in CSS), and hence
-         * resize() -> showResize() are called repeatedly in close succession,
-         * with slightly changing width.
-         * Minimise the impact of this by using debounce, and .toFixed(), since
-         * changes < 1 pixel aren't worth a re-render.
-         */
-        debounce(
-          me,
-          recordViewport,
-          viewPort.w.toFixed(),
-          viewPort.h.toFixed(),
-          500);
-        oa.axisApi.updateXScale?.();
-        oa.axisApi.collateO();
-        me.axesShowXOffsets();
-        if (widthChanged || (oa.axisTitleLayout?.verticalTitle === undefined))
-          axisTitle.updateAxisTitleSize(undefined);
-        let 
-          duration = useTransition || (useTransition === undefined) ? 750 : 0,
-        t = oa.svgContainer.transition().duration(duration);
-        let graphDim = oa.vc.graphDim;
-        oa.svgRoot
-        .attr("viewBox", oa.vc.viewBox.bind(oa.vc))
-          .attr('height', graphDim.h /*"auto"*/);
-
-      // recalculate Y scales before pathUpdate().
-        if (heightChanged)
-          oa.axisApi.stacksAdjustY(t);
-
-      // for stacked axes, window height change affects the transform.
-        if (widthChanged || heightChanged)
-        {
-        t.selectAll(".axis-outer").attr("transform", Stack.prototype.axisTransformO);
-          // also xDropOutDistance_update (),  update DropTarget().size
-          pathDataUtils.pathUpdate(t /*st*/);
-        }
-
-        if (heightChanged)
-        {
-          // let traceCount = 1;
-          oa.svgContainer.selectAll('g.axis-all > g.brush > clipPath > rect')
-            .each(function(d) {
-              const
-              a = d,
-              ya = a.y,
-              yaRange = ya.range();
-              // dLog('axis-brush', this, this.getBBox(), yaRange);
-              // see also brushClip().
-              d3.select(this)
-              // set 0 because getting y<0, probably from brushClip() - perhaps use [0, yRange] there.
-                .attr("y", 0)
-                .attr("height", yaRange[1]);
-            });
-          oa.svgContainer.selectAll('g.axis-all > g.brush > g[clip-path]')
-            .each(function(d) {
-              /** d is axis-1d */
-              if (d.isDestroying) {
-                return;
-              }
-              /* if (traceCount-->0) console.log(this, 'brush extent', oa.y[d].brush.extent()()); */
-              const
-              a = d,
-              ya = a.y,
-              b = ya.brush;
-              // draw the brush overlay using the changed scale
-              d3.select(this).call(b);
-              /* if the user has created a selection on the brush, move it to a
-               * new position based on the changed scale. */
-              axisBrushZoom.axisBrushShowSelection(d, this);
-            });
-          if (DropTarget.prototype.showResize) {
-            DropTarget.prototype.showResize();
-          }
-        }
-        later( function () {
-          if (me.isDestroying) { return; }
-          /* This does .trigger() within .later(), which seems marginally better than vice versa; it works either way.  (Planning to replace event:resize soon). */
-          if (widthChanged || heightChanged)
-            try {
-              /** draw-map sends 'resized' event to listening sub-components using trigger().
-               * It does not listen to this event. */
-              me.trigger('resized', widthChanged, heightChanged, useTransition);
-            } catch (exc) {
-              console.log('showResize', 'resized', me, me.resized, widthChanged, heightChanged, useTransition, graphDim, /*brushedDomains,*/ exc.stack || exc);
-            }
-          // axisShowExtendAll();
-          showSynteny(oa.syntenyBlocks, undefined, oa); });
-      };
+    //- moved to graph-frame.js : recordViewport(), showResize()
 
    //- moved extracts to view-controls, replaced these functions using oninput=(action )  :  setupToggle(), setupTogglePathUpdate(), setupToggleModePublish(), setupToggleShowPathHover(), setupToggleShowAll(), setupToggleShowSelectedFeatures(), setupPathOpacity(), setupPathWidth(), setupVariousControls(),
 
@@ -2211,26 +1933,9 @@ getBrushExtents(),
 
 
 //- draw-map
-    /** After chromosome is added, draw() will update elements, so
-     * this function is used to update d3 selections :
-     * svgRoot, svgContainer, foreground, flows[*].g
-     */
-    function updateSelections() {
-      let svgRoot = oa.svgRoot, svgContainer = oa.svgContainer,
-      foreground = oa.foreground;
-      console.log(
-        "svgRoot (._groups[0][0])", svgRoot._groups[0][0],
-        ", svgContainer", svgContainer._groups[0][0],
-        ", foreground", foreground._groups[0][0]);
-      svgRoot = d3.select('#holder > svg');
-      svgContainer = svgRoot.select('g');
-      foreground = svgContainer.select('g.foreground');
-      console.log(
-        "svgRoot (._groups[0][0])", svgRoot._groups[0][0],
-        ", svgContainer", svgContainer._groups[0][0],
-        ", foreground", foreground._groups[0][0]);
-      //- moved code to app/utils/draw/flow-controls.js: updateSelections_flowControls() (new function)
-    };
+
+  //- moved to graph-frame.js : updateSelections()
+
 
 //- moved to path-classes : getUsePatchColour() as getUsePathColour()
 
@@ -2241,263 +1946,30 @@ getBrushExtents(),
 
   //----------------------------------------------------------------------------
 
-  /** Redraw all stacks.
-   * Used when change of axisTicksOutside.
-   */
-  stacksRedraw()
-  {
-    dLog('stacksRedraw');
-    if (this.oa.svgContainer) {
-      let t = this.oa.svgContainer.transition().duration(750);
-      this.oa.stacks.forEach(function (s) { s.redraw(t); });
-    }
-  },
-  /** re-apply axisTransformO(), which uses the axis x scales oa.o */
-  axesShowXOffsets() {
-    let 
-    oa = this.oa,
-    t = oa.svgContainer;
-    t.selectAll(".axis-outer").attr("transform", Stack.prototype.axisTransformO);
-  },
+  //- moved to stacks-view.js : stacksRedraw(), axesShowXOffsets()
 
 
   //- moved to axisBrush.js : triggerZoomedAxis, throttledZoomedAxis,
 
-  //----------------------------------------------------------------------------
-
-
-  updateSyntenyBlocksPosition : task(function * () {
-    dLog('updateSyntenyBlocksPosition', this.oa.syntenyBlocks.length);
-    if (this.oa.axisApi.showSynteny) {
-      this.oa.axisApi.showSynteny(this.oa.syntenyBlocks, undefined);
-    }
-    yield timeout(100);
-  }).keepLatest(),
+  //- moved to graph-frame.js : updateSyntenyBlocksPosition()
 
   //----------------------------------------------------------------------------
 
   didInsertElement() {
     this._super(...arguments);
 
-    if (! $.popover && $.fn.popover) {
-      dLog('didInsertElement initialise $.popover from .fn');
-      $.popover = $.fn.popover;
-      $.button = $.fn.button;	// maybe not used.
-      $.tab = $.fn.tab;
-    }
-    // eltWidthResizable('.resizable');
-
-    later(() => {
-      $('.left-panel-shown')
-        .on('toggled', (event) => this.readLeftPanelToggle() );
-      /** .draggable() is provided by jquery-ui. ember-cli-jquery-ui is not
-       * updated, and .make-ui-draggable is not enabled for any elements
-       * currently; As needed, can instead use
-       * e.g. github.com/mharris717/ember-drag-drop for .tooltip.ember-popover.
-       * $('.make-ui-draggable').draggable();  */
-    });
+    const oa = this.oa;
+    // oa.graphFrame = new GraphFrame(oa);
+    oa.graphFrame.readLeftPanelShown();
+    //- moved to graph-frame.js : $.popover setup, readLeftPanelShown()
   },
 
-  drawEffect : computed('data.[]', 'resizeEffect', function () {
-    let me = this;
-    let data = this.get('data');
-    throttle(function () {
-      /** when switching back from groups/ route to mapview/, this may be called
-       * before oa.axisApi is initialised in draw(), */
-      if (me.oa.axisApi) {
-      /** viewed[] is equivalent to data[], apart from timing differences.  */
-      let viewed = me.get('blockService.viewed'),
-      /** create axes for the reference blocks before the data blocks are added. */
-      referencesFirst = viewed.sort((a,b) => {
-        let aHasReference = !!a.get('referenceBlock'),
-        bHasReference = !!b.get('referenceBlock');
-        return aHasReference === bHasReference ? 0 : aHasReference ?  1 : -1;
-      });
-      referencesFirst.forEach((block) => me.oa.axisApi.ensureAxis(block.id));
-      }
-      me.draw(data, 'didRender');
-    }, 1500);
+  //- moved to graph-frame.js : drawEffect(), resizeEffect(), stacksWidthChanges(), readLeftPanelToggle(), stacksWidthChanged(), resize()
 
-    highlightFeature_drawFromParams(this);
-  }),
-  resizeEffect : computed(
-    /* viewportWidth and viewportHeight will change as a result of changes in
-     * stacksWidthChanges.{left,right}, so these dependencies could be
-     * consolidated (checking that the dependencies change after the element size
-     * has changed).
-     */
-    'stacksWidthChanges.@each', 'viewportWidth', 'viewportHeight',
-    function () {
-      let
-      stacksWidthChanges = this.get('stacksWidthChanges'),
-      viewportWidth = this.get('viewportWidth'),
-      viewportHeight = this.get('viewportHeight'),
-      result = {
-        stacksWidthChanges, viewportWidth, viewportHeight
-      };
-      let prev = this.get('resizePrev');
-      this.set('resizePrev', result);
-      if (prev) {
-        delete result.changed;
-        let changed = compareFields(prev, result, compareViewport);
-        result.changed = changed;
-      }
-      dLog('resizeEffect', result);
-    if (false) // currently the display is probably smoother with the debounce; later after tidying up the resize structure this direct call may be better.
-      this.get('resize').apply(this.get('oa'), [/*transition*/true]);
-    else
-      debounce(this.get('oa'), this.get('resize'), [/*transition*/true], 500);
-      return result;
-  }),
 
-  /** for CP dependency.  Depends on factors which affect the horizontal (X) layout of stacks.
-   * When this CP fires, updates are required to X position of stacks / axes, and hence the paths between them.
-   * @return value is for devel trace
-   */
-  stacksWidthChanges : computed(
-    'blockService.stacksCount', 'splitAxes.[]',
-    /** panelLayout is mapview .layout */
-    'panelLayout.left.visible', 'panelLayout.right.visible',
-    function () {
-      let count = stacks.length;
-      // just checking - will retire stacks.stacksCount anyway.
-      if (count != stacks.stacksCount?.count)
-        console.log('stacksWidthChanges',  count, '!=', stacks.stacksCount);
-      let leftPanelShown = this.readLeftPanelToggle(),
-      current = {
-        stacksCount : count,
-        splitAxes : this.get('splitAxes').length,
-        // this.get('panelLayout.left.visible') is true, and does not update
-        left : leftPanelShown,
-        right : this.get('panelLayout.right.visible')
-      };
-      console.log('stacksWidthChanges', current);
-      return current;
-    }),
-  /** Read the CSS attribute display of left-panel to determine if it is shown / visible.  */
-  readLeftPanelToggle() {
-      let leftPanel = $('#left-panel'),
-      /** leftPanel.hasClass('left-panel-shown') is always true; instead the
-       * <div>'s display attribute is toggled between flex and none.
-       * using jQuery .toggle() applied to button.left-panel-{shown,hidden},
-       * in toggleLeftPanel(), via left-panel.hbs action of button.panel-collapse-button.
-       * This could be made consistent with right panel, but planning to use golden-layout in place of this anyway.
-       *
-       * .attributeStyleMap is part of CSS Typed OM; is in Chrome, not yet Firefox.
-       * https://github.com/Fyrd/caniuse/issues/4164
-       * https://developer.mozilla.org/en-US/docs/Web/API/CSS_Typed_OM_API
-       */
-      haveCSSOM = leftPanel[0].hasAttribute('attributeStyleMap'),
-      leftPanelStyleDisplay = haveCSSOM ?
-        leftPanel[0].attributeStyleMap.get('display').value :
-        leftPanel[0].style.display,
-      leftPanelShown = leftPanelStyleDisplay != 'none'
-    ;
-    dLog('readLeftPanelToggle', leftPanel[0], leftPanelShown);
-    /* The returned value is used only in trace.  This attribute .leftPanelShown is observed by resize()
- */
-    this.set('leftPanelShown', leftPanelShown);
-    return leftPanelShown;
-  },
-
-  /** @return true if changes in #stacks or split axes impact the width and horizontal layout.
-   * (maybe dotPlot / axis.perpendicular will affect width also)
-   */
-  stacksWidthChanged() {
-    /* can change this to a CP, merged with resize() e.g. resizeEffect(), with
-     * dependencies on 'blockService.stacksCount', 'splitAxes.[]'
-     */
-    let previous = this.get('previousRender'),
-    now = {
-      stacksCount : stacks.length,   // i.e. this.get('blockService.stacksCount'), or oa.stacks.stacksCount.count
-      splitAxes : this.get('splitAxes').length
-    },
-    changed = ! isEqual(previous, now);
-    if (changed) {
-      console.log('stacksWidthChanged', previous, now);
-      later(() => ! this.isDestroying && this.set('previousRender', now));
-    }
-    return changed;
-  },
-
-  resize : observer(
-    'panelLayout.left.visible',
-    'panelLayout.right.visible',
-    'leftPanelShown',
-    'controls.view.showAxisText',
-    /* axisTicksOutside doesn't resize, but a redraw is required (and re-calc could be done) */
-    'controls.view.axisTicksOutside',
-    /* after 'controls.view.extraOutsideMargin' changes, axis x offsets are re-calculated.  related : 'oa.vc.axisXRange' */
-    'controls.view.extraOutsideMargin',
-    /* ChangeCount represents 'xOffsets.@each.@each', */
-    'xOffsetsChangeCount',
-    /** split-view : sizes of the components adjacent the resize gutter : 0: draw-map and 1 : tables panel. */
-    'componentGeometry.sizes.0',
-    'controls.window.tablesPanelRight',
-    function() {
-      console.log("resize", this, arguments);
-        /** when called via .observes(), 'this' is draw-map object.  When called
-         * via  window .on('resize' ... resizeThisWithTransition() ... resizeThis()
-         * ... Ember.run.debounce(oa, me.resize, ), 'this' is oa.
-         */
-        let calledFromObserve = (arguments.length === 2),
-      layoutChanged = calledFromObserve,
-      /** This can be passed in along with transition in arguments,
-       * when ! calledFromObserve.
-       */
-      windowResize = ! calledFromObserve,
-            oa =  calledFromObserve ? this.oa : this;
-      let me = calledFromObserve ? this : oa.eventBus;
-      let redrawAxes = arguments[1] === 'controls.view.axisTicksOutside';
-    // logWindowDimensions('', oa.vc.w);  // defined in utils/domElements.js
-    function resizeDrawing() { 
-      // if (windowResize)
-        eltResizeToAvailableWidth(
-          /*bodySel*/ 'div.ember-view > div > div.body > div',
-          /*centreSel*/ '.resizable');
-      oa.vc.calc(oa);
-      let
-        drawMap = oa.eventBus,
-      widthChanged = (oa.vc.viewPort.w != oa.vc.viewPortPrev.w) || drawMap.stacksWidthChanged(),
-      heightChanged = oa.vc.viewPort.h != oa.vc.viewPortPrev.h;
-
-      // rerender each individual element with the new width+height of the parent node
-      // need to recalc viewPort{} and all the sizes, (from document.documentElement.clientWidth,Height)
-      // .attr('width', newWidth)
-      /** Called from .resizable : .on(drag) .. resizeThis() , the browser has
-       * already resized the <svg>, so a transition looks like 1 step back and 2
-       * steps forward, hence pass transition=false to showResize().
-      */
-      let useTransition = layoutChanged;
-      oa.showResize(widthChanged, heightChanged, useTransition);
-    }
-        console.log("oa.vc", oa.vc, arguments);
-        if (oa.vc)
-        {
-            if (redrawAxes) {
-              this.stacksRedraw();
-            }
-            if (false && ! layoutChanged)
-                // Currently debounce-d in resizeThis(), so call directly here.
-                resizeDrawing();
-            else
-            {
-                console.log(arguments[1], arguments[0]);
-                /* debounce is used to absorb the progressive width changes of
-                 * the side panels when they open / close (open is more
-                 * progressive).
-                 * After the values panelLayout.{left,right}.visible change, DOM
-                 * reflow will modify viewport width, so the delay helps with
-                 * waiting for that.
-                 */
-                debounce(resizeDrawing, 300);
-            }
-        }
-
-    }
-  )
   /* could include in .observes() : 'panelLayout.left.tab', but the tab name should not affect the width.
    * (currently the value of panelLayout.left.tab seems to not change - it is just 'view').
+   * graph-frame:
    * stacksWidthChanges.{left,right} are equivalent to leftPanelShown and panelLayout.right.visible,
    * so there is some duplication of dependencies, since resizeEffect() depends on stacksWidthChanges.@each
    */

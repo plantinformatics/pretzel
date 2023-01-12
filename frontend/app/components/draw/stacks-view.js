@@ -1,6 +1,6 @@
 import { later } from '@ember/runloop';
 import EmberObject, { computed } from '@ember/object';
-import { alias } from '@ember/object/computed';
+import { alias, filterBy } from '@ember/object/computed';
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
 import { A as Ember_A } from '@ember/array';
@@ -172,10 +172,12 @@ export default Component.extend({
   init() {
     this._super(...arguments);
 
-    this.oa.stacks.axesP = new Proxy({}, this.axesHandler);
+    stacks.init(this.oa);
+    /** stacks here is util/stacks.js:stacks; this.oa.stacks is equivalent when it is defined. */
+    stacks.axesP = new Proxy({}, this.axesHandler);
     this.stacks.blocks = new Proxy({}, this.blocksHandler);
-    this.stacks.sortLocation = this.oa.stacks.sortLocation;
-    this.stacks.log = this.oa.stacks.log;
+    this.stacks.sortLocation = /*this.oa.*/stacks.sortLocation;
+    this.stacks.log = /*this.oa.*/stacks.log;
 
     const axisApi = this.oa.axisApi;
     axisApi.stacksView = this;
@@ -183,6 +185,14 @@ export default Component.extend({
     axisApi.updateXScale = () => this.updateXScale();
     axisApi.stacksAdjustY = () => this.stacksAdjustY();
     axisApi.stacksAdjust = () => this.stacksAdjust();
+  },
+
+  //----------------------------------------------------------------------------
+
+  didInsertElement() {
+    this._super(...arguments);
+
+    this.get('drawMap').draw(/*myData*/{}, /*source*/'didRender');
   },
 
   //----------------------------------------------------------------------------
@@ -235,7 +245,8 @@ export default Component.extend({
       }
       this.collateO();
       // this.updateStacksAxes();
-      if (this.yScalesAreDefined) {
+      if (! this.oa.svgContainer) {
+      } else if (this.yScalesAreDefined) {
         this.draw();
       } else {
         const {availableMapsTask /*datasetsTask*/, blocksLimitsTask} = this.model;
@@ -426,6 +437,12 @@ export default Component.extend({
     throttle(this, this.axisStackChanged_, [t], 500);
   },
 
+
+  //----------------------------------------------------------------------------
+
+  axis1dArray : alias('axes1d.axis1dArray'),
+  splitAxes: filterBy('axis1dArray', 'extended', true),
+  splitAxesLength : alias('splitAxes.length'),
 
   //----------------------------------------------------------------------------
 
@@ -715,6 +732,26 @@ export default Component.extend({
 
   //----------------------------------------------------------------------------
 
+  /** Redraw all stacks.
+   * Used when change of axisTicksOutside.
+   */
+  stacksRedraw()
+  {
+    dLog('stacksRedraw');
+    const svgContainer = this.oa.svgContainer;
+    if (svgContainer) {
+      let t = svgContainer.transition().duration(750);
+      this.stacks.forEach(function (s) { s.redraw(t); });
+    }
+  },
+  /** re-apply axisTransformO(), which uses the axis x scales oa.o */
+  axesShowXOffsets() {
+    let 
+    t = this.oa.svgContainer;
+    t.selectAll(".axis-outer").attr("transform", Stack.prototype.axisTransformO);
+  },
+
+  //----------------------------------------------------------------------------
 
 });
 

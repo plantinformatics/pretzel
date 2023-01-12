@@ -347,7 +347,7 @@ export default Controller.extend(Evented, {
   pathsTableSummary : {},
 
   /** bundle of references  (object attributes) */
-  oa : {},
+  oa : {axisApi : {}, stacks},
 
   scaffolds: undefined,
   scaffoldFeatures: undefined,
