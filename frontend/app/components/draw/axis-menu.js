@@ -7,6 +7,10 @@ import { htmlSafe } from '@ember/template';
 
 import { AxisMenuActions } from '../../utils/draw/axis-menu-actions';
 import { stacks  } from '../../utils/stacks';
+import {
+  dragTransitionTime,
+} from '../../utils/stacks-drag';
+
 
 const FileName = "components/axis-menu";
 const dLog = console.debug;
@@ -223,10 +227,13 @@ export default Ember.Component.extend({
     dLog('xOffsetsEffect', this.get('xOffsetsChangeCount'));
     let tooltip = this.get('popoverTooltip');
     if (tooltip) {
+      /** after the dragged target has transitioned to its new position,
+       * hide and show tooltip to position it relative to the target.
+       */
       later(() => {
         tooltip.hide();
         tooltip.show();
-      });
+      }, dragTransitionTime+50);
     }
   }),
 
