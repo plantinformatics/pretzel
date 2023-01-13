@@ -1209,14 +1209,7 @@ export default Model.extend({
         axis1d = this.get('crossServerAxis1d') || this.get('referenceBlock.crossServerAxis1d');
         dLog(fnName, axis1d, this);
       }
-      if (/*draw_orig*/ false) {
-      /* using .id match in referencedAxis1d (see comment there) is probably
-       * sufficient, this is just backup, probably not required.
-       */
-      if (! axis1d && this.axis) {
-        axis1d = this.axis.axis1d;
-      }
-      }
+
       if (axis1d?.isDestroying) {
         dLog('axis1d isDestroying', axis1d);
         axis1d = undefined;

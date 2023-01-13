@@ -381,12 +381,7 @@ export default Component.extend(Evented, AxisEvents, {
   show() {
     let
     axisID = this.get('axisID'),
-    axis1d = this.get('axis1d'); /* , draw_orig :
-    axisS = axis1d.get('axisS'), view;
-    if (axis1d && ! axisS && (view = axis1d.get('axis.view'))) {
-      dLog('show', axisID, axis1d, view, 'axisShowExtend');
-      axisS = view;
-    } */
+    axis1d = this.get('axis1d');
     this.axisShowExtend(axis1d, axis1d, axisID, /*axisG*/ undefined);
   },
 

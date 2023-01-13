@@ -167,26 +167,6 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     /* axisS may not exist yet, so give Stacked a reference to this. */
     Stacked.axis1dAdd(axisName, this);
 
-    if (draw_orig) {
-    let axisS = this.get('axisS');
-    if (! axisS) {
-      dLog('axis-1d:init', this, axisName, this.get('axis'));
-    }
-    else if (axisS.axis1d === this) {
-      // no change
-    }
-    else if (axisS.axis1d && ! axisS.axis1d.isDestroyed)
-    {
-      dLog('axis-1d:init', this, axisName, this.get('axis'), axisS, axisS && axisS.axis1d);
-    }
-    else {
-      axisS.axis1d = this;
-      if (trace_stack) {
-        dLog('axis-1d:init', this, this.get('axis.id'), axisS); axisS.log();
-      }
-    }
-    }
-
     next(() => this.axis1dExists(this, true));
   },
 
@@ -1156,12 +1136,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     let viewedBlocks = this.get('viewedBlocks');
     let axisApi = stacks.oa.axisApi;
     let count = viewedBlocks.length;
-    viewedBlocks.forEach((block) => {
-      if (! block.get('axis'))
-        axisApi.ensureAxis(block.id);
-      if (! block.get('axis'))
-        count--;
-    });
+    // draw_orig
     return count;
   }),
 
@@ -1259,13 +1234,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   willDestroyElement() {
     dLog('willDestroyElement', this.get('axis.id'));
     this.removeTicks();
-    if (draw_orig) {
-    let axisS = this.get('axisS');
-    if (axisS) {
-      if (axisS.axis1d === this)
-        delete axisS.axis1d;
-    }
-    }
+
     let axisName = this.get('axis.id');
     Stacked.axis1dRemove(axisName, this);
     next(() => this.axis1dExists(this, false));

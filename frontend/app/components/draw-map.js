@@ -139,7 +139,6 @@ import { selectedBlocksFeaturesToArray } from '../services/data/selected';
 /* jshint -W083 */
 
 /*global d3 */
-/* global WheelEvent */
 
 /*----------------------------------------------------------------------------*/
 
@@ -149,8 +148,6 @@ const dLog = console.debug;
 
 Object.filter = Object_filter;
 
-
-const draw_orig = false;
 
 
 /*----------------------------------------------------------------------------*/
@@ -381,9 +378,9 @@ export default Component.extend(Evented, {
   scroller: service(),
 
   axes1d : computed( function () { return stacks.axes1d; }),
-  /* draw_orig :
-   * stacks.axes1d is [axisID] -> axis-1d, so splitAxes: filterBy('axes1d', ...)
-   * does not seem to apply, should have been Object.values(this.stacks.axes1d).
+  /*
+   * stacks.axes1d is [axisID] -> axis-1d.
+   * Equivalent : Object.values(this.stacks.axes1d).
    */
   axis1dArray : alias('oa.axisApi.stacksView.axes1d.axis1dArray'),
 
@@ -455,12 +452,6 @@ export default Component.extend(Evented, {
           () => axis.set('extended', enabled));  // was axis2DEnabled
       console.log("enableAxis2D in components/draw-map", axisID, enabled, axis);
       console.log("splitAxes", this.get('splitAxes'));
-    },
-
-    resizeView : function()
-    {
-      console.log("resizeView()");
-      // resize();
     },
 
     closeToolTipA() {
@@ -602,7 +593,7 @@ export default Component.extend(Evented, {
                     sendUpdatedSelectedFeatures,
                     selectedFeatures_clear : () => this.get('selectedService').selectedFeatures_clear(),
                     deleteAxisfromAxisIDs,
-                    removeAxisMaybeStack,
+                    // removeAxisMaybeStack,
                    };
       setProperties(oa.axisApi, axisApiAdd);
     }
@@ -983,564 +974,30 @@ export default Component.extend(Evented, {
 
     collateData();
 
-    /** Map an Array of Block-s to their longNames(), useful in log trace. */
-    function Block_list_longName(blocks) {
-      return blocks.map(function (b) { return b.longName(); });
-    }
-    if (draw_orig) {
-    let blocksToDraw = oa.axisIDs,
-    viewedBlocks = me.get('blockService').get('viewedIds'),
-    stackedBlocks = stacks.blockIDs(),
-    blocksUnviewed = stackedBlocks.filter(function (blockId, i) {
-      let foundAt = viewedBlocks.indexOf(blockId);
-      return foundAt < 0;
-    }),
-    blocksToAdd = viewedBlocks.filter(function (axisName) {
-      // axisName passes filter if it is not already in a stack
-      return ! Stacked.getAxis(axisName) && (blocksToDraw.indexOf(axisName) == -1) ; });
-    dLog(
-      oa.stacks.axisIDs(), blocksToDraw.length, 'viewedBlocks', viewedBlocks,
-      'blocksUnviewed', blocksUnviewed, 'blocksToAdd', blocksToAdd);
-    if (blocksToAdd.length)
-      blocksToDraw = blocksToDraw.concat(blocksToAdd);
-    let duplicates = blocksToDraw.filter(function (v, i) { return blocksToDraw.indexOf(v, i+1) != -1; });
-    if (duplicates.length)
-      dLog/*breakPoint*/('duplicates', duplicates, blocksToDraw, blocksToAdd, oa.axisIDs);
-    }
 
     //- moved to axisBrush.js as zoomBehaviorSetup()
 
-    if (draw_orig)
-    /* may have parent and child blocks in the same axis becoming unviewed in
-     * the same run-loop cycle, so ensure that the children are unviewed
-     * before the parents.
+    //--------------------------------------------------------------------------
+
+    /* Until f81e5367 there was a capability here for adopting axes : if a data
+     * block was viewed without its parent, it was displayed on an axis, and
+     * when the parent was viewed, that block / axis was adopted by the parent
+     * axis.  While there might be some use for displaying a data block by
+     * itself, there is no planned requirement for it - currently the parent is
+     * automatically viewed when a child data block is viewed.
+     *
+     * Also removed : ensureAxis(); now the axes are generated from
+     * components/draw/axes-1d.hbs based on .axesP
+     * It included matchParentAndScope(), whose role is now covered by
+     * mapBlocksByReferenceAndScope() et al in services/data/block.js
+     *
+     * Also removed : axisWidthResizeRight() : add width change to the x translation of axes to the right of this one.
+     * Used instead : the x scale and a transition seems to give a smooth and equivalent result.
      */
-    [true, false].forEach(function (filterChildren) {
-      /** Accumulate child data blocks whose parent is being unviewed;
-       * these will be unviewed before the parents.
-       */
-      let orphaned = [];
-      /** filter the generation indicated by filterChildren */
-      let     generationBlocksUnviewed = blocksUnviewed.filter(function (blockId, i) {
-        let b = oa.stacks.blocks[blockId],
-        /** These 2 criteria should be equivalent (i.e. isParent == ! isChild);
-         * the focus here is on unviewing the non-reference blocks of an axis
-         * before the reference block, so isParent is used.
-         * isChild says that the block is eligible to be a child; (it is possible,
-         * but seems very unlikely, that the block may have just been added and
-         * would be adopted below.)
-         * Child blocks have .parent and may have namespace; parent blocks don't have namespace.
-         */
-        isParent = b.axis && (b === b.axis.blocks[0]), // equivalent to b.axis.referenceBlock.view,
-        features = b.block.get('features'),
-        isChild = (b.parent || b.block.get('namespace') || (features && features.length));
-        if (isParent == isChild)        // verification.
-          breakPoint(b.longName(), isParent, 'should be !=', isChild, b.axis, features);
-        if (filterChildren && isParent)
-        {
-          let add = b.axis.dataBlocks(false, false).filter(function (b) { return b.block.get('isViewed'); });
-          if (add.length)
-            console.log(b.longName(), 'add to orphaned :', Block_list_longName(add));
-          orphaned = orphaned.concat(add);
-        }
-        return filterChildren !== Boolean(isParent);
-      });
-      dLog('filterChildren', filterChildren, generationBlocksUnviewed);
-      if (filterChildren && orphaned.length) {
-        let orphanedIds = orphaned.map(function (b) { return b.axisName; });
-        console.log('orphaned', Block_list_longName(orphaned), orphanedIds);
-        generationBlocksUnviewed = generationBlocksUnviewed.concat(orphanedIds);
-      }
-      generationBlocksUnviewed.forEach(function (blockId) {
-        blockIsUnviewed(blockId);
-      });
-    });
 
-    /** Add the block to z[].
-     * based on receivedBlock().
-     */
-    function receivedBlock2(block) {
-      let retHash = {},
-      ch = block,
-      blockId = block.get('id'), // chr
-      rc = chrData(ch);
-      /** use same structure as routes/mapview.js */
-      retHash[blockId] = rc;
-      this.get('receiveChr')(blockId, rc, 'dataReceived');
-    }
-
-    // Place new data blocks in an existing or new axis.
-    if (false)
-      blocksToDraw.forEach(function(d){
-        ensureAxis(d);
-      });
-
-    if (! oa.axisApi.ensureAxis)
-      oa.axisApi.ensureAxis = ensureAxis;
-    // for (let d in oa.stacks.axes) {
-    /** ensure that d is shown in an axis & stack.
-     * @return axis (Stacked)
-     */
-    function ensureAxis(d) {
-      console.log('ensureAxis', d);
-      return;
-      /** dBlock should be !== undefined.
-       */
-      let dBlock = me.peekBlock(d),
-      sBlock = oa.stacks.blocks[d],
-      addedBlock = ! sBlock;
-
-      if (! oa.z[dBlock.id])
-        receivedBlock2.apply(me, [dBlock]);
+    //--------------------------------------------------------------------------
 
 
-      if (! sBlock || ! dBlock.get('view')) {
-        /** sBlock may already be associated with dBlock */
-        let view = dBlock.get('view');
-        sBlock = view || new Block(dBlock);
-        // if view, then this is already set.
-        if (oa.stacks.blocks[d] !== sBlock)
-          oa.stacks.blocks[d] = sBlock;
-        if (! view) {
-          /* this .set() was getting assertion fail (https://github.com/emberjs/ember.js/issues/13948),
-           * hence the catch and trace;  this has been resolved by not displaying .view in .hbs
-           */
-          try {
-            dBlock.set('view', sBlock);
-            dBlock.set('visible', sBlock.visible);
-          }
-          catch (exc) {
-            console.log('ensureAxis', d, dBlock, sBlock, addedBlock, view, oa.stacks.blocks, exc.stack || exc);
-          }
-        }
-      }
-      let s = Stacked.getStack(d);
-      if (trace_stack > 1)
-        console.log(d, dBlock, 'sBlock', sBlock, s);
-      /* verification
-       if (addedBlock == (s !== undefined))
-       breakPoint(d, 'addedBlock', addedBlock, sBlock, 'already in stack', s); */
-      if (s && ! dBlock.get('view'))
-        console.log(d, 'has stack', s, 'but no axis', dBlock);
-      if (s && (s.axes.length == 0))
-      {
-        let axis = sBlock.axis;
-        dLog('re-add to stack', d, s, axis);
-        sBlock.log();
-        s.log();
-        axis.log();
-        s.add(axis);
-        oa.stacks.axesP[d] = axis;
-        if (oa.stacks.indexOf(s) == -1)
-          oa.stacks.append(s);
-        axisIDAdd(d);
-        s.log();
-      }
-      else
-        // if axisID d does not exist in stacks[], add a new stack for it.
-        if (! s)
-      {
-          let zd = oa.z[d],
-          dataset = zd ? zd.dataset : dBlock.get('datasetId'),
-          /** parent.parent may now be defined, in which case that will be the
-           * axis owner, not parent.  Further note below re. parent.parent (QTLs)
-           */
-          parent = dataset && dataset.get('parent'),
-          parentName = parent && parent.get('name'),  // e.g. "myGenome"
-          parentId = parent && parent.get('id'),  // same as name
-          namespace = dataset && dataset.get('namespace'),
-          /** undefined or axis of parent block of d. */
-          parentAxis
-          ;
-          Stack.verify();
-
-          console.log(d, "zd", zd, dataset && dataset.get('name'), parent, parentName, parentId, namespace);
-          // zd.  scope, featureType, , namespace
-          // if block has a parent, find a block with name matching parentName, and matching scope.
-          if (parentName)
-          {
-            /** this is alternative to matchParentAndScope() - direct lookup. */
-            let parentDataset = oa.datasets[parentName];
-            dLog("dataset", parentName, parentDataset);
-            function matchParentAndScope (key, value) {
-              if (! zd)
-                zd = oa.z[d];
-              let block = oa.z[key],
-              /** block is a copy of the data attributes, it does not have
-               * block.store; block_ is the ember data store object. */
-              block_ = me.peekBlock(key),
-              /** Match scope, dataset parent name, and store.name.
-               * There may be a copy of the parent in >1 server; for now we'll
-               * put the data block on the axis of the parent from the same
-               * server.  It is not invalid to put it on a different server,
-               * and that functionality can be considered.
-               * Now replacing :
-               *  (dBlock.store.name === block_.store.name)
-               * with parentMatch (which probably covers match and could replace it)
-               * And sometimes dataset (z[d].dataset) is the local dataset with
-               * the same name instead of dBlock.get('datasetId').dBlock
-               * So adding parentNameMatch, and using b.get('referenceBlock') as fall-back;
-               * this will be replaced anyway (axesBlocks, which uses block.referenceBlock).
-               */
-              parentMatch = block_ && (block_.get('datasetId.content') === dataset.get('parent')),
-              parentNameMatch = block_ && (dataset.get('parentName') === get(block_, 'datasetId.id')),
-              match = (block.scope == zd.scope) && (block.dataset.get('name') == parentName);
-              dLog(key, trace_stack ? block : block.dataset.get('name'), match, parentMatch, parentNameMatch);
-              match = match && (parentMatch || parentNameMatch);
-              return match;
-            }
-
-            let blockName;
-            /** Adding support for QTLs whose parent is a marker set aligned to
-             * a physical reference means we now may have dataset.parent.parent,
-             * i.e. dBlock.parentBlock !== dBlock.referenceBlock, whereas
-             * matchParentAndScope() assumes that the parentBlock is the owner of
-             * the axis (the referenceBlock).  This is handled here as a special
-             * case; it is likely useReferenceBlock() can now replace
-             * matchParentAndScope().
-             */
-             if (dBlock.get('datasetId.parent.parent')) {
-               useReferenceBlock(dBlock);
-             }
-            if (! blockName) {
-              /** undefined if no parent found, otherwise is the id corresponding to parentName */
-              blockName = d3.keys(oa.z).find(matchParentAndScope);
-            }
-            if (! blockName) {
-              let b = me.peekBlock(d);
-              useReferenceBlock(b);
-            }
-            function useReferenceBlock(b) {
-              let
-              r = b && b.get('referenceBlock');
-              blockName = r && r.get('id');
-              dLog(d, b, 'referenceBlock', r, blockName);
-            }
-            dLog(parentName, blockName);
-            if (blockName)
-            {
-              let block = oa.z[blockName];
-              parentAxis = oa.axesP[blockName];
-              if (! block) {
-                dLog('ensureAxis', blockName, oa.z, oa.axesP);
-              } else {
-                dLog(block.scope, block.featureType, block.dataset.get('name'), block.dataset.get('namespace'), "parentAxis", parentAxis);
-              }
-            }
-          }
-
-          let sd;
-          /** if any children loaded before this, adopt them */
-          let adopt;
-          /** Use the stack of the first child to adopt.
-           * First draft created a new stack, this may transition better.
-           */
-          let adopt0;
-
-          /** if true then if child data blocks are received before their parent
-           * blocks, create an axis and stack for the child block, and when the
-           * parent arrives, re-assign the axis to the parent, adopting the child
-           * into the axis.
-           *
-           * The idea was to give the user some positive feedback if the child
-           * data arrived and not the parent block, but the updates involved in
-           * the adoption step may be a problem, so this is currently disabled.
-           */
-          const drawChildBlocksBeforeParent = false;
-          
-          if (! drawChildBlocksBeforeParent && parentName && ! parentAxis)
-          {
-            dLog(sd, ".parentName", parentName);
-            sBlock.parentName = parentName;
-            sBlock.z = oa.z[d];
-            /* Skip the remainder of the function, which implements the
-             * drawChildBlocksBeforeParent feature.
-             * Disabling adoption seems to avoid this error, which is probably
-             * caused by an axis-1d component being destroyed during adoption :
-             *  "Cannot update watchers for `domain` on `<... component:draw/axis-1d ...>` after it has been destroyed."
-             *
-             * This return can be re-structured to if/then, assuming this solution works.
-             */
-            return;
-          }
-
-
-          if (! parentAxis)
-          {
-            // initial stacking : 1 axis per stack, but later when db contains Linkage
-            // Groups, can automatically stack Axes.
-            /* It seems better to re-use oa.axesP[adopt0] instead of creating sd;
-             * that requires the adoption search to be done earlier, which is simple,
-             * and also will change this significantly, so is better deferred
-             * until after current release.
-             */
-            sd = new Stacked(d, 1); // parentAxis === undefined
-            sd.referenceBlock = dBlock;
-            dLog('before push sd', sd, sd.blocks, sBlock);
-            sd.logBlocks();
-            if (sd.blocks.length && sd.blocks[0] === sBlock)
-              breakPoint('sBlock already in sd.blocks', sd.blocks);
-            else
-            {
-              sd.blocks.push(sBlock);
-              dLog('after push', sd.blocks);
-              sd.logBlocks();
-            }
-            // .parent of referenceBlock is undefined.
-            sBlock.setAxis(sd);
-            if (sBlock !== sd.referenceBlockS())
-              dLog('sBlock', sBlock, ' !== sd.referenceBlockS()',  sd.referenceBlockS());
-
-            adopt = 
-              d3.keys(oa.axesP).filter(function (d2) {
-                let a = oa.stacks.blocks[d2]; //  could traverse just axesP[] and get their reference
-                let match = 
-                  (d != d2) &&  // not self
-                  ! a.parent && a.parentName && (a.parentName == dataset.get('name')) &&
-                  a.z.scope && (a.z.scope == oa.cmName[d].scope) &&
-                  (a.block.store.name === dataset.store.name);
-                if (! a.parent && trace_stack > 1)
-                {
-                  console.log(d2, a.parentName,  dataset.get('name'),
-                              a.z && a.z.scope,  oa.cmName[d].scope, match); 
-                }
-                return match;
-              });
-
-            if (adopt.length)
-            {
-              dLog("adopt", adopt);
-              adopt0 = adopt.shift();
-              let a = oa.axesP[adopt0];
-              a.stack.log();
-              /** stacks:Block of the block being adopted */
-              let aBlock = a.referenceBlockS();
-              sd.move(a, 0);
-
-              delete oa.axesP[adopt0];
-              deleteAxisfromAxisIDs(adopt0);
-              a.stack.remove(adopt0);
-              // roughly equivalent : a.stack.move(adopt0, newStack, -1)
-
-              // a.axisName = d;
-              // sd.blocks[0] is sBlock
-              dLog('aBlock.parent', aBlock.parent, '->', sd.blocks[0]);
-              aBlock.parent = sd.blocks[0];
-              dLog('aBlock.axis', aBlock.axis, sd);
-              // see comments re. axislater and run.later in @see Block.prototype.setAxis().
-              aBlock.setAxis(sd);
-              a.stack.add(sd);
-              dLog(adopt0, a, sd, oa.axesP[a.axisName]);
-              sd.stack.log();
-
-              sd.scale = a.scale;
-              /** the y scales will be accessed via the new name d. - also update domain */
-              dLog('adopt scale', y[d] && 'defined', y[adopt0] && 'defined');
-              if (y[d] === undefined)
-                y[d] = y[adopt0]; // could then delete y[adopt0]
-
-              /** change the axisID of the DOM elements of the axis which is being adopted.  */
-              let aStackS = oa.svgContainer.select("g.axis-outer#" + eltId(adopt0));
-              dLog('aStackS', aStackS.size());
-              aStackS
-                .datum(d)
-                .attr("id", eltId);
-              if (trace_stack > 1)
-              {
-                logSelection(aStackS);
-                logSelectionNodes(aStackS);
-              }
-
-              let gAll = 
-                aStackS.select("g.axis-all")
-                .attr("id", eltIdAll);
-
-              /** just the <text> which is immediate child of gAll;  could use selectImmediateChildNodes(gAll).
-               */
-              let axisTitleS = aStackS.select("g.axis-all > text");
-              axisTitle.axisTitleFamily(axisTitleS);
-
-              /** update the __data__ of those elements which refer to axis parent block name */
-              let dataS = aStackS.selectAll("g.brush, g.brush > g[clip-path], g.stackDropTarget, g.stackDropTarget > rect");
-              /* could also update adopt0 -> d in : 
-               *  g.brush > clipPath#axis-clip-${axisID}
-               *  g.brush > g[clip-path] url(#axis-clip-${axisID})
-               * but adopt0 is unique and that is all that is required for now;
-               * will likely change datum of g axis* and brush to the Stacked axis
-               * when splitting out axes from draw-map, simplifying adoption.
-               */
-              dLog('dataS', dataS.nodes(), dataS.data(), '->', d);
-              dataS.each(function () { d3.select(this).datum(d); });
-
-              let gAxisS = aStackS.selectAll("g.axis");
-              dLog('zoomBehavior adopt.length', adopt.length, gAxisS.nodes(), gAxisS.node());
-              const axis = oa.axes[d];
-              gAxisS
-                .datum(d)
-                .attr('id', axisEltId(axis))
-                .call(oa.zoomBehavior)
-                .call(axis.scale(y[d]));
-
-              if (trace_stack > 1)
-              {
-                let checkS = aStackS.selectAll("g, g.stackDropTarget > rect");
-                checkS.each(function(b,i) {console.log(this,b,i,b.__data__); } );
-                // logSelectionNodes(checkS);
-              }
-            }
-          }
-
-          // verification : sd is defined iff this block doesn't have a parent axis and is not adopting a block with an axis.
-          if ((sd !== undefined) != ((parentAxis || adopt0) === undefined))
-            dLog('sd', sd, parentAxis, adopt0);
-          let
-            /** blocks which have a parent axis do not need a Stack.
-             * sd is defined if we need a new axis and hence a new Stack.
-             */
-            newStack = sd && ! adopt0 && new Stack(sd);
-          if (parentAxis)
-          {
-            dLog("pre-adopt", parentAxis, d, parentName);
-            /* axisIDAdd() has already been called (by receiveChr() or from
-             * myDataKeys above), so remove d from axisIDs because it is a child
-             * data block, not an axis / reference block.
-             * Alternative is to use stacks.axisIDs(); splitting out axes as a
-             * component will replace oa.axisIDs.
-             */
-            deleteAxisfromAxisIDs(d);
-            delete oa.axesP[d];
-            dLog('before push parentAxis', parentAxis, parentAxis.blocks, sBlock);
-            parentAxis.logBlocks();
-            parentAxis.blocks.push(sBlock);
-            dLog('after push', parentAxis.blocks);
-            parentAxis.logBlocks();
-            sBlock.setAxis(parentAxis);
-            sBlock.parent = parentAxis.referenceBlockS();
-            let aStackS1 = oa.svgContainer.select("g.axis-outer#" + eltId(parentAxis.axisName));
-            let axisTitleS = aStackS1.select("g.axis-all > text");
-            axisTitle.axisTitleFamily(axisTitleS);
-          }
-          else if (! adopt0)
-          {
-            /** handle GM-s and reference.
-             * : when reference arrives before any children : no .parent.
-             * Difference : GM has namespace and features;  reference has range
-             */
-            let isReference = dBlock.get('range') !== undefined;
-            // if (! isReference)
-            /* GM has no parent/child separation; it is its own reference and data block.  */
-            // set above : sd.referenceBlock = dBlock;
-            // sBlock.parent = sd;   //-	.parent should be Block not Stacked
-            // could push() - seems neater to place the reference block first.
-            dLog('before unshift sd', sd, sd.blocks, sBlock);
-            if (sd.blocks.length && sd.blocks[0] === sBlock)
-              dLog('sBlock already in sd.blocks', sd.blocks);
-            else
-            {
-              if (trace_stack)
-                sd.logBlocks();
-              sd.blocks.unshift(sBlock);
-              dLog('after unshift', sd.blocks);
-              if (trace_stack)
-                sd.logBlocks();
-            }
-          }
-          /** to recognise parent when it arrives.
-           * not need when parentAxis is defined.
-           */
-          if (parentName && ! parentAxis)
-          {
-            console.log(sd, ".parentName", parentName);
-            sBlock.parentName = parentName;
-          }
-          if (sBlock) { sBlock.z = oa.z[d]; }
-          if (sd)
-            sd.z = oa.z[d];  // reference from Stacked axis to z[axisID]
-
-          // newStack is only defined if sd is defined (and !adopt0) which is only true if ! parentAxis
-          if (newStack)
-          {
-            console.log("oa.stacks.append(stack)", d, newStack.stackID, oa.stacks);
-            oa.stacks.append(newStack);
-            console.log(oa.stacks);
-            newStack.calculatePositions();
-          }
-
-          if (! parentAxis)
-          {
-            adopt.map(function (d3) {
-              /** axis being adopted.
-               * a is discarded, and a.blocks[0] is re-used.
-               */
-              let a = oa.axesP[d3];
-              /** oldStack will be deleted. `a` will become unreferenced. */
-              let oldStack = a.stack;
-
-              /** re-use the Block being adopted. */
-              let aBlock = a.referenceBlockS();
-              sd.move(a, 0);
-              // could set .parent in .move()
-              aBlock.parent = sd;
-              //	-	check that oldStack.delete() will delete the (Stacked) a
-
-              console.log(d3, a, aBlock, sd, oa.axesP[a.axisName]);
-              sd.stack.log();
-              // noting that d3 == a.axisName
-              delete oa.axesP[a.axisName];
-              oa.stacks.blocks[a.axisName] = aBlock;
-              console.log('aBlock.axis', aBlock.axis);
-              aBlock.axis = sd;
-              deleteAxisfromAxisIDs(a.axisName);
-              if (! oldStack)
-                console.log("adopted axis had no stack", a, a.axisName, oa.stacks);
-              else
-              {
-                // remove Stack of a from oa.stacks.  a.stack is already replaced.
-                console.log("remove Stack", oldStack, oa.stacks);
-                oldStack.delete();
-                console.log("removed Stack", oa.stacks, oa.stacks.length, a);
-              }
-            });
-          }
-          Stack.verify();
-          stacksAxesDomVerify(stacks, oa.svgContainer);
-        }
-    }
-
-    /**  add width change to the x translation of axes to the right of this one.
-     */
-    function axisWidthResizeRight(axisID, width, dx)
-    {
-      console.log("axisWidthResizeRight", axisID, width, dx);
-      /** this is like Stack.axisStackIndex().  */
-      let axis = oa.axes[axisID], from = axis.stack,
-      fromSix = from.stackIndex(),   o = oa.o;
-      for (let six=0; six < stacks.length; six++)
-      {
-        let stack = stacks[six],
-        /** apply the dx proportionally to the closeness of the stack to the cursor (e.g. stack index or x distance),
-         * and apply it -ve to those to the left, including the stack of the axis extend being resized, so that it mirrors,
-         * i.e. right side goes same distance as dx, left side same and opposite,
-         */
-        close =
-          (six == fromSix)
-          ? -1/2
-          : (six < fromSix)
-          ? (six - fromSix) / fromSix
-          : (six - fromSix) / (stacks.length - fromSix);
-        console.log("close", close, fromSix, six, stacks.length);
-        stack.axes.forEach(
-          function (a, index)
-          {
-            o[a.axisName] += (dx * close);
-          }
-        );
-        // could filter the selection - just those right of the extended axis
-        oa.svgContainer.selectAll(".axis-outer").attr("transform", Stack.prototype.axisTransformO);
-        stack.axes.forEach( function (a, index) { axisRedrawText(oa.axes[a.axisName]); });
-        pathDataUtils.pathUpdate(undefined);
-      }
-    };
     let x = stacks.x;
     oa.axisApi.updateXScale?.();
     //let dynamic = d3.scaleLinear().domain([0,1000]).range([0,1000]);
@@ -1589,18 +1046,6 @@ export default Component.extend(Evented, {
       let a = oa.axes[d],
       y = a.axis.axis1d.y;
     });
-    /** when draw( , 'dataReceived'), pathUpdate() is not valid until ys is updated.
-     * ysUpdated is roughly equivalent to ysLength(), but on entry to a new
-     * draw() closure, ysUpdated is undefined until this point, while oa.ys
-     * contains existing axis scales.
-     */
-    let ysUpdated = true;
-    /** @return the number of axis y scales, which is equivalent to the number of axes. */
-    function ysLength()
-    {
-      // could use  ... axes1d.axesP.length
-      return me.get('axis1dArray.length');
-    }
 
     //- moved to graph-frame.js as renderFrame()
     oa.graphFrame.renderFrame();
@@ -1640,196 +1085,20 @@ export default Component.extend(Evented, {
     //- moved to graph-frame.js : flowName(), flowHidden(), if-block as renderForeground()
     oa.graphFrame.renderForeground();
 
-    if (draw_orig) {
-    // pathUpdate(undefined);
-    stacks.log();
-
-    //-components/stacks
-    // Add a group element for each stack.
-    // Stacks contain 1 or more Axes.
-    /** selection of stacks */
-    let stackSd = oa.svgContainer.selectAll(".stack")
-      .data(stacks, Stack.prototype.keyFunction),
-    stackS = stackSd
-      .enter()
-      .append("g"),
-    stackX = stackSd.exit();
-    if (trace_stack)
-    {
-      console.log("append g.stack", stackS.size(), stackSd.exit().size(), stackS.node(), stackS.nodes());
-      if (oa.stacks.length > stackSd.size() + stackS.size())
-      {
-        console.log("missed stack", oa.stacks.length, stackSd.size());
-        breakPoint();
-      }
-    }
-    let removedStacks = 
-      stackX;
-    if (removedStacks.size())
-    {
-      if (trace_stack > 1)
-      {
-        logSelection(removedStacks);
-        logSelectionNodes(removedStacks);
-      }
-      console.log('removedStacks', removedStacks.size());
-      /** If there are g.axis-outer in removedStacks[], either move them to the
-       * correct g.stack or remove them.
-       *
-       * Generation of the stacks / axes will probably be simpler when converted
-       * to CP -> d3 join;   probably can still get the move transition for the
-       * g.axis-outer by doing .insert() of the g.axis-outer in the .exit() case
-       * of the g.stack.
-       */
-      let ra = removedStacks.selectAll("g.axis-outer");
-      console.log('ra', ra, ra.nodes(), ra.node());
-      ra.each(function (d, i, g) {
-        console.log(d, i, this);
-        let rag = this,
-        ras = Stacked.getStack(d), sDest, alreadyAxis;
-        if (! ras)
-        {
-          // this is OK - just information
-          console.log('removedStacks', 'axis no longer in a stack', d);
-        }
-        else
-          if (! (sDest = ras && oa.svgContainer.select("g.stack#" + stackEltId(ras)))
-              || sDest.empty()) {
-            dLog('removedStacks', 'No stack for axis', ras, ras.stackID, this);
-          }
-        else
-          // check that target is not parent
-          // if it is then no move required.
-          if (sDest.node() === this.parentElement) {
-            dLog('removedStacks', 'axis is already in the right parent', d, i, ras, this.parentElement);
-          }
-        // check if there is already a g.axis-outer with this id in that stack.
-        else if ((alreadyAxis = sDest.selectAll("g > g.axis-outer#id" + rag.__data__)) && ! alreadyAxis.empty()) {
-          dLog('removedStacks', 'axis is already in the right parent', rag.__data__, d, i, ras, sDest.node(), this.parentElement);
-          // rag is not needed and will be removed with its parent which is in removedStacks[] / stackX
-        }
-        else
-        {
-          console.log('to stack', ras.stackID, sDest.node());
-          let
-            /** .insert() will change .__data__, refn d3 doc : " Each new
-             * element inherits the data of the current elements, if any, in
-             * the same manner as selection.select."
-             * Data of parent g.stack is Stack; data of g.axis-outer is axisID
-             */
-            ragd = rag.__data__,
-          moved = sDest.insert(function () { return rag; });
-          rag.__data__ = ragd;
-          if (trace_stack > 1)
-          {
-            console.log(moved.node(), moved.data(), moved.node().parentElement,
-                        rag.__data__);
-            Stack.verify();
-            stacksAxesDomVerify(stacks, oa.svgContainer);
-          }
-        }
-      });
-      console.log('remnant', removedStacks.node());
-    }
-    }
 
     // moved to ../utils/draw/axis.js : stackEltId()
 
-    /** For the given Stack, return its axisIDs.
-     * @return [] containing string IDs of reference blocks of axes of the Stack.
-     */
-    function stack_axisIDs(stack)
-    {
-      let result = stack.parentAxisIDs();
-      if (trace_stack > 1)
-        dLog('stack_axisIDs', stack, result);
-      return result;
-    }
-
-    if (draw_orig) {
-    const
-    axisDraw = new AxisDraw(oa, /*axis1d*/null, stacks, /*stacksView*/ null),
-    selections = {svgContainer, stackSd, stackS,  stackX};    
-    const resultSelections =  
-        axisDraw.draw2(selections, stack_axisIDs, newRender, stacksAxesDomVerify);
-    let {g, axisS, axisG, allG} = resultSelections;
-
-
     //- moved DropTarget to utils/draw/drop-target.js (considered : components/axis)
-    /*------------------------------------------------------------------------*/
-
-    axisTitle.updateAxisTitleSize(axisG.merge(axisS));
 
 //- moved to ../utils/draw/axis.js : yAxisTextScale(),  yAxisTicksScale(),  yAxisBtnScale()
 
       //- moved to utils/draw/axisBrush.js : setupBrushZoom(), brushClipSize()
 
     /*------------------------------------------------------------------------*/
-    /* above is the setup of scales, stacks, axis */
-    /* stacksAdjust() calls pathUpdate() which depends on the axis y scales. */
-    if (source == 'dataReceived')
-      stacks.changed = 0x10;
-    let t = stacksAdjust(true, undefined);
-    }
-    /* below is the setup of path hover (path classes, colouring are setup
-     * above, but that can be moved following this, when split out). */
-    /*------------------------------------------------------------------------*/
 
     //- moved toolTip to utils/draw/path-info.js
     pathInfo.setupToolTip();
 
-    //Probably leave the delete function to Ember
-    //function deleteAxis(){
-    //  console.log("Delete");
-    //}
-
-    /** remove g#axisName
-     */
-    function removeAxis(axisName, t)
-    {
-      let axisS = oa.svgContainer.select("g.axis-outer#" + eltId(axisName));
-      console.log("removeAxis", axisName, axisS.empty(), axisS.node());
-      axisS.remove();
-    }
-    /** remove g.stack#id<stackID
-     */
-    function removeStack(stack, t)
-    {
-      let stackS = oa.svgContainer.select("g.stack#" + stackEltId(stack));
-      console.log("removeStack", stack.stackID, stackS.empty(), stackS.node());
-      stackS.remove();
-    }
-    /** remove axis, and if it was only child, the parent stack;  pathUpdate
-     * @param stackID -1 (result of .removeStacked) or id of stack to remove
-     * @param stack refn to stack - if not being removed, redraw it
-     */
-    function removeAxisMaybeStack(axisName, stackID, stack)
-    {
-      let t = oa.svgContainer.transition().duration(750);
-      removeAxis(axisName, t);
-      /** number of stacks is changing */
-      let changedNum = stackID != -1;
-      if (changedNum)
-      {
-        removeStack(stack, t);
-      }
-      else
-      {
-        console.log("removeAxisMaybeStack", axisName, stackID, stack);
-        if (stack)
-          stack.redraw(t);
-      }
-      stacks.changed = 0x10;
-      /* Parts of stacksAdjust() are applicable to the 2 cases above : either a
-       * stack is removed, or a stack is non-empty after an axis is removed from
-       * it.  This is selected by changedNum.
-       *
-       * stacksAdjust() calls redrawAdjacencies() (when changedNum) for all
-       * stacks, but only need it for the stacks on either side of the removed
-       * stack.
-       */
-      stacksAdjust(changedNum, t);
-    }
 //- moved to stacks-view.js : axisStackChanged_(), axisStackChanged()
 
 //-components/paths

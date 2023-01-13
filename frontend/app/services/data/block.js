@@ -780,9 +780,7 @@ export default Service.extend(Evented, {
       });
     }
     block.set('isViewed', viewed);
-    if (viewed && draw_orig) {
-      this.ensureAxis(block);
-    }
+
     this.endPropertyChanges();
 
     // this.trigger('receivedBlock', id, block);  // not required now ?
@@ -1501,10 +1499,7 @@ export default Service.extend(Evented, {
     let oa = stacks.oa, axisApi = oa.axisApi;
     axisApi.cmNameAdd(oa, block);
     console.log('ensureAxis', block.get('id'));
-    if (false) {
-    axisApi.ensureAxis(block.get('id'));
-      stacks.forEach(function(s){s.log();});
-    }
+    // draw_orig
   },
   /** Collate the viewed blocks by their parent block id, or by their own block
    * id if they are not parented.
