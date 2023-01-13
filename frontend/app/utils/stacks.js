@@ -2228,6 +2228,7 @@ Stacked.prototype.axisTransformO = function ()
 };
 Stacked.prototype.axisTransformO_orig = function ()
 {
+  /** can use .yRangeSansStack() */
   let yRange = stacks.vc.yRange;
   let stack;
   // check that this.stack is DrawStackObject, not Stack

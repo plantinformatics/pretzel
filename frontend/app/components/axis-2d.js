@@ -581,7 +581,7 @@ export default Component.extend(Evented, AxisEvents, {
       const xOffset = 25, shiftRight=5;
       let 
         tickWidth = xOffset/5,
-      edgeHeight = axis ? axis.yRange() : vc.yRange || 0,
+      edgeHeight = axis ? axis.yRangeSansStack() : vc.yRange || 0,
       line = d3.line(),
       sLine = line([
         [+tickWidth, 0],

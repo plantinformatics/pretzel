@@ -255,6 +255,13 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   removeBlockByName		: Stacked_p.removeBlockByName,
   move		: Stacked_p.move,
   yOffset		: Stacked_p.yOffset,
+  /** same as .yRange(), but ignore the effect of stacking, i.e. just  (stacks.vc.yRange - axisGap).
+   * Background :
+   * Currently a transform y scale is used to apply .portion (will likely drop that because it complicates the text size).
+   * .yRange() also incorporates .portion, so compensate by /.portion
+   * Equivalent : in Stacked.prototype.axisTransformO_orig(), stacks.vc.yRange is used directly, without *.portion
+   */
+  yRangeSansStack : function() { return this.yRange() / this.portion; },
   yRange		: Stacked_p.yRange,
   yRange2		: Stacked_p.yRange2,
   domainCalc		: Stacked_p.domainCalc,
@@ -397,11 +404,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     const
     /** similar domain calcs in resetZoom().  */
     domain = a_parent ? a_parent.getDomain() : a.getDomain(),
-    /** Currently a transform y scale is used to apply .portion (will likely drop that because it complicates the text size).
-     * a.yRange() also incorporates .portion, so compensate by /.portion
-     * Equivalent : in Stacked.prototype.axisTransformO_orig(), stacks.vc.yRange is used directly, without *.portion
-     */
-    myRange = a.yRange() / a.portion;
+    myRange = a.yRangeSansStack();
     dLog(fnName, domain, myRange, this.axisName);
     let y;
     if (domain)
