@@ -181,10 +181,11 @@ export default Component.extend({
 
     const axisApi = this.oa.axisApi;
     axisApi.stacksView = this;
-    axisApi.collateO = () => this.collateO();
-    axisApi.updateXScale = () => this.updateXScale();
-    axisApi.stacksAdjustY = () => this.stacksAdjustY();
-    axisApi.stacksAdjust = () => this.stacksAdjust();
+    axisApi.collateO = this.collateO.bind(this);
+    axisApi.updateXScale = this.updateXScale.bind(this);
+    // stacksAdjust{,Y}() have parameters, so .bind is used.
+    axisApi.stacksAdjustY = this.stacksAdjustY.bind(this);
+    axisApi.stacksAdjust = this.stacksAdjust.bind(this);
   },
 
   //----------------------------------------------------------------------------
