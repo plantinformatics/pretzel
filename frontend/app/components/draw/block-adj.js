@@ -259,15 +259,22 @@ export default Component.extend(Evented, AxisEvents, {
             pathGradientUpper = this.get('controlsView.pathGradientUpper');
         dLog('pathGradient', pathGradient, pathGradientUpper, pathsResult.length);
         const pathEndOrder = this.pathEndOrder(pathsResult);
+    /** Used by pathIsSyntenic() : neighbourDistance() */
+    let domainSizes = this.axesDomainSizes();
     if (filterPathSynteny && ! useColinear && pathsResult.length) {
-      pathGradient = this.gradientThresholdToAxis(pathGradient);
+      // pathGradient = this.gradientThresholdToAxis(pathGradient);
+      /* gradientThresholdToAxis() scales pathGradient up by intervalSize(domain of otherEnd),
+       * which does not handle a block-adj which a large difference between its 2 axis lengths.
+       * The pathIsSyntenic() comment explains further.
+       */
+      // domainSizes is used (by pathIsSyntenic()) in this case.
     }
 
       if (filterPathSynteny && ! zeroDomain && pathsResult.length) {
         pathsResult = pathsResult.filter(
           ! useColinear ?
             (p) => this.pathIsSyntenic(
-              p, pathGradient, this.get('controlsView.pathGradientUpper'), pathEndOrder) :
+              p, pathGradient, this.get('controlsView.pathGradientUpper'), pathEndOrder, domainSizes) :
           (p) => /*this.*/pathIsColinear(
             p, pathGradient, pathGradientUpper, this.scaled_pos));
         /**
@@ -334,7 +341,7 @@ export default Component.extend(Evented, AxisEvents, {
             shown = shown.filter(
               ! useColinear ?
               (p) => this.pathIsSyntenic(
-                p, pathGradient, this.get('controlsView.pathGradientUpper'), pathEndOrder) :
+                p, pathGradient, this.get('controlsView.pathGradientUpper'), pathEndOrder, domainSizes) :
               (p) => /*this.*/pathIsColinear(
                 p, pathGradient, this.get('controlsView.pathGradientUpper'), this.scaled_pos));
           }
@@ -350,6 +357,15 @@ export default Component.extend(Evented, AxisEvents, {
     promise = this.draw(/*pathsApiResultType*/ prType, pathsResult);
     return promise;
   }).keepLatest(),
+
+  /** @return the intervalSize of the 2 axes of this block-adj. */
+  axesDomainSizes() {
+    /** related : gradientThresholdToAxis(). */
+    const
+    domains = this.blockAdj.axesDomains,
+    lengths = domains.map((d) => intervalSize(d));
+    return lengths;
+  },
 
   /** Convert pathGradient, which is [0, 1] to be proportional to axis length.
    */
@@ -434,9 +450,22 @@ looking at the currently displayed paths in a block_adj :
     return {shown, sorted, order};
   },
   /** Alternative to pathIsColinear()
-   * @param threshold pathGradient converted to be proportional to the respective axis domain
+   *
+   * A block-adj may have a large difference between its 2 axis lengths,
+   * e.g.  a GM axis (centiMorgans : ~100) and a physical reference axis
+   * (base pairs : ~1e8).
+   *
+   * axesDomainSizes() is passed to neighbourDistance() which scales the
+   * distance between path and neighbour at each end down by domainSizes[end],
+   * so that the 2 distances are proportionate and can be combined as a
+   * Euclidean distance, and the average distance of neighbours within +/-
+   * offset can be compared against pathGradient.
+   *
+   * @param threshold pathGradient
+   * @param pathEndOrder  result of pathEndOrder()
+   * @param domainSizes intervalSize of the 2 axes of this block-adj. result of axesDomainSizes().
    */
-  pathIsSyntenic(p, threshold, pathGradientUpper, pathEndOrder) {
+  pathIsSyntenic(p, threshold, pathGradientUpper, pathEndOrder, domainSizes) {
     let okCount = 0;
     let reasons = [];
     const neighbourScope = this.get('controlsView.pathNeighbours') || 3;
@@ -445,7 +474,7 @@ looking at the currently displayed paths in a block_adj :
     for (let offset=1; offset <= neighbourScope; offset++)
     {
       for (let sign=1; sign >= -1; sign -= 2) {
-        let distance = this.neighbourDistance(pathGradientUpper, pathEndOrder, sign * offset, p, reasons);
+        let distance = this.neighbourDistance(pathGradientUpper, pathEndOrder, domainSizes, sign * offset, p, reasons);
         if (distance !== undefined) {
           sum += distance;
           count++;
@@ -465,6 +494,8 @@ looking at the currently displayed paths in a block_adj :
   },
   /** Calculate the distance from path p to the neighbour identified by offset.
    * For distance : treat the 2 axes as perpendicular, and calculate Euclidean distance.
+   * @param pathEndOrder  result of pathEndOrder()
+   * @param domainSizes intervalSize of the 2 axes of this block-adj. result of axesDomainSizes().
    * @param offset current values are +/- 1
    * @param evidence gather data underlying the calculation
    * @return distance, or undefined if the given offset is out of range
@@ -475,7 +506,7 @@ looking at the currently displayed paths in a block_adj :
    * true if within threshold.  This assumed that neighbours are close; this
    * change aims to ignore support from distant neighbours.
    */
-  neighbourDistance(pathGradientUpper, pathEndOrder, offset, p, evidence) {
+  neighbourDistance(pathGradientUpper, pathEndOrder, domainSizes, offset, p, evidence) {
     const
     /** index of 1 end of path in pathEndOrder.sorted */
     endIndex = pathEndOrder.order.get(p),
@@ -497,8 +528,8 @@ looking at the currently displayed paths in a block_adj :
       pathEndValue = pathFeatures[otherEnd].value[0];
       /** the 2 components can be adjusted relative to their axis. */
       distance = Math.sqrt(
-        (neighbourValue - pathEndValue) ** 2 + 
-          (neighbourFeatures[sortedEnd].value[0] - pathFeatures[sortedEnd].value[0]) **2);
+        ((neighbourValue - pathEndValue) / domainSizes[otherEnd]) ** 2 + 
+          ((neighbourFeatures[sortedEnd].value[0] - pathFeatures[sortedEnd].value[0]) / domainSizes[sortedEnd]) **2);
 
       if (trace_blockAdj > 2) {
         dLog(distance, endIndex, offset, pathEndValue, neighbourValue, pathFeatures, neighbourFeatures);
