@@ -593,7 +593,6 @@ export default Component.extend(Evented, {
                     sendUpdatedSelectedFeatures,
                     selectedFeatures_clear : () => this.get('selectedService').selectedFeatures_clear(),
                     deleteAxisfromAxisIDs,
-                    // removeAxisMaybeStack,
                    };
       setProperties(oa.axisApi, axisApiAdd);
     }

@@ -340,8 +340,13 @@ function AxisDrag(oa, vc) {
       //Do we need to keep the brushed region when we drag the axis? probably not.
       //The highlighted features together with the brushed regions will be removed once the dragging triggered.
       // st0.select(".brush").call(y[d].brush.move,null);
+
+      /** Disabled this - it's not clear why it is needed; it seems sensible to
+       * retain the highlighted Features through the drag and after it.
+       * Their position doesn't need to be updated.
       //Remove all highlighted Features.
       axisFeatureCircles_selectAll().remove();
+      */
     }
   }
 
