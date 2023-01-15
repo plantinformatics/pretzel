@@ -811,7 +811,7 @@ export default Service.extend({
      */
     textP = vcfGenotypeLookup(
       this.auth, block.server, /*samples*/[], domainInteger,
-      requestFormat, vcfDatasetId, block.name, rowLimit
+      {requestFormat}, vcfDatasetId, block.name, rowLimit
     );
 
     return textP;

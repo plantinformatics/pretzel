@@ -207,7 +207,9 @@ Server :
   <div class="lookup-line">
 
   {{#if this.vcfGenotypeLookupDomain}}
-    <button type="button" onclick={{action this.vcfGenotypeLookup}} class="btn btn-info btn-xs">VCF Lookup</button>
+    <button type="button" onclick={{action this.vcfGenotypeLookup}}
+      disabled={{not this.vcfGenotypeSamplesSelected.length}}
+      class="btn btn-info btn-xs">VCF Lookup</button>
   {{else}}
     {{#if this.urlOptions.gtIntervalLimit}}
       <span>VCF Lookup Region limit is {{this.intervalLimit}}Mb</span>
@@ -236,6 +238,14 @@ Server :
 
 {{!-- --------------------------------------------------------------------- --}}
 
+<div class="genotype">
+  {{#if this.vcfExportText.length}}
+    <button type="button" class="btn btn-info btn-xs">
+      {{#component "ember-csv@file-anchor" data=this.vcfExportText fileName=this.vcfExportFileName}} VCF Download{{/component}}
+    </button>
+  {{/if}}
+</div>
+
   <div style="margin-top:2ex">
 
     {{#elem/panel-container state="primary" showComponent=showResultText as |panelContainer|}}
@@ -246,6 +256,9 @@ Server :
 
       {{#if panelContainer.showComponent}}
 
+        {{#if this.headerText}}
+          <textarea class="vcfGenotypeText" >{{this.headerText}}</textarea>
+        {{/if}}
       <div>
         <textarea class="vcfGenotypeText"
           style={{compute (action this.vcfGenotypeTextWidthStyle)}} >

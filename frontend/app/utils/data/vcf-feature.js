@@ -40,17 +40,21 @@ const cellMultiFeatures = false;
  * @param server store to add the features to
  * @param samples to request, may be undefined or []
  * @param domainInteger  [start,end] of interval, where start and end are integer values
- * @param requestFormat 'CATG' (%TGT) or 'Numerical' (%GT for 01)
+ * @param requestOptions :
+ * . requestFormat 'CATG' (%TGT) or 'Numerical' (%GT for 01)
+ * . headerOnly true means -h (--header-only), otherwise -H (--no-header)
+ *
  * @param vcfDatasetId  id of VCF dataset to lookup
  * @param scope chromosome, e.g. 1A, or chr1A - match %CHROM chromosome in .vcf.gz file
  * @param rowLimit
  */
-function vcfGenotypeLookup(auth, server, samples, domainInteger, requestFormat, vcfDatasetId, scope, rowLimit) {
+function vcfGenotypeLookup(auth, server, samples, domainInteger, requestOptions, vcfDatasetId, scope, rowLimit) {
   const
   fnName = 'vcfGenotypeLookup',
 
   region = scope + ':' + domainInteger.join('-'),
-  preArgs = {region, samples, requestFormat};
+  {requestFormat, headerOnly} = requestOptions,
+  preArgs = {region, samples, requestFormat, headerOnly};
   // parent is .referenceDatasetName
 
   /* reply time is generally too quick to see the non-zero count, so to see the

@@ -2084,6 +2084,11 @@ div.genotype label
   margin-top : 2em;
 }
 
+/* change default color of <a> to match the nearby buttons.   */
+.genotype > button > a {
+  color: white;
+}
+
 .ember-modal-dialog div.genotype ul.list-group
 {
   overflow-y: auto;

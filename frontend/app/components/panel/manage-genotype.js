@@ -6,6 +6,8 @@ import { tracked } from '@glimmer/tracking';
 import { later } from '@ember/runloop';
 import { A as Ember_A } from '@ember/array';
 
+
+import { toPromiseProxy, toArrayPromiseProxy } from '../../utils/ember-devel';
 import { intervalSize } from '../../utils/interval-calcs';
 import { overlapInterval } from '../../utils/draw/zoomPanCalcs';
 import {
@@ -21,6 +23,8 @@ import { stringCountString } from '../../utils/string';
 // -----------------------------------------------------------------------------
 
 const dLog = console.debug;
+
+const trace = 0;
 
 // -----------------------------------------------------------------------------
 
@@ -64,6 +68,14 @@ export default class PanelManageGenotypeComponent extends Component {
   /** Raw text result from vcfGenotypeLookup() : bcftools query. */
   @tracked
   vcfGenotypeText = '';
+
+  /** Comment header of VCF file; prepended to query result to create VCF Download. */
+  @tracked
+  headerText = undefined;
+
+  /** combined headerText and .vcfGenotypeText, for export via file-anchor */
+  @tracked
+  vcfExportText = [];
 
   /** Counter of results from vcfGenotypeSamples(). */
   @tracked
@@ -467,15 +479,13 @@ export default class PanelManageGenotypeComponent extends Component {
   /** Request the list of samples of the vcf of the brushed block.
    */
   vcfGenotypeSamples() {
+    /** implemented by common/models/block.js : Block.vcfGenotypeSamples().  */
     const
     fnName = 'vcfGenotypeSamples',
     scope = this.lookupScope,
     vcfDatasetId = this.lookupDatasetId;
     if (scope && vcfDatasetId)
     {
-      let
-      preArgs = 'query -l';
-
       this.lookupMessage = null;
 
       let textP = this.auth.vcfGenotypeSamples(
@@ -522,18 +532,31 @@ export default class PanelManageGenotypeComponent extends Component {
     store = this.apiServerSelectedOrPrimary?.store,
     samplesRaw = this.vcfGenotypeSamplesSelected,
     /** result is 1 string of names, separated by 1 newline.  */
-    samples = samplesRaw.join('\n'),
+    samples = samplesRaw?.join('\n'),
     domainInteger = this.vcfGenotypeLookupDomain,
     vcfDatasetId = this.lookupDatasetId;
-    if (samples?.length && domainInteger && vcfDatasetId) {
+    if (samples?.length && domainInteger && vcfDatasetId) { // && scope
       this.lookupMessage = null;
       let
       scope = this.lookupScope,
-      textP = vcfGenotypeLookup(this.auth, this.apiServerSelectedOrPrimary, samples, domainInteger,  this.requestFormat, vcfDatasetId, scope, this.rowLimit);
+      requestFormat = this.requestFormat,
+      requestOptions = {requestFormat},
+      textP = vcfGenotypeLookup(this.auth, this.apiServerSelectedOrPrimary, samples, domainInteger,  requestOptions, vcfDatasetId, scope, this.rowLimit);
+      // re-initialise file-anchor with the new @data
+      this.vcfExportText = null;
       textP.then(
         (text) => {
           // displays vcfGenotypeText in textarea, which triggers this.vcfGenotypeTextSetWidth();
           this.vcfGenotypeText = text;
+          this.headerTextP.then((headerText) => {
+            const combined = this.combineHeader(headerText, this.vcfGenotypeText)
+            /** ember-csv:file-anchor.js is designed for spreadsheets, and hence
+             * expects each row to be an array of cells.
+             */
+                  .map((row) => [row]);
+            // re-initialise file-anchor with the new @data
+            later(() => this.vcfExportText = combined, 1000);
+          });
 
           /** .lookupDatasetId is derived from .lookupBlock so .lookupBlock must be defined here. */
           let blockV = this.lookupBlock;
@@ -571,6 +594,24 @@ export default class PanelManageGenotypeComponent extends Component {
       })
       .catch(this.showError.bind(this, fnName));
     }
+  }
+
+  @computed(
+    'lookupDatasetId', 'lookupScope', 'vcfGenotypeLookupDomain',
+    'vcfGenotypeSamplesSelected', 'requestFormat')
+  get vcfExportFileName() {
+    const
+    scope = this.lookupScope,
+    vcfDatasetId = this.lookupDatasetId,
+    domainText = this.vcfGenotypeLookupDomain.join('-'),
+    samplesLength = this.vcfGenotypeSamplesSelected ? this.vcfGenotypeSamplesSelected.length : '',
+    fileName = vcfDatasetId +
+      '_' + scope +
+      '_' + domainText +
+      '_' + this.requestFormat +
+      '_' + samplesLength +
+      '.vcf' ;
+    return fileName;
   }
 
   // ---------------------------------------------------------------------------
@@ -703,6 +744,104 @@ export default class PanelManageGenotypeComponent extends Component {
   }
 
 
+  //----------------------------------------------------------------------------
+
+  @computed('vcfGenotypeSamplesSelected', 'lookupDatasetId', 'lookupScope')
+  get headerTextP() {
+    const
+    fnName = 'headerText',
+    samplesRaw = this.vcfGenotypeSamplesSelected || [],
+    samples = samplesRaw?.join('\n'),
+    domainInteger = [0, 1],
+    vcfDatasetId = this.lookupDatasetId,
+    scope = this.lookupScope;
+    let textP;
+    if (samples?.length && scope && vcfDatasetId) {
+      const
+      requestFormat = this.requestFormat,
+      requestOptions = {requestFormat, headerOnly : true};
+      /** these params are not applicable when headerOnly : samples, domainInteger, rowLimit. */
+      textP = vcfGenotypeLookup(
+        this.auth, this.apiServerSelectedOrPrimary, samples, domainInteger,
+        requestOptions, vcfDatasetId, scope, this.rowLimit);
+      textP.then(
+        (text) => {
+          this.headerText = text;
+          if (trace) {
+            dLog(fnName, text);
+          }
+        })
+        .catch(this.showError.bind(this, fnName));
+      textP = toPromiseProxy(textP);
+    }
+    return textP;
+  }
+
+  @computed('headerText', 'vcfGenotypeText')
+  get vcfExportTextP() {
+    let combinedP;
+    if (this.headerTextP) {
+      combinedP = this.headerTextP
+        .then((headerText) => {
+          const
+          combined = this.combineHeader(headerText, this.vcfGenotypeText);
+          return combined;
+        });
+    } else {
+      /** file-anchor.js requires a defined value for @data */
+      combinedP = Promise.resolve([]);
+    }
+    combinedP = toArrayPromiseProxy(combinedP);
+    return combinedP;
+  }
+
+  combineHeader(headerText, vcfGenotypeText) {
+    /** remove trailing \n, so that split does not create a trailing empty line.  */
+    headerText = headerText.trim().split('\n');
+    /** vcfGenotypeText starts with column header line (#CHROM...), so trim the
+     * column header line off the end of headerText.
+     */
+    if (headerText[headerText.length-1].startsWith('#CHROM')) {
+      headerText = headerText.slice(0, headerText.length-1);
+    }
+    const
+    tableRows = this.insertChromColumn(vcfGenotypeText),
+    combined = headerText.concat(tableRows);
+    return combined;
+  }
+
+  /** The vcf-genotype.js : vcfGenotypeLookup() format omits CHROM because it is
+   * constant - each request is specific to a chromosome.
+   * This function re-inserts the CHROM column in the conventional (left) position.
+   * @param vcfGenotypeText string
+   * @return array of strings, 1 per line
+   */
+  insertChromColumn(vcfGenotypeText) {
+    const
+    withChrom = vcfGenotypeText
+    // ignore trailing \n which otherwise creates an empty line.
+      .trim()
+      .split('\n')
+      .map((line, rowIndex) => {
+        let result;
+        if (rowIndex === 0) {
+          // insert CHROM column header
+          result = line
+            .replace(/# /, '#CHROM\t')
+          /* Strip out the column numbers [1] etc which are shown before column
+           * headers by bcftools query -H.
+           * Could match [ \t], but previous line changes that initial space to \t
+           */
+            .replaceAll(/\t\[\d+\]/g, '\t');
+        } else {
+          // insert chromosome / scope column value.
+          result = this.lookupScope + '\t' + line;
+        }
+        return result;
+      });
+    return withChrom;
+  }
+  
   // ---------------------------------------------------------------------------
 
   @computed('vcfGenotypeText')
