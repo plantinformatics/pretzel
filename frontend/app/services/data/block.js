@@ -153,6 +153,7 @@ export default Service.extend(Evented, {
     let isViewed = this.get('getIsViewed').apply(this, [id]);
     let block = yield this.getData(id);
     // console.log('taskGet', this, id, block);
+    if (false) // draw_orig
     if (! isViewed)
     {
       block.set('isViewed', true);
@@ -349,13 +350,15 @@ export default Service.extend(Evented, {
     });
     let blocksToView = this.blockIdsReferences(blockIds, false);
     this.viewReferences(blocksToView);
+    if (false) { // draw_orig
     let dataAndReferences = blocksToView.concat(
       blockIds.map((blockId) => { return {id : blockId, obj : this.peekBlock(blockId)}; }))
       // filter out .obj === null, i.e. block not in store yet.
         .filter((blockIdObj) => blockIdObj.obj);
       console.log('taskGetSummary dataAndReferences', dataAndReferences);
     this.receivedBlocks(dataAndReferences);
-    
+    }
+
     return blockFeatureCounts;
   }),
   /** Take blockIds as parameter instead of blocks, but otherwise the same as @see blocksReferences,

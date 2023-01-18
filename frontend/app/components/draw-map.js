@@ -113,7 +113,6 @@ import {
   unique_1_1_mapping 
 } from '../utils/paths-config';
 
-import { storeFeature } from '../utils/feature-lookup';
 
 import AxisDraw from '../utils/draw/axis-draw';
 import { PathClasses } from '../utils/draw/path-classes';
@@ -584,15 +583,12 @@ export default Component.extend(Evented, {
     let axisBrushZoom = AxisBrushZoom(oa);
     if (! oa.axisApi.drawMap || (instanceChanged = oa.axisApi.drawMap.isDestroying)) {
       const axisApiAdd = {
-                    cmNameAdd,
-                    axisIDAdd,
                     stacksAxesDomVerify : function (unviewedIsOK = false) { stacksAxesDomVerify(stacks, oa.svgContainer, unviewedIsOK); } ,
-                    updateSyntenyBlocksPosition : () => this.get('updateSyntenyBlocksPosition').perform(),
+                    updateSyntenyBlocksPosition : () => this.get('oa.graphFrame.updateSyntenyBlocksPosition').perform(),
                     drawMap : this,  // for debug trace / check.
                        // temporary additions - the definitions will be moved out.
                     sendUpdatedSelectedFeatures,
                     selectedFeatures_clear : () => this.get('selectedService').selectedFeatures_clear(),
-                    deleteAxisfromAxisIDs,
                    };
       setProperties(oa.axisApi, axisApiAdd);
     }
@@ -602,6 +598,7 @@ export default Component.extend(Evented, {
     const pathInfo = PathInfo(oa);
     dLog('draw-map stacks', stacks);
 
+    if (false) { // draw_orig
     /** Reference to all datasets by name.
      * (datasets have no id, their child blocks' datasetId refers to their name) .
      * Not used yet.
@@ -638,6 +635,7 @@ export default Component.extend(Evented, {
     let cmName = oa.cmName || (oa.cmName = {});
     /** axis id of each chromosome, indexed by axis name. */
     let mapChr2Axis = oa.mapChr2Axis || (oa.mapChr2Axis = {});
+    }
 
     /** Plan for layout of stacked axes.
 
@@ -740,110 +738,6 @@ export default Component.extend(Evented, {
       }
       me.draw({}, 'dataReceived');
     }
-    function receiveChr(axis, c, source) {
-      let z = oa.z, cmName = oa.cmName;
-      if ((z[axis] === undefined) || (cmName[axis] === undefined))
-      {
-        z[axis] = c;
-        let dataset = c.dataset,
-        datasetName = dataset && dataset.get('name'),
-        parent = dataset && dataset.get('parent'),
-        parentName = parent  && parent.get('name')
-        ;
-        if (oa.datasets[datasetName] === undefined)
-        {
-          oa.datasets[datasetName] = dataset;
-          console.log(datasetName, dataset.get('_meta.shortName'));
-        }
-        cmName[axis] = {
-          mapName : c.mapName, chrName : c.chrName,
-          parent: parentName,
-          name : c.name, range : c.range,
-          scope: c.scope, featureType: c.featureType,
-          dataset,
-        };
-        
-        let mapChrName = makeMapChrName(c.mapName, c.chrName);
-        mapChr2Axis[mapChrName] = axis;
-        //-	receive 'add axisIDs'
-        if (source == 'dataReceived')
-        {
-          axisIDAdd(axis);
-        }
-        delete c.mapName;
-        delete c.chrName;
-        if (trace_stack)
-          dLog("receiveChr", axis, cmName[axis]);
-        d3.keys(c).forEach(function(feature) {
-          if (! isOtherField[feature]) {
-            let f = z[axis][feature];
-            // alternate filter, suited to physical maps : f.location > 2000000
-            if ((featureTotal++ & 0x3) && filter_location)
-              delete z[axis][feature];
-            else
-            {
-              storeFeature(oa, flowsService, feature, f, undefined);
-              /* could partition featureIndex by block name/id :
-               * oa.featureIndex[axis][f.id] = f; but not necessary because object id
-               * is unique. */
-
-              // featureTotal++;
-
-              /** This implementation of aliases was used initially.
-               * The feature is simply duplicated (same location, same axis) for each alias.
-               * This works, but loses the distinction between direct connections (same feature / gene)
-               * and indirect (via aliases).
-               */
-              if (! unique_1_1_mapping)
-              {
-                let featureValue = z[axis][feature];
-                if (featureValue && featureValue.aliases)
-                  for (let a of featureValue.aliases)
-                {
-                    z[axis][a] = {location: featureValue.location};
-                  }
-              }
-            }
-          }
-        });
-      }
-    }
-    // hack a connection to receiveChr() until it gets moved / refactored.
-    if (! this.get('receiveChr'))
-      this.set('receiveChr', receiveChr);
-
-    /** Check if axis exists in oa.axisIDs[].
-     * @return index of axis in oa.axisIDs[], -1 if not found
-     */
-    function axisIDFind(axis) {
-      let k;
-      for (k=oa.axisIDs.length-1; (k>=0) && (oa.axisIDs[k] != axis); k--) { }
-      return k;
-    }
-    /** If axis is not in oa.axisIDs[], then append it.
-     * These 3 functions could be members of oa.axisIDs[] - maybe a class.
-     */
-    function axisIDAdd(axis) {
-      if (axisIDFind(axis) < 0)
-      {
-        if (trace_stack)
-          dLog("axisIDAdd push", oa.axisIDs, axis);
-        oa.axisIDs.push(axis);
-      }
-    }
-    /** Find axisName in oa.axisIDs, and remove it. */
-    function deleteAxisfromAxisIDs(axisName)
-    {
-      let k = axisIDFind(axisName);
-      if (k === -1)
-        console.log("deleteAxisfromAxisIDs", "not found:", axisName);
-      else
-      {
-        console.log("deleteAxisfromAxisIDs", axisName, k, oa.axisIDs);
-        let a = oa.axisIDs.splice(k, 1);
-        console.log(oa.axisIDs, "deleted:", a);
-      }
-    }
 
     /** Indexed by featureName, value is a Set of Axes in which the feature is present.
      * Currently featureName-s are unique, present in just one axis (Chromosome),
@@ -852,7 +746,6 @@ export default Component.extend(Evented, {
      *   genetic map contains chromosomes with features;
      *   physical map (pseudo-molecule) contains genes
      */
-    let featureAxisSets = flowsService.featureAxisSets;
 
     //- moved to view-controls : drawOptions
     if (oa.drawOptions === undefined)

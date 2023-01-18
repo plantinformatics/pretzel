@@ -427,6 +427,12 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     return y;
   },
   
+  //----------------------------------------------------------------------------
+
+  /** Scaled value of axis X position, saved by collateO().
+   */
+  get scaledX() { return this.stacksView.oa.o[this.axisName]; },
+
   /*--------------------------------------------------------------------------*/
 
   /** axis-1d receives axisStackChanged and zoomedAxis from draw-map
@@ -980,9 +986,15 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     let
     axisS = this.get('axisS'),
     range0 = axisS.yRange2(),
-    overlap = this.inRangeR(feature);
+    overlap = this.inRangeR(feature, range0);
     return overlap;
   },
+  /** Determine if the feature value interval is within / overlaps the given range.
+   * See intervalOverlapOrAbut(), intervalOverlap() for the overlap criteria.
+   * @param feature
+   * @param range0
+   * @return true if overlap
+   */
   inRangeR(feature, range0) {
     let
     axisS = this.get('axisS'),

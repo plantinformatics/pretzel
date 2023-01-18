@@ -87,16 +87,16 @@ function PathDataUtils(oa) {
     pathU, 
     pathUg, 
     pathAliasGroup, 
+    /** inRangeI{,2}() are only used here */
     inRangeI, 
     inRangeI2, 
     featureAliasesText, 
     pathFeatureStore, 
-    featureNameInRange, 
+    // featureNameInRange, 
     featureInRange, 
     patham, 
     // axisFeatureTick, 
     patham2, 
-    featureY_, 
     featureY2, 
     log_path_data, 
     pathUpdate_, 
@@ -114,17 +114,19 @@ function PathDataUtils(oa) {
    */
   function featureNameOfData(da)
   {
-    let featureName = (da.length === 4)  // i.e. ffaa (enabled by unique_1_1_mapping)
+    const
+    feature = (da.length === 4)  // i.e. ffaa (enabled by unique_1_1_mapping)
       ? da[0]  //  ffaa, i.e. [feature0, feature1, a0, a1]
-      : da;
+      : da,
+    featureName = feature.name;
     return featureName;
   }
   /** @see also pathsUnique_log()  */
   function data_text(da)
   {
     return unique_1_1_mapping   // ! flow.direct
-      ? [da[0], da[1], da[2].mapName, da[3].mapName]
-      : da;
+      ? [da[0].name, da[1].name, da[2].mapName, da[3].mapName]
+      : da.name;
   }
 
   //----------------------------------------------------------------------------
@@ -141,12 +143,14 @@ function PathDataUtils(oa) {
    * it caches axis positions.  Blocko can be renamed when axes are split out;
    * it is reminiscent of a bloco - a Carnival block party
    * (https://en.wikipedia.org/wiki/Carnival_block)
+   *
+   * @param ak  axis-1d
    */
   function blockO(ak)
   {
-    let axis = Stacked.getAxis(ak);
-    const o = oa.o;
-    return o[axis.axisName];
+    let axis = ak;
+    const o = axis.scaledX;
+    return o;
   }
 
   /** A line between a feature's location in adjacent Axes.
@@ -451,22 +455,22 @@ function PathDataUtils(oa) {
     return p.join();
   }
 
-  /** Calculate relative location of feature featureName in the axis axisID, and
+  /** Calculate relative location of feature in the axis, and
    * check if it is inRange 
-   * @param axisID  ID of Axis Piece
-   * @param featureName  feature within axisID
+   * @param axis1d
+   * @param feature  feature within axis1d
    * @param range e.g. [0, yRange]
    */
-  function inRangeI(axisID, featureName, range)
+  function inRangeI(axis1d, feature, range)
   {
-    return inRange(featureY_(axisID, featureName), range);
+    return inRange(featureY_(axis1d, feature), range);
   }
   /** as for inRangeI(), but param is a Feature, which is an interval (i.e. .values.length === 2) 
    * @return true if the interval of the feature overlaps range.
    */
-  function inRangeI2(axisID, feature, range)
+  function inRangeI2(axis1d, feature, range)
   {
-    let ir = featureY2(axisID, feature)
+    let ir = featureY2(axis1d, feature)
         .some((vi) => inRange(vi, range));
     return ir;
   }
@@ -494,6 +498,7 @@ function PathDataUtils(oa) {
    * @param sLine svg path text
    * @param d0, d1 feature names, i.e. a0:f0 , a1:f1 .
    * Iff d1!==undefined, they are connected by an alias.
+   * These params can be dropped because : fa0.name === d0 and fa1.name === d1
    * @param fa0, fa1  feature objects.
    * fa1 will be undefined when called from axisFeatureTick()
    * @param aliasDescription  undefined or text identifying the basis of the alias connection
@@ -528,54 +533,66 @@ function PathDataUtils(oa) {
     pathFeatures[sLine][d] = hoverExtraText; // 1;
   }
 
-  /** Determine if the feature interval overlaps the zoomedDomain of its axis,
-   * identified by axisName.
-   * Equivalent to featureInRange() - see comments there also.
+  /** Determine if the feature interval overlaps the zoomedDomain of its axis, axis1d.
+   * Broadly similar to featureInRange() except it calculates in (pixel) range
+   * space and does not use valueInInterval(), - see comments there also.
    *
-   * @param  a0  axis name
-   * @param d0 feature name, i.e. a0:d0
+   * @param axis1d axis-1d
+   * @param feature
+   * feature d0.blockId is viewed on axis1d
    */
-  function featureNameInRange(a0, d0) {
+  function featureInRange0(axis1d, feature) {
     /** To allow lines which spread onto other axes in the same stack, but
      * still remain within the stack limits, unlike allowPathsOutsideZoom, use
-     * [0, vc.yRange];
+     * range0 = [0, vc.yRange];
      */
-    let
-    a0_ = Stacked.getAxis(a0);
     /** If the block containing one end of the path is un-viewed, block.axis
      * may be undefined if render occurs before block-adj is destroyed . */
-    if (!a0_) return undefined;
-    let  range0 = a0_.yRange2();
-    let ir = inRangeI(a0, d0, range0);
+    if (! axis1d) return undefined;
+    let  range0 = axis1d.yRange2();
+    let ir = inRangeI(axis1d, feature, range0);
     return ir;
   }
-  /** Equivalent to featureNameInRange(); param is feature instead of feature name.
-   * @param  axisName ID of reference block of axis
+  /** Determine if the feature interval overlaps the zoomedDomain of its axis - axis1d.
+   *
+   * This calculation is done in domain space, whereas featureInRange0()
+   * calculates in (pixel) range space.
+   *
+   * This function also uses valueInInterval(), which is used by :
+   *   utils/draw/axisBrush.js : axisFeatureCirclesBrushed()
+   *   models/block.js : featuresInBrush()
+   * This function is used by synteny-blocks-draw.js : sbZoomFilter()
+   *
+   * @param axis1d axis-1d
+   * // draw_orig : @param  axisName ID of reference block of axis
    * @param feature ember data store object
+
+   * feature d0.blockId is viewed on axis1d
+
    */
-  function featureInRange(axisName, feature) {
+  function featureInRange(axis1d, feature) {
     const controlsView = this.controlsView;
-    let a0 = axisName, d0 = feature;
     /** To allow lines which spread onto other axes in the same stack, but
      * still remain within the stack limits, unlike allowPathsOutsideZoom, use
      * [0, vc.yRange];
      */
     let
+    /** true if in range */
     ir,
-    valueInInterval = controlsView?.get('valueInInterval'),
+    valueInInterval = controlsView?.get('valueInInterval');
     /** If the block containing one end of the path is un-viewed, block.axis
      * may be undefined if render occurs before block-adj is destroyed . */
-    a0_ = Stacked.getAxis(a0);
-    if (a0_) {
+    if (axis1d) {
       let
-      domain = a0_.axis1d?.zoomedDomain;
+      domain = axis1d.zoomedDomain;
       ir = ! domain || valueInInterval(feature.value, domain);
     }
     return ir;
   }
   /**
-   * @param  a0, a1  axis names
-   * @param d0, d1 feature names, i.e. a0:d0, a1:d1.
+   * @param  a0, a1  axis-1d
+   * feature d0.blockId is viewed on axis-1d a0, and similarly for d1, a1.
+   * @param d0, d1 features, i.e. a0:d0, a1:d1.
    * Iff d1!==undefined, they are connected by an alias.
    */
   function patham(a0, a1, d0, d1) {
@@ -583,14 +600,19 @@ function PathDataUtils(oa) {
     // let [stackIndex, a0, a1] = featureAliasGroupAxes[d];
     let r;
 
-    /** if d1 is undefined, then its value is d0 : direct connection, not alias. */
+    /** if d1 is undefined, then d1.name === d0.name : direct connection, not alias. */
     let d1_ = d1 || d0;
     // can skip the inRangeLR[] calc if allowPathsOutsideZoom.
-    /** Filter out those paths that either side locates out of the svg. */
+    /** Filter out those paths that either side locates out of the svg.
+     * Currently using featureInRange0() which was named featureNameInRange;
+     * changing this to use featureInRange() would include the valueInInterval()
+     * functionality added firstly for synteny blocks but also perhaps
+     * applicable here.
+     */
     let
         inRangeLR = 
-          [featureNameInRange(a0, d0),
-           featureNameInRange(a1, d1_)],
+          [featureInRange0(a0, d0),
+           featureInRange0(a1, d1_)],
 
       lineIn = controlsView?.get('allowPathsOutsideZoom') ||
           (inRangeLR[0]
@@ -599,32 +621,29 @@ function PathDataUtils(oa) {
     if (lineIn)
     {
       let sLine = featureLineS2(a0, a1, d0, d1_);
-      let cmName = oa.cmName;
-      let z = oa.z;
       let feature0 = d0, feature1 = d1,
       /** used for targeted debug trace (to filter, reduce volume)
-       * e.g. = feature0 == "featureK" && feature1 == "featureK" &&
-       cmName[a0].mapName == "MyMap5" && cmName[a1].mapName == "MyMap6"; */
+       * e.g. = feature0.name == "featureK" && feature1.name == "featureK" &&
+       a0.mapName == "MyMap5" && a1.mapName == "MyMap6"; */
       traceTarget = 
         ((trace_path_count !== undefined) && (trace_path_count-- > 0))
          || (trace_path > 4);
       if (traceTarget)
-        console.log("patham()", d0, d1, cmName[a0] && cmName[a0].mapName, cmName[a1] && cmName[a1].mapName, a0, a1, z && z[a0] && z[a0][d0] && z[a0][d0].location, d1 && z && z[a1] && z[a1][d1] && z[a1][d1].location, sLine);
+        console.log("patham()", d0, d1, a0.mapName, a1.mapName, a0, a1, d0.value, d1.value, sLine);
       r = sLine;
       if (pathDataIsLine)
         /* Prepare a tool-tip for the line. */
-        pathFeatureStore(sLine, d0, d1, z[a0][d0], z[a1][d1_]);
+        pathFeatureStore(sLine, d0.name, d1.name, d0, d1_);
     }
     // equivalent : ! controlsView.allowPathsOutsideZoom
     else if (controlsView?.get('tickOrPath') === 'tick') {
       // tickOrPath replaces oa.drawOptions.showAll
       const featureTickLen = 10; // orig 5
       function axisFeatureTick(ai, d) {
-        let z = oa.z;
-        if (d in z[ai])
+        if (d.blockId.get('view.axis1d') === ai)
         {
           r = featureLineS(ai, d, featureTickLen);
-          pathFeatureStore(r, d, d, z[ai][d], undefined);
+          pathFeatureStore(r, d.name, d.name, d, undefined);
         }
       }
       // Filter these according to inRangeI() as above : return 0 or 1 ticks, not 2 because at least one is out of range.
@@ -636,8 +655,8 @@ function PathDataUtils(oa) {
     return r;
   }
   /** patham() draws a line (1-d object),  patham2 draws a parallelogram (2-d object).
-   * @param  a0, a1  axis names
-   * @param d[0 .. 3], feature names, i.e. a0:d[0]-d[1], a1:d[2]-d[3].
+   * @param  a0, a1  axis-1d
+   * @param d[0 .. 3], features, i.e. a0:d[0]-d[1], a1:d[2]-d[3].
    * Unlike patham(), d does not contain undefined.
    * added : for syntenyBlock_2Feature, d is [d0, undefined, d2, undefined]
    * i.e. features d0 and d2 are intervals not points.
@@ -645,7 +664,6 @@ function PathDataUtils(oa) {
   function patham2(a0, a1, d) {
     const
     vc = oa.vc,
-    z = oa.z,
     me = oa.eventBus;
     let r;
     let range = [0, vc.yRange];
@@ -666,9 +684,9 @@ function PathDataUtils(oa) {
       let cmName = oa.cmName;
       if (trace_synteny > 4)
         console.log(
-          "patham2()", d, cmName[a0] && cmName[a0].mapName, cmName[a1] && cmName[a1].mapName, a0, a1,
-          z && z[a0] && z[a0][d[0]] /*&& z[a0][d[0]].location*/,
-          d[2] && z && z[a1] && z[a1][d[2]] /*&& z[a1][d[2]].location*/, sLine);
+          "patham2()", d, a0.mapName, a1.mapName, a0, a1,
+          d[0] /* ?.value*/,
+          d[2] /* ?.value*/, sLine);
       r = sLine;
     }
     /* for showAll, perhaps change the lineIn condition : if one end is wholly
@@ -683,54 +701,49 @@ function PathDataUtils(oa) {
    * because .foreground does not have the axis transform (Axes which are ends
    * of path will have different Y translations).
    *
-   * @param axisID name of axis or block  (if it is an axis it will be in axisIDs[])
+   * @param axis1d axis
    * This parameter is the difference with the original featureY() which this function replaces.
-   * @param d feature name
+   * @param d feature
+   * feature.blockId is viewed on axis1d
    */
-  function featureY_(axisID, d)
+  function featureY_(axis1d, d)
   {
     const flowsService = oa.eventBus.flowsService;
-    const z = oa.z;
-    // z[p][f].location, actual position of feature f in the axis p, 
-    // y[p](z[p][f].location) is the relative feature position in the svg
+    // f.value, actual position of feature f in the axis, 
+    // y[p](f.value) is the relative feature position in the svg
     // ys is used - the y scale for the stacked position&portion of the axis.
     const
- parentName = Block.axisName_parent(axisID),
-    stacksView = oa.axisApi.stacksView,
-    parentAxisBlock = stacksView.axesByBlockId[parentName],
-    ysa = parentAxisBlock.axis1d.ys,
-    /** if d is object ID instead of name then featureIndex[] is used */
-    feature = oa.z[axisID][d] || lookupFeature(oa, flowsService, oa.z, axisID, d), // || oa.featureIndex[d],
+    ysa = axis1d.ys,
+    feature = d,
     aky = ysa(feature.location),
     /**  As noted in header comment, path Y value requires adding axisY = ... yOffset().
-     * parentName not essential here because Block yOffset() follows .parent reference. */
-    axis1d = stacksView.axesByBlockId[axisID].axis1d,
+     */
     axisY = axis1d.yOffset();
     // can use parentName here, but initially good to have parent and child traced.
+    const axisID = axis1d.axisName;
     if (trace_scale_y && ! tracedAxisScale[axisID])
     {
       tracedAxisScale[axisID] = true;
       let yDomain = ysa.domain();
       const axisChrName = AxisChrName(oa);
-      console.log("featureY_", axisID,  axisChrName.axisName2MapChr(axisID), parentName, d,
-                    z[axisID][d].location, aky, axisY, yDomain, ysa.range());
+      const parentName = axis1d.mapName;
+      console.log("featureY_", axisID,  feature.get('blockId.mapName'), parentName, d,
+                    d.location, aky, axisY, yDomain, ysa.range());
     }
     return aky + axisY;
   }
   /** as for featureY_(), but param is a Feature, with value.length === 2.
+   * @param axis1d
    * @param feature
    * @return [start,end]  feature interval Y relative to the stack.
    */
-  function featureY2(axisID, feature)
+  function featureY2(axis1d, feature)
   {
-    let
-    // axisID = feature.get('blockId'),
-    /** or .view.axisName */
-    parentName = Block.axisName_parent(axisID),
-    ysa = oa.ys[parentName],
+    const
+    ysa = axis1d.ys,
     v = feature.value,
     aky = v.map((location) => ysa(location)),
-    axisY = oa.stacks.blocks[axisID].yOffset();
+    axisY = axis1d.yOffset();
 
     return aky.map((y) => y + axisY);
   }

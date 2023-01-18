@@ -75,23 +75,21 @@ export default Component.extend({
    * alternately the componenent can be a singleton or library, with the model data passed as argument pathData.
    * If the component is per-path with a separate model path-data, then pathData will be an attribute of the component.
    * @param pathData the models/draw/path-data instance, contains the data of the path.
+   * attributes : blockId0, blockId1, feature0, feature1
    */
   pathU : /*Ember.computed('feature0', 'feature1', 'block0', 'block1',*/ function() {
     let pathData = this;
     // based on draw-map.js : pathU(), pathUg(); this is equivalent and can replace those functions. (related : dataOfPath()).
 
     let p = [];
-    let block0 = pathData.get('blockId0'),
-    block1 = pathData.get('blockId1');
-      // pathData.get('block0'), pathData.get('block1');
+    const axes = ['0', '1'].map((fi) => pathData.get('feature' + fi + '.blockId.axis1d'));
     const pathDataUtils = PathDataUtils(stacks.oa);
-    p[0] = pathDataUtils.patham(block0, block1, pathData.get('feature0.name'), pathData.get('feature1.name'));
+    p[0] = pathDataUtils.patham(axes[0], axes[1], pathData.get('feature0'), pathData.get('feature1'));
     if (trace_path > 1) {
-      const axisChrName = AxisChrName(stacks.oa);
-      let axisName2MapChr = axisChrName.axisName2MapChr;
+      const blockNames = ['0', '1'].map((fi) => pathData.get('feature' + fi + '.blockId.brushName'));
       console.log(
         "pathU",
-        axisName2MapChr(block0), axisName2MapChr(block1),
+        blockNames,
         pathData.feature0, pathData.feature1, p[0]);
     }
     return p;

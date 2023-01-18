@@ -56,21 +56,7 @@ function AxisTitle(oa) {
     
   };
 
-  /** not used */
-  function axisTitle(chrID)
-  {
-    let cn=oa.
-      cmName[chrID];
-    // console.log(".axis text", chrID, cn);
-    return cn.mapName + " " + cn.chrName;
-  }
-
-
-  /** true if any axes have children.  used to get extra Y space at top for multi-level axis title.
-   * later can calculate this, roughly : oa.stacks.axesP.reduce(function (haveChildren, a) { return haveChildren || oa.stacks.axesP[a].blocks.length; } )
-   * The maximum value of that can be used as the value of Viewport:calc(): axisNameRows.
-   */
-  let someAxesHaveChildBlocks = true;
+  //----------------------------------------------------------------------------
 
   /** Update the axis title, including the block sub-titles.
    * If ! axisTitle_dataBlocks, don't show the data block sub-titles, only the first line;

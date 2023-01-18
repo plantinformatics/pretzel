@@ -40,6 +40,7 @@ function showSynteny(syntenyBlocks, t, oa)
 {
   const me = oa.eventBus;
   const axisApi = oa.axisApi;
+  const pathDataUtils = PathDataUtils(oa);
 
   /** indexes into the columns of syntenyBlocks[]
    * 0,1 : chr0, chr1
@@ -68,7 +69,7 @@ function showSynteny(syntenyBlocks, t, oa)
   function sbZoomFilter(sb) {
     let 
       inRangeLR = [[0, 2], [1, 4]]
-      .map(([chrI, featureI]) => axisApi.featureInRange(sb[chrI], sb[featureI])),
+      .map(([chrI, featureI]) => pathDataUtils.featureInRange(sb[chrI], sb[featureI])),
     inCount = inRangeLR.reduce((sum, flag) => sum += flag ? 1 : 0),
     lineIn = inCount >= (allowPathsOutsideZoom ? 1 : 2);
     return lineIn;
@@ -81,7 +82,6 @@ function showSynteny(syntenyBlocks, t, oa)
   }
 
   function blockLine (s) {
-    const pathDataUtils = PathDataUtils(oa);
     let sLine = pathDataUtils.patham2(s[0], s[1], s.slice(2));
     if (trace_synteny > 3)
     dLog("blockLine", s, sLine);

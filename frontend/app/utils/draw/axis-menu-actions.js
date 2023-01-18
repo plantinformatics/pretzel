@@ -63,8 +63,6 @@ function AxisMenuActions(oa) {
     // and can be factored with that.
     let axis = axis1d, stack = axis && axis.stack;
     const axisApi = oa.axisApi;
-    // draw_orig
-    axisApi.deleteAxisfromAxisIDs(axisName);
     let sBlock = axis1d.referenceBlock.view;
     let block = axis1d.referenceBlock;
     console.log('sBlock.axis', sBlock.axis);
