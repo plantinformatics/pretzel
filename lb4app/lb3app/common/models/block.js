@@ -842,6 +842,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       cache.put(cacheId, limits);
       cb(null, limits);
     }).catch(function(err) {
+      console.log(fnName, blockId, err.toString(), cursor?.length);
       cb(err);
     });
     }
