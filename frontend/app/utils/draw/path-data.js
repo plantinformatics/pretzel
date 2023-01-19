@@ -665,14 +665,13 @@ function PathDataUtils(oa) {
    */
   function patham2(a0, a1, d) {
     const
-    vc = oa.vc,
-    me = oa.eventBus;
+    vc = oa.vc;
     let r;
     let range = [0, vc.yRange];
 
     /** Filter out those parallelograms which are wholly outside the svg, because of zooming on either end axis. */
     let
-    lineIn = me.get('allowPathsOutsideZoom') ||
+    lineIn = this.controlsView.get('allowPathsOutsideZoom') ||
       (syntenyBlock_2Feature ?
        inRangeI2(a0, d[0], range) ||
        inRangeI2(a1, d[2], range) : 

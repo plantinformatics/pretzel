@@ -1,3 +1,7 @@
+import { isEqual } from 'lodash/lang';
+
+//------------------------------------------------------------------------------
+
 import {
   axisId2Name,
 } from '../stacks';
@@ -47,7 +51,7 @@ function showSynteny(syntenyBlocks, t, oa)
    * 2,3,4,5 : gene 1,2,3,4
    */
   const SB_ID = 6, SB_SIZE = 7;
-  let allowPathsOutsideZoom = me.get('allowPathsOutsideZoom');
+  let allowPathsOutsideZoom = me.get('controls.view.allowPathsOutsideZoom');
 
   let sbS=oa.svgContainer.selectAll("g.synteny")
     .data(["synteny"]), // datum could be used for class, etc
@@ -58,8 +62,40 @@ function showSynteny(syntenyBlocks, t, oa)
   if (trace_synteny)
     dLog("showSynteny", sbS.size(), sbE.size(), sbM.size(), sbM.node());
 
+  function sbFeatures(sb) {
+    /** assumes syntenyBlock_2Feature */
+    const features = [sb[2], sb[4]];
+    return features;
+  }
+  /** Use the features in sb[] to lookup the corresponding axis-1d-s.
+   * If one of the feature's blocks are unviewed, the corresponding axis will be undefined.
+   */
+  function sbAxes(sb) {
+    const axes = sbFeatures(sb).map((feature) => feature.get('blockId.axis1d'));
+    return axes;
+  }
+  function sbBlockIds(sb) {
+    const featureBlocks = sbFeatures(sb).map(feature => feature.get('blockId.id'));
+    if (trace_synteny) { // verify
+      /** sb[0] and sb[1] are the data blockIds of the features */
+      if (! isEqual([sb[0], sb[1]], featureBlocks)) {
+        dLog('sbAxes', 'mismatch', sb, featureBlocks);
+      }
+    }
+    return featureBlocks;
+  }
+
   function sbChrAreAdjacent(sb) {
-    let a0 = sb[0], a1 = sb[1], adj = isAdjacent(a0, a1) || isAdjacent(a1, a0);
+    const
+    a0 = sb[0], a1 = sb[1],
+    /** Using this equivalent allows blockIds to be dropped from sb[] :
+     [a0, a1] = sbBlockIds(sb),
+     */
+    /** if one of the blocks are unviewed, showSynteny() will be called before
+     * the synteny blocks between those blocks is removed from syntenyBlocks[].
+     */
+    adj = a0 && a1 &&
+      (isAdjacent(a0, a1) || isAdjacent(a1, a0));
     return adj;
   }
   const sbSizeThreshold = me.get('sbSizeThreshold');
@@ -67,9 +103,16 @@ function showSynteny(syntenyBlocks, t, oa)
     return sb[SB_SIZE] > sbSizeThreshold;
   }
   function sbZoomFilter(sb) {
-    let 
-      inRangeLR = [[0, 2], [1, 4]]
-      .map(([chrI, featureI]) => pathDataUtils.featureInRange(sb[chrI], sb[featureI])),
+    const
+    axes = sbAxes(sb),
+    /** featureInRange() uses valueInInterval(), which depends on
+     * featureIntervalOverlap and featureIntervalContain : the latter is true by
+     * default and indicates that when zoomed inside the interval of a feature,
+     * such as a synteny block which are easy to zoom into because they may be
+     * the whole axis, a path connecting that feature will still be displayed.
+     */
+    inRangeLR = [[0, 2], [1, 4]]
+      .map(([chrI, featureI]) => pathDataUtils.featureInRange(axes[chrI], sb[featureI])),
     inCount = inRangeLR.reduce((sum, flag) => sum += flag ? 1 : 0),
     lineIn = inCount >= (allowPathsOutsideZoom ? 1 : 2);
     return lineIn;
@@ -84,7 +127,7 @@ function showSynteny(syntenyBlocks, t, oa)
   function blockLine (s) {
     const
     // blockIds = [s[0], s[1]],
-    axes = [s[2], s[4]].map((feature) => feature.get('blockId.axis1d')),
+    axes = sbAxes(s),
     sLine = pathDataUtils.patham2(axes[0], axes[1], s.slice(2));
     if (trace_synteny > 3)
     dLog("blockLine", s, sLine);
@@ -93,8 +136,8 @@ function showSynteny(syntenyBlocks, t, oa)
 
   /** @return array [start, end]  */
   const f2Value = syntenyBlock_2Feature ?
-        (blockId, f) => f.get('value') :
-        (blockId, f0, f1) => [f0, f1].map((f) => f.location);
+        (f) => f.get('value') :
+        (f0, f1) => [f0, f1].map((f) => f.location);
   function intervalIsInverted(interval)
   {
     // could use featureY_(a, d0), if flipping is implemented via scale
@@ -104,13 +147,13 @@ function showSynteny(syntenyBlocks, t, oa)
     return inverted;
   }
   function syntenyIsInverted(s) {
-    let
+    const
     /** if syntenyBlock_2Feature, [s[2], s[3]] is [start feature, undefined]
-     * otherwise it is [start feature name, end feature name];
+     * otherwise it is [start feature, end feature];
      * and similarly for s[4], s[5].
      */
-    inverted = intervalIsInverted(f2Value(s[0], s[2], s[3]))
-      != intervalIsInverted(f2Value(s[1], s[4], s[5]));
+    inverted = intervalIsInverted(f2Value(s[2], s[3]))
+      != intervalIsInverted(f2Value(s[4], s[5]));
     if (trace_synteny > 3)
       dLog("syntenyIsInverted", s, inverted);
     return inverted;

@@ -186,6 +186,7 @@ export default Component.extend({
    * seems useful, especially with a transition, to show the progressive exclusion of
    * paths during zoom.
    * Users also report this is useful when viewing synteny blocks.
+   * Related : see comment in sbZoomFilter() re.  valueInInterval() and featureIntervalContain.
    */
   allowPathsOutsideZoom : computed('tickOrPath', function () {
     return this.get('tickOrPath') === 'path'; }),

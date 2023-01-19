@@ -471,11 +471,9 @@ export default Component.extend({
 
 
   updateSyntenyBlocksPosition : task(function * () {
-    dLog('updateSyntenyBlocksPosition', this.oa.syntenyBlocks.length);
-    const axisApi = this.oa.axisApi;
-    if (axisApi.showSynteny) {
-      axisApi.showSynteny(this.oa.syntenyBlocks, undefined);
-    }
+    const oa = this.oa;
+    dLog('updateSyntenyBlocksPosition', oa.syntenyBlocks.length);
+    showSynteny(oa.syntenyBlocks, undefined, oa);
     yield timeout(100);
   }).keepLatest(),
 
