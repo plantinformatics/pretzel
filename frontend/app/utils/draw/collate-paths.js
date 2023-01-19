@@ -171,7 +171,7 @@ function ensureFeatureIndex(featureId, featureName, blockId)
  * and call @see ensureFeatureIndex().
  * @param featureId
  */
-function featureLookupName(featureId)
+function featureLookupName(store, featureId)
 {
   let oa = oa_();
   let featureName, f = oa.featureIndex[featureId];
@@ -181,8 +181,6 @@ function featureLookupName(featureId)
   }
   else
   {
-    /** see comments above about injecting store. */
-    let store = oa.eventBus.get('store');
     let feature = store.peekRecord('feature', featureId),
     // in console .toJSON() was required - maybe just timing.
     block = feature.get('blockId') || (feature = feature.toJSON()).get('blockId'),
@@ -786,6 +784,7 @@ function addPathsToCollation(blockA, blockB, paths)
     console.log('addPathsToCollation', blockA, blockB, paths.length,
                 Block.longName(blockA), Block.longName(blockB));
   let axisName = blockA, axisName1 = blockB;
+  let axisStores = [blockA, blockB].map(axisName => flowsService.id2ServerGet(axisName).store);
   let trace_count_path = 1;
   paths.map(function (p) {
     /* could pass p.featureA, p.featureB to featureLookupName() as blockId;
@@ -815,14 +814,14 @@ function addPathsToCollation(blockA, blockB, paths)
      */
     featureA = aliasFeatures[1-aliasDirection],
     featureB = aliasFeatures[+aliasDirection],
-    featureName = featureLookupName(featureA),
+    featureName = featureLookupName(axisStores[0], featureA),
     /** If p.aliases.length == 0, then p is direct not alias so put it in featureAxes[] instead.
      * Will do that in next commit because it is useful in first pass to do visual comparison of
      * paths calculated FE & BE by toggling the flow display enables
      * (div.flowButton / flow.visible) "direct" and "alias".
      */
     aliasGroupName = p.aliases.length ? JSON.stringify(p.aliases, null, '  ') : undefined, // was aliasesText(p.aliases),
-    fi = featureLookupName(featureB);
+    fi = featureLookupName(axisStores[1], featureB);
     /* if path is direct and not from alias, then check that features are
      * stored, otherwise store them.
      */
@@ -879,13 +878,14 @@ function addPathsByReferenceToCollation(blockA, blockB, referenceGenome, maxDist
   if ((trace_adj > 1) || (trace_adj && paths.length))
     console.log('addPathsByReferenceToCollation', blockA, blockB, referenceGenome, maxDistance, paths.length, arguments);
   let axisName = blockA, axisName1 = blockB;
+  let axisStores = [blockA, blockB].map(axisName => flowsService.id2ServerGet(axisName).store);
   let trace_count_path = 1;
   paths.map(function (p) {
     /** @see addPathsToCollation() for further comments.  */
     let
-      featureName = featureLookupName(p.featureA),
+    featureName = featureLookupName(axisStores[0], p.featureA),
     aliasGroupName = p.aliases.length ? JSON.stringify(p.aliases, null, '  ') : undefined,
-    fi = featureLookupName(p.featureB);
+    fi = featureLookupName(axisStores[1], p.featureB);
     if (! p.aliases.length)
     {
       // this API result should not contain directs, only aliases.
