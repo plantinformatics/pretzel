@@ -75,14 +75,14 @@ function PathDataUtils(oa) {
 
   const result = {
     blockO, 
-    featureLine2, 
+    // featureLine2, 
     inside, 
     pointSegment, 
     featureLineS2, 
     featureLineS3, 
     featureLineS, 
     lineHoriz, 
-    featureLine, 
+    // featureLine, 
     path, 
     pathU, 
     pathUg, 
@@ -154,14 +154,13 @@ function PathDataUtils(oa) {
   }
 
   /** A line between a feature's location in adjacent Axes.
-   * @param ak1, ak2 block IDs
-   * @param d feature name
+   * @param ak1, ak2 axis-1d
+   * @param d feature
    * Replaced by the stacks equivalent : @see featureLineS2()
    */
   function featureLine2(ak1, ak2, d)
   {
     let
-      o = oa.o,
     /** use blockO() in place of o[] lookup to handle ak1,2 being child blocks */
     ends = [ak1, ak2].map(function (ak) {
       return [blockO(ak), featureY_(ak, d)]; });
@@ -172,7 +171,7 @@ function PathDataUtils(oa) {
    * The purpose is to give the x positions which paths between the 2 axes
    * should terminate at, hence the name 'inside' - it is concerned with the
    * inside edges of the axes from the perspective of the space between them.
-   * @param ak1, ak2  axis IDs  (i.e. oa.axes[ak1] is Stacked, not Block)
+   * @param ak1, ak2  axis-1d
    * @param cached  true means use the "old" / cached positions o[ak], otherwise use the current scale x(ak).
    * @return 2 x-positions, in an array, in the given order (ak1, ak2).
    */
@@ -180,17 +179,17 @@ function PathDataUtils(oa) {
   {
     const
     o = oa.o,
-    x = stacks.x;
+    x = stacks.x,
+    axes = [ak1, ak2];
     let xi = cached
-      ? [o[ak1], o[ak2]]
-      : [x(ak1), x(ak2)],
+        ? axes.mapBy('scaledX')
+        : axes.map(x),
     /** true if ak1 is left of ak2 */
     order = xi[0] < xi[1],
     /** If the rightmost axis is split it does not affect the endpoint, since its left side is the axis position.
      * This is the index of the left axis. */
     left = order ? 0 : 1,
-    akL = order ? ak1 : ak2,
-    aL = oa.axisApi.stacksView.axesByBlockId[akL].axis1d;    // draw_orig : oa.axes[akL];
+    aL = axes[left];
     if (aL.extended)
     {
       // console.log("inside", ak1, ak2, cached, xi, order, left, akL);
@@ -199,6 +198,7 @@ function PathDataUtils(oa) {
     return xi;
   }
   /** @return a short line segment, length approx 1, around the given point.
+   * @param point array with indexes 0, 1 for x, y.
    */
   function pointSegment(point)
   {
@@ -213,19 +213,20 @@ function PathDataUtils(oa) {
   }
   /** Stacks version of featureLine2().
    * A line between a feature's location in Axes in adjacent Stacks.
-   * @param ak1, ak2 axis names, (exist in axisIDs[])
-   * @param d1, d2 feature names, i.e. ak1:d1, ak1:d1
-   * If d1 != d2, they are connected by an alias.
+   * @param ak1, ak2 axis-1d,
+   * @param d1, d2 features, i.e. ak1:d1, ak1:d1
+   * If d1.name != d2.name, they are connected by an alias.
    */
   function featureLineS2(ak1, ak2, d1, d2)
   {
     const
     o = oa.o,
     vc = oa.vc,
-    axis1 = Stacked.getAxis(ak1),
-    axis2 = Stacked.getAxis(ak2),
+    axis1 = ak1,
+    axis2 = ak2,
     /** x endpoints of the line;  if either axis is split then the side closer the other axis is used.  */
-    xi = inside(axis1.axisName, axis2.axisName, true);
+    xi = inside(axis1, axis2
+, true);
     let l;
     if (axis1.perpendicular && axis2.perpendicular)
     { /* maybe a circos plot :-) */ }
@@ -249,18 +250,19 @@ function PathDataUtils(oa) {
   /** Show a parallelogram between 2 axes, defined by
    * 4 feature locations in Axes in adjacent Stacks.
    * Like @see featureLineS2().
-   * @param ak1, ak2 axis names, (exist in axisIDs[])
-   * @param d[0 .. 3] feature names, i.e. ak1:d[0] and d[1], ak2:d[2] and d[3]
-   * update : see comment in patham2()
+   * @param ak1, ak2 axis-1d
+   * @param d[0 .. 3] features, i.e. ak1:d[0] and d[1], ak2:d[2] and d[3]
+   * update : d contains 2 features which define the ends of a synteny block
+   * when syntenyBlock_2Feature, see comment in patham2()
    */
   function featureLineS3(ak1, ak2, d)
   {
     const
     o = oa.o,
     vc = oa.vc,
-    axis1 = Stacked.getAxis(ak1),
-    axis2 = Stacked.getAxis(ak2),
-    xi = inside(axis1.axisName, axis2.axisName, false),
+    axis1 = ak1,
+    axis2 = ak2,
+    xi = inside(axis1, axis2, false),
     oak = xi, // o[ak1], o[ak2]],
     my = syntenyBlock_2Feature ?
         [featureY2(ak1, d[0]), featureY2(ak2, d[2])] :
@@ -313,7 +315,7 @@ function PathDataUtils(oa) {
   /** Similar to @see featureLine().
    * Draw a horizontal notch at the feature location on the axis.
    * Used when showAll and the feature is not in a axis of an adjacent Stack.
-   * @param ak axisID
+   * @param ak axis1d
    * @param d feature name
    * @param xOffset add&subtract to x value, measured in pixels
    */
@@ -321,7 +323,7 @@ function PathDataUtils(oa) {
   {
     let akY = featureY_(ak, d);
     let shiftRight = 9;
-    let o = oa.o,
+    const
     oak = blockO(ak);
     return line([[oak-xOffset + shiftRight, akY],
                  [oak+xOffset + shiftRight, akY]]);
@@ -332,7 +334,7 @@ function PathDataUtils(oa) {
    * which is within stack elt, which has an x translation,
    * so the path x position is relative to 0.
    *
-   * @param ak axisID.
+   * @param ak axis-1d.
    * @param akY Y	position (relative to axis of ak?)
    * @param xOffset add&subtract to x value, measured in pixels
    * Tick length is 2 * xOffset, centred on the axis + shiftRight.
@@ -342,7 +344,7 @@ function PathDataUtils(oa) {
   function lineHoriz(ak, akY, xOffset, shiftRight)
   {
     /** scaled to axis */
-    let akYs = oa.y[ak](akY);
+    let akYs = ak.y(akY);
     /* If the path was within g.foreground, which doesn't have x translation
      * for the stack, would calculate x position :
      * o = oa.o;  x position of axis ak : o[ak]
@@ -476,7 +478,7 @@ function PathDataUtils(oa) {
   }
 
   //- paths-text
-  /** @param f  feature reference i.e. z[axisName][featureName]]
+  /** @param f  feature object reference
    * @return text for display in path hover tooltip */
   function featureAliasesText(fName, f)
   {

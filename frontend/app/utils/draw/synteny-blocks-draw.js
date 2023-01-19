@@ -82,7 +82,10 @@ function showSynteny(syntenyBlocks, t, oa)
   }
 
   function blockLine (s) {
-    let sLine = pathDataUtils.patham2(s[0], s[1], s.slice(2));
+    const
+    // blockIds = [s[0], s[1]],
+    axes = [s[2], s[4]].map((feature) => feature.get('blockId.axis1d')),
+    sLine = pathDataUtils.patham2(axes[0], axes[1], s.slice(2));
     if (trace_synteny > 3)
     dLog("blockLine", s, sLine);
     return sLine;
@@ -91,7 +94,7 @@ function showSynteny(syntenyBlocks, t, oa)
   /** @return array [start, end]  */
   const f2Value = syntenyBlock_2Feature ?
         (blockId, f) => f.get('value') :
-        (blockId, f0Name, f1Name) => [f0Name, f1Name].map((fName) => oa.z[blockId][fName].location);
+        (blockId, f0, f1) => [f0, f1].map((f) => f.location);
   function intervalIsInverted(interval)
   {
     // could use featureY_(a, d0), if flipping is implemented via scale
