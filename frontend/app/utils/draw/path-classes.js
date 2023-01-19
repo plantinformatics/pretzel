@@ -335,10 +335,9 @@ function PathClasses(oa) {
   /** If featureName has an alias group with a feature with an assigned class (colour) then return the classes.
    * @return undefined otherwise
    */
-  function colouredAg(axisName, featureName)
+  function colouredAg(feature)
   {
     let classSet,
-    feature = oa.z[axisName][featureName], //  || oa.featureIndex[featureName],  // use featureIndex[] if featureName was ID, but instead have converted IDs -> names.
     aliasGroupName = feature.aliasGroupName;
     if (aliasGroupName)
     {
@@ -383,6 +382,21 @@ function PathClasses(oa) {
 
     return classes;  
   }
+  function dataFeatureName(d, da) {
+    let featureName = da._id?.name;
+    if (featureName) {
+    } else if (d.feature0) {
+      featureName = d.feature0.name;
+    } else {
+      /** similar to : (da.length === 4) or unique_1_1_mapping */
+      let dataIsFfaa = Array.isArray(da);
+      featureName = dataIsFfaa ? da[0] : da; // also @see featureNameOfPath(pathElt)
+      if (featureName.name) {
+        featureName = featureName.name;
+      }
+    }
+    return featureName;
+  }
   /** Access featureName/s from d or __data__ of parent g of path.
    * Currently only used when (use_path_colour_scale === 4), but aims to be more general.
    * Lookup featureScaffold to find class, or if (use_path_colour_scale === 4)
@@ -400,10 +414,17 @@ function PathClasses(oa) {
     const pathDataUtils = PathDataUtils(oa);
     let classes;
     /** d is path SVG line text if pathDataIsLine */
-    let da = pathDataUtils.dataOfPath(pathElt);
-    /** similar to : (da.length === 4) or unique_1_1_mapping */
-    let dataIsMmaa = typeof(da) === "object";
-    let featureName = dataIsMmaa ? da[0] : da, // also @see featureNameOfPath(pathElt)
+    let da, groupData = pathDataUtils.dataOfPath(pathElt);
+    if (d.feature0 && d.feature1) {
+      /** construct ffaa array */
+      const features = [d.feature0, d.feature1],
+            axes = features.mapBy('blockId.axis1d');
+      da = features.concat(axes);
+    } else {
+      da = groupData;
+    }
+    const dataIsFfaa = Array.isArray(da);
+    let featureName = dataFeatureName(d, groupData),
     colourOrdinal;
     if (use_path_colour_scale < 4)
     {
@@ -415,7 +436,7 @@ function PathClasses(oa) {
       /* colour the path if either end has a class mapping defined.
        * if d[0] does not then check d[1].
        */
-      if ((colourOrdinal === undefined) && dataIsMmaa
+      if ((colourOrdinal === undefined) && dataIsFfaa
           && (da[0] != da[1]))
       {
         colourOrdinal = /*featureScaffold[da[0]] ||*/ featureScaffold[da[1]];
@@ -427,7 +448,7 @@ function PathClasses(oa) {
     {
       // currently, result of locationClasses() is a string identifying the interval,
       // and matching the domain value.
-      if (dataIsMmaa)
+      if (dataIsFfaa)
       {
         classes = locationClasses(da[2].axisName, featureName)
           || locationClasses(da[3].axisName, da[1]);
@@ -447,32 +468,36 @@ function PathClasses(oa) {
     }
     else if (colourOrdinal)
       classes = colourOrdinal;
-    else if (dataIsMmaa)
+    else if (dataIsFfaa)
     {
       /* Like stroke function above, after direct lookup of path end
        * features in featureScaffold finds no class defined, lookup via
        * aliases of end features - transitive.
        */
-      /* if ! dataIsMmaa then have featureName but no Axes; is result of a direct flow,
+      /* if ! dataIsFfaa then have featureName but no Axes; is result of a direct flow,
        * so colouring by AliasGroup may not be useful.
        */
       // collateStacks() / maInMaAG() could record in pathsUnique the alias group of the path.
       let
       /** based on similar in handleMouseOver(). */
-        featureNames, blockIds;
+        features;
+      if (groupData.alignment) {
+        const aliases = groupData.alignment.map((a) => a.repeats.features.mapBy('name')).flat().uniq();
+        classes = new Set(aliases);
+      } else {
         if (Array.isArray(da)) {
           const [feature0, feature1, a0, a1] = da;
-          featureNames = [feature0, feature1];
-          blockIds = [a0.axisName, a1.axisName];
+          features = [feature0, feature1];
         } else {
-          featureNames = da.alignment.mapBy('repeats.features.0.name');
-          blockIds = da.alignment.mapBy('blockId');
+          features = da.alignment.mapBy('repeats.features.0.name');
+          // blockIds = da.alignment.mapBy('blockId');
         }
       const
       classSet =
-        colouredAg(blockIds[0], featureNames[0]) ||
-        colouredAg(blockIds[1], featureNames[1]);
+        colouredAg(features[0]) ||
+        colouredAg(features[1]);
       classes = classSet;
+      }
     }
     return classes;
   }
@@ -498,8 +523,8 @@ function PathClasses(oa) {
           /** d is path SVG line text if pathDataIsLine */
           let da = pathDataUtils.dataOfPath(this);
           /** similar to : (da.length === 4) or unique_1_1_mapping */
-          let dataIsMmaa = typeof(da) === "object";
-          let featureName = dataIsMmaa ? da[0] : da, // also @see featureNameOfPath(this)
+          let dataIsFfaa = Array.isArray(da);
+          let featureName = dataFeatureName(d, da),
           colourOrdinal = featureName;
           if ((use_path_colour_scale === 4) && featureScaffold)
           {
@@ -507,10 +532,10 @@ function PathClasses(oa) {
             /* colour the path if either end has a class mapping defined.
              * if d[0] does not then check d[1].
              */
-            if ((colourOrdinal === undefined) && dataIsMmaa
-                && (da[0] != da[1]))
+            if ((colourOrdinal === undefined) && dataIsFfaa
+                && (da[0].name != da[1].name))
             {
-              colourOrdinal = featureScaffold[da[0]] || featureScaffold[da[1]];
+              colourOrdinal = featureScaffold[da[0].name] || featureScaffold[da[1].name];
             }
           }
           else if (use_path_colour_scale === 5)
@@ -521,14 +546,14 @@ function PathClasses(oa) {
               ? classSet : classFromSet(classSet);
           }
           // path_colour_scale(undefined) maps to pathColourDefault
-          if ((colourOrdinal === undefined) && dataIsMmaa)
+          if ((colourOrdinal === undefined) && dataIsFfaa)
           {
-            /* if ! dataIsMmaa then have featureName but no Axes; is result of a direct flow,
+            /* if ! dataIsFfaa then have featureName but no Axes; is result of a direct flow,
              * so colouring by AliasGroup may not be useful.
              */
             // collateStacks() / maInMaAG() could record in pathsUnique the alias group of the path.
             let [feature0, feature1, a0, a1] = da;
-            let classSet = colouredAg(a0.axisName, feature0) || colouredAg(a1.axisName, feature1);
+            let classSet = colouredAg(feature0) || colouredAg(feature1);
             if (classSet)
               colourOrdinal = classFromSet(classSet);
             if (false && colourOrdinal)
@@ -548,8 +573,7 @@ function PathClasses(oa) {
       gd.classed("reSelected", function(d, i, g) {
         /** d is path SVG line text */
         let da = pathDataUtils.dataOfPath(this);
-        let dataIsMmaa = typeof(da) === "object";
-        let featureName = dataIsMmaa ? da[0] : da;
+        let featureName = dataFeatureName(d, da);
 
         let pathColour = path_colour_scale(featureName);
 
