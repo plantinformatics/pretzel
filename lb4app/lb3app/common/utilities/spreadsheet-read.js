@@ -31,7 +31,7 @@ const I = (x) => x;
 
 /**
  * @param fileData
- * @return : {errors, warnings, datasets[]}
+ * @return : {errors, warnings, datasets[], datasetNames}
  * datasets[] may have .errors and .warnings
  */
 function spreadsheetDataToJsObj(fileData) {
@@ -39,6 +39,13 @@ function spreadsheetDataToJsObj(fileData) {
   let status = {
     errors : [],
     warnings : [] };
+  /** lists of dataset sheet names :
+   *   metadata : found in metadata worksheet,
+   *   metadataMatched :  matched with dataset worksheets,
+   * enabling checking for unused metadata.
+   * Also : keys(metadataMatched) is the list of names of dataset worksheets.
+   */
+  let sheetNames = {metadata : null, metadataMatched : {} };
 
   // readFile uses fs.readFileSync under the hood:
   // .readFile(fileName);
@@ -54,6 +61,7 @@ function spreadsheetDataToJsObj(fileData) {
   metadata = sheets.Metadata && readMetadataSheet(sheets.Metadata),
   chromosomeRenaming = parseSheet(sheets, 'Chromosome Renaming', readChromosomeRenaming), 
   chromosomesToOmit = parseSheet(sheets, 'Chromosomes to Omit', readChromosomesToOmit);
+  sheetNames.metadata = Array.from(Object.keys(metadata));
   const
   nonDatasetSheets = ['User Guide', 'Metadata', 'Chromosome Renaming', 'Chromosomes to Omit'],
   datasets = 
@@ -79,6 +87,11 @@ function spreadsheetDataToJsObj(fileData) {
          */
         datasetMetadata = metadata && (
           metadata[sheetName] || metadata[sheetType + '|' + datasetName]);
+        sheetNames.metadataMatched[sheetName] = !! datasetMetadata;
+        if (! datasetMetadata) {
+          const warning = 'Sheet name "' + sheetName + '" does not have corresponding metadata.';
+          status.warnings.push(warning);
+        }
 
         if (typeAndName.sheetType === 'Alias') {
           /** Aliases are not a dataset (maybe in future);
@@ -95,6 +108,15 @@ function spreadsheetDataToJsObj(fileData) {
       return dataset;
     })
     .flat();
+
+  const metadataUnused = sheetNames.metadata.filter(
+    (sheetName) => ! sheetNames.metadataMatched[sheetName]);
+  if (metadataUnused.length) {
+    const
+    warning = 'These dataset sheet names in the metadata worksheet were not matched : ' +
+      metadataUnused.join(', ');
+    status.warnings.push(warning);
+  }
 
   console.log(fnName, fileData.length, workbook?.SheetNames, datasets);
   if (trace) {
