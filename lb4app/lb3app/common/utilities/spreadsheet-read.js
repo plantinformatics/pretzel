@@ -127,21 +127,37 @@ function spreadsheetDataToJsObj(fileData) {
     console.log(fnName, 'block0', block0, 'feature0', feature0);
   }
 
-  /** for those datasets which are not OK and contain .warnings and/or .errors
+  /** truncate errors and warnings array; limit per dataset  */
+  const datasetErrorWarningLimit = 7;
+  /** 
+   * limit errors and warnings per dataset to datasetErrorWarningLimit
+   * for those datasets which are not OK and contain .warnings and/or .errors
    * drop the dataset and append the warnings / errors to status.{warnings,errors}
    * Filter out empty datasets (no .blocks[] or .aliases[]).
    */
   status.datasets = datasets
-    .filter((dataset) => {
+    .reduce((result, dataset) => {
       const ok = /* ! dataset.sheetName || */  dataset.name &&
             (dataset.blocks?.length || dataset.aliases?.length);
       ['warnings', 'errors'].forEach((fieldName) => {
-        if (! ok && dataset[fieldName]?.length) {
+        const df = dataset[fieldName];
+        if (df?.length > datasetErrorWarningLimit) {
+          console.log(fnName, fieldName, df.length);
+          const length = df.length;
+          dataset[fieldName] = df.slice(0, datasetErrorWarningLimit);
+          dataset[fieldName].push('... ' + length);
+        }
+        if (! ok && df?.length) {
           status[fieldName] = status[fieldName].concat(dataset[fieldName]);
         }
       });
-      return ok;
-    });
+      /* this reduce() is a combination of filter and map - the dataset is
+       * filtered out if ! ok, and it may be modified. */
+      if (ok) {
+        result.push(dataset);
+      }
+      return result;
+    }, []);
   if (trace && (status.warnings?.length || status.errors?.length)) {
     console.log(fnName, status.errors.slice(0, 2), status.warnings.slice(0, 2));
   }
