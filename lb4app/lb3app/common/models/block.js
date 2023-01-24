@@ -1342,6 +1342,28 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
 
   // ---------------------------------------------------------------------------
 
+  Block.cacheClearKey = function(cacheId, cb) {
+    /** cacheId could be : pre + id + post,
+     * with params : id, pre, post.
+     * This would check that the user session had permission for the block.
+     */
+    const value = blockFeatures.cacheClearKey(cache, cacheId);
+    cb(null, value);
+  };
+
+  const cacheClearKeyOptions = {
+    accepts: [
+      {arg: 'cacheId', type: 'string', required: true},
+    ],
+    http: {verb: 'get'},
+    returns: {arg: 'result', type: 'object'},
+    description: "Clear cached result for given cacheId and return the removed result."
+  };
+  Block.remoteMethod('cacheClearKey', cacheClearKeyOptions);
+
+
+  //----------------------------------------------------------------------------
+
 
   acl.assignRulesRecord(Block)
   acl.limitRemoteMethods(Block)
