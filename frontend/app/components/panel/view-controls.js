@@ -591,6 +591,24 @@ export default Component.extend({
     this.set('titleTextSize', (value === 'inherit') ? '' : value);
   },
 
+  //----------------------------------------------------------------------------
 
+  /** Limit on result rows for VCF lookup response.
+   * This initial default value is coordinated with hbs : <input ... value=3 ... pathNeighboursInput >
+   */
+  // @tracked
+  pathNeighbours : 3,
+
+  // @action
+  pathNeighboursInput(event) {
+    /** default is 3 : value=3 in hbs
+     * event.target.value is a string; convert to a number.
+     */
+    let value = +event.target.value;
+     dLog('pathNeighboursInput', value, event.target.value);
+    this.set('pathNeighbours', value);
+  },
+
+  //----------------------------------------------------------------------------
 
 });

@@ -10,4 +10,4 @@ exports.ErrorStatus = function(statusCode, text)
   let e = Error(text);
   e.statusCode = statusCode;
   return e;
-}
+};

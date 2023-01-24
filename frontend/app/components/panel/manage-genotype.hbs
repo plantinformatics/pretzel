@@ -209,7 +209,9 @@ Server :
   {{#if this.vcfGenotypeLookupDomain}}
     <button type="button" onclick={{action this.vcfGenotypeLookup}} class="btn btn-info btn-xs">VCF Lookup</button>
   {{else}}
-    <span>VCF Lookup Region limit is {{this.intervalLimit}}Mb</span>
+    {{#if this.urlOptions.gtIntervalLimit}}
+      <span>VCF Lookup Region limit is {{this.intervalLimit}}Mb</span>
+    {{/if}}
   {{/if}}
 
   <div class="interval-group">

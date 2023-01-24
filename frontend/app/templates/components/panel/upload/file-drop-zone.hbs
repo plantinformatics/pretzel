@@ -73,6 +73,15 @@ https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Comm
   warningMessage=warningMessage
   errorMessage=errorMessage}}
 
+<div>
+  {{#each this.errors as |error|}}
+    <div>{{error}}</div>
+  {{/each}}
+  {{#each this.warnings as |warning|}}
+    <div>{{warning}}</div>
+  {{/each}}
+</div>
+
 {{#if isProcessing}}
   {{#elem/panel-form
     name="info"

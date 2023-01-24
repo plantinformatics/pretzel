@@ -349,7 +349,7 @@ export default Service.extend({
       'Features/search' + (post ? 'Post' : ''),
       post ? 'POST' : 'GET',
       post ? JSON.stringify(data) : data,
-      true, apiServer);
+      true, /*onProgress*/null, apiServer);
   },
 
   /** Search for Aliases matching the given list of Feature names in featureNames[],
@@ -523,7 +523,7 @@ export default Service.extend({
     }
 
     if (trace) {
-      dLog(fnName, arguments, (trace < 2) ? ',' : this);
+      dLog(fnName, (trace < 2) ? [route, method, dataIn?.length] : [arguments, this]);
     }
     if (token === true) {
       let accessToken = this._accessToken(server);

@@ -1840,6 +1840,14 @@ ul.view-controls > li > div > .sub-label > span {
   }
 }
 
+/* enable label to be inline with input checkbox.  used within .list-group-item */
+.inline-margin
+{
+  display: inline;
+  margin-left: 0.5em;
+}
+
+
 /*------------------------------------*/
 
 /* used for #left-panel-upload > div > .panel

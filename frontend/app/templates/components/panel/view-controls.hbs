@@ -230,14 +230,15 @@
         List Selected Features in the Feature table in right panel.
       {{/ember-tooltip}}
     </li>
-    <li class="list-group-item">
+    <li class="list-group-item horiz-2">
+      <div>
       <span class="filter-group-col">
         {{input type="checkbox" name="pathGradientUpper" checked=pathGradientUpper }}
         {{#ember-tooltip side="right" delay=500}}
-          Use pathGradient threshold as an upper / lower limit.
+          Use threshold as an upper / lower limit.
         {{/ember-tooltip}}
       </span>
-      <label>Path Colinearity Threshold : {{pathGradient}}</label>
+      <label class="inline-margin">Path Colinearity Threshold : {{pathGradient}}</label>
       <input type="range" 
        id="range-pathGradient" 
        name="pathGradient" 
@@ -245,6 +246,20 @@
        value={{pathGradientInt}}
        oninput={{action (mut pathGradientInt) value="target.value"}}
       />
+      </div>
+      <div>
+        {{#ember-tooltip side="bottom" delay=500}}
+          Number of neighbours of each path to consider in distance average against threshold.
+        {{/ember-tooltip}}
+
+        <label>Path neighbours</label>
+        <span class="sub-label">{{ this.pathNeighbours }}</span>
+        <input type="range"
+         value=3
+         oninput={{action this.pathNeighboursInput}}
+         min="1" max="30"
+        />
+      </div>
     </li>
 
     <li class="list-group-item">

@@ -671,6 +671,7 @@ export default Component.extend(Evented, {
                     axisIDAdd,
                     stacksAxesDomVerify : function (unviewedIsOK = false) { stacksAxesDomVerify(stacks, oa.svgContainer, unviewedIsOK); } ,
                     updateSyntenyBlocksPosition : () => this.get('updateSyntenyBlocksPosition').perform(),
+                    setupMouseHover,
                     drawMap : this,  // for debug trace / check.
                    };
       Ember_set(oa, 'axisApi', axisApi);
@@ -3057,6 +3058,7 @@ export default Component.extend(Evented, {
      * @param this  path element
      */
     function handleMouseOver(d, i){
+      const fnName = 'handleMouseOver';
       let sLine, pathFeaturesHash;
       let pathFeatures = oa.pathFeatures;
       let hoverFeatures;
@@ -3078,6 +3080,15 @@ export default Component.extend(Evented, {
         if ((pathFeaturesHash === undefined) && ! pathDataIsLine)
         {
           let ffaa = dataOfPath(this),
+              syntenyEvidence = ffaa[Symbol.for('syntenyEvidence')];
+          if (syntenyEvidence) {
+            /** show path-data syntenyEvidence in console when mouse hover.
+             * Enable this via drawOptions : showPathHover : true
+             */
+            console.log(fnName, 'syntenyEvidence', syntenyEvidence);
+            return;
+          }
+          let
           [feature0, feature1, a0, a1] = ffaa;
           let direction, aliasGroupName;
           if (ffaa.length == 6)
