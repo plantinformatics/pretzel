@@ -63,6 +63,13 @@ echo  \
  datasetIdDir=$datasetIdDir, \
  >> $logFile
 
+# bcftools 'make install' installs by default in /usr/local/bin/
+# (yum install is in /usr/bin/)
+PATH=${PATH}:/usr/local/bin
+echo  \
+ PATH=$PATH, \
+ >> $logFile
+
 
 
 [ -d tmp ] || mkdir tmp

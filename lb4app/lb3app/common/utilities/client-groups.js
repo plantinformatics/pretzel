@@ -31,7 +31,7 @@ class ClientGroups {
         console.log('app.once(loaded)', app);
       });
       app.once('started', function () {
-        console.log('app.once(started)', app?.settings);
+        console.log('app.once(started)', app.settings);
       });
 
     }
