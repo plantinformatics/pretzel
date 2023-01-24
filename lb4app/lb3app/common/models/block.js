@@ -791,7 +791,14 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
 
       function blockDatabaseFeatureCounts([block, dataset]) {
         if (dataset.tags?.includes('VCF')) {
-          vcfGenotypeFeaturesCounts(block, interval, nBins, isZoomed, cb);
+          /** wrap cb to store the result in cache. */
+          function cacheCb(error, result2) {
+            if (result2 && useCache) {
+                cachePut(result2);
+            }
+            cb(error, result2);
+          }
+          vcfGenotypeFeaturesCounts(block, interval, nBins, isZoomed, cacheCb);
         } else {
           let db = this.dataSource.connector;
           let cursor =
@@ -799,10 +806,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
           cursor.toArray()
             .then(function(featureCounts) {
               if (useCache) {
-                if (trace_block > 1) {
-                  console.log(fnName, cacheId, 'put', featureCounts[0]);
-                }
-                cache.put(cacheId, featureCounts);
+                cachePut(featureCounts);
               }
               cb(null, featureCounts);
             }).catch(function(err) {
@@ -810,6 +814,14 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
             });
         }
       }
+
+      function cachePut(featureCounts) {
+        if (trace_block > 1) {
+          console.log(fnName, cacheId, 'put', featureCounts[0]);
+        }
+        cache.put(cacheId, featureCounts);
+      }
+
     }
 
   };
