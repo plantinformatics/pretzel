@@ -348,6 +348,12 @@ export default Component.extend(Evented, {
     if (flipRegion)
       flipRegion(features);
   },
+
+  resetZooms() {
+    console.log('resetZooms');
+    let axisBrushZoom = AxisBrushZoom(this.oa);
+    axisBrushZoom.resetZooms(undefined);
+  },
 //}
 
   /*------------------------------------------------------------------------*/

@@ -150,7 +150,7 @@ function axisBrushSelect(svgContainer, brushedAxis1d) {
 }
 
 
-function showAxisZoomResetButtons(svgContainer, zoom, resetZoom, brushedAxis1d, drawMap) {
+function showAxisZoomResetButtons(svgContainer, zoom, resetZoom, brushedAxis1d) {
   // `used as the basis of axisBrushSelect
   /** d3 selection of the brushed axis. */
   let axisS = svgContainer.selectAll("#" + eltId(brushedAxis1d));
@@ -217,8 +217,7 @@ function showAxisZoomResetButtons(svgContainer, zoom, resetZoom, brushedAxis1d, 
 function AxisBrushZoom(oa) {
   const
   me = oa.eventBus,
-  pathDataUtils = PathDataUtils(oa),
-  resetZooms = me.get('resetZooms');
+  pathDataUtils = PathDataUtils(oa);
   
 
   const result = {
@@ -491,7 +490,7 @@ function AxisBrushZoom(oa) {
       }
 
 
-      showAxisZoomResetButtons(svgContainer, zoom, bind(me, me.get('resetZooms')), axis1d, me);
+      showAxisZoomResetButtons(svgContainer, zoom, bind(this, resetZooms, axis1d), axis1d);
 
     } else {
       // brushHelper() is called from brushended() after zoom, with selectedAxes.length===0
@@ -778,27 +777,42 @@ function AxisBrushZoom(oa) {
 
   //----------------------------------------------------------------------------
 
-        /** Call resetZoom(axisId) - reset the zoom of one or all zoomed axes (selectedAxes).
-         * Applies to the specified axis, or all brushes if axisId is undefined.
-         * @param  axisId  db id of reference block of axis (i.e. .axisName) or undefined
-         * @desc resetZooms() resets both the brush/es and the
-         * zoom/s, and is callable via feed.trigger(), whereas resetZoom()
-         * clears just the zoom and is local.
-         */
-      // console.log("me.get('resetZooms')", me.get('resetZooms') !== undefined);
-        if (! me.get('resetZooms'))
-        me.set('resetZooms', function(axis1d) {
-          console.log('resetZooms', axis1d.axisName, oa.selectedAxes, axis1d.brushedRegion);
-          resetBrushes(axis1d);
-          resetZoom(axis1d);
-          console.log('after resetZoom', axis1d.axisName, oa.selectedAxes, axis1d.brushedRegion);
-        });
+  /** Call resetZoom(axisId) - reset the zoom of one or all zoomed axes (selectedAxes).
+   * Applies to the specified axis, or all brushes if axisId is undefined.
+   * @param  axisId  db id of reference block of axis (i.e. .axisName) or undefined
+   * @desc resetZooms() resets both the brush/es and the
+   * zoom/s, and is callable via feed.trigger(), whereas resetZoom()
+   * clears just the zoom and is local.
+   * @param this AxisBrushZoom - not used.
+   */
+  function resetZooms(axis1d) {
+    let zoomedAxes;
+    const
+    fnName = 'resetZooms',
+    stacksView = oa.axisApi.stacksView,
+    /** Probably zoomedAxes is sufficient; if it is empty then look at
+     * selectedAxes, but probably not required. */
+    axis1ds = axis1d ? [axis1d] :
+      (zoomedAxes = stacksView.axes().filterBy('zoomed')).length ? zoomedAxes : 
+      oa.selectedAxes.length ? oa.selectedAxes.slice() :
+      [];
+    console.log(
+      fnName, axis1ds.mapBy('axisName'),
+      axis1ds.mapBy('axis.brushName'), axis1ds);
+    axis1ds.forEach((axis1d) => {
+      console.log(fnName, axis1d.axisName, axis1d.brushedRegion);
+      resetBrushes(axis1d);
+      resetZoom(axis1d);
+      console.log(fnName, 'after resetZoom', axis1d.axisName, axis1d.brushedRegion);
+    });
+  }
       /** Clear the brush of the specified axis, or all brushes if axisId is undefined.
        * @param  axisId  db id of reference block of axis (i.e. .axisName) or undefined
        */
       function resetBrushes(axis1d)
       {
         if (axis1d === undefined) {
+          // or oa.selectedAxes[]
           oa.axisApi.stacksView.axes().forEach(resetBrush);
         } else {
           resetBrush(axis1d);
@@ -1105,7 +1119,7 @@ function AxisBrushZoom(oa) {
     debounce(
       undefined,
       me.functionHandle('showAxisZoomResetButtons', showAxisZoomResetButtons),
-      oa.svgContainer, zoom, bind(me, me.get('resetZooms')), axis1d, me,  // args
+      oa.svgContainer, zoom, bind(this, resetZooms, axis1d), axis1d,  // args
       me.get('controls.view.debounceTime')
     );
 
