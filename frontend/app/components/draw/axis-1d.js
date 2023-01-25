@@ -884,14 +884,17 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
    * Equivalent : this.get('axisS').selectAll(), which does a selection by id
    * from svgContainer through g.stack to the g.axis-outer.
    */
-  axisSelect : computed('axis.id', function () {
-    let 
+  axisSelectFn () {
+    const 
     /** could narrow this to svgContainer, but probably not a performance
      * improvement, and if we have multiple draw-maps later, the map id can be
      * included in eltId() etc. */
     as = d3.selectAll(".axis-outer#" + eltId(this));
     return as;
-  }),
+  },
+  axisSelectUpdate() {
+    this.axisSelect = this.axisSelectFn();
+  },
 
   /** d3 selection of tspan.blockTitle of this axis.
    */

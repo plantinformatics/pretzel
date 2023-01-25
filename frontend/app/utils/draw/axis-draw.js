@@ -139,7 +139,13 @@ function stack_axes(stack) {
   return stack.axes;
 }
 
-AxisDraw.prototype.draw2 = function draw2(selections, stack_axisIDs, newRender, stacksAxesDomVerify) {
+/**
+ * @param selections  identify the DOM context into which the axes elements are inserted
+ * @param axes  data for the axes. Used as the element datum .__data__
+ * @param newRender
+ * @param stacksAxesDomVerify
+ */
+AxisDraw.prototype.draw2 = function draw2(selections, axes, newRender, stacksAxesDomVerify) {
   const fnName = 'AxisDraw::draw2';
   console.log(fnName);
   let { svgContainer, stackSd, stackS,  stackX } = selections;
@@ -178,12 +184,13 @@ AxisDraw.prototype.draw2 = function draw2(selections, stack_axisIDs, newRender, 
 
 
   axisG = axisS
-    .data(stack_axisIDs, axisKeyFn) // draw_orig : Stacked.prototype.keyFunction
+    .data(axes, axisKeyFn) // draw_orig : Stacked.prototype.keyFunction
     .enter().append(moveOrAdd /*'g'*/),
   axisX = axisS.exit();
   dLog('stacks.length', stacks.length, axisG.size(), axisX.size());
   axisG.each(function(d, i, g) { dLog(d, i, this); });
   axisX.each(function(d, i, g) { dLog('axisX', d, i, this); });
+  axisX.each(function(axis1d, i, g) { axis1d.axisSelect = null; });
   axisX.remove();
   let axisGE = axisG
     .selectAll('g.axis-all')
@@ -219,6 +226,10 @@ AxisDraw.prototype.draw2 = function draw2(selections, stack_axisIDs, newRender, 
     .attr("id", eltId);
   let g = axisG;
   resultSelections.g = g;
+
+  // could use axis1d.axisSelect = d3.select(this)
+  axisG.each(function(axis1d, i, g) { axis1d.axisSelectUpdate(); });
+
   /** stackS / axisG / g / gt is the newly added stack & axis.
    * The X position of all stacks is affected by this addition, so
    * re-apply the X transform of all stacks / axes, not just the new axis.
