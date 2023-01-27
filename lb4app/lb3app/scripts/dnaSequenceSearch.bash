@@ -11,7 +11,8 @@ case $PWD in
     toolsDev=$resourcesDir
     blastn=$resourcesDir/blastn_request.bash
     ;;
-  *backend)
+  # orig : *backend
+  *lb4app)
     resourcesDir=../resources
     ;;
   *)
@@ -120,7 +121,7 @@ datasetId=$(echo "$datasetId" | sed 's/[^-A-Za-z0-9._ ]/_/g')
 
 if [ $inContainer -ne 0 ]
 then
-  fileName=/home/ec2-user/pretzel/"$fileName"
+  fileName=/home/ec2-user/pretzel/lb4app/"$fileName"
 fi
 
 function datasetId2dbName()
