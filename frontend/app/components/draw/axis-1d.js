@@ -164,6 +164,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
       });
     }
 
+    this.axisSelectUpdate();
+
     let axisName = this.get('axis.id');
     /* axisS may not exist yet, so give Stacked a reference to this. */
     Stacked.axis1dAdd(axisName, this);
@@ -893,7 +895,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     as = d3.selectAll(".axis-outer#" + eltId(this));
     return as;
   },
-  axisSelect : d3.select(),
+  axisSelect : null,
   axisSelectUpdate() {
     this.set('axisSelect', this.axisSelectFn());
   },
