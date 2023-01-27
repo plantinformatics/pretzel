@@ -30,7 +30,8 @@ import {
 } from '../../utils/stacks';
 
 import {
-   AxisBrushZoom,
+  axisZoomResetButtonClasses,
+  AxisBrushZoom,
 } from '../../utils/draw/axisBrush';
 
 import {
@@ -892,8 +893,9 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     as = d3.selectAll(".axis-outer#" + eltId(this));
     return as;
   },
+  axisSelect : d3.select(),
   axisSelectUpdate() {
-    this.axisSelect = this.axisSelectFn();
+    this.set('axisSelect', this.axisSelectFn());
   },
 
   /** d3 selection of tspan.blockTitle of this axis.
@@ -1328,13 +1330,13 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     as.classed("extended", this.get('extended'));
   },
   buttonStateEffect : computed('brushed', 'zoomed', function () {
-    this.showZoomResetButtonState();
+    later(() => this.showZoomResetButtonState(), 200);
   }),
   showZoomResetButtonState() {
     let
     as = this.get('axisSelect'),
     gb = as.selectAll('g.btn');
-    gb.attr('class', () => 'btn graph-btn ' + ['brushed', 'zoomed'].filter((state) => this.get(state)).join(' '));
+    gb.attr('class', () => axisZoomResetButtonClasses + ' ' + ['brushed', 'zoomed'].filter((state) => this.get(state)).join(' '));
     dLog('showZoomResetButtonState', gb.node(), this.get('brushed'), this.get('zoomed'), this.get('zoomed2'), this.get('axisBrush.brushedAxes'));
   },
   showZoomResetButtonXPosn() {

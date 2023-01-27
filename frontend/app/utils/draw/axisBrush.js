@@ -149,6 +149,10 @@ function axisBrushSelect(svgContainer, brushedAxis1d) {
   return gBrush;
 }
 
+/** fixed classes of the <g> containing the Axis Zoom/Reset buttons.
+ * The g.btn and buttons can be factored to form a Component.
+  */
+const axisZoomResetButtonClasses = 'btn graph-btn';
 
 function showAxisZoomResetButtons(svgContainer, zoom, resetZoom, brushedAxis1d) {
   // `used as the basis of axisBrushSelect
@@ -166,7 +170,7 @@ function showAxisZoomResetButtons(svgContainer, zoom, resetZoom, brushedAxis1d) 
   let gE = gS
       .enter()
       .append('g')
-      .attr('class', 'btn');
+      .attr('class', axisZoomResetButtonClasses);
   gE
     .selectAll('rect')
     .data(zoomResetNames)
@@ -208,7 +212,8 @@ function showAxisZoomResetButtons(svgContainer, zoom, resetZoom, brushedAxis1d) 
   resetSwitch
     .on('click',function(){resetZoom(brushedAxis1d); });
  
- dLog("showAxisZoomResetButtons g", g.nodes());
+  dLog("showAxisZoomResetButtons g", g.nodes());
+  brushedAxis1d.showZoomResetButtonState();
 }
 
 
@@ -1306,6 +1311,8 @@ function AxisBrushZoom(oa) {
 
 
 export {
-  brushClip, axisBrushSelect, showAxisZoomResetButtons,
+  brushClip, axisBrushSelect,
+  axisZoomResetButtonClasses,
+  showAxisZoomResetButtons,
   AxisBrushZoom,
 };

@@ -190,7 +190,7 @@ AxisDraw.prototype.draw2 = function draw2(selections, axes, newRender, stacksAxe
   dLog('stacks.length', stacks.length, axisG.size(), axisX.size());
   axisG.each(function(d, i, g) { dLog(d, i, this); });
   axisX.each(function(d, i, g) { dLog('axisX', d, i, this); });
-  axisX.each(function(axis1d, i, g) { axis1d.axisSelect = null; });
+  axisX.each(function(axis1d, i, g) { axis1d.set('axisSelect', d3.select()); });
   axisX.remove();
   let axisGE = axisG
     .selectAll('g.axis-all')
