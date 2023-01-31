@@ -904,7 +904,7 @@ Stacked.prototype.keyFunction = function (axis1d)
 Block.prototype.titleText = function ()
 {
   let
-  axis1d = this.block.get('axis1d'), // || this.axis.getAxis1d(),
+  axis1d = this.block.get('axis1d'), // || this.axis.getAxis1d(), // this.axis is axis-1d
   /** use '' if .axis1d not defined yet. */
   name = axis1d ? axis1d.get('axisTitleText') : '';
   if (axisTitle_dataBlocks) {
