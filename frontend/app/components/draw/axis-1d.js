@@ -291,7 +291,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     return ! this.isDestroying && Stacked_p.axisTransformO_orig.apply(this);
   },
   getY		: Stacked_p.getY,
-  currentPosition		: Stacked_p.currentPosition,
+  // currentPosition is VLinePosition, defined by mixins/axis-position.js.
   axisDimensions		: Stacked_p.axisDimensions,
   // Stacked_p.setDomain() calls back to axis-1d : setDomain() which is already defined by AxisPosition mixin.
   // setDomain		: Stacked_p.setDomain,

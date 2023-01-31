@@ -402,8 +402,8 @@ export default Model.extend(Evented, {
       blockIndex = this.get('blockIndex'),
       /** blocks[] is parallel to zoomedDomains[]. */
       blocks = this.get('blocks'),
-      /** just a check, will use block.get('zoomedDomain') in filter. */
-      zoomedDomains = this.get('zoomedDomains');
+      /** this is .zoomedDomains for an axis which is zoomed, otherwise axis-1d .blocksDomain */
+      zoomedDomains = this.get('domains');
 
       function filterOut(resultElt, i) {
         /** based on filterPaths: filterOut() in paths-table */
@@ -439,12 +439,12 @@ export default Model.extend(Evented, {
     }
     return pathsFiltered;
   },
-  pathsResultFiltered : computed('blocks', 'pathsResultLengthThrottled', 'zoomedDomains.@each.{0,1}', function () {
+  pathsResultFiltered : computed('blocks', 'pathsResultLengthThrottled', 'domains.@each.{0,1}', function () {
     let
     pathsFiltered = this.filterPathsResult('pathsResult');
     return pathsFiltered;
   }),
-  pathsAliasesResultFiltered : computed('pathsAliasesResultLengthThrottled', 'zoomedDomains.@each.{0,1}', function () {
+  pathsAliasesResultFiltered : computed('pathsAliasesResultLengthThrottled', 'domains.@each.{0,1}', function () {
     let
     pathsFiltered = this.filterPathsResult('pathsAliasesResult');
     return pathsFiltered;
