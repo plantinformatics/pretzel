@@ -157,6 +157,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   init() {
     this._super(...arguments);
 
+    this.colourSlotsUsed = A([]);
+
     // reference block -> axis-1d.  can change to a Symbol.
     this.axis.set('axis1dR', this);
     if (! this.stack) {
@@ -597,7 +599,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     dLog('blockIndexes', blockIndexes, dataBlocks);
     return blockIndexes;
   }),
-  colourSlotsUsed : A([]),
+  /** initialised to A([]) in init(). */
+  colourSlotsUsed : null,
   /** assign colour slots to viewed blocks of an axis
    * e.g. slots 0-10 for schemeCategory10
    * @return array mapping colour slots to blocks, or perhaps blocks to slots
@@ -622,10 +625,13 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
           return !bi || !bi.get('isViewed');
         });
         const obj = blockColourObj(b);
-        if (free > 0)
+        if (free > 0) {
           used[free] = obj;
-        else
-          used.push(obj);
+          // would be required if colourSlotsUsed were tracked
+          this.set('colourSlotsUsed', used);
+        } else {
+          used.pushObject(obj);
+        }
       }
     } );
     colourSlots = used;
@@ -634,17 +640,19 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     return colourSlots;
   }),
   colourSlotsEffect : computed('colourSlots.[]', 'dataBlocks.[]', function () {
+    /** not used if .stack is not yet set, but evaluation helps set up the dependency. */
+    const colourSlots = this.get('colourSlots');
     /** axis-1d is assigned .stack via newStacks() -> createStackForAxis();
      * There is no need to render until .stack is set.
      * May add dependency on 'stack'
      */
     if (this.stack && ! this.isDestroying) {
-      let colourSlots = this.get('colourSlots');
       if (trace_colourSlots)
         dLog('colourSlotsEffect', colourSlots, 'colourSlots', 'dataBlocks');
       /** Update the block titles text colour. */
       this.axisTitleFamily();
     }
+    return colourSlots;
   }),
   /** @return the colour index of this block
    */
