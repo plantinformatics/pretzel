@@ -74,6 +74,7 @@ import AxisDraw from '../../utils/draw/axis-draw';
 const Stacked_p = Stacked.prototype;
 
 const trace_stack = 0;
+const trace_colourSlots = 0;
 
 const dLog = console.debug;
 
@@ -612,7 +613,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     let colourSlots,
     used = this.get('colourSlotsUsed');
     let dataBlocks = this.get('dataBlocks');
-    if (trace_stack > 1)
+    if (trace_colourSlots > 1)
       dLog('colourSlots', used, 'dataBlocks', dataBlocks);
     dataBlocks.forEach((b) => {
       if (b.get('isViewed') && (this.blockColour(b) < 0)) {
@@ -628,14 +629,18 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
       }
     } );
     colourSlots = used;
-    if (trace_stack)
+    if (trace_colourSlots)
       dLog('colourSlots', colourSlots);
     return colourSlots;
   }),
   colourSlotsEffect : computed('colourSlots.[]', 'dataBlocks.[]', function () {
-    if (! this.isDestroying && this.stack) {
+    /** axis-1d is assigned .stack via newStacks() -> createStackForAxis();
+     * There is no need to render until .stack is set.
+     * May add dependency on 'stack'
+     */
+    if (this.stack && ! this.isDestroying) {
       let colourSlots = this.get('colourSlots');
-      if (trace_stack)
+      if (trace_colourSlots)
         dLog('colourSlotsEffect', colourSlots, 'colourSlots', 'dataBlocks');
       /** Update the block titles text colour. */
       this.axisTitleFamily();
@@ -646,7 +651,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   blockColour(block) {
     let used = this.get('colourSlotsUsed'),
     i = used.indexOf(blockColourObj(block));
-    if ((trace_stack > 1) && (i === -1) && block.isData) {
+    if ((trace_colourSlots > 1) && (i === -1) && block.isData) {
       dLog('blockColour', i, block.mapName, block, used, this,
            this.viewedBlocks, this.viewedBlocks.map((b) => [b.mapName, b.isData, b.id]));
     }

@@ -1306,7 +1306,9 @@ Stack.prototype.sideClasses = function ()
   }
   const stacks = this.axes[0].stacksView.stacks;
   let i = this.stackIndex(), n = stacks.length;
-  let axisTicksOutside = oa.drawOptions?.controls?.view?.axisTicksOutside;
+  const
+  controlsView = oa.axisApi.drawMap.controls.view,
+  axisTicksOutside = controlsView.axisTicksOutside;
   let classes = (i == 0) || ! axisTicksOutside ? "leftmost" : ((i == n-1) ? "rightmost" : "");
   return classes;
 };
@@ -1939,7 +1941,7 @@ Stack.prototype.redraw = function (t)
   t.on("end interrupt", dragTransitionEnd);
   /** to make this work, would have to reparent the Axes - what's the benefit
    * let ts = 
-   *   t.selectAll("g.stack#" + eltId(this.stackID) + " > .axis-outer");
+   *   t.selectAll("g.stack#" + stackEltId(this) + " > .axis-outer");
    */
   dLog("redraw() stackID:", this.stackID);
   let this_Stack = this;  // only used in trace
@@ -2035,7 +2037,7 @@ Stack.prototype.redrawAdjacencies = function ()
     function (a, index)
     {
       /** transition does not (yet) support .classed() */
-      let as = oa.svgContainer.selectAll(".axis-outer#" + eltId(a.axisName));
+      let as = oa.svgContainer.selectAll(".axis-outer#" + eltId(a));
       as.classed("leftmost", stackClass == "leftmost");
       as.classed("rightmost", stackClass == "rightmost");
       as.classed("not_top", index > 0);

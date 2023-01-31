@@ -667,11 +667,10 @@ export default Component.extend({
           const stacksView = this.oa.axisApi.stacksView;
           stacksView.stacksRedraw();
         }
-        if (false && ! layoutChanged)
+        if (false && ! layoutChanged) {
           // Currently debounce-d in resizeThis(), so call directly here.
           resizeDrawing.apply(this);
-        else
-        {
+        } else {
           console.log(arguments[1], arguments[0]);
           /* debounce is used to absorb the progressive width changes of
            * the side panels when they open / close (open is more

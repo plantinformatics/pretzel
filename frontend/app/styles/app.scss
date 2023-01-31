@@ -624,8 +624,12 @@ body.ctrl-modifier .axis-all > g.brush > g > rect
 .axis-outer.extended:not(.not_top) > .axis-all > text {
   text-anchor: middle;
 }
-/* extended : place the ticks on the left */
-.axis-outer.extended .axis {
+/* extended : place the ticks on the left
+ * axisSide() defaults to left;  
+ * text-anchor : browser default is start;  use start for right and end for left and default.
+ * So .extended is omitted from the selector.
+ */
+.axis-outer .axis {
   text-anchor: end;
 }
 .axis-outer.rightmost:not(.extended).not_top > .axis-all > text,

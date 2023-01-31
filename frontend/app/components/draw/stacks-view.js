@@ -743,6 +743,7 @@ export default Component.extend({
     if (svgContainer) {
       let t = svgContainer.transition().duration(750);
       this.stacks.forEach(function (s) { s.redraw(t); });
+      this.updateStacksAxesDraw();
     }
   },
   /** re-apply axisTransformO(), which uses the axis x scales oa.o */
