@@ -347,18 +347,8 @@ Stacked.axis1dRemove = function (axisName, axis1dComponent) {
     delete axes1d[axisName];
 };
 Stacked.prototype.getAxis1d = function () {
-  let axis1d = this.axis1d,
-      a1;
-  if (! axis1d && (a1 = axes1d[this.axisName])) {
-    Ember_set(this, 'axis1d', a1);
-  }
-  if (axis1d && (axis1d.isDestroying || axis1d.isDestroying)) {
-    dLog('getAxis1d() isDestroying', axis1d, this);
-    axis1d = this.axis1d = undefined;
-    delete axes1d[this.axisName];
-  }
-  return axis1d;
-}
+  return this;
+};
 function positionToString(p)
 {
   return (p === undefined) ? ""
@@ -958,7 +948,7 @@ Block.prototype.axisTitleColour = function ()
   let
   colour,
   block = this.block,
-  axis1d = block.axis1d; // || this.axis.axis1d;
+  axis1d = block.axis1d; // || this.axis; // .axis is axis-1d
   if (axis1d && ! axis1d.isDestroyed) {
     let
     blockId = this.getId(),
@@ -1319,7 +1309,7 @@ Stack.prototype.sideClasses = function ()
  */
 Stacked.prototype.axisSide = function (scale) {
   let stackClass = this.stack.sideClasses(),
-  extended = get(this, 'axis1d.extended'),
+  extended = this.extended,
   /** use of d3.axisLeft() / axisRight() does not seem to update
    * text-anchor="start" on the axis group element g.axis, so for now this is
    * augmented by CSS rules re. .leftmost / .rightmost which ensure the intended
@@ -2041,8 +2031,8 @@ Stack.prototype.redrawAdjacencies = function ()
       as.classed("leftmost", stackClass == "leftmost");
       as.classed("rightmost", stackClass == "rightmost");
       as.classed("not_top", index > 0);
-      if (a.axis1d)
-        a.axis1d.drawTicks();
+      if (a)
+        a.drawTicks();
     });
 };
 //-    import { } from "../utils/axis.js";
@@ -2071,7 +2061,7 @@ Stacked.prototype.extendedWidth = function()
   if (width === true) {
     width = this.allocatedWidth();
     if (! width) {
-      let childViews = get(this, 'axis1d.childViews');
+      let childViews = this.childViews;
       /** replace this with a passed parameter enabling axis-2d to report .width back up to axis-1d.  */
       let axis2d = childViews && childViews.findBy( '_debugContainerKey', 'component:axis-2d');
       if (axis2d) {
@@ -2225,7 +2215,7 @@ Block.prototype.axisTransformO = function ()
  */
 Stacked.prototype.axisTransformO = function ()
 {
-  let transform = this.axis1d?.axisTransformO();
+  let transform = this.axisTransformO();
   return transform;
 };
 Stacked.prototype.axisTransformO_orig = function ()
@@ -2340,7 +2330,7 @@ Stacked.prototype.getY = function ()
 /** .positions[] is [last update drawn, current], @see Stacked.prototype.currentPosition() */
 Stacked.prototype.currentPosition = function ()
 {
-  let axis1d = this.axis1d,
+  let axis1d = this,
   currentPosition = axis1d && axis1d.get('currentPosition');
   return currentPosition;
 };
@@ -2369,7 +2359,7 @@ Stacked.prototype.axisDimensions = function ()
  */
 Stacked.prototype.setDomain = function (domain)
 {
-  let axis1d = this.axis1d;
+  let axis1d = this;
   // if (! axis1d)
   //  dLog('setDomain', this, 'domain', domain, axis1d, axis1d && axis1d.currentPosition);
   if (axis1d) {
