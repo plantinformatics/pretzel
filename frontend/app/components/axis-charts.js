@@ -110,13 +110,7 @@ export default InAxis.extend({
     return gAxis;
   }),
 
-  yAxisScale : computed(function () {
-    const
-    axis1d = this.axis.axis1d,
-    yAxis = axis1d.y;
-    dLog('yAxisScale', yAxis && yAxis.domain());
-    return yAxis;
-  }),
+  yAxisScale : alias('axis.axis1d.y'),
 
   get transitionTime() {
     return this.get('axisZoom.axisTransitionTime');
