@@ -367,23 +367,23 @@
       </div>
 
       <div>
-      <div>
-        <label>QTL layer maximum</label>
-        <span class="sub-label">
-        {{input
-          type="text"
-          value=axisLayerModulusText
-          enter=(action axisLayerModulusTextChanged value=target.value)
-          id="axisLayerModulusText"
-        }}
-        </span>
-      </div>
-      <input type="range"
-       id="range-axisLayerModulus" 
-       min="0" max="50"
-       value={{axisLayerModulusLinear}}
-       oninput={{action axisLayerModulusLinearChanged value="target.value"}}
-      />
+        <div>
+          <label>QTL layer maximum</label>
+          <span class="sub-label">
+          {{input
+            type="text"
+            value=axisLayerModulusText
+            enter=(action axisLayerModulusTextChanged value=target.value)
+            id="axisLayerModulusText"
+          }}
+          </span>
+        </div>
+        <input type="range"
+         id="range-axisLayerModulus" 
+         min="0" max="50"
+         value={{axisLayerModulusLinear}}
+         oninput={{action axisLayerModulusLinearChanged value="target.value"}}
+        />
       </div>
 
     </li>
