@@ -197,6 +197,7 @@ export default EmberObject.extend({
     if (serverSo !== server)
       breakPoint('getDatasets', serverSo, server);
 
+    datasetsTask = 
     datasetsTask.then((blockValues) => {
       console.log(datasetsHandle, 'datasetsTask then', blockValues);
       if (datasetsHandle)

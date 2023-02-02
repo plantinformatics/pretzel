@@ -22,6 +22,8 @@ const trace = 0;
  * @see based on axis-tracks : configureHorizTickHover;
  * related : configureAxisTitleMenu()
  */
+//------------------------------------------------------------------------------
+
 import $ from 'jquery';
 
 /** hover.js is now also imported by draw-map, so stacks.oa is not defined. */
@@ -128,5 +130,44 @@ function configureHorizTickHover(d, block, hoverTextFn) {
 
 /*----------------------------------------------------------------------------*/
 
+/** Setup hover info text over scaffold horizTick-s.
+ * Based on similar @see configureAxisTitleMenu()
+ * @desc These are being factored to utils/hover.js :
+ * @see configureHover, configureHorizTickHover
+ */
+function  configureHorizTickHover_orig(location)
+{
+  console.log("configureHorizTickHover", location, this, this.outerHTML);
+  /** typeof location may also be "number" or "object" - array : syntenyBlocks[x] */
+  let text = (location == "string") ? location :  "" + location;
+  let node_ = this;
+  if ($(node_).popover)
+  $(node_)
+    .popover({
+      trigger : "click hover",
+      sticky: true,
+      delay: {show: 200, hide: 3000},
+      container: 'div#holder',
+      placement : "auto right",
+      /* The popover placement is 65px too high (might depend on window size).
+       * As a simple fix, offset was tried with no apparent effect, possibly
+       * depends on a recent version.  An alternative would be to use a
+       * placement function.
+       * offset : "0 65px",
+       */
+      /* Could show location in content or title; better in content because
+       * when content is undefined a small content area is still displayed,
+       * whereas undefined title takes no visual space.
+       * title : location,
+       */
+       content : text
+    });
+}
 
-export { configureHover, configureHorizTickHover };
+
+//------------------------------------------------------------------------------
+
+export {
+  configureHover, configureHorizTickHover,
+  configureHorizTickHover_orig,
+};

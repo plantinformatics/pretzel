@@ -118,9 +118,14 @@ Viewport.prototype.calc = function(oa)
   /** use width of div#holder, not document.documentElement.clientWidth because of margins L & R. */
 
   let eltHeight;
+  const
+  controls = oa.axisApi.drawMap.controls,
+  /** component:panel/view-controls */
+  controlsView = controls.view;
+  this.controlsView = controlsView;
   let
   componentGeometry = oa?.eventBus?.get('componentGeometry'),
-  controls_window = this.drawOptions?.controls?.window,
+  controls_window = controls.window,
   tablesPanelRight = controls_window ? controls_window.tablesPanelRight : componentGeometry.get('tablesPanelRight');
   /** iniiially .sizes and .tablesPanelRight are not defined; initial value of
    * controllers/mapview : tablesPanelRight is false.
@@ -151,12 +156,13 @@ Viewport.prototype.calc = function(oa)
 
   this.yRange = 
     yRange = graphDim.h - 40;
+  const stacks = oa.axisApi.stacksView?.stacks;
   /* Same calculation in @see Viewport.prototype.xDropOutDistance_update().
    * Based on stacks.length;  (formerly used axisIDs.length until the stacks were formed).
    * See also DropTarget.size.w.
    */
   this.xDropOutDistance =
-    xDropOutDistance = viewPort.w/((oa.stacks.length || 1)*6);
+    xDropOutDistance = viewPort.w/((stacks?.length || 1)*6);
 
   this.dragLimit =
     dragLimit = {min:-50, max:graphDim.w+70};
@@ -164,7 +170,6 @@ Viewport.prototype.calc = function(oa)
     console.log("viewPort=", viewPort, ", w=", w, ", h=", h, ", graphDim=", graphDim, ", yRange=", yRange);
 
   let
-  controlsView = oa.drawOptions?.controls?.view,
   /** input range value is string */
   extraOutsideMargin = +controlsView?.extraOutsideMargin || 0;
 
@@ -205,8 +210,8 @@ Viewport.prototype.viewBox = function()
     ((this.axisTitleLayout && (this.axisTitleLayout.increaseRightMargin() / 2 - shiftLeft)) || 0) : 0;
 
   let
-  controls = this.drawOptions?.controls,
-  showAxisText = controls ? controls.view.showAxisText : true,
+  controlsView = this.controlsView,
+  showAxisText = controlsView ? controlsView.showAxisText : true,
   axisTitleHeight = showAxisText ?
     ((this.axisTitleLayout && this.axisTitleLayout.height !== undefined) ? this.axisTitleLayout.height : 0) :
     80;
@@ -227,8 +232,9 @@ Viewport.prototype.viewBox = function()
  */
 Viewport.prototype.xDropOutDistance_update = function (oa) {
   let viewPort = this.viewPort;
+  const stacks = oa.axisApi.stacksView?.stacks;
   /** If no stacks then result is not used; avoid divide-by-zero. */
-  let nStacks = oa.stacks.length || 1;
+  let nStacks = stacks?.length || 1;
   let previous = this.xDropOutDistance;
   this.xDropOutDistance =
     viewPort.w/(nStacks*6);

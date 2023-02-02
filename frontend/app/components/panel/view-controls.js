@@ -16,6 +16,9 @@ import { stacks } from '../../utils/stacks';
 
 import { subInterval, overlapInterval, inRange } from '../../utils/draw/zoomPanCalcs';
 
+import { PathDataUtils } from '../../utils/draw/path-data';
+import { axisFontSizeApply } from '../../utils/draw/axis-draw';
+
 
 /* global d3 */
 /* global DocumentTimeline */
@@ -72,10 +75,17 @@ export default Component.extend({
   // attributes
   // classes
 
+  controlsService : service('controls'),
   feed: service(),
 
   /*--------------------------------------------------------------------------*/
-  /** paths are calculated in the backend if both blocks of block-adj are from
+
+  /** Enable frontend collation of paths : pathUpdate_() / collate-paths.js
+   * The user sets this via GUI input in panel/view-controls.
+   * Same effect as me.get('urlOptions.pathsCheck'); if pathJoinClient is
+   * available in GUI, then urlOptions.pathsCheck is not required.
+   *
+   * paths are calculated in the backend if both blocks of block-adj are from
    * the same server;  otherwise they may be calculated in the frontend (client)
    * and / or in the backend via localiseBlocks().
   */
@@ -100,6 +110,14 @@ export default Component.extend({
   /** number of ticks in y axis when axis is not stacked.  reduce this
    * proportionately when axis is stacked. */
   axisTicks : 10,
+
+  /** font-size in pixels of axis ticks text.
+   * This replaces constant axisTitleLayout.js : axisFontSize,
+   * which is (original, disabled by axisTitle_dataBlocks) svg axis title menu :
+   *  axisTitleBlocksServers.js : positionToTextBBox()
+   *  axisTitle.js : axisTitleFamily()
+   */
+  axisFontSize : 10,
 
   /*--------------------------------------------------------------------------*/
 
@@ -169,6 +187,17 @@ export default Component.extend({
     dLog('tickOrPathChanged', value);
     this.updateSyntenyBlocksPosition();
   },
+
+  //----------------------------------------------------------------------------
+
+  /** Draw paths between features on Axes even if one end of the path is outside the svg.
+   * This was the behaviour of an earlier version of this Feature Map Viewer, and it
+   * seems useful, especially with a transition, to show the progressive exclusion of
+   * paths during zoom.
+   * Users also report this is useful when viewing synteny blocks.
+   */
+  allowPathsOutsideZoom : computed('tickOrPath', function () {
+    return this.get('tickOrPath') === 'path'; }),
 
   /*--------------------------------------------------------------------------*/
 
@@ -464,8 +493,14 @@ export default Component.extend({
   /*--------------------------------------------------------------------------*/
 
   didInsertElement() {
-    dLog("components/draw-controls didInsertElement()", this.drawActions);
+    const fnName = "components/draw-controls didInsertElement()";
+    dLog(fnName, this.drawActions);
     this._super(...arguments);
+
+    // console.log(fnName, 'controlsService.view', this.controlsService.get('view'));
+    this.controlsService.set('view', this);
+    const oa = stacks.oa;
+    oa.drawOptions = this.drawOptions;
 
     this.drawActions.trigger("drawControlsLife", true);
     // initially 'Paths - Sample' tab is active.
@@ -607,6 +642,98 @@ export default Component.extend({
     let value = +event.target.value;
      dLog('pathNeighboursInput', value, event.target.value);
     this.set('pathNeighbours', value);
+  },
+
+  //----------------------------------------------------------------------------
+
+  drawOptions :
+  {
+    /** true enables display of info when mouse hovers over a path.
+     * A subsequent iteration will show reduced hover info in a fixed location below the graph when false.
+     */
+    showPathHover : false,
+    /** true enables display of info when mouse hovers over a brushed feature position (marked with a circle) on an axis.
+     * A subsequent iteration will show reduced hover info in a fixed location below the graph when false.
+     */
+    showCircleHover : false,
+    /** Draw a horizontal notch at the feature location on the axis,
+     * when the feature is not in a axis of an adjacent Stack.
+     * Makes the feature location visible, because otherwise there is no path to indicate it.
+     */
+    showAll : true,
+    /** Show brushed features, i.e. pass them to updatedSelectedFeatures().
+     * The purpose is to save processing time; this is toggled by 
+     * setupToggleShowSelectedFeatures() - #checkbox-toggleShowSelectedFeatures.
+     */
+    showSelectedFeatures : true,
+
+    //--------------------------------------------------------------------------
+
+    continuousPathUpdate : true,
+
+    /** The Zoom & Reset buttons (g.btn) can be hidden by clicking the 'Publish
+     * Mode' checkbox, now called 'Show Zoom/Reset buttons' and the logic is inverted.
+     * This provides a clear view of the visualisation
+     * uncluttered by buttons and other GUI mechanisms
+     */
+    publishMode : false,
+
+
+    //--------------------------------------------------------------------------
+
+    // controls : () => this.drawMap.get('controls')
+
+  },
+
+  publishModeChanged(checked) {
+    const oa = stacks.oa;
+    let svgContainer = oa.svgContainer;
+    console.log(checked, this.drawOptions.publishMode, svgContainer._groups[0][0]);
+    this.drawOptions.publishMode = ! checked;
+    /** the checkbox is 'Show', so hide if ! checked. */
+    svgContainer.classed("publishMode", ! checked);
+  },
+
+  axisFontSizeChanged(value) {
+    dLog('axisFontSizeChanged(', value, arguments);
+    axisFontSizeApply(stacks.oa);
+  },
+
+
+  continuousPathUpdateChanged(checked) {
+    console.log('continuousPathUpdateChanged', checked, this.drawOptions.continuousPathUpdate);
+    this.drawOptions.continuousPathUpdate = checked;
+    const pathDataUtils = PathDataUtils(stacks.oa);
+    pathDataUtils.pathUpdate(undefined);
+  },
+
+  showSelectedFeaturesChanged(checked) {
+    console.log('showSelectedFeaturesChanged', checked, this.drawOptions.showSelectedFeatures);
+    this.drawOptions.showSelectedFeatures = checked;
+    const pathDataUtils = PathDataUtils(stacks.oa);
+    pathDataUtils.pathUpdate(undefined);
+  },
+
+  pathOpacityInput(event) {
+    /** default is 100% : range [0, 100], value=100 in hbs
+     * event.target.value is a string; convert to a number.
+     */
+    const factor = 100;
+    const value = +event.target.value / factor;
+    dLog('pathOpacityInput', value, event.target.value, stacks.oa.svgRoot._groups[0][0]);
+    this.set('pathOpacity', value);
+    setCssVariable("--path-stroke-opacity", value);
+  },
+
+  pathWidthInput(event) {
+    /** default is 100% : range [0, 300],  value=75 in hbs
+     * event.target.value is a string; convert to a number.
+     */
+    const factor = 100;
+    const value = +event.target.value / factor;
+    dLog('pathWidthInput', value, event.target.value, stacks.oa.svgRoot._groups[0][0]);
+    this.set('pathWidth', value);
+    setCssVariable("--path-stroke-width", value);
   },
 
   //----------------------------------------------------------------------------

@@ -201,7 +201,9 @@ function highlightFeature(feature) {
   }
 };
 
-/** Highlight 1 feature, given feature */
+/** Highlight 1 feature, given feature
+ * Related : paths-table.js : highlightFeature().
+ */
 function highlightFeature1(feature) {
   /** see also handleFeatureCircleMouseOver(). */
   axisFeatureCircles_selectOneInAxis(undefined, feature)

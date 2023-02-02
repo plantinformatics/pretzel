@@ -8,7 +8,7 @@ import {
   Block,
   Stacked,
   Stack,
-  stacks,
+  // stacks,
   xScaleExtend,
   axisRedrawText,
   axisId2Name
@@ -34,8 +34,11 @@ const dLog = console.debug;
  *
  * result: flowsService.adjAxes;
  */
-function collateAdjacentAxes()
+function collateAdjacentAxes(/*stacks*/)
 {
+  const
+  stacksView = flowsService.oa.axisApi.stacksView,
+  stacks = stacksView.stacks;
   dLog('collateAdjacentAxes', flowsService);
   let previous = flowsService.get ? flowsService.get('adjAxes') : flowsService.adjAxes;
   let adjAxes = {};
@@ -64,7 +67,10 @@ function collateAdjacentAxes()
     }
     // Cross-product of the Axes in two adjacent stacks
     for (let a0i=0; a0i < fAxis_s0.length; a0i++) {
-      let a0 = fAxis_s0[a0i], za0 = a0.z, a0Name = a0.axisName;
+      const
+      a0 = fAxis_s0[a0i],
+      // draw_orig, not used : za0 = a0.z,
+      a0Name = a0.axisName;
       if (a0Name === undefined)
       {
         console.log(fAxis_s0, fAxis_s1, a0i, a0);

@@ -1,6 +1,11 @@
 import { debounce, later as run_later } from '@ember/runloop';
 import { observer, computed } from '@ember/object';
 
+//------------------------------------------------------------------------------
+
+/* global Promise */
+
+//------------------------------------------------------------------------------
 
 const dLog = console.debug;
 

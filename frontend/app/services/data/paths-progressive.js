@@ -6,6 +6,10 @@ import Service, { inject as service } from '@ember/service';
 
 import { task, didCancel } from 'ember-concurrency';
 
+/* global Promise */
+
+//------------------------------------------------------------------------------
+
 import { stacks, Stacked } from '../../utils/stacks';
 import { storeFeature } from '../../utils/feature-lookup';
 import { vcfGenotypeLookup, addFeaturesJson } from '../../utils/data/vcf-feature';
@@ -704,10 +708,9 @@ export default Service.extend({
     }
     let dataBlockIds =
         all ? [blockA] :
-        axis.dataBlocks(true, false)
-        .filter((blockS) => blockS.block.get('isBrushableFeatures'))
-     // equiv : blockS.block.get('id')
-      .map(function (blockS) { return blockS.axisName; });
+        axis.dataBlocksFiltered(true, false)
+        .filter((block) => block.get('isBrushableFeatures'))
+      .map(function (block) { return block.id; });
     /** The result of passing multiple blockIds to getBlockFeaturesInterval()
      * has an unevenly distributed result : all the results come from just 1 of
      * the blockIds.  This is because of the implementation of $sample
@@ -808,7 +811,7 @@ export default Service.extend({
      */
     textP = vcfGenotypeLookup(
       this.auth, block.server, /*samples*/[], domainInteger,
-      requestFormat, vcfDatasetId, block.name, rowLimit
+      {requestFormat}, vcfDatasetId, block.name, rowLimit
     );
 
     return textP;

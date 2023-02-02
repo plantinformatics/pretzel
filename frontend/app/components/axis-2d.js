@@ -23,6 +23,8 @@ import { dLog } from '../utils/common/log';
 
 /*----------------------------------------------------------------------------*/
 
+/** ms per second */
+const SecondMs = 1000;
 const axisTransitionTime = 750;
 /** 0 or 1 to disable or enable transitions */
 const transitionEnable = 1;
@@ -365,7 +367,7 @@ export default Component.extend(Evented, AxisEvents, {
 
   /*--------------------------------------------------------------------------*/
 
-  resizeEffect : alias('drawMap.resizeEffect'),
+  resizeEffect : alias('drawMap.oa.graphFrame.resizeEffect'),
 
   /*--------------------------------------------------------------------------*/
 
@@ -379,38 +381,48 @@ export default Component.extend(Evented, AxisEvents, {
   show() {
     let
     axisID = this.get('axisID'),
-    axis1d = this.get('axis1d'),
-    axisS = axis1d.get('axisS'), view;
-    if (axis1d && ! axisS && (view = axis1d.get('axis.view'))) {
-      dLog('show', axisID, axis1d, view, 'axisShowExtend');
-      axisS = view;
-    }
-    this.axisShowExtend(axisS, axis1d, axisID, /*axisG*/ undefined);
+    axis1d = this.get('axis1d');
+    this.axisShowExtend(axis1d, axis1d, axisID, /*axisG*/ undefined);
   },
 
   didInsertElement() {
     this._super(...arguments);
     dLog('axis-2d didInsertElement', this.get('axisID'));
 
-    this.getUse();
+    this.getUseTask.perform(1 * SecondMs);
 
     later(() => this.dragResizeListen(), 1000);
   },
-  getUse(backoffTime) {
+  getUseTask: task(function * (backoffTime) {
+    dLog('getUseTask', backoffTime);
+    if (! this.get('axisUse')) {
+      const ok = this.getUse();
+      if (! ok) {
+        backoffTime = Math.min(60 * SecondMs, backoffTime * 2);
+        later(() => this.getUseTask.isRunning || this.getUseTask.perform(backoffTime), backoffTime);
+      }
+    }
+  }).keepLatest(),
+
+  /** initialise .axisUse, .use, .subComponents
+   * @return false if <g> .axis-outer is not rendered yet
+   */
+  getUse() {
     let oa = this.get('data'),
     /** This is g.axis-outer, which contains g.axis-use.  */
     axisUse = oa.svgContainer.selectAll("g.axis-outer#id"+this.get('axisID')),
     /** <use> is present iff dualAxis */
     use = axisUse.selectAll("use");
-    if (axisUse.empty()) {
-      dLog('getUse', backoffTime);
-      later(() => this.getUse(backoffTime ? backoffTime * 2 : 1000));
+    const ok = ! axisUse.empty();
+    if (! ok) {
+      dLog('getUse', ok);
     } else {
       this.set('axisUse', axisUse);
       this.set('use', use);
       dLog("axis-2d didInsertElement getUse", this, this.get('axisID'), axisUse.node(), use.node());
       this.set('subComponents', []);
     }
+    return ok;
   },
 
   /** receive notification of draw-map resize. */
@@ -436,7 +448,7 @@ export default Component.extend(Evented, AxisEvents, {
     this.widthEffects();
   },
   widthEffects() {
-    this.updateXScale();
+    this.axis1d.stacksView.updateXScale();
     stacks.changed = 0x10;
     let oa = this.get('oa');
     /* Number of stacks hasn't changed, but X position needs to be
@@ -448,20 +460,10 @@ export default Component.extend(Evented, AxisEvents, {
     // may trigger this differently, could be action.
     next(() => ! this.get('axis1d').isDestroying && this.get('axis1d').widthEffects());
   },
-  /** Update the X scale / horizontal layout of stacks
-   * copied from draw-map; the x scale will likely move to stacks-view, and this will likely be dropped.
-   */
-  updateXScale()
-  {
-    let oa = this.get('oa');
-    // xScale() uses stacks.keys().
-    oa.xScaleExtend = xScaleExtend(); // or xScale();
-  },
 
-  getAxisExtendedWidth(axisID)
+  getAxisExtendedWidth(axis1d)
   {
-    let oa = this.get('oa');
-    let axis = oa.axes[axisID],
+    let axis = axis1d,
     /** duplicates the calculation in axis-tracks.js : layoutWidth() */
     blocks = axis && axis.blocks,
     /** could also use : axis.axis1d.get('dataBlocks.length');
@@ -489,6 +491,8 @@ export default Component.extend(Evented, AxisEvents, {
 
   /**
    * @param axis  Stacks axis, optional, used by axisShowExtended() for yRange().
+   * Now (after draw_orig) === axis1d
+   * @param axis1d
    */
   axisShowExtend(axis, axis1d, axisID, axisG)
   {
@@ -496,8 +500,8 @@ export default Component.extend(Evented, AxisEvents, {
     /** x translation of right axis */
     let 
     /** value of .extended may be false, so || 0.  */
-      initialWidth = /*50*/ this.getAxisExtendedWidth(axisID) || 0,
-    axisData = axis1d.get('is2d') ? [axisID] : [];
+      initialWidth = /*50*/ this.getAxisExtendedWidth(axis1d) || 0,
+    axisData = axis1d.get('is2d') ? [axis1d] : [];
     let oa = this.get('oa');
     if (axisG === undefined)
       axisG = oa.svgContainer.selectAll("g.axis-outer#id" + axisID);
@@ -577,7 +581,7 @@ export default Component.extend(Evented, AxisEvents, {
       const xOffset = 25, shiftRight=5;
       let 
         tickWidth = xOffset/5,
-      edgeHeight = axis ? axis.yRange() : vc.yRange || 0,
+      edgeHeight = axis ? axis.yRangeSansStack() : vc.yRange || 0,
       line = d3.line(),
       sLine = line([
         [+tickWidth, 0],
@@ -629,8 +633,13 @@ export default Component.extend(Evented, AxisEvents, {
 
     /** this clipPath is created in AxisCharts:frame(), id is axisClipId(). */
     let axisClipRect = em.selectAll("g.chart > clipPath > rect");
+    if (! axisClipRect.empty()) {
+      console.log('axisClipRect', 'width', axisClipRect.attr('width'));
+    }
+    /*
     axisClipRect
       .attr("width", initialWidth);
+*/
   },
 
   /*--------------------------------------------------------------------------*/
@@ -648,7 +657,7 @@ export default Component.extend(Evented, AxisEvents, {
  * Making this a task with .drop() enables avoiding conflicting transitions.
  * (as in draw/block-adj.js : pathPosition() )
  */
-  positionRightEdge: task(function * (pathSelection, thenFn) {
+  positionRightEdge: task(function * () {
     let axisUse, width;
     if (! this.get('dualAxis') && (axisUse = this.get('axisUse'))) {
       if (! this.get('axis1d.extended')) {

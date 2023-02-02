@@ -115,5 +115,22 @@ function fromNestedParentAndScope(levelMeta, nested) {
 
 /*----------------------------------------------------------------------------*/
 
+/** Order the given array of blocks : first the reference blocks, then the data blocks.
+ *
+ * Originally used to sort viewed blocks, and apply ensureAxis(), so that axes
+ * were constructed for references before data.
+ */
+function blocksReferencesBeforeData(blocks) {
+  const
+  referencesFirst = blocks.sort((a,b) => {
+    let aHasReference = !!a.get('referenceBlock'),
+        bHasReference = !!b.get('referenceBlock');
+    return aHasReference === bHasReference ? 0 : aHasReference ?  1 : -1;
+  });
+  return referencesFirst;
+}
+
+//------------------------------------------------------------------------------
+
 
 export { blocksValuesUnwindAndGroup, blocksParentAndScope }  

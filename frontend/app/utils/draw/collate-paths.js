@@ -915,8 +915,9 @@ function storePath(blockA, blockB, featureName, fi, aliasGroupName)
      */
     let // aliasGroupName = featureA.aliasGroupName,
       direction = axisName < aj,
-    blockA_ = oa.stacks.blocks[blockA],
-    blockB_ = oa.stacks.blocks[blockB],
+    blocks = oa.axisApi.stacksView.stacks.blocks,
+    blockA_ = blocks[blockA],
+    blockB_ = blocks[blockB],
     /** indexed with direction to produce featureToAxis_[],
      * from which ffaa is extracted so that .axis0 < .axis1.
      */
@@ -934,8 +935,13 @@ function storePath(blockA, blockB, featureName, fi, aliasGroupName)
           aliased, axisName, aj, direction, blockA_, blockB_, featureToAxis, featureToAxis_, ffaa);
       }
     }
+    /* For aliased paths in HC, this check is failing; if it is useful it can be
+     * implemented without z[], e.g. feature.blockId.axis === axis
+     */
+    if (false) {
     checkFa(f0, axis0);
     checkFa(f1, axis1);
+    }
     if (trace_adj && trace_count_path-- > 0)
       console.log("ffaa", ffaa, axis0.axisName, axis1.axisName, axisId2Name(axis0.axisName), axisId2Name(axis1.axisName));
     // log_ffaa(ffaa);

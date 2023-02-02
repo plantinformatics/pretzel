@@ -97,7 +97,14 @@ export default UploadBase.extend({
           datasetNames = [status];
         }
         datasetNames.forEach((datasetName) => this.unviewDataset(datasetName));
-        this.setSuccess("Dataset '" + datasetNames.join("', '") + "' " +  this.successMessage);
+        if (datasetNames.length) {
+          this.setSuccess("Dataset '" + datasetNames.join("', '") + "' " +  this.successMessage);
+        } else if (status.errors?.length) {
+          // displays 'Error' if message is non-empty
+          this.setError(' ');
+        } else if (status.warnings?.length) {
+          this.setWarning(' ');
+        }
         const
         datasetWarnings  = status.datasetsWithErrorsOrWarnings?.map(
           (d) => [d.name].concat(d.warnings)) || [],

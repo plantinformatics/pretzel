@@ -66,7 +66,9 @@ export default ManageBase.extend({
         return include
       })
     }
-    filtered = this.showRefAlt(filtered);
+    if (filtered) {
+      filtered = this.showRefAlt(filtered);
+    }
     return filtered
   }),
   /** if .Feature is just "chr"* and .feature.blockId.isSNP and it has

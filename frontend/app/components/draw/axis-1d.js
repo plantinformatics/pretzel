@@ -1,4 +1,4 @@
-import { later, next, once as run_once, throttle } from '@ember/runloop';
+import { later, next, once as run_once, throttle, debounce } from '@ember/runloop';
 import { A } from '@ember/array';
 import { computed, observer } from '@ember/object';
 import { alias } from '@ember/object/computed';
@@ -10,6 +10,11 @@ import { inject as service } from '@ember/service';
 import { sum } from 'lodash/math';
 import { isEqual } from 'lodash/lang';
 
+//------------------------------------------------------------------------------
+
+import {
+  noKeyfilter,
+} from '../../utils/domElements';
 
 import { contentOf } from '../../utils/common/promises';
 import AxisEvents from '../../utils/draw/axis-events';
@@ -23,7 +28,14 @@ import {
   axisRedrawText,
   axisId2Name*/
 } from '../../utils/stacks';
+
 import {
+  axisZoomResetButtonClasses,
+  AxisBrushZoom,
+} from '../../utils/draw/axisBrush';
+
+import {
+  maybeFlip,
   noDomain,
   /* Axes, yAxisTextScale,  yAxisTicksScale,*/  yAxisBtnScale,
   /* yAxisTitleTransform, eltId,*/ axisEltId /*, eltIdAll, highlightId*/,
@@ -32,6 +44,11 @@ import {
   eltId,
   featureTraitColour,
 } from '../../utils/draw/axis';
+
+import {
+  AxisTitle,
+} from '../../utils/draw/axisTitle';
+
 import {
   DragTransition,
   dragTransitionTime,
@@ -39,21 +56,25 @@ import {
   dragTransition
 } from '../../utils/stacks-drag';
 import { selectAxis } from '../../utils/draw/stacksAxes';
-import { selectGroup, nowOrAfterTransition } from '../../utils/draw/d3-svg';
+import { I, combineFilters, selectGroup, nowOrAfterTransition } from '../../utils/draw/d3-svg';
 import { breakPoint } from '../../utils/breakPoint';
 import { configureHover } from '../../utils/hover';
 import { getAttrOrCP } from '../../utils/ember-devel';
 import { intervalExtent, intervalOverlapOrAbut }  from '../../utils/interval-calcs';
 import { inRange } from '../../utils/draw/zoomPanCalcs';
 import { updateDomain } from '../../utils/stacksLayout';
-
+import { FeatureTicks, FeatureTick_className, blockTickEltId } from '../../utils/draw/feature-ticks';
+import AxisDraw from '../../utils/draw/axis-draw';
 
 /* global d3 */
 /* global require */
 
 /*------------------------------------------------------------------------*/
 
+const Stacked_p = Stacked.prototype;
+
 const trace_stack = 0;
+const trace_colourSlots = 0;
 
 const dLog = console.debug;
 
@@ -65,6 +86,8 @@ const axisTickTransitionTime = 750;
 
 /** if true, assign colours to block.get('dataset'), otherwise block. */
 const colourByDataset = true;
+
+const draw_orig = false;
 
 /*------------------------------------------------------------------------*/
 
@@ -83,526 +106,19 @@ function blockColourObj(block) {
 
 function blockKeyFn(block) { return block.axisName; }
 
+/** replaces Stacked.prototype.keyFunction (draw_orig) */
+function axisKeyFn(axis1d) { return axis1d.axis.id; }
 
 /*------------------------------------------------------------------------*/
 
 
 /*------------------------------------------------------------------------*/
 
-
-/* showTickLocations() and configureHover() are based on the
- * corresponding functions in draw-map.js
- * There is a lot of variation at all levels between this application and the
- * original - draft factoring (axisDomData.js) showed a blow-out of abstraction
- * and complexity even before all the differences were handled.
- */
 
 const componentName = 'axis-1d';
-const className = "horizTick";
+const className = FeatureTick_className;
 
-/** filter : @return true if the given Block is configured to display ticks.
- *
- * Previously : ! block.block.get('dataset').get('showPaths') to select
- * the scaffolds, but that is no longer relevant since ticks are no
- * longer used for scaffolds.  So now return block ... .isData
- */
-function blockWithTicks(block)
-{
-  let isData = block.block.get('isData');  // was .showPaths
-  // dLog('blockWithTicks', block.axisName, showPaths);
-  return isData;
-}
 
-/** Return a filter to select features which are within the current zoomedDomain
- * of the given block.
- * @param block stacks Block
- */
-function inRangeBlock(range0, block) {
-  return function (feature) {
-    let
-    axis1d = block.axis.axis1d;
-    return axis1d.inRangeR(feature, range0);
-  };
-}
-
-/** Draw horizontal ticks on the axes, at feature locations.
- * This is used for 2 cases so far :
- * . all features of blocks which have !showPaths, when axis is ! extended
- * . features found in blocks using feature search (goto-feature-list)
- *
- * @param axis  Stacked
- * @param axisApi for lineHoriz
- * @param axis1d axis-1d component, to lookup axisObj.extended
- */
-function FeatureTicks(axis, axisApi, axis1d)
-{
-  this.axis = axis;
-  this.axisApi = axisApi;
-  this.axis1d = axis1d;
-
-  this.getTransitionTime = () => this.axis1d.get('transitionTime');
-  this.selectionToTransition = (selection) => this.axis1d.selectionToTransition(selection);
-  this.featureY = (feature) => this.axis1d.featureY(feature);
-  this.blockColourValue = (feature) => this.axis1d.blockColourValue(feature);
-  this.selectGroup = (groupName) => this.axis1d.selectGroup(groupName);
-}
-
-/** @return a function to lookup from block to an array of features.
- * Used as a d3 .data() function with block as data.
- */
-FeatureTicks.prototype.featuresOfBlock = function (featuresOfBlockLookup) {
-  let
-  range0 = this.axis.yRange2();
-
-    return (block) => {
-      let inRange = inRangeBlock(range0, block);
-
-      let blockR = block.block,
-      blockId = blockR.get('id'),
-      featuresAll = featuresOfBlockLookup(blockR),
-      features = ! featuresAll ? [] : featuresAll
-        .filter(inRange);
-      if (trace_stack > 1) {
-        dLog(blockId, features.length, 'showTickLocations featuresOfBlock');
-      }
-      return features;
-    };
-};
-
-/** Determine the colour for the feature, either traitColour() if
- * feature.blockId is a QTL, or otherwise blockColourValue().
- */
-FeatureTicks.prototype.featureColour = function (feature) {
-  /** Similar @see featurePathStroke() */
-  let colour;
-  let block = feature.get('blockId');
-  let qtlColourBy = block.get('useFeatureColour');
-  if (qtlColourBy) {
-    colour = feature.colour(qtlColourBy);
-  } else {
-    colour = this.blockColourValue(contentOf(block));
-  }
-  return colour;
-};
-
-function blockTickEltId(groupName) {
-  return function (block) { return className + '_' + groupName + '_' + block.axisName; };
-}
-
-
-/** Draw horizontal ticks on the axes, at feature locations.
- *
- * @param featuresOfBlockLookup map from block to array of features; its param is :
- * @param axis  block (Ember object), result of stacks-view:axesP
- * If the axis has multiple (data) blocks, this is the reference block.
- */
-FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setupHover, groupName, blockFilter, clickFn)
-{
-  /** Called from axis-ticks-selected : renderTicks(), and originally also
-   * called from axis-1d : renderTicks() to represent the edges of scaffolds.
- */
-  let axis = this.axis, axisApi = this.axisApi;
-  let axisName = axis.axisName;
-  let
-    axisObj = this.axis1d.get('axisObj'),
-  // The following call to this.axis1d.get('extended')
-  // replaces directly accessing axisObj.extended
-  extended = this.axis1d.get('extended');
-  if (trace_stack)
-    dLog('showTickLocations', extended, axisObj, groupName);
-
-  let blockIndex = {};
-  let aS = selectAxis(axis);
-  if (!aS.empty())
-  {
-    /** show no ticks if axis is extended. */
-    const notWhenExtended = false;
-    let blocks = (notWhenExtended && extended ? [] : blockFilter ? axis.blocks.filter(blockWithTicks) : axis.blocks);
-    let gSA = this.selectGroup(groupName);
-    if (!gSA.empty()) {
-
-      function storeBlockIndex (block, i) {
-        blockIndex[block.getId()] = i;
-        if (trace_stack)
-          dLog('blockIndex', block.getId(), i);
-      };
-
-      /** data blocks of the axis, for calculating blockIndex i.e. colour.
-       * colour assignment includes non-visible blocks . */
-      let blocksUnfiltered = extended ? [] : axis.dataBlocks(false, false);
-      if (trace_stack)
-        dLog('blockIndex', axisName, axis, axis.blocks);
-      blocksUnfiltered.forEach(storeBlockIndex);
-
-      featuresOfBlockLookup ||= function (blockR) {
-        return blockR.get('features').toArray();
-      };
-      let featuresOfBlock = this.featuresOfBlock(featuresOfBlockLookup);
-
-      let
-      pS = gSA
-        .selectAll("path." + className)
-        .data(featuresOfBlock, keyFn),
-      pSE = pS.enter()
-        .append("path")
-        .attr("class", className)
-      ;
-
-      /** @return rgb() colour for feature <path> stroke (feature ticks / triangles)
-       * @desc Calling signature : `this` is the DOM element to be coloured,  from d3 .attr() `this`
-       */
-      function featurePathStroke (feature, i2) {
-        /** Similar : FeatureTicks.prototype.featureColour() */
-        let colour;
-        /** Stacks : Block */
-        let block = this.parentElement.__data__;
-        let qtlColourBy = block.block.get('useFeatureColour');
-        if (qtlColourBy) {
-          colour = feature.colour(qtlColourBy);
-        } else {
-          let
-          blockId = block.getId(),
-          /** Add 1 to i because it is the elt index, not the
-           * index within axis.blocks[], i.e. the reference block is not included. */
-          i = blockIndex[blockId];
-          if (i2 < 2)
-            dLog(this, 'stroke', blockId, i);
-          colour = axisTitleColour(blockId, i+1) || 'black';
-        }
-        return colour;
-      }
-
-      if (setupHover === true)
-      {
-        setupHover = 
-          function setupHover (feature) 
-        {
-          let block = this.parentElement.__data__;
-          return configureHover.apply(this, [{feature, block}, hoverTextFn]);
-        };
-
-        pSE
-          .each(setupHover);
-      }
-      pSE.on('click', clickFn);
-
-      pS.exit()
-        .remove();
-      /** Instead of using .merge(), show .enter() elements (at their
-       * final posiiton) after the pS elements have transitioned to
-       * their final position.
-       let pSM = pSE.merge(pS);
-      */
-
-      /* update attr d in a transition if one was given.  */
-      let p1 = // (t === undefined) ? pSM :
-          this.selectionToTransition(pS);
-
-      /** similar comment re. transitionTime as in showLabels() */
-      nowOrAfterTransition(
-        p1, () => pSE.call(pathAndColour),
-        this.axis1d.transitionTime);
-
-      p1.call(pathAndColour);
-      function pathAndColour(selection) {
-        selection
-        .attr("d", pathFn)
-        .attr('stroke', featurePathStroke)
-        .attr('fill', featurePathStroke)
-      ;
-      }
-
-    }
-  }
-
-  function keyFn (feature) {
-    // here `this` is the parent of the <path>-s, e.g. g.axis
-
-    /** If feature is the result of block.get('features') then it will be an
-     * ember store object, but if it is the result of featureSearch() then it will be
-     * just the data attributes, and will not implement .get().
-     * Using feature.name instead of feature.get('name') will work in later
-     * versions of Ember, and will work after the computed property is
-     * evaluated, because name attribute does not change.
-     * The function getAttrOrCP() will use .get if defined, otherwise .name (via ['name']).
-     * This comment applies to use of 'feature.'{name,range,value} in
-     * inRange() (above), and keyFn(), pathFn(), hoverTextFn() below.
-     *
-     * The features created from blast search results will all have the same name,
-     * so for better d3 join, append location to the key.
-     */
-    let
-    value = getAttrOrCP(feature, 'value'),
-    featureName = getAttrOrCP(feature, 'name') + '-' + value[0];
-    // dLog('keyFn', feature, featureName); 
-    return featureName;
-  };
-  function pathFn (feature) {
-    // based on axisFeatureTick(ai, d)
-    /** shiftRight moves right end of tick out of axis zone, so it can
-     * receive hover events.
-     */
-    let xOffset = 25, shiftRight=5;
-    /* the requirements for foundFeatures path will likely evolve after trial,
-     * so this informal customisation is sufficient until the requirements are
-     * settled.
-     */
-    if (groupName === 'foundFeatures') {
-      xOffset = 35;
-    }
-    let ak = axisName,
-    range = getAttrOrCP(feature, 'range') || getAttrOrCP(feature, 'value'),
-    tickY = range && (range.length ? range[0] : range),
-    // sLine = axisApi.lineHoriz(ak, tickY, xOffset, shiftRight);
-    // instead of lineHoriz(), use horizTrianglePath().
-    /** scaled to axis.
-     * could instead use featureY_(ak, feature.id);     */
-    akYs = stacks.oa.y[ak](tickY),
-    sLine = horizTrianglePath(akYs, 10, xOffset / 2, 1);
-    return sLine;
-  };
-
-  /** Construct a <path> which draws a horizontal isosceles triangle, pointing right.
-   * This is used to indicate on an axis the position of features search results.
-   * @param akYs	scaled y position of feature
-   * @param yLength	length of triangle base
-   * @param xLength	length of triangle x axis
-   * @param shiftLeft	offset of vertex from y axis
-   */
-  function horizTrianglePath(akYs, yLength, xLength, shiftLeft) {
-    /** related : axisApi.lineHoriz(), featureLineS()  */
-    let
-    baseX = -xLength + shiftLeft,
-    y2 = yLength / 2;
-    let path = d3.line()(
-      [[baseX, akYs - y2],
-       [-shiftLeft, akYs],
-       [baseX, akYs + y2]]) + 'Z';
-    return path;
-  };
-
-  /** eg: "scaffold23432:1A:1-534243" */
-  function hoverTextFn(context) {
-    let {feature, block} = context;
-    let
-      /** value is now renamed to range, this handles some older data. */
-      range = getAttrOrCP(feature, 'range') || getAttrOrCP(feature, 'value'),
-    rangeText = range && (range.length ? ('' + range[0] + ' - ' + range[1]) : range),
-    blockR = block.block,
-    featureName = getAttrOrCP(feature, 'name'),
-    scope = blockR && blockR.get('scope'),
-    text = [featureName, scope, rangeText]
-      .filter(function (x) { return x; })
-      .join(" : ");
-    return text;
-  };
-  // the code corresponding to hoverTextFn in the original is :
-  // (location == "string") ? location :  "" + location;
-
-};
-
-/**
- * Specification : #223.  
- * 3.     Shift+ left click triangles on an axis draws a line across the top of the outermost triangles
- *   a.  determine extent of clicked features
- *   b. draw path across extent, near the base of the triangles
- */
-FeatureTicks.prototype.showSpanningLine = function (featuresOfBlockLookup) {
-  const groupName = 'spanFeatures';
-
-  let axis = this.axis, axisApi = this.axisApi;
-  let axisName = axis.axisName;
-
-  let aS = selectAxis(axis);
-  if (!aS.empty())
-  {
-
-    // .filter((b) => axis1d.selected.shiftClickedFeaturesByBlock(block.block)
-
-    let gSA = this.selectGroup(groupName);
-    gSA
-      .attr("clip-path", (block) => "url(#" + axisEltIdClipPath(block.block.get('referenceBlockOrSelf.id')) + ")");
-
-    if (!gSA.empty()) {
-
-      const spanFeaturesOfBlock = (blockS) => {
-        let
-        blockR = blockS.block,
-        features = featuresOfBlockLookup(blockR),
-        outermostFeatures = features && features
-          .reduce((result, f) => {
-            let y = this.featureY(f);
-            if (! result[0] || (y < result.minY)) {
-              result[0] = f;
-              result.minY = y;
-            }
-            if (! result[1] || (y > result.maxY)) {
-              result[1] = f;
-              result.maxY = y;
-            }
-            return result; }, []);
-        // .minY and .maxY are used in spanPathFn(), but could be deleted here and re-calculated.
-        return outermostFeatures ? [outermostFeatures] : [];
-      };
-
-      const tagName = 'path';
-
-      let
-      pS = gSA
-        .selectAll(tagName + "." + className)
-        .data(spanFeaturesOfBlock /*, keyFn*/),
-      pSE = pS.enter()
-        .append(tagName)
-        .attr("class", className)
-      ;
-
-      pS.exit()
-        .remove();
-      let pSM = pSE.merge(pS);
-
-      const pathFn = (d,i,g) => this.spanPathFn(d,i,g);
-      pSE
-        .attr("d", pathFn)
-
-      this.selectionToTransition(pSM)
-        .attr("d", pathFn)
-        .attr('stroke', (limitFeatures) => this.featureColour(limitFeatures[0]))
-      ;
-
-    }
-  }
-}
-
-/** Construct a <path> which draws a line slightly left of the bases of the
- * triangles which represent the given outermost limitFeatures
- */
-FeatureTicks.prototype.spanPathFn = function (limitFeatures) {
-  // based on showTickLocations():pathFn(), horizTrianglePath(); related : axisFeatureTick(ai, d)
-
-  /** features y extent / interval scaled to px. */
-  let 
-  /** only called if there is >=1 feature, so .minY and .maxY are defined.
-   * equivalent to : limitFeatures.map((f) => this.featureY(featureY));
-   */
-  yIntS = [limitFeatures.minY, limitFeatures.maxY],
-  padding = 0;
-  if (yIntS[0] === yIntS[1]) {
-    /** @param yLength	length of triangle base */
-    const yLength = 10,
-    y2 = yLength / 2;
-    /** if padding is to be added when !==, use Math.sign(yIntS[1] - yIntS[0]) * y2 */
-    padding = yLength;
-  }
-
-  /**
-   * @param yLength	length of triangle base
-   * @param xLength	length of triangle x axis
-   * @param shiftLeft	offset of line from base of triangles
-   */
-  const xLength = 35 / 2;
-  const shiftLeft = -1.5;
-
-  let
-  baseX = -xLength - shiftLeft;
-  let path = d3.line()(
-    [[baseX, yIntS[0] - padding],
-     [baseX, yIntS[1] + padding]]);
-
-  return path;
-};
-
-
-
-/** Draw text feature labels left of the axes, at location of features selected
- * by clicking on the feature triangle, recorded in selected.labelledFeatures.
- *
- */
-FeatureTicks.prototype.showLabels = function (featuresOfBlockLookup, setupHover, groupName, blockFilter, transitionFn)
-{
-
-  function textFn(feature) {
-    let
-    featureName = getAttrOrCP(feature, 'name');
-    return featureName;
-  }
-
-  // copied from .showTickLocations(); can probably factor the keyFn and <g> setup
-
-  function keyFn (feature) {
-    // here `this` is the parent of the <path>-s, e.g. g.axis
-    let
-    value = getAttrOrCP(feature, 'value'),
-    featureName = getAttrOrCP(feature, 'name') + '-' + value[0];
-    // dLog('keyFn', feature, featureName); 
-    return featureName;
-  };
-
-  let axis = this.axis, axisApi = this.axisApi;
-  let axisName = axis.axisName;
-
-  let aS = selectAxis(axis);
-  if (!aS.empty())
-  {
-    let gSA = this.selectGroup(groupName);
-    if (!gSA.empty()) {
-
-      let featuresOfBlock = this.featuresOfBlock(featuresOfBlockLookup);
-
-      const tagName = 'text';
-      /**  p* (i.e. pS, pSE, pSM, p1) are selections of the <path> in .showTickLocations or <text> in .showLabels
-       * S : the whole selection, SE : the .enter().append(), SM : the SE merged back with S, 1 : SM with a transition.
-       */
-      let
-      pS = gSA
-        .selectAll(tagName + "." + className)
-        .data(featuresOfBlock, keyFn),
-      pSE = pS.enter()
-        .append(tagName)
-        .attr("class", className)
-        .attr('stroke', this.featureColour.bind(this))
-      ;
-
-      /* pSE
-         .each(setupHover); */
-
-      pS.exit()
-        .remove();
-      let pSM = pSE.merge(pS);
-
-      /** For <text> the d is constant, so use pSE.
-       * For showTickLocations / <path>, the d updates, so pSM is used
-       */
-      pSE
-      // positioned just left of the base of the triangles.  inherits text-anchor from axis;
-        .attr('x', '-30px');
-
-      let attrY_featureY = this.attrY_featureY.bind(this);
-
-      let transition = this.selectionToTransition(pS);
-      /** pass in the delay time, because transition has no duration if empty(). */
-      nowOrAfterTransition(
-        transition, () => {
-          return pSE.call(attrY_featureY)
-        .text(textFn);
-        },
-        this.axis1d.transitionTime);
-
-      if (transition === pS) {
-        pS.call(attrY_featureY);
-      } else {
-        transition.call(attrY_featureY);
-        // transitionFn(transition, attrY_featureY);
-      }
-    }
-  }
-
-};
-
-FeatureTicks.prototype.attrY_featureY = function(selection) {
-  console.log('attrY_featureY', selection.node(), this.axis1d.zoomedDomain);
-  selection
-    .attr('y',  (feature) => this.axis1d.featureY(feature));
-};
 
 /**
  * @property zoomed   selects either .zoomedDomain or .blocksDomain.  initially undefined (false).
@@ -635,36 +151,181 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
    */
   flipRegionCounter : 0,
 
+  flipped : undefined,
+  perpendicular : false,
 
   init() {
     this._super(...arguments);
 
+    this.colourSlotsUsed = A([]);
+
+    // reference block -> axis-1d.  can change to a Symbol.
+    this.axis.set('axis1dR', this);
+    if (! this.stack) {
+      later(() => {
+        this.isDestroying || this.stack || this.createStackForAxis();
+      });
+    }
+
+    this.axisSelectUpdate();
+
     let axisName = this.get('axis.id');
     /* axisS may not exist yet, so give Stacked a reference to this. */
     Stacked.axis1dAdd(axisName, this);
-    let axisS = this.get('axisS');
-    if (! axisS) {
-      dLog('axis-1d:init', this, axisName, this.get('axis'));
-    }
-    else if (axisS.axis1d === this) {
-      // no change
-    }
-    else if (axisS.axis1d && ! axisS.axis1d.isDestroyed)
-    {
-      dLog('axis-1d:init', this, axisName, this.get('axis'), axisS, axisS && axisS.axis1d);
-    }
-    else {
-      axisS.axis1d = this;
-      if (trace_stack) {
-        dLog('axis-1d:init', this, this.get('axis.id'), axisS); axisS.log();
-      }
-    }
 
     next(() => this.axis1dExists(this, true));
   },
 
 
+  // ---------------------------------------------------------------------------
+
+  referenceBlock : alias('axis'),
+  axisName : alias('axis.id'),
+  axisID : alias('axis.id'),
+  /** mapName was defined in Stacked(), used in some trace. */
+  mapName : alias('axis.mapName'),
+
+  /** Look up the portion of the stack which this axis occupies, based on stack.portions.
+   */
+  portion : computed('stack.portions', 'stack.axes.length', function () {
+    console.log('portion', this);
+    console.log('portion', this.stack?.axes, this.stack?.portions);
+    /** dependency on stack.portions is not effective; stack.axes.length works */
+    const fnName = 'portion' + ' (axesP)';
+    let portion;
+    if (! this.stack || (this.stack.axes.length < 2) || ! this.stack?.axisIndex) {
+      later(() => {
+        const portions = this.get('stack.portions');
+      }, 4000);
+      // portion is 1 until another axis is added to the same stack.
+      portion = 1;
+    } else {
+      const
+      portions = this.stack.portions,
+      axisIndex = this.stack.axisIndex(this);
+      portion = (axisIndex === -1) ? undefined : portions[axisIndex];
+      console.log(fnName, portion, this.axis.scope);
+    }
+    return portion;
+  }),
+  /** .position is accumulated from .portion.
+   * .position is [start, end], relative to the same space as portion.
+   * i.e. .portion = (end - start) / (sum of .portion for all Axes in the same Stack).
+   * Initially, each axis is in a Stack by itself, .portion === 1, so
+   * .position is the whole axis [0, 1].
+   */
+  position : [0, 1],
+
+  //------------------------------------------------------------------------------
+
+  z : alias('axis'),
+  longName()
+  {
+    const
+    block = this.axis,
+    name = this.axisName + ":" + block.mapName +
+      ((this.z && this.z.scope) ? ":" + this.z.scope : '');
+    return name;
+  },
+
+  //----------------------------------------------------------------------------
+
+  /** Create a stack for this axis-1d. */
+  createStackForAxis() {
+    const fnName = 'createStackForAxis' + ' (axesP)';
+    const
+    stacksView = this.stacksView,
+    s = stacksView.createStackForAxis(this);
+    return s;
+  },
+
+
+  //----------------------------------------------------------------------------
+
+  getAxis		: Stacked_p.getAxis,
+  axis1dAdd		: Stacked.axis1dAdd,
+  axis1dRemove		: Stacked.axis1dRemove,
+  getAxis1d()		{ return this; },
+  toString		: Stacked_p.toString,
+  log		: Stacked_p.log,
+  // longName		: Stacked_p.longName,
+  logBlocks		: Stacked_p.logBlocks,
+  logElt		: Stacked_p.logElt,
+  referenceBlockS		: Stacked_p.referenceBlockS,
+  getStack		: Stacked_p.getStack,
+  getAxis		: () => this,   // Stacked.getAxis
+  axisOfDatasetAndScope		: Stacked.axisOfDatasetAndScope,
+  getStack		: Stacked.getStack,
+  // longName		: Stacked.longName, // static
+  removeBlock		: Stacked_p.removeBlock,
+  removeBlockByName		: Stacked_p.removeBlockByName,
+  move		: Stacked_p.move,
+  yOffset		: Stacked_p.yOffset,
+  /** same as .yRange(), but ignore the effect of stacking, i.e. just  (stacks.vc.yRange - axisGap).
+   * Background :
+   * Currently a transform y scale is used to apply .portion (will likely drop that because it complicates the text size).
+   * .yRange() also incorporates .portion, so compensate by /.portion
+   * Equivalent : in Stacked.prototype.axisTransformO_orig(), stacks.vc.yRange is used directly, without *.portion
+   */
+  yRangeSansStack : function() { return this.yRange() / this.portion; },
+  yRange		: Stacked_p.yRange,
+  yRange2		: Stacked_p.yRange2,
+  domainCalc		: Stacked_p.domainCalc,
+  referenceDomain		: Stacked_p.referenceDomain,
+  /* .domain can replace getDomain(); the latter does not incorporate .flipped,
+   * ditto this.axis (block) .getDomain().
+   */
+  getDomain		: Stacked_p.getDomain,
+  verify		: Stacked_p.verify,
+  children		: Stacked_p.children,
+  dataBlocks		: Stacked_p.dataBlocks,
+  // not used. keyFunction		: axisKeyFn,
+  axisSide		: Stacked_p.axisSide,
+  // axisTransform		: Stacked_p.axisTransform,
+  selectAll		: Stacked_p.selectAll,
+  selectAll_static		: Stacked.selectAll,
+  allocatedWidth		: Stacked_p.allocatedWidth,
+  extendedWidth		: Stacked_p.extendedWidth,
+  location		: Stacked_p.location,
+  axisTransformO() { 
+    return ! this.isDestroying && Stacked_p.axisTransformO_orig.apply(this);
+  },
+  getY		: Stacked_p.getY,
+  // currentPosition is VLinePosition, defined by mixins/axis-position.js.
+  axisDimensions		: Stacked_p.axisDimensions,
+  // Stacked_p.setDomain() calls back to axis-1d : setDomain() which is already defined by AxisPosition mixin.
+  // setDomain		: Stacked_p.setDomain,
+  // setZoomed() from mixin AxisPosition : setZoomed
+  unviewBlocks		: Stacked_p.unviewBlocks,
+
+  /** @return all the blocks in this axis which are data blocks, not reference blocks.
+   * Data blocks are recognised by having a .namespace;
+   * @param visible if true then exclude blocks which are not visible
+   * @param showPaths if true then exclude blocks which are not for paths alignment
+   */
+  dataBlocksFiltered(visible, showPaths) {
+    const
+    stacked = {blocks : this.dataBlocks, axisName : this.axisName, mapName : this.axis.mapName},
+    blocks = Stacked.prototype.dataBlocks.apply(stacked, [...arguments]);
+    return blocks;
+  },
+  /** Same as dataBlocksFiltered(), but return the BlockAxisView-s of the blocks. */
+  dataBlockViewsFiltered(visible, showPaths) {
+    const
+    blocks = this.isDestroying ? [] :
+      this.dataBlocksFiltered(visible, showPaths)
+      .mapBy('view');
+    return blocks;
+  },
+
   /*--------------------------------------------------------------------------*/
+
+  get axisBrushObj() {
+    const axisBrushZoom = AxisBrushZoom(stacks.oa);
+    return axisBrushZoom.axisBrushRefn.call(this, 'axisName');
+  },
+
+  //----------------------------------------------------------------------------
 
   /** @return true if there is a brush on this axis.
    */
@@ -672,29 +333,14 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     let brushed = !! this.get('brushedRegion');
     return brushed;
   }),
-  brushedRegion : computed(
-    'axis.id',
-    'axisBrush.brushedAxes.[]',
-    /** oa.brushedRegions is a hash, and it is updated not replaced,
-     * so as a dependency key it will not signal changes; selectedAxes
-     * is an array and is changed when brushedRegions is changed, so
-     * it is used as a dependency, but it may not change when the user
-     * brushes because it persists after the brush is cleared.
-     */
-    'oa.brushedRegions', 'oa.selectedAxes.[]',
-    function () {
-      let brushedRegions = this.get('oa.brushedRegions'),
-      axisId = this.get('axis.id'),
-      brushed = brushedRegions[axisId];
-      dLog('brushed', axisId, brushedRegions[axisId], this.get('axisBrush.brushedAxes'));
-      return brushed;
-    }),
+  /** pixel range of brush selection / thumb, or undefined if no current selection. */
+  brushedRegion : null,
+  /** expect this is the same as : .axisBrushObj.brushedDomain */
   brushedDomain : computed('brushedRegion', function () {
     let
     brushedRegion = this.get('brushedRegion'),
-    /** refBlockId */
-    axisId = this.get('axis.id'),
-    brushedDomain = brushedRegion && this.get('axisApi').axisRange2Domain(axisId, brushedRegion);
+    axisBrushZoom = AxisBrushZoom(stacks.oa),
+    brushedDomain = brushedRegion && axisBrushZoom.axisRange2Domain(this, brushedRegion);
     return brushedDomain;
   }),
 
@@ -717,8 +363,12 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     domain = this.get('domain'),
     zoomedDomain = this.get('zoomedDomain');
     if (zoomed) {
-      zoomed &= (domain[0] !== zoomedDomain[0]) ||
-        (domain[1] !== zoomedDomain[1]);
+      if (! zoomedDomain) {
+        // dLog('zoomed2', 'zoomed but not zoomedDomain');
+      } else {
+        zoomed &= (domain[0] !== zoomedDomain[0]) ||
+          (domain[1] !== zoomedDomain[1]);
+      }
     }
     return zoomed;
   }),
@@ -740,6 +390,49 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     return out;
   },
 
+  //----------------------------------------------------------------------------
+
+  /** Setup .y and .ys 
+   * calculate axis domain if not already done;
+   * ensure it has a y scale,
+   *   make a copy of the y scale - use 1 for the brush
+   */
+  y : computed('domain.{0,1}', 'flipped', function() { return this.setupYScale(); }),
+  setupYScale() {
+    const
+    fnName = 'setupYScale',
+    a = this,
+    d = this.axisName,
+    a_parent = this.referenceBlock;
+    // now a is Stacked not Block, so expect ! a_parent
+    if (a_parent && ! a_parent.getDomain)
+      breakPoint('domain and ys', d, a, a_parent);
+    const
+    /** similar domain calcs in resetZoom().  */
+    domain = a_parent ? a_parent.getDomain() : a.getDomain(),
+    myRange = a.yRangeSansStack();
+    dLog(fnName, domain, myRange, this.axisName);
+    let y;
+    if (domain)
+    {
+      /** equivalent this.domain can be used instead.  */
+      const ys = d3.scaleLinear()
+        .domain(maybeFlip(domain, a.flipped))
+        .range([0, myRange]); // set scales for each axis
+      this.ys = ys;
+
+      // y and ys are the same until the axis is stacked.
+      // The brush is on y.
+      y = ys.copy();
+      const axisBrushZoom = AxisBrushZoom(stacks.oa);
+      y.brush = d3.brushY()
+        .extent([[-8,0], [8,myRange]])
+        .filter(combineFilters(noKeyfilter, this.controls.noGuiModeFilter))
+        .on("end", axisBrushZoom.brushended);
+    }
+    return y;
+  },
+  
   /*--------------------------------------------------------------------------*/
 
   /** axis-1d receives axisStackChanged and zoomedAxis from draw-map
@@ -763,8 +456,33 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
 */
   },
 
+  //----------------------------------------------------------------------------
+
+  dropIn(targetAxis1d, top) {
+    const fnName = 'dropIn' + '(axesP)';
+    console.log(fnName, this.get('axis.id'), this.axis.scope, targetAxis1d, top, targetAxis1d.get('axis.scope'));
+    targetAxis1d.stack.dropIn(this, targetAxis1d, top);
+  },
+  dropOut() {
+    const fnName = 'dropOut';
+    console.log(fnName, this.get('axis.id'));
+    /* updateStacksAxes() : newStacks() : createStackForAxis() will create a new stack for this axis. */
+    this.stack.dropOut(this);
+  },
+
+  stackIndex() {
+    return this.stacksView.stackIndex(this.stack);
+  },
+
+  axisIndex() {
+    return this.stack.axisIndex(this);
+  },
+
+  //----------------------------------------------------------------------------
+
+  axisS : computed(function() { return this; }),
   /** @return the Stacked object corresponding to this axis. */
-  axisS : computed(
+  axisS_orig : computed(
     'axis.id', 'stacks.axesPCount', 'axis.view',
     function () {
       let
@@ -798,6 +516,38 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   is2d : computed('extended', 'dataBlocksQtl.[]', function () {
     return !! this.get('extended') || this.get('dataBlocksQtl.length');
   }),
+  /** @return the BlockAxisView (block-axis-view.js) of all blocks of this axis,
+   * with .referenceBlock in [0], and .dataBlocks in [1], ..., if different from
+   * .referenceBlock
+   */
+  blockViews : computed('referenceBlock', 'dataBlocks', function () {
+    const
+    fnName = 'blockViews',
+    /** .viewedBlocks is equivalent if it puts referenceBlock always in [0] */
+    blocks = [this.referenceBlock].concat(this.dataBlocks),
+    /** evaluating .view instantiates BlockAxisView (block-axis-view) for this block
+     * Apply .uniq() because referenceBlock may be dataBlocks[0].
+     * blocks[] may contain proxies, so apply uniq later in the pipeline.
+     */
+    blockViews = blocks
+      .map((b) => b.view)
+      .uniq();
+    /** could instead : visible : alias('view.visible'); */
+    blocks.forEach((b) => { if (b.visible === undefined) { b.visible = true; }});
+    blockViews.forEach((bav) => {
+      if (bav.axis !== this) {
+        if (bav.axisName !== this.axisName) {
+          dLog(fnName, bav.axisName, this.axisName, bav, this);
+        }
+        bav.setAxis(this);
+        // or Ember.set(bav, 'axis', a);
+      }
+    });
+    console.log(fnName, blocks, blockViews, this.dataBlocks.length);
+    return blockViews;
+  }),
+  /** provide transitional support for Stacked interface. */
+  blocks : alias('blockViews'),
   /** viewed blocks on this axis.
    * For just the data blocks (depends on .hasFeatures), @see dataBlocks()
    * @desc
@@ -808,8 +558,11 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     blocks,
     axesBlocks = this.get('blockService.axesViewedBlocks2'),
     referenceBlock = this.get('axis');
-      blocks = axesBlocks.get(referenceBlock);
+      blocks = referenceBlock.isViewed && axesBlocks.get(referenceBlock);
       dLog('viewedBlocks', referenceBlock, axesBlocks, blocks);
+    if (blocks) {
+      this.stacksView.blocksInAxis(this, blocks);
+    }
     return blocks || [];
   }),
   dataBlocks : computed('viewedBlocks.@each.isData', function () {
@@ -846,7 +599,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     dLog('blockIndexes', blockIndexes, dataBlocks);
     return blockIndexes;
   }),
-  colourSlotsUsed : A([]),
+  /** initialised to A([]) in init(). */
+  colourSlotsUsed : null,
   /** assign colour slots to viewed blocks of an axis
    * e.g. slots 0-10 for schemeCategory10
    * @return array mapping colour slots to blocks, or perhaps blocks to slots
@@ -862,7 +616,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     let colourSlots,
     used = this.get('colourSlotsUsed');
     let dataBlocks = this.get('dataBlocks');
-    if (trace_stack > 1)
+    if (trace_colourSlots > 1)
       dLog('colourSlots', used, 'dataBlocks', dataBlocks);
     dataBlocks.forEach((b) => {
       if (b.get('isViewed') && (this.blockColour(b) < 0)) {
@@ -871,30 +625,41 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
           return !bi || !bi.get('isViewed');
         });
         const obj = blockColourObj(b);
-        if (free > 0)
+        if (free > 0) {
           used[free] = obj;
-        else
-          used.push(obj);
+          // would be required if colourSlotsUsed were tracked
+          this.set('colourSlotsUsed', used);
+        } else {
+          used.pushObject(obj);
+        }
       }
     } );
     colourSlots = used;
-    if (trace_stack)
+    if (trace_colourSlots)
       dLog('colourSlots', colourSlots);
     return colourSlots;
   }),
   colourSlotsEffect : computed('colourSlots.[]', 'dataBlocks.[]', function () {
-    let colourSlots = this.get('colourSlots');
-    if (trace_stack)
-      dLog('colourSlotsEffect', colourSlots, 'colourSlots', 'dataBlocks');
-    /** Update the block titles text colour. */
-    this.axisTitleFamily();
+    /** not used if .stack is not yet set, but evaluation helps set up the dependency. */
+    const colourSlots = this.get('colourSlots');
+    /** axis-1d is assigned .stack via newStacks() -> createStackForAxis();
+     * There is no need to render until .stack is set.
+     * May add dependency on 'stack'
+     */
+    if (this.stack && ! this.isDestroying) {
+      if (trace_colourSlots)
+        dLog('colourSlotsEffect', colourSlots, 'colourSlots', 'dataBlocks');
+      /** Update the block titles text colour. */
+      this.axisTitleFamily();
+    }
+    return colourSlots;
   }),
   /** @return the colour index of this block
    */
   blockColour(block) {
     let used = this.get('colourSlotsUsed'),
     i = used.indexOf(blockColourObj(block));
-    if ((trace_stack > 1) && (i === -1) && block.isData) {
+    if ((trace_colourSlots > 1) && (i === -1) && block.isData) {
       dLog('blockColour', i, block.mapName, block, used, this,
            this.viewedBlocks, this.viewedBlocks.map((b) => [b.mapName, b.isData, b.id]));
     }
@@ -902,6 +667,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   },
   /** @return a colour value for .attr 'color'
    * @desc uses axisTitleColour(), which uses this.blockColour()
+   * @param block model:block
    */
   blockColourValue(block) {
     let
@@ -910,7 +676,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
      * featurePathStroke(), but i is only used when axisTitleColourBy is .index,
      * and currently it is configured as .slot.
      */
-    colour = axisTitleColour(blockId, /*i*/undefined) || 'black';
+    colour = axisTitleColour(block.get('view'), /*i*/undefined) || 'black';
     return colour;
     },
 
@@ -927,7 +693,6 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
       .filter(d => d !== undefined);
     return dataBlockDomains;
   }),
-  referenceBlock : alias('axis'),
   /** @return the domains of all the blocks of this axis, including the reference block if any.
    * @description related @see axesDomains() (draw/block-adj)
    */
@@ -1046,7 +811,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     /** defined after first brushHelper() call. */
     axisFeatureCirclesBrushed = axisApi.axisFeatureCirclesBrushed;
     if (axisFeatureCirclesBrushed) {
-      next(axisFeatureCirclesBrushed);
+      next(() => axisFeatureCirclesBrushed(this));
     }
   },
   /** When values change on user controls which configure the brush,
@@ -1060,25 +825,25 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
       this.updateBrushedFeatures();
     }),
   axisTitleFamily() {
-    let axisApi = stacks.oa.axisApi;
     let axis = this.get('axisS');
-    if (axis) {
+    if (axis && ! axis.isDestroying) {
       let
         gAxis = axis.selectAll(),
       axisTitleS = gAxis.select("g.axis-outer > g.axis-all > text");
       dLog(
         'axisTitleFamily', axisTitleS.nodes(), axisTitleS.node(),
         gAxis.nodes(), gAxis.node());
-      axisApi.axisTitleFamily(axisTitleS);
+      const axisTitle = AxisTitle(stacks.oa);
+      axisTitle.axisTitleFamily(axisTitleS);
     }
   },
   updateAxisTitleSize() {
-    let axisApi = stacks.oa.axisApi;
     let axis = this.get('axisS');
     if (axis) {
       let
         gAxis = axis.selectAll();
-      axisApi.updateAxisTitleSize(gAxis);
+      const axisTitle = AxisTitle(stacks.oa);
+      axisTitle.updateAxisTitleSize(gAxis);
     }
   },
 
@@ -1135,15 +900,18 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
    * Equivalent : this.get('axisS').selectAll(), which does a selection by id
    * from svgContainer through g.stack to the g.axis-outer.
    */
-  axisSelect : computed('axis.id', function () {
-    let 
-      axisId = this.get('axis.id'),
+  axisSelectFn () {
+    const 
     /** could narrow this to svgContainer, but probably not a performance
      * improvement, and if we have multiple draw-maps later, the map id can be
      * included in eltId() etc. */
-    as = d3.selectAll(".axis-outer#" + eltId(axisId));
+    as = d3.selectAll(".axis-outer#" + eltId(this));
     return as;
-  }),
+  },
+  axisSelect : null,
+  axisSelectUpdate() {
+    this.set('axisSelect', this.axisSelectFn());
+  },
 
   /** d3 selection of tspan.blockTitle of this axis.
    */
@@ -1255,7 +1023,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   zoomedAxis : function(axisID_t) { },
 
   /** position when last pathUpdate() drawn. */
-  position : alias('lastDrawn.yDomain'),
+  lastDrawnDomain : alias('lastDrawn.yDomain'),
   /** position as of the last zoom. */
   zoomedDomain : alias('currentPosition.yDomain'),
   zoomedDomainDebounced : alias('currentPosition.yDomainDebounced'),
@@ -1275,11 +1043,16 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
         // use the VLinePosition:toString() for the position-s
         dLog('domainChanged', domain, this.get('axisS'), ''+this.get('currentPosition'), ''+this.get('lastDrawn'));
         // this.notifyChanges();
-        if (! this.get('axisS'))
+        // post-draw_orig : axisS is now this, so it must be defined.
+        if (! this.get('axisS')) {
           dLog('domainChanged() no axisS yet', domain, this.get('axis.id'));
+        } else if (! this.y) {
+          dLog('domainChanged() no axisS y scale yet', domain, this);
+        }
         else {
           this.updateScaleDomain();
-          throttle(this, this.updateAxis, this.get('controlsView.throttleTime'));
+          /* if this.stack is not yet defined then defer, so use debounce instead of throttle */
+          debounce(this, this.updateAxis, this.get('controlsView.throttleTime'));
         }
       }
       return domainDefined && domain;
@@ -1302,25 +1075,28 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     let axisID = this.get('axis.id');
     dLog('notifyChanges', axisID);
 
-    let axisApi = stacks.oa.axisApi;
     let t = stacks.oa.svgContainer; // .transition().duration(750);
 
     let eventBus = stacks.oa.eventBus;
 
-    let p = axisID;
     eventBus.trigger("zoomedAxis", [axisID, t]);
     // true does pathUpdate(t);
-    axisApi.axisScaleChanged(p, t, true);
+    let axisBrushZoom = AxisBrushZoom(stacks.oa);
+    axisBrushZoom.axisScaleChanged(this, t, true);
 
-    axisApi.axisStackChanged(t);
+    axisBrushZoom.axisStackChanged(t);
   },
   updateAxis() {
+    if (this.isDestroying) {
+      return;
+    }
     // subset of notifyChanges()
-    let axisApi = stacks.oa.axisApi;
     let axisID = this.get('axis.id');
     dLog('updateAxis', axisID);
     let t = stacks.oa.svgContainer; //.transition().duration(750);
-    axisApi.axisScaleChanged(axisID, t, true);
+    let axisBrushZoom = AxisBrushZoom(stacks.oa);
+    axisBrushZoom.axisScaleChanged(this, t, true);
+    this.stacksView.stacksAdjust(true);
   },
   drawTicks() {
     /** based on extract from axisScaleChanged() */
@@ -1340,7 +1116,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
        * The d3 axis function is called on the g.axis.
        */
       let gAxis = this.get('axisSelect')
-        .select("#" + axisEltId(axisId))
+        .select("#" + axisEltId(this))
         /*.transition().duration(750)*/;
       gAxis.call(yAxis);
       dLog('drawTicks', axisId, axisS, gAxis.nodes(), gAxis.node());
@@ -1356,41 +1132,79 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
         .on('mouseout', showText.bind(this, ''));
     }
   },
+  /** @return true if y scale of this axis has been set up.
+   * @desc
+   * render depends on y scale, and setupYScale() uses referenceBlock domain (limits).
+   * Also noted in extendedEffect(); see also setupYScale().
+   */
+  get yScaleIsDefined() {
+    // .featureLimits is undefined for reference.
+    return this.axis.limits && this.y;
+  },
   drawTicksEffect : computed('controlsView.axisTicks', function () {
-    later(() => this.drawTicks());
+    later(() => this.yScaleIsDefined && this.drawTicks());
+  }),
+  axisDraw : computed( function () {
+    return new AxisDraw(/*oa*/null, this, /*stacks*/null, this.stacksView);
+  }),
+  drawAxis() {
+    // this.axisDraw.draw();
+  },
+  drawAxisEffect : computed('stacksView.stacks.[]', function () {
+    this.drawAxis();
   }),
 
   ensureAxis : computed('viewedBlocks', function () {
+    breakPoint('axis-1d:ensureAxis');
     let viewedBlocks = this.get('viewedBlocks');
     let axisApi = stacks.oa.axisApi;
     let count = viewedBlocks.length;
-    viewedBlocks.forEach((block) => {
-      if (! block.get('axis'))
-        axisApi.ensureAxis(block.id);
-      if (! block.get('axis'))
-        count--;
-    });
+    // draw_orig
     return count;
   }),
 
   extendedEffect : computed('extended', function () {
-    let
+    const
+    fnName = 'extendedEffect',
     extended = this.get('extended'),
     axisID = this.get('axis.id');
-    dLog('extended', extended, axisID);
+    dLog(fnName, extended, axisID);
     // possibly ... pass an action param.
     let axis2d = this.get('axis2d');
     if (axis2d) {
       next(() => ! axis2d.isDestroyed && axis2d.axisWidthResizeEnded());
     }
+    const
+    showFn = () => ! this.isDestroying && this.showExtended(extended),
+    limitsRequest = this.blockService.taskGetLimits?.lastPerformed;
+    if (limitsRequest) {
+      /** render depends on y scale, and setupYScale() uses domain (limits),
+       * so delay until after blockFeatureLimits result.
+       */
+      limitsRequest.then(showFn);
+    } else if (! this.yScaleIsDefined) {
+      dLog(fnName, 'taskGetLimits');
+      const limitsP = this.axis.get('taskGetLimits').perform();
+      limitsP.then(showFn);
+    } else {
+      // initially called before this.stacks is defined, so defer render.
+      later(showFn);
+    }
 
+    return extended;
+  }),
+
+  /** render elements which are affected by .extended */
+  showExtended(extended) {
     this.showExtendedClass();
+    if (this.stack && this.yScaleIsDefined) {
     this.drawTicks();
 
     if (extended)
       this.removeTicks();
     else
     {
+      const axisID = this.get('axis.id');
       let axisID_t = [axisID, undefined];
       this.renderTicksDebounce(axisID_t);
     }
@@ -1401,9 +1215,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
      */
 
     this.widthEffects();
-
-    return extended;
-  }),
+    }
+  },
 
   extendedWidthEffect : computed(/*'extended',*/ 'axis2d.allocatedWidthsMax.centre', function () {
     this.widthEffects();
@@ -1413,7 +1226,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
 
     let axisApi = stacks.oa.axisApi;
     axisApi.updateXScale();
-    axisApi.collateO();
+    this.stacksView.collateO();
 
     /** .extended has changed, so the centre of the axisTitle is changed. */
     this.axisTitleFamily();
@@ -1425,7 +1238,9 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     'referenceBlock.datasetId._meta.shortName',
     'controlsView.axisTitleChrOnly',
     function () {
-      this.axisTitleFamily();
+      if (this.stack) {
+        this.axisTitleFamily();
+      }
     }),
 
   /*--------------------------------------------------------------------------*/
@@ -1442,11 +1257,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   willDestroyElement() {
     dLog('willDestroyElement', this.get('axis.id'));
     this.removeTicks();
-    let axisS = this.get('axisS');
-    if (axisS) {
-      if (axisS.axis1d === this)
-        delete axisS.axis1d;
-    }
+
     let axisName = this.get('axis.id');
     Stacked.axis1dRemove(axisName, this);
     next(() => this.axis1dExists(this, false));
@@ -1465,6 +1276,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     pS.remove();
   },
   didRender() {
+    this._super.apply(this, arguments);
+
     this.renderTicksDebounce();
   },
   constructFeatureTicks () {
@@ -1475,9 +1288,10 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     dLog('constructFeatureTicks', blockId, this);
     let axisApi = this.get('drawMap.oa.axisApi');
     let oa = this.get('drawMap.oa');
-    let axis = oa.axes[blockId];
+    let axis = this;
     // dLog('axis-1d renderTicks', block, blockId, axis);
 
+    // draw_orig
     /* If block is a child block, don't render, expect to get an event for the
      * parent (reference) block of the axis. */
     if (! axis)
@@ -1531,13 +1345,13 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     as.classed("extended", this.get('extended'));
   },
   buttonStateEffect : computed('brushed', 'zoomed', function () {
-    this.showZoomResetButtonState();
+    later(() => this.showZoomResetButtonState(), 200);
   }),
   showZoomResetButtonState() {
     let
     as = this.get('axisSelect'),
     gb = as.selectAll('g.btn');
-    gb.attr('class', () => 'btn graph-btn ' + ['brushed', 'zoomed'].filter((state) => this.get(state)).join(' '));
+    gb.attr('class', () => axisZoomResetButtonClasses + ' ' + ['brushed', 'zoomed'].filter((state) => this.get(state)).join(' '));
     dLog('showZoomResetButtonState', gb.node(), this.get('brushed'), this.get('zoomed'), this.get('zoomed2'), this.get('axisBrush.brushedAxes'));
   },
   showZoomResetButtonXPosn() {
@@ -1552,3 +1366,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   
 });
 
+//------------------------------------------------------------------------------
+
+export {
+  axisKeyFn
+};

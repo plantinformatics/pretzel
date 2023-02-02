@@ -791,7 +791,14 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
 
       function blockDatabaseFeatureCounts([block, dataset]) {
         if (dataset.tags?.includes('VCF')) {
-          vcfGenotypeFeaturesCounts(block, interval, nBins, isZoomed, cb);
+          /** wrap cb to store the result in cache. */
+          function cacheCb(error, result2) {
+            if (result2 && useCache) {
+                cachePut(result2);
+            }
+            cb(error, result2);
+          }
+          vcfGenotypeFeaturesCounts(block, interval, nBins, isZoomed, cacheCb);
         } else {
           let db = this.dataSource.connector;
           let cursor =
@@ -799,10 +806,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
           cursor.toArray()
             .then(function(featureCounts) {
               if (useCache) {
-                if (trace_block > 1) {
-                  console.log(fnName, cacheId, 'put', featureCounts[0]);
-                }
-                cache.put(cacheId, featureCounts);
+                cachePut(featureCounts);
               }
               cb(null, featureCounts);
             }).catch(function(err) {
@@ -810,6 +814,14 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
             });
         }
       }
+
+      function cachePut(featureCounts) {
+        if (trace_block > 1) {
+          console.log(fnName, cacheId, 'put', featureCounts[0]);
+        }
+        cache.put(cacheId, featureCounts);
+      }
+
     }
 
   };
@@ -842,6 +854,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       cache.put(cacheId, limits);
       cb(null, limits);
     }).catch(function(err) {
+      console.log(fnName, blockId, err.toString(), cursor?.length);
       cb(err);
     });
     }
@@ -1340,6 +1353,28 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
 
 
   // ---------------------------------------------------------------------------
+
+  Block.cacheClearKey = function(cacheId, cb) {
+    /** cacheId could be : pre + id + post,
+     * with params : id, pre, post.
+     * This would check that the user session had permission for the block.
+     */
+    const value = blockFeatures.cacheClearKey(cache, cacheId);
+    cb(null, value);
+  };
+
+  const cacheClearKeyOptions = {
+    accepts: [
+      {arg: 'cacheId', type: 'string', required: true},
+    ],
+    http: {verb: 'get'},
+    returns: {arg: 'result', type: 'object'},
+    description: "Clear cached result for given cacheId and return the removed result."
+  };
+  Block.remoteMethod('cacheClearKey', cacheClearKeyOptions);
+
+
+  //----------------------------------------------------------------------------
 
 
   acl.assignRulesRecord(Block)

@@ -1,3 +1,5 @@
+import { breakPoint } from '../breakPoint';
+
 /*----------------------------------------------------------------------------*/
 
 /*global d3 */
@@ -56,15 +58,16 @@ function noDomain(domain) {
  * axis-1d : domainChanged()->updateScaleDomain() can handle this, but perhaps
  * that needs an added dependency.
  *
- * @param axis  e.g. oa.axes[brushedAxisID]
+ * @param yp  axis1d.y
+ * @param axis1d  e.g. brushedAxis1dID
 */
-function ensureYscaleDomain(yp, axis) {
+function ensureYscaleDomain(yp, axis1d) {
   if (! yp.domain().length) {
-    let block0 = axis && axis.blocks.length && axis.blocks[0],
-    block0featureLimits = block0 && block0.block && block0.block.featureLimits;
+    let block0 = axis1d.referenceBlock,
+    block0featureLimits = block0?.featureLimits;
     if (block0featureLimits) {
       // for GM, blocks[0] has .featureLimits and not .range
-      dLog('block0featureLimits', block0featureLimits, axis.axisName, block0.longName());
+      dLog('block0featureLimits', block0featureLimits, axis1d.axisName, block0.brushName);
       yp.domain(block0featureLimits);
     }
   }
@@ -80,8 +83,8 @@ function ensureYscaleDomain(yp, axis) {
  *  g.axis-outer > g.axis > g.btn     (see following yAxisBtnScale() )
  *  g.axis-outer > g.axis > text
  * g.axis has the axisName in its name (prefixed via axisEltId()) and in its .__data__.
- * The axis / axis title (g.axis > text) has axisName in its name, .__data__, and parent's name
- * (i.e. g[i].__data__ === axisName)
+ * The axis / axis title (g.axis > text) has axis1d in .__data__, axisName in its name and parent's name
+ * (i.e. g[i].__data__ === axis1d)
  *
  * g.tick already has a transform, so place the scale transform on g.tick > text.
  * g.btn contains <rect> and <text>, both requiring this scale.
@@ -90,9 +93,8 @@ function ensureYscaleDomain(yp, axis) {
 function yAxisTextScale(/*d, i, g*/)
 {
   let
-    axisName = this.__data__,
-  axis = oa.axes[axisName],
-  portion = axis && axis.portion || 1,
+  axis1d = this.__data__,
+  portion = axis1d && axis1d.portion || 1,
   scaleText = "scale(1, " + 1 / portion + ")";
   // console.log("yAxisTextScale", d, i, g, this, axisName, axis, portion, scaleText);
   return scaleText;
@@ -141,19 +143,18 @@ function axisConfig(yAxis, yScale)
   yAxis.tickFormat(format);
 }
 /**
- * @param gAxis has __data__ which is axisName; may be g.axis-all or g.btn
+ * @param gAxis has __data__ which is axis1d; may be g.axis-all or g.btn
  */
 function axisExtended(gAxis)
 {
   let
-  axisName = gAxis.__data__,
-  axis = oa.axes[axisName],
-  extended = axis && axis.extended; // or axis.axis1d.get('extended'),
+  axis1d = gAxis.__data__,
+  extended = axis1d?.extended;
   /* .extended should be false or width;  if it is just true then return the default initial width. */
   if (extended === true) {
-    let axis1d = axis.axis1d,
+    let
     nTracksBlocks = (axis1d && axis1d.get('dataBlocks.length')) || 1;
-    extended = axis.allocatedWidth() ||
+    extended = axis1d.allocatedWidth() ||
       nTracksBlocks * 2 * 10 + 10; // trackWidth===10. orig: 130.  match : getAxisExtendedWidth()
     extended += 10;
   }
@@ -163,46 +164,47 @@ function axisExtended(gAxis)
  * @description
  * Usage : ... .selectAll('g.axis ... g.btn > text').attr("transform", yAxisBtnScale);
  * The result transform contains both translate(x,y) and scale(...).
- * @param d axisName
+ * @param d axis1d
  */
 function yAxisBtnScale(d/*, i, g*/)
 {
   let g = this.parentElement,
-  axisName = g.__data__, // d === 1
-  axis = oa.axes[axisName],
+  axis1d = g.__data__, // d === 1
   extended = axisExtended(g),
   xOffset = -30 + (extended ? extended/2 : 0),
   /** Place the Zoom / Reset button below the axis. */
-  yOffsetText = ',' + (axis.yRange()/axis.portion + 10);
-  console.log('yAxisBtnScale', g, axisName, yOffsetText);
+  yOffsetText = ',' + (axis1d.yRange()/axis1d.portion + 10);
+  console.log('yAxisBtnScale', g, axis1d.axisName, yOffsetText);
   return 'translate(' + xOffset + yOffsetText + ') ' + yAxisTextScale.apply(this, arguments);
 }
 /** @return transform for the axis title
  * @description
  * Usage : ... .selectAll("g.axis-all > text")
  * .attr("transform", yAxisTitleTransform(oa.axisTitleLayout))
- * @param d axisName
+ * @param d axis1d
  */
 function yAxisTitleTransform(axisTitleLayout)
 {
   return function (d /*, i, g*/) {
+    if (d.isDestroying) {
+      return null;
+    }
     // order : scale then rotate then translate.
     let 
-      gAxis = this.parentElement,
-    axisName = d; // === gAxis.__data__
-    if (! axisName) {
-      axisName = gAxis.__data__;
-      dLog('yAxisTitleTransform', 'd undefined', axisName, this, gAxis);
+    gAxis = this.parentElement,
+    axis1d = d; // === gAxis.__data__
+    if (! axis1d) {
+      axis1d = gAxis.__data__;
+      dLog('yAxisTitleTransform', 'd undefined', axis1d, this, gAxis);
     }
     let
-    axis = oa.axes[axisName],
     width = axisExtended(gAxis),
     /** true if axis is at top of its stack. */
-    top = axis.stack.axes[0] === axis,
+    top = axis1d.stack.axes[0] === axis1d,
     /** See also setWidth() which sets the same translate, initially. */
     translateText = top && width ? " translate(" + width/2 + ",0)" : '';
     if (trace_axis)
-      console.log('yAxisTitleTransform', arguments, this, gAxis, axisName, axis, width, translateText);
+      console.log('yAxisTitleTransform', arguments, this, gAxis, axis1d.axisName, axis1d, width, translateText);
     return yAxisTextScale.apply(this, arguments) + ' ' + axisTitleLayout.transform()
       + translateText;
   };
@@ -210,28 +212,59 @@ function yAxisTitleTransform(axisTitleLayout)
 
 /*----------------------------------------------------------------------------*/
 
+/** g.axis-outer Element Id Prefix */
+const axisOuterEip = 'id';
 /** Used for group element, class "axis-outer"; required because id may start with
  * numeric mongodb id (of geneticmap) and element id cannot start with
  * numeric.
- * Also used for g.stack, which is given a numeric id (@see nextStackID).
  * Not used for axis element ids; they have an "f" prefix.
  */
-function eltId(name)
+function eltId(axis1d)
 {
-  return "id" + name;
+  return axisOuterEip + axis1d.axisName;
 }
-/** id of axis g element, based on axisName, with an "a" prefix. */
-function axisEltId(name)
+
+/** can change to 'sid'. */
+const stackEip = 'id';
+/** Used for g.stack, which is given a numeric id (@see nextStackID).
+ */
+function stackEltId(s)
 {
-  return "a" + name;
+  if (s.stackID === undefined) breakPoint();
+  dLog("stackEltId", s.stackID, s.axes[0].mapName, s);
+  return stackEip + s.stackID;
 }
+
+const axisEip = 'a';
+/** id of axis g.axis element, based on axisName, with an "a" prefix. */
+function axisEltId(axis1d)
+{
+  return axisEip + axis1d.axisName;
+}
+
+/** g.axis-all */
+const axisAllEip = 'all';
 /** id of g.axis-all element, based on axisName, with an "all" prefix. */
-function eltIdAll(d) { return "all" + d; }
+function eltIdAll(axis1d) { return axisAllEip + axis1d.axisName; }
+
+const axisTitleEip = 't';
 /** id of 'g.axis-all > text' element, based on axisName (id of reference block of axis), with a 't' prefix. */
-function axisEltIdTitle(d) { return 't' + d; }
-/** id of <g clippath> element, based on axisName, with an "axis-clip" prefix. */
-function axisEltIdClipPath(d) { return "axis-clip-" + d; }
-function axisEltIdClipPath2d(d) { return "axis-clip-2d-" + d; }
+function axisEltIdTitle(axis1d) { return 't' + axis1d.axisName; }
+
+const axisClipEip = 'axis-clip-';
+const axisClip2dEip = 'axis-clip-2d-';
+/** id of <g clippath> element, based on axisName, with an "axis-clip" prefix.
+ * Used by axisBrush.js and feature-ticks.js.
+ * @param axis1d
+ */
+function axisEltIdClipPath(axis1d) { return "axis-clip-" + axis1d.axisName; }
+/**
+ * Used by axis-tracks.js, which still has axisID in element data; when that
+ * changes to axis1d, the param can change from axisID to axis1d, as in
+ * axisEltIdClipPath().
+ * @param axisID
+ */
+function axisEltIdClipPath2d(axisID) { return "axis-clip-2d-" + axisID; }
 
 /** @return a d3 selection of the svg <g> element which encloses all
  * elements of an axis; its position is :
@@ -243,28 +276,31 @@ function axisEltIdClipPath2d(d) { return "axis-clip-2d-" + d; }
  *		vertical path, and all the axis-2d (split axis) elements and
  *		subComponents (g.track for axis-tracks, g.chart for axis-charts)
  */
-function selectAxisOuter(axisID) {
+function selectAxisOuter(axis1d) {
   /** based on selectAxisUse().   */
-  let gAxis = d3.select("g.axis-outer#" + eltId(axisID));
+  let gAxis = d3.select("g.axis-outer#" + eltId(axis1d));
   return gAxis;
 }
 
 /** @return a d3 selection of the svg group element containing the split axis
  * components axis-2d etc <g.axis-use>.
  */
-function selectAxisUse(axisID) {
+function selectAxisUse(axis1d) {
   /** factored from chart1.js : AxisCharts.prototype.selectParentContainer(), 
    * axis-1d.js : axisSelect(), draw-map.js, ...
    */
-  let gAxis = d3.select("g.axis-outer#" + eltId(axisID) + "> g.axis-use");
+  let gAxis = d3.select("g.axis-outer#" + eltId(axis1d) + "> g.axis-use");
   return gAxis;
 }
 
 function eltIdGpRef(d, i, g)
 {
   dLog("eltIdGpRef", this, d, i, g);
-  let p2 = this.parentNode.parentElement;
-  return "#a" + p2.__data__;
+  const
+  p2 = this.parentNode.parentElement,
+  axis1d = p2.__data__,
+  axisName = axis1d.axisName;
+  return "#a" + axisName;
 }
 
 
@@ -276,6 +312,27 @@ function highlightId(name)
 
 /** prefix for id of a g.tracks.  Used within split axis. see components/axis-tracks.js  */
 const trackBlockEltIdPrefix = 'tb-';
+
+//------------------------------------------------------------------------------
+
+
+/**
+ * @param d1	axis1d
+ * @param this	EnterNode
+ */
+function moveOrAdd(d1, i, g) {
+  let p = g[i]._parent,
+      r;
+  let gaExists = d3.selectAll("g.axis-outer#id" + d1.axisName);
+  if (gaExists.size()) {
+    r = gaExists.node();
+    dLog('gaExists', gaExists.nodes(), r, p);
+  }
+  else {
+    r = d3.creator('g').apply(this, [d1, i, g]);
+  }
+  return r;
+}
 
 /*----------------------------------------------------------------------------*/
 
@@ -314,8 +371,8 @@ function axisFeatureCircles_selectOne(feature) {
 function axisFeatureCircles_selectOneInAxis(axisS, feature) {
   if (! axisS) {
     let
-    chrName = feature.get('blockId.referenceBlockOrSelf.id');
-    axisS = selectAxisOuter(chrName);
+    axis1d = feature.get('blockId.referenceBlockOrSelf.axis1d');
+    axisS = selectAxisOuter(axis1d);
   }
   let
   selector = "g > circle#" + axisFeatureCircles_eltId(feature),
@@ -332,6 +389,7 @@ function axisFeatureCircles_selectUnviewed() {
   return circleS;
 }
 /** Remove features of chrName from selectedFeatures and from the axisFeatureCircles.
+ * @param selectedFeatures  selectedService.blocksFeatures (not .selectedFeatures)
  * @param chrName i.e. mapChrName, blockR.brushName
  */
 function axisFeatureCircles_removeBlock(selectedFeatures, mapChrName) {
@@ -375,7 +433,9 @@ let
  * Block.prototype.axisTitleColour() and Block.axisTitleColour(), which is
  * called from d3.
  *
- * @param d block (g.axis-all > text > tspan) or blockId (g.axis-use > g.tracks)
+ * @param d
+ *   BlockAxisView / block-axis-view (was blockId, maybe earlier Stacks : Block) (g.axis-all > text > tspan)
+ *  ? or blockId (g.axis-use > g.tracks)
  * @param i index of element within group.  i===0 is the reference block, which has colour undefined; data blocks have i>0
  * @param group
  */
@@ -395,13 +455,12 @@ function axisTitleColour (d, i) {
   case axisTitleColourKey.slot :
     /** d is axisName / blockId */
     let
-    blockS = oa.stacks.axes[d],
+    blockS = d,
     block = blockS && blockS.block,
-    axis = blockS && blockS.axis, // if reference then === oa.axes[d],
-    axis1d = axis && axis.axis1d;
+    axis1d = block?.axis1d || blockS.axis; // if reference then === oa.axes[d],
     value = axis1d && axis1d.blockColour(block);
     if (trace_axis > 1)
-      dLog('axisTitleColour', d, i, axis, block, axis1d, value);
+      dLog('axisTitleColour', d, i, blockS, block, axis1d, value);
     if (value === -1)
       value = undefined;
     break;
@@ -422,10 +481,12 @@ export {
   ensureYscaleDomain,
   yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform,
   axisConfig,
-  eltId, axisEltId, eltIdAll, axisEltIdTitle, axisEltIdClipPath, axisEltIdClipPath2d,
+  eltId, stackEltId, axisEltId, eltIdAll,
+  axisEltIdTitle, axisEltIdClipPath, axisEltIdClipPath2d,
   selectAxisOuter, selectAxisUse, eltIdGpRef,
   highlightId,
   trackBlockEltIdPrefix,
+  moveOrAdd,
   axisFeatureCircles_eltId,
   axisFeatureCircles_selectAll,
   axisFeatureCircles_selectOne,

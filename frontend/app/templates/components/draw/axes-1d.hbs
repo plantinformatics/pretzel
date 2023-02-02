@@ -3,6 +3,7 @@
 {{#each axesP as |axis axisIndex|}}
   {{!-- axis is the primary / reference block of the axis --}}
   {{#draw/axis-1d drawMap=drawMap axis=axis axes2d=axes2d
+     stacksView=stacksView
      axis1dExists=(action this.axis1dExists)
      as |axis1d|}}
     <div>axis : {{axis1d.axis.id}}, {{axis1d.extended}}</div>
