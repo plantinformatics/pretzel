@@ -342,6 +342,22 @@
       </div>
 
       <div>
+        <label>Ticks Text Size</label>
+        <span class="sub-label">{{ this.axisFontSize }}</span>
+        <input type="range"
+         value=10
+         oninput={{action (pipe
+           (action (mut this.axisFontSize) value="target.value")
+           (action this.axisFontSizeChanged ) )}}
+         min="0" max="35"
+        />
+      </div>
+
+    </li>
+
+    <li class="list-group-item horiz-2">
+
+      <div>
         <label>QTL : Black Opacity</label>
         <input type="range"
          value=16
@@ -350,9 +366,7 @@
         />
       </div>
 
-    </li>
-
-    <li class="list-group-item">
+      <div>
       <div>
         <label>QTL layer maximum</label>
         <span class="sub-label">
@@ -370,6 +384,8 @@
        value={{axisLayerModulusLinear}}
        oninput={{action axisLayerModulusLinearChanged value="target.value"}}
       />
+      </div>
+
     </li>
 
     <li class="list-group-item">

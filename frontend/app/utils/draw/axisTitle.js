@@ -83,6 +83,7 @@ function AxisTitle(oa) {
    *
    * @param axisTitleS  d3 selection of the <text> within g.axis-all
    * In usage, axisTitleS is a selection of either a single axis, or all axes.
+   * This <text> is appended by the caller - AxisDraw : draw2().
    */
   function axisTitleFamily(axisTitleS) {
     if (axisTitle_dataBlocks) {

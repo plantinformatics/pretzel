@@ -17,6 +17,7 @@ import { stacks } from '../../utils/stacks';
 import { subInterval, overlapInterval, inRange } from '../../utils/draw/zoomPanCalcs';
 
 import { PathDataUtils } from '../../utils/draw/path-data';
+import { axisFontSizeApply } from '../../utils/draw/axis-draw';
 
 
 /* global d3 */
@@ -109,6 +110,14 @@ export default Component.extend({
   /** number of ticks in y axis when axis is not stacked.  reduce this
    * proportionately when axis is stacked. */
   axisTicks : 10,
+
+  /** font-size in pixels of axis ticks text.
+   * This replaces constant axisTitleLayout.js : axisFontSize,
+   * which is (original, disabled by axisTitle_dataBlocks) svg axis title menu :
+   *  axisTitleBlocksServers.js : positionToTextBBox()
+   *  axisTitle.js : axisTitleFamily()
+   */
+  axisFontSize : 10,
 
   /*--------------------------------------------------------------------------*/
 
@@ -684,6 +693,12 @@ export default Component.extend({
     /** the checkbox is 'Show', so hide if ! checked. */
     svgContainer.classed("publishMode", ! checked);
   },
+
+  axisFontSizeChanged(value) {
+    dLog('axisFontSizeChanged(', value, arguments);
+    axisFontSizeApply(stacks.oa);
+  },
+
 
   continuousPathUpdateChanged(checked) {
     console.log('continuousPathUpdateChanged', checked, this.drawOptions.continuousPathUpdate);

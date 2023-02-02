@@ -298,27 +298,77 @@ AxisDraw.prototype.draw2 = function draw2(selections, axes, newRender, stacksAxe
     logSelection(g);
   }
 
+  const
+  controlsView = oa.eventBus.controls.view,
+  /** integer number, may be represented as string */
+  axisFontSize = +controlsView.axisFontSize;
+
   let y = oa.y;
   // Add an axis and title
   /** This g is referenced by the <use>. It contains axis path, ticks, title text, brush. */
   let defG =
     g.append("g")
     .attr("class", "axis")
+    /* see comment in axisFontSizeApply() : factor as : gAxes.style('font-size', axisFontSizeFn)  */
+    .style('font-size', '' + axisFontSize + 'px')
     .each(function(axis1d) {
       d3.select(this).attr("id", axisEltId).call(axis1d.axisSide(axis1d.y)); });  
-
 
   let axisTitleS = g.append("text")
      /* id is used by axis-menu targetId */
     .attr('id', axisEltIdTitle)
-    .attr("y", -2 * axisFontSize)
-    .style("font-size", axisFontSize);
+    /* this offset makes vertical space for the axis title menu; if needed then
+     * perhaps key the size to view-controls : titleTextSize
+     * axisFontSize relates to axisTitle_dataBlocks - the original svg axis title menu.
+     */
+    .attr("y", -2 * axisFontSize);
+    /* if font-size is set here to a value other than inherit, it will be seen
+     * by Chrome as overriding the font-size setting added to
+     * <svg class=​"FeatureMapViewer" > by titleTextSizeInput().
+     */
   const axisTitle = AxisTitle(oa);
   axisTitle.axisTitleFamily(axisTitleS);
 
   return resultSelections;
 };
 
+//------------------------------------------------------------------------------
 
+function axisFontSizeApply(oa) {
+  const
+  fnName = 'axisFontSizeApply',
+  svgContainer = oa.svgContainer,
+  controlsView = oa.eventBus.controls.view,
+  /** integer number, may be represented as string */
+  axisFontSize = +controlsView.axisFontSize,
+  gAxes = svgContainer.selectAll('g.axis');
+  dLog(fnName, gAxes.node(), axisFontSize);
+
+  gAxes
+  /* copied from draw2(); factor as : gAxes.style('font-size', axisFontSizeFn) */
+    .style('font-size', '' + axisFontSize + 'px');
+  dLog(fnName, gAxes.node(), axisFontSize);
+};
+
+/** Set font-size of this <g .axis>, which is inherited by axis ticks text.
+ *
+ * d3 call signature :
+ * @param this <g .axis>
+ * @param axis1d    element datum
+ * @param i
+ * @param g
+ */
+function axisFontSizeFn(axis1d, i, g) {
+  const 
+  /** integer number, may be represented as string */
+  axisFontSize = +axis1d.controlsView.axisFontSize,
+  fontSize = '' + axisFontSize + 'px';
+  return fontSize;
+}
 
 //------------------------------------------------------------------------------
+
+export {
+  axisFontSizeApply,
+  axisFontSizeFn,
+};
