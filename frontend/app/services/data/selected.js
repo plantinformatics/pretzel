@@ -20,6 +20,31 @@ export default Service.extend(Evented, {
 
   // ---------------------------------------------------------------------------
 
+  /** Selected features, in a single array
+   */
+
+  /** array of {Chromosome, Feature, Position, feature}.
+   * selectedBlocksFeaturesToArray() returns this form.
+   */
+  selectedFeatures : [],
+
+  /** Selected features, grouped in per-block arrays.
+   * [blockId] -> [feature, ...]
+   * This is operated on by :
+   *  selectedFeatures_add(), selectedFeatures_clear(),
+   *  selectedBlocksFeaturesToArray(),
+   *  removeUnviewedBlockFeaturesFromSelected()
+   * The result of selectedBlocksFeaturesToArray() can be written to .selectedFeatures with updateSelectedFeatures.
+   */
+  blocksFeatures : {},
+
+  // ---------------------------------------------------------------------------
+
+  /** blocks of .selectedFeatures */
+  selectedAxes : [],
+
+  // ---------------------------------------------------------------------------
+
   selectedElements : A(),
 
   // ---------------------------------------------------------------------------
@@ -42,6 +67,9 @@ export default Service.extend(Evented, {
    * After feature search, labelledFeatures will be intersected with the feature search result.
    */
   labelledFeatures : A(),
+
+  // ---------------------------------------------------------------------------
+  /** Operations on .features, .shiftClickedFeatures, .labelledFeatures */
 
   /** Called when an axis feature track or feature triangle is clicked.
    * Toggle membership of the feature in one of the arrays : .features or .labelledFeatures
@@ -190,5 +218,85 @@ export default Service.extend(Evented, {
   }),
 
   /*--------------------------------------------------------------------------*/
+  /** Operations on .blocksFeatures */
+
+  updateSelectedFeatures: function(features) {
+    const fnName = 'updateSelectedFeatures';
+    const
+    selectedSummary =
+      Object.entries(features).map(([mapChrName, features]) => [mapChrName, features.length]);
+    console.log(fnName, selectedSummary);
+    if (this.blocksFeatures !== features) {
+      this.set('blocksFeatures', features);
+    }
+  },
+
+  selectedFeatures_add(mapChrName, feature) {
+    this.blocksFeatures[mapChrName].push(feature);
+  },
+
+  selectedFeatures_clear()
+  {
+    if (this.selectedFeatures.length) {
+      this.selectedFeatures.removeAt(0, this.selectedFeatures.length);
+    }
+
+    const selectedFeatures = this.blocksFeatures;
+    /* delete properties instead of '= {}'
+     * to preserve the reference
+     */
+    for (const mapChrName in selectedFeatures){
+      if (selectedFeatures.hasOwnProperty(mapChrName)) {
+        delete selectedFeatures[mapChrName];
+      }
+    }
+    // no-op because selectedFeatures reference has not changed.
+    this.updateSelectedFeatures(selectedFeatures);
+  }
+
+
+  //----------------------------------------------------------------------------
 
 });
+
+//------------------------------------------------------------------------------
+
+/** Map selectedService.blocksFeatures to .selectedFeatures format (single array).
+ * @param selectedFeatures  selectedService.blocksFeatures (not .selectedFeatures)
+ */
+function selectedBlocksFeaturesToArray(selectedFeatures) {
+  const
+  featuresAsArray = Object.keys(selectedFeatures)
+    .map(function (key) {
+      return selectedFeatures[key].map(function(feature) {
+        /** feature is now the Ember object models/feature 
+         * Until 0eeda0a7, feature contained feature name and position, separated by " ".
+         */
+        let selectedFeature = {
+          Chromosome : key,
+          Feature : feature.name,
+          Position : feature.location, /* i.e. .value[0]*/
+          /** Chromosome, Feature and Position can be derived from
+           * feature, so after the various uses of this are
+           * changed to use .feature, the structure can be
+           * replaced by simply feature.
+           */
+          feature
+        };
+        return selectedFeature;
+      });
+    })
+    .reduce(function(a, b) { 
+      return a.concat(b);
+    }, []);
+
+  return featuresAsArray;
+}
+
+//------------------------------------------------------------------------------
+
+export {
+  selectedBlocksFeaturesToArray,
+};
+
+//------------------------------------------------------------------------------

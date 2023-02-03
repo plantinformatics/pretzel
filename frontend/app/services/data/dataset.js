@@ -57,7 +57,7 @@ export default Service.extend(Evented, {
           'taskGetList', err.message || err, store.name || store, adapterOptions,
           server.name || server, primaryServer.name || primaryServer,
           serverTabSelectedName, serverTabSelected);
-        return [];
+        throw err.message || err;
       });
     if (trace_promise)
       dP.then(function (d) { console.log(d, d.toArray()[0].get('blocks').toArray());});

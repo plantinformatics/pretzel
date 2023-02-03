@@ -157,7 +157,7 @@
         <label {{action "togglePathColourScale" on="click"}}>Path Colour Scale</label>
       </li>
       <li class="list-group-item">
-        {{input type="checkbox" checked=showScaffoldMarkers class="toggle"}}
+        {{input type="checkbox" checked=showScaffoldFeatures class="toggle"}}
         <label>Show Scaffold Features</label>
       </li>
       <li class="list-group-item">
@@ -168,7 +168,7 @@
 
     <div class="panel-body">
       <div class="drawing-controls flowButtons vspace1">
-        {{draw/flow-controls viewOptions=(hash isShowUnique pathColourScale showScaffoldMarkers showAsymmetricAliases) modelParamOptions=model.params.options }}
+        {{draw/flow-controls viewOptions=(hash isShowUnique pathColourScale showScaffoldFeatures showAsymmetricAliases) modelParamOptions=model.params.options }}
       </div>
     </div>
 

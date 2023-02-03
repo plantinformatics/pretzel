@@ -5,7 +5,12 @@ import { next as run_next, later } from '@ember/runloop';
 import { inject as service } from '@ember/service';
 import { htmlSafe } from '@ember/template';
 
+import { AxisMenuActions } from '../../utils/draw/axis-menu-actions';
 import { stacks  } from '../../utils/stacks';
+import {
+  dragTransitionTime,
+} from '../../utils/stacks-drag';
+
 
 const FileName = "components/axis-menu";
 const dLog = console.debug;
@@ -20,16 +25,25 @@ const closeAfterAction = false;
 export default Ember.Component.extend({
   apiServers : service(),
   controls : service(),
-  controlsView : alias('controls.controls.view'),
+  controlsView : alias('controls.view'),
+  queryParamsService: service('query-params'),
+
+  urlOptions : alias('queryParamsService.urlOptions'),
 
 
   classNames: ['axis-menu'],
 
   /** the parameter will likely change from blockS (stacks) to block. */
   block : computed.alias('blockS.block'),
+  axis1d : computed.alias('blockS.axis'),
   /** blockId of blockS */
   axisName : computed.alias('blockS.axisName'),
-  menuActions : computed.alias('axisApi.menuActions'),
+  menuActions : computed( function () {
+    const
+    oa = stacks.oa,
+    menuActions = AxisMenuActions(oa);
+    return menuActions;
+  }),
 
   hide() {
     let axes1d = this.parentView;
@@ -45,26 +59,29 @@ export default Ember.Component.extend({
     /** button actions : axis / block : */
     /** axis actions */
 
+    /**
+     * @param click MouseEvent
+     */
     deleteMap : function() {
       console.log("deleteMap in ", FileName);
-      this.menuActions.axisDelete(this.axisName);
+      this.menuActions.axisDelete(this.axis1d);
       this.hide();
     },
     flipAxis : function() {
       console.log("flipAxis in ", FileName);
-      this.menuActions.axisFlip(this.axisName);
+      this.menuActions.axisFlip(this.axis1d);
       if (closeAfterAction)
         this.hide();
     },
     perpendicularAxis : function() {
       console.log("perpendicularAxis in ", FileName);
-      this.menuActions.axisPerpendicular(this.axisName);
+      this.menuActions.axisPerpendicular(this.axis1d);
       if (closeAfterAction)
         this.hide();
     },
     extendMap : function() {
       console.log("extendMap in ", FileName);
-      this.menuActions.axisExtend(this.axisName);
+      this.menuActions.axisExtend(this.axis1d);
       if (closeAfterAction)
         this.hide();
     },
@@ -112,7 +129,7 @@ export default Ember.Component.extend({
     'block',
     'block.viewedChildBlocks.[]',
     'block.blockService.viewedBlocksByReferenceAndScopeUpdateCount',
-    'block.axis1d.dataBlocks',
+    'axis1d.dataBlocks',
     function () {
       let
       dataBlocks,
@@ -124,7 +141,7 @@ export default Ember.Component.extend({
         run_next(() => this.hide());
         /* returning undefined is also OK, result is used in axis-menu.hbs : #each dataBlocks */
         dataBlocks = [];
-      } else if ((axis1d = this.block.axis1d)) {
+      } else if ((axis1d = this.axis1d)) {
         /* axis1d.dataBlocks returns ember data model objects, so map that to
          * Stacks Blocks, until Stacks Blocks are absorbed into axis-1d and
          * dataBlocks() can return model objects instead. */
@@ -162,9 +179,7 @@ export default Ember.Component.extend({
   dataBlockColour(blockS) {
     let
     block = blockS.block,
-    axis1d = this.block.axis1d ||
-      blockS.axis?.axis1d ||
-      block.get('view.axis.axis1d'),
+    axis1d = this.axis1d,
     colour = axis1d.blockColourValue(block);
     return colour;
   },
@@ -212,10 +227,13 @@ export default Ember.Component.extend({
     dLog('xOffsetsEffect', this.get('xOffsetsChangeCount'));
     let tooltip = this.get('popoverTooltip');
     if (tooltip) {
+      /** after the dragged target has transitioned to its new position,
+       * hide and show tooltip to position it relative to the target.
+       */
       later(() => {
         tooltip.hide();
         tooltip.show();
-      });
+      }, dragTransitionTime+50);
     }
   }),
 
@@ -233,3 +251,23 @@ export default Ember.Component.extend({
 
 });
 
+//------------------------------------------------------------------------------
+
+/** icons used in axis-menu.hbs :
+ * unicode :
+ *      dec   hex
+ *	╳	9587	2573	 	BOX DRAWINGS LIGHT DIAGONAL CROSS
+ *	⇅	8645	21C5	 	UPWARDS ARROW LEFTWARDS OF DOWNWARDS ARROW
+ *	↷	8631	21B7	 	CLOCKWISE TOP SEMICIRCLE ARROW
+ *	⇲	8690	21F2	 	SOUTH EAST ARROW TO CORNER
+ *
+ * related, glyphicon alternatives :
+ *   glyphicon-arrow-right
+ *   glyphicon-remove-sign
+ *   glyphicon-retweet
+ *
+ * dataBlocks :
+ *  &#x1F441;  Unicode Character 'EYE'  glyphicon-eye-close
+ */
+
+//------------------------------------------------------------------------------

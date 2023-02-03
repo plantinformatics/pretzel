@@ -271,9 +271,14 @@ module.exports = function(Dataset) {
       datasets.filter((d) => d.warnings?.length || d.errors?.length)
       .map((dataset) => pick(dataset, ['name', 'errors', 'warnings']));
 
-    if (status.errors?.length) {
+    // if ! datasets.length then cbCountDone() is not called, so send warnings here.
+    if (status.errors?.length || (status.warnings?.length && ! datasets.length)) {
       status.fileName = fileName;
-      cb(ErrorStatus(400, status));
+      /* status may contain {errors, warnings, .. } and Error() takes only a
+       * string, so send status result back as return value instead of error.
+       */
+      // ErrorStatus(400, JSON.stringify(status))
+      cb(null, status);
     } else {
       /* aliases don't have much overlap with datasets - handle separately. */
       let aliasesP = [];

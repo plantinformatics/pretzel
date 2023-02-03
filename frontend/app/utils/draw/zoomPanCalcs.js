@@ -4,12 +4,21 @@
 
 import { isEqual } from 'lodash/lang';
 
+//------------------------------------------------------------------------------
+
+/* global d3 */
+/* global WheelEvent */
+
+//------------------------------------------------------------------------------
+
 import { maybeFlip, noDomain }  from './axis';
+import {
+   AxisBrushZoom,
+} from './axisBrush';
+
 
 import normalizeWheel from 'normalize-wheel';
 
-
-/* global d3 */
 
 /*----------------------------------------------------------------------------*/
 const trace_zoom = 0;
@@ -17,9 +26,12 @@ const dLog = console.debug;
 
 /*----------------------------------------------------------------------------*/
 
-/* copied from draw-map.js; this has already been split out of draw-map.js into
+/* @return true if a is in the closed interval range[]
+ *
+ * copied from draw-map.js; this has already been split out of draw-map.js into
  * utils/graph-maths.js in an unpushed branch (8fccbd3).
  * Added : this version handles range[] being in -ve order, i.e. range[0] > range[1].
+ *
  * @param a point value
  * @param range interval [start, end]
  * The argument order is opposite to the similar function @see inInterval()
@@ -146,7 +158,7 @@ function intervalDirection(interval, direction) {
  * Uses : d3.event,
  * d3.event.sourceEvent (! inFilter), d3.event.currentTarget (! inFilter && ! isPan)
  *
- * @param axis  Stacked
+ * @param axis  axis1d (was Stacked)
  * @param axisApi for axisRange2Domain()
  * @param inFilter  true when called from zoomFilter() (d3.zoom().filter()),
  * false when called from zoom() (d3.zoom().on('zoom')); this indicates
@@ -156,6 +168,7 @@ function intervalDirection(interval, direction) {
  * newDomain is the new domain resulting from the zoom change.
  */
 function wheelNewDomain(axis, axisApi, inFilter) {
+  const axis1d = axis;
   let yp = axis.y;
   /* if the axis does not yet have a domain then it won't have a scale.
    * The domain should be received before the user can excercise the scroll
@@ -195,7 +208,7 @@ function wheelNewDomain(axis, axisApi, inFilter) {
   include;
 
   let
-    axis1dReferenceDomain = axis.axis1d && axis.axis1d.get('blocksDomain'),
+    axis1dReferenceDomain = axis1d?.get('blocksDomain'),
     /** the whole domain of the axis reference block.
      * If the axis does not have a reference block with a range, as in the case
      * of GMs, use the domain of the reference Block
@@ -208,8 +221,7 @@ function wheelNewDomain(axis, axisApi, inFilter) {
      * reverse order.
      */
     axisReferenceDomain = axis1dReferenceDomain ||
-    (axis.referenceBlock && axis.referenceBlock.get('range')) ||
-    axis.referenceBlockS().domain;
+    (axis.referenceBlock && axis.referenceBlock.get('range'));
   
   if (noDomain(axisReferenceDomain)) {
     if (trace_zoom)
@@ -269,8 +281,9 @@ function wheelNewDomain(axis, axisApi, inFilter) {
       return false;
     }
     let
+    axisBrushZoom = AxisBrushZoom(axisApi.drawMap.oa),
     /** This is the centre of zoom, i.e. the mouse position, not the centre of the axis.  */
-    centre = axisApi.axisRange2Domain(axis.axisName, rangeYCentre),
+    centre = axisBrushZoom.axisRange2Domain(axis1d, rangeYCentre),
 
     transform = inFilter ? elt.__zoom : d3.event.transform, // currently only used in trace
 
@@ -336,9 +349,54 @@ function wheelNewDomain(axis, axisApi, inFilter) {
 
 /*----------------------------------------------------------------------------*/
 
+function ZoomFilter(oa) {
+
+  const result = {
+    wheelDelta,
+    zoomFilter,
+  };
+
+  /** default is 500.  "scaling applied in response to a WheelEvent ... is
+   * proportional to 2 ^ result of wheelDelta(). */
+  let wheelDeltaFactor = 500 * 3 * 8;
+  dLog('wheelDeltaFactor', wheelDeltaFactor);
+  function wheelDelta() {
+    return -d3.event.deltaY * (d3.event.deltaMode ? 120 : 1) / wheelDeltaFactor;
+  }
+  function zoomFilter(d) {
+    let  e = d3.event;
+    let  include;
+    /** WheelEvent is a subtype of MouseEvent; click to drag axis gets
+     * MouseEvent - this is filtered out here so it will be handle by dragged().
+     * ! d3.event.button is the default zoom.filter, possibly superfluous here.
+     */
+    let isMouseWheel = (d3.event instanceof WheelEvent) && ! d3.event.button;
+    if (isMouseWheel) {
+
+      if (e.shiftKey && trace_zoom > 1) {
+        dLog('zoom.filter shiftKey', this, arguments, d3.event, d);
+      }
+
+      let axisName = d,
+      axis = d;
+
+      include = wheelNewDomain(axis, oa.axisApi, true); // uses d3.event
+    }
+    return include;
+  }
+
+  //----------------------------------------------------------------------------
+
+  return result;
+}
+
+
+//------------------------------------------------------------------------------
+
 export {
   inRange, inRangeEither, subInterval, overlapInterval,
   intervalSign,
   intervalDirection,
-  wheelNewDomain
+  wheelNewDomain,
+  ZoomFilter,
 };

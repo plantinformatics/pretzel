@@ -101,6 +101,8 @@ export default Component.extend(AxisEvents, {
   }),
 
   didRender() {
+    this._super.apply(this, arguments);
+
     let featuresInBlocks = this.get('featuresInBlocks');
     if (trace)
       dLog('didRender', featuresInBlocks, this.get('axisId'),
@@ -114,7 +116,7 @@ export default Component.extend(AxisEvents, {
     let
     axis1d = this.get('axis1d'),
     featureTicks = axis1d.get('featureTicks');
-    if (featureTicks) {
+    if (! axis1d.isDestroying && featureTicks) {
     let block = axis1d.axis,
     clickedFeaturesMap = this.get('selected.clickedFeaturesByAxis'),
     /** clickedFeatures will be undefined or an array with .length > 1

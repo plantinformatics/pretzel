@@ -73,22 +73,35 @@ export default Component.extend(Evented, AxisEvents, {
 
   referenceDataset : computed('axis', function () {
     let dataset;
+    /* this.block is model:axis-brush, but currently in me.store (the default
+     * store not the primary apiServer store), so this.block.block is in the
+     * same store, and .block.block.datasetId has null content.
+     * this.axis is model:block, and in the correct store.
+     *
+     * Could change ensureAxisBrush() to use block.store, i.e. put axis-brush in
+     * the store of its .referenceBlock, but axis1d.dataBlocks may span
+     * secondary stores, so it it better to convert model:axis-brush to (plain-old) JS Object.
+     */
     if (this.get('axis')) {
-      dataset = this.get('axis').referenceBlock.get('datasetId');
+      dataset = this.get('axis.axis').referenceBlockOrSelf.get('datasetId');
     } else {
       dataset = this.get('block.block.datasetId');
-      if (dataset.content) {
-        dataset = dataset.content;
-      }
+    }
+    if (dataset.content) {
+      dataset = dataset.content;
     }
     return dataset;
   }),
 
   datasetName : computed('block', 'id', function () {
+    if (! this.block.block.get('isViewed')) {
+      dLog('axis-brush:datasetName', this, this.blockId);
+    }
     let
-    axis = this.get('axis'),
-    name = axis && axis.axis1d && axis.axis1d.get('referenceBlock.datasetId.id');
-    dLog('datasetName', name, axis);
+    axis1d = this.get('axis1d'),
+    name = this.block.get('block.referenceBlockOrSelf.datasetId.id') || 
+      this.get('referenceDataset.id');
+    dLog('datasetName', name, axis1d);
     return name;
   }),
 
@@ -127,10 +140,14 @@ export default Component.extend(Evented, AxisEvents, {
   axis :  computed('blockId', function () {
     let
       blockId = this.get('blockId'),
+    /** result is now axis-1d */
     axis = Stacked.getAxis(blockId);
     console.log('axis', axis);
     return axis;
   }),
+  /** equivalent : this.block.get('block.axis.axis1d')
+   */
+  axis1d : alias('axis'),
 
   features : computed('axisBrush.features.[]', 'zoomCounter', function () {
     console.log('features', this.zoomCounter, this);
@@ -165,11 +182,11 @@ export default Component.extend(Evented, AxisEvents, {
    * .featuresCountIncludingZoom (later : featuresCountInBrush)
    */
   brushedBlocks : computed(
-    'axis.axis1d.brushedBlocks.[]',
+    'axis1d.brushedBlocks.[]',
     'block.brushedDomain.{0,1}',
     function () {
       let
-      blocks = this.get('axis.axis1d.brushedBlocks') || [],
+      blocks = this.get('axis1d.brushedBlocks') || [],
       brushedBlocks = blocks.map((block, i) => {
         let 
         featureCountInBrush = this.round1(block.get('featuresCountIncludingBrush')),
@@ -220,8 +237,10 @@ export default Component.extend(Evented, AxisEvents, {
       let
         /** defined after first brushHelper() call. */
         axisFeatureCirclesBrushed = axisApi.axisFeatureCirclesBrushed;
-      if (axisFeatureCirclesBrushed)
-        axisFeatureCirclesBrushed();
+      if (axisFeatureCirclesBrushed) {
+        let axis1d = this.get('axis1d');
+        axisFeatureCirclesBrushed(axis1d);
+      }
     }
 
   },

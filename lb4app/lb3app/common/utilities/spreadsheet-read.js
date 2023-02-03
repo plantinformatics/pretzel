@@ -31,7 +31,7 @@ const I = (x) => x;
 
 /**
  * @param fileData
- * @return : {errors, warnings, datasets[]}
+ * @return : {errors, warnings, datasets[], datasetNames}
  * datasets[] may have .errors and .warnings
  */
 function spreadsheetDataToJsObj(fileData) {
@@ -39,6 +39,13 @@ function spreadsheetDataToJsObj(fileData) {
   let status = {
     errors : [],
     warnings : [] };
+  /** lists of dataset sheet names :
+   *   metadata : found in metadata worksheet,
+   *   metadataMatched :  matched with dataset worksheets,
+   * enabling checking for unused metadata.
+   * Also : keys(metadataMatched) is the list of names of dataset worksheets.
+   */
+  let sheetNames = {metadata : null, metadataMatched : {} };
 
   // readFile uses fs.readFileSync under the hood:
   // .readFile(fileName);
@@ -54,6 +61,7 @@ function spreadsheetDataToJsObj(fileData) {
   metadata = sheets.Metadata && readMetadataSheet(sheets.Metadata),
   chromosomeRenaming = parseSheet(sheets, 'Chromosome Renaming', readChromosomeRenaming), 
   chromosomesToOmit = parseSheet(sheets, 'Chromosomes to Omit', readChromosomesToOmit);
+  sheetNames.metadata = Array.from(Object.keys(metadata));
   const
   nonDatasetSheets = ['User Guide', 'Metadata', 'Chromosome Renaming', 'Chromosomes to Omit'],
   datasets = 
@@ -79,6 +87,11 @@ function spreadsheetDataToJsObj(fileData) {
          */
         datasetMetadata = metadata && (
           metadata[sheetName] || metadata[sheetType + '|' + datasetName]);
+        sheetNames.metadataMatched[sheetName] = !! datasetMetadata;
+        if (! datasetMetadata) {
+          const warning = 'Sheet name "' + sheetName + '" does not have corresponding metadata.';
+          status.warnings.push(warning);
+        }
 
         if (typeAndName.sheetType === 'Alias') {
           /** Aliases are not a dataset (maybe in future);
@@ -96,6 +109,15 @@ function spreadsheetDataToJsObj(fileData) {
     })
     .flat();
 
+  const metadataUnused = sheetNames.metadata.filter(
+    (sheetName) => ! sheetNames.metadataMatched[sheetName]);
+  if (metadataUnused.length) {
+    const
+    warning = 'These dataset sheet names in the metadata worksheet were not matched : ' +
+      metadataUnused.join(', ');
+    status.warnings.push(warning);
+  }
+
   console.log(fnName, fileData.length, workbook?.SheetNames, datasets);
   if (trace) {
     /** dataset may contain just a sheetName warning, instead of .blocks[].features[] */
@@ -105,19 +127,37 @@ function spreadsheetDataToJsObj(fileData) {
     console.log(fnName, 'block0', block0, 'feature0', feature0);
   }
 
-  /** for those datasets which are not OK and contain .warnings and/or .errors
+  /** truncate errors and warnings array; limit per dataset  */
+  const datasetErrorWarningLimit = 7;
+  /** 
+   * limit errors and warnings per dataset to datasetErrorWarningLimit
+   * for those datasets which are not OK and contain .warnings and/or .errors
    * drop the dataset and append the warnings / errors to status.{warnings,errors}
+   * Filter out empty datasets (no .blocks[] or .aliases[]).
    */
   status.datasets = datasets
-    .filter((dataset) => {
-      const ok = /* ! dataset.sheetName || */  dataset.name;
+    .reduce((result, dataset) => {
+      const ok = /* ! dataset.sheetName || */  dataset.name &&
+            (dataset.blocks?.length || dataset.aliases?.length);
       ['warnings', 'errors'].forEach((fieldName) => {
-        if (! ok && dataset[fieldName]?.length) {
+        const df = dataset[fieldName];
+        if (df?.length > datasetErrorWarningLimit) {
+          console.log(fnName, fieldName, df.length);
+          const length = df.length;
+          dataset[fieldName] = df.slice(0, datasetErrorWarningLimit);
+          dataset[fieldName].push('... ' + length);
+        }
+        if (! ok && df?.length) {
           status[fieldName] = status[fieldName].concat(dataset[fieldName]);
         }
       });
-      return ok;
-    });
+      /* this reduce() is a combination of filter and map - the dataset is
+       * filtered out if ! ok, and it may be modified. */
+      if (ok) {
+        result.push(dataset);
+      }
+      return result;
+    }, []);
   if (trace && (status.warnings?.length || status.errors?.length)) {
     console.log(fnName, status.errors.slice(0, 2), status.warnings.slice(0, 2));
   }
@@ -285,6 +325,7 @@ function sheetToDataset(
         } else {
           dataset = Object.assign({name : datasetNameChild}, datasetTemplate);
           dataset.parent = feature.parentName;
+          dataset.warnings = [];
           datasets.push(dataset);
         }
         delete feature.parentName;
@@ -338,8 +379,11 @@ function sheetToObj(sheet) {
    */
   options = {header: headerRow},
   rowObjects = XLSX.utils.sheet_to_json(sheet, options)
-  /** filter out comment rows */
-    .filter((f, i) => ! rowIsComment[i])
+  /** filter out comment rows
+   * Blank lines are present in rowIsComment[] but not in rowObjects[], so i may
+   * be different to f.__rowNum__
+   */
+    .filter((f, i) => ! rowIsComment[f.__rowNum__])
   /** remove first (header) row */
     .filter((f, i) => i > 0)
   ;
@@ -597,7 +641,10 @@ name chr pos
  * @param header text of column header; may be undefined
  */
 function normaliseHeader(header) {
-  if (header !== undefined) {
+  if (header === undefined) {
+  } else if (header.startsWith('#')) {
+    header = '__comment__';
+  } else {
     header = normaliseFieldName(trimAndDeletePunctuation(header));
     const renamed = headerRenaming[header];
     if (renamed) {
@@ -911,7 +958,7 @@ function requiredFields(feature, sheetType, warnings) {
     warnings.push(warning);
   }
   return ok;
-}
+} 
 
 /** Adjust attribute names of feature :
  * .pos (Position) (maybe ._start) -> value, value_0
@@ -925,8 +972,9 @@ function featureAttributes(feature) {
    *
    * Column names not matching the core values (pos, end, Chromosome, name, parentName)
    * are placed in feature.values{}
+   * Discard __comment__ columns, i.e. column header starting with '#'.
    */
-  {pos, end, Chromosome, name, parentName, ...values} = feature,
+  {pos, end, Chromosome, name, parentName, __comment__, ...values} = feature,
   value = [];
   if (pos !== undefined) {
     pos = roundNumber(pos);
@@ -952,10 +1000,7 @@ function featureAttributes(feature) {
      * /000000/ pattern in roundNumber().
      */
     valuesKeys.forEach((key) => {
-      /** delete values in commented-out columns */
-      if (key.startsWith('#')) {
-        delete values[key];
-      } else if (key !== 'flankingMarkers') {
+      if (key !== 'flankingMarkers') {
         values[key] = roundNumber(values[key]);
       }
     });

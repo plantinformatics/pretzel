@@ -9,6 +9,7 @@ import EmberObject from '@ember/object';
 
 import ENV from '../config/environment';
 import { parseOptions } from '../utils/common/strings';
+import { thenOrNow } from '../utils/common/promises';
 
 const dLog = console.debug;
 
@@ -125,18 +126,23 @@ let config = {
     if (! blocksLimitsTask ||
         (! Array.isArray(blocksLimitsTask._result) &&
          (! blocksLimitsTask.get || ! blocksLimitsTask.get('isRunning')))) {
-      blocksLimitsTask = blockService.getBlocksLimits(undefined, {server: 'primary'});
+      blocksLimitsTask = datasetsTask.then(() => 
+        blockService.getBlocksLimits(undefined, {server: 'primary'})
+          .then((limits) => dLog('getBlocksLimits', limits))
+      );
       this.set('blocksLimitsTask', blocksLimitsTask);
     }
     let allInitially = params.parsedOptions && params.parsedOptions.allInitially;
     let getBlocks = blockService.get('getBlocks' + (allInitially ? '' : 'Summary'));
     let viewedBlocksTasks = (params.mapsToView && params.mapsToView.length) ?
-      getBlocks.apply(blockService, [params.mapsToView]) : RSVP.cast([]);
+        thenOrNow(this.blocksLimitsTask, () => getBlocks.apply(blockService, [params.mapsToView])) :
+        RSVP.cast([]);
 
     result = EmberObject.create(
       {
         params : params,
         availableMapsTask : datasetsTask, // task result is -> [ id , ... ]
+        blocksLimitsTask,
         viewedBlocks : viewedBlocksTasks,
         viewedById : blockService.get('viewedById')
       });

@@ -192,7 +192,9 @@ export default Component.extend({
     let table = this.get('table');
     dLog('destroyHoTable', table);
     if (table) {
-      table.destroy();
+      if (! table.isDestroyed) {
+        table.destroy();
+      }
       this.set('table', null);
     }
   },
@@ -627,7 +629,7 @@ export default Component.extend({
     if (trace && data.length < 20)
       dLog("showData", data);
     let table = this.get('table');
-    if (table)
+    if (table && ! table.isDestroyed)
     {
       table.loadData(data);
     }
@@ -765,18 +767,18 @@ export default Component.extend({
     let data = this.get('tableData'),
     me = this,
     table = this.get('table');
-    if (table)
+    if (table && ! table.isDestroyed)
     {
       if (trace)
         dLog(fileName, "onDataChange", table, data.length);
       // me.send('showData', data);
-      debounce(() => table.updateSettings({data:data}), 500);
+      debounce(() => ! table.isDestroyed && table.updateSettings({data:data}), 500);
     }
   }),
 
   onColumnsChange : observer('columns', 'colHeaders', 'colWidths', function ()  {
     let table = this.get('table');
-    if (table) {
+    if (table && ! table.isDestroyed) {
       let colSettings = {
         columns: this.get('columns'),
         colHeaders: this.get('colHeaders'),
@@ -786,6 +788,7 @@ export default Component.extend({
     }
   }),
 
+  /** Related : axis-table.js : highlightFeature{,1}() */
   highlightFeature: function(feature) {
     d3.selectAll("g.axis-outer > circle")
       .attr("r", 2)

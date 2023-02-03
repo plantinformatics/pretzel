@@ -10,8 +10,12 @@
   <button class="close" onClick={{action "hide" target=popover}} type="button">╳</button>
 
   <div class="menu-icons">
+       {{!-- Unicode values of icons are noted in comment appended to axis-menu.js --}}
       <button onClick={{action "deleteMap"}}>╳</button>
       <button onClick={{action "flipAxis"}}>⇅</button>
+      {{#if urlOptions.dotPlot}}
+        <button onClick={{action "perpendicularAxis"}}>↷</button>
+      {{/if}}
       <button onClick={{action "extendMap"}}>⇲</button>
   </div>
 

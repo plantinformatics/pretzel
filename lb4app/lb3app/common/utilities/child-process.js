@@ -141,6 +141,8 @@ exports.childProcess = (scriptName, postData, useFile, fileName, moreParams, dat
     if (progressiveResult) {
       // a further chunk received after finished(), so close child.
       console.log('outCb', 'SIGINT child', progressiveResult.length);
+      child.stdin.pause();
+      child.stdout.pause();
       child.kill('SIGINT');
     } else if (progressive) {
       let results;

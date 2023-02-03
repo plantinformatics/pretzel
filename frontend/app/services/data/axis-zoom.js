@@ -11,7 +11,7 @@ const axisTransitionTime = 750;
 
 export default Service.extend({
   controls : service(),
-  controlsView : alias('controls.controls.view'),
+  controlsView : alias('controls.view'),
 
   /**
    * set via e.g.

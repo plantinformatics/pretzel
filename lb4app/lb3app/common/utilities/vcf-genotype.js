@@ -30,8 +30,18 @@ const { binEvenLengthRound, binBoundaries } = require('../utilities/block-featur
 function vcfGenotypeLookup(parent, scope, preArgs, nLines, dataOutCb, cb) {
   const
   fnName = 'vcfGenotypeLookup',
-  command = preArgs.requestFormat ? 'query' : 'view';
+  headerOnly = preArgs.headerOnly,
+  command = ! headerOnly && preArgs.requestFormat ? 'query' : 'view';
   let moreParams = [command, parent, scope, '-r', preArgs.region ];
+  /** from BCFTOOLS(1) :
+      -h, --header-only
+          output the VCF header only
+
+      -H, --no-header
+          suppress the header in VCF output
+  */
+  const headerOption = headerOnly ? '-h' : '-H';
+
   if (preArgs.requestFormat) {
     const
     /** from BCFTOOLS(1) :
@@ -40,7 +50,10 @@ function vcfGenotypeLookup(parent, scope, preArgs, nLines, dataOutCb, cb) {
      */
     formatGT = (preArgs.requestFormat === 'CATG') ? '%TGT' : '%GT',
     format = '%ID\t%POS' + '\t%REF\t%ALT' + '[\t' + formatGT + ']\n';
-    moreParams = moreParams.concat('-H', '-f', format);
+    moreParams = moreParams.concat(headerOption, '-f', format);
+    if (headerOnly) {
+      moreParams.push('--force-samples');
+    }
   }
   if (preArgs.samples?.length) {
     moreParams = moreParams.concat('-s', preArgs.samples.replaceAll('\n', ','));

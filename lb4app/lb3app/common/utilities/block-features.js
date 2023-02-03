@@ -438,3 +438,18 @@ exports.blockFeatureLimitsCacheClear = function blockFeatureLimitsCacheClear(cac
 
 
 // --------------------------------------------------------------------------------
+
+/** Clear cached result for given cacheId and return the removed result. */
+exports.cacheClearKey = function cacheClearKey(cache, cacheId)
+{
+  const fnName = 'cacheClearKey';
+
+  let value = cache.get(cacheId);
+  if (value !== undefined) {
+    console.log(fnName, cacheId, 'remove from cache', value.length);
+    cache.put(cacheId, undefined);
+  }
+  return value;
+};
+
+//------------------------------------------------------------------------------

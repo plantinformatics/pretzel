@@ -9,6 +9,7 @@ import DS from 'ember-data';
 
 /* global d3 */
 
+import { stacks } from '../utils/stacks';
 import { axisFeatureCircles_selectOne, axisFeatureCircles_selectUnviewed } from '../utils/draw/axis';
 import { thenOrNow } from '../utils/common/promises';
 import { dLog } from '../utils/common/log';
@@ -26,6 +27,7 @@ export default Controller.extend(Evented, {
   dataset: service('data/dataset'),
   block: service('data/block'),
   view : service('data/view'),
+  selectedService : service('data/selected'),
   apiServers: service(),
   controlsService : service('controls'),
 
@@ -52,7 +54,7 @@ export default Controller.extend(Evented, {
       this.set(`layout.${side}.tab`, tab);
     },
     updateSelectedFeatures: function(features) {
-    	// dLog("updateselectedFeatures in mapview", features.length);
+      // dLog("updateselectedFeatures in mapview", features.length);
       this.set('selectedFeatures', features);
       /** results of a selection impact on the selection (selectedFeatures) tab
        * and the paths tab, so if neither of these is currently shown, show the
@@ -325,7 +327,12 @@ export default Controller.extend(Evented, {
   },
 
 
-  controls : EmberObject.create({ view : {  }, window : {tablesPanelRight : false } }),
+  controls : EmberObject.create({
+    // .view becomes a reference to components/panel/view-controls
+    view : {  },
+    /** to add .viewed, use computed() to provide `this`
+    viewed : () => this.get('controlsService.viewed'),  */
+    window : {tablesPanelRight : false } }),
 
   queryParams: ['mapsToView'],
   mapsToView: [],
@@ -335,10 +342,12 @@ export default Controller.extend(Evented, {
    */
   userSettings : {genotype : {}},
 
-  selectedFeatures: [],
+  selectedFeatures : alias('selectedService.selectedFeatures'),
   /** counts of selected paths, from paths-table; shown in tab. */
   pathsTableSummary : {},
 
+  /** bundle of references  (object attributes) */
+  oa : {axisApi : {}, stacks},
 
   scaffolds: undefined,
   scaffoldFeatures: undefined,
@@ -356,6 +365,8 @@ export default Controller.extend(Evented, {
         next(message, options);
       }
     });
+
+    stacks.oa = this.oa;
 
     this._super.apply(this, arguments);
   },
@@ -473,6 +484,11 @@ export default Controller.extend(Evented, {
 
   /*--------------------------------------------------------------------------*/
 
+  /** Filter out of .selectedFeatures[] features of un-viewed blocks.
+   * Also : axis-menu-actions.js : blockVisible() and axisDelete() update .blocksFeatures and :
+   * sendUpdatedSelectedFeatures() -> updatedSelectedFeatures() -> selectedBlocksFeaturesToArray()
+   * which will remove the block's features from .selectedFeatures
+   */
   removeUnviewedBlockFeaturesFromSelected() {
     const fnName = 'removeUnviewedBlockFeaturesFromSelected';
     // 'blockService.viewed'

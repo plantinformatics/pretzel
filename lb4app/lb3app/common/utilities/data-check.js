@@ -23,9 +23,10 @@ exports.datasetParentContainsNamedFeatures = function(models, dataset, options, 
   /** originally (77969f1e) required just 1 of the FMs of each feature to be
    * found in the parent block; this is changed to check that all FMs of each
    * feature are found.
+   * dataset .parent and .blocks are required for following calculation.
    */
   let errorMsgP;
-  if (! dataset.tags || (dataset.tags.indexOf('QTL') == -1) || ! dataset.parent) {
+  if (! dataset.tags || (dataset.tags.indexOf('QTL') == -1) || ! dataset.parent || ! dataset.blocks) {
     errorMsgP = Promise.resolve(null);
   } else {
     errorMsgP = 
