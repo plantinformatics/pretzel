@@ -64,8 +64,8 @@ echo  \
  >> $logFile
 
 # bcftools 'make install' installs by default in /usr/local/bin/
-# (yum install is in /usr/bin/)
-PATH=${PATH}:/usr/local/bin
+# (yum install is in /usr/bin/ - it is ancient : 0.1.17-dev (r973:277) and does not recognize 'query' command, so prefix with /usr/local/bin)
+PATH=/usr/local/bin:${PATH}
 echo  \
  PATH=$PATH, \
  >> $logFile
