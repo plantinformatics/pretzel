@@ -30,8 +30,18 @@ unused_var=${bcftools=bcftools}
 unused_var=${blastDir:=/mnt/data_blast/blast}
 unused_var=${vcfDir:=$blastDir/../vcf}
 # blastDir=tmp/blast
-vcfDir=tmp/vcf
-unused_var=${datasetIdDir:=$vcfDir/datasetId}
+set -x
+if [ ! -d "$vcfDir" ]
+then
+  vcfDir=tmp/vcf
+else
+  ls -AF "$vcfDir"
+fi
+if [ -z "$datasetIdDir" ]
+then
+  unused_var=${datasetIdDir:=$blastDir/datasetId}
+fi
+set +x
 
 # Test if running within container.
 # File Handles for errors and warnings to be reported back to the user.

@@ -56,13 +56,14 @@ case $result_url in
     # $blastnUrl contains / etc.
     result_url="$blastnUrl?key=$(echo $result_url | sed -n "s/.*future_key \(.*\) already exists.*/\1/p")"
     ;;
+  null|'')
+    # error return : result_url=null
+    exit 1
+    ;;
   *)
     # Result has surrounding "", so remove these
     eval result_url=$result_url
     ;;
-  null)
-    # error return : result_url=null
-    exit 1
 esac
 
 # $B/results/ in dev testing
