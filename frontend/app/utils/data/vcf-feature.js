@@ -54,8 +54,11 @@ function vcfGenotypeLookup(auth, server, samples, domainInteger, requestOptions,
 
   region = scope + ':' + domainInteger.join('-'),
   {requestFormat, headerOnly} = requestOptions,
-  preArgs = {region, samples, requestFormat, headerOnly};
+  /** this dataset has tSNP in INFO field */
+  requestInfo = requestFormat && (vcfDatasetId === 'Triticum_aestivum_IWGSC_RefSeq_v1.0_vcf_data'),
+  preArgs = {region, samples, requestFormat, headerOnly, requestInfo};
   // parent is .referenceDatasetName
+
 
   /* reply time is generally too quick to see the non-zero count, so to see the
    * count in operation use +2 here. */
@@ -468,6 +471,18 @@ function featureBlockColourValue(feature) {
   blockColourValue = axis1d.blockColourValue(feature.get('blockId'));
   return blockColourValue;
 }
+function featureHaplotype(feature, i) {
+  const
+  value = featureHaplotypeValue(feature);
+  return featureNameValue(feature, value);
+}
+function featureHaplotypeValue(feature) {
+  /** a number, or ".", which means no value  */
+  const haplotype = feature.get('values.tSNP');
+  return haplotype;
+}
+
+
 
 
 /** Map the result of vcfGenotypeLookup() to the format expected by component:matrix-view param displayData
@@ -488,6 +503,7 @@ function vcfFeatures2MatrixView(requestFormat, added) {
   /** createdFeatures : array of model:Feature (could be native JS objects - see
    * comment in addFeaturesJson() */
   let {createdFeatures, sampleNames} = added;
+  const showHaplotypeColumn = createdFeatures.length && createdFeatures[0].values.tSNP;
   /** The param added.createdFeatures could be grouped by block.
    * Ordering by sampleName seems more useful, although not clear how often sampleName appears in 2 blocks.
    */
@@ -520,6 +536,11 @@ function vcfFeatures2MatrixView(requestFormat, added) {
       features : sortedFeatures.map(featureBlockColour),
       datasetId : {id : ''},
       name : 'Block' };
+  const haplotypeColourColumn = 
+    {
+      features : sortedFeatures.map(featureHaplotype),
+      datasetId : {id : ''},
+      name : 'Haplotype' };
   const
   refAltColumns = refAlt
     .map((ra, i) => ({
@@ -527,7 +548,7 @@ function vcfFeatures2MatrixView(requestFormat, added) {
       datasetId : {id : ''},
       name : refAltHeadings[i]}));
 
-  const leftColumns = [blockColourColumn].concat(valueColumns, refAltColumns);
+  const leftColumns = [blockColourColumn].concat(valueColumns, haplotypeColourColumn, refAltColumns);
 
   let displayData = sampleNames.reduce((result, sampleName) => {
     /** if any features of a block contain sampleName, then generate a
@@ -684,6 +705,7 @@ function vcfFeatures2MatrixViewRows(requestFormat, featuresArrays) {
  */
 function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features) {
   const fnName = 'vcfFeatures2MatrixViewRows';
+  const showHaplotypeColumn = features.length && features[0].values.tSNP;
 
   let sampleNamesSet = new Set();
 
@@ -697,6 +719,9 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features) {
       /* related to vcfFeatures2MatrixView() : blockColourColumn,  */
       row.Block = stringSetFeature(blockColourValue, feature);
       row.Name = stringSetFeature(feature.name, feature);
+      if (showHaplotypeColumn) {
+        row.Haplotype = stringSetFeature(featureHaplotypeValue(feature), feature);
+      }
       const
       featureSamples = feature.get('values');
       Object.entries(featureSamples).reduce(

@@ -186,6 +186,7 @@ export default Component.extend({
     // stacksAdjust{,Y}() have parameters, so .bind is used.
     axisApi.stacksAdjustY = this.stacksAdjustY.bind(this);
     axisApi.stacksAdjust = this.stacksAdjust.bind(this);
+    dLog('stacks-view', 'init', this, axisApi, this.oa, stacks);
   },
 
   //----------------------------------------------------------------------------

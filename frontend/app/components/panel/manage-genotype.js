@@ -666,7 +666,7 @@ export default class PanelManageGenotypeComponent extends Component {
             let sampleGenotypes = 
                 vcfFeatures2MatrixViewRows(this.requestFormat, featuresArrays);
             this.displayDataRows = sampleGenotypes.rows;
-            this.columnNames = ['Block', 'Name'].concat(sampleGenotypes.sampleNames);
+            this.columnNames = ['Block', 'Name', 'Haplotype'].concat(sampleGenotypes.sampleNames);
           } else {
             let sampleNames;
             if (this.args.userSettings.filterBySelectedSamples) {

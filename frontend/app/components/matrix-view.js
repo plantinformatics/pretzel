@@ -66,7 +66,7 @@ function columnNameIsNotSample(column_name) {
    * like the sample columns, and they are formatted like the sample columns, so
    * assign the class col-sample.
    */
-  return ['Block', 'Name', 'Position', 'End'].includes(column_name);
+  return ['Block', 'Name', 'Position', 'End', 'Haplotype'].includes(column_name);
 }
 
 function copiesColourClass(alleleValue) {
@@ -88,7 +88,7 @@ function col_name_fn(column) {
   const
   datasetId = Ember_get(column, 'datasetId.id'),
   /** if datasetId is '' or undefined / null, then ':' separator is not required.
-   * This is true for non-sample columns, e.g. Position, End, Ref, Alt
+   * This is true for non-sample columns, e.g. Position, End, Ref, Alt, Haplotype
    */
   col_name = (! datasetId ? '' : datasetId + ':')  + Ember_get(column, 'name');
   return col_name;
@@ -155,9 +155,11 @@ function nRows2HeightEx(nRows) {
  *   ABRenderer : abValues
  *   numericalDataRenderer : rowRanges
  *   blockColourRenderer
+ *   haplotypeColourRenderer
  *
  *   renderer =
  *     (prop === 'Block') ? blockColourRenderer :
+ *     (prop === 'Haplotype') ? haplotypeColourRenderer :
  *     numericalData ? numericalDataRenderer :
  *        selectedBlock ? ABRenderer : CATGRenderer
  *   type =  (prop.endsWith 'Position' or 'End') ? 'numeric'
@@ -336,6 +338,7 @@ export default Component.extend({
     Handsontable.renderers.registerRenderer('ABRenderer', bind(this, this.ABRenderer));
     Handsontable.renderers.registerRenderer('numericalDataRenderer', bind(this, this.numericalDataRenderer));
     Handsontable.renderers.registerRenderer('blockColourRenderer', bind(this, this.blockColourRenderer));
+    Handsontable.renderers.registerRenderer('haplotypeColourRenderer', bind(this, this.haplotypeColourRenderer));
 
     this.set('table', table);
   },
@@ -374,6 +377,8 @@ export default Component.extend({
       cellProperties.type = 'numeric';
     } else if (prop === 'Block') {
       cellProperties.renderer = 'blockColourRenderer';
+    } else if (prop === 'Haplotype') {
+      cellProperties.renderer = 'haplotypeColourRenderer';
     } else if (prop === 'Name') {
       cellProperties.renderer = Handsontable.renderers.TextRenderer;
     } else if (numericalData) {
@@ -401,7 +406,7 @@ export default Component.extend({
       columnNames = this.get('columnNames');
       if (columnNames) {
         col_name = columnNames[col];
-        /* selectedColumnName may be Ref, Alt, or a sample column, not Block, Position, End. */
+        /* selectedColumnName may be Ref, Alt, or a sample column, not Block, Position, End, Haplotype. */
         if (columnNameIsNotSample(col_name)) {
           col_name = undefined;
         }
@@ -625,6 +630,38 @@ export default Component.extend({
     td.style.background = colour;
     $(td).text(' ');
   },
+
+  /** The .text is Haplotype, currently represented as a numeric tSNP value;
+   * equal values are in the same tagged-SNP-set.
+   * Allocate a column per set, within the Haplotype column.
+   * Assign a unique colour to each set.
+   * Show a rectangle coloured with the set colour, in the set column.
+   * @param instance  this Handsontable
+   */
+  haplotypeColourRenderer(instance, td, row, col, prop, value, cellProperties) {
+    /** based on blockColourRenderer(). */
+    Handsontable.renderers.TextRenderer.apply(instance, arguments);
+    const
+    tSNP = $(td).text();
+    if ((tSNP !== undefined) && (tSNP !== '') && (tSNP !== '.')) {
+      const
+      haplotypes = this.haplotypes,
+      haplotype = haplotypes[tSNP] || (haplotypes[tSNP] = {column : this.haplotypeColumn++}),
+      colour = this.haplotypeColourScale(haplotype.column);
+      td.style.background = colour;
+    }
+    $(td).text(' ');
+  },
+
+  //----------------------------------------------------------------------------
+
+  haplotypes : {},
+  haplotypeColumn : 0,
+
+  haplotypeColourScale : computed( function () { 
+    let scale = d3.scaleOrdinal().range(d3.schemeCategory10);
+    return scale;
+  }),
 
   // ---------------------------------------------------------------------------
 

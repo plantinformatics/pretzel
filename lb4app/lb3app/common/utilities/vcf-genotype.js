@@ -49,7 +49,10 @@ function vcfGenotypeLookup(parent, scope, preArgs, nLines, dataOutCb, cb) {
      *        %TGT            Translated genotype (e.g. C/A)
      */
     formatGT = (preArgs.requestFormat === 'CATG') ? '%TGT' : '%GT',
-    format = '%ID\t%POS' + '\t%REF\t%ALT' + '[\t' + formatGT + ']\n';
+    requestInfo = preArgs.requestInfo && JSON.parse(preArgs.requestInfo),
+    format = '%ID\t%POS' + '\t%REF\t%ALT' +
+      (requestInfo ? '\t%INFO/tSNP' : '') +
+      '[\t' + formatGT + ']\n';
     moreParams = moreParams.concat(headerOption, '-f', format);
     if (headerOnly) {
       moreParams.push('--force-samples');
