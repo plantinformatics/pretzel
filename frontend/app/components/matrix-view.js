@@ -53,6 +53,20 @@ const ABRendererShowAB = false;
 const refAlt = ['ref', 'alt'];
 const refAltHeadings = refAlt.map(toTitleCase);
 
+/** Provide default widths for feature fields, including .values
+ * Based on similar in table-brushed.js
+ */
+const featureValuesWidths = {
+  Name : 180,
+  Position : 80,
+  End : 80,
+  /*
+  ref : 40,
+  alt : 40,
+  */
+};
+
+
 // -----------------------------------------------------------------------------
 
 /** Considering the columns as 2 groups :
@@ -253,8 +267,10 @@ export default Component.extend({
      *    may switch to a class-based solution)
      */
     const
+    columnName = this.columnNames[columnIndex],
     width =
-      columnIndex === 1 ? 80 :
+      featureValuesWidths[columnName] ||
+
       /* works, but padding-left is required also, to move the text.
       columnIndex === this.colSample0 ?
       25 + 3 :
@@ -347,9 +363,12 @@ export default Component.extend({
 
   // ---------------------------------------------------------------------------
 
+  /** The row header is Feature Position if gtMergeRows, otherwise Feature name.
+   * The row index is displayed if feature reference is not available.
+   */
   rowHeaders(visualRowIndex) {
     let feature = this.table && getRowAttribute(this.table, visualRowIndex, /*col*/undefined);
-    let text = `${visualRowIndex}: `;
+    let text;
     if (! feature) {
       /** or !!this.displayDataRows ... */
       const dataIsRows = this.displayDataRows === this.get('dataByRow');
@@ -360,7 +379,11 @@ export default Component.extend({
     }
 
     if (feature) {
-      text = feature?.name;
+      text = this.urlOptions.gtMergeRows ?
+        feature?.value?.[0] || feature?.Block?.[featureSymbol]?.value?.[0] :
+        feature?.name;
+    } else {
+        text = `${visualRowIndex}: `;
     }
     return text;
   },
@@ -950,8 +973,7 @@ export default Component.extend({
         /** displaying via { {this.timeMeasure}} in hbs causes re-render, so display using jQuery. */
         $('#timeMeasure').text(timeMeasure);
       }
-      const dataIsRows = !!this.displayDataRows;
-      setRowAttributes(table, dataIsRows ? this.displayDataRows : this.displayData, dataIsRows);
+      this.setRowAttributes();
     } else {
       this.progressiveRowMergeInBatch();
       t.hide();
@@ -959,8 +981,13 @@ export default Component.extend({
   }),
 
   setRowAttributes() {
-    const dataIsRows = !!this.displayDataRows;
-    setRowAttributes(this.table, dataIsRows ? this.displayDataRows : this.displayData, dataIsRows);
+    const
+    dataIsRows = !!this.displayDataRows,
+    /** if gtMergeRows then displayDataRows is sparse, indexed by Position.  */
+    data = dataIsRows ?
+      ( this.urlOptions.gtMergeRows ? Object.values(this.displayDataRows) : this.displayDataRows) :
+      this.displayData;
+    setRowAttributes(this.table, data, dataIsRows);
   },
 
   afterScrollVertically() {
@@ -1007,8 +1034,7 @@ export default Component.extend({
        * already called) and the call in updateTable() is too early - before
        * table data is populated.
        */
-      const dataIsRows = !!this.displayDataRows;
-      setRowAttributes(this.table, dataIsRows ? this.displayDataRows : this.displayData, dataIsRows);
+      this.setRowAttributes();
       // required for initial display of rowHeaders
       this.table?.render();
     }

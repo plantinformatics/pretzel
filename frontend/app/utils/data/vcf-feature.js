@@ -719,6 +719,8 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features) {
       /* related to vcfFeatures2MatrixView() : blockColourColumn,  */
       row.Block = stringSetFeature(blockColourValue, feature);
       row.Name = stringSetFeature(feature.name, feature);
+      /* row.Position is used by matrix-view : rowHeaders(), not in a named column. */
+      row.Position = position;
       if (showHaplotypeColumn) {
         row.Haplotype = stringSetFeature(featureHaplotypeValue(feature), feature);
       }
@@ -737,6 +739,8 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features) {
           featureSampleNames(sampleNamesSet, feature, caseRefAlt);
           if (refAlt.includes(sampleName)) {
             sampleValue = refAltNumericalValue(sampleName);
+            // the capital field name is used in : row[sampleName]
+            sampleName = toTitleCase(sampleName);
           }
           const 
           // featureNameValue(feature, sampleValue),

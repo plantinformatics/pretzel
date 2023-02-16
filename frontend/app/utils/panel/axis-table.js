@@ -6,24 +6,25 @@ import { axisFeatureCircles_selectOneInAxis } from '../draw/axis';
 
 const featureSymbol = Symbol.for('feature');
 
-// const trace = 0;
+const trace = 0;
 const dLog = console.debug;
 
 /*----------------------------------------------------------------------------*/
 
-/** Alternative to featureSymbol for string values, which can't have [Symbol].
- * Store a mapping from string to Feature.
+/** Support featureSymbol for string values, which can't have [Symbol].
+ * Convert string to new String() object, then assign reference to Feature
+ * to [featureSymbol]
  */
-let stringsToFeatures = {};
 function stringGetFeature(sampleValue) {
-  return stringsToFeatures[sampleValue];
+  return sampleValue[featureSymbol];
 }
-/**
- * @return sampleValue, so that this can be used in a value pipeline
+/** Convert sampleValue to an Object (new String) if it is not already.
+ * @return String object
  */
 function stringSetFeature(sampleValue, feature) {
-  stringsToFeatures[sampleValue] = feature;
-  return sampleValue;
+  const s = (typeof s === 'object') ? s : new String(sampleValue);
+  s[featureSymbol] = feature;
+  return s;
 }
 
 
@@ -56,7 +57,15 @@ function setRowAttributes(table, data, dataIsRows) {
       Object.values(feature).forEach((value, physicalCol) => {
         const col = table.toVisualColumn(physicalCol);
         if (col !== null) {
-          const feature = value[featureSymbol] || stringGetFeature(value);
+          /* For gtMergeRows, a row can combine several Features, so it may be
+           * necessary to use a per-cell value for feature here.
+           * Currently used in rowHeaders() for feature .Position, which will be
+           * common for Features in a single row.
+           * Also used for cell hover (afterOnCellMouseOver() ->
+           * tableCoordsToFeature()), and for this it would be useful to have
+           * references to the individual features.
+           const feature = value[featureSymbol] || stringGetFeature(value);
+          */
           setRowAttribute(table, row, col, feature);
         }
       });
@@ -134,7 +143,9 @@ function afterOnCellMouseOverClosure(hasTable) {
     let
     table = hasTable.table, // === this
     feature = tableCoordsToFeature(table, coords);
-    dLog('afterOnCellMouseOver', coords, TD, feature?.name, feature?.value);
+    if (trace) {
+      dLog('afterOnCellMouseOver', coords, TD, feature?.name, feature?.value);
+    }
     /** clears any previous highlights if feature is undefined */
     highlightFeature(feature);
   }

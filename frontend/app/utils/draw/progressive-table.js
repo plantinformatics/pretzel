@@ -11,6 +11,9 @@ import {
 
 const dLog = console.debug;
 
+const featureSymbol = Symbol.for('feature');
+
+
 //------------------------------------------------------------------------------
 
 const progressiveMergeLimit = 10;
@@ -48,7 +51,7 @@ function tableRowMerge(table, data, currentData, columnNames, colHeaders) {
     d0Array = rowObjDataToArray(d0, columnNames),
     cmp = d1IsArray ? dataRowArrayCmp(d0Array, d1) : dataRowCmp(d0, d1),
     visualRowIndex1 = table.toVisualRow(i1),
-    feature = d0[Symbol.for('feature')];
+    feature = d0[featureSymbol] || d0?.Block?.[featureSymbol];
 
     if (visualRowIndex1 === null) {
       remainingChanges++;
@@ -116,7 +119,7 @@ function tableRowMerge(table, data, currentData, columnNames, colHeaders) {
     const
     d0 = a0[i0],
     d0Array = rowObjDataToArray(d0, columnNames),
-    feature = d0[Symbol.for('feature')];
+    feature = d0[featureSymbol] || d0?.Block?.[featureSymbol];
     // insert d0
     a1.splice(i1, 0, d0);
     /* append to table, so use countRows(). after insert toVisualRow(i1) will be
