@@ -153,6 +153,10 @@ export default class PanelManageGenotypeComponent extends Component {
     this.requestFormat =
       userSettings.requestFormat || 'Numerical';  // alternate : CATG
 
+    /* most of the following flags are (mut) in checkboxes in .hbs, which
+     * may require that they have a defined initial value.
+     */
+
     if (userSettings.replaceResults === undefined) {
       userSettings.replaceResults = false;
     }
@@ -163,6 +167,10 @@ export default class PanelManageGenotypeComponent extends Component {
 
     if (userSettings.filterBySelectedSamples === undefined) {
       userSettings.filterBySelectedSamples = true;
+    }
+
+    if (this.urlOptions.gtMergeRows === undefined) {
+      this.urlOptions.gtMergeRows = false;
     }
 
   }
@@ -731,6 +739,8 @@ export default class PanelManageGenotypeComponent extends Component {
     'blockService.viewedVisible',
     'requestFormat', 'rowLimit',
     'args.userSettings.filterBySelectedSamples',
+    /** showSamplesWithinBrush() uses gtMergeRows */
+    'urlOptions.gtMergeRows',
   )
   get selectedSampleEffect () {
     const fnName = 'selectedSampleEffect';

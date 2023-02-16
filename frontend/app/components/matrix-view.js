@@ -659,7 +659,7 @@ export default Component.extend({
   haplotypeColumn : 0,
 
   haplotypeColourScale : computed( function () { 
-    let scale = d3.scaleOrdinal().range(d3.schemeCategory10);
+    let scale = d3.scaleOrdinal().range(d3.schemeCategory20);
     return scale;
   }),
 

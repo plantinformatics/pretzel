@@ -292,13 +292,21 @@ Server :
 {{!---------------------------------------------------------------------------}}
 
 <ul class="list-group view-controls">
+
   <li>
     <input type="checkbox"
       style="margin-left: 3em;"
       checked={{@userSettings.filterBySelectedSamples}}
       oninput={{action (mut @userSettings.filterBySelectedSamples) value="target.checked"}}  >
     <label>Selected samples</label>
+
+    <input type="checkbox"
+      style="margin-left: 3em;"
+      checked={{this.urlOptions.gtMergeRows}}
+      oninput={{action (mut this.urlOptions.gtMergeRows) value="target.checked"}}  >
+    <label>Merge Rows</label>
   </li>
+
 </ul>
 
 {{!---------------------------------------------------------------------------}}
