@@ -357,11 +357,34 @@ export default Component.extend({
     Handsontable.renderers.registerRenderer('haplotypeColourRenderer', bind(this, this.haplotypeColourRenderer));
 
     this.set('table', table);
+
+    table.addHook('afterRender', this.afterRender.bind(this));
   },
 
   highlightFeature,
 
   // ---------------------------------------------------------------------------
+
+  afterRender(isForced) {
+    const scope = this.dataScope;
+    if (scope) {
+      this.showTextInTopLeftCorner(scope);
+    }
+  },
+  showTextInTopLeftCorner(text) {
+    /* Within #observational-table there are 4 
+     * <div class="ht_clone_* handsontable">
+     * with ht_clone_{top,bottom,left,top_left_corner}
+     * and they each have a table.htCore containing a span.colHeader.cornerHeader
+     *
+     * Setting [3] is visible;  setting [0], 1, 2 is not visible.
+     */
+    const cornerClones=$('#observational-table .colHeader.cornerHeader');
+    if (cornerClones.length > 3) {
+      cornerClones[3].textContent = text;
+    }
+  },
+
 
   /** The row header is Feature Position if gtMergeRows, otherwise Feature name.
    * The row index is displayed if feature reference is not available.
@@ -713,6 +736,22 @@ export default Component.extend({
       cols[col_name] = d;
     });
     return cols;
+  }),
+  /** identify the reference datasetId and scope of the axis of the genotype
+   * datasets which are displayed in the table.
+   * There could be multiple such axes - only the first is identified.
+   * This is displayed in the top-left corner of the table.
+   */
+  dataScope : computed('displayData.[]', function() {
+    const
+    feature = this.displayData?.[0]?.features
+    ?.[0]
+    ?.[Symbol.for('feature')],
+    block = feature?.blockId,
+    datasetId = block?.get('referenceBlockOrSelf.datasetId.id'),
+    scope = block?.get('scope'),
+    text = datasetId + ' ' + scope;
+    return text;
   }),
   /** index of the first sample column.
    * 2 or 4 if Ref & Alt

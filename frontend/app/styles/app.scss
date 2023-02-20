@@ -1659,6 +1659,17 @@ div#goto-feature > div
   border-right-width: 5px;
 }
 
+/* genotype table : wrap text of datasetId and scope in top-left corner   */
+/* div.ht_clone_top_left_corner > div.wtHolder > div.wtHider > div.wtSpreader > table.htCore > thead > tr > th > div > span.colHeader.cornerHeader */
+div.ht_clone_top_left_corner span.colHeader.cornerHeader {
+  /* display: block; */
+  /* depends on Feature name length. */
+  width : 11em;
+  white-space : normal;
+  margin-top : 5ex;
+}
+
+
 //------------------------------------------------------------------------------
 
 /* use specificity #observational-table to override .handsontable default
