@@ -717,8 +717,10 @@ export default class PanelManageGenotypeComponent extends Component {
                 this.requestFormat, featuresArrays, this.featureFilter.bind(this));
             this.displayDataRows = sampleGenotypes.rows;
             /* Position value is returned by matrix-view : rowHeaders().
-             * for gtMergeRows the Position column is hidden. */
-            this.columnNames = ['Block', 'Position', 'Name', 'Haplotype', 'MAF'].concat(sampleGenotypes.sampleNames);
+             * for gtMergeRows the Position column is hidden.
+             * .sampleNames contains : [ 'Ref', 'Alt', 'tSNP', 'MAF' ]; 'tSNP' is mapped to 'Haplotype'
+             */
+            this.columnNames = ['Block', 'Position', 'Name'].concat(sampleGenotypes.sampleNames);
           } else {
             let sampleNames;
             if (this.args.userSettings.filterBySelectedSamples) {

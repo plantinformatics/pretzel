@@ -748,19 +748,23 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
         if (showHaplotypeColumn) {
           row.Haplotype = stringSetFeature(featureHaplotypeValue(feature), feature);
         }
+
+        /* related to refAltColumns */
+        function caseRefAlt(sampleName) {
+          if (refAlt.includes(sampleName)) {
+            sampleName = toTitleCase(sampleName);
+          }
+          return sampleName;
+        }
+        /* unchanged */ /* sampleNamesSet = */
+        featureSampleNames(sampleNamesSet, feature, caseRefAlt);
+
         const
         featureSamples = feature.get('values');
-        Object.entries(featureSamples).reduce(
+        Object.entries(featureSamples)
+          // .filter(([sampleName, sampleValue]) => ! ['tSNP', 'MAF'].includes(sampleName))
+          .reduce(
           (res2, [sampleName, sampleValue]) => {
-            /* related to refAltColumns */
-            function caseRefAlt(sampleName) {
-              if (refAlt.includes(sampleName)) {
-                sampleName = toTitleCase(sampleName);
-              }
-              return sampleName;
-            }
-            /* unchanged */ /* sampleNamesSet = */
-            featureSampleNames(sampleNamesSet, feature, caseRefAlt);
             if (refAlt.includes(sampleName)) {
               sampleValue = refAltNumericalValue(sampleName);
               // the capital field name is used in : row[sampleName]
@@ -785,7 +789,11 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
     },
     result);
 
-  result.sampleNames.addObjects(Array.from(sampleNamesSet.keys()));
+  const
+  /** 'tSNP' is mapped to 'Haplotype' in columnNames, not in the row data. */
+  columnNames = Array.from(sampleNamesSet.keys())
+    .map((name) => (name === 'tSNP') ? 'Haplotype' : name);
+  result.sampleNames.addObjects(columnNames);
 
   dLog(fnName, result.rows.length);
   return result;
