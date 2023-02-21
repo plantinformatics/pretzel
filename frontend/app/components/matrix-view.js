@@ -758,14 +758,26 @@ export default Component.extend({
    * This is displayed in the top-left corner of the table.
    */
   dataScope : computed('displayData.[]', function() {
-    const
-    feature = this.displayData?.[0]?.features
-    ?.[0]
-    ?.[Symbol.for('feature')],
-    block = feature?.blockId,
-    datasetId = block?.get('referenceBlockOrSelf.datasetId.id'),
-    scope = block?.get('scope'),
-    text = datasetId + ' ' + scope;
+    let text, feature;
+    if (this.displayDataRows) {
+      if (this.displayDataRows.length) {
+        const rowData = this.displayDataRows[this.displayDataRows.length - 1];
+        feature = rowData?.Block[Symbol.for('feature')];
+      }
+    } else {
+      feature = this.displayData?.[0]?.features
+      ?.[0]
+      ?.[Symbol.for('feature')];
+    }
+    if (feature) {
+      const
+      block = feature.blockId,
+      datasetId = block?.get('referenceBlockOrSelf.datasetId.id'),
+      scope = block?.get('scope');
+      if (datasetId && scope) {
+        text = datasetId + ' ' + scope;
+      }
+    }
     return text;
   }),
   /** index of the first sample column.
