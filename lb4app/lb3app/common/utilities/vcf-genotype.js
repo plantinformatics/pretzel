@@ -51,7 +51,7 @@ function vcfGenotypeLookup(parent, scope, preArgs, nLines, dataOutCb, cb) {
     formatGT = (preArgs.requestFormat === 'CATG') ? '%TGT' : '%GT',
     requestInfo = preArgs.requestInfo && JSON.parse(preArgs.requestInfo),
     format = '%ID\t%POS' + '\t%REF\t%ALT' +
-      (requestInfo ? '\t%INFO/tSNP' : '') +
+      (requestInfo ? '\t%INFO/tSNP\t%INFO/MAF' : '') +
       '[\t' + formatGT + ']\n';
     moreParams = moreParams.concat(headerOption, '-f', format);
     if (headerOnly) {

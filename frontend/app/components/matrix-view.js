@@ -80,7 +80,7 @@ function columnNameIsNotSample(column_name) {
    * like the sample columns, and they are formatted like the sample columns, so
    * assign the class col-sample.
    */
-  return ['Block', 'Name', 'Position', 'End', 'Haplotype'].includes(column_name);
+  return ['Block', 'Name', 'Position', 'End', 'Haplotype', 'MAF'].includes(column_name);
 }
 
 function copiesColourClass(alleleValue) {
@@ -343,6 +343,12 @@ export default Component.extend({
         rows: false,
         columns: true,
         onlyTrimmed: true
+      },
+
+      hiddenColumns: {
+        // copyPasteEnabled: default is true,
+        indicators: true,
+        columns: [],
       }
     };
     if (this.urlOptions.gtSelectColumn) {
@@ -425,6 +431,9 @@ export default Component.extend({
       cellProperties.renderer = 'blockColourRenderer';
     } else if (prop === 'Haplotype') {
       cellProperties.renderer = 'haplotypeColourRenderer';
+    } else if (prop === 'MAF') {
+      cellProperties.type = 'numeric';
+      cellProperties.renderer = 'numericalDataRenderer';
     } else if (prop === 'Name') {
       cellProperties.renderer = Handsontable.renderers.TextRenderer;
     } else if (numericalData) {
@@ -659,10 +668,16 @@ export default Component.extend({
     let row_ranges = this.get('rowRanges');
 
     if (!isNaN(value)) {
-      let color_scale = d3.scaleLinear().domain(row_ranges[row])
-          .interpolate(d3.interpolateHsl)
-          .range([d3.rgb("#0000FF"), d3.rgb('#FFFFFF'), d3.rgb('#FF0000')]);
-      td.style.background = color_scale(value);
+      /** for MAF, use log(value), range of MAF is [0,1], log range of interest is mostly in [-5,0] */
+      const
+      isMAF = prop === 'MAF',
+      domain = isMAF ? [-5, 0] : row_ranges[row],
+      /** color_scale can be factored out - it is constant for all cells, apart from .domain(). */
+      color_scale = d3.scaleLinear().domain(domain)
+        .interpolate(d3.interpolateHsl)
+        .range([d3.rgb("#0000FF"), d3.rgb('#FFFFFF'), d3.rgb('#FF0000')]),
+      valueInDomain = isMAF ? Math.log10(value) : value;
+      td.style.background = color_scale(valueInDomain);
       td.title = value;
       $(td).css('font-size', 10);
     }
@@ -792,6 +807,31 @@ export default Component.extend({
       });
     return columns;
   },
+  /** Depending on gtMergeRows :       false | true
+   * the rowHeader (left) column is :  Name  | Position
+   * and so this column is hidden in the body of the table.
+   */
+  hideColumns() {
+    const
+    table = this.table,
+    hiddenColumnsPlugin = table.getPlugin('hiddenColumns'),
+    gtMergeRows = this.urlOptions.gtMergeRows,
+    hide = {
+      Position : gtMergeRows,
+      Name : ! gtMergeRows,
+    };
+    this.columnNames?.forEach((name, columnIndex) => {
+      const action = hide[name];
+      if (action !== undefined) {
+        if (action) {
+          hiddenColumnsPlugin.hideColumn(columnIndex);
+        } else {
+          hiddenColumnsPlugin.showColumn(columnIndex);
+        }
+      }
+    });
+
+  },
   /** For each value in .rows (row names), measure the length of the text
    * rendering using #length_checker, and return the maximum length.
    */
@@ -903,10 +943,15 @@ export default Component.extend({
 
     let data = [];
     rows.forEach((row_name) => {
+      const rowData = dataByRow[row_name];
       let d  = {};
       this.get('columnNames').forEach(function(col_name) {
-        d[col_name] = dataByRow[row_name][col_name];
+        d[col_name] = rowData[col_name];
       });
+      /** for gtMergeRows, Position is a hidden column; if it were not in
+       * columnNames, then this reference could be used by dataRowCmp().
+. */
+      d[Symbol.for('Position')] = rowData.Position;
       data.push(d);
     });
     return data;
@@ -966,6 +1011,8 @@ export default Component.extend({
     let table = this.get('table');
     let data = this.get('data');
     dLog('matrix-view', 'updateTable', t, rows.length, rowHeaderWidth, colHeaderHeight, table, data, this.blockSamples && 'vcf');
+
+    this.hideColumns();
 
     if (data.length > 0) {
       t.show();

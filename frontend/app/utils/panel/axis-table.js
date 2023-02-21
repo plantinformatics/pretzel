@@ -22,7 +22,7 @@ function stringGetFeature(sampleValue) {
  * @return String object
  */
 function stringSetFeature(sampleValue, feature) {
-  const s = (typeof s === 'object') ? s : new String(sampleValue);
+  const s = (typeof sampleValue === 'object') ? sampleValue : new String(sampleValue);
   s[featureSymbol] = feature;
   return s;
 }
@@ -54,6 +54,7 @@ function setRowAttributes(table, data, dataIsRows) {
 
       setRowAttribute(table, row, /*col*/undefined, feature);
     } else if (dataIsRows) {
+      feature = feature.Block[Symbol.for('feature')];
       Object.values(feature).forEach((value, physicalCol) => {
         const col = table.toVisualColumn(physicalCol);
         if (col !== null) {

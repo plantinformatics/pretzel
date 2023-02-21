@@ -1981,6 +1981,13 @@ body:not(.tablesPanelRight) .metaeditor-panel {
 {
   overflow-y: auto;
 }
+/* .view-controls */
+#right-panel-content.right-panel-genotype input#range-maf {
+  width : 10em;
+}
+
+
+
 body.tablesPanelRight #right-panel-content.right-panel-dataset > div
 {
   height:650px;

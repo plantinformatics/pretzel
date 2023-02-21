@@ -305,7 +305,28 @@ Server :
       checked={{this.urlOptions.gtMergeRows}}
       oninput={{action (mut this.urlOptions.gtMergeRows) value="target.checked"}}  >
     <label>Merge Rows</label>
+
+    <div style="display : inline-block;">
+      <span class="filter-group-col">
+        <input type="checkbox" id="gtInputMafUpper" name="mafUpper" checked={{@userSettings.mafUpper}}
+          oninput={{action (mut @userSettings.mafUpper) value="target.checked"}} 
+        >
+        <EmberTooltip side="right" delay=500>
+          <span>Use threshold as an upper / lower limit.</span>
+        </EmberTooltip>
+      </span>
+      <label for="range-maf" class="inline-margin">MAF Threshold : {{this.maf}}</label>
+      <input type="range" 
+       id="range-maf" 
+       name="maf" 
+       min="0" max="100"
+       value={{@userSettings.mafInt}}
+       oninput={{action (mut @userSettings.mafInt) value="target.value"}}
+      >
+    </div>
+
   </li>
+
 
 </ul>
 

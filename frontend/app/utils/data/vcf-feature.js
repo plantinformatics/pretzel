@@ -459,6 +459,7 @@ function featureValuesRefAlt(requestFormat, feature, fieldName) {
   }
   return featureNameValue(feature, value);
 }
+
 function featureBlockColour(feature, i) {
   /** preferably use : FeatureTicks:featureColour() (factor out of components/draw/axis-1d.js)  */
   const
@@ -471,6 +472,7 @@ function featureBlockColourValue(feature) {
   blockColourValue = axis1d.blockColourValue(feature.get('blockId'));
   return blockColourValue;
 }
+
 function featureHaplotype(feature, i) {
   const
   value = featureHaplotypeValue(feature);
@@ -480,6 +482,17 @@ function featureHaplotypeValue(feature) {
   /** a number, or ".", which means no value  */
   const haplotype = feature.get('values.tSNP');
   return haplotype;
+}
+
+function featureMaf(feature, i) {
+  const
+  value = featureMafValue(feature);
+  return featureNameValue(feature, value);
+}
+function featureMafValue(feature) {
+  /** a number, domain [0,1]  */
+  const maf = feature.get('values.MAF');
+  return maf;
 }
 
 
@@ -495,10 +508,11 @@ function featureHaplotypeValue(feature) {
  * @param added
  *  { createdFeatures : array of created Features,
  *    sampleNames : array of sample names }
+ * @param featureFilter filter applied to add.createdFeatures
  *
  * @return displayData
  */
-function vcfFeatures2MatrixView(requestFormat, added) {
+function vcfFeatures2MatrixView(requestFormat, added, featureFilter) {
   const fnName = 'vcfFeatures2MatrixView';
   /** createdFeatures : array of model:Feature (could be native JS objects - see
    * comment in addFeaturesJson() */
@@ -520,6 +534,7 @@ function vcfFeatures2MatrixView(requestFormat, added) {
   /** sort features by .value[0] */
   const
   sortedFeatures = createdFeatures
+    .filter(featureFilter)
     .sort(featureSortComparator),
   /** Features have Position start (.value[0]) and optional End (.value[1])
    * This value is 2 if any feature has .value[1], otherwise 1.
@@ -541,6 +556,12 @@ function vcfFeatures2MatrixView(requestFormat, added) {
       features : sortedFeatures.map(featureHaplotype),
       datasetId : {id : ''},
       name : 'Haplotype' };
+  /** probably displayed as a colour, using numericalDataRenderer. */
+  const mafColumn = 
+    {
+      features : sortedFeatures.map(featureMaf),
+      datasetId : {id : ''},
+      name : 'MAF' };
   const
   refAltColumns = refAlt
     .map((ra, i) => ({
@@ -548,7 +569,7 @@ function vcfFeatures2MatrixView(requestFormat, added) {
       datasetId : {id : ''},
       name : refAltHeadings[i]}));
 
-  const leftColumns = [blockColourColumn].concat(valueColumns, haplotypeColourColumn, refAltColumns);
+  const leftColumns = [blockColourColumn].concat(valueColumns, haplotypeColourColumn, mafColumn, refAltColumns);
 
   let displayData = sampleNames.reduce((result, sampleName) => {
     /** if any features of a block contain sampleName, then generate a
@@ -688,12 +709,13 @@ function blockToMatrixColumn(singleBlock, block, sampleName, features) {
 
  * brushedVCFBlocks.reduce ( block.featuresInBrush.reduce() )
 
+ * @param featureFilter filter applied to featuresArrays[*]
  * @return result : {rows, sampleNames}
  */
-function vcfFeatures2MatrixViewRows(requestFormat, featuresArrays) {
+function vcfFeatures2MatrixViewRows(requestFormat, featuresArrays, featureFilter) {
   const fnName = 'vcfFeatures2MatrixViewRows';
   const result = featuresArrays.reduce((res, features) => {
-    res = vcfFeatures2MatrixViewRowsResult(res, requestFormat, features);
+    res = vcfFeatures2MatrixViewRowsResult(res, requestFormat, features, featureFilter);
     return res;
   }, {rows : [], sampleNames : []});
   return result;
@@ -701,10 +723,11 @@ function vcfFeatures2MatrixViewRows(requestFormat, featuresArrays) {
 /** Similar to vcfFeatures2MatrixView(), but merge rows with identical position,
  * i.e. implement options.gtMergeRows
  * @param features block.featuresInBrush. one array, one block.
+ * @param featureFilter filter applied to features
  * @param result : {rows, sampleNames}. function can be called via .reduce()
  */
-function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features) {
-  const fnName = 'vcfFeatures2MatrixViewRows';
+function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featureFilter) {
+  const fnName = 'vcfFeatures2MatrixViewRowsResult';
   const showHaplotypeColumn = features.length && features[0].values.tSNP;
 
   let sampleNamesSet = new Set();
@@ -712,50 +735,52 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features) {
   // result =
   features.reduce(
     (res, feature) => {
-      const
-      position = feature.get('value.0'),
-      row = (res.rows[position] ||= {}),
-      blockColourValue = featureBlockColourValue(feature);
-      /* related to vcfFeatures2MatrixView() : blockColourColumn,  */
-      row.Block = stringSetFeature(blockColourValue, feature);
-      row.Name = stringSetFeature(feature.name, feature);
-      /* row.Position is used by matrix-view : rowHeaders(), not in a named column. */
-      row.Position = position;
-      if (showHaplotypeColumn) {
-        row.Haplotype = stringSetFeature(featureHaplotypeValue(feature), feature);
-      }
-      const
-      featureSamples = feature.get('values');
-      Object.entries(featureSamples).reduce(
-        (res2, [sampleName, sampleValue]) => {
-          /* related to refAltColumns */
-          function caseRefAlt(sampleName) {
+      if (featureFilter(feature)) {
+        const
+        position = feature.get('value.0'),
+        row = (res.rows[position] ||= {}),
+        blockColourValue = featureBlockColourValue(feature);
+        /* related to vcfFeatures2MatrixView() : blockColourColumn,  */
+        row.Block = stringSetFeature(blockColourValue, feature);
+        row.Name = stringSetFeature(feature.name, feature);
+        /* row.Position is used by matrix-view : rowHeaders(), not in a named column. */
+        row.Position = position;
+        if (showHaplotypeColumn) {
+          row.Haplotype = stringSetFeature(featureHaplotypeValue(feature), feature);
+        }
+        const
+        featureSamples = feature.get('values');
+        Object.entries(featureSamples).reduce(
+          (res2, [sampleName, sampleValue]) => {
+            /* related to refAltColumns */
+            function caseRefAlt(sampleName) {
+              if (refAlt.includes(sampleName)) {
+                sampleName = toTitleCase(sampleName);
+              }
+              return sampleName;
+            }
+            /* unchanged */ /* sampleNamesSet = */
+            featureSampleNames(sampleNamesSet, feature, caseRefAlt);
             if (refAlt.includes(sampleName)) {
+              sampleValue = refAltNumericalValue(sampleName);
+              // the capital field name is used in : row[sampleName]
               sampleName = toTitleCase(sampleName);
             }
-            return sampleName;
-          }
-          /* unchanged */ /* sampleNamesSet = */
-          featureSampleNames(sampleNamesSet, feature, caseRefAlt);
-          if (refAlt.includes(sampleName)) {
-            sampleValue = refAltNumericalValue(sampleName);
-            // the capital field name is used in : row[sampleName]
-            sampleName = toTitleCase(sampleName);
-          }
-          const 
-          // featureNameValue(feature, sampleValue),
-          fx = stringSetFeature(sampleValue, feature),
-          r = row[sampleName];
-          /** for multiple features in a cell */
-          if (cellMultiFeatures) {
-            const
-            cell = (row[sampleName] ||= []);
-            cell.push(fx);
-          } else {
-            row[sampleName] = fx;
-          }
-          return res2;
-        }, res);
+            const 
+            // featureNameValue(feature, sampleValue),
+            fx = stringSetFeature(sampleValue, feature),
+            r = row[sampleName];
+            /** for multiple features in a cell */
+            if (cellMultiFeatures) {
+              const
+              cell = (row[sampleName] ||= []);
+              cell.push(fx);
+            } else {
+              row[sampleName] = fx;
+            }
+            return res2;
+          }, res);
+      }
       return res;
     },
     result);

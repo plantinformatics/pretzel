@@ -46,6 +46,8 @@ const trace = 0;
  * .replaceResults default: false
  * .showResultText default: false
  * .filterBySelectedSamples default : true
+ * .mafUpper default : true
+ * .mafInt default 100
  * @see userSettingsDefaults()
  */
 export default class PanelManageGenotypeComponent extends Component {
@@ -169,6 +171,13 @@ export default class PanelManageGenotypeComponent extends Component {
       userSettings.filterBySelectedSamples = true;
     }
 
+    if (userSettings.mafUpper === undefined) {
+      userSettings.mafUpper = true;
+    }
+    if (userSettings.mafInt === undefined) {
+      userSettings.mafInt = 100;
+    }
+
     if (this.urlOptions.gtMergeRows === undefined) {
       this.urlOptions.gtMergeRows = false;
     }
@@ -232,6 +241,22 @@ export default class PanelManageGenotypeComponent extends Component {
      dLog('rowLimitInput', value, event.target.value);
     this.rowLimit = value;
   }
+
+  //----------------------------------------------------------------------------
+
+  /** @userSettings.mafInt The input slider has an integer value, so mafInt / 100 is the real value. */
+  /** @userSettings.mafUpper : true means use maf threshold as an upper limit. */
+  @computed('args.userSettings.mafInt')
+  get maf() {
+    const
+    maf = +this.args.userSettings.mafInt,
+    threshold = (maf / 100);
+    dLog('maf', maf, threshold);
+    return threshold;
+   }
+
+
+  //----------------------------------------------------------------------------
 
 
   // ---------------------------------------------------------------------------
@@ -586,7 +611,8 @@ export default class PanelManageGenotypeComponent extends Component {
                * than table data causing undefined / mis-aligned associated
                * features.
                */
-              const displayData = vcfFeatures2MatrixView(this.requestFormat, added);
+              const displayData = vcfFeatures2MatrixView
+                (this.requestFormat, added, this.featureFilter.bind(this));
               this.displayData.addObjects(displayData);
               }
               // equivalent : displayData[0].features.length
@@ -603,6 +629,20 @@ export default class PanelManageGenotypeComponent extends Component {
       .catch(this.showError.bind(this, fnName));
     }
   }
+
+  //----------------------------------------------------------------------------
+
+  featureFilter(feature) {
+    const
+    MAF = feature.values.MAF,
+    /** don't filter datasets which don't have MAF */
+    ok = (MAF === undefined) || 
+      ((+MAF < this.maf) === this.args.userSettings.mafUpper);
+    return ok;
+  }
+
+  //----------------------------------------------------------------------------
+
 
   @computed(
     'lookupDatasetId', 'lookupScope', 'vcfGenotypeLookupDomain',
@@ -671,11 +711,14 @@ export default class PanelManageGenotypeComponent extends Component {
         if (featuresArrays.length) {
           if (this.urlOptions.gtMergeRows) {
             /** {rows, sampleNames}; */
-            let sampleGenotypes = 
-                vcfFeatures2MatrixViewRows(this.requestFormat, featuresArrays);
+            const
+            sampleGenotypes = 
+              vcfFeatures2MatrixViewRows(
+                this.requestFormat, featuresArrays, this.featureFilter.bind(this));
             this.displayDataRows = sampleGenotypes.rows;
-            /* Position is returned by matrix-view : rowHeaders() */
-            this.columnNames = ['Block', 'Name', 'Haplotype'].concat(sampleGenotypes.sampleNames);
+            /* Position value is returned by matrix-view : rowHeaders().
+             * for gtMergeRows the Position column is hidden. */
+            this.columnNames = ['Block', 'Position', 'Name', 'Haplotype', 'MAF'].concat(sampleGenotypes.sampleNames);
           } else {
             let sampleNames;
             if (this.args.userSettings.filterBySelectedSamples) {
@@ -694,7 +737,8 @@ export default class PanelManageGenotypeComponent extends Component {
             const
             features = featuresArrays.flat(),
             sampleGenotypes =  {createdFeatures : features, sampleNames},
-            displayData = vcfFeatures2MatrixView(this.requestFormat, sampleGenotypes);
+            displayData = vcfFeatures2MatrixView
+              (this.requestFormat, sampleGenotypes, this.featureFilter.bind(this));
             this.displayData = displayData;
           }
         }
@@ -742,6 +786,9 @@ export default class PanelManageGenotypeComponent extends Component {
     'args.userSettings.filterBySelectedSamples',
     /** showSamplesWithinBrush() uses gtMergeRows */
     'urlOptions.gtMergeRows',
+    /** showSamplesWithinBrush() -> featureFilter() uses .mafUpper, .maf */
+    'args.userSettings.mafUpper',
+    'maf',
   )
   get selectedSampleEffect () {
     const fnName = 'selectedSampleEffect';
