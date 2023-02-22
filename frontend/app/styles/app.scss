@@ -1663,11 +1663,16 @@ div#goto-feature > div
 /* div.ht_clone_top_left_corner > div.wtHolder > div.wtHider > div.wtSpreader > table.htCore > thead > tr > th > div > span.colHeader.cornerHeader */
 div.ht_clone_top_left_corner span.colHeader.cornerHeader {
   /* display: block; */
-  /* depends on Feature name length. */
-  width : 11em;
   white-space : normal;
   margin-top : 5ex;
 }
+#observational-table:not(.gtMergeRows) span.colHeader.cornerHeader {
+  /* depends on rowHeaders() width, i.e.  length of
+   *  (gtMergeRows ? Feature Position : Feature name)
+   */
+  width : 11em;
+}
+    
 
 
 //------------------------------------------------------------------------------

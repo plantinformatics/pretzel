@@ -28,6 +28,16 @@ const vcfColumn2Feature = {
   'ALT' : 'values.alt',
 };
 
+const
+columnOrder = [ 'Ref', 'Alt', 'Haplotype', 'MAF' ],
+columnOrderIndex = columnOrder.reduce(
+  (result, name, index) => {
+    result[name] = index;
+    return result;
+  },
+  {});
+
+
 /** for multiple features in a cell, i.e. merge rows - multiple features at a
  * position from different vcf datasets; could also merge columns (samples).  */
 const cellMultiFeatures = false;
@@ -790,9 +800,10 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
     result);
 
   const
-  /** 'tSNP' is mapped to 'Haplotype' in columnNames, not in the row data. */
+  /** map 'tSNP' to 'Haplotype' in columnNames, not in the row data. */
   columnNames = Array.from(sampleNamesSet.keys())
-    .map((name) => (name === 'tSNP') ? 'Haplotype' : name);
+    .map((name) => (name === 'tSNP') ? 'Haplotype' : name)
+    .sort(columnNamesCmp);
   result.sampleNames.addObjects(columnNames);
 
   dLog(fnName, result.rows.length);
@@ -826,6 +837,20 @@ function featureSampleNames(sampleNamesSet, feature, filterFn) {
 
 
 // -----------------------------------------------------------------------------
+
+/** Used as a .sort() comparator function.
+ * Order the given list of column names to match columnOrder[].
+ */
+function columnNamesCmp(n1, n2) {
+  return columnOrderIndex[n2] - columnOrderIndex[n1];
+}
+function columnNamesSort(columnNames) {
+  const
+  sorted = columnNames.sort(columnNamesCmp);
+  return sorted;
+}
+
+//------------------------------------------------------------------------------
 
 
 export {

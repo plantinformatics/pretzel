@@ -60,6 +60,7 @@ const featureValuesWidths = {
   Name : 180,
   Position : 80,
   End : 80,
+  MAF : 35,
   /*
   ref : 40,
   alt : 40,
@@ -348,7 +349,7 @@ export default Component.extend({
       hiddenColumns: {
         // copyPasteEnabled: default is true,
         indicators: true,
-        columns: [],
+        // columns: [],
       }
     };
     if (this.urlOptions.gtSelectColumn) {
@@ -389,6 +390,9 @@ export default Component.extend({
     if (cornerClones.length > 3) {
       cornerClones[3].textContent = text;
     }
+    /** gtMergeRows : datasetId is not displayed, so width is not set  */
+    let ot = d3.select('#observational-table');
+    ot.classed('gtMergeRows', this.urlOptions.gtMergeRows);
   },
 
 
@@ -676,8 +680,18 @@ export default Component.extend({
       color_scale = d3.scaleLinear().domain(domain)
         .interpolate(d3.interpolateHsl)
         .range([d3.rgb("#0000FF"), d3.rgb('#FFFFFF'), d3.rgb('#FF0000')]),
-      valueInDomain = isMAF ? Math.log10(value) : value;
-      td.style.background = color_scale(valueInDomain);
+      valueInDomain = isMAF ? Math.log10(value) : value,
+      color = color_scale(valueInDomain);
+      /* MAF has sufficient differences now to warrant splitting it off as a separate Renderer. */
+      if (isMAF) {
+        if (value !== null) {
+          td.style.borderLeftColor = color;
+          td.style.borderLeftStyle = 'solid';
+          td.style.borderLeftWidth = '5px';
+        }
+      } else {
+        td.style.background = color;
+      }
       td.title = value;
       $(td).css('font-size', 10);
     }
@@ -774,8 +788,15 @@ export default Component.extend({
       block = feature.blockId,
       datasetId = block?.get('referenceBlockOrSelf.datasetId.id'),
       scope = block?.get('scope');
-      if (datasetId && scope) {
-        text = datasetId + ' ' + scope;
+      if (scope) {
+        text = scope;
+        /* gtMergeRows : rowHeader is Position, which is narrower than name, and
+         * datasetId gets truncated and moves the centre (where scope is
+         * positioned) out of view, so omit it.
+         */
+        if (datasetId && ! this.urlOptions.gtMergeRows) {
+          text = datasetId + ' ' + text;
+        }
       }
     }
     return text;
