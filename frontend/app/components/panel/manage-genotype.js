@@ -172,10 +172,10 @@ export default class PanelManageGenotypeComponent extends Component {
     }
 
     if (userSettings.mafUpper === undefined) {
-      userSettings.mafUpper = true;
+      userSettings.mafUpper = false;
     }
     if (userSettings.mafInt === undefined) {
-      userSettings.mafInt = 100;
+      userSettings.mafInt = 0;
     }
 
     if (this.urlOptions.gtMergeRows === undefined) {
@@ -255,6 +255,16 @@ export default class PanelManageGenotypeComponent extends Component {
     return threshold;
    }
 
+  /** @return < or > to indicate whether .maf is an upper or lower threshold,
+   * respectively, depending on .mafUpper
+   */
+  @computed('args.userSettings.mafUpper')
+  get mafThresholdText() {
+    const
+    text = this.args.userSettings.mafUpper ? '<' : '>';
+    dLog('maf', this.args.userSettings.mafUpper, text);
+    return text;
+   }
 
   //----------------------------------------------------------------------------
 
