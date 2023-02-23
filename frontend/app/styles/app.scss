@@ -1987,10 +1987,13 @@ body:not(.tablesPanelRight) .metaeditor-panel {
   overflow-y: auto;
 }
 /* .view-controls */
-#right-panel-content.right-panel-genotype input#range-maf {
-  width : 10em;
+/* original : #right-panel-content.right-panel-genotype input#range-maf */
+.input-range-text input[type=range] {
+  width : 100%;
 }
-
+.input-range-text input[type=text] {
+  width : 5em;
+}
 
 
 body.tablesPanelRight #right-panel-content.right-panel-dataset > div

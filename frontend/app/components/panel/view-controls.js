@@ -251,6 +251,8 @@ export default Component.extend({
     fn && next(fn);
   },
 
+  /** Factored as components/elem/input-range-text.{js,hbs}, which can be used in place of the following. */
+
   /** sbSizeThreshold is the minimum size for synteny blocks / trapezoids to be displayed.
    * The user has 2 controls for changing the value of sbSizeThreshold : text input and a range slider.
    * For each input this component has an attribute value and a change action function : sbSizeThreshold{Text,Linear}{,Changed}
@@ -279,7 +281,7 @@ export default Component.extend({
        */
       return;
     }
-    if (value !== this.set('sbSizeThreshold')) {
+    if (value !== this.get('sbSizeThreshold')) {
       let linear = expRangeInitial(value, expRangeBase(50, sbSizeThresholdMax));
       dLog('sbSizeThresholdTextChanged', this.sbSizeThresholdText, value, linear);
       /* setting this.sbSizeThresholdLinear updates the range slider because of value= :
@@ -314,7 +316,8 @@ export default Component.extend({
   },
 
   // ---------------------------------------------------------------------------
-  /* copied, with sbSizeThreshold → axisLayerModulus; factor as a sub-component - no time now.
+  /* copied, with sbSizeThreshold → axisLayerModulus; factored as a sub-component :
+   *   components/elem/input-range-text.{js,hbs}, which can now be used here.
    * sbSizeThreshold comments apply similarly here.
    */
   
@@ -333,7 +336,7 @@ export default Component.extend({
     if ((value < 1) || (value > axisLayerModulusMax)) {
       return;
     }
-    if (value !== this.set('axisLayerModulus')) {
+    if (value !== this.get('axisLayerModulus')) {
       let linear = expRangeInitial(value, expRangeBase(50, axisLayerModulusMax));
       dLog('axisLayerModulusTextChanged', this.axisLayerModulusText, value, linear);
       this.set('axisLayerModulusLinear', linear);

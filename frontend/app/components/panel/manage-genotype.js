@@ -1,5 +1,5 @@
 import Component from '@glimmer/component';
-import EmberObject, { computed, action, set } from '@ember/object';
+import EmberObject, { computed, action, set as Ember_set } from '@ember/object';
 import { alias, reads } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
@@ -47,7 +47,7 @@ const trace = 0;
  * .showResultText default: false
  * .filterBySelectedSamples default : true
  * .mafUpper default : true
- * .mafInt default 100
+ * .mafThreshold default 0
  * @see userSettingsDefaults()
  */
 export default class PanelManageGenotypeComponent extends Component {
@@ -174,8 +174,8 @@ export default class PanelManageGenotypeComponent extends Component {
     if (userSettings.mafUpper === undefined) {
       userSettings.mafUpper = false;
     }
-    if (userSettings.mafInt === undefined) {
-      userSettings.mafInt = 0;
+    if (userSettings.mafThreshold === undefined) {
+      userSettings.mafThreshold = 0;
     }
 
     if (this.urlOptions.gtMergeRows === undefined) {
@@ -244,16 +244,10 @@ export default class PanelManageGenotypeComponent extends Component {
 
   //----------------------------------------------------------------------------
 
-  /** @userSettings.mafInt The input slider has an integer value, so mafInt / 100 is the real value. */
+  mafThresholdMin = .001;
+  mafThresholdMax = 1;
+
   /** @userSettings.mafUpper : true means use maf threshold as an upper limit. */
-  @computed('args.userSettings.mafInt')
-  get maf() {
-    const
-    maf = +this.args.userSettings.mafInt,
-    threshold = (maf / 100);
-    dLog('maf', maf, threshold);
-    return threshold;
-   }
 
   /** @return < or > to indicate whether .maf is an upper or lower threshold,
    * respectively, depending on .mafUpper
@@ -262,9 +256,19 @@ export default class PanelManageGenotypeComponent extends Component {
   get mafThresholdText() {
     const
     text = this.args.userSettings.mafUpper ? '<' : '>';
-    dLog('maf', this.args.userSettings.mafUpper, text);
+    dLog('mafThresholdText', this.args.userSettings.mafUpper, text);
     return text;
    }
+
+  /**
+   * @param inputType "text" or "range"
+   */
+  @action
+  mafThresholdChanged(value, inputType) {
+    /* if (trace) { */
+    dLog('mafThresholdChanged', value, inputType);
+    Ember_set(this, 'args.userSettings.mafThreshold', value);
+  }
 
   //----------------------------------------------------------------------------
 
@@ -647,7 +651,7 @@ export default class PanelManageGenotypeComponent extends Component {
     MAF = feature.values.MAF,
     /** don't filter datasets which don't have MAF */
     ok = (MAF === undefined) || 
-      ((+MAF < this.maf) === this.args.userSettings.mafUpper);
+      ((+MAF < this.args.userSettings.mafThreshold) === this.args.userSettings.mafUpper);
     return ok;
   }
 
@@ -798,9 +802,9 @@ export default class PanelManageGenotypeComponent extends Component {
     'args.userSettings.filterBySelectedSamples',
     /** showSamplesWithinBrush() uses gtMergeRows */
     'urlOptions.gtMergeRows',
-    /** showSamplesWithinBrush() -> featureFilter() uses .mafUpper, .maf */
+    /** showSamplesWithinBrush() -> featureFilter() uses .mafUpper, .mafThreshold */
     'args.userSettings.mafUpper',
-    'maf',
+    'args.userSettings.mafThreshold',
   )
   get selectedSampleEffect () {
     const fnName = 'selectedSampleEffect';

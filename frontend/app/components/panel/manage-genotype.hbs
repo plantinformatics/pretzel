@@ -307,7 +307,13 @@ Server :
     <label>Merge Rows</label>
 
     <div style="display : inline-block;">
-      <label for="range-maf" class="inline-margin">MAF Threshold : {{this.mafThresholdText}} {{this.maf}}</label>
+      <Elem::InputRangeText
+        @labelText="MAF Threshold : "
+        @allowZero=true
+        @valueInitial={{this.args.userSettings.mafThreshold}}
+        @valueMin={{this.mafThresholdMin}}
+        @valueMax={{this.mafThresholdMax}}
+        @valueChanged={{action (fn this.mafThresholdChanged)}} >
 
       <span class="filter-group-col">
         <input type="checkbox" id="gtInputMafUpper" name="mafUpper" checked={{@userSettings.mafUpper}}
@@ -317,14 +323,10 @@ Server :
           <span>Use threshold as an upper / lower limit.</span>
         </EmberTooltip>
       </span>
+      
+      {{this.mafThresholdText}}
+      </Elem::InputRangeText>
 
-      <input type="range" 
-       id="range-maf" 
-       name="maf" 
-       min="0" max="100"
-       value={{@userSettings.mafInt}}
-       oninput={{action (mut @userSettings.mafInt) value="target.value"}}
-      >
     </div>
 
   </li>
