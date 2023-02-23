@@ -593,7 +593,7 @@ export default Component.extend(Evented, {
                     cmNameAdd,
                     axisIDAdd,
                     stacksAxesDomVerify : function (unviewedIsOK = false) { stacksAxesDomVerify(stacks, oa.svgContainer, unviewedIsOK); } ,
-                    updateSyntenyBlocksPosition : () => this.get('updateSyntenyBlocksPosition').perform(),
+                    updateSyntenyBlocksPosition : () => this.get('oa.graphFrame.updateSyntenyBlocksPosition').perform(),
                     drawMap : this,  // for debug trace / check.
                        // temporary additions - the definitions will be moved out.
                     sendUpdatedSelectedFeatures,
