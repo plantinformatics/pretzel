@@ -272,6 +272,55 @@ Server :
     {{/elem/panel-container}}
 
 
+    {{#elem/panel-container state="primary" showComponent=true as |panelContainer|}}
+
+      {{#elem/panel-heading icon="transfer" panelContainer=panelContainer}}
+        Haplotype Sample Filters
+      {{/elem/panel-heading}}
+
+      {{#if panelContainer.showComponent}}
+
+        <ul class="list-group">
+          {{#each this.blocksHaplotypeFilters as |blockHF|}}
+            <li class="list-group-item">
+              <label>{{blockHF.block.datasetId.id}}</label>
+              <ul class="list-group">
+                {{#each blockHF.haplotypeFilters as |haplotype|}}
+                  <li class="list-group-item">
+                    <label>{{haplotype}}</label>
+                  </li>
+                {{/each}}
+              </ul>
+
+            </li>
+          {{/each}}
+        </ul>
+
+        <ul class="list-group view-controls">
+
+          <li>
+            <input type="checkbox"
+              style="margin-left: 3em;"
+              checked={{@userSettings.haplotypeFilterRef}}
+              oninput={{action (pipe 
+              (action (mut @userSettings.haplotypeFilterRef) value="target.checked")
+              this.haplotypeFiltersApply) }}  >
+            <label>Filter by Ref</label>
+
+            <button type="button" class="btn btn-info btn-xs" onclick={{action (pipe this.haplotypeFiltersClear this.haplotypeFiltersApply) }} >
+              Clear Haplotype filters
+            </button>
+
+          </li>
+
+
+        </ul>
+
+      {{/if}} {{!-- showComponent --}}
+    {{/elem/panel-container}}
+
+
+
   </div>
 
 
@@ -287,6 +336,8 @@ Server :
   selectedBlock=@selectedBlock
   blockSamples=true
   displayForm=this.requestFormat
+  haplotypeToggle=this.haplotypeToggle
+  haplotypeFilterSamples=this.haplotypeFilterSamples
 }}
 
 {{!---------------------------------------------------------------------------}}

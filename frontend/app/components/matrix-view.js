@@ -354,6 +354,8 @@ export default Component.extend({
     };
     if (this.urlOptions.gtSelectColumn) {
       settings.afterSelection = bind(this, this.afterSelection);
+    } else {
+      settings.afterSelection = bind(this, this.afterSelectionHaplotype);
     }
     let table = new Handsontable(tableDiv, settings);
 
@@ -465,6 +467,10 @@ export default Component.extend({
       columnNames = this.get('columnNames');
       if (columnNames) {
         col_name = columnNames[col];
+        if (col_name === 'Haplotype') {
+          this.haplotypeToggleRC(row, col);
+          return;
+        }
         /* selectedColumnName may be Ref, Alt, or a sample column, not Block, Position, End, Haplotype. */
         if (columnNameIsNotSample(col_name)) {
           col_name = undefined;
@@ -493,6 +499,11 @@ export default Component.extend({
       });
     }
   },
+  afterSelectionHaplotype(row, col) {
+    dLog('afterSelectionHaplotype', row, col);
+    this.haplotypeToggleRC(row, col);
+    later(() => this.table.render(), 1000);
+  },
 
   // ---------------------------------------------------------------------------
 
@@ -502,7 +513,10 @@ export default Component.extend({
       // no column or column does not identify a block
     } else if (this.blockSamples) {
       let feature = tableCoordsToFeature(this.table, coords);
-      block = feature.get('blockId');
+      /* no feature when select on column header.
+       * block is not currently used when blockSamples anyway.
+       */
+      block = feature?.get('blockId');
     } else if (coords.row == -1) {
       let col_name = $(td).find('span').text();
       // ! this.blockSamples, so get .columns from .displayData
@@ -836,6 +850,9 @@ export default Component.extend({
         if (name === 'Alt') {
           options.className += ' col-Alt';
         }
+        if (name === 'Haplotype') {
+          options.afterSelection = bind(this, this.afterSelectionHaplotype);
+        }
         return options;
       });
     return columns;
@@ -863,6 +880,8 @@ export default Component.extend({
         }
       }
     });
+    /* this makes hideColumn() effective */
+    table.render();
 
   },
   /** For each value in .rows (row names), measure the length of the text
@@ -1051,7 +1070,7 @@ export default Component.extend({
       t.show();
       const
       columns = this.columnNamesToColumnOptions(this.columnNames);
-      if (! this.columnNames.includes(this.selectedColumnName)) {
+      if (this.get('selectedColumnName') && ! this.columnNames.includes(this.selectedColumnName)) {
         this.set('selectedColumnName', null);
       }
 
@@ -1199,6 +1218,8 @@ export default Component.extend({
     }
   },
 
+  //----------------------------------------------------------------------------
+
   showSelectedBlockObserver: observer('selectedBlock', function() {
     this.showSelectedBlock(this.selectedBlock);
   }),
@@ -1215,6 +1236,47 @@ export default Component.extend({
       table.selectColumns(col_name);
       $('#matrix-view').find('table').find('th').find('span:contains("' + col_name + '")').addClass('selected');
     }
-  }
+  },
+
+  //----------------------------------------------------------------------------
+
+  /** Called from selection in Haplotype column, which will toggle selection of this Haplotype (tSNP).
+   * manage-genotype passes in action haplotypeToggle, with signature (feature, haplotype).
+   */
+  haplotypeToggleRC(row, col) {
+    const
+    fnName = 'haplotypeToggleRC',
+    coords = {row, col},
+    feature = tableCoordsToFeature(this.table, coords);
+    /** afterSelectionHaplotype() gets called while table is re-rendering, and feature is undefined */
+    if (feature) {
+      const
+      haplotype = feature.values.tSNP;
+      dLog(fnName, coords, feature.name, haplotype);
+      this.haplotypeToggle(feature, haplotype);
+      this.filterSamplesBySelectedHaplotypes();
+    }
+  },
+
+  //----------------------------------------------------------------------------
+
+  filterSamplesBySelectedHaplotypes() {
+    this.haplotypeFilterSamples(this.showHideSampleFn.bind(this), this);
+  },
+  showHideSampleFn(sampleName, counts) {
+    if (counts.matches || counts.mismatches) {
+      const
+      hide = counts.mismatches,
+      columnIndex = this.columnNames.indexOf(sampleName),
+      table = this.table,
+      hiddenColumnsPlugin = table.getPlugin('hiddenColumns');
+      if (hide) {
+        hiddenColumnsPlugin.hideColumn(columnIndex);
+      } else {
+        hiddenColumnsPlugin.showColumn(columnIndex);
+      }
+    }
+    /* caller will do table.render() to make hideColumn() effective */
+  },
 
 });

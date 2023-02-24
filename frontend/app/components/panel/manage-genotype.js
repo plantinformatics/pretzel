@@ -8,6 +8,7 @@ import { A as Ember_A } from '@ember/array';
 
 
 import { toPromiseProxy, toArrayPromiseProxy } from '../../utils/ember-devel';
+import { contentOf } from '../../utils/common/promises';
 import { intervalSize } from '../../utils/interval-calcs';
 import { overlapInterval } from '../../utils/draw/zoomPanCalcs';
 import {
@@ -25,6 +26,19 @@ import { stringCountString } from '../../utils/string';
 const dLog = console.debug;
 
 const trace = 0;
+
+const haplotypeFiltersSymbol = Symbol.for('haplotypeFilters');
+const haplotypeFeaturesSymbol = Symbol.for('haplotypeFeatures');
+const sampleMatchesSymbol = Symbol.for('sampleMatches');
+
+//------------------------------------------------------------------------------
+
+/** Given a key within Feature.values, classify it as sample (genotype data) or other field.
+ */
+function valueNameIsNotSample(valueName) {
+  return ['ref', 'alt', 'tSNP', 'MAF'].includes(valueName);
+}
+
 
 // -----------------------------------------------------------------------------
 
@@ -48,6 +62,7 @@ const trace = 0;
  * .filterBySelectedSamples default : true
  * .mafUpper default : true
  * .mafThreshold default 0
+ * .haplotypeFilterRef default : false
  * @see userSettingsDefaults()
  */
 export default class PanelManageGenotypeComponent extends Component {
@@ -178,6 +193,11 @@ export default class PanelManageGenotypeComponent extends Component {
       userSettings.mafThreshold = 0;
     }
 
+    if (userSettings.haplotypeFilterRef === undefined) {
+      userSettings.haplotypeFilterRef = false;
+    }
+
+
     if (this.urlOptions.gtMergeRows === undefined) {
       this.urlOptions.gtMergeRows = false;
     }
@@ -272,6 +292,85 @@ export default class PanelManageGenotypeComponent extends Component {
 
   //----------------------------------------------------------------------------
 
+  /** User may select tSNP values which are then used to filter samples,
+   * in combination with a flag which selects match with Ref or non-Ref values :
+   * columns of samples with the expected value are displayed.
+   */
+  @action
+  blockHaplotypeFilters(block) {
+    if (block.content) {
+      block = block.content;
+    }
+    const filters = block[haplotypeFiltersSymbol] || (block[haplotypeFiltersSymbol] = Ember_A());
+    return filters;
+  }
+
+  @action
+  haplotypeToggle(feature, haplotype) {
+    const
+    block = feature.get('blockId'),
+    filters = this.blockHaplotypeFilters(block);
+    this.arrayToggleObject(filters, haplotype);
+    this.haplotypeFiltersSet();
+  }
+  /** If object is in array, remove it, otherwise add it.
+   * @param object  any value - string or object, etc
+   */
+  arrayToggleObject(array, object) {
+    const present = array.includes(object);
+    if (present) {
+      /* currently getting multiple calls to afterSelectionHaplotype(), so disable toggle off
+      array.removeObject(object);
+      */
+    } else {
+      array.addObject(object);
+    }
+    return present;
+  }
+
+  @action
+  haplotypeFiltersClear() {
+    dLog('haplotypeFiltersClear');
+    const
+    abBlocks = this.brushedOrViewedVCFBlocks;
+    abBlocks.forEach((abBlock) => {
+      const
+      block = abBlock.block,
+      selected = block[haplotypeFiltersSymbol];
+      if (abBlock.haplotypeFilters !== selected) {
+        dLog('haplotypeFiltersClear', abBlock, abBlock.haplotypeFilters, selected);
+      }
+      if (selected.length) {
+        selected.removeAt(0, selected.length);
+      }
+    });
+    // Refresh display.
+    this.haplotypeFiltersSet();
+    // also done in hbs via action pipe
+    // this.haplotypeFiltersApply();
+  }
+
+  @action
+  haplotypeFiltersApply() {
+    if (this.matrixView && ! this.matrixView.isDestroying) {
+      this.matrixView.filterSamplesBySelectedHaplotypes();
+      later(() => this.matrixView.table.render(), 2000);
+    }
+  }
+  
+
+  /** Use Ember_set() to signal update of tracked properties and trigger re-render. */
+  haplotypeFiltersSet() {
+    dLog('haplotypeFiltersClear');
+    const
+    abBlocks = this.brushedOrViewedVCFBlocks;
+    abBlocks.forEach((abBlock) => {
+      const
+      block = abBlock.block;
+      Ember_set(abBlock, 'haplotypeFilters', abBlock.haplotypeFilters);
+    });
+  }
+
 
   // ---------------------------------------------------------------------------
 
@@ -290,6 +389,21 @@ export default class PanelManageGenotypeComponent extends Component {
   }
 
   // ---------------------------------------------------------------------------
+
+  /** @return array of blocks and the haplotypes selected on them for filtering samples.
+   */
+  @computed('brushedOrViewedVCFBlocks')
+  get blocksHaplotypeFilters() {
+    const
+    fnName = 'blocksHaplotypeFilters',
+    axisBrushes = this.brushedOrViewedVCFBlocks,
+    blocksHF = axisBrushes.map(
+      (ab) => ({block : ab.block, haplotypeFilters : this.blockHaplotypeFilters(ab.block)}));
+    dLog(fnName, axisBrushes, blocksHF);
+    return blocksHF;
+  }
+
+  //----------------------------------------------------------------------------
 
   /** @return the {axisBrush, vcfBlock} selected via gui pull-down
    */
@@ -722,6 +836,9 @@ export default class PanelManageGenotypeComponent extends Component {
           .map((b) => b.featuresInBrush)
           .filter((features) => features.length)
           .map((features) => features.slice(0, this.rowLimit));
+
+        this.collateBlockHaplotypeFeatures(featuresArrays);
+
         if (featuresArrays.length) {
           if (this.urlOptions.gtMergeRows) {
             /** {rows, sampleNames}; */
@@ -815,6 +932,84 @@ export default class PanelManageGenotypeComponent extends Component {
       this.displayData.removeAt(0, this.displayData.length);
     }
     this.showSamplesWithinBrush();
+  }
+
+  //----------------------------------------------------------------------------
+
+  /** Construct a map from haplotype / tSNP values to Feature arrays.
+   * @param featuresArrays  array of arrays of features, 1 array per block
+   */
+  collateBlockHaplotypeFeatures(featuresArrays) {
+    featuresArrays
+      .forEach(
+        (features) => {
+          const
+          blockp = features?.[0].get('blockId'),
+          /** blockp may be a proxy; want the actual Block, for reference via Symbol */
+          block = blockp && contentOf(blockp),
+          map = block[haplotypeFeaturesSymbol] || (block[haplotypeFeaturesSymbol] = {});
+          features
+          .reduce(
+            (map, feature) => {
+              const
+              tSNP = feature.values?.tSNP;
+              if (tSNP) {
+                const features = map[tSNP] || (map[tSNP] = Ember_A());
+                features.push(feature);
+              }
+              return map;
+            },
+            map);
+        }
+      );
+  }
+
+  /**
+   * design :
+   * block *
+   *   Haplotype / tSNP *
+   *     feature *
+   *       sample *
+   *         accumulate : block : sample : count of matches and mismatches 
+   */
+  @action
+  haplotypeFilterSamples(showHideSampleFn, matrixView) {
+    const
+    matchRef = this.args.userSettings.haplotypeFilterRef,
+    matchKey = matchRef ? 'ref' : 'alt',
+    matchNumber = matchRef ? '0' : '2',
+    ablocks = this.brushedOrViewedVCFBlocks;
+    ablocks.forEach((abBlock) => {
+      const
+      block = abBlock.block,
+      selected = block[haplotypeFiltersSymbol],
+      matchesR = selected.reduce((matches, tSNP) => {
+        const features = block[haplotypeFeaturesSymbol][tSNP];
+        features.forEach((feature) => {
+          const
+          matchValue = feature.values[matchKey];
+          Object.entries(feature.values).forEach(([key, value]) => {
+            if (! valueNameIsNotSample(key)) {
+              const match = (value === matchNumber) || value.startsWith(matchValue);
+              const sampleMatch = matches[key] || (matches[key] = {matches: 0, mismatches : 0});
+              sampleMatch[match ? 'matches' : 'mismatches']++;
+            }
+          });
+        });
+        return matches;
+      }, {});
+      block[sampleMatchesSymbol] = matchesR;
+      /* 
+       * block *
+       *   sample*
+       *     show/hide according to count
+       */
+        Object.entries(matchesR).forEach(([sampleName, counts]) => {
+        showHideSampleFn(sampleName, counts);
+      });
+    });
+    // to enable trialling of action to filer after Clear
+    this.matrixView = matrixView;
   }
 
 
