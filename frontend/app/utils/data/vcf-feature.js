@@ -29,7 +29,7 @@ const vcfColumn2Feature = {
 };
 
 const
-columnOrder = [ 'Ref', 'Alt', 'Haplotype', 'MAF' ],
+columnOrder = [ 'MAF', 'Haplotype', 'Ref', 'Alt' ],
 columnOrderIndex = columnOrder.reduce(
   (result, name, index) => {
     result[name] = index;
@@ -842,7 +842,7 @@ function featureSampleNames(sampleNamesSet, feature, filterFn) {
  * Order the given list of column names to match columnOrder[].
  */
 function columnNamesCmp(n1, n2) {
-  return columnOrderIndex[n2] - columnOrderIndex[n1];
+  return columnOrderIndex[n1] - columnOrderIndex[n2];
 }
 function columnNamesSort(columnNames) {
   const
