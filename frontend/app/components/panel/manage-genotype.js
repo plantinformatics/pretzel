@@ -730,6 +730,15 @@ export default class PanelManageGenotypeComponent extends Component {
               this.args.selectedFeatures, text);
 
             if (added.createdFeatures && added.sampleNames) {
+              /* Update the filtered-out samples, including the received data,
+               * for the selected haplotypeFilters.
+               * The received data (createdFeatures) is in lookupBlock, so could
+               * limit this update to lookupBlock.
+               * showHideSampleFn is passed undefined - this is just updating
+               * the sample status, and table display is done by
+               * showSamplesWithinBrush().
+               */
+              this.haplotypeFilterSamples(/*showHideSampleFn*/undefined, /*matrixView*/undefined);
               const showOtherBlocks = true;
               if (showOtherBlocks) {
                 this.showSamplesWithinBrush();
@@ -1008,17 +1017,21 @@ export default class PanelManageGenotypeComponent extends Component {
         return matches;
       }, {});
       block[sampleMatchesSymbol] = matchesR;
-      /* 
-       * block *
-       *   sample*
-       *     show/hide according to count
-       */
+      if (showHideSampleFn) {
+        /* 
+         * block *
+         *   sample*
+         *     show/hide according to count
+         */
         Object.entries(matchesR).forEach(([sampleName, counts]) => {
-        showHideSampleFn(sampleName, counts);
-      });
+          showHideSampleFn(sampleName, counts);
+        });
+      }
     });
-    // to enable trialling of action to filer after Clear
-    this.matrixView = matrixView;
+    if (matrixView) {
+      // to enable trialling of action to filer after Clear
+      this.matrixView = matrixView;
+    }
   }
 
 
