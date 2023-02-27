@@ -3,6 +3,7 @@ import { A as Ember_A } from '@ember/array';
 
 import { toTitleCase } from '../string';
 import { stringGetFeature, stringSetFeature } from '../panel/axis-table';
+import { contentOf } from '../common/promises';
 
 // -----------------------------------------------------------------------------
 
@@ -11,6 +12,7 @@ const dLog = console.debug;
 const trace = 1;
 
 const featureSymbol = Symbol.for('feature');
+const sampleMatchesSymbol = Symbol.for('sampleMatches');
 
 /** number of columns in the vcf output before the first sample column. */
 const nColumnsBeforeSamples = 9;
@@ -505,6 +507,47 @@ function featureMafValue(feature) {
   return maf;
 }
 
+//------------------------------------------------------------------------------
+
+/** @return true if sampleName is filtered out by haplotypeFilters.
+ * @param block which contains tSNP / haplotype which is applying a filter to sampleName.
+ * block is defined.
+ * @param sampleName
+ * @return true / false or undefined; if undefined then the sample is not
+ * filtered out - there may be no filter on this block.
+ */
+function sampleIsFilteredOut(block, sampleName) {
+  /* can return hide=undefined if ! block[haplotypeFiltersSymbol] - probably no faster. */
+  const
+  matches = block[sampleMatchesSymbol];
+  let hide;
+  if (matches) {
+    const counts = matches[sampleName];
+    /** also done in matrix-view.js : showHideSampleFn() */
+    hide = counts.mismatches;
+  }
+  return hide;
+}
+/** @see sampleIsFilteredOut()
+ * @param blocks array of blocks which are displayed in the genotype table;
+ * this derives from brushedVCFBlocks.
+ * @param sampleName
+ * sampleName may be present in multiple blocks, but in practice the name prefix
+ * will differ, and possibly also naming system.
+ * @return true / false or undefined; if undefined then the sample is not
+ * filtered out - there may be no filter on its block.
+ */
+function sampleIsFilteredOutBlocks(blocks, sampleName) {
+  const
+  /** find if one of the blocks defines a show/hide status for sampleName.
+   * block can be skipped if ! block[haplotypeFiltersSymbol]; probably similar execution time.
+   */
+  block = blocks.find((block) => block[sampleMatchesSymbol]?.[sampleName]),
+  hide = block && sampleIsFilteredOut(block, sampleName);
+  return hide;
+}
+
+//------------------------------------------------------------------------------
 
 
 
@@ -581,7 +624,13 @@ function vcfFeatures2MatrixView(requestFormat, added, featureFilter) {
 
   const leftColumns = [blockColourColumn].concat(valueColumns, mafColumn, haplotypeColourColumn, refAltColumns);
 
-  let displayData = sampleNames.reduce((result, sampleName) => {
+  const
+  blocksArray = Array.from(blocks.keys()),
+  displayData = sampleNames
+    /* alternatively, could filter sampleName after : if (featuresMatchSample),
+     * at that point block is known; this is probably more efficient. */
+    .filter((sampleName) => ! sampleIsFilteredOutBlocks(blocksArray, sampleName))
+    .reduce((result, sampleName) => {
     /** if any features of a block contain sampleName, then generate a
      * block:sampleName column, with all features of all blocks, in
      * feature.value[0] order - empty where block has no feature.
@@ -739,6 +788,7 @@ function vcfFeatures2MatrixViewRows(requestFormat, featuresArrays, featureFilter
 function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featureFilter) {
   const fnName = 'vcfFeatures2MatrixViewRowsResult';
   const showHaplotypeColumn = features.length && features[0].values.tSNP;
+  const block = features.length && contentOf(features[0].blockId);
 
   let sampleNamesSet = new Set();
 
@@ -748,7 +798,7 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
       if (featureFilter(feature)) {
         const
         position = feature.get('value.0'),
-        row = (res.rows[position] ||= {}),
+        row = (res.rows[position] ||= ({})),
         blockColourValue = featureBlockColourValue(feature);
         /* related to vcfFeatures2MatrixView() : blockColourColumn,  */
         row.Block = stringSetFeature(blockColourValue, feature);
@@ -772,6 +822,7 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
         const
         featureSamples = feature.get('values');
         Object.entries(featureSamples)
+          .filter(([sampleName, sampleValue]) => ! sampleIsFilteredOut(block, sampleName))
           // .filter(([sampleName, sampleValue]) => ! ['tSNP', 'MAF'].includes(sampleName))
           .reduce(
           (res2, [sampleName, sampleValue]) => {

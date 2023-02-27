@@ -331,7 +331,8 @@ export default class PanelManageGenotypeComponent extends Component {
 
   @action
   haplotypeFiltersClear() {
-    dLog('haplotypeFiltersClear');
+    const fnName = 'haplotypeFiltersClear';
+    dLog(fnName);
     const
     abBlocks = this.brushedOrViewedVCFBlocks;
     abBlocks.forEach((abBlock) => {
@@ -339,7 +340,7 @@ export default class PanelManageGenotypeComponent extends Component {
       block = abBlock.block,
       selected = block[haplotypeFiltersSymbol];
       if (abBlock.haplotypeFilters !== selected) {
-        dLog('haplotypeFiltersClear', abBlock, abBlock.haplotypeFilters, selected);
+        dLog(fnName, abBlock, abBlock.haplotypeFilters, selected);
       }
       if (selected.length) {
         selected.removeAt(0, selected.length);
@@ -362,7 +363,7 @@ export default class PanelManageGenotypeComponent extends Component {
 
   /** Use Ember_set() to signal update of tracked properties and trigger re-render. */
   haplotypeFiltersSet() {
-    dLog('haplotypeFiltersClear');
+    dLog('haplotypeFiltersSet');
     const
     abBlocks = this.brushedOrViewedVCFBlocks;
     abBlocks.forEach((abBlock) => {
