@@ -579,7 +579,7 @@ function vcfFeatures2MatrixView(requestFormat, added, featureFilter) {
       datasetId : {id : ''},
       name : refAltHeadings[i]}));
 
-  const leftColumns = [blockColourColumn].concat(valueColumns, haplotypeColourColumn, mafColumn, refAltColumns);
+  const leftColumns = [blockColourColumn].concat(valueColumns, mafColumn, haplotypeColourColumn, refAltColumns);
 
   let displayData = sampleNames.reduce((result, sampleName) => {
     /** if any features of a block contain sampleName, then generate a

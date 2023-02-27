@@ -298,6 +298,7 @@ export default class PanelManageGenotypeComponent extends Component {
    */
   @action
   blockHaplotypeFilters(block) {
+    // equivalent : block = contentOf(block);
     if (block.content) {
       block = block.content;
     }
@@ -978,6 +979,13 @@ export default class PanelManageGenotypeComponent extends Component {
     matchRef = this.args.userSettings.haplotypeFilterRef,
     matchKey = matchRef ? 'ref' : 'alt',
     matchNumber = matchRef ? '0' : '2',
+    /** to match homozygous could use .startsWith(); that will also match 1/2 of heterozygous.
+     * Will check on (value === '1') : should it match depending on matchRef ?
+     * @param value sample/individual value at feature / SNP
+     * @param matchValue  ref/alt value at feature / SNP (depends on matchRef)
+     */
+    matchFn = (value, matchValue) => (value === matchNumber) || (value === '1') || value.includes(matchValue),
+
     ablocks = this.brushedOrViewedVCFBlocks;
     ablocks.forEach((abBlock) => {
       const
@@ -990,7 +998,7 @@ export default class PanelManageGenotypeComponent extends Component {
           matchValue = feature.values[matchKey];
           Object.entries(feature.values).forEach(([key, value]) => {
             if (! valueNameIsNotSample(key)) {
-              const match = (value === matchNumber) || value.startsWith(matchValue);
+              const match = matchFn(value, matchValue);
               const sampleMatch = matches[key] || (matches[key] = {matches: 0, mismatches : 0});
               sampleMatch[match ? 'matches' : 'mismatches']++;
             }
