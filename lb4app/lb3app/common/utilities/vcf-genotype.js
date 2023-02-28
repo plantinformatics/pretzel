@@ -60,6 +60,8 @@ function vcfGenotypeLookup(parent, scope, preArgs, nLines, dataOutCb, cb) {
   }
   if (preArgs.samples?.length) {
     moreParams = moreParams.concat('-s', preArgs.samples.replaceAll('\n', ','));
+  } else if (preArgs.requestSamples === 'All') {
+    // bcftools default is All samples, no option required.
   } else {
     // There is not an option for 0 samples, except via using an empty file :
     moreParams = moreParams.concat('-S', '/dev/null');

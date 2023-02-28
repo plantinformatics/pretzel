@@ -51,6 +51,7 @@ const cellMultiFeatures = false;
  * @param auth  auth service for ajax
  * @param server store to add the features to
  * @param samples to request, may be undefined or []
+ * Not used if requestSamples === 'All'
  * @param domainInteger  [start,end] of interval, where start and end are integer values
  * @param requestOptions :
  * . requestFormat 'CATG' (%TGT) or 'Numerical' (%GT for 01)
@@ -65,10 +66,10 @@ function vcfGenotypeLookup(auth, server, samples, domainInteger, requestOptions,
   fnName = 'vcfGenotypeLookup',
 
   region = scope + ':' + domainInteger.join('-'),
-  {requestFormat, headerOnly} = requestOptions,
+  {requestFormat, requestSamples, headerOnly} = requestOptions,
   /** this dataset has tSNP in INFO field */
   requestInfo = requestFormat && (vcfDatasetId === 'Triticum_aestivum_IWGSC_RefSeq_v1.0_vcf_data'),
-  preArgs = {region, samples, requestFormat, headerOnly, requestInfo};
+  preArgs = {region, samples, requestFormat, requestSamples, headerOnly, requestInfo};
   // parent is .referenceDatasetName
 
 

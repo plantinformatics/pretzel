@@ -390,6 +390,19 @@ export default class PanelManageGenotypeComponent extends Component {
     this.requestFormat = value;
   }
 
+  //----------------------------------------------------------------------------
+
+  /** The user can choose how to determine the samples to request from bcftools.
+   * input radio : choose how to specify which samples / individuals to request genotype of. 
+   * requestSamples : string : 'Selected', 'All', 'Filtered'
+   */
+  @tracked
+  requestSamples = undefined;
+  requestSamplesChanged(value) {
+    dLog('requestSamplesChanged', value);
+    this.requestSamples = value;
+  }
+
   // ---------------------------------------------------------------------------
 
   /** @return array of blocks and the haplotypes selected on them for filtering samples.
@@ -511,6 +524,7 @@ export default class PanelManageGenotypeComponent extends Component {
   //------------------------------------------------------------------------------
 
   /** @return selectedSamples of the given blocks
+   * If no samples are selected, result is [].
    * @param blocks  VCF blocks, which may be brushed
    */
   blocksSelectedSamples(blocks) {
@@ -518,6 +532,7 @@ export default class PanelManageGenotypeComponent extends Component {
     fnName = 'blocksSelectedSamples',
     brushedVCFDatasetIds = blocks.map((block) => block.get('datasetId.id')),
     selected = brushedVCFDatasetIds.map((datasetId) => this.vcfGenotypeSamplesSelectedAll[datasetId])
+      .filter((a) => a)
       .flat();
     return selected;
   }
@@ -685,6 +700,23 @@ export default class PanelManageGenotypeComponent extends Component {
 
   // ---------------------------------------------------------------------------
 
+  /** if .requestSamples !== 'All', collate samples.
+   * @return {samples, samplesOK}, which samplesOK is true if All or samples.length
+   */
+  get samplesOK() {
+    let samples;
+    const
+    ok = this.requestSamples === 'All';
+    if (! ok) {
+      const
+      samplesRaw = this.vcfGenotypeSamplesSelected || [];
+      /** result is 1 string of names, separated by 1 newline.  */
+      samples = samplesRaw?.join('\n');
+      ok = samples?.length;
+    }
+    return {samples, samplesOK : ok};
+  }
+
   /** Lookup the genotype for the selected samples in the interval of the brushed block.
    */
   vcfGenotypeLookup() {
@@ -693,17 +725,16 @@ export default class PanelManageGenotypeComponent extends Component {
     /** this.axisBrush.block is currently the reference; lookup the data block. */
     // store = this.axisBrush?.get('block.store'),
     store = this.apiServerSelectedOrPrimary?.store,
-    samplesRaw = this.vcfGenotypeSamplesSelected,
-    /** result is 1 string of names, separated by 1 newline.  */
-    samples = samplesRaw?.join('\n'),
+    {samples, samplesOK} = this.samplesOK,
     domainInteger = this.vcfGenotypeLookupDomain,
     vcfDatasetId = this.lookupDatasetId;
-    if (samples?.length && domainInteger && vcfDatasetId) { // && scope
+    if (samplesOK && domainInteger && vcfDatasetId) { // && scope
       this.lookupMessage = null;
       let
       scope = this.lookupScope,
       requestFormat = this.requestFormat,
-      requestOptions = {requestFormat},
+      requestSamples = this.requestSamples,
+      requestOptions = {requestFormat, requestSamples},
       textP = vcfGenotypeLookup(this.auth, this.apiServerSelectedOrPrimary, samples, domainInteger,  requestOptions, vcfDatasetId, scope, this.rowLimit);
       // re-initialise file-anchor with the new @data
       this.vcfExportText = null;
@@ -975,13 +1006,17 @@ export default class PanelManageGenotypeComponent extends Component {
       );
   }
 
-  /**
+  /** for brushedOrViewedVCFBlocks, apply any haplotypeFilters which the blocks have.
+   *
    * design :
    * block *
    *   Haplotype / tSNP *
    *     feature *
    *       sample *
    *         accumulate : block : sample : count of matches and mismatches 
+   *
+   * @param showHideSampleFn if provided, after filtering, call this for each
+   * sample to hide/show the column.
    */
   @action
   haplotypeFilterSamples(showHideSampleFn, matrixView) {
@@ -1041,16 +1076,16 @@ export default class PanelManageGenotypeComponent extends Component {
   get headerTextP() {
     const
     fnName = 'headerText',
-    samplesRaw = this.vcfGenotypeSamplesSelected || [],
-    samples = samplesRaw?.join('\n'),
+    {samples, samplesOK} = this.samplesOK,
     domainInteger = [0, 1],
     vcfDatasetId = this.lookupDatasetId,
     scope = this.lookupScope;
     let textP;
-    if (samples?.length && scope && vcfDatasetId) {
+    if (samplesOK && scope && vcfDatasetId) {
       const
       requestFormat = this.requestFormat,
-      requestOptions = {requestFormat, headerOnly : true};
+      requestSamples = this.requestSamples,
+      requestOptions = {requestFormat, requestSamples, headerOnly : true};
       /** these params are not applicable when headerOnly : samples, domainInteger, rowLimit. */
       textP = vcfGenotypeLookup(
         this.auth, this.apiServerSelectedOrPrimary, samples, domainInteger,
