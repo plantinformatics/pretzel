@@ -313,14 +313,20 @@ Server :
 
       {{#if panelContainer.showComponent}}
 
-        <ul class="list-group">
+        <ul class="list-group haplotypeFilters">
           {{#each this.blocksHaplotypeFilters as |blockHF|}}
             <li class="list-group-item">
               <label>{{blockHF.block.datasetId.id}}</label>
               <ul class="list-group">
                 {{#each blockHF.haplotypeFilters as |haplotype|}}
                   <li class="list-group-item">
-                    <label>{{haplotype}}</label>
+                    <div>
+                      {{!-- 2 nbsp creates a square block --}}
+                      <span style="background-color : {{compute this.haplotypeColour haplotype }}">
+                        &nbsp; &nbsp;
+                      </span>
+                      {{haplotype}}
+                    </div>
                   </li>
                 {{/each}}
               </ul>

@@ -183,6 +183,7 @@ function nRows2HeightEx(nRows) {
  *   afterOnCellMouseDown -> selectBlock (column name)
  */
 export default Component.extend({
+  haplotypeService : service('data/haplotype'),
   queryParamsService : service('query-params'),
 
   urlOptions : alias('queryParamsService.urlOptions'),
@@ -738,7 +739,7 @@ export default Component.extend({
       const
       haplotypes = this.haplotypes,
       haplotype = haplotypes[tSNP] || (haplotypes[tSNP] = {column : this.haplotypeColumn++}),
-      colour = this.haplotypeColourScale(haplotype.column);
+      colour = this.haplotypeColourScale(tSNP); // originally haplotype.column
       td.style.background = colour;
     }
     $(td).text(' ');
@@ -746,13 +747,28 @@ export default Component.extend({
 
   //----------------------------------------------------------------------------
 
+  /** Map from tSNP number to column offset.
+   * Each tSNP / haplotype is allocated the next successive column offset.
+   *
+   * The original specification was for the display to offset the colour block
+   * in the Haplotype / tSNP column, so that tSNP sets could be correlated
+   * visually; this may not be necessary because the colour block makes it
+   * fairly clear; this may be re-evaluated when larger numbers of sets cause
+   * colour cycling in the palette.
+   *
+   * There may be multiple tSNP columns in the genotype table - on one axis
+   * there may be multiple VCF datasets with tSNP - the plan is to have a
+   * separate colum for each; then these attributes .haplotypes,
+   * .haplotypeColumn, .haplotypeColourScale should be per-dataset.
+   */
   haplotypes : {},
+  /** Current column offset - this will be used for the next tSNP / haplotype.
+   */
   haplotypeColumn : 0,
 
-  haplotypeColourScale : computed( function () { 
-    let scale = d3.scaleOrdinal().range(d3.schemeCategory20);
-    return scale;
-  }),
+  /** Map from column offset (maybe later tSNP number) to the colour assigned to
+   * this tSNP (Tagged SNP set).  */
+  haplotypeColourScale : alias('haplotypeService.haplotypeColourScale'),
 
   // ---------------------------------------------------------------------------
 

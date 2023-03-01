@@ -1996,6 +1996,18 @@ body:not(.tablesPanelRight) .metaeditor-panel {
 }
 
 
+.haplotypeFilters ul .list-group-item
+{
+  /* reduce vertical padding.  Inherit horizontal padding : 15px from
+   * bootstap list-group.scss : .list-group-item */
+  padding: 3px 15px;
+}
+/* gap between colour block and tSNP number (text) */
+.haplotypeFilters ul .list-group-item > div > span
+{
+  margin-right: 1em;
+}
+
 body.tablesPanelRight #right-panel-content.right-panel-dataset > div
 {
   height:650px;

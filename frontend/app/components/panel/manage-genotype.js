@@ -81,12 +81,15 @@ export default class PanelManageGenotypeComponent extends Component {
   @service('data/flows-collate') flowsService;
   @service('data/block') blockService;
   @service('data/vcf-genotype') sampleCache;
+  @service('data/haplotype') haplotypeService;
   @service('query-params') queryParamsService;
 
 
   @alias('controls.apiServerSelectedOrPrimary') apiServerSelectedOrPrimary;
 
   @alias('queryParamsService.urlOptions') urlOptions;
+
+  @alias('haplotypeService.haplotypeColourScale') haplotypeColourScale;
 
 
   // ---------------------------------------------------------------------------
@@ -312,6 +315,7 @@ export default class PanelManageGenotypeComponent extends Component {
   /** User may select tSNP values which are then used to filter samples,
    * in combination with a flag which selects match with Ref or non-Ref values :
    * columns of samples with the expected value are displayed.
+   * @return [] of tSNP
    */
   @action
   blockHaplotypeFilters(block) {
@@ -329,6 +333,7 @@ export default class PanelManageGenotypeComponent extends Component {
     block = feature.get('blockId'),
     filters = this.blockHaplotypeFilters(block);
     this.arrayToggleObject(filters, haplotype);
+    // Refresh display.
     this.haplotypeFiltersSet();
   }
   /** If object is in array, remove it, otherwise add it.
@@ -390,6 +395,14 @@ export default class PanelManageGenotypeComponent extends Component {
     });
   }
 
+  /** Map haplotype / tSNP to a colour
+   * @param tSNP  string represention of a number
+   */
+  @action
+  haplotypeColour(tSNP) {
+    const colour = this.haplotypeColourScale(tSNP);
+    return colour;
+  }
 
   // ---------------------------------------------------------------------------
 
