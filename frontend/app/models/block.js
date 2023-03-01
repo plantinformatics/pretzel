@@ -342,18 +342,30 @@ export default Model.extend({
     let isQTL =  this.hasTag('QTL') || this.get('datasetId._meta.type') === 'QTL';
     return isQTL;
   }),
+  isVCF : computed('datasetId.tags', function () {
+    let isVCF = this.hasTag('VCF');
+    return isVCF;
+  }),
   /** Result indicates how axis-tracks display of features of this block should be coloured.
    * @return
    *  undefined for blockColour,
    *  !== undefined for featureColour, e.g. :
    * 'Ontology' for ontologyColour,
    * 'Trait' for traitColour.
+   * 'Haplotype' for haplotypeColour.
    */
   get useFeatureColour() {
+    let qtlColourBy = this.get('controls.viewed.qtlColourBy');
     let useColour;
-    if (this.get('isQTL')) {
-      let qtlColourBy = this.get('controls.viewed.qtlColourBy');
-      useColour = qtlColourBy && (qtlColourBy !== 'Block') ? qtlColourBy : undefined;
+    /** To disable haplotypeColour when 'Block' is selected :
+     *   Move the VCF case to after the QTL case
+     */
+    if (this.get('isVCF')) {
+      useColour = 'Haplotype';
+    } else if (! qtlColourBy || (qtlColourBy === 'Block')) {
+      useColour = undefined;
+    } else if (this.get('isQTL')) {
+      useColour = qtlColourBy;
     }
     return useColour;
   },

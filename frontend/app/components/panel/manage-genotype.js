@@ -579,7 +579,7 @@ export default class PanelManageGenotypeComponent extends Component {
       axis1d = ab.block.get('axis1d'),
       vcfBlocks = axis1d.brushedBlocks
         .filter(
-          (b) => b.get('datasetId').content.hasTag('VCF')),
+          (b) => b.get('isVCF')),
       ab1 = vcfBlocks.map((block) => ({axisBrush : ab, block}));
       return ab1;
     })
@@ -620,7 +620,7 @@ export default class PanelManageGenotypeComponent extends Component {
     const
     fnName = 'viewedVCFBlocks',
     vcfBlocks = this.blockService.viewed.filter(
-      (b) => b.get('datasetId').content.hasTag('VCF')),
+      (b) => b.get('isVCF')),
     blocks = vcfBlocks.map((block) => ({
       axisBrush : EmberObject.create({block : block.referenceBlock}),
       block}));
@@ -927,7 +927,7 @@ export default class PanelManageGenotypeComponent extends Component {
             b.get('featuresCountIncludingBrush') <= this.rowLimit);
        */
       if (blocks.length === 0) {
-        blocks = this.blockService.viewed.filter((b) => b.hasTag('VCF'));
+        blocks = this.blockService.viewed.filter((b) => b.get('isVCF'));
       }
       dLog(fnName, blocks.mapBy('id'));
       if (blocks.length) {

@@ -1602,10 +1602,23 @@ export default InAxis.extend({
       }
       let
       qtlColourBy = block.get('useFeatureColour'),
-      featureColour = qtlColourBy ?
-          (interval) => {
+      /** Alternately this can be enabled by (qtlColourBy !== 'Block') - that is
+       * implemented in block : useFeatureColour()
+       */
+      useHaplotypeColour = block && block.get('isVCF'),
+      /** @param g[i] is <rect>
+       * @param this is <g clip-path>, the parent of <rect class="track" >
+       */
+      featureColour = useHaplotypeColour || qtlColourBy ?
+          (interval, i, g) => {
             let feature = thisAt.featureData2Feature.get(interval);
-            return feature.colour(qtlColourBy); } :
+            /** when haplotypeColour is undefined, e.g. tSNP === undefined or
+             * '.', fall back to blockTrackColourI().
+             */
+            const
+            trackRect = g[i],
+            colour = feature.colour(qtlColourBy) || blockTrackColourI.apply(trackRect);
+            return colour; } :
           blockTrackColourI;
 
       rm
