@@ -525,10 +525,12 @@ function sampleIsFilteredOut(block, sampleName) {
   const
   matches = block[sampleMatchesSymbol];
   let hide;
+  // matches may be empty
   if (matches) {
+    /** matches may not contain all samples of block, because of samplesLimit. */
     const counts = matches[sampleName];
     /** also done in matrix-view.js : showHideSampleFn() */
-    hide = counts.mismatches;
+    hide = counts?.mismatches;
   }
   return hide;
 }

@@ -2008,6 +2008,17 @@ body:not(.tablesPanelRight) .metaeditor-panel {
   margin-right: 1em;
 }
 
+.border-none-lgi .list-group-item
+{
+  border : none;
+}
+li.list-group-item.horiz-2 > div.samplesLimit
+{
+  width : 19em;
+  margin-top : 2em;
+}
+
+
 body.tablesPanelRight #right-panel-content.right-panel-dataset > div
 {
   height:650px;

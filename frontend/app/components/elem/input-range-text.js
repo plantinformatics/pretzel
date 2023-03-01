@@ -176,6 +176,13 @@ function digitsRound(x, digits) {
    */
   decPlaces = -Math.log10(x);
   if (decPlaces > 0) { digits += 2 + decPlaces; }
+  /** if the upper limit is 10^(digits) and x is exactly the upper limit
+   * (or slightly larger, because of floating point precision),
+   * then truncating at (digits) would result in (upper limit)/10.
+   */
+  if (xs[digits+1] === '.') {
+    digits++;
+  }
   const trunc = xs.slice(0, digits);
   return +trunc;
 }

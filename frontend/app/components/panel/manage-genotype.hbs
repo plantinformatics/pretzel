@@ -229,6 +229,26 @@ Server :
            min="1" max="1000"
           />
         </div>
+
+        <div class="samplesLimit border-none-lgi">
+          <Elem::InputRangeText
+            @labelText="Samples Limit : "
+            @allowZero=true
+            @valueInitial={{this.args.userSettings.samplesLimit}}
+            @valueMin=1
+            @valueMax=1000
+            @valueChanged={{action (fn this.samplesLimitChanged)}}
+            @disabled={{not @userSettings.samplesLimitEnable}} >
+
+            <input type="checkbox"
+              checked={{@userSettings.samplesLimitEnable}}
+              oninput={{action (mut @userSettings.samplesLimitEnable) value="target.checked"}}  >
+
+          </Elem::InputRangeText>
+        </div>
+
+
+
       </li>
 
       </ul>

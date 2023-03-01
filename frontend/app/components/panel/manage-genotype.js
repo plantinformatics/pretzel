@@ -64,6 +64,8 @@ function valueNameIsNotSample(valueName) {
  * .filterBySelectedSamples default : true
  * .mafUpper default : true
  * .mafThreshold default 0
+ * .samplesLimit default 10
+ * .samplesLimitEnable default true
  * .haplotypeFilterRef default : false
  *
  * The user can choose how to determine the samples to request from bcftools.
@@ -205,6 +207,13 @@ export default class PanelManageGenotypeComponent extends Component {
       userSettings.mafThreshold = 0;
     }
 
+    if (userSettings.samplesLimit === undefined) {
+      userSettings.samplesLimit = 10;
+    }
+    if (userSettings.samplesLimitEnable === undefined) {
+      userSettings.samplesLimitEnable = true;
+    }
+
     if (userSettings.haplotypeFilterRef === undefined) {
       userSettings.haplotypeFilterRef = false;
     }
@@ -308,6 +317,18 @@ export default class PanelManageGenotypeComponent extends Component {
     /* if (trace) { */
     dLog('mafThresholdChanged', value, inputType);
     Ember_set(this, 'args.userSettings.mafThreshold', value);
+  }
+
+  //----------------------------------------------------------------------------
+
+  /**
+   * @param inputType "text" or "range"
+   */
+  @action
+  samplesLimitChanged(value, inputType) {
+    /* if (trace) { */
+    dLog('samplesLimitChanged', value, inputType);
+    Ember_set(this, 'args.userSettings.samplesLimit', Math.round(value));
   }
 
   //----------------------------------------------------------------------------
@@ -717,9 +738,11 @@ export default class PanelManageGenotypeComponent extends Component {
     const
     userSettings = this.args.userSettings,
     requestSamplesAll = userSettings.requestSamplesAll,
-    requestSamplesFiltered = userSettings.requestSamplesFiltered;
+    requestSamplesFiltered = userSettings.requestSamplesFiltered,
+    samplesLimitEnable = userSettings.samplesLimitEnable;
 
-    if (requestSamplesAll && requestSamplesFiltered && ! this.vcfGenotypeSamplesText) {
+    if (requestSamplesAll && (requestSamplesFiltered || samplesLimitEnable) &&
+        ! this.vcfGenotypeSamplesText) {
       dLog('ensureSamples');
       this.vcfGenotypeSamples();
     }
@@ -744,15 +767,18 @@ export default class PanelManageGenotypeComponent extends Component {
   /** Determine sample names to request genotype for.
    * if ! .requestSamplesAll, use selected samples.
    * Filter if .requestSamplesFiltered.
+   * @param limitSamples if true, apply this.samplesLimit.  Equal to
+   * .samplesLimitEnable except when requesting headers - headerTextP().
    * @return {samples, samplesOK}, where samplesOK is true if All or samples.length
    */
-  get samplesOK() {
+  samplesOK(limitSamples) {
     let samplesRaw, samples;
     const
     userSettings = this.args.userSettings,
     requestSamplesAll = userSettings.requestSamplesAll,
-    requestSamplesFiltered = userSettings.requestSamplesFiltered;
-    let ok = requestSamplesAll && ! requestSamplesFiltered;
+    requestSamplesFiltered = userSettings.requestSamplesFiltered,
+    samplesLimit = userSettings.samplesLimit;
+    let ok = requestSamplesAll && ! requestSamplesFiltered && ! limitSamples;
     if (! ok) {
       if (requestSamplesAll) {
         // All sample names received for lookupDatasetId.
@@ -766,7 +792,13 @@ export default class PanelManageGenotypeComponent extends Component {
         .filter((sampleName) => ! sampleIsFilteredOut(this.lookupBlock, sampleName));
     }
 
-    ok ||= (samplesRaw?.length);
+    if (limitSamples && (samplesRaw?.length > samplesLimit)) {
+      samplesRaw = samplesRaw.slice(0, samplesLimit);
+    }
+
+    /* Handle samplesLimit===0; that may not have a use since the features are
+     * already requested without samples. */
+    ok ||= (samplesRaw?.length || (limitSamples && !samplesLimit));
     /** result is 1 string of names, separated by 1 newline.  */
     samples = samplesRaw?.join('\n');
 
@@ -781,7 +813,9 @@ export default class PanelManageGenotypeComponent extends Component {
     /** this.axisBrush.block is currently the reference; lookup the data block. */
     // store = this.axisBrush?.get('block.store'),
     store = this.apiServerSelectedOrPrimary?.store,
-    {samples, samplesOK} = this.samplesOK,
+    userSettings = this.args.userSettings,
+    samplesLimitEnable = userSettings.samplesLimitEnable,
+    {samples, samplesOK} = this.samplesOK(samplesLimitEnable),
     domainInteger = this.vcfGenotypeLookupDomain,
     vcfDatasetId = this.lookupDatasetId;
     if (samplesOK && domainInteger && vcfDatasetId) { // && scope
@@ -789,10 +823,9 @@ export default class PanelManageGenotypeComponent extends Component {
       let
       scope = this.lookupScope,
       requestFormat = this.requestFormat,
-      userSettings = this.args.userSettings,
       requestSamplesFiltered = userSettings.requestSamplesFiltered,
-      /** If filtered, then samples is a subset of All. */
-      requestSamplesAll = userSettings.requestSamplesAll && ! requestSamplesFiltered,
+      /** If filtered or column-limited, then samples is a subset of All. */
+      requestSamplesAll = userSettings.requestSamplesAll && ! requestSamplesFiltered && ! samplesLimitEnable,
       requestOptions = {requestFormat, requestSamplesAll},
       textP = vcfGenotypeLookup(this.auth, this.apiServerSelectedOrPrimary, samples, domainInteger,  requestOptions, vcfDatasetId, scope, this.rowLimit);
       // re-initialise file-anchor with the new @data
@@ -1135,7 +1168,7 @@ export default class PanelManageGenotypeComponent extends Component {
   get headerTextP() {
     const
     fnName = 'headerText',
-    {samples, samplesOK} = this.samplesOK,
+    {samples, samplesOK} = this.samplesOK(false),
     domainInteger = [0, 1],
     vcfDatasetId = this.lookupDatasetId,
     scope = this.lookupScope;
