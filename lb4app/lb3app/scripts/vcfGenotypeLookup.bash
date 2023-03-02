@@ -34,8 +34,8 @@ set -x
 if [ ! -d "$vcfDir" ]
 then
   vcfDir=tmp/vcf
-else
-  ls -AF "$vcfDir"
+# else
+  # ls -AF "$vcfDir"
 fi
 if [ -z "$datasetIdDir" ]
 then
