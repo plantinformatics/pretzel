@@ -13,6 +13,7 @@ const trace = 1;
 
 const featureSymbol = Symbol.for('feature');
 const sampleMatchesSymbol = Symbol.for('sampleMatches');
+const callRateSymbol = Symbol.for('callRate');
 
 /** number of columns in the vcf output before the first sample column. */
 const nColumnsBeforeSamples = 9;
@@ -540,16 +541,21 @@ function sampleIsFilteredOut(block, sampleName) {
  * @param sampleName
  * sampleName may be present in multiple blocks, but in practice the name prefix
  * will differ, and possibly also naming system.
+ * @param sampleFilter undefined or optional additional filter (callRate filter)
  * @return true / false or undefined; if undefined then the sample is not
  * filtered out - there may be no filter on its block.
  */
-function sampleIsFilteredOutBlocks(blocks, sampleName) {
+function sampleIsFilteredOutBlocks(blocks, sampleName, sampleFilter) {
   const
   /** find if one of the blocks defines a show/hide status for sampleName.
    * block can be skipped if ! block[haplotypeFiltersSymbol]; probably similar execution time.
    */
-  block = blocks.find((block) => block[sampleMatchesSymbol]?.[sampleName]),
-  hide = block && sampleIsFilteredOut(block, sampleName);
+  block = blocks.find((block) => block[sampleMatchesSymbol]?.[sampleName]);
+  let hide = block && sampleIsFilteredOut(block, sampleName);
+  if (! hide) {
+    const block = blocks.find((block) => block[callRateSymbol]?.[sampleName]);
+    hide = block && sampleFilter && ! sampleFilter(block, sampleName);
+  }
   return hide;
 }
 
@@ -568,10 +574,11 @@ function sampleIsFilteredOutBlocks(blocks, sampleName) {
  *  { createdFeatures : array of created Features,
  *    sampleNames : array of sample names }
  * @param featureFilter filter applied to add.createdFeatures
+ * @param sampleFilter undefined or optional additional filter (callRate filter)
  *
  * @return displayData
  */
-function vcfFeatures2MatrixView(requestFormat, added, featureFilter) {
+function vcfFeatures2MatrixView(requestFormat, added, featureFilter, sampleFilter) {
   const fnName = 'vcfFeatures2MatrixView';
   /** createdFeatures : array of model:Feature (could be native JS objects - see
    * comment in addFeaturesJson() */
@@ -635,7 +642,7 @@ function vcfFeatures2MatrixView(requestFormat, added, featureFilter) {
   displayData = sampleNames
     /* alternatively, could filter sampleName after : if (featuresMatchSample),
      * at that point block is known; this is probably more efficient. */
-    .filter((sampleName) => ! sampleIsFilteredOutBlocks(blocksArray, sampleName))
+    .filter((sampleName) => ! sampleIsFilteredOutBlocks(blocksArray, sampleName, sampleFilter))
     .reduce((result, sampleName) => {
     /** if any features of a block contain sampleName, then generate a
      * block:sampleName column, with all features of all blocks, in
@@ -775,9 +782,10 @@ function blockToMatrixColumn(singleBlock, block, sampleName, features) {
  * brushedVCFBlocks.reduce ( block.featuresInBrush.reduce() )
 
  * @param featureFilter filter applied to featuresArrays[*]
+ * @param sampleFilter undefined or optional additional filter (callRate filter)
  * @return result : {rows, sampleNames}
  */
-function vcfFeatures2MatrixViewRows(requestFormat, featuresArrays, featureFilter) {
+function vcfFeatures2MatrixViewRows(requestFormat, featuresArrays, featureFilter, sampleFilter) {
   const fnName = 'vcfFeatures2MatrixViewRows';
   const result = featuresArrays.reduce((res, features) => {
     res = vcfFeatures2MatrixViewRowsResult(res, requestFormat, features, featureFilter);
@@ -789,9 +797,10 @@ function vcfFeatures2MatrixViewRows(requestFormat, featuresArrays, featureFilter
  * i.e. implement options.gtMergeRows
  * @param features block.featuresInBrush. one array, one block.
  * @param featureFilter filter applied to features
+ * @param sampleFilter undefined or optional additional filter (callRate filter)
  * @param result : {rows, sampleNames}. function can be called via .reduce()
  */
-function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featureFilter) {
+function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featureFilter, sampleFilter) {
   const fnName = 'vcfFeatures2MatrixViewRowsResult';
   const showHaplotypeColumn = features.length && features[0].values.tSNP;
   const block = features.length && contentOf(features[0].blockId);
@@ -828,7 +837,10 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
         const
         featureSamples = feature.get('values');
         Object.entries(featureSamples)
-          .filter(([sampleName, sampleValue]) => ! sampleIsFilteredOut(block, sampleName))
+          .filter(
+            ([sampleName, sampleValue]) =>
+              ! sampleIsFilteredOut(block, sampleName) &&
+              (! sampleFilter || sampleFilter(this.lookupBlock, sampleName)) )
           // .filter(([sampleName, sampleValue]) => ! ['tSNP', 'MAF'].includes(sampleName))
           .reduce(
           (res2, [sampleName, sampleValue]) => {

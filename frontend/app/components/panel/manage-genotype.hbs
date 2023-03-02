@@ -420,6 +420,18 @@ Server :
 
             </div>
 
+            <div style="display : inline-block;">
+              <Elem::InputRangeText
+                @labelText="Call Rate : "
+                @allowZero=true
+                @valueInitial={{this.args.userSettings.callRateThreshold}}
+                @valueMin=0.001
+                @valueMax=1
+                @valueChanged={{action (fn this.callRateThresholdChanged)}} >
+              </Elem::InputRangeText>
+            </div>
+
+
           </li>
 
 

@@ -32,6 +32,7 @@ const trace = 0;
 const haplotypeFiltersSymbol = Symbol.for('haplotypeFilters');
 const haplotypeFeaturesSymbol = Symbol.for('haplotypeFeatures');
 const sampleMatchesSymbol = Symbol.for('sampleMatches');
+const callRateSymbol = Symbol.for('callRate');
 
 //------------------------------------------------------------------------------
 
@@ -64,6 +65,7 @@ function valueNameIsNotSample(valueName) {
  * .filterBySelectedSamples default : true
  * .mafUpper default : true
  * .mafThreshold default 0
+ * .callRateThreshold default 0
  * .samplesLimit default 10
  * .samplesLimitEnable default true
  * .haplotypeFilterRef default : false
@@ -206,6 +208,9 @@ export default class PanelManageGenotypeComponent extends Component {
     if (userSettings.mafThreshold === undefined) {
       userSettings.mafThreshold = 0;
     }
+    if (userSettings.callRateThreshold === undefined) {
+      userSettings.callRateThreshold = 0;
+    }
 
     if (userSettings.samplesLimit === undefined) {
       userSettings.samplesLimit = 10;
@@ -317,6 +322,18 @@ export default class PanelManageGenotypeComponent extends Component {
     /* if (trace) { */
     dLog('mafThresholdChanged', value, inputType);
     Ember_set(this, 'args.userSettings.mafThreshold', value);
+  }
+
+  //----------------------------------------------------------------------------
+
+  /**
+   * @param inputType "text" or "range"
+   */
+  @action
+  callRateThresholdChanged(value, inputType) {
+    /* if (trace) { */
+    dLog('callRateThresholdChanged', value, inputType);
+    Ember_set(this, 'args.userSettings.callRateThreshold', value);
   }
 
   //----------------------------------------------------------------------------
@@ -789,7 +806,10 @@ export default class PanelManageGenotypeComponent extends Component {
     }
     if (requestSamplesFiltered) {
       samplesRaw = samplesRaw
-        .filter((sampleName) => ! sampleIsFilteredOut(this.lookupBlock, sampleName));
+        .filter(
+          (sampleName) =>
+            ! sampleIsFilteredOut(this.lookupBlock, sampleName) &&
+            (! this.sampleFilter || this.sampleFilter(this.lookupBlock, sampleName)) );
     }
 
     if (limitSamples && (samplesRaw?.length > samplesLimit)) {
@@ -874,7 +894,7 @@ export default class PanelManageGenotypeComponent extends Component {
                * features.
                */
               const displayData = vcfFeatures2MatrixView
-                (this.requestFormat, added, this.featureFilter.bind(this));
+                (this.requestFormat, added, this.featureFilter.bind(this), this.sampleFilter);
               this.displayData.addObjects(displayData);
               }
               // equivalent : displayData[0].features.length
@@ -901,6 +921,26 @@ export default class PanelManageGenotypeComponent extends Component {
     ok = (MAF === undefined) || 
       ((+MAF < this.args.userSettings.mafThreshold) === this.args.userSettings.mafUpper);
     return ok;
+  }
+
+  /** @return undefined if callRateThreshold is 0, otherwise a filter function with signature
+   * sampleFilter(block, sampleName) -> boolean, false means filter out
+   */
+  @computed('args.userSettings.callRateThreshold')
+  get sampleFilter() {
+    const
+    callRateThreshold = this.args.userSettings.callRateThreshold,
+    fn = ! callRateThreshold ? undefined : (block, sampleName) => {
+      const
+      sampleCount = block[callRateSymbol][sampleName],
+      /** OK (filter in) if callRate is undefined because of lack of counts. */
+      callRate = sampleCount && (sampleCount.calls + sampleCount.misses) ?
+        sampleCount.calls / (sampleCount.calls + sampleCount.misses) :
+        undefined,
+      ok = ! callRate || (callRate >= callRateThreshold);
+      return ok;
+    };
+    return fn;
   }
 
   //----------------------------------------------------------------------------
@@ -972,6 +1012,7 @@ export default class PanelManageGenotypeComponent extends Component {
           .map((features) => features.slice(0, this.rowLimit));
 
         this.collateBlockHaplotypeFeatures(featuresArrays);
+        this.collateBlockSamplesCallRate(featuresArrays);
 
         if (featuresArrays.length) {
           if (this.urlOptions.gtMergeRows) {
@@ -979,7 +1020,7 @@ export default class PanelManageGenotypeComponent extends Component {
             const
             sampleGenotypes = 
               vcfFeatures2MatrixViewRows(
-                this.requestFormat, featuresArrays, this.featureFilter.bind(this));
+                this.requestFormat, featuresArrays, this.featureFilter.bind(this), this.sampleFilter);
             this.displayDataRows = sampleGenotypes.rows;
             /* Position value is returned by matrix-view : rowHeaders().
              * for gtMergeRows the Position column is hidden.
@@ -1005,8 +1046,9 @@ export default class PanelManageGenotypeComponent extends Component {
             features = featuresArrays.flat(),
             sampleGenotypes =  {createdFeatures : features, sampleNames},
             displayData = vcfFeatures2MatrixView
-              (this.requestFormat, sampleGenotypes, this.featureFilter.bind(this));
+              (this.requestFormat, sampleGenotypes, this.featureFilter.bind(this), this.sampleFilter);
             this.displayData = displayData;
+            this.columnNames = null;
           }
         }
       }
@@ -1056,6 +1098,8 @@ export default class PanelManageGenotypeComponent extends Component {
     /** showSamplesWithinBrush() -> featureFilter() uses .mafUpper, .mafThreshold */
     'args.userSettings.mafUpper',
     'args.userSettings.mafThreshold',
+    /** callRateThreshold -> sampleFilter, passed to vcfFeatures2MatrixView{,Rows{,Result}} -> sampleIsFilteredOut{,Blocks} */
+    'args.userSettings.callRateThreshold',
   )
   get selectedSampleEffect () {
     const fnName = 'selectedSampleEffect';
@@ -1096,6 +1140,50 @@ export default class PanelManageGenotypeComponent extends Component {
             map);
         }
       );
+  }
+
+  //----------------------------------------------------------------------------
+
+  /** Construct a map per block from sample names to call rate.
+   * Call rate is defined as the genotype calls divided by the total number of
+   * Features / SNPs in the brushed interval.
+   * Genotype calls are e.g. 0, 1, 2; misses are './.'
+   * @param featuresArrays  array of arrays of features, 1 array per block
+   */
+  collateBlockSamplesCallRate(featuresArrays) {
+    const fnName = 'collateBlockSamplesCallRate';
+    const callKey = ['misses', 'calls'];
+    featuresArrays
+      .forEach(
+        (features) => {
+          const
+          blockp = features?.[0].get('blockId'),
+          /** blockp may be a proxy; want the actual Block, for reference via Symbol */
+          block = blockp && contentOf(blockp),
+          map = block[callRateSymbol] || (block[callRateSymbol] = {});
+          features
+          .reduce(
+            (map, feature) => {
+              // could do map=, but the 3 levels have the same value for map.
+              Object.entries(feature.values).reduce((map, [key, value], columnIndex) => {
+                if (! valueNameIsNotSample(key)) {
+                  /* could skip samples which are filtered out; would have to
+                  * return that info from vcfFeatures2MatrixView{,RowsResult}() */
+                  /** equivalent : this.columnNames[columnIndex] when gtMergeRows */
+                  const
+                  sampleName = key,
+                  call = value !== './.',
+                  sampleCount = map[key] || (map[key] = {calls:0, misses:0});
+                  sampleCount[callKey[+call]]++;
+                }
+                return map;
+              }, map);
+
+              return map;
+            },
+            map);
+          dLog(fnName, map, block.brushName);
+        });
   }
 
   /** for brushedOrViewedVCFBlocks, apply any haplotypeFilters which the blocks have.
