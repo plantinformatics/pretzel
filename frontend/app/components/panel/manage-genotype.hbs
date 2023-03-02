@@ -328,12 +328,13 @@ Server :
     {{#elem/panel-container state="primary" showComponent=true as |panelContainer|}}
 
       {{#elem/panel-heading icon="transfer" panelContainer=panelContainer}}
-        Haplotype Sample Filters
+        Controls and Filters
       {{/elem/panel-heading}}
 
       {{#if panelContainer.showComponent}}
 
-        <ul class="list-group haplotypeFilters">
+        <label style="margin-left: 1em; margin-top: 1em" >Haplotype Sample Filters</label>
+        <ul class="list-group borderless haplotypeFilters">
           {{#each this.blocksHaplotypeFilters as |blockHF|}}
             <li class="list-group-item">
               <label>{{blockHF.block.datasetId.id}}</label>
@@ -355,20 +356,69 @@ Server :
           {{/each}}
         </ul>
 
-        <ul class="list-group view-controls">
+        <ul class="list-group borderless view-controls">
 
           <li>
+            <button type="button" class="btn btn-info btn-xs"
+              style="margin-left: 2.5em;"
+              onclick={{action (pipe this.haplotypeFiltersClear this.haplotypeFiltersApply) }} >
+              Clear
+            </button>
+
             <input type="checkbox"
-              style="margin-left: 3em;"
+              style="margin-left: 2em;"
               checked={{@userSettings.haplotypeFilterRef}}
               oninput={{action (pipe 
               (action (mut @userSettings.haplotypeFilterRef) value="target.checked")
               this.haplotypeFiltersApply) }}  >
             <label>Filter by Ref</label>
 
-            <button type="button" class="btn btn-info btn-xs" onclick={{action (pipe this.haplotypeFiltersClear this.haplotypeFiltersApply) }} >
-              Clear Haplotype filters
-            </button>
+          </li>
+
+
+        </ul>
+
+        <hr>
+
+        {{!---------------------------------------------------------------------------}}
+
+        <ul class="list-group borderless view-controls">
+
+          <li>
+            <input type="checkbox"
+              style="margin-left: 3em;"
+              checked={{@userSettings.filterBySelectedSamples}}
+              oninput={{action (mut @userSettings.filterBySelectedSamples) value="target.checked"}}  >
+            <label>Selected samples</label>
+
+            <input type="checkbox"
+              style="margin-left: 3em;"
+              checked={{this.urlOptions.gtMergeRows}}
+              oninput={{action (mut this.urlOptions.gtMergeRows) value="target.checked"}}  >
+            <label>Merge Rows</label>
+
+            <div style="display : inline-block;">
+              <Elem::InputRangeText
+                @labelText="MAF Threshold : "
+                @allowZero=true
+                @valueInitial={{this.args.userSettings.mafThreshold}}
+                @valueMin={{this.mafThresholdMin}}
+                @valueMax={{this.mafThresholdMax}}
+                @valueChanged={{action (fn this.mafThresholdChanged)}} >
+
+              <span class="filter-group-col">
+                <input type="checkbox" id="gtInputMafUpper" name="mafUpper" checked={{@userSettings.mafUpper}}
+                  oninput={{action (mut @userSettings.mafUpper) value="target.checked"}} 
+                >
+                <EmberTooltip side="right" delay=500>
+                  <span>Use threshold as an upper / lower limit.</span>
+                </EmberTooltip>
+              </span>
+
+              {{this.mafThresholdText}}
+              </Elem::InputRangeText>
+
+            </div>
 
           </li>
 
@@ -398,51 +448,6 @@ Server :
   haplotypeToggle=this.haplotypeToggle
   haplotypeFilterSamples=this.haplotypeFilterSamples
 }}
-
-{{!---------------------------------------------------------------------------}}
-
-<ul class="list-group view-controls">
-
-  <li>
-    <input type="checkbox"
-      style="margin-left: 3em;"
-      checked={{@userSettings.filterBySelectedSamples}}
-      oninput={{action (mut @userSettings.filterBySelectedSamples) value="target.checked"}}  >
-    <label>Selected samples</label>
-
-    <input type="checkbox"
-      style="margin-left: 3em;"
-      checked={{this.urlOptions.gtMergeRows}}
-      oninput={{action (mut this.urlOptions.gtMergeRows) value="target.checked"}}  >
-    <label>Merge Rows</label>
-
-    <div style="display : inline-block;">
-      <Elem::InputRangeText
-        @labelText="MAF Threshold : "
-        @allowZero=true
-        @valueInitial={{this.args.userSettings.mafThreshold}}
-        @valueMin={{this.mafThresholdMin}}
-        @valueMax={{this.mafThresholdMax}}
-        @valueChanged={{action (fn this.mafThresholdChanged)}} >
-
-      <span class="filter-group-col">
-        <input type="checkbox" id="gtInputMafUpper" name="mafUpper" checked={{@userSettings.mafUpper}}
-          oninput={{action (mut @userSettings.mafUpper) value="target.checked"}} 
-        >
-        <EmberTooltip side="right" delay=500>
-          <span>Use threshold as an upper / lower limit.</span>
-        </EmberTooltip>
-      </span>
-      
-      {{this.mafThresholdText}}
-      </Elem::InputRangeText>
-
-    </div>
-
-  </li>
-
-
-</ul>
 
 {{!---------------------------------------------------------------------------}}
 
