@@ -598,7 +598,7 @@ export default class PanelManageGenotypeComponent extends Component {
     blocks = axisBrushes.map((ab) => {
       let
       axis1d = ab.block.get('axis1d'),
-      vcfBlocks = axis1d.brushedBlocks
+      vcfBlocks = ! axis1d ? [] : axis1d.brushedBlocks
         .filter(
           (b) => b.get('isVCF')),
       ab1 = vcfBlocks.map((block) => ({axisBrush : ab, block}));
