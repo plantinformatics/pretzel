@@ -95,7 +95,7 @@ Server :
         this.ensureSamples ) }}  >
     <label>Filtered</label>
     {{#ember-tooltip side="right" delay=500}}
-      Request genotype of samples selected by Haplotype / tSNP filters
+      Request genotype of samples selected by LD Block / tSNP filters
     {{/ember-tooltip}}
   </span>
 
@@ -333,7 +333,7 @@ Server :
 
       {{#if panelContainer.showComponent}}
 
-        <label style="margin-left: 1em; margin-top: 1em" >Haplotype Sample Filters</label>
+        <label style="margin-left: 1em; margin-top: 1em" >LD Block Sample Filters</label>
         <ul class="list-group borderless haplotypeFilters">
           {{#each this.blocksHaplotypeFilters as |blockHF|}}
             <li class="list-group-item">
@@ -399,7 +399,7 @@ Server :
 
             <div style="display : inline-block;">
               <Elem::InputRangeText
-                @labelText="MAF Threshold : "
+                @labelText="SNP MAF Threshold : "
                 @allowZero=true
                 @valueInitial={{this.args.userSettings.mafThreshold}}
                 @valueMin={{this.mafThresholdMin}}
@@ -422,7 +422,7 @@ Server :
 
             <div style="display : inline-block;">
               <Elem::InputRangeText
-                @labelText="Call Rate : "
+                @labelText="Sample Call Rate : "
                 @allowZero=true
                 @valueInitial={{this.args.userSettings.callRateThreshold}}
                 @valueMin=0.001

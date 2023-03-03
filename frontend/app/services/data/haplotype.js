@@ -7,6 +7,18 @@ import Service from '@ember/service';
 /*global d3 */
 
 
+/** Functionality which is application-wide, such as common colours,
+ * related to LD Blocks / tSNP sets / Haplotypes.
+ *
+ * A note on terminology : this functionality is related to Haplotypes, but
+ * distinct, the term Haplotype is used in function and variable names because
+ * this work is part of the vision for Haplotype functionality, and some of it
+ * may be common, but the implementation so far is using LD Blocks via tagged
+ * SNP sets - INFO/tSNP in the vcf.
+ * The user-facing terminology in the GUI has been changed from Haplotype to LD
+ * Block.  Function and variable names are not changed; they may
+ * in the long term be used as part of Haplotype functionality.
+ */
 export default class DataHaplotypeService extends Service {
 
   /** Map from haplotype / tSNP to colour; each Tagged SNP set is allocated a

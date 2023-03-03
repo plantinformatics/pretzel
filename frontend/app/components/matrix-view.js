@@ -81,7 +81,7 @@ function columnNameIsNotSample(column_name) {
    * like the sample columns, and they are formatted like the sample columns, so
    * assign the class col-sample.
    */
-  return ['Block', 'Name', 'Position', 'End', 'Haplotype', 'MAF'].includes(column_name);
+  return ['Block', 'Name', 'Position', 'End', 'LD Block', 'MAF'].includes(column_name);
 }
 
 function copiesColourClass(alleleValue) {
@@ -103,7 +103,7 @@ function col_name_fn(column) {
   const
   datasetId = Ember_get(column, 'datasetId.id'),
   /** if datasetId is '' or undefined / null, then ':' separator is not required.
-   * This is true for non-sample columns, e.g. Position, End, Ref, Alt, Haplotype
+   * This is true for non-sample columns, e.g. Position, End, Ref, Alt, LD Block
    */
   col_name = (! datasetId ? '' : datasetId + ':')  + Ember_get(column, 'name');
   return col_name;
@@ -174,7 +174,7 @@ function nRows2HeightEx(nRows) {
  *
  *   renderer =
  *     (prop === 'Block') ? blockColourRenderer :
- *     (prop === 'Haplotype') ? haplotypeColourRenderer :
+ *     (prop === 'LD Block') ? haplotypeColourRenderer :
  *     numericalData ? numericalDataRenderer :
  *        selectedBlock ? ABRenderer : CATGRenderer
  *   type =  (prop.endsWith 'Position' or 'End') ? 'numeric'
@@ -438,7 +438,7 @@ export default Component.extend({
       cellProperties.type = 'numeric';
     } else if (prop === 'Block') {
       cellProperties.renderer = 'blockColourRenderer';
-    } else if (prop === 'Haplotype') {
+    } else if (prop === 'LD Block') {
       cellProperties.renderer = 'haplotypeColourRenderer';
     } else if (prop === 'MAF') {
       cellProperties.type = 'numeric';
@@ -470,11 +470,11 @@ export default Component.extend({
       columnNames = this.get('columnNames');
       if (columnNames) {
         col_name = columnNames[col];
-        if (col_name === 'Haplotype') {
+        if (col_name === 'LD Block') {
           this.haplotypeToggleRC(row, col);
           return;
         }
-        /* selectedColumnName may be Ref, Alt, or a sample column, not Block, Position, End, Haplotype. */
+        /* selectedColumnName may be Ref, Alt, or a sample column, not Block, Position, End, LD Block. */
         if (columnNameIsNotSample(col_name)) {
           col_name = undefined;
         }
@@ -723,9 +723,9 @@ export default Component.extend({
     $(td).text(' ');
   },
 
-  /** The .text is Haplotype, currently represented as a numeric tSNP value;
+  /** The .text is LD Block / Haplotype, currently represented as a numeric tSNP value;
    * equal values are in the same tagged-SNP-set.
-   * Allocate a column per set, within the Haplotype column.
+   * Allocate a column per set, within the LD Block column.
    * Assign a unique colour to each set.
    * Show a rectangle coloured with the set colour, in the set column.
    * @param instance  this Handsontable
@@ -748,10 +748,10 @@ export default Component.extend({
   //----------------------------------------------------------------------------
 
   /** Map from tSNP number to column offset.
-   * Each tSNP / haplotype is allocated the next successive column offset.
+   * Each LD Block / tSNP / "haplotype" is allocated the next successive column offset.
    *
    * The original specification was for the display to offset the colour block
-   * in the Haplotype / tSNP column, so that tSNP sets could be correlated
+   * in the LD Block / tSNP / Haplotype column, so that tSNP sets could be correlated
    * visually; this may not be necessary because the colour block makes it
    * fairly clear; this may be re-evaluated when larger numbers of sets cause
    * colour cycling in the palette.
@@ -762,7 +762,7 @@ export default Component.extend({
    * .haplotypeColumn, .haplotypeColourScale should be per-dataset.
    */
   haplotypes : {},
-  /** Current column offset - this will be used for the next tSNP / haplotype.
+  /** Current column offset - this will be used for the next LD Block / tSNP / haplotype.
    */
   haplotypeColumn : 0,
 
@@ -868,7 +868,7 @@ export default Component.extend({
         if (name === 'Alt') {
           options.className += ' col-Alt';
         }
-        if (name === 'Haplotype') {
+        if (name === 'LD Block') {
           options.afterSelection = bind(this, this.afterSelectionHaplotype);
         }
         return options;
@@ -1258,7 +1258,7 @@ export default Component.extend({
 
   //----------------------------------------------------------------------------
 
-  /** Called from selection in Haplotype column, which will toggle selection of this Haplotype (tSNP).
+  /** Called from selection in LD Block / Haplotype column, which will toggle selection of this LD Block / Haplotype (tSNP).
    * manage-genotype passes in action haplotypeToggle, with signature (feature, haplotype).
    */
   haplotypeToggleRC(row, col) {

@@ -98,7 +98,7 @@ export default Model.extend({
 
   //----------------------------------------------------------------------------
 
-  /** Map values.tSNP (Haplotype / tagged SNP set) to per-set colour.
+  /** Map values.tSNP (LD Block / Haplotype / tagged SNP set) to per-set colour.
    *
    * It seems likely that a concept of Haplotype separate from tSNP will be
    * added, so the naming may change; currently the name tSNP is used where it
@@ -106,6 +106,7 @@ export default Model.extend({
    * for higher level functionality related to selection / filtering / colouring
    * by Haplotype, which is concerned with the role of Haplotype rather than how
    * it is implemented (tSNP).
+   * tSNP values identifies LD Blocks.
    *
    * @return undefined if values.tSNP is undefined
    */
@@ -127,7 +128,7 @@ export default Model.extend({
     switch (qtlColourBy) {
     case 'Trait' : colour = this.get('traitColour');  break;
     case 'Ontology' : colour = this.get('ontologyColour');  break;
-    case 'Haplotype' : colour = this.get('haplotypeColour');  break;
+    case 'Haplotype' : colour = this.get('haplotypeColour');  break;  // LD Block / tSNP
     default : dLog('colour', qtlColourBy); break;
     }
     return colour;

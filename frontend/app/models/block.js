@@ -352,7 +352,7 @@ export default Model.extend({
    *  !== undefined for featureColour, e.g. :
    * 'Ontology' for ontologyColour,
    * 'Trait' for traitColour.
-   * 'Haplotype' for haplotypeColour.
+   * 'Haplotype' for haplotypeColour.  (LD Block / tSNP)
    */
   get useFeatureColour() {
     let qtlColourBy = this.get('controls.viewed.qtlColourBy');

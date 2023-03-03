@@ -32,7 +32,7 @@ const vcfColumn2Feature = {
 };
 
 const
-columnOrder = [ 'MAF', 'Haplotype', 'Ref', 'Alt' ],
+columnOrder = [ 'MAF', 'LD Block', 'Ref', 'Alt' ],
 columnOrderIndex = columnOrder.reduce(
   (result, name, index) => {
     result[name] = index;
@@ -515,7 +515,7 @@ function featureMafValue(feature) {
 //------------------------------------------------------------------------------
 
 /** @return true if sampleName is filtered out by haplotypeFilters.
- * @param block which contains tSNP / haplotype which is applying a filter to sampleName.
+ * @param block which contains LD Block / tSNP / haplotype which is applying a filter to sampleName.
  * block is defined.
  * @param sampleName
  * @return true / false or undefined; if undefined then the sample is not
@@ -621,7 +621,7 @@ function vcfFeatures2MatrixView(requestFormat, added, featureFilter, sampleFilte
     {
       features : sortedFeatures.map(featureHaplotype),
       datasetId : {id : ''},
-      name : 'Haplotype' };
+      name : 'LD Block' }; // Haplotype / tSNP
   /** probably displayed as a colour, using numericalDataRenderer. */
   const mafColumn = 
     {
@@ -869,9 +869,9 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
     result);
 
   const
-  /** map 'tSNP' to 'Haplotype' in columnNames, not in the row data. */
+  /** map 'tSNP' to 'LD Block' in columnNames, not in the row data. related : Haplotype. */
   columnNames = Array.from(sampleNamesSet.keys())
-    .map((name) => (name === 'tSNP') ? 'Haplotype' : name)
+    .map((name) => (name === 'tSNP') ? 'LD Block' : name)
     .sort(columnNamesCmp);
   result.sampleNames.addObjects(columnNames);
 
