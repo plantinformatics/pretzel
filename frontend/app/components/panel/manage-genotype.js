@@ -29,9 +29,21 @@ const dLog = console.debug;
 
 const trace = 0;
 
+/** tSNP values which are selected for filtering.
+ * block[haplotypeFiltersSymbol] -> [] of tSNP
+ */
 const haplotypeFiltersSymbol = Symbol.for('haplotypeFilters');
+/** array of Features / SNPs in a tagged SNP set, i.e. equal tSNP value.
+ * features = block[haplotypeFeaturesSymbol][tSNP]
+ */
 const haplotypeFeaturesSymbol = Symbol.for('haplotypeFeatures');
+/** Counts for filtering by LD Block (Haplotype) values
+ * block[sampleMatchesSymbol] : {matches: 0, mismatches : 0}
+ * also used in sampleIsFilteredOut{,Blocks}()
+ */
 const sampleMatchesSymbol = Symbol.for('sampleMatches');
+/** Counts for calculating Call Rate of a sample.
+ * sampleCount = block[callRateSymbol][sampleName] : {calls:0, misses:0}  */
 const callRateSymbol = Symbol.for('callRate');
 
 //------------------------------------------------------------------------------
@@ -69,6 +81,11 @@ function valueNameIsNotSample(valueName) {
  * .samplesLimit default 10
  * .samplesLimitEnable default true
  * .haplotypeFilterRef default : false
+ *
+ * .haplotypeFiltersEnable default : false
+ * true means apply haplotypeFilters to filter out non-matchng sample columns;
+ * otherwise show the non-Ref Samples at the right of the matching samples - use
+ * .sort(sampleNamesCmp), instead of sampleIsFilteredOut().
  *
  * The user can choose how to determine the samples to request from bcftools.
  * .requestSamplesAll boolean, default : false
@@ -221,6 +238,9 @@ export default class PanelManageGenotypeComponent extends Component {
 
     if (userSettings.haplotypeFilterRef === undefined) {
       userSettings.haplotypeFilterRef = false;
+    }
+    if (userSettings.haplotypeFiltersEnable === undefined) {
+      userSettings.haplotypeFiltersEnable = false;
     }
 
     if (userSettings.requestSamplesAll === undefined) {
@@ -424,14 +444,19 @@ export default class PanelManageGenotypeComponent extends Component {
   /** Use Ember_set() to signal update of tracked properties and trigger re-render. */
   haplotypeFiltersSet() {
     dLog('haplotypeFiltersSet');
+    let filterCount = 0;
     const
-    abBlocks = this.brushedOrViewedVCFBlocks;
+    abBlocks = this.blocksHaplotypeFilters;
     abBlocks.forEach((abBlock) => {
       const
       block = abBlock.block;
       Ember_set(abBlock, 'haplotypeFilters', abBlock.haplotypeFilters);
+      filterCount += abBlock.haplotypeFilters.length;
     });
+    this.haplotypeFiltersCount = filterCount;
   }
+  @tracked
+  haplotypeFiltersCount = 0;
 
   /** Map haplotype / tSNP to a colour
    * @param tSNP  string represention of a number
@@ -735,6 +760,10 @@ export default class PanelManageGenotypeComponent extends Component {
           const t = text?.text;
           dLog(fnName, t?.length || Object.keys(text), t?.slice(0, 60));
           this.sampleCache.sampleNames[vcfDatasetId] = t;
+          /** trim off trailing newline; other non-sample column info could be
+           * removed; it is not a concern for the mapping. */
+          const sampleNames = t.trim().split('\n');
+          this.mapSamplesToBlock(sampleNames, this.lookupBlock);
           if ((vcfDatasetId === this.lookupDatasetId) &&
               (this.vcfGenotypeSamplesSelected === undefined)) {
             this.vcfGenotypeSamplesSelected = [];
@@ -763,6 +792,18 @@ export default class PanelManageGenotypeComponent extends Component {
       dLog('ensureSamples');
       this.vcfGenotypeSamples();
     }
+  }
+
+  //----------------------------------------------------------------------------
+
+  /** block[sampleNamesSymbol] is a map from sampleName to block */
+  sampleName2Block = {}
+  /** Record a mapping from sampleNames to the block which they are within.
+   * @param sampleNames []
+   * @param block the lookupBlock use in API request which returned the sampleNames
+   */
+  mapSamplesToBlock(sampleNames, block) {
+    sampleNames.forEach((sampleName) => this.sampleName2Block[sampleName] = block);
   }
 
   // ---------------------------------------------------------------------------
@@ -808,7 +849,7 @@ export default class PanelManageGenotypeComponent extends Component {
       samplesRaw = samplesRaw
         .filter(
           (sampleName) =>
-            ! sampleIsFilteredOut(this.lookupBlock, sampleName) &&
+            (! userSettings.haplotypeFiltersEnable || ! sampleIsFilteredOut(this.lookupBlock, sampleName)) &&
             (! this.sampleFilter || this.sampleFilter(this.lookupBlock, sampleName)) );
     }
 
@@ -894,7 +935,8 @@ export default class PanelManageGenotypeComponent extends Component {
                * features.
                */
               const displayData = vcfFeatures2MatrixView
-                (this.requestFormat, added, this.featureFilter.bind(this), this.sampleFilter);
+                (this.requestFormat, added, this.featureFilter.bind(this), this.sampleFilter,
+                 this.sampleNamesCmp, /*options*/ {userSettings});
               this.displayData.addObjects(displayData);
               }
               // equivalent : displayData[0].features.length
@@ -943,6 +985,32 @@ export default class PanelManageGenotypeComponent extends Component {
     return fn;
   }
 
+  /** @return undefined if haplotypeFiltersCount is 0, otherwise
+   * a sort comparator function with signature (sampleName1, sampleName2),
+   * which returns +ve if column of sampleName2 should be shown to the right of sampleName1.
+   * Related : columnNamesCmp().
+   */
+  @computed('haplotypeFiltersCount')
+  get sampleNamesCmp() {
+    const
+    fn = ! this.haplotypeFiltersCount ? undefined : (...sampleNames) => {
+      const
+      matchRates = sampleNames.map((sampleName) => {
+        const
+        block = this.sampleName2Block[sampleName],
+        m = block?.[sampleMatchesSymbol][sampleName],
+        ratio = ! m || ! (m.matches + m.mismatches) ? 0 : 
+          m.matches / (m.matches + m.mismatches);
+        return ratio;
+      }),
+      cmp = matchRates[1] - matchRates[0];
+      return cmp;
+    };
+    return fn;
+  }
+
+  
+
   //----------------------------------------------------------------------------
 
 
@@ -984,6 +1052,7 @@ export default class PanelManageGenotypeComponent extends Component {
     if (! this.axisBrush /* || ! this.lookupBlock*/) {
       // perhaps clear table
     } else {
+      const userSettings = this.args.userSettings;
       let
       referenceBlock = this.axisBrush?.get('block'),
       /** expect : block.referenceBlock.id === referenceBlock.id
@@ -1015,12 +1084,14 @@ export default class PanelManageGenotypeComponent extends Component {
         this.collateBlockSamplesCallRate(featuresArrays);
 
         if (featuresArrays.length) {
+          const options = {userSettings};
           if (this.urlOptions.gtMergeRows) {
             /** {rows, sampleNames}; */
             const
             sampleGenotypes = 
               vcfFeatures2MatrixViewRows(
-                this.requestFormat, featuresArrays, this.featureFilter.bind(this), this.sampleFilter);
+                this.requestFormat, featuresArrays, this.featureFilter.bind(this), this.sampleFilter,
+                options);
             this.displayDataRows = sampleGenotypes.rows;
             /* Position value is returned by matrix-view : rowHeaders().
              * for gtMergeRows the Position column is hidden.
@@ -1029,7 +1100,7 @@ export default class PanelManageGenotypeComponent extends Component {
             this.columnNames = ['Block', 'Position', 'Name'].concat(sampleGenotypes.sampleNames);
           } else {
             let sampleNames;
-            if (this.args.userSettings.filterBySelectedSamples) {
+            if (userSettings.filterBySelectedSamples) {
               /** instead of this.selectedSamples (i.e. of lookupDatasetId), show
                * selected samples of all .brushedVCFBlocks.
                */
@@ -1046,7 +1117,8 @@ export default class PanelManageGenotypeComponent extends Component {
             features = featuresArrays.flat(),
             sampleGenotypes =  {createdFeatures : features, sampleNames},
             displayData = vcfFeatures2MatrixView
-              (this.requestFormat, sampleGenotypes, this.featureFilter.bind(this), this.sampleFilter);
+            (this.requestFormat, sampleGenotypes, this.featureFilter.bind(this), this.sampleFilter,
+             this.sampleNamesCmp, options);
             this.displayData = displayData;
             this.columnNames = null;
           }
@@ -1201,7 +1273,8 @@ export default class PanelManageGenotypeComponent extends Component {
   @action
   haplotypeFilterSamples(showHideSampleFn, matrixView) {
     const
-    matchRef = this.args.userSettings.haplotypeFilterRef,
+    userSettings = this.args.userSettings,
+    matchRef = userSettings.haplotypeFilterRef,
     matchKey = matchRef ? 'ref' : 'alt',
     matchNumber = matchRef ? '0' : '2',
     /** to match homozygous could use .startsWith(); that will also match 1/2 of heterozygous.
@@ -1232,7 +1305,7 @@ export default class PanelManageGenotypeComponent extends Component {
         return matches;
       }, {});
       block[sampleMatchesSymbol] = matchesR;
-      if (showHideSampleFn) {
+      if (showHideSampleFn && this.args.userSettings.haplotypeFiltersEnable) {
         /* 
          * block *
          *   sample*

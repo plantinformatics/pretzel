@@ -371,7 +371,15 @@ Server :
               oninput={{action (pipe 
               (action (mut @userSettings.haplotypeFilterRef) value="target.checked")
               this.haplotypeFiltersApply) }}  >
-            <label>Filter by Ref</label>
+            <label>Match Ref</label>
+
+            <input type="checkbox"
+              style="margin-left: 2em;"
+              checked={{@userSettings.haplotypeFiltersEnable}}
+              oninput={{action (pipe 
+              (action (mut @userSettings.haplotypeFiltersEnable) value="target.checked")
+              this.haplotypeFiltersApply) }}  >
+            <label>Filter</label>
 
           </li>
 
