@@ -388,11 +388,27 @@ export default class PanelManageGenotypeComponent extends Component {
   @action
   haplotypeToggle(feature, haplotype) {
     const
+    fnName = 'haplotypeToggle',
     block = feature.get('blockId'),
     filters = this.blockHaplotypeFilters(block);
     this.arrayToggleObject(filters, haplotype);
-    // Refresh display.
-    this.haplotypeFiltersSet();
+    /** filtered/sorted display depends on .samples, which depends on
+     * this.vcfGenotypeSamplesText, so request all sampleNames if not received.
+     */
+    let textP = ! this.vcfGenotypeSamplesText && this.vcfGenotypeSamples();
+    if (textP) {
+      // could use thenOrNow() but it currently expects value to be defined.
+      textP.then(() => {
+        dLog(fnName);
+        filtersSet.apply(this);
+      });
+    } else {
+      filtersSet();
+    }
+    function filtersSet() {
+      // Refresh display.
+      this.haplotypeFiltersSet();
+    }
   }
   /** If object is in array, remove it, otherwise add it.
    * @param object  any value - string or object, etc
@@ -741,6 +757,8 @@ export default class PanelManageGenotypeComponent extends Component {
   // ---------------------------------------------------------------------------
 
   /** Request the list of samples of the vcf of the brushed block.
+   * @return undefined if scope or vcfDatasetId are not defined,
+   * or a promise yielding received text
    */
   vcfGenotypeSamples() {
     /** implemented by common/models/block.js : Block.vcfGenotypeSamples().  */
@@ -748,11 +766,12 @@ export default class PanelManageGenotypeComponent extends Component {
     fnName = 'vcfGenotypeSamples',
     scope = this.lookupScope,
     vcfDatasetId = this.lookupDatasetId;
+    let textP;
     if (scope && vcfDatasetId)
     {
       this.lookupMessage = null;
 
-      let textP = this.auth.vcfGenotypeSamples(
+      textP = this.auth.vcfGenotypeSamples(
         this.apiServerSelectedOrPrimary, vcfDatasetId, scope,
         {} );
       textP.then(
@@ -772,6 +791,7 @@ export default class PanelManageGenotypeComponent extends Component {
         })
         .catch(this.showError.bind(this, fnName));
     }
+    return textP;
   }
 
   //----------------------------------------------------------------------------
