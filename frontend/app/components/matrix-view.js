@@ -118,7 +118,7 @@ const headerHeightEx = 32;  // for 210px
  */
 function nRows2HeightEx(nRows) {
   // 2 -> 6ex : only 1 row visible; may need an base offset - try adding 5ex
-  return headerHeightEx + 5 + (+((nRows || 2) * 3.2).toFixed(0));
+  return headerHeightEx + 5 + (+((nRows || 2) * 3.25).toFixed(0));
 }
 
 // -----------------------------------------------------------------------------
@@ -325,19 +325,28 @@ export default Component.extend({
     dLog(fnName, tableDiv);
     const afterOnCellMouseOver = afterOnCellMouseOverClosure(this);
     let nRows = this.get('rows.length') || 0;
-
+    /** switch on gtPlainRender by default, temporarily. */
+    const gtPlainRender = this.urlOptions.gtPlainRender ||
+          (this.urlOptions.gtPlainRender = true);
     let settings = {
       /* see comment re. handsOnTableLicenseKey in frontend/config/environment.js */
       licenseKey: config.handsOnTableLicenseKey,
       data: [],
       readOnly: true,
-      rowHeaders: bind(this, this.rowHeaders),
-      manualColumnMove: true,
+
       width : '100%',
       height: this.fullPage ? '100%' : nRows2HeightEx(nRows) + 'ex',
       rowHeights : '24px',
       colWidths : bind(this, this.colWidths),
       stretchH: 'none',
+    };
+    /** The above settings are minimal - just plain text, without actions, to
+     * test performance without the rich presentation and actions.
+     */
+    const richSettings = {
+      rowHeaders: bind(this, this.rowHeaders),
+      manualColumnMove: true,
+
       cells: bind(this, this.cells),
       afterScrollVertically: bind(this, this.afterScrollVertically),
       outsideClickDeselects: true,
@@ -355,6 +364,10 @@ export default Component.extend({
         // columns: [],
       }
     };
+    if (! gtPlainRender) {
+      Object.assign(settings, richSettings);
+    }
+
     if (this.urlOptions.gtSelectColumn) {
       settings.afterSelection = bind(this, this.afterSelection);
     } else {
@@ -362,15 +375,19 @@ export default Component.extend({
     }
     let table = new Handsontable(tableDiv, settings);
 
-    Handsontable.renderers.registerRenderer('CATGRenderer', bind(this, this.CATGRenderer));
-    Handsontable.renderers.registerRenderer('ABRenderer', bind(this, this.ABRenderer));
-    Handsontable.renderers.registerRenderer('numericalDataRenderer', bind(this, this.numericalDataRenderer));
-    Handsontable.renderers.registerRenderer('blockColourRenderer', bind(this, this.blockColourRenderer));
-    Handsontable.renderers.registerRenderer('haplotypeColourRenderer', bind(this, this.haplotypeColourRenderer));
+    if (! gtPlainRender) {
+      Handsontable.renderers.registerRenderer('CATGRenderer', bind(this, this.CATGRenderer));
+      Handsontable.renderers.registerRenderer('ABRenderer', bind(this, this.ABRenderer));
+      Handsontable.renderers.registerRenderer('numericalDataRenderer', bind(this, this.numericalDataRenderer));
+      Handsontable.renderers.registerRenderer('blockColourRenderer', bind(this, this.blockColourRenderer));
+      Handsontable.renderers.registerRenderer('haplotypeColourRenderer', bind(this, this.haplotypeColourRenderer));
+    }
 
     this.set('table', table);
 
-    table.addHook('afterRender', this.afterRender.bind(this));
+    if (! gtPlainRender) {
+      table.addHook('afterRender', this.afterRender.bind(this));
+    }
   },
 
   highlightFeature,
@@ -775,7 +792,9 @@ export default Component.extend({
   /** When configuration of one of the Renderers changes, re-render.
    */
   rendererConfigEffect : computed('abValues', 'rowRanges', function () {
-    this.table?.render();
+    if (! this.urlOptions.gtPlainRender) {
+      this.table?.render();
+    }
   }),
 
   // ---------------------------------------------------------------------------
@@ -1080,9 +1099,12 @@ export default Component.extend({
     let colHeaderHeight = this.get('colHeaderHeight');
     let table = this.get('table');
     let data = this.get('data');
+    const gtPlainRender = this.urlOptions.gtPlainRender;
     dLog('matrix-view', 'updateTable', t, rows.length, rowHeaderWidth, colHeaderHeight, table, data, this.blockSamples && 'vcf');
 
-    this.hideColumns();
+    if (! gtPlainRender) {
+      this.hideColumns();
+    }
 
     if (data.length > 0) {
       t.show();
@@ -1106,9 +1128,11 @@ export default Component.extend({
           colHeaders: this.colHeaders,
           columns,
           rowHeaderWidth: rowHeaderWidth,
-          // this can be enabled as an alternative to progressiveRowMergeInBatch().
-          // data: data
         };
+        if (gtPlainRender) {
+          // this can be enabled as an alternative to progressiveRowMergeInBatch().
+          settings.data = data;
+        }
         if (this.fullPage) {
           settings.columnHeaderHeight = colHeaderHeight;
         } else {
@@ -1118,7 +1142,9 @@ export default Component.extend({
         const startTime = Date.now();
         console.time(fnName + ':updateSettings');
         table.updateSettings(settings);
-        this.progressiveRowMergeInBatch();
+        if (! gtPlainRender) {
+          this.progressiveRowMergeInBatch();
+        }
         const endTime = Date.now();
         console.timeEnd(fnName + ':updateSettings');
         const
@@ -1129,9 +1155,13 @@ export default Component.extend({
         /** displaying via { {this.timeMeasure}} in hbs causes re-render, so display using jQuery. */
         $('#timeMeasure').text(timeMeasure);
       }
-      this.setRowAttributes();
+      if (! gtPlainRender) {
+        this.setRowAttributes();
+      }
     } else {
-      this.progressiveRowMergeInBatch();
+      if (! gtPlainRender) {
+        this.progressiveRowMergeInBatch();
+      }
       t.hide();
     }
   }),
