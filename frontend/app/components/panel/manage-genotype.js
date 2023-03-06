@@ -79,7 +79,7 @@ function valueNameIsNotSample(valueName) {
  * .mafThreshold default 0
  * .callRateThreshold default 0
  * .samplesLimit default 10
- * .samplesLimitEnable default true
+ * .samplesLimitEnable default false
  * .haplotypeFilterRef default : false
  *
  * .haplotypeFiltersEnable default : false
@@ -233,7 +233,7 @@ export default class PanelManageGenotypeComponent extends Component {
       userSettings.samplesLimit = 10;
     }
     if (userSettings.samplesLimitEnable === undefined) {
-      userSettings.samplesLimitEnable = true;
+      userSettings.samplesLimitEnable = false;
     }
 
     if (userSettings.haplotypeFilterRef === undefined) {

@@ -326,7 +326,7 @@ export default Component.extend({
     const afterOnCellMouseOver = afterOnCellMouseOverClosure(this);
     let nRows = this.get('rows.length') || 0;
     /** switch on gtPlainRender by default, temporarily. */
-    const gtPlainRender = this.urlOptions.gtPlainRender ||
+    const gtPlainRender = this.urlOptions.gtPlainRender ??
           (this.urlOptions.gtPlainRender = true);
     let settings = {
       /* see comment re. handsOnTableLicenseKey in frontend/config/environment.js */
