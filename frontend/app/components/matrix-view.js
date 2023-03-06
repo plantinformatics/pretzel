@@ -190,6 +190,10 @@ export default Component.extend({
 
   //----------------------------------------------------------------------------
 
+  classNames: ['matrix-view'],
+
+  //----------------------------------------------------------------------------
+
   /** this may move up to matrix-view-page
   style: 'height:100%; width:100%',
   attributeBindings: ['style:style'],
@@ -335,7 +339,7 @@ export default Component.extend({
       readOnly: true,
 
       width : '100%',
-      height: this.fullPage ? '100%' : nRows2HeightEx(nRows) + 'ex',
+      height: true || this.fullPage ? '100%' : nRows2HeightEx(nRows) + 'ex',
       rowHeights : '24px',
       colWidths : bind(this, this.colWidths),
       stretchH: 'none',
@@ -1137,7 +1141,7 @@ export default Component.extend({
           settings.columnHeaderHeight = colHeaderHeight;
         } else {
           let nRows = rows.length;
-          settings.height = nRows2HeightEx(nRows) + 'ex';
+          settings.height = '100%'; // nRows2HeightEx(nRows) + 'ex';
         }
         const startTime = Date.now();
         console.time(fnName + ':updateSettings');

@@ -73,7 +73,11 @@ function valueNameIsNotSample(valueName) {
  *
  * .requestFormat 'Numerical' (default), 'CATG'
  * .replaceResults default: false
+
  * .showResultText default: false
+ * .showConfigureLookup default: false
+ * .showControlsFilters default: false
+
  * .filterBySelectedSamples default : true
  * .mafUpper default : true
  * .mafThreshold default 0
@@ -213,6 +217,12 @@ export default class PanelManageGenotypeComponent extends Component {
 
     if (userSettings.showResultText === undefined) {
       userSettings.showResultText = false;
+    }
+    if (userSettings.showConfigureLookup === undefined) {
+      userSettings.showConfigureLookup = true;
+    }
+    if (userSettings.showControlsFilters === undefined) {
+      userSettings.showControlsFilters = true;
     }
 
     if (userSettings.filterBySelectedSamples === undefined) {

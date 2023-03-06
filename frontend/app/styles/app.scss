@@ -1633,13 +1633,19 @@ div#goto-feature > div
   height: 100%;
 }
 
+.right-panel-genotype,
+.right-panel-genotype > .matrix-view
+{
+  height: 100%;
+}
+
 #observational-table {
   flex: 1;
 }
 
 #observational-table .wtHolder
 {
-  height : fit-content !important;
+  /* height : fit-content !important; */
 }
 /* .col-sample */
 #observational-table .head
@@ -1987,7 +1993,7 @@ body:not(.tablesPanelRight) .metaeditor-panel {
 
 
 #right-panel-content.right-panel-dataset,
-#right-panel-content.right-panel-genotype,
+// #right-panel-content.right-panel-genotype,
 {
   overflow-y: auto;
 }
@@ -2120,6 +2126,18 @@ div.genotype > div > div > textarea,
 {
   width: 20em;
 }
+/** plan to add .panel-children-are-closed when all panel-container children have showComponent=false.
+ * In the case of manage-genotype, the 3 closed panel-container-s can be placed in a horizontal line.
+  */
+.panel-parent.panel-children-are-closed
+{
+  display : flex;
+}
+.panel-parent.panel-children-are-closed > .panel-primary
+{
+  flex : 1;
+  margin-right : 1em;
+}
 
 .vcfGenotypeSamplesSelected
 {
@@ -2129,11 +2147,10 @@ div.genotype > div > div > textarea,
 }
 .right-panel-genotype
 {
-  margin-top: 1em;
 }
 div.genotype
 {
-  margin-left : 1em;
+  margin: 1em;
 }
 /* vertical space above labelled inputs in manage-genotype : lookup inputs dialog.
  * Don't apply to the x-toggle label (in div.x-toggle-component >) 
@@ -2178,7 +2195,6 @@ div.genotype label
 }
 .lookup-line > button {
   margin-top: auto;
-  margin-bottom: 1em;
 }
 .lookup-line > .interval-group {
   display: flex;

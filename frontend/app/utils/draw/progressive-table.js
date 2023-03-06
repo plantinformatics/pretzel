@@ -96,7 +96,7 @@ function tableRowMerge(table, data, currentData, columnNames, colHeaders) {
       a1.splice(i1, 1);
       table.alter('remove_row', visualRowIndex1);
       // deleting the only row seems to cause columns to be forgotten.
-      if (false && ! table.getData().length) {
+      if (table_getData_length(table) === 0) {
         table.updateSettings({colHeaders});
       }
       /* don't count deleting as a change : if a large block of data becomes
@@ -112,7 +112,7 @@ function tableRowMerge(table, data, currentData, columnNames, colHeaders) {
     a1.splice(i1, length);
     const visualRowIndex1 = table.toVisualRow(i1);
     table.alter('remove_row', visualRowIndex1, length);
-    if (false && ! table.getData().length) {
+    if (table_getData_length(table) === 0) {
       table.updateSettings({colHeaders});
     }
   } else for (; (i0 < a0.length) && (remainingChanges-- > 0); i0++, i1++) {
@@ -153,6 +153,13 @@ function rowObjDataToArray(rowData, columnNames) {
     rowData :
     columnNames.map((name) => rowData[name]);
   return rowDataArray;
+}
+
+function table_getData_length(table) {
+  const
+  data = table.getData ? table.getData() : table.getSettings()?.data,
+  length = data?.length;
+  return length;
 }
 
 /**

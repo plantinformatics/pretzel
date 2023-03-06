@@ -152,6 +152,17 @@ Server :
 
 {{!-- --------------------------------------------------------------------- --}}
 
+  <div class="panel-parent" style="margin-top:2ex">
+
+{{#elem/panel-container state="primary" showComponent=@userSettings.showConfigureLookup as |panelContainer|}}
+
+  {{#elem/panel-heading icon="transfer" panelContainer=panelContainer}}
+    Configure Lookup
+  {{/elem/panel-heading}}
+
+  {{#if panelContainer.showComponent}}
+
+
 <div class="genotype">
 
   {{#elem/button-base
@@ -299,7 +310,10 @@ Server :
   {{/if}}
 </div>
 
-  <div style="margin-top:2ex">
+  {{/if}} {{!-- showComponent --}}
+{{/elem/panel-container}}
+
+
 
     {{#elem/panel-container state="primary" showComponent=showResultText as |panelContainer|}}
 
@@ -325,7 +339,7 @@ Server :
     {{/elem/panel-container}}
 
 
-    {{#elem/panel-container state="primary" showComponent=true as |panelContainer|}}
+    {{#elem/panel-container state="primary" showComponent=@userSettings.showControlsFilters as |panelContainer|}}
 
       {{#elem/panel-heading icon="transfer" panelContainer=panelContainer}}
         Controls and Filters
