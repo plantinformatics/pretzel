@@ -8,7 +8,7 @@ import { A as Ember_A } from '@ember/array';
 
 
 import { toPromiseProxy, toArrayPromiseProxy } from '../../utils/ember-devel';
-import { contentOf } from '../../utils/common/promises';
+import { thenOrNow, contentOf } from '../../utils/common/promises';
 import { intervalSize } from '../../utils/interval-calcs';
 import { overlapInterval } from '../../utils/draw/zoomPanCalcs';
 import {
@@ -402,23 +402,18 @@ export default class PanelManageGenotypeComponent extends Component {
     block = feature.get('blockId'),
     filters = this.blockHaplotypeFilters(block);
     this.arrayToggleObject(filters, haplotype);
+
     /** filtered/sorted display depends on .samples, which depends on
      * this.vcfGenotypeSamplesText, so request all sampleNames if not received.
      */
     let textP = ! this.vcfGenotypeSamplesText && this.vcfGenotypeSamples();
-    if (textP) {
-      // could use thenOrNow() but it currently expects value to be defined.
-      textP.then(() => {
+    thenOrNow(textP, () => {
+      if (textP) {
         dLog(fnName);
-        filtersSet.apply(this);
-      });
-    } else {
-      filtersSet();
-    }
-    function filtersSet() {
+      }
       // Refresh display.
       this.haplotypeFiltersSet();
-    }
+    });
   }
   /** If object is in array, remove it, otherwise add it.
    * @param object  any value - string or object, etc

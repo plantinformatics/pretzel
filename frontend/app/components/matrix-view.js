@@ -31,6 +31,7 @@ import { tableRowMerge } from '../utils/draw/progressive-table';
 // -----------------------------------------------------------------------------
 
 const dLog = console.debug;
+const trace = 1;
 
 const featureSymbol = Symbol.for('feature');
 
@@ -351,7 +352,6 @@ export default Component.extend({
       rowHeaders: bind(this, this.rowHeaders),
       manualColumnMove: true,
 
-      afterScrollVertically: bind(this, this.afterScrollVertically),
       outsideClickDeselects: true,
       afterOnCellMouseDown: bind(this, this.afterOnCellMouseDown),
       afterOnCellMouseOver,
@@ -373,6 +373,12 @@ export default Component.extend({
     // linked to below : .registerRenderer( *Renderer )
     if (gtPlainRender & 0b10) {
       settings.cells = bind(this, this.cells);
+    }
+    /* afterScrollVertically() calls progressiveRowMergeInBatch(), so enable
+     * with the same bit value as progressiveRowMergeInBatch().
+     */
+    if (gtPlainRender & 0b100000) {
+      settings.afterScrollVertically = bind(this, this.afterScrollVertically);
     }
 
     if (this.urlOptions.gtSelectColumn) {
@@ -1150,18 +1156,20 @@ export default Component.extend({
         const startTime = Date.now();
         console.time(fnName + ':updateSettings');
         table.updateSettings(settings);
-        if (gtPlainRender & 0b1000000) {
+        if (gtPlainRender & 0b100000) {
           this.progressiveRowMergeInBatch();
         }
         const endTime = Date.now();
         console.timeEnd(fnName + ':updateSettings');
-        const
-        timeMeasure =
-          'rows : ' + table.countRows() +
-          ', cols : ' + table.countCols() +
-          ', time : ' + (endTime - startTime) + ' ms';
-        /** displaying via { {this.timeMeasure}} in hbs causes re-render, so display using jQuery. */
-        $('#timeMeasure').text(timeMeasure);
+        if (trace > 1) {
+          const
+          timeMeasure =
+            'rows : ' + table.countRows() +
+            ', cols : ' + table.countCols() +
+            ', time : ' + (endTime - startTime) + ' ms';
+          /** displaying via { {this.timeMeasure}} in hbs causes re-render, so display using jQuery. */
+          $('#timeMeasure').text(timeMeasure);
+        }
       }
       if (gtPlainRender & 0b10000000) {
         this.setRowAttributes();
