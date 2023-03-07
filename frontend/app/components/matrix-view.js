@@ -329,9 +329,9 @@ export default Component.extend({
     dLog(fnName, tableDiv);
     const afterOnCellMouseOver = afterOnCellMouseOverClosure(this);
     let nRows = this.get('rows.length') || 0;
-    /** switch on gtPlainRender by default, temporarily. */
+    /** switch on gtPlainRender=0b11 by default, temporarily. */
     const gtPlainRender = this.urlOptions.gtPlainRender ??
-          (this.urlOptions.gtPlainRender = true);
+          (this.urlOptions.gtPlainRender = 0b11);
     let settings = {
       /* see comment re. handsOnTableLicenseKey in frontend/config/environment.js */
       licenseKey: config.handsOnTableLicenseKey,
@@ -351,7 +351,6 @@ export default Component.extend({
       rowHeaders: bind(this, this.rowHeaders),
       manualColumnMove: true,
 
-      cells: bind(this, this.cells),
       afterScrollVertically: bind(this, this.afterScrollVertically),
       outsideClickDeselects: true,
       afterOnCellMouseDown: bind(this, this.afterOnCellMouseDown),
@@ -368,8 +367,12 @@ export default Component.extend({
         // columns: [],
       }
     };
-    if (! gtPlainRender) {
+    if (gtPlainRender & 0b1) {
       Object.assign(settings, richSettings);
+    }
+    // linked to below : .registerRenderer( *Renderer )
+    if (gtPlainRender & 0b10) {
+      settings.cells = bind(this, this.cells);
     }
 
     if (this.urlOptions.gtSelectColumn) {
@@ -379,7 +382,7 @@ export default Component.extend({
     }
     let table = new Handsontable(tableDiv, settings);
 
-    if (! gtPlainRender) {
+    if (gtPlainRender & 0b10) {
       Handsontable.renderers.registerRenderer('CATGRenderer', bind(this, this.CATGRenderer));
       Handsontable.renderers.registerRenderer('ABRenderer', bind(this, this.ABRenderer));
       Handsontable.renderers.registerRenderer('numericalDataRenderer', bind(this, this.numericalDataRenderer));
@@ -389,7 +392,7 @@ export default Component.extend({
 
     this.set('table', table);
 
-    if (! gtPlainRender) {
+    if (gtPlainRender & 0b100) {
       table.addHook('afterRender', this.afterRender.bind(this));
     }
   },
@@ -796,7 +799,7 @@ export default Component.extend({
   /** When configuration of one of the Renderers changes, re-render.
    */
   rendererConfigEffect : computed('abValues', 'rowRanges', function () {
-    if (! this.urlOptions.gtPlainRender) {
+    if (this.urlOptions.gtPlainRender & 0b1000) {
       this.table?.render();
     }
   }),
@@ -1106,7 +1109,7 @@ export default Component.extend({
     const gtPlainRender = this.urlOptions.gtPlainRender;
     dLog('matrix-view', 'updateTable', t, rows.length, rowHeaderWidth, colHeaderHeight, table, data, this.blockSamples && 'vcf');
 
-    if (! gtPlainRender) {
+    if (gtPlainRender & 0b10000) {
       this.hideColumns();
     }
 
@@ -1133,7 +1136,8 @@ export default Component.extend({
           columns,
           rowHeaderWidth: rowHeaderWidth,
         };
-        if (gtPlainRender) {
+        // .data is required, so invert the flag
+        if (! (gtPlainRender & 0b100000)) {
           // this can be enabled as an alternative to progressiveRowMergeInBatch().
           settings.data = data;
         }
@@ -1146,7 +1150,7 @@ export default Component.extend({
         const startTime = Date.now();
         console.time(fnName + ':updateSettings');
         table.updateSettings(settings);
-        if (! gtPlainRender) {
+        if (gtPlainRender & 0b1000000) {
           this.progressiveRowMergeInBatch();
         }
         const endTime = Date.now();
@@ -1159,11 +1163,12 @@ export default Component.extend({
         /** displaying via { {this.timeMeasure}} in hbs causes re-render, so display using jQuery. */
         $('#timeMeasure').text(timeMeasure);
       }
-      if (! gtPlainRender) {
+      if (gtPlainRender & 0b10000000) {
         this.setRowAttributes();
       }
     } else {
-      if (! gtPlainRender) {
+      // alternative to .data
+      if (gtPlainRender & 0b100000) {
         this.progressiveRowMergeInBatch();
       }
       t.hide();

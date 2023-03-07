@@ -1488,12 +1488,18 @@ export default class PanelManageGenotypeComponent extends Component {
     return count;
   }
 
+  /** Can use this to set width of textarea class="vcfGenotypeText".
+   * Currently using 100% instead - this may be useful when result does not need 100%
+   */
   @action
   vcfGenotypeTextWidthStyle() {
     const
     fnName = 'vcfGenotypeTextSetWidth',
     text = this.vcfGenotypeText,
-    lastRowWidth = text.length - text.lastIndexOf('\n', text.length-2),
+    /** last line may be truncated so to measure length of 2nd last line */
+    lastChar = text.length-1,
+    lastNewline = text.lastIndexOf('\n', lastChar - 1),
+    lastRowWidth = lastNewline - text.lastIndexOf('\n', lastNewline - 1),
     style = lastRowWidth ? 'width:' + lastRowWidth + 'em' : '';
     console.log(fnName, arguments, lastRowWidth, style);
     return style;
