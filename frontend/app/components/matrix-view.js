@@ -4,6 +4,7 @@ import Component from '@ember/component';
 import { inject as service } from '@ember/service';
 import { get as Ember_get, set as Ember_set } from '@ember/object';
 import { later, once, bind, debounce } from '@ember/runloop';
+import { on } from '@ember/object/evented';
 import { task, didCancel } from 'ember-concurrency';
 
 
@@ -68,6 +69,10 @@ const featureValuesWidths = {
   */
 };
 
+/** Initially '100%', but that puts horizontal scrollbar below the browser window.
+ * Recalculated to a px value by tableHeightFromParent().
+ * vh doesn't seem to work here. */
+let tableHeight = '100%';
 
 // -----------------------------------------------------------------------------
 
@@ -322,12 +327,36 @@ export default Component.extend({
 
   //----------------------------------------------------------------------------
 
+  initResizeListener() {
+    d3.select(window) // '#right-panel'
+      .on('resize', () => this.updateTableHeight());
+  },
+  updateTableHeight() {
+    this.updateTableOnce();
+  },
+
+  /** Calculate height of table in px to enable horizontal scrollbar below table
+   * to be visible.
+   */
+  tableHeightFromParent(tableDiv) {
+    const
+    /** could use .clientHeight of #right-panel-content.right-panel-genotype;
+     * matrixViewElt.clientHeight seems the same value */
+    matrixViewElt = tableDiv.parentElement,
+    matrixViewHeight = matrixViewElt.clientHeight,
+    rightPanel = $('#right-panel-content.right-panel-genotype > .panel-parent')[0],
+    // this.colHeaderHeight + 80
+    height = '' + (matrixViewHeight - rightPanel.clientHeight - 45) + 'px';
+    return height;
+  },
 
   createTable() {
     const fnName = 'createTable';
-
+    /** div.matrix-view.ember-view */
     let tableDiv = $("#observational-table")[0];
-    dLog(fnName, tableDiv);
+    this.initResizeListener();
+    tableHeight = this.tableHeightFromParent(tableDiv);
+    dLog(fnName, tableDiv, tableHeight);
     const afterOnCellMouseOver = afterOnCellMouseOverClosure(this);
     let nRows = this.get('rows.length') || 0;
     /** switch on gtPlainRender=0b11 by default, temporarily. */
@@ -340,7 +369,7 @@ export default Component.extend({
       readOnly: true,
 
       width : '100%',
-      height: true || this.fullPage ? '100%' : nRows2HeightEx(nRows) + 'ex',
+      height: true || this.fullPage ? tableHeight : nRows2HeightEx(nRows) + 'ex',
       rowHeights : '24px',
       colWidths : bind(this, this.colWidths),
       stretchH: 'none',
@@ -1052,7 +1081,7 @@ export default Component.extend({
       });
       /** for gtMergeRows, Position is a hidden column; if it were not in
        * columnNames, then this reference could be used by dataRowCmp().
-. */
+       */
       d[Symbol.for('Position')] = rowData.Position;
       data.push(d);
     });
@@ -1107,13 +1136,14 @@ export default Component.extend({
   updateTable: observer(/*'displayData.[]'*/ 'rows', 'selectedBlock', function() {
     const fnName = 'updateTable';
     let t = $("#observational-table");
+    tableHeight = this.tableHeightFromParent(t[0]);
     let rows = this.get('rows');
     let rowHeaderWidth = this.get('rowHeaderWidth');
     let colHeaderHeight = this.get('colHeaderHeight');
     let table = this.get('table');
     let data = this.get('data');
     const gtPlainRender = this.urlOptions.gtPlainRender;
-    dLog('matrix-view', 'updateTable', t, rows.length, rowHeaderWidth, colHeaderHeight, table, data, this.blockSamples && 'vcf');
+    dLog('matrix-view', fnName, t, rows.length, rowHeaderWidth, colHeaderHeight, tableHeight, table, data, this.blockSamples && 'vcf');
 
     if (gtPlainRender & 0b10000) {
       this.hideColumns();
@@ -1151,7 +1181,7 @@ export default Component.extend({
           settings.columnHeaderHeight = colHeaderHeight;
         } else {
           let nRows = rows.length;
-          settings.height = '100%'; // nRows2HeightEx(nRows) + 'ex';
+          settings.height = tableHeight; // nRows2HeightEx(nRows) + 'ex';
         }
         const startTime = Date.now();
         console.time(fnName + ':updateSettings');
