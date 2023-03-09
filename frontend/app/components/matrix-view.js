@@ -267,7 +267,13 @@ export default Component.extend({
 
   // ---------------------------------------------------------------------------
 
+  /** Used in columnNamesToColumnOptions() to add .width to the settings .columns[]
+   */
   colWidths : function (columnIndex) {
+    /** Originally included in table settings as :
+     * colWidths : bind(this, this.colWidths),
+     */
+
     /** fix GT columns at 25; they have long headings so autoColumnWidth is too wide.
      * Columns :
      *  0 : Block (track colour).  same as GT - 25px
@@ -362,6 +368,7 @@ export default Component.extend({
     /** switch on gtPlainRender=0b11 by default, temporarily. */
     const gtPlainRender = this.urlOptions.gtPlainRender ??
           (this.urlOptions.gtPlainRender = 0b11);
+    const columns = this.columnNamesToColumnOptions(this.columnNames);
     let settings = {
       /* see comment re. handsOnTableLicenseKey in frontend/config/environment.js */
       licenseKey: config.handsOnTableLicenseKey,
@@ -371,7 +378,7 @@ export default Component.extend({
       width : '100%',
       height: true || this.fullPage ? tableHeight : nRows2HeightEx(nRows) + 'ex',
       rowHeights : '24px',
-      colWidths : bind(this, this.colWidths),
+      columns,
       stretchH: 'none',
     };
     /** The above settings are minimal - just plain text, without actions, to
@@ -921,8 +928,10 @@ export default Component.extend({
   columnNamesToColumnOptions(columnNames) {
     const
     columns =
-      columnNames.map((name) => {
-        const options = {data : name};
+      columnNames.map((name, columnIndex) => {
+        const
+        width = this.colWidths(columnIndex),
+        options = {data : name, width};
         if (! columnNameIsNotSample(name)) {
           options.className = 'col-sample';
         }
