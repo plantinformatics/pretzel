@@ -2126,6 +2126,12 @@ div.genotype > div > div > textarea,
 {
   width: 20em;
 }
+/** Hide the panel-container-s when toggled off */
+#right-panel-content.right-panel-genotype.hideControls .panel-parent
+{
+  display : none;
+}
+
 /** plan to add .panel-children-are-closed when all panel-container children have showComponent=false.
  * In the case of manage-genotype, the 3 closed panel-container-s can be placed in a horizontal line.
   */

@@ -519,10 +519,23 @@ export default Controller.extend(Evented, {
    * components div;   the remainder of the template is disabled via {{#if
    * (compare layout.right.tab '===' 'paths')}} which wraps the whole component.
    */
-  rightPanelClass : computed('layout.right.tab', function () {
-    let tab = this.get('layout.right.tab');
-    dLog('rightPanelClass', tab);
-    return 'right-panel-' + tab;
-  }),
+  rightPanelClass : computed(
+    'layout.right.tab',
+    'userSettings.genotype.hideControls',
+    function () {
+      let tab = this.get('layout.right.tab');
+      dLog('rightPanelClass', tab);
+      let
+      classNames = 'right-panel-' + tab,
+      /** Add hideControls to classNames when .userSettings.genotype.hideControls is true.
+       * This class could be omitted when tab is not genotype; the css selector is :
+       * .right-panel-genotype.hideControls .panel-parent
+       */
+      rightPanelGenotype_hideControls = this.userSettings.genotype.hideControls;
+      if (rightPanelGenotype_hideControls) {
+        classNames += ' hideControls';
+      }
+      return classNames;
+    }),
 
 });
