@@ -341,6 +341,10 @@ export default Component.extend({
     this.updateTableOnce();
   },
 
+  tableHeightEffect : computed('userSettings.hideControls', function () {
+    this.updateTableOnce();
+  }),
+
   /** Calculate height of table in px to enable horizontal scrollbar below table
    * to be visible.
    */
