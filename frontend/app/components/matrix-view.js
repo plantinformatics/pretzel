@@ -73,6 +73,8 @@ const featureValuesWidths = {
  * Recalculated to a px value by tableHeightFromParent().
  * vh doesn't seem to work here. */
 let tableHeight = '100%';
+/** Enable use of tableHeightFromParent().  */
+const calculateTableHeight = true;
 
 // -----------------------------------------------------------------------------
 
@@ -350,13 +352,17 @@ export default Component.extend({
    */
   tableHeightFromParent(tableDiv) {
     const
-    /** could use .clientHeight of #right-panel-content.right-panel-genotype;
+    fnName = 'tableHeightFromParent',
+    /** Use .clientHeight of #right-panel-content.right-panel-genotype;
      * matrixViewElt.clientHeight seems the same value */
     matrixViewElt = tableDiv.parentElement,
     matrixViewHeight = matrixViewElt.clientHeight,
-    rightPanel = $('#right-panel-content.right-panel-genotype > .panel-parent')[0],
+    rightPanel = $('#right-panel-content.right-panel-genotype')[0],
     // this.colHeaderHeight + 80
-    height = '' + (matrixViewHeight - rightPanel.clientHeight - 45) + 'px';
+    height = '' + (rightPanel.clientHeight - 45) + 'px';
+    if (matrixViewHeight !== rightPanel.clientHeight) {
+      dLog(fnName, matrixViewHeight, '!==', rightPanel.clientHeight, matrixViewElt, rightPanel);
+    }
     return height;
   },
 
@@ -364,8 +370,10 @@ export default Component.extend({
     const fnName = 'createTable';
     /** div.matrix-view.ember-view */
     let tableDiv = $("#observational-table")[0];
-    this.initResizeListener();
-    tableHeight = this.tableHeightFromParent(tableDiv);
+    if (calculateTableHeight) {
+      this.initResizeListener();
+      tableHeight = this.tableHeightFromParent(tableDiv);
+    }
     dLog(fnName, tableDiv, tableHeight);
     const afterOnCellMouseOver = afterOnCellMouseOverClosure(this);
     let nRows = this.get('rows.length') || 0;
@@ -1149,7 +1157,9 @@ export default Component.extend({
   updateTable: observer(/*'displayData.[]'*/ 'rows', 'selectedBlock', function() {
     const fnName = 'updateTable';
     let t = $("#observational-table");
-    tableHeight = this.tableHeightFromParent(t[0]);
+    if (calculateTableHeight) {
+      tableHeight = this.tableHeightFromParent(t[0]);
+    }
     let rows = this.get('rows');
     let rowHeaderWidth = this.get('rowHeaderWidth');
     let colHeaderHeight = this.get('colHeaderHeight');

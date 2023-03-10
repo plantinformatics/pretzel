@@ -178,8 +178,9 @@ export default class PanelManageGenotypeComponent extends Component {
   @tracked
   axisBrushBlockIndex = undefined;
 
-  @tracked
-  showInputDialog = false;
+  // @tracked
+  @alias('args.userSettings.hideControls') 
+  showInputDialog;
 
   @alias('args.userSettings.showResultText')
   showResultText;
