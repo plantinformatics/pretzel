@@ -2132,6 +2132,27 @@ div.genotype > div > div > textarea,
   display : none;
 }
 
+div.genotype ul.list-group
+{
+  width:40em;
+}
+.panel-parent > .panel-primary
+{
+  width: fit-content;
+  margin-right: 1em;
+}
+.genotype-controls > .form-control
+{
+  width: 40%;
+}
+.panel-parent
+{
+  width: 1200px;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+
 /** plan to add .panel-children-are-closed when all panel-container children have showComponent=false.
  * In the case of manage-genotype, the 3 closed panel-container-s can be placed in a horizontal line.
   */
