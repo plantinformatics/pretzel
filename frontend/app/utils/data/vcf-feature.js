@@ -825,7 +825,8 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
         const
         row = rowsAddFeature(res.rows, feature, 'Name');
         if (showHaplotypeColumn) {
-          row.Haplotype = stringSetFeature(featureHaplotypeValue(feature), feature);
+          // column name is 'LD Block', originally  'Haplotype'.
+          row['LD Block'] = stringSetFeature(featureHaplotypeValue(feature), feature);
         }
 
         /* related to refAltColumns */

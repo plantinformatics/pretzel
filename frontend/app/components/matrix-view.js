@@ -1376,7 +1376,7 @@ export default Component.extend({
     let haplotype;
     /** afterSelectionHaplotype() gets called while table is re-rendering, and feature is undefined */
     if (feature) {
-      haplotype = feature.values.tSNP;
+      haplotype = feature.values?.tSNP;
       dLog(fnName, coords, feature.name, haplotype);
       if (haplotype) {
         this.haplotypeToggle(feature, haplotype);
