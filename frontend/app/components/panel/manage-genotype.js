@@ -1183,7 +1183,14 @@ export default class PanelManageGenotypeComponent extends Component {
             this.displayDataRows = sampleGenotypes.rows;
             nonVCF.features.forEach((f) => {
               const
-              row = rowsAddFeature(this.displayDataRows, f, f.get('blockId.datasetId.id')); });
+              datasetId = f.get('blockId.datasetId.id'),
+              row0 = rowsAddFeature(this.displayDataRows, f, datasetId, 0),
+              value = f.value;
+              if ((value[1] !== undefined) && (value[1] !== value[0])) {
+                // add it also, as '- ' + name
+                const row1 = rowsAddFeature(this.displayDataRows, f, datasetId, 1);
+              }
+            });
             this.datasetColumns = nonVCF.columnNames;
             /* Position value is returned by matrix-view : rowHeaders().
              * for gtMergeRows the Position column is hidden.

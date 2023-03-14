@@ -823,7 +823,7 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
     (res, feature) => {
       if (featureFilter(feature)) {
         const
-        row = rowsAddFeature(res.rows, feature, 'Name');
+        row = rowsAddFeature(res.rows, feature, 'Name', 0);
         if (showHaplotypeColumn) {
           // column name is 'LD Block', originally  'Haplotype'.
           row['LD Block'] = stringSetFeature(featureHaplotypeValue(feature), feature);
@@ -888,16 +888,22 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
  * @param rows array indexed by .Position (feature.value[0])
  * @param feature models/feature
  * @param nameColumn  'Name' or datasetId, for feature from non-VCF data block
+ * @param valueIndex use .value[valueIndex] for position, default 0
+ * If valueIndex is 1 (end position), prefix name with '- '
  */
-function rowsAddFeature(rows, feature, nameColumn) {
+function rowsAddFeature(rows, feature, nameColumn, valueIndex = 0) {
   const
-  position = feature.get('value.0'),
+  position = feature.get('value.' + valueIndex),
   row = (rows[position] ||= ({})),
   blockColourValue = featureBlockColourValue(feature);
   /* related to vcfFeatures2MatrixView() : blockColourColumn,  */
   /* probably change Block to an array, and .push() here, display a flex ul of colour blocks. */
   row.Block = stringSetFeature(blockColourValue, feature);
-  row[nameColumn] = stringSetFeature(feature.name, feature);
+  let name = feature.name;
+  if (valueIndex) {
+    name = '- ' + name;
+  }
+  row[nameColumn] = stringSetFeature(name, feature);
   /* row.Position is used by matrix-view : rowHeaders(), not in a named column. */
   row.Position = position;
   return row;
