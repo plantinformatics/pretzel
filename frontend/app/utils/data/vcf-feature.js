@@ -798,7 +798,7 @@ function blockToMatrixColumn(singleBlock, block, sampleName, features) {
 function vcfFeatures2MatrixViewRows(requestFormat, featuresArrays, featureFilter, sampleFilter, options) {
   const fnName = 'vcfFeatures2MatrixViewRows';
   const result = featuresArrays.reduce((res, features) => {
-    res = vcfFeatures2MatrixViewRowsResult(res, requestFormat, features, featureFilter, options);
+    res = vcfFeatures2MatrixViewRowsResult(res, requestFormat, features, featureFilter, sampleFilter, options);
     return res;
   }, {rows : [], sampleNames : []});
   return result;
@@ -823,14 +823,7 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
     (res, feature) => {
       if (featureFilter(feature)) {
         const
-        position = feature.get('value.0'),
-        row = (res.rows[position] ||= ({})),
-        blockColourValue = featureBlockColourValue(feature);
-        /* related to vcfFeatures2MatrixView() : blockColourColumn,  */
-        row.Block = stringSetFeature(blockColourValue, feature);
-        row.Name = stringSetFeature(feature.name, feature);
-        /* row.Position is used by matrix-view : rowHeaders(), not in a named column. */
-        row.Position = position;
+        row = rowsAddFeature(res.rows, feature, 'Name');
         if (showHaplotypeColumn) {
           row.Haplotype = stringSetFeature(featureHaplotypeValue(feature), feature);
         }
@@ -890,6 +883,26 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
   return result;
 }
 
+/** Add feature to rows[]
+ * @param rows array indexed by .Position (feature.value[0])
+ * @param feature models/feature
+ * @param nameColumn  'Name' or datasetId, for feature from non-VCF data block
+ */
+function rowsAddFeature(rows, feature, nameColumn) {
+  const
+  position = feature.get('value.0'),
+  row = (rows[position] ||= ({})),
+  blockColourValue = featureBlockColourValue(feature);
+  /* related to vcfFeatures2MatrixView() : blockColourColumn,  */
+  /* probably change Block to an array, and .push() here, display a flex ul of colour blocks. */
+  row.Block = stringSetFeature(blockColourValue, feature);
+  row[nameColumn] = stringSetFeature(feature.name, feature);
+  /* row.Position is used by matrix-view : rowHeaders(), not in a named column. */
+  row.Position = position;
+  return row;
+}
+
+
 /** Collate "sample names" i.e. keys(feature.values), adding them to sampleNamesSet.
  * Omit ref and alt, i.e. names which are in refAlt.
  * @param feature
@@ -940,5 +953,6 @@ export {
   sampleIsFilteredOut,
   vcfFeatures2MatrixView, vcfFeatures2MatrixViewRows,
   valueIsCopies,
+  rowsAddFeature,
   featureSampleNames,
 };

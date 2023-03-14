@@ -773,6 +773,7 @@ function AxisBrushZoom(oa) {
     d3.selectAll(fadedSelector).classed("faded", featureNotSelected2);
   } // axisFeatureCirclesBrushed()
 
+  //----------------------------------------------------------------------------
 
   /** Determine the axis-brush object and calculate brushedDomain from brushRange.
    * param  brushRange from d3.event.selection
@@ -1162,9 +1163,8 @@ function AxisBrushZoom(oa) {
     let y = axis1d.y, svgContainer = oa.svgContainer;
     if (! axis1d.isDestroying && y) {
       let yAxis = axis1d.axisSide(y).ticks(me.axisTicks * axis1d.portion);
-      const
-      idName = axisEltId(axis1d),
-      axisS = svgContainer.select("#"+idName);
+      const idName = axisEltId(axis1d);
+      let axisS = svgContainer.select("#"+idName);
       if (t) {
         axisS = axisS.transition(t)
           .duration(me.get('axisZoom.axisTransitionTime'));

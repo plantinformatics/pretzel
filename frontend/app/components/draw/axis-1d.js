@@ -16,6 +16,7 @@ import {
   noKeyfilter,
 } from '../../utils/domElements';
 
+import { intervalIntersect } from '../../utils/interval-calcs';
 import { contentOf } from '../../utils/common/promises';
 import AxisEvents from '../../utils/draw/axis-events';
 import AxisPosition from '../../mixins/axis-position';
@@ -305,6 +306,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
    */
   dataBlocksFiltered(visible, showPaths) {
     const
+    /** construct a proxy which has the attributes used by dataBlocks(). */
     stacked = {blocks : this.dataBlocks, axisName : this.axisName, mapName : this.axis.mapName},
     blocks = Stacked.prototype.dataBlocks.apply(stacked, [...arguments]);
     return blocks;
@@ -342,6 +344,16 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     axisBrushZoom = AxisBrushZoom(stacks.oa),
     brushedDomain = brushedRegion && axisBrushZoom.axisRange2Domain(this, brushedRegion);
     return brushedDomain;
+  }),
+  /** @return the intersection of .domain, which incorporates .zoomedDomain, and .brushedDomain if defined.
+   */
+  zoomedAndOrBrushedDomain : computed('brushedRegion', function () {
+    let domain = this.domain;
+    const brushedDomain = this.brushedDomain;
+    if (brushedDomain) {
+      domain = intervalIntersect(brushedDomain, domain);
+    }
+    return domain;
   }),
 
   /** Dependency on .dataBlocks provides update for this axis if brushed, when a
@@ -824,6 +836,53 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     function () {
       this.updateBrushedFeatures();
     }),
+
+  //----------------------------------------------------------------------------
+
+  /** For visible data blocks on axis1d, collate features in
+   * .zoomedAndOrBrushedDomain.
+   * @param includeVCF if false, filter out VCF blocks, which are handled by
+   * manage-genotype : brushedOrViewedVCFBlocks() -> viewedVCFBlocks()
+   * @return undefined if .isDestroying, otherwise array of [block,
+   * featuresInInterval]
+   */
+  zoomedAndOrBrushedFeatures(includeVCF) {
+    const fnName = 'zoomedAndOrBrushedFeatures';
+    /** Based on extracts from axisFeatureCirclesBrushed(); potentially that
+     * function could use this.
+     */
+    if (this.isDestroying) {
+      return undefined;
+    }
+
+    const
+    interval = this.zoomedAndOrBrushedDomain,
+    valueInInterval = this.controlsView.valueInInterval,
+    brushExtent = this.brushedRegion,
+    yp = this.y,
+    brushedDomain_ = brushExtent?.map(
+      function(ypx) { return yp.invert(ypx /* *this.portion */); }),
+    brushedDomain = maybeFlip(brushedDomain_, this.flipped);
+
+    const
+    childBlocksIncludingVCF = this.dataBlocksFiltered(true, false)
+      .filterBy('visible'),
+    childBlocks = includeVCF ? childBlocksIncludingVCF :
+      childBlocksIncludingVCF.filter((b) => ! b.get('isVCF')),
+    blocksFeaturesInInterval = childBlocks.map(function (block) {
+      const
+      blockFeatures = block.get('features'),
+      featuresInInterval = blockFeatures.filter(
+        feature => valueInInterval(feature.value, interval));
+      dLog(fnName, block, featuresInInterval);
+      return [block, featuresInInterval];
+    });
+    dLog(fnName, blocksFeaturesInInterval);
+    return blocksFeaturesInInterval;
+  },
+
+  //----------------------------------------------------------------------------
+
   axisTitleFamily() {
     let axis = this.get('axisS');
     if (axis && ! axis.isDestroying) {

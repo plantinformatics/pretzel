@@ -2113,7 +2113,7 @@ div.metaeditor-panel div.jsoneditor-tree button.jsoneditor-contextmenu-button {
 /*#right-panel-content.right-panel-dataset >*/ .axis-brushes > table > div > textarea,
 textarea.vcfGenotypeText
 {
-  width: 100%;
+  width: 50em;
   height: 20ex;
   overflow: auto;
 }
@@ -2151,7 +2151,9 @@ div.genotype ul.list-group
   display: flex;
   flex-wrap: wrap;
 }
-
+.panel-parent > .panel-primary {
+  height: fit-content;
+}
 
 /** plan to add .panel-children-are-closed when all panel-container children have showComponent=false.
  * In the case of manage-genotype, the 3 closed panel-container-s can be placed in a horizontal line.
@@ -2195,6 +2197,12 @@ div.genotype label
   color: white;
 }
 
+/* added for manage-genotype, but applicable to other modals also. */
+.ember-modal-dialog
+{
+  max-height: calc(100vh - 20px);
+  overflow-y: auto;
+}
 .ember-modal-dialog div.genotype ul.list-group
 {
   overflow-y: auto;

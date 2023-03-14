@@ -290,12 +290,13 @@ export default Component.extend({
     columnName = this.columnNames[columnIndex],
     width =
       featureValuesWidths[columnName] ||
+      (this.datasetColumns?.includes(columnName) ? 180 : 
 
       /* works, but padding-left is required also, to move the text.
       columnIndex === this.colSample0 ?
       25 + 3 :
       */
-      25;
+       25);
     return width;
   },
 
@@ -523,6 +524,8 @@ export default Component.extend({
       cellProperties.renderer = 'numericalDataRenderer';
     } else if (prop === 'Name') {
       cellProperties.renderer = Handsontable.renderers.TextRenderer;
+    } else if (this.datasetColumns?.includes(prop)) {
+      cellProperties.renderer = Handsontable.renderers.TextRenderer;      
     } else if (numericalData) {
       cellProperties.renderer = 'numericalDataRenderer';
     } else if ((selectedBlock == null) || (this.selectedColumnName == null)) {
@@ -582,8 +585,10 @@ export default Component.extend({
   },
   afterSelectionHaplotype(row, col) {
     dLog('afterSelectionHaplotype', row, col);
-    this.haplotypeToggleRC(row, col);
-    later(() => this.table.render(), 1000);
+    const ldBlock = this.haplotypeToggleRC(row, col);
+    if (ldBlock) {
+      later(() => this.table.render(), 1000);
+    }
   },
 
   // ---------------------------------------------------------------------------
@@ -1360,20 +1365,25 @@ export default Component.extend({
 
   /** Called from selection in LD Block / Haplotype column, which will toggle selection of this LD Block / Haplotype (tSNP).
    * manage-genotype passes in action haplotypeToggle, with signature (feature, haplotype).
+   * @return LD Block : feature.values.tSNP
    */
   haplotypeToggleRC(row, col) {
     const
     fnName = 'haplotypeToggleRC',
     coords = {row, col},
     feature = tableCoordsToFeature(this.table, coords);
+    /** LD Block */
+    let haplotype;
     /** afterSelectionHaplotype() gets called while table is re-rendering, and feature is undefined */
     if (feature) {
-      const
       haplotype = feature.values.tSNP;
       dLog(fnName, coords, feature.name, haplotype);
-      this.haplotypeToggle(feature, haplotype);
-      this.filterSamplesBySelectedHaplotypes();
+      if (haplotype) {
+        this.haplotypeToggle(feature, haplotype);
+        this.filterSamplesBySelectedHaplotypes();
+      }
     }
+    return haplotype;
   },
 
   //----------------------------------------------------------------------------

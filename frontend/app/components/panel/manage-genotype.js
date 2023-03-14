@@ -6,6 +6,7 @@ import { tracked } from '@glimmer/tracking';
 import { later } from '@ember/runloop';
 import { A as Ember_A } from '@ember/array';
 
+import { uniq } from 'lodash/array';
 
 import { toPromiseProxy, toArrayPromiseProxy } from '../../utils/ember-devel';
 import { thenOrNow, contentOf } from '../../utils/common/promises';
@@ -17,6 +18,7 @@ import {
   addFeaturesJson,
   sampleIsFilteredOut,
   vcfFeatures2MatrixView, vcfFeatures2MatrixViewRows,
+  rowsAddFeature,
   featureSampleNames,
  } from '../../utils/data/vcf-feature';
 import { stringCountString } from '../../utils/string';
@@ -170,6 +172,11 @@ export default class PanelManageGenotypeComponent extends Component {
    */
   @tracked
   columnNames = null;
+
+  /** Non-VCF datasets are allocated 1 column each, displaying the feature name.
+   */
+  @tracked
+  datasetColumns = null;
 
   /** in .args.userSettings : */
   /** true means replace the previous result Features added to the block. */
@@ -728,6 +735,57 @@ export default class PanelManageGenotypeComponent extends Component {
     return blocks;
   }
 
+  //----------------------------------------------------------------------------
+
+  /** To enable non-VCF features to be displayed in the table,
+   * determine the non-VCF data blocks which are on the axes displayed in the table.
+   * @return axis1d []
+   */
+  @computed('brushedVCFBlocks')
+  /* brushedVCFBlocks depends on .brushedAxes, so will update when brush is
+   * started / ended, but not changed */
+  get brushedOrViewedVCFAxes() {
+    const
+    vcfBlocks = this.brushedVCFBlocks.map((abb) => abb.block),
+    axes = vcfBlocks.mapBy('axis1d').uniq();
+    return axes;
+  }
+  @computed('brushedOrViewedVCFAxes', 'brushedOrViewedVCFAxes.0.zoomCounter')
+  get nonVCFFeaturesWithinBrush() {
+    const
+    axes = this.brushedOrViewedVCFAxes,
+    axesBlocksFeatures = axes.map((axis1d) => {
+      const
+      blocksFeatures = axis1d.zoomedAndOrBrushedFeatures(/*includeVCF*/false);
+      return [axis1d, blocksFeatures];
+    });
+    return axesBlocksFeatures;
+  }
+  /** Map nonVCFFeaturesWithinBrush to a feature proxy with just
+   * { Block : feature.blockId, [datasetId.id] : feature.name, Position }
+   * @return {columnNames [], features [] }
+   * columnNames[] contains the .blockId.datasetId.id of filtered features.
+   */
+  @computed('nonVCFFeaturesWithinBrush')
+  get nonVCFFeaturesWithinBrushData() {
+    const
+    result = {columnNames : [], features : [] },
+    axesBlocksFeatures = this.nonVCFFeaturesWithinBrush;
+    axesBlocksFeatures.forEach(([axis1d, blocksFeatures]) => {
+      blocksFeatures.forEach(([block, blockFeatures]) => {
+        const
+        datasetId = block.get('datasetId.id');
+        result.features = result.features.concat(blockFeatures);
+        if (blockFeatures.length) {
+          result.columnNames.push(datasetId);
+        }
+      });
+    });
+    return result;
+  }
+
+
+
   // ---------------------------------------------------------------------------
 
   /** dataset parent name of the selected block for lookup.
@@ -1118,12 +1176,22 @@ export default class PanelManageGenotypeComponent extends Component {
               vcfFeatures2MatrixViewRows(
                 this.requestFormat, featuresArrays, this.featureFilter.bind(this), this.sampleFilter,
                 options);
+            /** Insert datasetIds to this.columnNames.
+             * Add features to : this.displayDataRows.
+             */
+            const nonVCF = this.nonVCFFeaturesWithinBrushData;
             this.displayDataRows = sampleGenotypes.rows;
+            nonVCF.features.forEach((f) => {
+              const
+              row = rowsAddFeature(this.displayDataRows, f, f.get('blockId.datasetId.id')); });
+            this.datasetColumns = nonVCF.columnNames;
             /* Position value is returned by matrix-view : rowHeaders().
              * for gtMergeRows the Position column is hidden.
              * .sampleNames contains : [ 'Ref', 'Alt', 'tSNP', 'MAF' ]; 'tSNP' is mapped to 'LD Block'
              */
-            this.columnNames = ['Block', 'Position', 'Name'].concat(sampleGenotypes.sampleNames);
+            this.columnNames = ['Block', 'Position', 'Name']
+              .concat(nonVCF.columnNames)
+              .concat(sampleGenotypes.sampleNames);
           } else {
             let sampleNames;
             if (userSettings.filterBySelectedSamples) {
@@ -1147,6 +1215,7 @@ export default class PanelManageGenotypeComponent extends Component {
              this.sampleNamesCmp, options);
             this.displayData = displayData;
             this.columnNames = null;
+            this.datasetColumns = null;
           }
         }
       }
