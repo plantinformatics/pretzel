@@ -1,6 +1,9 @@
 import { get as Ember_get, set as Ember_set } from '@ember/object';
 import { A as Ember_A } from '@ember/array';
 
+import createIntervalTree from 'interval-tree-1d';
+
+import { intervalOrdered } from '../interval-calcs';
 import { toTitleCase } from '../string';
 import { stringGetFeature, stringSetFeature } from '../panel/axis-table';
 import { contentOf } from '../common/promises';
@@ -910,6 +913,40 @@ function rowsAddFeature(rows, feature, nameColumn, valueIndex = 0) {
 }
 
 
+/** Annotate each row which the given features overlap.
+ * This is used to annotate VCF merged rows (possibly multiple SNPs)
+ * with non-VCF features.
+ * Features with only .value[0] or .value[0]===.value[1] i.e. 0-length features
+ * are only annotated if there is a row at Position .value[0].
+ * @param rows sparse array, indexed by feature.value[*]
+ */
+function annotateRowsFromFeatures(rows, features) {
+  const
+  /** f.value.length may be 1.  intervals[*].length must be 2.
+   * createIntervalTree() gets infinite recursion if intervals are not ordered.
+   */
+  intervals = features.map(f => {
+    const i = f.value.length > 1 ? intervalOrdered(f.value) : [f.value[0], f.value[0]+1];
+    i[featureSymbol] = f;
+    return i;
+  }),
+  /** Build tree */
+  intervalTree = createIntervalTree(intervals);
+
+  rows.forEach((row, location, g) => {
+    /** Find all intervals containing query point */
+    intervalTree.queryPoint(location, function(interval) {
+      const
+      feature = interval[featureSymbol],
+      datasetId = feature.get('blockId.datasetId.id'),
+      rowDatasetFeatures = row[datasetId] || (row[datasetId] = []);
+      rowDatasetFeatures.push(feature);
+    });
+  });
+}
+
+
+
 /** Collate "sample names" i.e. keys(feature.values), adding them to sampleNamesSet.
  * Omit ref and alt, i.e. names which are in refAlt.
  * @param feature
@@ -957,9 +994,11 @@ export {
   refAlt,
   vcfGenotypeLookup,
   addFeaturesJson,
+  featureBlockColourValue,
   sampleIsFilteredOut,
   vcfFeatures2MatrixView, vcfFeatures2MatrixViewRows,
   valueIsCopies,
   rowsAddFeature,
+  annotateRowsFromFeatures,
   featureSampleNames,
 };

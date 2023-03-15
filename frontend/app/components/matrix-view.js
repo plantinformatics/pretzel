@@ -23,7 +23,7 @@ import {
   highlightFeature,
 } from '../utils/panel/axis-table';
 import { afterSelectionFeatures } from '../utils/panel/feature-table';
-import { valueIsCopies } from '../utils/data/vcf-feature';
+import { featureBlockColourValue, valueIsCopies } from '../utils/data/vcf-feature';
 import { toTitleCase } from '../utils/string';
 import { thenOrNow } from '../utils/common/promises';
 import { tableRowMerge } from '../utils/draw/progressive-table';
@@ -290,7 +290,7 @@ export default Component.extend({
     columnName = this.columnNames[columnIndex],
     width =
       featureValuesWidths[columnName] ||
-      (this.datasetColumns?.includes(columnName) ? 180 : 
+      (this.datasetColumns?.includes(columnName) ? (this.userSettings.showNonVCFFeatureNames ? 180 : 25) : 
 
       /* works, but padding-left is required also, to move the text.
       columnIndex === this.colSample0 ?
@@ -441,6 +441,7 @@ export default Component.extend({
       Handsontable.renderers.registerRenderer('CATGRenderer', bind(this, this.CATGRenderer));
       Handsontable.renderers.registerRenderer('ABRenderer', bind(this, this.ABRenderer));
       Handsontable.renderers.registerRenderer('numericalDataRenderer', bind(this, this.numericalDataRenderer));
+      Handsontable.renderers.registerRenderer('blockFeaturesRenderer', bind(this, this.blockFeaturesRenderer));
       Handsontable.renderers.registerRenderer('blockColourRenderer', bind(this, this.blockColourRenderer));
       Handsontable.renderers.registerRenderer('haplotypeColourRenderer', bind(this, this.haplotypeColourRenderer));
     }
@@ -525,7 +526,7 @@ export default Component.extend({
     } else if (prop === 'Name') {
       cellProperties.renderer = Handsontable.renderers.TextRenderer;
     } else if (this.datasetColumns?.includes(prop)) {
-      cellProperties.renderer = Handsontable.renderers.TextRenderer;      
+      cellProperties.renderer = 'blockFeaturesRenderer';
     } else if (numericalData) {
       cellProperties.renderer = 'numericalDataRenderer';
     } else if ((selectedBlock == null) || (this.selectedColumnName == null)) {
@@ -794,6 +795,25 @@ export default Component.extend({
       }
       td.title = value;
       $(td).css('font-size', 10);
+    }
+  },
+
+  /** The value is [feature,];  all features are of a single block.
+   * Show a colour rectangle of features' block colour.
+   * Optionally show feature names.
+   */
+  blockFeaturesRenderer(instance, td, row, col, prop, value, cellProperties) {
+    Handsontable.renderers.TextRenderer.apply(this, arguments);
+    if (value?.length) {
+      const
+      feature = value[0],
+      blockColourValue = featureBlockColourValue(feature),
+      featureNames = this.userSettings.showNonVCFFeatureNames ? value.mapBy('name').join(' ') : ' ',
+      tdStyle = td.style;
+      tdStyle.borderLeftColor = blockColourValue;
+      tdStyle.borderLeftStyle = 'solid';
+      tdStyle.borderLeftWidth = '25px';
+      $(td).text(featureNames);
     }
   },
 

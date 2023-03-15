@@ -19,6 +19,7 @@ import {
   sampleIsFilteredOut,
   vcfFeatures2MatrixView, vcfFeatures2MatrixViewRows,
   rowsAddFeature,
+  annotateRowsFromFeatures,
   featureSampleNames,
  } from '../../utils/data/vcf-feature';
 import { stringCountString } from '../../utils/string';
@@ -87,6 +88,7 @@ function valueNameIsNotSample(valueName) {
  * .samplesLimit default 10
  * .samplesLimitEnable default false
  * .haplotypeFilterRef default : false
+ * .showNonVCFFeatureNames default : true
  *
  * .haplotypeFiltersEnable default : false
  * true means apply haplotypeFilters to filter out non-matchng sample columns;
@@ -268,6 +270,12 @@ export default class PanelManageGenotypeComponent extends Component {
     if (userSettings.requestSamplesFiltered === undefined) {
       userSettings.requestSamplesFiltered = false;
     }
+
+    if (userSettings.showNonVCFFeatureNames === undefined) {
+      userSettings.showNonVCFFeatureNames = false;
+    }
+
+
 
 
     if (this.urlOptions.gtMergeRows === undefined) {
@@ -1181,23 +1189,23 @@ export default class PanelManageGenotypeComponent extends Component {
              */
             const nonVCF = this.nonVCFFeaturesWithinBrushData;
             this.displayDataRows = sampleGenotypes.rows;
-            nonVCF.features.forEach((f) => {
-              const
-              datasetId = f.get('blockId.datasetId.id'),
-              row0 = rowsAddFeature(this.displayDataRows, f, datasetId, 0),
-              value = f.value;
-              if ((value[1] !== undefined) && (value[1] !== value[0])) {
-                // add it also, as '- ' + name
-                const row1 = rowsAddFeature(this.displayDataRows, f, datasetId, 1);
-              }
-            });
+            /** Annotate rows with features from nonVCF.features which overlap them.
+             * nonVCFFeaturesWithinBrushData() could return []{datasetId, features : [] },
+             * and that datasetId could be passed to annotateRowsFromFeatures() with its features.
+             *
+             * Earlier functionality instead displayed start and end position of
+             * all of nonVCF.features, using rowsAddFeature(), until 54baad61.
+             */
+            annotateRowsFromFeatures(this.displayDataRows, nonVCF.features);
+
             this.datasetColumns = nonVCF.columnNames;
             /* Position value is returned by matrix-view : rowHeaders().
              * for gtMergeRows the Position column is hidden.
              * .sampleNames contains : [ 'Ref', 'Alt', 'tSNP', 'MAF' ]; 'tSNP' is mapped to 'LD Block'
              */
-            this.columnNames = ['Block', 'Position', 'Name']
+            this.columnNames = ['Block']
               .concat(nonVCF.columnNames)
+              .concat(['Position', 'Name'])
               .concat(sampleGenotypes.sampleNames);
           } else {
             let sampleNames;

@@ -417,6 +417,12 @@ Server :
             oninput={{action (mut this.urlOptions.gtMergeRows) value="target.checked"}}  >
           <label>Merge Rows</label>
 
+          <input type="checkbox"
+            style="margin-left: 3em;"
+            checked={{@userSettings.showNonVCFFeatureNames}}
+            oninput={{action (mut @userSettings.showNonVCFFeatureNames) value="target.checked"}}  >
+          <label>Feature Names</label>
+
         </li>
       </ul>
 
