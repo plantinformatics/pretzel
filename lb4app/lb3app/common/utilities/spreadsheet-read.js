@@ -685,8 +685,9 @@ function normaliseFieldName(fieldName) {
  * Currently applied to pos,end columns in featureAttributes(), but could be
  * applied to all columns, in cellValue().
  * @param pos if type is not number then returned unchanged.
+ * @param convertStringToNumber if true and typeof pos is string then convert to number
  */
-function roundNumber(pos) {
+function roundNumber(pos, convertStringToNumber) {
   /** based on snps2Dataset.pl : roundPosition()   */
   if (typeof pos === 'number') {
     const
@@ -700,6 +701,13 @@ function roundNumber(pos) {
         .replace(/\.$/, '');
       pos = +rounded;
     }
+  } else if ((typeof pos === 'string') && convertStringToNumber) {
+    /** Use + to convert it to number.
+     * If the user enters e.g. "12.5" or '13.5' then pos will be a string
+     * containing quotes, i.e. '“12.5”' or "'13.5’" respectively.
+     * Use trimAndDeletePunctuation() to remove those quotes.
+     */
+    pos = +trimAndDeletePunctuation(pos);
   }
   return pos;
 }
@@ -977,11 +985,11 @@ function featureAttributes(feature) {
   {pos, end, Chromosome, name, parentName, __comment__, ...values} = feature,
   value = [];
   if (pos !== undefined) {
-    pos = roundNumber(pos);
+    pos = roundNumber(pos, true);
     value.push(pos);
   }
   if (end !== undefined) {
-    end = roundNumber(end);
+    end = roundNumber(end, true);
     value.push(end);
   }
   let featureOut = pick(feature, ['value', 'Chromosome', 'name', 'parentName']);
@@ -1001,7 +1009,7 @@ function featureAttributes(feature) {
      */
     valuesKeys.forEach((key) => {
       if (key !== 'flankingMarkers') {
-        values[key] = roundNumber(values[key]);
+        values[key] = roundNumber(values[key], false);
       }
     });
     featureOut.values = values;
