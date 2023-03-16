@@ -1,7 +1,6 @@
 const { findLastIndex } = require('lodash/array');  // 'lodash.findlastindex'
 const { pick } = require('lodash/object');
 
-
 /* global exports */
 /* global require */
 
@@ -98,6 +97,8 @@ function spreadsheetDataToJsObj(fileData) {
            * returning data in dataset.aliases[]
            */
           dataset = sheetToAliases(typeAndName.datasetName, sheet, datasetMetadata);
+        } else if (typeAndName.sheetType === 'AddMetadata') {
+          dataset = sheetToDatasetsMetadata(typeAndName.datasetName, sheet, datasetMetadata);
         } else {
         /** if parentName column, result may be array of datasets */
         dataset = sheetToDataset(
@@ -138,7 +139,7 @@ function spreadsheetDataToJsObj(fileData) {
   status.datasets = datasets
     .reduce((result, dataset) => {
       const ok = /* ! dataset.sheetName || */  dataset.name &&
-            (dataset.blocks?.length || dataset.aliases?.length);
+            (dataset.blocks?.length || dataset.aliases?.length || dataset.datasetMetadata?.length);
       ['warnings', 'errors'].forEach((fieldName) => {
         const df = dataset[fieldName];
         if (df?.length > datasetErrorWarningLimit) {
@@ -447,6 +448,26 @@ function sheetToAliases(datasetName, sheet, metadata) {
 
   return dataset;
 }
+//------------------------------------------------------------------------------
+
+/** Translate the sheet data into an array of datasets metadata.
+ * The result is used in datasetSetMeta(), which adds the meta to the corresponding datasets.
+ *
+ * Later : perhaps add the meta for datasets which don't exist to metadata; this
+ * could be used in spreadsheets which were loading datasets, i.e. the meta would
+ * be added after the data from other sheets (re-)created the datasets.
+ */
+function sheetToDatasetsMetadata(datasetName, sheet, metadata) {
+  const 
+  fnName = 'sheetToDatasetsMetadata',
+  {rowObjects, headerRow} = sheetToObj(sheet),
+
+  dataset = {name : 'AddMetadata', datasetMetadata : rowObjects};
+  console.log(fnName, headerRow, rowObjects.length, rowObjects[0]);
+
+  return dataset;
+}
+
 
 //------------------------------------------------------------------------------
 

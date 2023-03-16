@@ -482,3 +482,72 @@ exports.removeExistingP = function(models, options, id, replaceDataset) {
 
 
 /*----------------------------------------------------------------------------*/
+
+/**
+ * @param rows array, 1 dataset per row, datasetId is given by rows[*]['Current dataset name']
+ * From sheetToDatasetsMetadata().
+ * @desc
+ * For each dataset in rows, merge the data given in rows into dataset.meta.
+ * Generate warnings for datasets which don't exist.
+ * @param models
+ * @param options
+ */
+exports.datasetSetMeta = datasetSetMeta;
+function datasetSetMeta(rows, models, options) {
+  const
+  fnName = 'datasetSetMeta',
+
+  /* .observe() : models = ctx.Model.app.models, options = ctx.options */
+  Dataset = models.Dataset,
+
+  /** array of promises, 1 per row / dataset */
+  updatePs = rows.map(row => {
+    const
+    /** datasetId */
+    id = row['Current dataset name'];
+    delete row['Current dataset name'];
+
+    /** based on removeExisting(). */
+    let clientIdString = gatherClientId(options);
+    let clientId = options.accessToken.userId;
+    console.log(fnName, options, clientIdString, clientId, typeof clientId);
+    const
+    updateP = 
+      models.Dataset.findById(id, {}, { unfiltered: true } )
+      .then((dataset) => {
+        console.log(fnName, dataset);
+
+        if (! dataset) {
+          let error = ErrorStatus(404, 'Dataset ' + id + ' does not exist');
+          throw error;
+        } else
+        if (dataset && ! dataset.meta._origin &&
+            (clientIdString !== dataset.clientId.id.hexSlice())) {
+          let error = ErrorStatus(403, 'Dataset ' + id + ' is not owned by this user');
+          throw error;
+        } else {
+          const
+          meta = Object.assign({}, dataset.meta),
+          merged = Object.assign(meta, row);
+
+          /** based on Group.observe('after delete' ) */
+          let where = {_id : id};
+          console.log(fnName, where);
+
+          let promise = Dataset.update(where, {meta : merged}, options);
+          promise.then((done) => { console.log(fnName, done); return 1; })
+            .catch((error) => console.log(fnName, 'error', error));
+          return promise;
+        }
+      });
+    return updateP;
+  });
+  const
+  /** updateP yields 1, so .length is sufficient to count OK updates. */
+  countUpdates = Promise.all(updatePs)
+    .then((updates) => updates.length);
+  return countUpdates;
+}
+
+
+//------------------------------------------------------------------------------
