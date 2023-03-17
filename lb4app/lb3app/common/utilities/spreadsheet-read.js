@@ -395,6 +395,14 @@ function sheetToObj(sheet, headerRenaming) {
   /** remove first (header) row */
     .filter((f, i) => i > 0)
   ;
+  /** Apply a heuristic to recognise MS Excel Serial Date values and convert
+   * them to JavaScript Date. */
+  headerRow.filter((header) => header.match(fieldNameDateRegexp))
+    .forEach((header) => {
+      rowObjects.forEach((row) => {
+        row[header] = excelSerialDate2JS(header, row[header]); });
+       });
+
   return {rowObjects, headerRow};
 }
 
@@ -475,6 +483,11 @@ function sheetToDatasetsMetadata(datasetName, sheet, metadata) {
   return dataset;
 }
 function renameDisplayNameField(header) {
+  /** This could be instead included in headerRenaming instead of passing
+   * renameDisplayNameField to sheetToObj().
+   * Counter to that, it is probably only applicable to AddMetadata, which
+   * argues for it being defined here.
+   */
   const fieldName = (header === 'Display name') ? 'displayName' : header;
   return fieldName;
 }
@@ -703,6 +716,23 @@ function normaliseFieldName(fieldName) {
 }
 
 //------------------------------------------------------------------------------
+
+const fieldNameDateRegexp = /date/i;
+/** Recognise a MS Excel Serial Date by its value and field name, and convert to JavaScript Date.
+ * @param fieldName
+ * @param value
+ */
+function excelSerialDate2JS(fieldName, value) {
+  // this can also be applied to metadataEntries
+
+  if (fieldName.match(fieldNameDateRegexp) &&
+      (typeof value === 'number') && (value > 30000) && (value < 80000) ) {
+    /** Interpret value as MS Excel Serial Date, which is : days after January 1, 1900.
+     * from https://stackoverflow.com/a/67130235, William Denman */
+    value = new Date(Date.UTC(0, 0, /*excelSerialDate*/value - 1));
+  }
+  return value;
+}
 
 
 /** Numeric cell values may present with an 18 digit mantissa instead of a few
