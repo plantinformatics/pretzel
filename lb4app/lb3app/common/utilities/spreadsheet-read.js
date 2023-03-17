@@ -60,7 +60,7 @@ function spreadsheetDataToJsObj(fileData) {
   metadata = sheets.Metadata && readMetadataSheet(sheets.Metadata),
   chromosomeRenaming = parseSheet(sheets, 'Chromosome Renaming', readChromosomeRenaming), 
   chromosomesToOmit = parseSheet(sheets, 'Chromosomes to Omit', readChromosomesToOmit);
-  sheetNames.metadata = Array.from(Object.keys(metadata));
+  sheetNames.metadata = ! metadata ? [] : Array.from(Object.keys(metadata));
   const
   nonDatasetSheets = ['User Guide', 'Metadata', 'Chromosome Renaming', 'Chromosomes to Omit'],
   datasets = 
