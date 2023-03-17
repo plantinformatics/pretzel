@@ -32,6 +32,8 @@ export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
      * since Ember3 this clashes with the ember-data object .meta field, so it is
      * renamed to ._meta.  This rename could be done also in the Pretzel data
      * format (pretzel-data). */
-    _meta : 'meta'
+    _meta : 'meta',
+    /** Refer to .name as ._name, so that .name can be an alias to .displayName */
+    _name : 'name',
   }
 });

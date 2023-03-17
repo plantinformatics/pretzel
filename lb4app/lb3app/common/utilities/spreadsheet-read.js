@@ -359,18 +359,25 @@ function sheetToDataset(
 /** Translate sheet data to an array of row objects, using the required header
  * row to name the object fields corresponding to columns.
  * Used for features : sheetToDataset and aliases : sheetToAliases().
+ * @param sheet
+ * @param headerRenaming  undefined, or a function to rename column header names.
+ * signature : (header : string) => renamedHeader : string
  * @return { rowObjects, headerRow }
  * rowObjects : array of row objects
  * headerRow : array of column names parallel to sheet columns
  */
-function sheetToObj(sheet) {
+function sheetToObj(sheet, headerRenaming) {
   /** if A1 starts with # then warn : 1st row must be headers
    * index of first row (A1-Z1) is 0
    */
-  const
+  let
   // -	check for overlap of header names caused by header rename : first check for the target names
   /** map headerRow using header renaming */
-  headerRow = sheet2RowArray(sheet, 0).map(normaliseHeader),
+  headerRow = sheet2RowArray(sheet, 0).map(normaliseHeader);
+  if (headerRenaming) {
+    headerRow = headerRow.map(headerRenaming);
+  }
+  const
   rowIsComment = sheet2ColArray(sheet, 0)
     .map((ai) => (typeof ai === 'string') && ai.startsWith('#')),
   /** options.header        result    index
@@ -452,6 +459,7 @@ function sheetToAliases(datasetName, sheet, metadata) {
 
 /** Translate the sheet data into an array of datasets metadata.
  * The result is used in datasetSetMeta(), which adds the meta to the corresponding datasets.
+ * The sheet is of type 'AddMetadata|'.
  *
  * Later : perhaps add the meta for datasets which don't exist to metadata; this
  * could be used in spreadsheets which were loading datasets, i.e. the meta would
@@ -460,12 +468,15 @@ function sheetToAliases(datasetName, sheet, metadata) {
 function sheetToDatasetsMetadata(datasetName, sheet, metadata) {
   const 
   fnName = 'sheetToDatasetsMetadata',
-  {rowObjects, headerRow} = sheetToObj(sheet),
-
+  {rowObjects, headerRow} = sheetToObj(sheet, renameDisplayNameField),
   dataset = {name : 'AddMetadata', datasetMetadata : rowObjects};
   console.log(fnName, headerRow, rowObjects.length, rowObjects[0]);
 
   return dataset;
+}
+function renameDisplayNameField(header) {
+  const fieldName = (header === 'Display name') ? 'displayName' : header;
+  return fieldName;
 }
 
 
