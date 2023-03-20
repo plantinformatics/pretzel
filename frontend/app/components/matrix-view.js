@@ -954,8 +954,15 @@ export default Component.extend({
     return columnNames;
   }),
   colHeaders : computed('columnNames', function() {
-    const colHeaders = this.get('columnNames').map(function(x) {
-      let extraClassName = columnNameIsNotSample(x) ? '' : ' col-sample';
+    const colHeaders = this.get('columnNames').map((x) => {
+      /** Overlap with columnNamesToColumnOptions(). */
+      let extraClassName;
+      /** dataset columns have the datasetId (vertically) as the column header.  */
+      if (this.datasetColumns?.includes(x)) {
+        extraClassName = ' col-Dataset';
+      } else {
+        extraClassName = columnNameIsNotSample(x) ? '' : ' col-sample';
+      }
       /** specific classes for Position and Alt :
        * . Position column is wide, so set margin-left to centre the header text horizontally;
        * . place a white border on the right side of 'Alt' column, i.e. between Alt and the sample columns.
@@ -974,6 +981,9 @@ export default Component.extend({
         const
         width = this.colWidths(columnIndex),
         options = {data : name, width};
+        /** Overlap with colHeaders() : extraClassName
+         * Some classNames are used only in colHeaders, some are only used in cells.
+         */
         if (! columnNameIsNotSample(name)) {
           options.className = 'col-sample';
         }

@@ -1664,6 +1664,18 @@ div#goto-feature > div
 {
   border-right-width: 5px;
 }
+#observational-table th > div > span.colHeader > .col-Dataset
+{
+  /* handsontable th has white-space: nowrap, so override that */
+  white-space: initial;
+  /* datasetId may be long, without spaces. */
+  overflow-wrap: anywhere;
+  /* height:0em prevents first line being rotated left of the left edge,
+   * but causes a few px indent from the bottom, so use margin-left instead. */
+  margin-left: 2ex;
+  width: 13em;
+  text-align: left;
+}
 
 /* genotype table : wrap text of datasetId and scope in top-left corner   */
 /* div.ht_clone_top_left_corner > div.wtHolder > div.wtHider > div.wtSpreader > table.htCore > thead > tr > th > div > span.colHeader.cornerHeader */
