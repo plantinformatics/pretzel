@@ -939,8 +939,21 @@ function annotateRowsFromFeatures(rows, features) {
       const
       feature = interval[featureSymbol],
       datasetId = feature.get('blockId.datasetId.id'),
-      rowDatasetFeatures = row[datasetId] || (row[datasetId] = []);
-      rowDatasetFeatures.push(feature);
+      rowDatasetFeatures = row[datasetId] || (row[datasetId] = []),
+      /** Putting Feature[] in the table cell data led HandsOnTable to try to
+       * render Feature.store, ._internalModel etc and get into an infinite
+       * recursion when the Feature was e.g. HC genes (no error with 90k and 40k
+       * markers, which are also loaded from the API; they are less dense and
+       * have single-location whereas genes have intervals).
+       *
+       * The solution used is to put Feature.name [] into the cell data, using
+       * new String() so that it can refer to the Feature via [featureSymbol].
+       * It would be possible to put a feature proxy into the data providing
+       * only the required fields (.name, ...), but it would be similar memory &
+       * time use, and more complex.
+       */
+      featureString = stringSetFeature(feature.name, feature);
+      rowDatasetFeatures.push(featureString);
     });
   });
 }

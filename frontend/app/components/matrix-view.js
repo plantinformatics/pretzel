@@ -798,7 +798,8 @@ export default Component.extend({
     }
   },
 
-  /** The value is [feature,];  all features are of a single block.
+  /** The value is [new String(feature.name), ...], with [featureSymbol] referring
+   * to the Feature;  all features are of a single block.
    * Show a colour rectangle of features' block colour.
    * Optionally show feature names.
    */
@@ -806,9 +807,13 @@ export default Component.extend({
     Handsontable.renderers.TextRenderer.apply(this, arguments);
     if (value?.length) {
       const
-      feature = value[0],
+      feature = value[0][featureSymbol],
       blockColourValue = featureBlockColourValue(feature),
-      featureNames = this.userSettings.showNonVCFFeatureNames ? value.mapBy('name').join(' ') : ' ',
+      /** If table cell data is Feature[] instead of Feature.name [], then use 
+       * value.mapBy('name')
+       * Related comment in annotateRowsFromFeatures().
+       */
+      featureNames = this.userSettings.showNonVCFFeatureNames ? value.join(' ') : ' ',
       tdStyle = td.style;
       tdStyle.borderLeftColor = blockColourValue;
       tdStyle.borderLeftStyle = 'solid';
