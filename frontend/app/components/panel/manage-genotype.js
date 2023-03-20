@@ -1,5 +1,5 @@
 import Component from '@glimmer/component';
-import EmberObject, { computed, action, set as Ember_set } from '@ember/object';
+import EmberObject, { computed, action, set as Ember_set, setProperties } from '@ember/object';
 import { alias, reads } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
@@ -1188,7 +1188,7 @@ export default class PanelManageGenotypeComponent extends Component {
              * Add features to : this.displayDataRows.
              */
             const nonVCF = this.nonVCFFeaturesWithinBrushData;
-            this.displayDataRows = sampleGenotypes.rows;
+            const displayDataRows = sampleGenotypes.rows;
             /** Annotate rows with features from nonVCF.features which overlap them.
              * nonVCFFeaturesWithinBrushData() could return []{datasetId, features : [] },
              * and that datasetId could be passed to annotateRowsFromFeatures() with its features.
@@ -1196,9 +1196,14 @@ export default class PanelManageGenotypeComponent extends Component {
              * Earlier functionality instead displayed start and end position of
              * all of nonVCF.features, using rowsAddFeature(), until 54baad61.
              */
-            annotateRowsFromFeatures(this.displayDataRows, nonVCF.features);
+            annotateRowsFromFeatures(displayDataRows, nonVCF.features);
+            /** These are passed to matrix-view, so set them at one time. */
+            setProperties(this, {
+              displayData : null,
+              displayDataRows,
+              datasetColumns : nonVCF.columnNames,
+            });
 
-            this.datasetColumns = nonVCF.columnNames;
             /* Position value is returned by matrix-view : rowHeaders().
              * for gtMergeRows the Position column is hidden.
              * .sampleNames contains : [ 'Ref', 'Alt', 'tSNP', 'MAF' ]; 'tSNP' is mapped to 'LD Block'
@@ -1228,9 +1233,11 @@ export default class PanelManageGenotypeComponent extends Component {
             displayData = vcfFeatures2MatrixView
             (this.requestFormat, sampleGenotypes, this.featureFilter.bind(this), this.sampleFilter,
              this.sampleNamesCmp, options);
-            this.displayData = displayData;
-            this.columnNames = null;
-            this.datasetColumns = null;
+            setProperties(this, {
+              displayData,
+              columnNames : null,
+              datasetColumns : null
+            });
           }
         }
       }
@@ -1288,7 +1295,7 @@ export default class PanelManageGenotypeComponent extends Component {
     const viewedVisible = this.blockService.viewedVisible;
     dLog(fnName, viewedVisible.length);
     // remove all because sampleNames / columns may have changed.
-    if (this.displayData.length) {
+    if (this.displayData?.length) {
       this.displayData.removeAt(0, this.displayData.length);
     }
     this.showSamplesWithinBrush();
