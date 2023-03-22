@@ -530,9 +530,12 @@ export default ManageBase.extend({
            this.get('model.availableMapsTask._result.length'),
            this.get('mapviewDatasets.content.length'));
     }
-    if (datasetsBlocks)
+    if (datasetsBlocks) {
+      /** result from API is sorted by .id, with upper case preceding lower case. */
       datasetsBlocks =
-      datasetsBlocks.filter((block) => !block.get('isCopy'));
+      datasetsBlocks.filter((block) => !block.get('isCopy'))
+        .sortBy('name');
+    }
 
     return datasetsBlocks;
   }),
