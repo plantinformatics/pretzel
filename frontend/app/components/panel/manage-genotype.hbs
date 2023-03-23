@@ -469,6 +469,22 @@ Server :
 
       </ul>
 
+      {{!---------------------------------------------------------------------}}
+
+      <ul class="list-group borderless view-controls">
+        <li>
+
+          <input type="checkbox"
+            style="margin-left: 3em;"
+            checked={{@userSettings.showAxisLDBlocks}}
+            oninput={{action (mut @userSettings.showAxisLDBlocks) value="target.checked"}}  >
+          <label>LD Blocks colour in Axis Tracks</label>
+
+        </li>
+      </ul>
+      {{!---------------------------------------------------------------------}}
+
+
     {{/if}} {{!-- showComponent --}}
   {{/elem/panel-container}}
 

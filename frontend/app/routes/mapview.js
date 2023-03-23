@@ -137,6 +137,7 @@ let config = {
     let viewedBlocksTasks = (params.mapsToView && params.mapsToView.length) ?
         thenOrNow(this.blocksLimitsTask, () => getBlocks.apply(blockService, [params.mapsToView])) :
         RSVP.cast([]);
+    const userSettings = this.controllerFor(this.fullRouteName).userSettings;
 
     result = EmberObject.create(
       {
@@ -144,7 +145,8 @@ let config = {
         availableMapsTask : datasetsTask, // task result is -> [ id , ... ]
         blocksLimitsTask,
         viewedBlocks : viewedBlocksTasks,
-        viewedById : blockService.get('viewedById')
+        viewedById : blockService.get('viewedById'),
+        userSettings,
       });
 
     /* When the datasets result (actually the blocks) is received, use that

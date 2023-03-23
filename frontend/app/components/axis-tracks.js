@@ -1602,14 +1602,16 @@ export default InAxis.extend({
       }
       let
       qtlColourBy = block.get('useFeatureColour'),
+      showAxisLDBlocks = thisAt.model.userSettings.genotype?.showAxisLDBlocks,
       /** Alternately this can be enabled by (qtlColourBy !== 'Block') - that is
        * implemented in block : useFeatureColour()
+       * userSettings.genotype is populated by manage-genotype; showAxisLDBlocks defaults to false.
        */
-      useHaplotypeColour = block && block.get('isVCF'),
+      useHaplotypeColour = showAxisLDBlocks && block && block.get('isVCF'),
       /** @param g[i] is <rect>
        * @param this is <g clip-path>, the parent of <rect class="track" >
        */
-      featureColour = useHaplotypeColour || qtlColourBy ?
+      featureColour = useHaplotypeColour || (qtlColourBy && (qtlColourBy !== 'Haplotype')) ?
           (interval, i, g) => {
             let feature = thisAt.featureData2Feature.get(interval);
             /** when haplotypeColour is undefined, e.g. tSNP === undefined or

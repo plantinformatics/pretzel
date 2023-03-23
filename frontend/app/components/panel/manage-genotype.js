@@ -89,6 +89,7 @@ function valueNameIsNotSample(valueName) {
  * .samplesLimitEnable default false
  * .haplotypeFilterRef default : false
  * .showNonVCFFeatureNames default : true
+ * .showAxisLDBlocks default : false
  *
  * .haplotypeFiltersEnable default : false
  * true means apply haplotypeFilters to filter out non-matchng sample columns;
@@ -275,7 +276,9 @@ export default class PanelManageGenotypeComponent extends Component {
       userSettings.showNonVCFFeatureNames = false;
     }
 
-
+    if (userSettings.showAxisLDBlocks === undefined) {
+      userSettings.showAxisLDBlocks = false;
+    }
 
 
     if (this.urlOptions.gtMergeRows === undefined) {
