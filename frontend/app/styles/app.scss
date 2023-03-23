@@ -1707,7 +1707,8 @@ div.ht_clone_top_left_corner span.colHeader.cornerHeader {
 /** colours representing N copies of Alt value */
 /* copyNum_0 : Ref */
 #observational-table td.copyNum_0 {
-  background-color : #5cb85c;  /*green, was orange*/
+  /** copyNum_0, 2 colours from MS Teams 2023Mar10 chat 14:36, KLF */
+  background-color : #b1c1e8;  /* pale blue/grey. was  #5cb85c green, prev orange*/
 }
 /* copyNum_1 : Het */
 #observational-table td.copyNum_1 {
@@ -1715,7 +1716,7 @@ div.ht_clone_top_left_corner span.colHeader.cornerHeader {
 }
 /* copyNum_2 : Alt */
 #observational-table td.copyNum_2 {
-  background-color : #337ab7; /*blue*/
+  background-color : #ffc8ae; /* pale orange, was #337ab7 blue*/
 }
 
 #observational-table td.relativeColour_equal {

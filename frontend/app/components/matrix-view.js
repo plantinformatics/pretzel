@@ -713,9 +713,9 @@ export default Component.extend({
 
       /* default text colour is black.  if changing the background colour to
        * something other than white, set text colour to white.
-       * copyNum_1 is white.
+       * copyNum_1 is white, and copyNum_0 and 2 are pale, so use black text.
        */
-      if (! colours.includes('copyNum_1')) {
+      if (! (this.displayForm === 'Numerical')) {
         td.style.color = 'white';
       }
     }
