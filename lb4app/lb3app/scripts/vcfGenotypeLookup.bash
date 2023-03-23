@@ -31,9 +31,9 @@ unused_var=${blastDir:=/mnt/data_blast/blast}
 unused_var=${vcfDir:=$blastDir/../vcf}
 # blastDir=tmp/blast
 vcfDir=tmp/vcf
-if [ ! -x $vcfDir -a -x $blastDir/vcf ]
+if [ ! -e "$vcfDir" -a -e "$blastDir/vcf" ]
 then
-  vcfDir=$blastDir/vcf
+  vcfDir="$blastDir/vcf"
 fi
 unused_var=${datasetIdDir:=$vcfDir/datasetId}
 
