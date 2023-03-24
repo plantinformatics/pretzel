@@ -228,6 +228,10 @@ export default Component.extend({
     this._super.apply(this, arguments);
 
     dLog('matrix-view', this, 'vcf');
+    // used in development only, in Web Inspector console.
+    if (window.PretzelFrontend) {
+      window.PretzelFrontend.matrixView = this;
+    }
     this.fullPage = ! this.blockSamples;
     // later(() => ! this.isDestroying && this.createTable(), 1000);
   },
@@ -378,7 +382,6 @@ export default Component.extend({
     fnName = 'cellSize',
     cellSizeFactor = this.userSettings.cellSizeFactor || 1,
     size = Math.round(cellSizeFactor * this.cellSizeBase);
-    window.PretzelFrontend.matrixView = this;
     dLog(fnName, size, cellSizeFactor);
     // Side Effect
     this.setCellSizeStyle(cellSizeFactor);
