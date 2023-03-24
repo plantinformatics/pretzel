@@ -919,8 +919,10 @@ function rowsAddFeature(rows, feature, nameColumn, valueIndex = 0) {
  * Features with only .value[0] or .value[0]===.value[1] i.e. 0-length features
  * are only annotated if there is a row at Position .value[0].
  * @param rows sparse array, indexed by feature.value[*]
+ * @param features [] of non-VCF feature
+ * @param selectedFeaturesValuesFields 
  */
-function annotateRowsFromFeatures(rows, features) {
+function annotateRowsFromFeatures(rows, features, selectedFeaturesValuesFields) {
   const
   /** f.value.length may be 1.  intervals[*].length must be 2.
    * createIntervalTree() gets infinite recursion if intervals are not ordered.
@@ -938,26 +940,64 @@ function annotateRowsFromFeatures(rows, features) {
     intervalTree.queryPoint(location, function(interval) {
       const
       feature = interval[featureSymbol],
-      datasetId = feature.get('blockId.datasetId.id'),
-      rowDatasetFeatures = row[datasetId] || (row[datasetId] = []),
-      /** Putting Feature[] in the table cell data led HandsOnTable to try to
-       * render Feature.store, ._internalModel etc and get into an infinite
-       * recursion when the Feature was e.g. HC genes (no error with 90k and 40k
-       * markers, which are also loaded from the API; they are less dense and
-       * have single-location whereas genes have intervals).
-       *
-       * The solution used is to put Feature.name [] into the cell data, using
-       * new String() so that it can refer to the Feature via [featureSymbol].
-       * It would be possible to put a feature proxy into the data providing
-       * only the required fields (.name, ...), but it would be similar memory &
-       * time use, and more complex.
-       */
-      featureString = stringSetFeature(feature.name, feature);
-      rowDatasetFeatures.push(featureString);
+      datasetId = feature.get('blockId.datasetId.id');
+
+      rowAddFeatureField(row, feature, datasetId, feature.name);
+
+      const fields = selectedFeaturesValuesFields[datasetId];
+      if (fields) {
+        /* features within a block could overlap, so cell value is an array of Strings.
+         * Also, field names might overlap between multiple non-VCF blocks
+         * brushed (they would not conflict if the column name was different per
+         * dataset).
+         */
+        fields.forEach((fieldName) => rowAddFeatureField(row, feature, fieldName, feature.values[fieldName]));
+      }
     });
   });
 }
 
+/**
+ * @param fieldName used to index row{}
+ * @param value feature.name or feature.values[fieldName]
+ */
+function rowAddFeatureField(row, feature, fieldName, value) {
+  /** Putting Feature[] in the table cell data led HandsOnTable to try to
+   * render Feature.store, ._internalModel etc and get into an infinite
+   * recursion when the Feature was e.g. HC genes (no error with 90k and 40k
+   * markers, which are also loaded from the API; they are less dense and
+   * have single-location whereas genes have intervals).
+   *
+   * The solution used is to put Feature.name [] into the cell data, using
+   * new String() so that it can refer to the Feature via [featureSymbol].
+   * It would be possible to put a feature proxy into the data providing
+   * only the required fields (.name, ...), but it would be similar memory &
+   * time use, and more complex.
+   */
+
+  const
+  rowDatasetFeatures = row[fieldName] || (row[fieldName] = []),
+  featureString = stringSetFeature(value, feature);
+  rowDatasetFeatures.push(featureString);
+}
+
+/** @return [datasetId] -> Set of field names of features[*].values{}, 1 Set per datasetId.
+ * @param features array of non-VCF features, i.e. features[*].values are not samples
+ */
+function featuresValuesFields(features) {
+  let
+  fnName = 'featuresValuesFields',
+  fieldsSets = features.reduce((sets, feature) => {
+    const
+    datasetId = feature.get('blockId.datasetId.id'),
+    set = sets[datasetId] || (sets[datasetId] = new Set());
+    if (feature.values) {
+      Object.keys(feature.values).forEach((fieldName) => set.add(fieldName));
+    }
+    return sets;
+  }, {});
+  return fieldsSets;
+}
 
 
 /** Collate "sample names" i.e. keys(feature.values), adding them to sampleNamesSet.
@@ -1013,5 +1053,6 @@ export {
   valueIsCopies,
   rowsAddFeature,
   annotateRowsFromFeatures,
+  featuresValuesFields,
   featureSampleNames,
 };

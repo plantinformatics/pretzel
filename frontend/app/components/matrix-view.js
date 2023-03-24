@@ -148,6 +148,7 @@ function nRows2HeightEx(nRows) {
  * @param displayDataRows
  * @param columnNamesParam
  * @param selectBlock action
+ * @param featureColumnDialogDataset action
  * @param displayForm requestFormat
  *
  * @desc
@@ -574,6 +575,7 @@ export default Component.extend({
   // ---------------------------------------------------------------------------
 
   /** handle click on a cell.
+   * This callback is used when gtSelectColumn, supporting abValues / ABRenderer.
    * Note the selected column in .selectedColumnName
    * and set .selectedSampleColumn if .selectedColumnName and it is not Ref or Alt.
    */
@@ -618,11 +620,26 @@ export default Component.extend({
       });
     }
   },
+  /** afterSelection callback when ! gtSelectColumn, 
+   * for 'LD Block' column it toggles the LD Block filter : haplotypeToggleRC().
+   * For non-VCF column header (.datasetColumns), it shows a dialog to select additional feature fields
+   */
   afterSelectionHaplotype(row, col) {
-    dLog('afterSelectionHaplotype', row, col);
+    const
+    fnName = 'afterSelectionHaplotype',
+    columnName = this.columnNames[col];
+    dLog(fnName, row, col);
+    if (columnName === 'LD Block') {
     const ldBlock = this.haplotypeToggleRC(row, col);
     if (ldBlock) {
       later(() => this.table.render(), 1000);
+    }
+    } else if (this.datasetColumns?.includes(columnName)) {
+      /* this.datasetColumns is defined by gtMergeRows. */
+      if (row === -1) { // if row is header.
+        const datasetId = columnName;
+        this.attrs.featureColumnDialogDataset(datasetId);
+      }
     }
   },
 

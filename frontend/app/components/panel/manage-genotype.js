@@ -20,6 +20,7 @@ import {
   vcfFeatures2MatrixView, vcfFeatures2MatrixViewRows,
   rowsAddFeature,
   annotateRowsFromFeatures,
+  featuresValuesFields,
   featureSampleNames,
  } from '../../utils/data/vcf-feature';
 import { stringCountString } from '../../utils/string';
@@ -200,6 +201,17 @@ export default class PanelManageGenotypeComponent extends Component {
   /** Warning message from failure of vcfGenotypeLookup or vcfGenotypeSamples API */
   @tracked
   lookupMessage = null;
+
+  /** Enable dialog to select fields of non-VCF dataset features to display as
+   * additional columns.  */
+  @tracked
+  featureColumnDialogDataset = false;
+
+  /** selectedFeaturesValuesFields[datasetId] is selected from
+   * .currentFeaturesValuesFields[datasetId],
+   * where datasetId is a non-VCF dataset. */
+  @tracked
+  selectedFeaturesValuesFields = {};
 
   // ---------------------------------------------------------------------------
 
@@ -827,7 +839,50 @@ export default class PanelManageGenotypeComponent extends Component {
     return result;
   }
 
+  //----------------------------------------------------------------------------
 
+  @computed('selectedFeaturesValuesFields', 'featureColumnDialogDataset')
+  get selectedFeaturesValuesFieldsForDataset() {
+    let selected;
+    const datasetId = this.featureColumnDialogDataset;
+    if (datasetId) {
+      selected = this.selectedFeaturesValuesFields[datasetId] ||
+        (this.selectedFeaturesValuesFields[datasetId] = []);
+    }
+    return selected;
+  }
+
+  /** @return
+   * .currentFeaturesValuesFields[featureColumnDialogDataset] minus
+   * .selectedFeaturesValuesFields[featureColumnDialogDataset]
+   */
+  @computed('currentFeaturesValuesFields', 'selectedFeaturesValuesFieldsForDataset.[]')
+  get forSelectFeaturesValuesFields() {
+    const
+    fnName = 'forSelectFeaturesValuesFields',
+    datasetId = this.featureColumnDialogDataset,
+    current = this.currentFeaturesValuesFields[datasetId],
+    selected = this.selectedFeaturesValuesFields[datasetId],
+    /** Copy current and subtract selected from it, remainder is available for selection */
+    unselected = selected.reduce((set, field) => {
+      set.delete(field);
+      return set;
+    }, new Set(current)),
+    unselectedArray = Array.from(unselected);
+    return unselectedArray;
+  }  
+
+  /** Map the multi-select to an array of selected sample names.
+   * Based on @see selectSample().
+   * @desc
+   */
+  @action
+  selectFieldName(event) {
+    const
+    selectedFieldNames = $(event.target).val(),
+    datasetId = this.featureColumnDialogDataset;
+    this.selectedFeaturesValuesFields[datasetId] = selectedFieldNames || [];
+  }
 
   // ---------------------------------------------------------------------------
 
@@ -1227,26 +1282,46 @@ export default class PanelManageGenotypeComponent extends Component {
             /** Annotate rows with features from nonVCF.features which overlap them.
              * nonVCFFeaturesWithinBrushData() could return []{datasetId, features : [] },
              * and that datasetId could be passed to annotateRowsFromFeatures() with its features.
+             * or :
+             * For the purposes of annotateRowsFromFeatures() and
+             * featuresValuesFields(), the result nonVCF.features could be
+             * 1 array of features per block, as with featuresArrays above.
              *
              * Earlier functionality instead displayed start and end position of
              * all of nonVCF.features, using rowsAddFeature(), until 54baad61.
              */
-            annotateRowsFromFeatures(displayDataRows, nonVCF.features);
-            /** These are passed to matrix-view, so set them at one time. */
-            setProperties(this, {
-              displayData : null,
-              displayDataRows,
-              datasetColumns : nonVCF.columnNames,
-            });
+            annotateRowsFromFeatures(displayDataRows, nonVCF.features, this.selectedFeaturesValuesFields);
+            const currentFeaturesValuesFields = featuresValuesFields(nonVCF.features);
+            const
+            datasetIds = nonVCF.features.mapBy('blockId.datasetId.id').uniq(),
+            extraDatasetColumns = datasetIds
+              .map((datasetId) => this.selectedFeaturesValuesFields[datasetId])
+              .filter(x => x)
+              .flat(),
+            datasetColumns = (nonVCF.columnNames || []).concat(extraDatasetColumns),
+
+            /* merge new values in - remember selections for datasets which are currently not visible. */
+            // if (this.currentFeaturesValuesFields) Object.assign(this.currentFeaturesValuesFields, currentFeaturesValuesFields);
 
             /* Position value is returned by matrix-view : rowHeaders().
              * for gtMergeRows the Position column is hidden.
              * .sampleNames contains : [ 'Ref', 'Alt', 'tSNP', 'MAF' ]; 'tSNP' is mapped to 'LD Block'
              */
-            this.columnNames = ['Block']
+            columnNames = ['Block']
               .concat(nonVCF.columnNames)
               .concat(['Position', 'Name'])
+              .concat(extraDatasetColumns)
               .concat(sampleGenotypes.sampleNames);
+
+            /** These are passed to matrix-view, so set them at one time. */
+            setProperties(this, {
+              displayData : null,
+              displayDataRows,
+              datasetColumns,
+              currentFeaturesValuesFields,
+              columnNames,
+            });
+
           } else {
             let sampleNames;
             if (userSettings.filterBySelectedSamples) {
@@ -1270,8 +1345,9 @@ export default class PanelManageGenotypeComponent extends Component {
              this.sampleNamesCmp, options);
             setProperties(this, {
               displayData,
+              displayDataRows : null,
               columnNames : null,
-              datasetColumns : null
+              datasetColumns : null,
             });
           }
         }

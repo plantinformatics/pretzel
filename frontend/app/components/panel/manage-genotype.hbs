@@ -518,6 +518,38 @@ Server :
 {{/ember-modal-dialog}}
 {{/if}}
 
+{{!-- --------------------------------------------------------------------- --}}
+
+{{#if this.featureColumnDialogDataset}}
+
+{{#ember-modal-dialog
+  onClose=(action (mut this.featureColumnDialogDataset) null)
+  targetAttachment="center"
+  translucentOverlay=true
+  clickOutsideToClose=false
+  onClickOverlay=(action this.userMessage "Use X to close dialog")
+  modal-id="dataset-extra-columns-modal"
+  title="Select additional columns"
+  header-icon='search'
+}}
+
+<div class="genotype">
+  <label>Select additional columns</label>
+
+  <select style="height:100px" class="form-control" multiple onchange={{action this.selectFieldName}}>
+    {{#each this.selectedFeaturesValuesFieldsForDataset as |fieldName|}}
+      <option value={{fieldName}} selected={{include this.selectedFeaturesValuesFieldsForDataset fieldName}}>{{fieldName}}</option>
+    {{/each}}
+    {{#each this.forSelectFeaturesValuesFields as |fieldName|}}
+      <option value={{fieldName}}>{{fieldName}}</option>
+    {{/each}}
+  </select>
+
+  <BsButton @type="info" @onClick={{action (mut this.featureColumnDialogDataset) null}}>OK</BsButton>
+</div>
+
+{{/ember-modal-dialog}}
+{{/if}}
 
 {{!-- --------------------------------------------------------------------- --}}
 <div class="clear-both"></div>
@@ -529,6 +561,7 @@ Server :
   columnNamesParam=this.columnNames
   datasetColumns=this.datasetColumns
   selectBlock=(action @selectBlock)
+  featureColumnDialogDataset=(action (mut this.featureColumnDialogDataset))
   selectedBlock=@selectedBlock
   blockSamples=true
   displayForm=this.requestFormat
