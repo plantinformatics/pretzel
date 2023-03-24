@@ -426,6 +426,29 @@ Server :
         </li>
       </ul>
 
+      {{!---------------------------------------------------------------------}}
+
+      <ul class="list-group borderless view-controls">
+        <li class="list-group-item horiz-2">
+
+          <div>
+            <label>Cell size factor</label>
+            {{#ember-tooltip side="right" delay=500}}
+              Adjust table cell size.
+            {{/ember-tooltip}}
+            <span class="sub-label">{{ this.args.userSettings.cellSizeFactor }}</span>
+            <input type="range"
+             value={{ this.args.userSettings.cellSizeFactorInt }}
+             oninput={{action this.cellSizeFactorInput}}
+             min="1" max="200"
+            />
+          </div>
+
+        </li>
+      </ul>
+
+      {{!---------------------------------------------------------------------}}
+
       <ul class="list-group borderless view-controls">
         <li>
 

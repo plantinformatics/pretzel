@@ -288,15 +288,20 @@ export default Component.extend({
      */
     const
     columnName = this.columnNames[columnIndex],
+    /** applied to datasetColumns, could also apply to Position, Name,
+     * and the row header when ! gtMergeRows. */
+    cellSizeFactor = this.userSettings.cellSizeFactor || 1,
+    featureNamesWidth = Math.round(180 * cellSizeFactor),
     width =
       featureValuesWidths[columnName] ||
-      (this.datasetColumns?.includes(columnName) ? (this.userSettings.showNonVCFFeatureNames ? 180 : 25) : 
+      (this.datasetColumns?.includes(columnName) ?
+       (this.userSettings.showNonVCFFeatureNames ? featureNamesWidth : this.cellSize) : 
 
       /* works, but padding-left is required also, to move the text.
       columnIndex === this.colSample0 ?
       25 + 3 :
       */
-       25);
+       this.cellSize);
     return width;
   },
 
@@ -367,6 +372,32 @@ export default Component.extend({
     return height;
   },
 
+  cellSizeBase : 25,
+  cellSize : computed('userSettings.cellSizeFactor', function () {
+    const
+    fnName = 'cellSize',
+    cellSizeFactor = this.userSettings.cellSizeFactor || 1,
+    size = Math.round(cellSizeFactor * this.cellSizeBase);
+    window.PretzelFrontend.matrixView = this;
+    dLog(fnName, size, cellSizeFactor);
+    // Side Effect
+    this.setCellSizeStyle(cellSizeFactor);
+    return size;
+  }),
+  get rowHeights() {
+    return '' + (this.cellSize - 1) + 'px';
+  },
+  setCellSizeStyle(cellSizeFactor) {
+    // if (cellSizeFactor === 1) clear class which enables use of :
+    const
+    height = Math.round(cellSizeFactor * 22),
+    lineHeight = Math.round(cellSizeFactor * 21),
+    fontSize = Math.round(cellSizeFactor * 14),
+    body = d3.select('body');
+    body.style('--matrixViewLineHeight', lineHeight + 'px');
+    body.style('--matrixViewHeight', height + 'px');
+    body.style('--matrixViewFontSize', fontSize + 'px');
+  },
   createTable() {
     const fnName = 'createTable';
     /** div.matrix-view.ember-view */
@@ -390,7 +421,7 @@ export default Component.extend({
 
       width : '100%',
       height: true || this.fullPage ? tableHeight : nRows2HeightEx(nRows) + 'ex',
-      rowHeights : '24px',
+      rowHeights : this.rowHeights,
       columns,
       stretchH: 'none',
     };
@@ -817,7 +848,7 @@ export default Component.extend({
       tdStyle = td.style;
       tdStyle.borderLeftColor = blockColourValue;
       tdStyle.borderLeftStyle = 'solid';
-      tdStyle.borderLeftWidth = '25px';
+      tdStyle.borderLeftWidth = '' + this.cellSize + 'px';
       $(td).text(featureNames);
     }
   },
@@ -1234,6 +1265,7 @@ export default Component.extend({
           colHeaders: this.colHeaders,
           columns,
           rowHeaderWidth: rowHeaderWidth,
+          rowHeights : this.rowHeights,
         };
         // .data is required, so invert the flag
         if (! (gtPlainRender & 0b100000)) {

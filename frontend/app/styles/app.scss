@@ -1640,7 +1640,14 @@ div#goto-feature > div
 }
 
 #observational-table {
-  flex: 1;
+  /* flex: 1; */
+  font-size : var(--matrixViewFontSize);
+}
+#observational-table th,
+#observational-table td
+{
+  line-height : var(--matrixViewLineHeight);
+  height : var(--matrixViewHeight);
 }
 
 #observational-table .wtHolder

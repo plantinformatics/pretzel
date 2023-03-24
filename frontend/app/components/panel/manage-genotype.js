@@ -90,6 +90,8 @@ function valueNameIsNotSample(valueName) {
  * .haplotypeFilterRef default : false
  * .showNonVCFFeatureNames default : true
  * .showAxisLDBlocks default : false
+ * .cellSizeFactorInt default : 100
+ * .cellSizeFactor default : 1
  *
  * .haplotypeFiltersEnable default : false
  * true means apply haplotypeFilters to filter out non-matchng sample columns;
@@ -280,6 +282,11 @@ export default class PanelManageGenotypeComponent extends Component {
       userSettings.showAxisLDBlocks = false;
     }
 
+    if (userSettings.cellSizeFactor === undefined) {
+      userSettings.cellSizeFactorInt = 100;
+      userSettings.cellSizeFactor = 1;
+    }
+
 
     if (this.urlOptions.gtMergeRows === undefined) {
       this.urlOptions.gtMergeRows = false;
@@ -345,6 +352,31 @@ export default class PanelManageGenotypeComponent extends Component {
     this.rowLimit = value;
   }
 
+
+
+  //----------------------------------------------------------------------------
+
+  /** Adjust table cell size.
+   * This initial default value is coordinated with hbs : <input ... value=100 ... cellSizeFactorInput >
+   * Factor domain is (0, 2], default 1.
+   * <input> range is [0, 200]; divide value by /100, i.e. value is %
+   * userSettings.cellSizeFactor{Int,} initialised in userSettingsDefaults().
+   */
+
+  @action
+  cellSizeFactorInput(event) {
+    this.args.userSettings.cellSizeFactorInt = +event.target.value;
+    /** default is 100% : value=100 in hbs
+     * event.target.value is a string; convert to a number.
+     * Exclude 0, map it to 0.01.
+     */
+    let value = (+event.target.value || 1) / 100;
+    dLog('cellSizeFactorInput', value, event.target.value);
+    /* cellSizeFactor is tracked by matrix-view.js : cellSize() */
+    Ember_set(this, 'args.userSettings.cellSizeFactor', value);
+  }
+
+
   //----------------------------------------------------------------------------
 
   mafThresholdMin = .001;
@@ -361,7 +393,7 @@ export default class PanelManageGenotypeComponent extends Component {
     text = this.args.userSettings.mafUpper ? '<' : '>';
     dLog('mafThresholdText', this.args.userSettings.mafUpper, text);
     return text;
-   }
+  }
 
   /**
    * @param inputType "text" or "range"
