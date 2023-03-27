@@ -103,10 +103,6 @@ export default Record.extend({
   displayName : computed('_meta.displayName', function () {
     return this.get('_meta.displayName') || this.get('id');
   }),
-  /** The .name received from the API is mapped to _name by
-   * serializers/dataset.js so that name can be aliased to displayName.
-   */
-  name : alias('displayName'),
 
   /** @return shortName if defined, otherwise name
    */

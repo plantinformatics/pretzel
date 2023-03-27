@@ -33,7 +33,5 @@ export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
      * renamed to ._meta.  This rename could be done also in the Pretzel data
      * format (pretzel-data). */
     _meta : 'meta',
-    /** Refer to .name as ._name, so that .name can be an alias to .displayName */
-    _name : 'name',
   }
 });
