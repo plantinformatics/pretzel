@@ -184,6 +184,13 @@ export default class PanelManageGenotypeComponent extends Component {
   @tracked
   datasetColumns = null;
 
+  /** Extra fields of non-VCF datasets may be shown, displaying the Feature.values[fieldName].
+   * These are currently allocated 1 column per fieldName, but perhaps will
+   * change to 1 per dataset x fieldName.
+   */
+  @tracked
+  extraDatasetColumns = null;
+
   /** in .args.userSettings : */
   /** true means replace the previous result Features added to the block. */
   // replaceResults = undefined;
@@ -1298,7 +1305,7 @@ export default class PanelManageGenotypeComponent extends Component {
               .map((datasetId) => this.selectedFeaturesValuesFields[datasetId])
               .filter(x => x)
               .flat(),
-            datasetColumns = (nonVCF.columnNames || []).concat(extraDatasetColumns),
+            datasetColumns = nonVCF.columnNames,
 
             /* merge new values in - remember selections for datasets which are currently not visible. */
             // if (this.currentFeaturesValuesFields) Object.assign(this.currentFeaturesValuesFields, currentFeaturesValuesFields);
@@ -1318,6 +1325,7 @@ export default class PanelManageGenotypeComponent extends Component {
               displayData : null,
               displayDataRows,
               datasetColumns,
+              extraDatasetColumns,
               currentFeaturesValuesFields,
               columnNames,
             });
@@ -1334,7 +1342,11 @@ export default class PanelManageGenotypeComponent extends Component {
               }
             }
             if (! sampleNames) {
-              sampleNames = this.featuresArraysToSampleNames(featuresArrays);
+              /** filter out tSNP and MAF because they are already covered, in
+               * vcfFeatures2MatrixView() : mafColumn, haplotypeColourColumn
+               */
+              sampleNames = this.featuresArraysToSampleNames(featuresArrays)
+                .filter(sampleName => ! ['tSNP', 'MAF'].includes(sampleName));
             }
 
             const
@@ -1348,6 +1360,7 @@ export default class PanelManageGenotypeComponent extends Component {
               displayDataRows : null,
               columnNames : null,
               datasetColumns : null,
+              extraDatasetColumns : null,
             });
           }
         }

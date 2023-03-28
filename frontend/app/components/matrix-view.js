@@ -299,14 +299,15 @@ export default Component.extend({
     featureNamesWidth = Math.round(180 * cellSizeFactor),
     width =
       featureValuesWidths[columnName] ||
-      (this.datasetColumns?.includes(columnName) ?
-       (this.userSettings.showNonVCFFeatureNames ? featureNamesWidth : this.cellSize) : 
+      (this.extraDatasetColumns?.includes(columnName) ? featureNamesWidth :
+       (this.datasetColumns?.includes(columnName) ?
+        (this.userSettings.showNonVCFFeatureNames ? featureNamesWidth : this.cellSize) : 
 
       /* works, but padding-left is required also, to move the text.
       columnIndex === this.colSample0 ?
       25 + 3 :
       */
-       this.cellSize);
+        this.cellSize));
     return width;
   },
 
@@ -561,6 +562,8 @@ export default Component.extend({
     } else if (prop === 'Name') {
       cellProperties.renderer = Handsontable.renderers.TextRenderer;
     } else if (this.datasetColumns?.includes(prop)) {
+      cellProperties.renderer = 'blockFeaturesRenderer';
+    } else if (this.extraDatasetColumns?.includes(prop)) {
       cellProperties.renderer = 'blockFeaturesRenderer';
     } else if (numericalData) {
       cellProperties.renderer = 'numericalDataRenderer';
@@ -858,19 +861,46 @@ export default Component.extend({
     Handsontable.renderers.TextRenderer.apply(this, arguments);
     if (value?.length) {
       const
-      feature = value[0][featureSymbol],
-      blockColourValue = featureBlockColourValue(feature),
+      features = value.map(text => text[featureSymbol]),
+      blockColourValue = featureBlockColourValue(features[0]),
+      /** blockFeaturesRenderer() is used for Feature.name (datasetColumns) and
+       * Feature.values[fieldName] (extraDatasetColumns). .name value is
+       * enabled by showNonVCFFeatureNames, and .values[fieldName] value is
+       * always displayed.
+       *
+       * Depending on showNonVCFFeatureNames and isFieldValue, show the value
+       * text in the cell or in title (hoverText); if feature names are shown in
+       * cell then show dataset:scope and value in title / hover.
+       * isFieldValue is : (extraDatasetColumns : true, datasetColumns : false)
+       */
+      isFieldValue = this.extraDatasetColumns?.includes(prop),
+      showValueText = this.userSettings.showNonVCFFeatureNames || isFieldValue,
       /** If table cell data is Feature[] instead of Feature.name [], then use 
        * value.mapBy('name')
        * Related comment in annotateRowsFromFeatures().
        */
-      featureNames = this.userSettings.showNonVCFFeatureNames ? value.join(' ') : ' ',
+      valueText = value.join(' '),
+      cellText = showValueText ? valueText : ' ',
+      hoverText = showValueText ?
+        (isFieldValue ?
+         features.mapBy('name').join('\n') :
+         features.map(this.featureNameHoverText.bind(this) ).join('\n') )
+        : valueText,
       tdStyle = td.style;
       tdStyle.borderLeftColor = blockColourValue;
       tdStyle.borderLeftStyle = 'solid';
-      tdStyle.borderLeftWidth = '' + this.cellSize + 'px';
-      $(td).text(featureNames);
+      tdStyle.borderLeftWidth = '' + (isFieldValue ? 5 : this.cellSize) + 'px';
+      td.title = hoverText;
+      $(td).text(cellText);
     }
+  },
+
+  featureNameHoverText(feature) {
+    const
+    text =
+      feature.get('blockId.brushName') +
+      '  [' + feature.get('value').join(' - ') + ']';
+    return text;
   },
 
   /** The .text is a rgb() block colour; show it as a colour rectangle.
@@ -1005,26 +1035,41 @@ export default Component.extend({
     return columnNames;
   }),
   colHeaders : computed('columnNames', function() {
-    const colHeaders = this.get('columnNames').map((x) => {
-      /** Overlap with columnNamesToColumnOptions(). */
-      let extraClassName;
-      /** dataset columns have the datasetId (vertically) as the column header.  */
-      if (this.datasetColumns?.includes(x)) {
-        extraClassName = ' col-Dataset';
-      } else {
-        extraClassName = columnNameIsNotSample(x) ? '' : ' col-sample';
-      }
-      /** specific classes for Position and Alt :
-       * . Position column is wide, so set margin-left to centre the header text horizontally;
-       * . place a white border on the right side of 'Alt' column, i.e. between Alt and the sample columns.
-       */
-      if (['Position', 'Alt'].includes(x)) {
-        extraClassName +=  ' col-' + x;
-      }
-      return '<div class="head' + extraClassName + '">' + x + '</div>';
+    const colHeaders = this.get('columnNames').map((columnName) => {
+      const extraClassName = this.columnNameToClasses(columnName);
+      return '<div class="head' + extraClassName + '">' + columnName + '</div>';
     });
     return colHeaders;
   }),
+  /** Map from columnName to CSS class names for the header element or data cell.
+   * Used by colHeaders() and columnNamesToColumnOptions().
+   * Some classNames are used by CSS selectors only in colHeaders, some are only used in cells.
+   */
+  columnNameToClasses(columnName) {
+      let extraClassName;
+      /** dataset columns have the datasetId (vertically) as the column header.  */
+      if (this.datasetColumns?.includes(columnName)) {
+        /* column header displays Dataset .displayName; cell displays Feature.name */
+        extraClassName = ' col-Dataset-Name';
+      } else if (this.extraDatasetColumns?.includes(columnName)) {
+        /* column header displays fieldName; cell displays Feature.values[fieldName];
+         * for selected field names, listed in extraDatasetColumns
+         */
+        extraClassName = ' col-Dataset-Values';
+      } else {
+        extraClassName = columnNameIsNotSample(columnName) ? '' : ' col-sample';
+      }
+      /** specific classes for Position and Alt : col-Position, col-Alt
+       * header :
+       * . Position column is wide, so set margin-left to centre the header text horizontally;
+       * data cell :
+       * . place a white border on the right side of 'Alt' column, i.e. between Alt and the sample columns.
+       */
+      if (['Position', 'Alt'].includes(columnName)) {
+        extraClassName +=  ' col-' + columnName;
+      }
+    return extraClassName;
+  },
   columnNamesToColumnOptions(columnNames) {
     const
     columns =
@@ -1032,15 +1077,8 @@ export default Component.extend({
         const
         width = this.colWidths(columnIndex),
         options = {data : name, width};
-        /** Overlap with colHeaders() : extraClassName
-         * Some classNames are used only in colHeaders, some are only used in cells.
-         */
-        if (! columnNameIsNotSample(name)) {
-          options.className = 'col-sample';
-        }
-        if (name === 'Alt') {
-          options.className += ' col-Alt';
-        }
+        options.className = this.columnNameToClasses(name);
+
         if (name === 'LD Block') {
           options.afterSelection = bind(this, this.afterSelectionHaplotype);
         }
