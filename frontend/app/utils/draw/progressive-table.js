@@ -51,6 +51,9 @@ function tableRowMerge(table, data, currentData, columnNames, colHeaders) {
     d0Array = rowObjDataToArray(d0, columnNames),
     cmp = d1IsArray ? dataRowArrayCmp(d0Array, d1) : dataRowCmp(d0, d1),
     visualRowIndex1 = table.toVisualRow(i1),
+    /* .Block is replaced by {gt,}DatasetColumns; OK because it's just a
+     * fall-back, and tableRowMerge() is disabled becasue it didn't achieve its
+     * goal of improved render performance. */
     feature = d0[featureSymbol] || d0?.Block?.[featureSymbol];
 
     if (visualRowIndex1 === null) {

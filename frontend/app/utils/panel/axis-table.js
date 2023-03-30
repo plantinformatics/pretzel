@@ -54,6 +54,11 @@ function setRowAttributes(table, data, dataIsRows) {
 
       setRowAttribute(table, row, /*col*/undefined, feature);
     } else if (dataIsRows) {
+      /* Disabled because : feature.Block is no longer defined. value String should define [featureSymbol]. 
+       * Setting all cells is slow, so set just column 0 as a fall-back.
+       * Transitioning away from HandsOnTable would solve this difficulty of
+       * associating metadata with table cells.
+       */
       feature = feature.Block[Symbol.for('feature')];
       Object.values(feature).forEach((value, physicalCol) => {
         const col = table.toVisualColumn(physicalCol);
@@ -102,8 +107,19 @@ function getRowAttribute(table, row, col) {
       dLog(fnName, 'col 0 -> null', table.countRows(), table.countCols());
     }
   }
-  const
-  feature = (col === null) ? undefined : table.getCellMeta(row, col)?.PretzelFeature;;
+  let
+  feature = (col === null) ? undefined : table.getCellMeta(row, col)?.PretzelFeature;
+
+  if (! feature) {
+    /** matrix-view no longer uses axis-table.js : setRowAttributes();
+     * Using references from cell values, which are available when gtMergeRows;
+     * perhaps use matrix-view .data[physicalRow] instead, as in matrix-view : getRowAttribute().
+     */
+    const
+    rowData = table.getDataAtRow(row),
+    featureRefn = rowData.find(value => value?.[featureSymbol]);
+    feature = featureRefn?.[featureSymbol];
+  }
   return feature;
 }
 

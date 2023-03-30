@@ -593,10 +593,13 @@ function vcfFeatures2MatrixView(requestFormat, added, featureFilter, sampleFilte
   /** The param added.createdFeatures could be grouped by block.
    * Ordering by sampleName seems more useful, although not clear how often sampleName appears in 2 blocks.
    */
-  const blocks = createdFeatures.reduce((result, feature) => {
+  const
+  blocks = createdFeatures.reduce((result, feature) => {
     result.set(feature.get('blockId.content'), true);
     return result;
-  }, new Map());
+  }, new Map()),
+  blocksArray = Array.from(blocks.keys()),
+  gtDatasetIds = blocksArray.mapBy('datasetId.id');
   /** If only 1 block / dataset, then dataset name is not required in column
    * headings, and not required to disambiguate feature (row) names.
    * This can be passed featurePosition() -> featureNameValue() -> featureName()
@@ -618,11 +621,12 @@ function vcfFeatures2MatrixView(requestFormat, added, featureFilter, sampleFilte
       features : sortedFeatures.map((f) => featurePosition(f, 0)),
       datasetId : {id : ''},
       name : ['Position', 'End'][i]}));
-  const blockColourColumn = 
-    {
-      features : sortedFeatures.map(featureBlockColour),
-      datasetId : {id : ''},
-      name : 'Block' };
+  const blockColourColumns = gtDatasetIds.map((datasetId) => ({
+    features : sortedFeatures.map(
+      (feature) => (feature.get('blockId.datasetId.id') === datasetId) ?
+        featureNameValue(feature, feature.name) : undefined),
+    datasetId : {id : ''},
+    name : datasetId }));
   const haplotypeColourColumn = 
     {
       features : sortedFeatures.map(featureHaplotype),
@@ -641,10 +645,8 @@ function vcfFeatures2MatrixView(requestFormat, added, featureFilter, sampleFilte
       datasetId : {id : ''},
       name : refAltHeadings[i]}));
 
-  const leftColumns = [blockColourColumn].concat(valueColumns, mafColumn, haplotypeColourColumn, refAltColumns);
+  const leftColumns = blockColourColumns.concat(valueColumns, mafColumn, haplotypeColourColumn, refAltColumns);
 
-  const
-  blocksArray = Array.from(blocks.keys());
   let sampleNamesForTable = ! options.userSettings.haplotypeFiltersEnable ? sampleNames : sampleNames
     /* alternatively, could filter sampleName after : if (featuresMatchSample),
      * at that point block is known; this is probably more efficient. */
@@ -660,7 +662,7 @@ function vcfFeatures2MatrixView(requestFormat, added, featureFilter, sampleFilte
      * block:sampleName column, with all features of all blocks, in
      * feature.value[0] order - empty where block has no feature.
      */
-    for (const block of blocks.keys()) {
+    for (const block of blocksArray) {
       /** blocks : features : samples
        * maybe filter by sampleName.
        * each column is identified by block + sampleName, and has features of that block with that sampleName
@@ -898,10 +900,15 @@ function rowsAddFeature(rows, feature, nameColumn, valueIndex = 0) {
   const
   position = feature.get('value.' + valueIndex),
   row = (rows[position] ||= ({})),
-  blockColourValue = featureBlockColourValue(feature);
-  /* related to vcfFeatures2MatrixView() : blockColourColumn,  */
-  /* probably change Block to an array, and .push() here, display a flex ul of colour blocks. */
-  row.Block = stringSetFeature(blockColourValue, feature);
+  datasetId = feature.get('blockId.datasetId.id');  // .mapName
+  /* related to vcfFeatures2MatrixView() : blockColourColumns,
+   * Until 53c7c59f these set cell value to featureBlockColourValue(feature),
+   * now replaced by feature.name
+   */
+  /* Originally (until 53c7c59f) single row.Block column, now 1 .name column per
+   * VCF dataset, as with the non-VCF datasets datasetColumns.
+   */
+  row[datasetId] = stringSetFeature(feature.name, feature);
   let name = feature.name;
   if (valueIndex) {
     name = '- ' + name;

@@ -89,7 +89,7 @@ function columnNameIsNotSample(column_name) {
    * like the sample columns, and they are formatted like the sample columns, so
    * assign the class col-sample.
    */
-  return ['Block', 'Name', 'Position', 'End', 'LD Block', 'MAF'].includes(column_name);
+  return ['Name', 'Position', 'End', 'LD Block', 'MAF'].includes(column_name);
 }
 
 function copiesColourClass(alleleValue) {
@@ -145,8 +145,23 @@ function nRows2HeightEx(nRows) {
  * @param blockSamples  true if blocks contain multiple samples (each column is a sample)
  * false if each column is a block (dataset : chromosome)
  *
- * @param displayDataRows
- * @param columnNamesParam
+ * @param userSettings  Persisted controls / settings
+ * 
+ * @param dataScope=this.brushedOrViewedScope
+ * identify the reference datasetId and scope of the axis of the genotype
+ * datasets which are displayed in the table.
+ * There could be multiple such axes; the components handle that but it may not be used.
+ * This is displayed in the top-left corner of the table.
+ *
+ * @param displayDataRows alternative to displayData, which is grouped in
+ * columns, this is in rows (analogous to column- vs row- major order)
+ *
+ * Column Names :
+ * @param columnNamesParam  names of all columns
+ * @param gtDatasetColumns names of Genotype / VCF feature name ("Block") columns
+ * @param datasetColumns names of non-Genotype feature name ("Block") columns
+ * @param extraDatasetColumns names of non-Genotype feature .values[] fieldNames to display in columns
+ *
  * @param selectBlock action
  * @param featureColumnDialogDataset action
  * @param displayForm requestFormat
@@ -516,26 +531,51 @@ export default Component.extend({
     ot.classed('gtMergeRows', this.urlOptions.gtMergeRows);
   },
 
+  /** Get the feature displayed in this row.
+   * @param table instance param to *Renderer i.e. blockFeaturesRenderer(), or this.table.
+   * @param visualRowIndex
+   * @param visualColIndex
+   * if undefined then axis-table.js : getRowAttribute() defaults it to 0.
+   * if ! gtMergeRows then a row has a single feature, applicable to all columns.
+   */
+  getRowAttribute(table, visualRowIndex, visualColIndex) {
+    let feature;
+    const
+    physicalRow = table.toPhysicalRow(visualRowIndex);
+    feature = this.data[physicalRow]?.[featureSymbol];
+
+    const gtPlainRender = this.urlOptions.gtPlainRender;
+    if (! feature && table && (gtPlainRender & 0b10000000)) {
+      feature = getRowAttribute(table, visualRowIndex, visualColIndex);
+    }
+
+    if (! feature && false) {
+      /** or !!this.displayDataRows ... */
+      const dataIsRows = this.displayDataRows === this.get('dataByRow');
+      const data = dataIsRows ? this.displayDataRows : this.displayData;
+      feature = getRowAttributeFromData(table, data, dataIsRows, visualRowIndex);
+
+      debounce(this, this.setRowAttributes, 1000);
+    }
+    return feature;
+  },
 
   /** The row header is Feature Position if gtMergeRows, otherwise Feature name.
    * The row index is displayed if feature reference is not available.
    */
   rowHeaders(visualRowIndex) {
-    let feature = this.table && getRowAttribute(this.table, visualRowIndex, /*col*/undefined);
+    const fnName = 'rowHeaders';
+    const feature = this.getRowAttribute(this.table, visualRowIndex);
     let text;
-    if (! feature) {
-      /** or !!this.displayDataRows ... */
-      const dataIsRows = this.displayDataRows === this.get('dataByRow');
-      const data = dataIsRows ? this.displayDataRows : this.displayData;
-      feature = getRowAttributeFromData(this.table, data, dataIsRows, visualRowIndex);
-
-      debounce(this, this.setRowAttributes, 1000);
-    }
 
     if (feature) {
       text = this.urlOptions.gtMergeRows ?
-        feature?.value?.[0] || feature?.Block?.[featureSymbol]?.value?.[0] :
+        feature?.value?.[0] :
         feature?.name;
+      if (text === undefined) {
+        // previous fall-back for gtMergeRows :  || feature?.Block?.[featureSymbol]?.value?.[0]
+        dLog(fnName, text, feature);
+      }
     } else {
         text = `${visualRowIndex}: `;
     }
@@ -561,6 +601,8 @@ export default Component.extend({
       cellProperties.renderer = 'numericalDataRenderer';
     } else if (prop === 'Name') {
       cellProperties.renderer = Handsontable.renderers.TextRenderer;
+    } else if (this.gtDatasetColumns?.includes(prop)) {
+      cellProperties.renderer = 'blockFeaturesRenderer';
     } else if (this.datasetColumns?.includes(prop)) {
       cellProperties.renderer = 'blockFeaturesRenderer';
     } else if (this.extraDatasetColumns?.includes(prop)) {
@@ -595,8 +637,10 @@ export default Component.extend({
           this.haplotypeToggleRC(row, col);
           return;
         }
-        /* selectedColumnName may be Ref, Alt, or a sample column, not Block, Position, End, LD Block. */
-        if (columnNameIsNotSample(col_name)) {
+        /* selectedColumnName may be Ref, Alt, or a sample column, not Position, End, LD Block,
+         * or one of the *datasetColumns.
+         */
+        if (columnNameIsNotSample(col_name) && this.columnNameIsDatasetColumn(col_name) ) {
           col_name = undefined;
         }
         dLog(fnName, col_name);
@@ -859,9 +903,24 @@ export default Component.extend({
    */
   blockFeaturesRenderer(instance, td, row, col, prop, value, cellProperties) {
     Handsontable.renderers.TextRenderer.apply(this, arguments);
+    if (value && !Array.isArray(value)) {
+      value = [value];
+    }
     if (value?.length) {
+      let
+      features = value.map(text => text[featureSymbol]);
+      if (! features[0]) {
+        const
+        feature = this.getRowAttribute(instance, /*visualRowIndex*/ row);
+        if (feature) {
+          features = [feature];
+        } else {
+          td.title = undefined;
+          return;
+        }
+      }
+
       const
-      features = value.map(text => text[featureSymbol]),
       blockColourValue = featureBlockColourValue(features[0]),
       /** blockFeaturesRenderer() is used for Feature.name (datasetColumns) and
        * Feature.values[fieldName] (extraDatasetColumns). .name value is
@@ -989,41 +1048,6 @@ export default Component.extend({
     });
     return cols;
   }),
-  /** identify the reference datasetId and scope of the axis of the genotype
-   * datasets which are displayed in the table.
-   * There could be multiple such axes - only the first is identified.
-   * This is displayed in the top-left corner of the table.
-   */
-  dataScope : computed('displayData.[]', function() {
-    let text, feature;
-    if (this.displayDataRows) {
-      if (this.displayDataRows.length) {
-        const rowData = this.displayDataRows[this.displayDataRows.length - 1];
-        feature = rowData?.Block[Symbol.for('feature')];
-      }
-    } else {
-      feature = this.displayData?.[0]?.features
-      ?.[0]
-      ?.[Symbol.for('feature')];
-    }
-    if (feature) {
-      const
-      block = feature.blockId,
-      datasetId = block?.get('referenceBlockOrSelf.datasetId.id'),
-      scope = block?.get('scope');
-      if (scope) {
-        text = scope;
-        /* gtMergeRows : rowHeader is Position, which is narrower than name, and
-         * datasetId gets truncated and moves the centre (where scope is
-         * positioned) out of view, so omit it.
-         */
-        if (datasetId && ! this.urlOptions.gtMergeRows) {
-          text = datasetId + ' ' + text;
-        }
-      }
-    }
-    return text;
-  }),
   /** index of the first sample column.
    * 2 or 4 if Ref & Alt
    */
@@ -1041,15 +1065,31 @@ export default Component.extend({
     });
     return colHeaders;
   }),
+  columnNameIsDatasetColumn(columnName) {
+    // gtDatasetColumns were called 'Block' until 53c7c59f
+    const
+    isDatasetColumn =
+      [this.gtDatasetColumns, this.datasetColumns, this.extraDatasetColumns].find(
+        (columnNames) => columnNames?.includes(columnName));
+    return isDatasetColumn;
+  },
+
   /** Map from columnName to CSS class names for the header element or data cell.
    * Used by colHeaders() and columnNamesToColumnOptions().
    * Some classNames are used by CSS selectors only in colHeaders, some are only used in cells.
    */
   columnNameToClasses(columnName) {
       let extraClassName;
-      /** dataset columns have the datasetId (vertically) as the column header.  */
-      if (this.datasetColumns?.includes(columnName)) {
-        /* column header displays Dataset .displayName; cell displays Feature.name */
+      /** dataset columns : gtDatasetColumns datasetColumns :
+       * . column header displays Dataset .displayName;
+       * . cell displays Block colour
+       * . title is Feature.name
+       * extraDatasetColumns show Block colour in a thin border-left rectangle.
+       * The column headers display vertically.
+       */
+      if (this.gtDatasetColumns?.includes(columnName)) {
+        extraClassName = ' col-Dataset-Name col-Genotype';
+      } else if (this.datasetColumns?.includes(columnName)) {
         extraClassName = ' col-Dataset-Name';
       } else if (this.extraDatasetColumns?.includes(columnName)) {
         /* column header displays fieldName; cell displays Feature.values[fieldName];
@@ -1155,20 +1195,42 @@ export default Component.extend({
     return rows;
   }),
   get dataByRowFromColumns() {
+    const fnName = 'dataByRowFromColumns';
     let nonNumerical = false;
     let rows = {};
     let cols = this.get('columns');
     Object.entries(cols).forEach(function([col_name, col]) {
       Ember_get(col, 'features').forEach(function(feature) {
+        /** param feature is a proxy wrapping one value of featureObj. */
+        /** feature may be undefined in the {gt,,extra}DatasetColumns */
+        if (feature === undefined) {
+          return;
+        }
         let feature_name = feature.name;
         if (rows[feature_name] == null) {
           rows[feature_name] = {};
         }
+
+        const
+        row = rows[feature_name],
+        /** copy feature object reference from proxy to row. */
+        rowFeature = row[featureSymbol],
+        featureObj = feature[featureSymbol];
+        if (featureObj) {
+          if (! rowFeature) {
+            row[featureSymbol] = featureObj;
+          } else if (featureObj != rowFeature) {
+            /* dataByRowFromColumns() is used for ! gtMergeRows, so each row
+             * references a single feature. */
+            dLog(fnName, rowFeature, '!==', featureObj);
+          }
+        }
+
         let value = feature.value;
         if (Array.isArray(value)) {
           value = value[0];
         }
-        rows[feature_name][col_name] = value;
+        row[col_name] = value;
 
         if (isNaN(value)) {
           nonNumerical = true;
@@ -1233,6 +1295,11 @@ export default Component.extend({
        * columnNames, then this reference could be used by dataRowCmp().
        */
       d[Symbol.for('Position')] = rowData.Position;
+      /** for ! gtMergeRows, row corresponds to a single feature, which is referenced by rowData.  */
+      const feature = rowData[featureSymbol];
+      if (feature) {
+        d[featureSymbol] = feature;  
+      }
       data.push(d);
     });
     return data;

@@ -179,7 +179,14 @@ export default class PanelManageGenotypeComponent extends Component {
   @tracked
   columnNames = null;
 
-  /** Non-VCF datasets are allocated 1 column each, displaying the feature name.
+  /** Genotype (VCF) datasets are allocated 1 column each, showing Block colour, and
+   * containing the feature name as cell title.
+   */
+  @tracked
+  gtDatasetColumns = null;
+
+  /** Non-VCF datasets are allocated 1 column each, displaying the feature name
+   * when enabled by showNonVCFFeatureNames.
    */
   @tracked
   datasetColumns = null;
@@ -226,6 +233,8 @@ export default class PanelManageGenotypeComponent extends Component {
     super(...arguments);
 
     this.userSettingsDefaults();
+    /* if (trace) { */
+      dLog('manage-genotype', 'constructor', 'this', this, 'args', Object.entries(this.args));
   }
   /** Provide default values for args.userSettings; used in constructor().
    */
@@ -587,6 +596,40 @@ export default class PanelManageGenotypeComponent extends Component {
       (ab) => ({block : ab.block, haplotypeFilters : this.blockHaplotypeFilters(ab.block)}));
     dLog(fnName, axisBrushes, blocksHF);
     return blocksHF;
+  }
+
+  @computed('brushedOrViewedVCFBlocks')
+  get brushedOrViewedScope () {
+    const fnName = 'brushedOrViewedScope';
+    const scope = this.lookupScope || this.brushedOrViewedVCFBlocks.mapBy('scope').uniq();
+    dLog(fnName, scope);
+    return scope;
+  }
+  /** identify the reference datasetId and scope of the axis of the genotype
+   * datasets which are displayed in the table.
+   * There could be multiple such axes; the components handle that but it may not be used.
+   * This is displayed in the top-left corner of the table.
+   */
+  @computed('brushedOrViewedScope')
+  get dataScope () {
+    const
+    fnName = 'dataScope',
+    scope = this.brushedOrViewedScope,
+    blocks = this.brushedOrViewedVCFBlocks,
+    visibleBlocks = blocks
+      .filterBy('visible'),
+    gtDatasetIds = visibleBlocks.mapBy('datasetId.id'),
+    texts = (scope ? [scope] : []).concat(gtDatasetIds),
+    text = texts.join('\n');
+
+    /* gtMergeRows : rowHeader is Position, which is narrower than name, and
+     * datasetId gets truncated and moves the centre (where scope is
+     * positioned) out of view, so omit it.
+     if (gtDatasetIds?.length && ! this.urlOptions.gtMergeRows)
+    */
+    dLog(fnName, blocks, visibleBlocks, scope, gtDatasetIds, text);
+
+    return text;
   }
 
   //----------------------------------------------------------------------------
@@ -1263,8 +1306,10 @@ export default class PanelManageGenotypeComponent extends Component {
       dLog(fnName, blocks.mapBy('id'));
       if (blocks.length) {
         const
-        featuresArrays = blocks
-        .filterBy('visible')
+        visibleBlocks = blocks
+          .filterBy('visible'),
+        gtDatasetIds = visibleBlocks.mapBy('datasetId.id'),
+        featuresArrays = visibleBlocks
           .map((b) => b.featuresInBrush)
           .filter((features) => features.length)
           .map((features) => features.slice(0, this.rowLimit));
@@ -1305,6 +1350,9 @@ export default class PanelManageGenotypeComponent extends Component {
               .map((datasetId) => this.selectedFeaturesValuesFields[datasetId])
               .filter(x => x)
               .flat(),
+
+            /** non- Genotype/VCF datasetColumns; they are passed separately to
+             * gtDatasetColumns as they may require different presentation. */
             datasetColumns = nonVCF.columnNames,
 
             /* merge new values in - remember selections for datasets which are currently not visible. */
@@ -1314,7 +1362,7 @@ export default class PanelManageGenotypeComponent extends Component {
              * for gtMergeRows the Position column is hidden.
              * .sampleNames contains : [ 'Ref', 'Alt', 'tSNP', 'MAF' ]; 'tSNP' is mapped to 'LD Block'
              */
-            columnNames = ['Block']
+            columnNames = gtDatasetIds
               .concat(nonVCF.columnNames)
               .concat(['Position', 'Name'])
               .concat(extraDatasetColumns)
@@ -1324,6 +1372,7 @@ export default class PanelManageGenotypeComponent extends Component {
             setProperties(this, {
               displayData : null,
               displayDataRows,
+              gtDatasetColumns : gtDatasetIds,
               datasetColumns,
               extraDatasetColumns,
               currentFeaturesValuesFields,
@@ -1359,6 +1408,7 @@ export default class PanelManageGenotypeComponent extends Component {
               displayData,
               displayDataRows : null,
               columnNames : null,
+              gtDatasetColumns : gtDatasetIds,
               datasetColumns : null,
               extraDatasetColumns : null,
             });
