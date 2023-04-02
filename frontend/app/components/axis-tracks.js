@@ -1078,12 +1078,7 @@ export default InAxis.extend({
         let
         feature = thisAt.featureData2Feature.get(d),
         isQTL = feature?.get('blockId.isQTL'),
-        p = this.parentElement,
-        gBlock = subElements ? p.parentElement : p,
-        blockId = gBlock.__data__;
-  if (! subElements && (typeof blockId !== "string") && blockId.description && (typeof p.parentElement.__data__ === "string")) {
-      blockId = p.parentElement.__data__;
-  }
+        blockId = thisAt.trackElt2BlockId(subElements, this);
   let
         blockC = thisAt.lookupAxisTracksBlock(blockId),
         trackWidth = blockC.trackWidth,
@@ -1109,7 +1104,14 @@ export default InAxis.extend({
      * This is used in combination with height(), which returns a positive value.
      */
     function yPosn(d) { /*console.log("yPosn", d);*/
-      let px = d.map((yi) => y(yi)),
+      let
+      /** d is [start, end], with an optional d[2] for subElements : an array of
+       * [start, end, subElementTypeName]
+       * Here just the [start, end] is required.
+       */
+      px = d
+        .slice(0, 2)
+        .map((yi) => y(yi)),
           // pxPlus = intervalDirection(px, true);
           pxMin = Math.min.apply(undefined, px);
       return pxMin;
@@ -1582,7 +1584,7 @@ export default InAxis.extend({
         let t0 = selection.node();
         if (t0) {
           /** may not be blockId, e.g subElements, so default to false. */
-          let blockId = t0.parentElement.__data__,
+          let blockId = thisAt.trackElt2BlockId(subElements, t0),
               block = blockId && thisAt.lookupBlockView(blockId),
               out = block && ! block.block.get('isQTL') && block.block.isZoomedRightOut();
           /** if selection is a transition */
@@ -2167,6 +2169,25 @@ export default InAxis.extend({
     this.set('tracks', tracks); // used by axisStackChanged() : passed to layoutAndDrawTracks()
     return tracks;
   }),
+
+  trackElt2BlockId(subElements, trackElt) {
+    const
+    fnName = 'trackElt2BlockId',
+    p = trackElt.parentElement,
+    gBlock = subElements ? p.parentElement : p;
+    let
+    blockId = gBlock.__data__;
+    /* equivalent : check on parent.getAttribute('clip-path') in blockTrackColourI()  */
+    if (! subElements && (typeof blockId !== "string") && blockId.description && (typeof p.parentElement.__data__ === "string")) {
+      dLog(fnName, subElements, trackElt, p, gBlock, blockId, p.parentElement.__data__);
+      blockId = p.parentElement.__data__;
+    }
+    if (typeof blockId !== 'string') {
+      dLog(fnName, subElements, trackElt, p, gBlock, blockId);
+    }
+    return blockId;
+  },
+
 
   lookupBlock(blockId) {
     let
