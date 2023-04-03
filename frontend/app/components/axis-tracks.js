@@ -2259,7 +2259,7 @@ export default InAxis.extend({
     // yDomain = this.get('yDomain'),
     tracksLayout = regionOfTree(subEltTree.intervalTree[blockId], undefined, sizeThreshold, undefined, false),
     data = tracksLayout.intervals;
-    blockState.set('layoutWidth', tracksLayout.nLayers * this.get('trackWidth') * 2);
+    blockState.set('layoutWidth', (2 + tracksLayout.nLayers) * this.get('trackWidth') * 2);
     return data;
   },
 
