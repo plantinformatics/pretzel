@@ -58,16 +58,21 @@ function vcfGenotypeLookup(parent, scope, preArgs, nLines, dataOutCb, cb) {
       moreParams.push('--force-samples');
     }
   }
-  if (preArgs.samples?.length) {
-    moreParams = moreParams.concat('-s', preArgs.samples.replaceAll('\n', ','));
+  const samples = preArgs.samples;
+  if (samples?.length) {
+    const
+    samplesJoined = samples
+      .trimEnd(/\n/)
+      .replaceAll('\n', ',');
+    moreParams = moreParams.concat('-s', samplesJoined);
   } else if (preArgs.requestSamplesAll) {
     // bcftools default is All samples, no option required.
   } else {
     // There is not an option for 0 samples, except via using an empty file :
     moreParams = moreParams.concat('-S', '/dev/null');
   }
-  /** avoid tracing preArgs.samples, and moreParams[9] which is the samples. */
-  console.log(fnName, parent, preArgs.region, preArgs.requestFormat, preArgs.samples?.length, moreParams.slice(0, 9));
+  /** avoid tracing samples, and moreParams[9] which is the samples. */
+  console.log(fnName, parent, preArgs.region, preArgs.requestFormat, samples?.length, moreParams.slice(0, 9));
   if (! dataOutCb) {
     dataOutCb = dataOutReplyClosureLimit(cb, nLines);
   }

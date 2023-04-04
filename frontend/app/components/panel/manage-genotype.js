@@ -345,7 +345,7 @@ export default class PanelManageGenotypeComponent extends Component {
     this.args.userSettings.lookupBlock = this.lookupBlock;
 
     later(() => {
-      this.selectedSamplesText = this.selectedSamples.join('\n');
+      this.selectedSamplesText = this.selectedSamples?.join('\n');
     });
   }
 
@@ -780,7 +780,11 @@ export default class PanelManageGenotypeComponent extends Component {
   sampleNameListInput(value) {
     const
     fnName = 'sampleNameListInput',
-    selected = value.split(/\n/g);
+    /** empty lines are invalid sample names, so trim \n and white-space lines */
+    selected = value
+      .trimEnd(/\n/)
+      .split(/\n *\t*/g)
+      .filter((name) => !!name);
     dLog(fnName, value, selected);
     this.selectedSamples = selected;
   }
