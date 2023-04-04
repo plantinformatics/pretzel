@@ -2400,7 +2400,8 @@ export default InAxis.extend({
 
     let allocatedWidth = this.get('allocatedWidth');
 
-    let width = ((allocatedWidth && allocatedWidth[1]) ??  this.get('layoutWidth')) + axisBlocksEnd;
+    const layoutWidth = this.get('layoutWidth');
+    let width = ((allocatedWidth && allocatedWidth[1]) || layoutWidth.centre ) + axisBlocksEnd;
     return width;
   }),
   /** Render changes related to a change of .layoutWidth
