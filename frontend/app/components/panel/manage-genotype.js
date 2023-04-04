@@ -8,6 +8,7 @@ import { A as Ember_A } from '@ember/array';
 
 import { uniq } from 'lodash/array';
 
+import NamesFilters from '../../utils/data/names-filters';
 import { toPromiseProxy, toArrayPromiseProxy } from '../../utils/ember-devel';
 import { thenOrNow, contentOf } from '../../utils/common/promises';
 import { intervalSize } from '../../utils/interval-calcs';
@@ -227,6 +228,13 @@ export default class PanelManageGenotypeComponent extends Component {
   @tracked
   selectedFeaturesValuesFields = {};
 
+  //----------------------------------------------------------------------------
+
+  // @action  // called via (action to pass target.value)
+  nameFilterChanged(value) {
+    this.namesFilters.nameFilterChanged(value);
+  }
+
   // ---------------------------------------------------------------------------
 
   constructor() {
@@ -235,6 +243,7 @@ export default class PanelManageGenotypeComponent extends Component {
     this.userSettingsDefaults();
     /* if (trace) { */
       dLog('manage-genotype', 'constructor', 'this', this, 'args', Object.entries(this.args));
+    this.namesFilters = new NamesFilters();
   }
   /** Provide default values for args.userSettings; used in constructor().
    */
@@ -334,13 +343,10 @@ export default class PanelManageGenotypeComponent extends Component {
     this.axisBrushBlockIndex = +value;
     /** save user setting for next component instance. */
     this.args.userSettings.lookupBlock = this.lookupBlock;
-    /*
+
     later(() => {
-      if (this.vcfGenotypeSamplesSelected === undefined) {
-        this.vcfGenotypeSamplesSelected = [];
-      }
+      this.selectedSamplesText = this.selectedSamples.join('\n');
     });
-    */
   }
 
   // ---------------------------------------------------------------------------
@@ -719,10 +725,6 @@ export default class PanelManageGenotypeComponent extends Component {
 
   @alias('vcfGenotypeSamplesSelected')
   selectedSamples;
-  /*
-  @tracked
-  selectedSamples = [];
-  */
 
   @reads('selectedSamples.length')
   selectedCount;
@@ -736,10 +738,52 @@ export default class PanelManageGenotypeComponent extends Component {
    */
   @action
   selectSample(event) {
-    const selectedSamples = $(event.target).val();
-    this.selectedSamples = selectedSamples || [];
+    const
+    previousSelected = this.selectedSamples,
+    selectedSamples = $(event.target).val();
+    this.selectedSamples.addObjects(selectedSamples);
+    if (selectedSamples.length) {
+      this.selectedSamplesText = previousSelected.addObjects(selectedSamples).join('\n');
+    }
   }
 
+  /**
+   * @return undefined if .samples is undefined
+   */
+  @computed('samples', 'namesFilters.nameFilterArray')
+  get filteredSamples() {
+    const
+    fnName = 'filteredSamples',
+    nameFilterArray = this.namesFilters.nameFilterArray,
+    filteredSamples = this.samples
+      ?.filter(sampleName => this.namesFilters.matchFilters(
+        sampleName, nameFilterArray,
+        /*this.caseInsensitive*/ true,
+        /*this.searchFilterAll*/ true));
+    return filteredSamples;
+  }
+
+  // copied from feature-list, not used.
+  @tracked
+  activeInput = false;
+  /* related user actions :
+   *  change filter : doesn't change selectedSamples{,Text}
+   *  user select -> append to selectedSamples ( -> selectedSamplesText)
+   *  paste -> (selectedSamplesText and) selectedSamples
+   */
+  @tracked
+  selectedSamplesText = '';
+
+  /** parse the contents of the textarea -> selectedSamples
+   */
+  @action
+  sampleNameListInput(value) {
+    const
+    fnName = 'sampleNameListInput',
+    selected = value.split(/\n/g);
+    dLog(fnName, value, selected);
+    this.selectedSamples = selected;
+  }
 
   //------------------------------------------------------------------------------
 

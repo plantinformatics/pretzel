@@ -57,6 +57,7 @@ import {
 
 import { noGroup } from '../../utils/data/groups';
 
+import NamesFilters from '../../utils/data/names-filters';
 
 import ManageBase from './manage-base'
 
@@ -108,6 +109,7 @@ export default ManageBase.extend({
     this.get('apiServers').on('receivedDatasets', this.receivedDatasetsFn);
     /** Initialise this.blocksService so that dependency blocksService.featureUpdateCount works. */
     let blocksService = this.get('blocksService');
+    this.namesFilters = new NamesFilters();
   },
   receivedDatasetsFn : computed( function() {
     return (datasets) => {
@@ -594,27 +596,17 @@ export default ManageBase.extend({
     }
     return data;
   }),
+
+  //----------------------------------------------------------------------------
+
+  nameFilter : alias('namesFilters.nameFilter'),
+  nameFilterArray : alias('namesFilters.nameFilterArray'),
   nameFilterChanged(value) {
-    // dLog('nameFilterChanged', value);
-    // debounce(this, this.nameFilterChangedSet, 2000);
-    // use lodash_debounce() instead because it has option : leading
-    this.get('nameFilterDebouncedLodash')();
+    this.namesFilters.nameFilterChanged(value);
   },
-  nameFilterDebouncedLodash : computed(function () {
-    let debounced = lodash_debounce(() => this.nameFilterChangedSet(), 500, { maxWait: 2000, leading: true });
-    return debounced;
-  }),
-  nameFilterChangedSet() {
-    dLog('nameFilterChangedSet', 'set', this.nameFilter);
-    this.set('nameFilterDebounced', this.nameFilter);
-  },
-  nameFilterArray : computed('nameFilterDebounced', function () {
-    let
-    nameFilter = this.get('nameFilterDebounced'),
-    array = !nameFilter || (nameFilter === '') ? [] :
-      nameFilter.split(/[ \t]/);
-    return array;
-  }),
+
+  //----------------------------------------------------------------------------
+
   /* The two dependencies caseInsensitive and searchFilterAll impact on
    * datasetOrBlockMatch(), called by dataPre, so they could be moved downstream
    * to dataPre (it would have to change from filter to computed to add those
@@ -640,22 +632,10 @@ export default ManageBase.extend({
    * @param nameFilters array of text to match against names of datasets / blocks
    */
   datasetOrBlockMatch(dataset, nameFilters) {
-    const maybeLC  = this.caseInsensitive ? (string) => string.toLowerCase() : (string) => string; 
-    let
-    multiFnName = this.searchFilterAll ? 'every' : 'any';
-    if (this.caseInsensitive) {
-      nameFilters = nameFilters.map((n) => n.toLowerCase());
-    }
-    let
-    matchAll = nameFilters[multiFnName]((nameFilter) => {
-      let
-      match = maybeLC(dataset.name).includes(nameFilter);
-      if (! match) {
-        /** depending on the cost of get('blocks'), it may be worthwhile to reverse the order of these loops : nameFilters / blocks */
-        match = dataset.get('blocks').any((block) => maybeLC(block.name).includes(nameFilter));
-      }
-      return match;
-    });
+    const
+    childNamesFn = (dataset) => dataset.get('blocks').mapBy('name'),
+    matchAll = this.namesFilters.matchFiltersObj(
+      dataset, nameFilters, this.caseInsensitive, this.searchFilterAll, childNamesFn);
     return matchAll;
   },
   /**
@@ -664,19 +644,10 @@ export default ManageBase.extend({
    * @param nameFilters array of text to match against name
    */
   nameMatch(name, nameFilters) {
-    const maybeLC  = this.caseInsensitive ? (string) => string.toLowerCase() : (string) => string; 
-    let
-    multiFnName = this.searchFilterAll ? 'every' : 'any';
-    if (this.caseInsensitive) {
-      /** this can be factored out a couple of levels. */
-      nameFilters = nameFilters.map((n) => n.toLowerCase());
-    }
-    let
-    matchAll = nameFilters[multiFnName]((nameFilter) => {
-      let
-      match = maybeLC(name).includes(nameFilter);
-      return match;
-    });
+    const
+    matchAll = this.namesFilters.matchFilters(
+      name, nameFilters, this.caseInsensitive, this.searchFilterAll);
+
     return matchAll;
   },
   /** Filter blockTraits[fieldName] (e.g. blockTraits.Traits) by nameFilters

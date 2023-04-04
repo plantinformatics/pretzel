@@ -109,10 +109,21 @@ Server :
     <button type="button" onclick={{action this.vcfGenotypeSamples}} class="btn btn-info btn-xs">Get samples list</button>
   {{/if}}
 
+  <div class="genotypeSampleFilter_textInput">
+    <label class="" style="margin-right: 1em;">
+      <i class="glyphicon glyphicon-filter"></i>
+      Search / Filter
+    </label>
+    {{input id="sampleNameFilter" type="search" value=sampleNameFilter
+      input=(action this.nameFilterChanged value="target.value")
+      placeholder="Filter available samples by name" }}
+      {{!-- maybe autocomplete="sample-name", but samples names are mostly numeric so it may be more of an impediment than a benefit for the user --}}
+  </div>
+
   <div class="genotype-controls">
 
     <select style="height:100px" class="form-control" multiple onchange={{action this.selectSample}}>
-      {{#each this.samples as |sampleChoice|}}
+      {{#each this.filteredSamples as |sampleChoice|}}
       <option value={{sampleChoice}} selected={{include this.selectedSamples sampleChoice}}>{{sampleChoice}}</option>
       {{/each}}
     </select>
@@ -125,14 +136,18 @@ Server :
   {{#if this.selectedCount}}
     <span class="sample-count">( {{selectedCount}} )</span>
   {{/if}}
+
   <div>
-    <ul class="list-group">
-      {{#each this.selectedSamples as |sample|}}
-        <li class="list-group-item">{{sample}}</li>
-      {{else}}
-        <li class="list-group-item">(No samples selected)</li>
-      {{/each}}
-    </ul>
+  <Textarea
+    class="selectedSamplesInput"
+    @value={{this.selectedSamplesText}}
+    @input={{action (mut this.activeInput) true}}
+    @enter={{this.sampleNameListInput}}
+    @insert-newline={{this.sampleNameListInput}}
+    @escape-press={{this.sampleNameListInput}}
+    placeholder="Sample Names"
+    >
+  </Textarea>
   </div>
 
 </div>

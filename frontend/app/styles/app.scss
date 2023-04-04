@@ -2146,6 +2146,12 @@ div.genotype > div > div > textarea,
 {
   width: 20em;
 }
+.selectedSamplesInput
+{
+  height : 15ex;
+  overflow-y : auto;
+}
+
 /** Hide the panel-container-s when toggled off */
 #right-panel-content.right-panel-genotype.hideControls .panel-parent
 {
