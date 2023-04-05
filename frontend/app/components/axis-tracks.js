@@ -1680,7 +1680,9 @@ export default InAxis.extend({
     /** subElements */
     function eachGroup(blockId, i, g) {
       let
-      egs = bs.selectAll("g.element")
+      /** this === g[i] */
+      tracksG = d3.select(this),
+      egs = tracksG.selectAll("g.element")
       // probably add geneKeyFn showing sub-element details, e.g. typeName, start/end, sequence?
         .data(trackBlocksData, trackKeyFn),
       ege =  egs.enter(), egx = egs.exit();
