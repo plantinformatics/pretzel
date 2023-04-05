@@ -26,12 +26,13 @@ const dLog = console.debug;
  * @param eltSelector DOM element to make resizable
  * @param filter  undefined or event filter - refn github.com/d3/d3-drag#drag_filter
  * @param resized undefined or callback when resized
+ * @param vertical if true, adjust y / height, otherwise x / width
  * @return undefined if selectors eltSelector or resizer don't match, otherwise
  * the d3 drag object, so that the caller can register for drag events.
  * The caller could use eltWidthResizable(...).on('drag') instead of passing resized,
  * but this function wraps the calculation of x and dx which is useful.
  */
-function eltWidthResizable(eltSelector, filter, resized)
+function eltWidthResizable(eltSelector, filter, resized, vertical = false)
 {
   /** refn : meetamit https://stackoverflow.com/a/25792309  */
   let resizable = d3.select(eltSelector);
@@ -60,12 +61,17 @@ let
       // Determine resizer position relative to resizable (parent)
       let relativeParent = (this.parentNode.parentNode.parentNode.tagName === 'foreignObject') ?
         this.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode : this.parentNode;
-      let x = d3.mouse(relativeParent)[0];
-      let dx = d3.event.dx;
+      const
+      mousePosition = d3.mouse(relativeParent),
+      /** means y if vertical */
+      x_ = mousePosition[+vertical],
+      event = d3.event,
+      /** means dy if vertical */
+      dx = event[vertical ? 'dy' : 'dx'],
       // dLog("eltWidthResizable drag x=", x, dx);
       // Avoid negative or really small widths
       // (perhaps if x < 50, don't call resized() or set width.)
-      x = Math.max(50, x);
+      x = Math.max(50, x_);
 
       /** if resized is given, and it returns a value, then only update width if value is truthy. */
       let resizedOk;
@@ -80,9 +86,11 @@ let
         // Only the first 2 args are used so far - the others can be dropped.
         resized(x, dx, eltSelector, resizable, resizer, this, d);
 
-      if (resizedOk === undefined || resizedOk) 
-        resizable.style('width', x + 'px');
-
+      if (resizedOk === undefined || resizedOk) {
+        const dimension = vertical ? 'height' : 'width';
+        // or use $(resizable.node())[dimension] = ..., to avoid overriding other element style.
+        resizable.style(dimension, x + 'px');
+      }
     });
   // if (filter)
     dragResize.filter(shiftKeyfilter/*filter*/);

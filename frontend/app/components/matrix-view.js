@@ -27,6 +27,7 @@ import { featureBlockColourValue, valueIsCopies } from '../utils/data/vcf-featur
 import { toTitleCase } from '../utils/string';
 import { thenOrNow } from '../utils/common/promises';
 import { tableRowMerge } from '../utils/draw/progressive-table';
+import { eltWidthResizable } from '../utils/domElements';
 
 
 // -----------------------------------------------------------------------------
@@ -75,6 +76,9 @@ const featureValuesWidths = {
 let tableHeight = '100%';
 /** Enable use of tableHeightFromParent().  */
 const calculateTableHeight = true;
+
+/** <div> which contains HandsOnTable elements. */
+const tableContainerSelector = '#observational-table';
 
 // -----------------------------------------------------------------------------
 
@@ -502,6 +506,8 @@ export default Component.extend({
     if (gtPlainRender & 0b100) {
       table.addHook('afterRender', this.afterRender.bind(this));
     }
+
+    this.dragResizeListen();
   },
 
   highlightFeature,
@@ -1358,7 +1364,7 @@ export default Component.extend({
     }
     let rows = this.get('rows');
     let rowHeaderWidth = this.get('rowHeaderWidth');
-    let colHeaderHeight = this.get('colHeaderHeight');
+    let colHeaderHeight = this.userSettings.columnHeaderHeight || this.get('colHeaderHeight');
     let table = this.get('table');
     let data = this.get('data');
     const gtPlainRender = this.urlOptions.gtPlainRender;
@@ -1583,7 +1589,7 @@ export default Component.extend({
   filterSamplesBySelectedHaplotypes() {
     this.haplotypeFilterSamples(this.showHideSampleFn.bind(this), this);
   },
-  showHideSampleFn(sampleName, counts) {
+  showHideSampleFn(sampleName, counts) {  
     if (counts.matches || counts.mismatches) {
       const
       hide = counts.mismatches,
@@ -1598,5 +1604,56 @@ export default Component.extend({
     }
     /* caller will do table.render() to make hideColumn() effective */
   },
+
+  //----------------------------------------------------------------------------
+
+  /** based on axis width resizer in axis-2d.js */
+
+  /** Called when resizer element for column header height resize is dragged.
+   * @param d data of the resizer elt
+   */
+  resizedByDrag(height, dy, eltSelector, resizable, resizer,  resizerElt, d)
+  {
+    dLog("resizedByDrag", height, dy, eltSelector, resizable.node(), resizer.node(),  resizerElt, d);
+    this.setColumnHeaderHeight(height, dy);
+  },
+  /**
+   * @param columnHeaderHeight initially .colHeaderHeight, then resizer height
+   */
+  setColumnHeaderHeight(columnHeaderHeight) {
+    /* this is not used for manage-genotype, instead .height = tableHeightFromParent() */
+    this.userSettings.columnHeaderHeight = columnHeaderHeight;
+    const body = d3.select('body');
+    body.style('--matrixViewColumnHeaderHeight', columnHeaderHeight + 'px');
+    const
+    table = this.get('table'),
+    settings = {
+      columnHeaderHeight
+    };
+    table.updateSettings(settings);
+  },
+  defaultColumnHeaderHeight() {
+    const body = d3.select('body');
+    if (! body.style('--matrixViewColumnHeaderHeight')) {
+      body.style('--matrixViewColumnHeaderHeight', '300px');
+    }
+  },
+  /** listen for drag adjustment of column header height. */
+  dragResizeListen() {
+    this.defaultColumnHeaderHeight();
+    const
+    fnName = 'dragResizeListen',
+    /** .gtResizeHeader is outside of tableContainerSelector */
+    resizeSel = '.gtResizeHeader > div';
+    $(resizeSel).height(this.get('colHeaderHeight'));
+    /** as well as passing vertical=true, also : class="resizer vertical" */
+    let dragResize = eltWidthResizable(resizeSel, undefined, bind(this, this.resizedByDrag), /* vertical*/ true);
+    if (! dragResize) {
+      dLog(fnName, resizeSel);
+    }
+    /** axis-2d also does dragResize.on('{start,end}' ), resize{Start,End}ed,  */
+  },
+
+  //----------------------------------------------------------------------------
 
 });
