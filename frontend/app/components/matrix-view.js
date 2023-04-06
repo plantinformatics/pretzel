@@ -23,7 +23,9 @@ import {
   highlightFeature,
 } from '../utils/panel/axis-table';
 import { afterSelectionFeatures } from '../utils/panel/feature-table';
-import { featureBlockColourValue, valueIsCopies } from '../utils/data/vcf-feature';
+import {
+  featureBlockColourValue, columnName2SampleName, valueIsCopies,
+} from '../utils/data/vcf-feature';
 import { toTitleCase } from '../utils/string';
 import { thenOrNow } from '../utils/common/promises';
 import { tableRowMerge } from '../utils/draw/progressive-table';
@@ -563,6 +565,10 @@ export default Component.extend({
 
       debounce(this, this.setRowAttributes, 1000);
     }
+    /* above getRowAttribute{,FromData}() use <cell data>[featureSymbol], which tableCoordsToFeature() does not. */
+    if (! feature) {
+      feature = tableCoordsToFeature(this.table, {row : visualRowIndex, col : visualColIndex});
+    }
     return feature;
   },
 
@@ -592,6 +598,7 @@ export default Component.extend({
     let cellProperties = {};
     let selectedBlock = this.get('selectedBlock');
     let numericalData = ! this.blockSamples && this.get('numericalData');
+    const sampleName = columnName2SampleName(prop);
     /** much of this would be better handled using table options.columns,
      * as is done in table-brushed.js : createTable().
      */
@@ -600,9 +607,9 @@ export default Component.extend({
       cellProperties.type = 'numeric';
     } else if (prop === 'Block') {
       cellProperties.renderer = 'blockColourRenderer';
-    } else if (prop === 'LD Block') {
+    } else if (sampleName === 'LD Block') {
       cellProperties.renderer = 'haplotypeColourRenderer';
-    } else if (prop === 'MAF') {
+    } else if (sampleName === 'MAF') {
       cellProperties.type = 'numeric';
       cellProperties.renderer = 'numericalDataRenderer';
     } else if (prop === 'Name') {
@@ -703,7 +710,7 @@ export default Component.extend({
     if ((coords.col == -1) || (coords.col < this.colSample0)) {
       // no column or column does not identify a block
     } else if (this.blockSamples) {
-      let feature = tableCoordsToFeature(this.table, coords);
+      let feature = this.getRowAttribute(this.table, coords.row, coords.col);
       /* no feature when select on column header.
        * block is not currently used when blockSamples anyway.
        */
@@ -879,7 +886,7 @@ export default Component.extend({
     if (!isNaN(value)) {
       /** for MAF, use log(value), range of MAF is [0,1], log range of interest is mostly in [-5,0] */
       const
-      isMAF = prop === 'MAF',
+      isMAF = prop.startsWith('MAF'),
       domain = isMAF ? [-5, 0] : row_ranges[row],
       /** color_scale can be factored out - it is constant for all cells, apart from .domain(). */
       color_scale = d3.scaleLinear().domain(domain)
@@ -1569,7 +1576,7 @@ export default Component.extend({
     const
     fnName = 'haplotypeToggleRC',
     coords = {row, col},
-    feature = tableCoordsToFeature(this.table, coords);
+    feature = this.getRowAttribute(this.table, coords.row, coords.col);
     /** LD Block */
     let haplotype;
     /** afterSelectionHaplotype() gets called while table is re-rendering, and feature is undefined */
@@ -1635,7 +1642,8 @@ export default Component.extend({
   defaultColumnHeaderHeight() {
     const body = d3.select('body');
     if (! body.style('--matrixViewColumnHeaderHeight')) {
-      body.style('--matrixViewColumnHeaderHeight', '300px');
+      const height = this.get('colHeaderHeight') || 300;
+      body.style('--matrixViewColumnHeaderHeight', '' + height + 'px');
     }
   },
   /** listen for drag adjustment of column header height. */

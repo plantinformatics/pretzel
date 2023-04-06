@@ -565,6 +565,27 @@ function sampleIsFilteredOutBlocks(blocks, sampleName, sampleFilter) {
 
 //------------------------------------------------------------------------------
 
+/** Map sampleName 'tSNP' -> 'LD Block'
+ * Related : caseRefAlt() : refAlt.includes(), toTitleCase()
+ */
+function sampleName2ColumnName(sampleName) {
+  if (sampleName === 'tSNP') {
+    sampleName = 'LD Block';
+  }
+  return sampleName;
+}
+
+function columnNameAppendDatasetId(columnName, datasetId) {
+  const text = columnName + '\t' + datasetId;
+  return text;
+}
+function columnName2SampleName(columnName) {
+  const sampleName = columnName.split('\t')[0];
+  return sampleName;
+}
+
+//------------------------------------------------------------------------------
+
 
 
 /** Map the result of vcfGenotypeLookup() to the format expected by component:matrix-view param displayData
@@ -820,6 +841,7 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
   const fnName = 'vcfFeatures2MatrixViewRowsResult';
   const showHaplotypeColumn = features.length && features[0].values.tSNP;
   const block = features.length && contentOf(features[0].blockId);
+  const datasetId = block.get('datasetId.id');
 
   let sampleNamesSet = new Set();
 
@@ -841,6 +863,7 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
           }
           return sampleName;
         }
+        // can instead collate columnNames in following .reduce(), plus caseRefAlt().
         /* unchanged */ /* sampleNamesSet = */
         featureSampleNames(sampleNamesSet, feature, caseRefAlt);
 
@@ -854,14 +877,19 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
           // .filter(([sampleName, sampleValue]) => ! ['tSNP', 'MAF'].includes(sampleName))
           .reduce(
           (res2, [sampleName, sampleValue]) => {
+            let columnName;
+            /** overlap with caseRefAlt(). */
             if (refAlt.includes(sampleName)) {
               sampleValue = refAltNumericalValue(sampleName);
               // the capital field name is used in : row[sampleName]
               sampleName = toTitleCase(sampleName);
+            } else {
+              columnName = sampleName = sampleName2ColumnName(sampleName);
             }
             const 
             // featureNameValue(feature, sampleValue),
             fx = stringSetFeature(sampleValue, feature),
+            // devel - checking value in console
             r = row[sampleName];
             /** for multiple features in a cell */
             if (cellMultiFeatures) {
@@ -869,6 +897,7 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
               cell = (row[sampleName] ||= []);
               cell.push(fx);
             } else {
+              sampleName = columnNameAppendDatasetId(sampleName, datasetId);
               row[sampleName] = fx;
             }
             return res2;
@@ -882,6 +911,7 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
   /** map 'tSNP' to 'LD Block' in columnNames, not in the row data. related : Haplotype. */
   columnNames = Array.from(sampleNamesSet.keys())
     .map((name) => (name === 'tSNP') ? 'LD Block' : name)
+    .map((name) => columnNameAppendDatasetId(name, datasetId))
     .sort(columnNamesCmp);
   result.sampleNames.addObjects(columnNames);
 
@@ -1009,9 +1039,9 @@ function featuresValuesFields(features) {
 
 /** Collate "sample names" i.e. keys(feature.values), adding them to sampleNamesSet.
  * Omit ref and alt, i.e. names which are in refAlt.
+ * @param sampleNamesSet new Set() to accumulate sampleNames
  * @param feature
  * @param filterFn  if defined, process names, and if result is not undefined, add it to set.
- * @param sampleNamesSet new Set() to accumulate sampleNames
  * @return sampleNamesSet, for use in .reduce().
  */
 function featureSampleNames(sampleNamesSet, feature, filterFn) {
@@ -1056,6 +1086,8 @@ export {
   addFeaturesJson,
   featureBlockColourValue,
   sampleIsFilteredOut,
+  sampleName2ColumnName,
+  columnName2SampleName,
   vcfFeatures2MatrixView, vcfFeatures2MatrixViewRows,
   valueIsCopies,
   rowsAddFeature,
