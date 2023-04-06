@@ -326,7 +326,7 @@ export default class PanelManageGenotypeComponent extends Component {
 
 
     if (this.urlOptions.gtMergeRows === undefined) {
-      this.urlOptions.gtMergeRows = false;
+      this.urlOptions.gtMergeRows = true;
     }
 
   }
