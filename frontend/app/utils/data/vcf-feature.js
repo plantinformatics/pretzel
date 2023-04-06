@@ -910,9 +910,9 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
   const
   /** map 'tSNP' to 'LD Block' in columnNames, not in the row data. related : Haplotype. */
   columnNames = Array.from(sampleNamesSet.keys())
-    .map((name) => (name === 'tSNP') ? 'LD Block' : name)
-    .map((name) => columnNameAppendDatasetId(name, datasetId))
-    .sort(columnNamesCmp);
+    .map(sampleName2ColumnName)
+    .sort(columnNamesCmp)
+    .map((name) => columnNameAppendDatasetId(name, datasetId));
   result.sampleNames.addObjects(columnNames);
 
   dLog(fnName, result.rows.length);
@@ -1087,6 +1087,7 @@ export {
   featureBlockColourValue,
   sampleIsFilteredOut,
   sampleName2ColumnName,
+  columnNameAppendDatasetId,
   columnName2SampleName,
   vcfFeatures2MatrixView, vcfFeatures2MatrixViewRows,
   valueIsCopies,

@@ -24,7 +24,7 @@ import {
 } from '../utils/panel/axis-table';
 import { afterSelectionFeatures } from '../utils/panel/feature-table';
 import {
-  featureBlockColourValue, columnName2SampleName, valueIsCopies,
+  featureBlockColourValue, columnNameAppendDatasetId, columnName2SampleName, valueIsCopies,
 } from '../utils/data/vcf-feature';
 import { toTitleCase } from '../utils/string';
 import { thenOrNow } from '../utils/common/promises';
@@ -119,7 +119,8 @@ function col_name_fn(column) {
   /** if datasetId is '' or undefined / null, then ':' separator is not required.
    * This is true for non-sample columns, e.g. Position, End, Ref, Alt, LD Block
    */
-  col_name = (! datasetId ? '' : datasetId + ':')  + Ember_get(column, 'name');
+  name = Ember_get(column, 'name'),
+  col_name = datasetId ? columnNameAppendDatasetId(name, datasetId) : name;
   return col_name;
 }
 
@@ -646,7 +647,7 @@ export default Component.extend({
       columnNames = this.get('columnNames');
       if (columnNames) {
         col_name = columnNames[col];
-        if (col_name === 'LD Block') {
+        if (col_name.startsWith('LD Block')) {
           this.haplotypeToggleRC(row, col);
           return;
         }
@@ -689,7 +690,7 @@ export default Component.extend({
     fnName = 'afterSelectionHaplotype',
     columnName = this.columnNames[col];
     dLog(fnName, row, col);
-    if (columnName === 'LD Block') {
+    if (columnName.startsWith('LD Block')) {
     const ldBlock = this.haplotypeToggleRC(row, col);
     if (ldBlock) {
       later(() => this.table.render(), 1000);
@@ -1132,7 +1133,7 @@ export default Component.extend({
         options = {data : name, width};
         options.className = this.columnNameToClasses(name);
 
-        if (name === 'LD Block') {
+        if (name.startsWith('LD Block')) {
           options.afterSelection = bind(this, this.afterSelectionHaplotype);
         }
         return options;
@@ -1360,10 +1361,15 @@ export default Component.extend({
     return ranges;
   }),
 
-  /** Observe changes to .rows and .selectedBlock, and update table settings with
+  /** Observe changes to .rows and .selectedBlock, and update table.
+   */
+  updateTableObserver: observer(/*'displayData.[]'*/ 'rows', 'selectedBlock', function() {
+    this.updateTableOnce();
+  }),
+  /** Update table settings with
    * column headings from keys(.data), .rows, .rowHeaderWidth, .colHeaderHeight.
    */
-  updateTable: observer(/*'displayData.[]'*/ 'rows', 'selectedBlock', function() {
+  updateTable() {
     const fnName = 'updateTable';
     let t = $("#observational-table");
     if (calculateTableHeight) {
@@ -1444,7 +1450,7 @@ export default Component.extend({
       }
       t.hide();
     }
-  }),
+  },
 
   setRowAttributes() {
     const
