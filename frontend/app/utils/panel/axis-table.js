@@ -19,14 +19,20 @@ function stringGetFeature(sampleValue) {
   return sampleValue[featureSymbol];
 }
 /** Convert sampleValue to an Object (new String) if it is not already.
+ * to enable assigning a reference using the given Symbol.
  * @return String object
  */
-function stringSetFeature(sampleValue, feature) {
-  const s = (typeof sampleValue === 'object') ? sampleValue : new String(sampleValue);
-  s[featureSymbol] = feature;
+function stringSetSymbol(referenceSymbol, value, reference) {
+  const s = (typeof value === 'object') ? value : new String(value);
+  s[referenceSymbol] = reference;
   return s;
 }
-
+/** Assign a reference to feature to the given sampleValue,
+ * converting it to String as required.
+ */
+function stringSetFeature(sampleValue, feature) {
+  return stringSetSymbol(featureSymbol, sampleValue, feature);
+}
 
 /*----------------------------------------------------------------------------*/
 
@@ -250,6 +256,7 @@ d3.selection.prototype.moveToFront = function() {
 
 export {
   stringGetFeature,
+  stringSetSymbol,
   stringSetFeature,
   setRowAttributes,
   setRowAttribute,

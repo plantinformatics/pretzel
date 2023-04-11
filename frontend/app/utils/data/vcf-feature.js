@@ -5,7 +5,7 @@ import createIntervalTree from 'interval-tree-1d';
 
 import { intervalOrdered } from '../interval-calcs';
 import { toTitleCase } from '../string';
-import { stringGetFeature, stringSetFeature } from '../panel/axis-table';
+import { stringGetFeature, stringSetSymbol, stringSetFeature } from '../panel/axis-table';
 import { contentOf } from '../common/promises';
 
 // -----------------------------------------------------------------------------
@@ -14,6 +14,7 @@ const dLog = console.debug;
 
 const trace = 1;
 
+const datasetSymbol = Symbol.for('dataset');
 const featureSymbol = Symbol.for('feature');
 const sampleMatchesSymbol = Symbol.for('sampleMatches');
 const callRateSymbol = Symbol.for('callRate');
@@ -48,6 +49,20 @@ columnOrderIndex = columnOrder.reduce(
  * position from different vcf datasets; could also merge columns (samples).  */
 const cellMultiFeatures = false;
 
+//------------------------------------------------------------------------------
+
+/** Convert punctuation in datasetId to underscore, to sanitize it and enable
+ * use of the result as a CSS class name.
+ *
+ * Used in genotype table column headers for the dataset colour rectangle (border-left).
+ * This is in support of selecting dataset colour using datasetId instead of
+ * hard-wiring it onto every element; this will support future plans for user
+ * editing of dataset colour.
+ */
+function datasetId2Class(datasetId) {
+  const className = datasetId.replaceAll(/[ -,.-/:-?\[-^`{-~]/g, '_');
+  return className;
+}
 
 // -----------------------------------------------------------------------------
 
@@ -841,7 +856,9 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
   const fnName = 'vcfFeatures2MatrixViewRowsResult';
   const showHaplotypeColumn = features.length && features[0].values.tSNP;
   const block = features.length && contentOf(features[0].blockId);
-  const datasetId = block.get('datasetId.id');
+  const
+  dataset = block?.get('datasetId'),
+  datasetId = dataset?.get('id');
 
   let sampleNamesSet = new Set();
 
@@ -908,11 +925,18 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
     result);
 
   const
-  /** map 'tSNP' to 'LD Block' in columnNames, not in the row data. related : Haplotype. */
+  /** map 'tSNP' to 'LD Block' in columnNames, not in the row data. related : Haplotype.
+   *
+   * Annotate the column name with dataset; this could be block; handling
+   * multiple blocks of one dataset is not envisaged ATM, so it is not known
+   * whether they should be separate columns, which would favour annotating with
+   * block here.  This value is used in matrix-view : colHeaders().
+   */
   columnNames = Array.from(sampleNamesSet.keys())
     .map(sampleName2ColumnName)
     .sort(columnNamesCmp)
-    .map((name) => columnNameAppendDatasetId(name, datasetId));
+    .map((name) => columnNameAppendDatasetId(name, datasetId))
+    .map(name => stringSetSymbol(datasetSymbol, name, dataset));
   result.sampleNames.addObjects(columnNames);
 
   dLog(fnName, result.rows.length);
@@ -1082,6 +1106,7 @@ function columnNamesSort(columnNames) {
 
 export {
   refAlt,
+  datasetId2Class,
   vcfGenotypeLookup,
   addFeaturesJson,
   featureBlockColourValue,

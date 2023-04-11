@@ -24,6 +24,7 @@ import {
 } from '../utils/panel/axis-table';
 import { afterSelectionFeatures } from '../utils/panel/feature-table';
 import {
+  datasetId2Class,
   featureBlockColourValue, columnNameAppendDatasetId, columnName2SampleName, valueIsCopies,
 } from '../utils/data/vcf-feature';
 import { toTitleCase } from '../utils/string';
@@ -37,6 +38,7 @@ import { eltWidthResizable } from '../utils/domElements';
 const dLog = console.debug;
 const trace = 1;
 
+const datasetSymbol = Symbol.for('dataset');
 const featureSymbol = Symbol.for('feature');
 
 // -----------------------------------------------------------------------------
@@ -1074,8 +1076,11 @@ export default Component.extend({
   }),
   colHeaders : computed('columnNames', function() {
     const colHeaders = this.get('columnNames').map((columnName) => {
-      const extraClassName = this.columnNameToClasses(columnName);
-      return '<div class="head' + extraClassName + '">' + columnName + '</div>';
+      const
+      dataset = columnName[datasetSymbol],
+      datasetClass = dataset ? ' col-Dataset-' + datasetId2Class(dataset.get('id')) : '',
+      extraClassName = this.columnNameToClasses(columnName);
+      return '<div class="head' + extraClassName + datasetClass + '">' + columnName + '</div>';
     });
     return colHeaders;
   }),
@@ -1119,9 +1124,11 @@ export default Component.extend({
        * data cell :
        * . place a white border on the right side of 'Alt' column, i.e. between Alt and the sample columns.
        */
-      if (['Position', 'Alt'].includes(columnName)) {
-        extraClassName +=  ' col-' + columnName;
-      }
+    if (columnName === 'Position') {
+      extraClassName +=  ' col-' + columnName;
+    } else if (columnName.startsWith('Alt')) {
+      extraClassName +=  ' col-' + 'Alt';
+    }
     return extraClassName;
   },
   columnNamesToColumnOptions(columnNames) {

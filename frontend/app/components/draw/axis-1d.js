@@ -692,6 +692,27 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     return colour;
     },
 
+  //----------------------------------------------------------------------------
+
+  /** @return a mapping from datasets -> block colour
+   */
+  datasetsColour : computed('dataBlocks', function () {
+    const
+    fnName = 'datasetsColour',
+    dataBlocks = this.get('dataBlocks'),
+    blockColourMap = dataBlocks.reduce((map, block) => {
+      const
+      dataset = block.get('datasetId'),
+      colour = this.blockColourValue(block);
+      map.set(dataset, colour);
+      return map;
+    }, new Map());
+    dLog(fnName, blockColourMap, dataBlocks);
+    return blockColourMap;
+  }),
+
+  //----------------------------------------------------------------------------
+
   /** @return the domains of the data blocks of this axis.
    * The result does not contain a domain for data blocks with no features loaded.
    *

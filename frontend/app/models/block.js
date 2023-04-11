@@ -1322,6 +1322,21 @@ export default Model.extend({
       return brushable;
     }),
 
+  //----------------------------------------------------------------------------
+
+  /** Block Colour
+   * Currently based on colours allocated to data blocks in axis title menu and
+   * used to colour axis tracks, later this will map to "Dataset Colour",
+   * i.e. all axes will use a common colour for data blocks of a single dataset.
+   * @return rgb() colour string
+   */
+  get colourValue() {
+    const
+    axis1d = this.get('axis1d'),
+    blockColourValue = axis1d.blockColourValue(this);
+    return blockColourValue;
+  },
+
   /*--------------------------------------------------------------------------*/
 
   /** @return current .zoomedDomain, or .limits

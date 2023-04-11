@@ -1672,6 +1672,12 @@ div#goto-feature > div
   height : var(--matrixViewHeight);
 }
 
+#observational-table .handsontable th
+{
+  /* default 'top' causes a few px empty space at the bottom of column headers.  */
+  vertical-align: inherit;
+}
+
 #observational-table .wtHolder
 {
   /* height : fit-content !important; */
@@ -1684,6 +1690,8 @@ div#goto-feature > div
   margin-left: 7px;
   transform-origin: left;
   transform: rotate(-90deg);
+  /* space above dataset colour border-left rectangle. */
+  padding-left: 10px;
 }
 #observational-table .head.col-Position
 {

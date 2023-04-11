@@ -569,6 +569,15 @@ Server :
 {{!-- --------------------------------------------------------------------- --}}
 <div class="clear-both"></div>
 
+<style>
+  {{#each datasetsClasses as |datasetsClass|}}
+    {{concat ".col-Dataset-" datasetsClass.id}}
+    {
+      border-left : 15px solid {{datasetsClass.colour}};
+    }
+  {{/each}}
+</style>
+
 {{matrix-view
   userSettings=this.args.userSettings
   dataScope=this.dataScope

@@ -15,6 +15,7 @@ import { intervalSize } from '../../utils/interval-calcs';
 import { overlapInterval } from '../../utils/draw/zoomPanCalcs';
 import {
   refAlt,
+  datasetId2Class,
   vcfGenotypeLookup,
   addFeaturesJson,
   sampleIsFilteredOut,
@@ -611,20 +612,30 @@ export default class PanelManageGenotypeComponent extends Component {
     dLog(fnName, scope);
     return scope;
   }
+
+  @computed('brushedOrViewedVCFBlocks')
+  get gtDatasets () {
+    const
+    fnName = 'gtDatasets',
+    blocks = this.brushedOrViewedVCFBlocks,
+    visibleBlocks = blocks
+      .filterBy('visible'),
+    gtDatasets = visibleBlocks.mapBy('datasetId');
+    dLog(fnName, blocks, visibleBlocks, gtDatasets);
+    return gtDatasets;
+  }
+
   /** identify the reference datasetId and scope of the axis of the genotype
    * datasets which are displayed in the table.
    * There could be multiple such axes; the components handle that but it may not be used.
    * This is displayed in the top-left corner of the table.
    */
-  @computed('brushedOrViewedScope')
+  @computed('brushedOrViewedScope', 'gtDatasets')
   get dataScope () {
     const
     fnName = 'dataScope',
     scope = this.brushedOrViewedScope,
-    blocks = this.brushedOrViewedVCFBlocks,
-    visibleBlocks = blocks
-      .filterBy('visible'),
-    gtDatasetIds = visibleBlocks.mapBy('datasetId.id'),
+    gtDatasetIds = this.gtDatasets.mapBy('id'),
     texts = (scope ? [scope] : []).concat(gtDatasetIds),
     text = texts.join('\n');
 
@@ -633,7 +644,7 @@ export default class PanelManageGenotypeComponent extends Component {
      * positioned) out of view, so omit it.
      if (gtDatasetIds?.length && ! this.urlOptions.gtMergeRows)
     */
-    dLog(fnName, blocks, visibleBlocks, scope, gtDatasetIds, text);
+    dLog(fnName, scope, gtDatasetIds, text);
 
     return text;
   }
@@ -886,6 +897,54 @@ export default class PanelManageGenotypeComponent extends Component {
     this.lookupBlockWithinBlocks(blocks);
     dLog(fnName, blocks.length);
     return blocks;
+  }
+
+  //----------------------------------------------------------------------------
+
+  /** @return a mapping from datasets -> block colour
+   * @desc
+   * Also set .brushedOrViewedVCFDatasets : array of datasets of brushedOrViewedVCFBlocks.
+   */
+  @computed('brushedOrViewedVCFBlocks')
+  get datasetsColour() {
+    /** related : axis-1d.js : datasetsColour() */
+    const
+    fnName = 'datasetsColour',
+    /** [{axisBrush, vcfBlock}, ...], refn : brushedVCFBlocks() */
+    abBlocks = this.brushedOrViewedVCFBlocks,
+    datasetsSet = new Set(),
+    blockColourMap = abBlocks.reduce((map, abBlock) => {
+      const
+      block = abBlock.block,
+      dataset = block.get('datasetId'),
+      axis1d = block.get('axis1d'),
+      colour = axis1d.blockColourValue(block);
+      datasetsSet.add(dataset);
+      map.set(dataset, colour);
+      return map;
+    }, new Map()),
+    datasets = Array.from(datasetsSet.keys());
+    dLog(fnName, blockColourMap, abBlocks, datasets);
+    Ember_set(this, 'brushedOrViewedVCFDatasets', datasets);
+    return blockColourMap;
+  }
+
+  /** @return the CSS class names for the datasets which are displayed in the table.
+   */
+  @computed('brushedOrViewedVCFDatasets', 'gtDatasetColumns')
+  get datasetsClasses() {
+    const
+    fnName = 'datasetsClasses',
+    datasetsColour = this.datasetsColour,
+    datasets =
+      this.brushedOrViewedVCFDatasets
+      .concat(this.gtDatasets),
+    classes = datasets.map(dataset => ({
+      id : datasetId2Class(dataset.get('id')),
+      colour : datasetsColour.get(dataset)
+    }));
+    dLog(fnName, classes);
+    return classes;
   }
 
   //----------------------------------------------------------------------------
@@ -1356,6 +1415,7 @@ export default class PanelManageGenotypeComponent extends Component {
         const
         visibleBlocks = blocks
           .filterBy('visible'),
+        /** equivalent : this.gtDatasetIds */
         gtDatasetIds = visibleBlocks.mapBy('datasetId.id'),
         featuresArrays = visibleBlocks
           .map((b) => b.featuresInBrush)
