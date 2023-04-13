@@ -591,8 +591,12 @@ function sampleName2ColumnName(sampleName) {
 }
 
 function columnNameAppendDatasetId(columnName, datasetId) {
-  const text = columnName + '\t' + datasetId;
-  return text;
+  /** Assume the SNPs are bi-allelic, so only display 1 Ref/Alt
+   * regardless of multiple datasets. */
+  if (! refAltHeadings.includes(columnName)) {
+    columnName = columnName + '\t' + datasetId;
+  }
+  return columnName;
 }
 function columnName2SampleName(columnName) {
   const sampleName = columnName.split('\t')[0];
@@ -838,8 +842,8 @@ function blockToMatrixColumn(singleBlock, block, sampleName, features) {
  */
 function vcfFeatures2MatrixViewRows(requestFormat, featuresArrays, featureFilter, sampleFilter, options) {
   const fnName = 'vcfFeatures2MatrixViewRows';
-  const result = featuresArrays.reduce((res, features) => {
-    res = vcfFeatures2MatrixViewRowsResult(res, requestFormat, features, featureFilter, sampleFilter, options);
+  const result = featuresArrays.reduce((res, features, datasetIndex) => {
+    res = vcfFeatures2MatrixViewRowsResult(res, requestFormat, features, featureFilter, sampleFilter, options, datasetIndex);
     return res;
   }, {rows : [], sampleNames : []});
   return result;
@@ -850,9 +854,10 @@ function vcfFeatures2MatrixViewRows(requestFormat, featuresArrays, featureFilter
  * @param featureFilter filter applied to features
  * @param sampleFilter undefined or optional additional filter (callRate filter)
  * @param options { userSettings }
+ * @param datasetIndex index of this dataset in the featuresArrays passed to vcfFeatures2MatrixViewRows().
  * @param result : {rows, sampleNames}. function can be called via .reduce()
  */
-function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featureFilter, sampleFilter, options) {
+function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featureFilter, sampleFilter, options, datasetIndex) {
   const fnName = 'vcfFeatures2MatrixViewRowsResult';
   const showHaplotypeColumn = features.length && features[0].values.tSNP;
   const block = features.length && contentOf(features[0].blockId);
@@ -925,7 +930,11 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
     result);
 
   const
-  /** map 'tSNP' to 'LD Block' in columnNames, not in the row data. related : Haplotype.
+  /** construct column names from the samples names accumulated from feature values.
+   *
+   * Omit Ref/Alt if datasetIndex > 0, i.e. assume SNPs are bi-allelic so Ref / Alt
+   * from each dataset will be the same.
+   * map 'tSNP' to 'LD Block' in columnNames, not in the row data. related : Haplotype.
    *
    * Annotate the column name with dataset; this could be block; handling
    * multiple blocks of one dataset is not envisaged ATM, so it is not known
@@ -933,6 +942,7 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
    * block here.  This value is used in matrix-view : colHeaders().
    */
   columnNames = Array.from(sampleNamesSet.keys())
+    .filter(name => (datasetIndex === 0) || ! refAltHeadings.includes(name))
     .map(sampleName2ColumnName)
     .sort(columnNamesCmp)
     .map((name) => columnNameAppendDatasetId(name, datasetId))

@@ -115,6 +115,7 @@ function copiesColourClass(alleleValue) {
 function col_name_fn(column) {
   /** If column is block then block.get('datasetId.id') requires .get();
    * otherwise column can be a native JS object, so use Ember_get() to handle either case.
+   * vcfFeatures2MatrixView() sets : datasetId : {id : ''}, so in that case datasetId is not appended.
    */
   const
   datasetId = Ember_get(column, 'datasetId.id'),
