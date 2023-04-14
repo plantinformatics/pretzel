@@ -2255,6 +2255,12 @@ div.genotype label
   color: white;
 }
 
+.ember-modal-dialog.genotype > .btn
+{
+  margin: 1em 0em;
+  margin-left: 3em;
+}
+
 /* added for manage-genotype, but applicable to other modals also. */
 .ember-modal-dialog
 {
@@ -2265,6 +2271,11 @@ div.genotype label
 {
   overflow-y: auto;
   max-height: 40vh;
+}
+.ember-modal-dialog.genotype
+{
+  min-width: 40em;
+  min-height: 79ex;
 }
 
 .genotype li.list-group-item

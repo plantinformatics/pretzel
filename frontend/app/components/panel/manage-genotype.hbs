@@ -4,19 +4,76 @@
 {{#if this.showInputDialog}}
 
 {{#ember-modal-dialog
+  containerClassNames="genotype"
   onClose=(action (mut this.showInputDialog) false)
   targetAttachment="center"
   translucentOverlay=true
   clickOutsideToClose=false
   onClickOverlay=(action this.userMessage "Use X to close Samples dialog")
 
-  modal-id="split-container-dialog-modal"
-  title="VCF Lookup Inputs"
+  title="Genotype Table Controls, Samples, Filters, VCF Lookup Inputs"
   header-icon='search'
 }}
 
 
 {{!-- Genotypes --}}
+
+    {{!-- ----------------------------------------------------------------- --}}
+    {{!-- tabTypeName is the text displayed on the tab for user identification of the contents, aka tabName.  --}}
+
+    <BsTab @customTabs={{true}} @onChange={{action this.onChangeTab}} @activeId={{this.activeId}} as |tab|>
+      <BsNav @type="tabs" as |nav|>
+      <ul class="nav nav-tabs li-active-extra counts">
+
+        {{#let 'Samples' as |tabTypeName|}}
+          {{#let (compute (action this.tabName2Id tabTypeName)) as |tabId|}}
+            <nav.item class="active-detail" @active={{bs-eq tab.activeId tabId}}><a href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
+              <div>{{this.brushedVCFBlocks.length}}</div>
+            </nav.item>
+          {{/let}}
+        {{/let}}
+
+        {{#let 'Lookup' as |tabTypeName|}}
+          {{#let (compute (action this.tabName2Id tabTypeName)) as |tabId|}}
+            <nav.item class="active-detail" @active={{bs-eq tab.activeId tabId}}><a href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
+              <div>{{this.brushedDomainLength}}</div>
+            </nav.item>
+          {{/let}}
+        {{/let}}
+
+        {{#let 'Result' as |tabTypeName|}}
+          {{#let (compute (action this.tabName2Id tabTypeName)) as |tabId|}}
+            <nav.item class="active-detail" @active={{bs-eq tab.activeId tabId}}><a href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
+              <div>
+      {{this.vcfGenotypeTextSizeDescription}}
+      , {{this.vcfGenotypeLookupCount}} current requests.
+      {{this.vcfGenotypeText.length}}
+              </div>
+            </nav.item>
+          {{/let}}
+        {{/let}}
+
+        {{#let 'Controls' as |tabTypeName|}}
+          {{#let (compute (action this.tabName2Id tabTypeName)) as |tabId|}}
+            <nav.item class="active-detail" @active={{bs-eq tab.activeId tabId}}><a href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
+              <div>{{!-- this.blocksHaplotypeFilters.mapBy('haplotypeFilters').flat() --}}</div>
+            </nav.item>
+          {{/let}}
+        {{/let}}
+
+      </ul>
+      </BsNav>
+
+      {{!-- --------------------------------------------------------------- --}}
+
+      <div class="tab-content">
+
+        {{#let 'Samples' as |tabTypeName|}}
+          {{#let (compute (action this.tabName2Id tabTypeName)) as |tabId|}}
+
+          {{#tab.pane id=tabId title=tabTypeName}}
+
+    {{!-- ----------------------------------------------------------------- --}}
 
 {{log 'flowsService.axisBrush' flowsService.axisBrush}}
 
@@ -154,27 +211,20 @@ Server :
 
 
 
-{{!---------------------------------------------------------------------------}}
-
-<BsButton @type="info" @onClick={{action (mut this.showInputDialog) false}}>OK</BsButton>
 
 {{!-- --------------------------------------------------------------------- --}}
-
 </div>
 
+          {{/tab.pane}}
+          {{/let}}
+        {{/let}}
 
-{{!-- --------------------------------------------------------------------- --}}
+        {{!-- ------------------------------------------------------------- --}}
 
-<div class="panel-parent" style="margin-top:2ex">
+        {{#let 'Lookup' as |tabTypeName|}}
+          {{#let (compute (action this.tabName2Id tabTypeName)) as |tabId|}}
 
-  {{#elem/panel-container state="primary" showComponent=@userSettings.showConfigureLookup as |panelContainer|}}
-
-    {{#elem/panel-heading icon="transfer" panelContainer=panelContainer}}
-      Configure Lookup
-    {{/elem/panel-heading}}
-
-    {{#if panelContainer.showComponent}}
-
+          {{#tab.pane id=tabId title=tabTypeName}}
 
       <div class="genotype">
 
@@ -283,16 +333,6 @@ Server :
 
         <div class="lookup-line">
 
-          {{#if this.vcfGenotypeLookupDomain}}
-            <button type="button" onclick={{action this.vcfGenotypeLookup}}
-              disabled={{and (not @userSettings.requestSamplesAll) (not this.vcfGenotypeSamplesSelected.length)  }}
-              class="btn btn-info btn-xs">VCF Lookup</button>
-          {{else}}
-            {{#if this.urlOptions.gtIntervalLimit}}
-              <span>VCF Lookup Region limit is {{this.intervalLimit}}Mb</span>
-            {{/if}}
-          {{/if}}
-
           <div class="interval-group">
             <label>VCF Genotype for brushed interval</label>
             <div>
@@ -323,18 +363,16 @@ Server :
         {{/if}}
       </div>
 
-    {{/if}} {{!-- showComponent --}}
-  {{/elem/panel-container}}
+          {{/tab.pane}}
+          {{/let}}
+        {{/let}}
 
+        {{!-- ------------------------------------------------------------- --}}
 
+        {{#let 'Result' as |tabTypeName|}}
+          {{#let (compute (action this.tabName2Id tabTypeName)) as |tabId|}}
 
-  {{#elem/panel-container state="primary" showComponent=showResultText as |panelContainer|}}
-
-    {{#elem/panel-heading icon="transfer" panelContainer=panelContainer}}
-      Result text
-    {{/elem/panel-heading}}
-
-    {{#if panelContainer.showComponent}}
+          {{#tab.pane id=tabId title=tabTypeName}}
 
       {{#if this.headerText}}
         <textarea class="vcfGenotypeText" >{{this.headerText}}</textarea>
@@ -345,20 +383,18 @@ Server :
         {{this.vcfGenotypeText}}</textarea>
     </div>
 
-    {{else}}
-      {{this.vcfGenotypeTextSizeDescription}}
-      , {{this.vcfGenotypeLookupCount}} current requests.
-    {{/if}} {{!-- showComponent --}}
-  {{/elem/panel-container}}
 
+          {{/tab.pane}}
+          {{/let}}
+        {{/let}}
 
-  {{#elem/panel-container state="primary" showComponent=@userSettings.showControlsFilters as |panelContainer|}}
+        {{!-- ------------------------------------------------------------- --}}
 
-    {{#elem/panel-heading icon="transfer" panelContainer=panelContainer}}
-      Controls and Filters
-    {{/elem/panel-heading}}
+        {{#let 'Controls' as |tabTypeName|}}
+          {{#let (compute (action this.tabName2Id tabTypeName)) as |tabId|}}
 
-    {{#if panelContainer.showComponent}}
+          {{#tab.pane id=tabId title=tabTypeName}}
+            <div class="genotype">
 
       <label style="margin-left: 1em; margin-top: 1em" >LD Block Sample Filters</label>
       <ul class="list-group borderless haplotypeFilters">
@@ -521,14 +557,40 @@ Server :
         </li>
       </ul>
       {{!---------------------------------------------------------------------}}
-
-
-    {{/if}} {{!-- showComponent --}}
-  {{/elem/panel-container}}
-
-
-
 </div>
+
+
+          {{/tab.pane}}
+          {{/let}}
+        {{/let}}
+
+        {{!-- ------------------------------------------------------------- --}}
+
+
+      </div>      {{!-- end of class="tab-content" --}}
+
+    </BsTab>
+
+
+{{!-- --------------------------------------------------------------------- --}}
+
+          {{#if this.vcfGenotypeLookupDomain}}
+            <button type="button" onclick={{action this.vcfGenotypeLookup}}
+              disabled={{and (not @userSettings.requestSamplesAll) (not this.vcfGenotypeSamplesSelected.length)  }}
+              class="btn btn-info">VCF Lookup</button>
+          {{else}}
+            {{#if this.urlOptions.gtIntervalLimit}}
+              <span>VCF Lookup Region limit is {{this.intervalLimit}}Mb</span>
+            {{/if}}
+          {{/if}}
+
+{{!---------------------------------------------------------------------------}}
+
+<BsButton @type="info" @onClick={{action (mut this.showInputDialog) false}}>Close</BsButton>
+
+
+{{!-- --------------------------------------------------------------------- --}}
+
 
 {{/ember-modal-dialog}}
 {{/if}}
@@ -537,13 +599,13 @@ Server :
 
 {{#if this.featureColumnDialogDataset}}
 
+{{!-- tried modal-id param - no affect --}}
 {{#ember-modal-dialog
   onClose=(action (mut this.featureColumnDialogDataset) null)
   targetAttachment="center"
   translucentOverlay=true
   clickOutsideToClose=false
   onClickOverlay=(action this.userMessage "Use X to close dialog")
-  modal-id="dataset-extra-columns-modal"
   title="Select additional columns"
   header-icon='search'
 }}

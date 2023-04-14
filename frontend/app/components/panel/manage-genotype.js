@@ -26,6 +26,7 @@ import {
   featureSampleNames,
  } from '../../utils/data/vcf-feature';
 import { stringCountString } from '../../utils/string';
+import { text2EltId } from '../../utils/explorer-tabId';
 
 /* global $ */
 
@@ -51,6 +52,8 @@ const sampleMatchesSymbol = Symbol.for('sampleMatches');
 /** Counts for calculating Call Rate of a sample.
  * sampleCount = block[callRateSymbol][sampleName] : {calls:0, misses:0}  */
 const callRateSymbol = Symbol.for('callRate');
+
+const tab_view_prefix = "tab-view-";
 
 //------------------------------------------------------------------------------
 
@@ -1050,6 +1053,18 @@ export default class PanelManageGenotypeComponent extends Component {
 
   // ---------------------------------------------------------------------------
 
+  /** .brushedDomain is not rounded, but could be because base positions are integral.
+   * This result is rounded.
+   */
+  @computed('axisBrush.brushedDomain')
+  get brushedDomainLength () {
+    let domain = this.axisBrush?.brushedDomain;
+    if (domain) {
+      domain = Math.abs(domain[1] - domain[0]).toFixed();
+    }
+    return domain;
+  }
+
   @computed('axisBrush.brushedDomain')
   get brushedDomainRounded () {
     /** copied from axis-brush.js */
@@ -1880,6 +1895,36 @@ export default class PanelManageGenotypeComponent extends Component {
   userMessage(text) {
     alert(text);
   }
+
+  //----------------------------------------------------------------------------
+
+
+
+  /** comments as in manage-explorer.js; copied from manage-{explorer,view} */
+  activeId = 'tab-view-Samples';
+
+  /** invoked from hbs via {{compute (action this.tabName2Id tabTypeName ) }}
+   * @param tabName text displayed on the tab for user identification of the contents.
+   * @return string suitable for naming a html tab, based on datasetType name.
+   */
+  @action
+  tabName2Id(tabName) {
+    let
+    id = tab_view_prefix + text2EltId(tabName);
+    if (trace)
+      dLog('tabName2Id', id, tabName);
+    return id;
+  }
+
+  @action
+  onChangeTab(id, previous) {
+    dLog('onChangeTab', this, id, previous, arguments);
+
+    this.activeId = id;
+  }
+
+
+  //----------------------------------------------------------------------------
 
   // ---------------------------------------------------------------------------
 }
