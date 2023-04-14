@@ -1079,9 +1079,11 @@ export default Component.extend({
     const colHeaders = this.get('columnNames').map((columnName) => {
       const
       dataset = columnName[datasetSymbol],
+      /** fieldName may be sampleName, or other fields name, Ref/Alt, MAF, LD Block */
+      [fieldName, datasetId] = columnName.split('\t'),
       datasetClass = dataset ? ' col-Dataset-' + datasetId2Class(dataset.get('id')) : '',
-      extraClassName = this.columnNameToClasses(columnName);
-      return '<div class="head' + extraClassName + datasetClass + '">' + columnName + '</div>';
+      extraClassName = this.columnNameToClasses(fieldName);
+      return '<div class="head' + extraClassName + datasetClass + '">' + fieldName + '</div>';
     });
     return colHeaders;
   }),
