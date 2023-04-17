@@ -620,12 +620,26 @@ export default class PanelManageGenotypeComponent extends Component {
   get gtDatasets () {
     const
     fnName = 'gtDatasets',
-    blocks = this.brushedOrViewedVCFBlocks,
+    blocks = this.brushedOrViewedVCFBlocks
+      .map(abb => abb.block),
     visibleBlocks = blocks
       .filterBy('visible'),
     gtDatasets = visibleBlocks.mapBy('datasetId');
     dLog(fnName, blocks, visibleBlocks, gtDatasets);
     return gtDatasets;
+  }
+
+  @computed('gtDatasets')
+  get gtDatasetTabs() {
+    const
+    fnName = 'gtDatasets',
+    datasetIds = this.gtDatasets.mapBy('id');
+    if (! this.activeDatasetId && datasetIds.length) {
+      dLog(fnName, 'initial activeDatasetId', datasetIds[0], this.activeDatasetId);
+      this.activeDatasetId = datasetIds[0];
+    }
+    dLog(fnName, datasetIds, this.gtDatasets);
+    return datasetIds;
   }
 
   /** identify the reference datasetId and scope of the axis of the genotype
@@ -1901,7 +1915,10 @@ export default class PanelManageGenotypeComponent extends Component {
 
 
   /** comments as in manage-explorer.js; copied from manage-{explorer,view} */
+  @tracked
   activeId = 'tab-view-Samples';
+  @tracked
+  activeDatasetId = null;
 
   /** invoked from hbs via {{compute (action this.tabName2Id tabTypeName ) }}
    * @param tabName text displayed on the tab for user identification of the contents.
@@ -1916,11 +1933,36 @@ export default class PanelManageGenotypeComponent extends Component {
     return id;
   }
 
+  /** Receive user tab selection changes, for controls dialog.
+   * @param id  tab name
+   */
   @action
   onChangeTab(id, previous) {
-    dLog('onChangeTab', this, id, previous, arguments);
+    const fnName = 'onChangeTab';
+    dLog(fnName, this, id, previous, arguments);
 
     this.activeId = id;
+  }
+  /** Receive user selection of VCF / genotype dataset via tab selection change
+   * of Datasets Samples tabs.
+   * @param datasetId
+   */
+  @action
+  selectDataset(datasetId) {
+    const fnName = 'onChangeTab';
+    dLog(fnName, this, datasetId, arguments);
+
+    const
+      gtDatasetIds = this.gtDatasetTabs,
+      i = gtDatasetIds.findIndex(tabId => tabId === datasetId);
+      if (i < 0) {
+        dLog(fnName, i, datasetId, gtDatasetIds);
+      } else {
+        dLog(fnName, i, gtDatasetIds[i], datasetId);
+        // sets .axisBrushBlockIndex
+        this.mut_axisBrushBlockIndex(i);
+      }
+    this.activeDatasetId = datasetId;
   }
 
 

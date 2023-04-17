@@ -25,13 +25,17 @@
       <BsNav @type="tabs" as |nav|>
         <ul class="nav nav-tabs li-active-extra counts">
 
-          {{#let 'Samples' as |tabTypeName|}}
-            {{#let (compute (action this.tabName2Id tabTypeName)) as |tabId|}}
-              <nav.item class="active-detail" @active={{bs-eq tab.activeId tabId}}><a href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
-                <div>{{this.brushedVCFBlocks.length}}</div>
+          {{!-- For the Dataset Samples tabs : pass to this.onChangeTab / tab.select : [ 'Samples', datasetId]
+ --}}
+          {{#each this.gtDatasetTabs as |tabTypeName|}}
+            {{#let (compute (action this.tabName2Id 'Samples')) as |tabId|}}
+              <nav.item class="active-detail"
+                @active={{and (eq this.activeDatasetId tabTypeName) (bs-eq tab.activeId tabId) }}>
+                <a href={{concat "#" tabId}} role="tab" onclick={{action (pipe (action tab.select tabId) (action this.selectDataset tabTypeName) ) }}>{{tabTypeName}}</a>
+                <div>{{this.selectedCount}}</div>
               </nav.item>
             {{/let}}
-          {{/let}}
+          {{/each}}
 
           {{#let 'Lookup' as |tabTypeName|}}
             {{#let (compute (action this.tabName2Id tabTypeName)) as |tabId|}}
@@ -116,14 +120,6 @@
                 </div>
 
                 <div>{{referenceDatasetName}}</div>
-
-                <div class="select-wrap">
-                  <select onchange={{action this.mut_axisBrushBlockIndex value="target.value"}}>
-                    {{#each this.brushedOrViewedVCFBlocks as |abbChoice abbIndex|}}
-                      <option value={{abbIndex}} selected={{eq this.axisBrushBlockIndex abbIndex}}>{{abbIndex}} : {{abbChoice.block.datasetId.id}} : {{abbChoice.block.scope}}</option>
-                    {{/each}}
-                  </select>
-                </div>
 
                 <div>
                   <label style="display:inline">Request Samples :
