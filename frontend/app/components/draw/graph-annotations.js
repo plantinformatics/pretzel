@@ -123,8 +123,9 @@ export default class DrawGraphAnnotationsComponent extends Component {
     oa = this.args.stacksView.oa,
     viewportWidth = oa.graphFrame.viewportWidth,
     tableX = viewportWidth,
-    tableRowInterval = this.tableRowInterval,
-    axes = this.args.rightAxes || [],
+    tableDim = this.tableYDimensions,
+    tableRowInterval = tableDim && this.tableRowInterval(tableDim),
+    axes = tableDim ? this.args.rightAxes || [] : [],
     stackLocation = this.axis1d?.location();
     if (selections) {
       const
@@ -224,9 +225,8 @@ export default class DrawGraphAnnotationsComponent extends Component {
     return dim;
   }
 
-  get tableRowInterval() {
+  tableRowInterval(tableDim) {
     const
-    tableDim = this.tableYDimensions,
     genotypeSettings = this.args.model.userSettings.genotype,
     /** 300 is default of defaultColumnHeaderHeight(); could use .colHeaderHeight. */
     columnHeaderHeight = genotypeSettings.columnHeaderHeight || 300,
