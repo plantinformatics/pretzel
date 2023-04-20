@@ -212,6 +212,15 @@ function yAxisTitleTransform(axisTitleLayout)
 
 /*----------------------------------------------------------------------------*/
 
+/** Designed to be used as an d3 .attr('id' ) function 
+ * @return a function to construct a DOM element id from a prefix and an object which has an id field, named idField.
+ * @param d d3 selection datum
+ * @desc
+ * Example usage : selection.attr('id', eltIdFn('ar-', 'axisName') )
+ */
+function eltIdFn(prefix, idField) { return (d) => prefix + d[idField]; }
+
+
 /** g.axis-outer Element Id Prefix */
 const axisOuterEip = 'id';
 /** Used for group element, class "axis-outer"; required because id may start with
@@ -481,6 +490,7 @@ export {
   ensureYscaleDomain,
   yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform,
   axisConfig,
+  eltIdFn,
   eltId, stackEltId, axisEltId, eltIdAll,
   axisEltIdTitle, axisEltIdClipPath, axisEltIdClipPath2d,
   selectAxisOuter, selectAxisUse, eltIdGpRef,

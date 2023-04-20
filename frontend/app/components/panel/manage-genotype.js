@@ -29,6 +29,7 @@ import { stringCountString } from '../../utils/string';
 import { text2EltId } from '../../utils/explorer-tabId';
 
 /* global $ */
+/* global d3 */
 
 // -----------------------------------------------------------------------------
 
@@ -247,6 +248,11 @@ export default class PanelManageGenotypeComponent extends Component {
     this.userSettingsDefaults();
     /* if (trace) { */
       dLog('manage-genotype', 'constructor', 'this', this, 'args', Object.entries(this.args));
+    // used in development only, in Web Inspector console.
+    if (window.PretzelFrontend) {
+      window.PretzelFrontend.manageGenotype = this;
+    }
+
     this.namesFilters = new NamesFilters();
   }
   /** Provide default values for args.userSettings; used in constructor().
@@ -1967,6 +1973,26 @@ export default class PanelManageGenotypeComponent extends Component {
 
 
   //----------------------------------------------------------------------------
+
+  /** Called by matrix-view afterScrollVertically()
+   * @param features of first and last visible rows after vertical scroll by user.
+   */
+  @action
+  tablePositionChanged(features) {
+    const fnName = 'tablePositionChanged';
+    dLog(fnName, features);
+    if (features?.length) {
+      const
+      values = features.mapBy('value').flat(),
+      valueExtent = d3.extent(values),
+      axes = features.mapBy('blockId.axis1d'),
+      /** Features could be of multiple axes; can pass all features and collate
+       * extents for each axis separately.  */
+      axis1d = axes[0];
+      axis1d.set('tablePosition', valueExtent);
+      /* related : this.brushedOrViewedVCFAxes // axis-1d [] */
+    }
+  }
 
   // ---------------------------------------------------------------------------
 }

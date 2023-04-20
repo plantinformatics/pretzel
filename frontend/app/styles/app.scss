@@ -759,6 +759,13 @@ g.horizTick.labelledFeatures > text.horizTick {
     text-shadow: initial
 }
 
+path.genotypeEdge
+{
+  fill : none;
+  stroke: green;
+  stroke-dasharray: 16 8 16 40;
+}
+
 path.syntenyEdge
 {
   fill-opacity: calc(var(--path-stroke-opacity)*0.33);

@@ -174,6 +174,7 @@ function nRows2HeightEx(nRows) {
  *
  * @param selectBlock action
  * @param featureColumnDialogDataset action
+ * @param tablePositionChanged action
  * @param displayForm requestFormat
  *
  * @desc
@@ -490,6 +491,7 @@ export default Component.extend({
     if (gtPlainRender & 0b100000) {
       settings.afterScrollVertically = bind(this, this.afterScrollVertically);
     }
+    settings.afterScrollVertically = this.afterScrollVertically_tablePosition.bind(this);
 
     if (this.urlOptions.gtSelectColumn) {
       settings.afterSelection = bind(this, this.afterSelection);
@@ -542,6 +544,27 @@ export default Component.extend({
     let ot = d3.select('#observational-table');
     ot.classed('gtMergeRows', this.urlOptions.gtMergeRows);
   },
+
+  //----------------------------------------------------------------------------
+
+  /** After user scroll, pass the features of first and last visible rows to
+   * tablePositionChanged().
+   */
+  afterScrollVertically_tablePosition() {
+    const
+    fnName = 'afterScrollVertically_tablePosition',
+    table = this.table,
+    /** refn : https://github.com/handsontable/handsontable/issues/2429#issuecomment-406616217 */
+    wtScroll = table.view.wt.wtScroll,
+    rows = [wtScroll.getFirstVisibleRow(),
+            wtScroll.getLastVisibleRow()],
+    //[0, table.countVisibleRows() - 1],
+    features = rows.map(row => this.getRowAttribute(table, row, 0));
+
+    this.tablePositionChanged(features);
+  },
+
+  //----------------------------------------------------------------------------
 
   /** Get the feature displayed in this row.
    * @param table instance param to *Renderer i.e. blockFeaturesRenderer(), or this.table.
@@ -693,6 +716,9 @@ export default Component.extend({
     fnName = 'afterSelectionHaplotype',
     columnName = this.columnNames[col];
     dLog(fnName, row, col);
+    if (col === -1) {
+      /** Ctrl-A Select-All causes row===-1 and col===-1 */
+    } else
     if (columnName.startsWith('LD Block')) {
     const ldBlock = this.haplotypeToggleRC(row, col);
     if (ldBlock) {
