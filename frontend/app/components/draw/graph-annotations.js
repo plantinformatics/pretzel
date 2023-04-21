@@ -148,7 +148,7 @@ export default class DrawGraphAnnotationsComponent extends Component {
   }
 
   annotationPath(axis1d, tableX, tableRowInterval) {
-    let lineText;
+    let path;
     /** related : utils/draw/path-data.js : featureLineS3(), patham2()  */
     const
     fname = 'annotationPath',
@@ -163,18 +163,21 @@ export default class DrawGraphAnnotationsComponent extends Component {
       intervalPx = interval.map(y),
       tableIntervalPx = tableRowInterval || intervalPx,
       axisX = axis1d.location(),
-      points = [
-        [axisX, intervalPx[0]],
-        [axisX, intervalPx[1]],
-        [tableX, tableIntervalPx[1]],
-        [tableX, tableIntervalPx[0]],
-      ];
-      lineText = line(points) + "Z";
+      /** or axis1d.extendedWidth() */
+      extendedWidth = axis1d.get('axis2d.allocatedWidthsMax.centre');
+      path = intervalPx.reduce((path_, axisPx, i) => {
+        path_.moveTo(axisX, intervalPx[i]);
+        if (extendedWidth) {
+          path_.lineTo(axisX + extendedWidth + 10, intervalPx[i]);
+        }
+        path_.lineTo(tableX, tableIntervalPx[i]);
+        return path_;
+      }, d3.path());
       if (trace) {
-        dLog(fname, intervalPx, interval, axisX, tablePosition, lineText);
+        dLog(fname, intervalPx, interval, axisX, tablePosition, path);
       }
     }
-    return lineText;
+    return path;
   }
 
 
@@ -194,6 +197,8 @@ export default class DrawGraphAnnotationsComponent extends Component {
     'args.stacksView.oa.graphFrame.viewportWidth',
     'args.model.controls.window.tablesPanelRight',
     'args.model.layout.right.tab',
+    // 'axis1d.axis2d.allocatedWidthRect',
+    'axis1d.axis2d.allocatedWidthsMax.centre',
   )
   get zoomEffect() {
     this.renderAnnotations();
