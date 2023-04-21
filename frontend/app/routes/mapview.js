@@ -140,6 +140,7 @@ let config = {
     const
     controller = this.controllerFor(this.fullRouteName),
     userSettings = controller.userSettings,
+    layout = controller.layout,
     /** Includes user settings such as .tablesPanelRight; that is also present
      * in .componentGeometry - may include that for the .sizes */
     controls = controller.controls;
@@ -153,6 +154,7 @@ let config = {
         viewedById : blockService.get('viewedById'),
         userSettings,
         controls,
+        layout,
       });
 
     /* When the datasets result (actually the blocks) is received, use that
