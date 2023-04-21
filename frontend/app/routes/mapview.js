@@ -137,7 +137,12 @@ let config = {
     let viewedBlocksTasks = (params.mapsToView && params.mapsToView.length) ?
         thenOrNow(this.blocksLimitsTask, () => getBlocks.apply(blockService, [params.mapsToView])) :
         RSVP.cast([]);
-    const userSettings = this.controllerFor(this.fullRouteName).userSettings;
+    const
+    controller = this.controllerFor(this.fullRouteName),
+    userSettings = controller.userSettings,
+    /** Includes user settings such as .tablesPanelRight; that is also present
+     * in .componentGeometry - may include that for the .sizes */
+    controls = controller.controls;
 
     result = EmberObject.create(
       {
@@ -147,6 +152,7 @@ let config = {
         viewedBlocks : viewedBlocksTasks,
         viewedById : blockService.get('viewedById'),
         userSettings,
+        controls,
       });
 
     /* When the datasets result (actually the blocks) is received, use that

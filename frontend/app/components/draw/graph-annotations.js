@@ -123,9 +123,10 @@ export default class DrawGraphAnnotationsComponent extends Component {
     oa = this.args.stacksView.oa,
     viewportWidth = oa.graphFrame.viewportWidth,
     tableX = viewportWidth,
+    tablesPanelRight = this.args.model.controls.window.tablesPanelRight,
     tableDim = this.tableYDimensions,
     tableRowInterval = tableDim && this.tableRowInterval(tableDim),
-    axes = tableDim ? this.args.rightAxes || [] : [],
+    axes = tableDim && tablesPanelRight ? this.args.rightAxes || [] : [],
     stackLocation = this.axis1d?.location();
     if (selections) {
       const
