@@ -431,6 +431,8 @@ export default Component.extend({
   },
   createTable() {
     const fnName = 'createTable';
+    /** guard against intervening calls to createTable(). */
+    this.set('table', true);
     /** div.matrix-view.ember-view */
     let tableDiv = $("#observational-table")[0];
     if (calculateTableHeight) {
@@ -792,6 +794,7 @@ export default Component.extend({
     return colour;
   },
   /** map prop : Ref / Alt -> copiesColourClass( 0 / 2)
+   * @param typeof prop === 'string'
    */
   refAltCopyColour(prop) {
     const
@@ -804,9 +807,18 @@ export default Component.extend({
     Handsontable.renderers.TextRenderer.apply(this, arguments);
     if (value) {
       const
-      valueToColourClass = (this.displayForm === 'Numerical') && refAltHeadings.includes(prop) ?
-        () => this.refAltCopyColour(prop) :
+      /** prop may be String(), and string [].includes(String) does not match, so use .toString()
+. */
+      prop_string = prop.toString(),
+      valueToColourClass = (this.displayForm === 'Numerical') && refAltHeadings.includes(prop_string) ?
+        () => this.refAltCopyColour(prop_string) :
         this.avToColourClass.bind(this);
+      /** value may be string or : Object { name: "20102 scaffold44824_8566554", value: "C", Symbol("feature"): <Feature Object> } */
+      if (value.value !== undefined) {
+        value = value.value;
+        // instead of '[object Object]'
+        td.textContent = value;
+      }
       this.valueDiagonal(td, value, valueToColourClass);
     }
   },

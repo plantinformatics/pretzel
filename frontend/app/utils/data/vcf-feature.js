@@ -902,7 +902,7 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
             let columnName;
             /** overlap with caseRefAlt(). */
             if (refAlt.includes(sampleName)) {
-              sampleValue = refAltNumericalValue(sampleName);
+              sampleValue = featureValuesRefAlt(requestFormat, feature, sampleName);
               // the capital field name is used in : row[sampleName]
               sampleName = toTitleCase(sampleName);
             } else {
