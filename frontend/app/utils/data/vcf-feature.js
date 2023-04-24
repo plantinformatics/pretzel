@@ -824,7 +824,12 @@ function blockToMatrixColumn(singleBlock, block, sampleName, features) {
   const
   showDatasetAndScope = ! singleBlock && block,
   datasetId = showDatasetAndScope ? Ember_get(block, 'datasetId.id') : '',
-  name = (showDatasetAndScope ? Ember_get(block, 'name') + ' ' : '') + sampleName,
+  /** Now that dataset colour block is displayed, via col-Dataset- in colHeaders(), 
+   * dataset and scope are not included in name.
+   * gtMergeRows:true displays the dataset colour block regardless of singleBlock,
+   * so for consistency one of these should change.
+   */
+  name = /*(showDatasetAndScope ? Ember_get(block, 'name') + ' ' : '') +*/ sampleName,
   column = {features,  datasetId : {id : datasetId}, name};
   return column;
 }

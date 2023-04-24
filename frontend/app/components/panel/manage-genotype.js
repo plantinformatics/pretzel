@@ -883,7 +883,8 @@ export default class PanelManageGenotypeComponent extends Component {
         if (this.axisBrushBlockIndex === undefined) {
           this.args.userSettings.lookupBlock = undefined;
         }
-        dLog(fnName, this.axisBrushBlockIndex, blocks[this.axisBrushBlockIndex].block.id, blocks, lookupBlock.id);
+        /** .axisBrushBlockIndex maybe -1, when data block is un-viewed while brushed. */
+        dLog(fnName, this.axisBrushBlockIndex, blocks[this.axisBrushBlockIndex]?.block.id, blocks, lookupBlock.id);
       } else if ((this.axisBrushBlockIndex === undefined) || (this.axisBrushBlockIndex > blocks.length-1)) {
         /* first value is selected. if only 1 value then select onchange action will not be called.  */
         this.axisBrushBlockIndex = 0;
