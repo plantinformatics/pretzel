@@ -9,9 +9,9 @@
     targetAttachment="center"
     translucentOverlay=true
     clickOutsideToClose=false
-    onClickOverlay=(action this.userMessage "Use X to close Samples dialog")
+    onClickOverlay=(action this.userMessage "Use X to close dialog")
 
-    title="Genotype Table Controls, Samples, Filters, VCF Lookup Inputs"
+    title="Genotype Table Controls, Datasets, Samples, Filters, VCF Lookup Inputs"
     header-icon='search'
   }}
 
@@ -25,17 +25,15 @@
       <BsNav @type="tabs" as |nav|>
         <ul class="nav nav-tabs li-active-extra counts">
 
-          {{!-- For the Dataset Samples tabs : pass to this.onChangeTab / tab.select : [ 'Samples', datasetId]
- --}}
-          {{#each this.gtDatasetTabs as |tabTypeName|}}
-            {{#let (compute (action this.tabName2Id 'Samples')) as |tabId|}}
+          {{#let 'Datasets' as |tabTypeName|}}
+            {{#let (compute (action this.tabName2Id 'Datasets')) as |tabId|}}
               <nav.item class="active-detail"
                 @active={{and (eq this.activeDatasetId tabTypeName) (bs-eq tab.activeId tabId) }}>
-                <a href={{concat "#" tabId}} role="tab" onclick={{action (pipe (action tab.select tabId) (action this.selectDataset tabTypeName) ) }}>{{tabTypeName}}</a>
+                <a href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
                 <div>{{this.selectedCount}}</div>
               </nav.item>
             {{/let}}
-          {{/each}}
+          {{/let}}
 
           {{#let 'Lookup' as |tabTypeName|}}
             {{#let (compute (action this.tabName2Id tabTypeName)) as |tabId|}}
@@ -72,10 +70,32 @@
 
       <div class="tab-content">
 
-        {{#let 'Samples' as |tabTypeName|}}
+        {{#let 'Datasets' as |tabTypeName|}}
           {{#let (compute (action this.tabName2Id tabTypeName)) as |tabId|}}
 
             {{#tab.pane id=tabId title=tabTypeName}}
+
+              {{!-- --------------------------------------------------------- --}}
+
+    <BsTab @customTabs={{true}} @onChange={{action this.selectDataset}} @activeId={{this.activeIdDatasets}} as |tab|>
+      <BsNav @type="tabs" as |nav|>
+        <ul class="nav nav-tabs li-active-extra counts">
+
+          {{#each this.gtDatasetTabs as |tabTypeName|}}
+            {{#let (compute (action this.tabName2IdDatasets tabTypeName)) as |tabId|}}
+              <nav.item class="active-detail"
+                @active={{bs-eq this.activeDatasetId tabTypeName }}>
+                <a href={{concat "#" tabId}} role="tab" onclick={{action (pipe (action tab.select tabId) (action this.selectDataset tabTypeName) ) }}>{{tabTypeName}}</a>
+                <div>{{this.selectedCount}}</div>
+              </nav.item>
+            {{/let}}
+          {{/each}}
+
+        </ul>
+      </BsNav>
+
+      <div class="tab-content">
+
 
               {{!-- --------------------------------------------------------- --}}
 
@@ -207,6 +227,13 @@
 
               {{!-- --------------------------------------------------------------------- --}}
               </div>
+              {{!-- --------------------------------------------------------------------- --}}
+
+
+      </div>      {{!-- end of class="tab-content" --}}
+
+    </BsTab>
+              {{!-- --------------------------------------------------------------------- --}}
 
             {{/tab.pane}}
           {{/let}}
@@ -220,20 +247,6 @@
             {{#tab.pane id=tabId title=tabTypeName}}
 
               <div class="genotype">
-
-                {{#elem/button-base
-                  icon="search"
-                  classColour="info"
-                  onClick=(action (mut this.showInputDialog) true)
-                  }}
-                  <span>Samples ...</span>
-
-                   {{#ember-tooltip side="right" delay=500}}
-                     Show/hide the Samples selection dialog.
-                   {{/ember-tooltip}}
-
-                {{/elem/button-base}}
-
 
                 <div class="genotype-controls">
                   <div>

@@ -55,6 +55,7 @@ const sampleMatchesSymbol = Symbol.for('sampleMatches');
 const callRateSymbol = Symbol.for('callRate');
 
 const tab_view_prefix = "tab-view-";
+const tab_view_prefix_Datasets = "tab-view-Datasets-";
 
 //------------------------------------------------------------------------------
 
@@ -642,7 +643,9 @@ export default class PanelManageGenotypeComponent extends Component {
     datasetIds = this.gtDatasets.mapBy('id');
     if (! this.activeDatasetId && datasetIds.length) {
       dLog(fnName, 'initial activeDatasetId', datasetIds[0], this.activeDatasetId);
-      this.activeDatasetId = datasetIds[0];
+      later(() => {
+        this.setSelectedDataset(datasetIds[0]);
+      });
     }
     dLog(fnName, datasetIds, this.gtDatasets);
     return datasetIds;
@@ -1923,13 +1926,11 @@ export default class PanelManageGenotypeComponent extends Component {
 
   /** comments as in manage-explorer.js; copied from manage-{explorer,view} */
   @tracked
-  activeId = 'tab-view-Samples';
-  @tracked
-  activeDatasetId = null;
+  activeId = 'tab-view-Datasets';
 
   /** invoked from hbs via {{compute (action this.tabName2Id tabTypeName ) }}
    * @param tabName text displayed on the tab for user identification of the contents.
-   * @return string suitable for naming a html tab, based on datasetType name.
+   * @return string suitable for naming a html tab, based on tabName.
    */
   @action
   tabName2Id(tabName) {
@@ -1950,13 +1951,40 @@ export default class PanelManageGenotypeComponent extends Component {
 
     this.activeId = id;
   }
+
+  //----------------------------------------------------------------------------
+
+  /** activeIdDatasets, tabName2IdDatasets() are analogous to and based on 
+   * activeId, tabName2Id() above.
+   */
+  @tracked
+  activeIdDatasets = null;
+  @tracked
+  activeDatasetId = null;
+
+  /** invoked from hbs via {{compute (action this.tabName2Id tabTypeName ) }}
+   * @param tabName text displayed on the tab for user identification of the contents.
+   * @return string suitable for naming a html tab, based on tabName.
+   */
+  @action
+  tabName2IdDatasets(tabName) {
+    let
+    id = tab_view_prefix_Datasets + text2EltId(tabName);
+    if (trace)
+      dLog('tabName2IdDatasets', id, tabName);
+    return id;
+  }
+
+  //----------------------------------------------------------------------------
+
+
   /** Receive user selection of VCF / genotype dataset via tab selection change
    * of Datasets Samples tabs.
    * @param datasetId
    */
   @action
   selectDataset(datasetId) {
-    const fnName = 'onChangeTab';
+    const fnName = 'selectDataset';
     dLog(fnName, this, datasetId, arguments);
 
     const
@@ -1969,7 +1997,11 @@ export default class PanelManageGenotypeComponent extends Component {
         // sets .axisBrushBlockIndex
         this.mut_axisBrushBlockIndex(i);
       }
+    this.setSelectedDataset(datasetId);
+  }
+  setSelectedDataset(datasetId) {
     this.activeDatasetId = datasetId;
+    this.activeIdDatasets = this.tabName2IdDatasets(datasetId);
   }
 
 
