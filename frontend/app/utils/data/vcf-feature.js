@@ -878,7 +878,8 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
           row['LD Block'] = stringSetFeature(featureHaplotypeValue(feature), feature);
         }
 
-        /* related to refAltColumns */
+        /* If sampleName is ref/alt, convert to Title Case, i.e. leading capital.
+         * related to refAltColumns */
         function caseRefAlt(sampleName) {
           if (refAlt.includes(sampleName)) {
             sampleName = toTitleCase(sampleName);
@@ -890,7 +891,11 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
         featureSampleNames(sampleNamesSet, feature, caseRefAlt);
 
         const
+        /** for valueToFormat(); the same is done in vcfFeatures2MatrixView() */
+        refAltValues = refAlt
+          .map((ra, i) => feature.values[refAlt[i]]),
         featureSamples = feature.get('values');
+
         Object.entries(featureSamples)
           .filter(
             ([sampleName, sampleValue]) =>
@@ -907,6 +912,7 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
               sampleName = toTitleCase(sampleName);
             } else {
               columnName = sampleName = sampleName2ColumnName(sampleName);
+              sampleValue = valueToFormat(requestFormat, refAltValues, sampleValue);
             }
             const 
             // featureNameValue(feature, sampleValue),
