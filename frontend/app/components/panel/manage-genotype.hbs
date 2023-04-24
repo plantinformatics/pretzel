@@ -77,162 +77,162 @@
 
               {{!-- --------------------------------------------------------- --}}
 
-    <BsTab @customTabs={{true}} @onChange={{action this.selectDataset}} @activeId={{this.activeIdDatasets}} as |tab|>
-      <BsNav @type="tabs" as |nav|>
-        <ul class="nav nav-tabs li-active-extra counts">
+              <BsTab @customTabs={{true}} @onChange={{action this.selectDataset}} @activeId={{this.activeIdDatasets}} as |tab|>
+                <BsNav @type="tabs" as |nav|>
+                  <ul class="nav nav-tabs li-active-extra counts">
 
-          {{#each this.gtDatasetTabs as |tabTypeName|}}
-            {{#let (compute (action this.tabName2IdDatasets tabTypeName)) as |tabId|}}
-              <nav.item class="active-detail"
-                @active={{bs-eq this.activeDatasetId tabTypeName }}>
-                <a href={{concat "#" tabId}} role="tab" onclick={{action (pipe (action tab.select tabId) (action this.selectDataset tabTypeName) ) }}>{{tabTypeName}}</a>
-                <div>{{this.selectedCount}}</div>
-              </nav.item>
-            {{/let}}
-          {{/each}}
+                    {{#each this.gtDatasetTabs as |tabTypeName|}}
+                      {{#let (compute (action this.tabName2IdDatasets tabTypeName)) as |tabId|}}
+                        <nav.item class="active-detail"
+                          @active={{bs-eq this.activeDatasetId tabTypeName }}>
+                          <a href={{concat "#" tabId}} role="tab" onclick={{action (pipe (action tab.select tabId) (action this.selectDataset tabTypeName) ) }}>{{tabTypeName}}</a>
+                          <div>{{this.selectedCount}}</div>
+                        </nav.item>
+                      {{/let}}
+                    {{/each}}
 
-        </ul>
-      </BsNav>
+                  </ul>
+                </BsNav>
 
-      <div class="tab-content">
+                <div class="tab-content">
 
 
-              {{!-- --------------------------------------------------------- --}}
+                  {{!-- --------------------------------------------------------- --}}
 
-              {{log 'flowsService.axisBrush' flowsService.axisBrush}}
+                  {{log 'flowsService.axisBrush' flowsService.axisBrush}}
 
-              Server : 
-              {{this.apiServerSelectedOrPrimary.name}}
+                  Server : 
+                  {{this.apiServerSelectedOrPrimary.name}}
 
-              <div class="genotype">
-                <div class="axis-brushes">
+                  <div class="genotype">
+                    <div class="axis-brushes">
 
-                  <table>
-                    <tr>
-                      <th>Dataset Name</th>
-                      <th>Scope</th>
-                      <th>Interval</th>
-                      <!-- ----------------------------- -->
-                      <th class="devel-visible">BlockId</th>
-                      <th class="devel-visible">zoomCounter</th>
-                    </tr>
+                      <table>
+                        <tr>
+                          <th>Dataset Name</th>
+                          <th>Scope</th>
+                          <th>Interval</th>
+                          <!-- ----------------------------- -->
+                          <th class="devel-visible">BlockId</th>
+                          <th class="devel-visible">zoomCounter</th>
+                        </tr>
 
-                  {{#each flowsService.axisBrush.brushedAxes as |block| }}
+                      {{#each flowsService.axisBrush.brushedAxes as |block| }}
 
-                    <tr>
-                      <td>
-                        {{!-- datasetName --}}
-                        <div>{{block.axis.referenceBlock.datasetId.id}}</div>
-                        <div>{{block.axis.axis1d.referenceBlock.datasetId.id}}</div>
-                      </td>
-                      <td>{{block.block.scope}}</td>
-                      <td>{{brushedDomainRounded}}</td>
-                      <!-- ----------------------------- -->
-                      <td class="devel-visible">{{blockId}}</td>
-                      <td class="devel-visible">{{zoomCounter}}</td>
-                      <td style="display:none;"> {{features.length}} <!-- for features request. --></td>
-                    </tr>
+                        <tr>
+                          <td>
+                            {{!-- datasetName --}}
+                            <div>{{block.axis.referenceBlock.datasetId.id}}</div>
+                            <div>{{block.axis.axis1d.referenceBlock.datasetId.id}}</div>
+                          </td>
+                          <td>{{block.block.scope}}</td>
+                          <td>{{brushedDomainRounded}}</td>
+                          <!-- ----------------------------- -->
+                          <td class="devel-visible">{{blockId}}</td>
+                          <td class="devel-visible">{{zoomCounter}}</td>
+                          <td style="display:none;"> {{features.length}} <!-- for features request. --></td>
+                        </tr>
 
-                  {{/each}}
-
-                  </table>
-
-                </div>
-
-                <div>{{referenceDatasetName}}</div>
-
-                <div>
-                  <label style="display:inline">Request Samples :
-                    {{#ember-tooltip side="right" delay=500}}
-                    Which samples / individuals to request genotype of
-                    {{/ember-tooltip}}
-                  </label>
-
-                  <span>
-                    <input type="checkbox"
-                      style="margin-left: 3em;"
-                      checked={{@userSettings.requestSamplesAll}}
-                      oninput={{action (pipe (action (mut @userSettings.requestSamplesAll) value="target.checked")
-                        this.ensureSamples ) }}  >
-                    <label>All</label>
-                    {{#ember-tooltip side="right" delay=500}}
-                      Request genotype of All samples or select samples in list
-                    {{/ember-tooltip}}
-                  </span>
-
-                  <span>
-                    <input type="checkbox"
-                      style="margin-left: 3em;"
-                      checked={{@userSettings.requestSamplesFiltered}}
-                      oninput={{action (pipe (action (mut @userSettings.requestSamplesFiltered) value="target.checked")
-                        this.ensureSamples ) }}  >
-                    <label>Filtered</label>
-                    {{#ember-tooltip side="right" delay=500}}
-                      Request genotype of samples selected by LD Block / tSNP filters
-                    {{/ember-tooltip}}
-                  </span>
-
-                </div>
-
-                <div>
-                  <label>List of samples from VCF</label>
-                  {{#if this.vcfGenotypeSamplesCount}}
-                    <span class="sample-count">( {{this.vcfGenotypeSamplesCount}} )</span>
-                  {{else}}
-                    <button type="button" onclick={{action this.vcfGenotypeSamples}} class="btn btn-info btn-xs">Get samples list</button>
-                  {{/if}}
-
-                  <div class="genotypeSampleFilter_textInput">
-                    <label class="" style="margin-right: 1em;">
-                      <i class="glyphicon glyphicon-filter"></i>
-                      Search / Filter
-                    </label>
-                    {{input id="sampleNameFilter" type="search" value=sampleNameFilter
-                      input=(action this.nameFilterChanged value="target.value")
-                      placeholder="Filter available samples by name" }}
-                      {{!-- maybe autocomplete="sample-name", but samples names are mostly numeric so it may be more of an impediment than a benefit for the user --}}
-                  </div>
-
-                  <div class="genotype-controls">
-
-                    <select style="height:100px" class="form-control" multiple onchange={{action this.selectSample}}>
-                      {{#each this.filteredSamples as |sampleChoice|}}
-                      <option value={{sampleChoice}} selected={{include this.selectedSamples sampleChoice}}>{{sampleChoice}}</option>
                       {{/each}}
-                    </select>
 
+                      </table>
+
+                    </div>
+
+                    <div>{{referenceDatasetName}}</div>
+
+                    <div>
+                      <label style="display:inline">Request Samples :
+                        {{#ember-tooltip side="right" delay=500}}
+                        Which samples / individuals to request genotype of
+                        {{/ember-tooltip}}
+                      </label>
+
+                      <span>
+                        <input type="checkbox"
+                          style="margin-left: 3em;"
+                          checked={{@userSettings.requestSamplesAll}}
+                          oninput={{action (pipe (action (mut @userSettings.requestSamplesAll) value="target.checked")
+                            this.ensureSamples ) }}  >
+                        <label>All</label>
+                        {{#ember-tooltip side="right" delay=500}}
+                          Request genotype of All samples or select samples in list
+                        {{/ember-tooltip}}
+                      </span>
+
+                      <span>
+                        <input type="checkbox"
+                          style="margin-left: 3em;"
+                          checked={{@userSettings.requestSamplesFiltered}}
+                          oninput={{action (pipe (action (mut @userSettings.requestSamplesFiltered) value="target.checked")
+                            this.ensureSamples ) }}  >
+                        <label>Filtered</label>
+                        {{#ember-tooltip side="right" delay=500}}
+                          Request genotype of samples selected by LD Block / tSNP filters
+                        {{/ember-tooltip}}
+                      </span>
+
+                    </div>
+
+                    <div>
+                      <label>List of samples from VCF</label>
+                      {{#if this.vcfGenotypeSamplesCount}}
+                        <span class="sample-count">( {{this.vcfGenotypeSamplesCount}} )</span>
+                      {{else}}
+                        <button type="button" onclick={{action this.vcfGenotypeSamples}} class="btn btn-info btn-xs">Get samples list</button>
+                      {{/if}}
+
+                      <div class="genotypeSampleFilter_textInput">
+                        <label class="" style="margin-right: 1em;">
+                          <i class="glyphicon glyphicon-filter"></i>
+                          Search / Filter
+                        </label>
+                        {{input id="sampleNameFilter" type="search" value=sampleNameFilter
+                          input=(action this.nameFilterChanged value="target.value")
+                          placeholder="Filter available samples by name" }}
+                          {{!-- maybe autocomplete="sample-name", but samples names are mostly numeric so it may be more of an impediment than a benefit for the user --}}
+                      </div>
+
+                      <div class="genotype-controls">
+
+                        <select style="height:100px" class="form-control" multiple onchange={{action this.selectSample}}>
+                          {{#each this.filteredSamples as |sampleChoice|}}
+                          <option value={{sampleChoice}} selected={{include this.selectedSamples sampleChoice}}>{{sampleChoice}}</option>
+                          {{/each}}
+                        </select>
+
+                      </div>
+                    </div>
+
+                    <div>
+                      <label>Selected samples to be requested in VCF Lookup</label>
+                      {{#if this.selectedCount}}
+                        <span class="sample-count">( {{selectedCount}} )</span>
+                      {{/if}}
+
+                      <div>
+                        <Textarea
+                          class="selectedSamplesInput"
+                          @value={{this.selectedSamplesText}}
+                          @input={{action (mut this.activeInput) true}}
+                          @enter={{this.sampleNameListInput}}
+                          @insert-newline={{this.sampleNameListInput}}
+                          @escape-press={{this.sampleNameListInput}}
+                          placeholder="Sample Names"
+                          >
+                        </Textarea>
+                      </div>
+
+                    </div>
+
+                  {{!-- --------------------------------------------------------------------- --}}
                   </div>
-                </div>
-
-                <div>
-                  <label>Selected samples to be requested in VCF Lookup</label>
-                  {{#if this.selectedCount}}
-                    <span class="sample-count">( {{selectedCount}} )</span>
-                  {{/if}}
-
-                  <div>
-                    <Textarea
-                      class="selectedSamplesInput"
-                      @value={{this.selectedSamplesText}}
-                      @input={{action (mut this.activeInput) true}}
-                      @enter={{this.sampleNameListInput}}
-                      @insert-newline={{this.sampleNameListInput}}
-                      @escape-press={{this.sampleNameListInput}}
-                      placeholder="Sample Names"
-                      >
-                    </Textarea>
-                  </div>
-
-                </div>
-
-              {{!-- --------------------------------------------------------------------- --}}
-              </div>
-              {{!-- --------------------------------------------------------------------- --}}
+                  {{!-- --------------------------------------------------------------------- --}}
 
 
-      </div>      {{!-- end of class="tab-content" --}}
+                </div>      {{!-- end of class="tab-content" --}}
 
-    </BsTab>
+              </BsTab>
               {{!-- --------------------------------------------------------------------- --}}
 
             {{/tab.pane}}
