@@ -912,7 +912,13 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
               sampleName = toTitleCase(sampleName);
             } else {
               columnName = sampleName = sampleName2ColumnName(sampleName);
-              sampleValue = valueToFormat(requestFormat, refAltValues, sampleValue);
+              /** Convert sample values to requestFormat; don't convert
+               * non-sample values such as tSNP, MAF.
+               * May move sample values to form Feature.values.samples{}, which
+               * will make it simpler to apply distinct treatments to these. */
+              if (! ['tSNP', 'MAF'].includes(sampleName)) {
+                sampleValue = valueToFormat(requestFormat, refAltValues, sampleValue);
+              }
             }
             const 
             // featureNameValue(feature, sampleValue),
