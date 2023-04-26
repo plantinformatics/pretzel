@@ -162,6 +162,7 @@ export default class PanelManageGenotypeComponent extends Component {
   @alias('args.userSettings.vcfGenotypeSamplesSelected')
   vcfGenotypeSamplesSelectedAll;
 
+  /** see selectedSamples() */
   // @computed('lookupBlockSamples.selected')
   @computed('lookupDatasetId', 'receivedNamesCount')
   get vcfGenotypeSamplesSelected() {
@@ -328,6 +329,10 @@ export default class PanelManageGenotypeComponent extends Component {
 
     if (userSettings.showAxisLDBlocks === undefined) {
       userSettings.showAxisLDBlocks = false;
+    }
+
+    if (userSettings.autoLookup === undefined) {
+      userSettings.autoLookup = true;
     }
 
     if (userSettings.cellSizeFactor === undefined) {
@@ -624,23 +629,44 @@ export default class PanelManageGenotypeComponent extends Component {
   }
 
   @computed('brushedOrViewedVCFBlocks')
-  get gtDatasets () {
+  get brushedOrViewedVCFBlocksVisible () {
     const
-    fnName = 'gtDatasets',
+    fnName = 'brushedOrViewedVCFBlocks',
     blocks = this.brushedOrViewedVCFBlocks
       .map(abb => abb.block),
     visibleBlocks = blocks
-      .filterBy('visible'),
-    gtDatasets = visibleBlocks.mapBy('datasetId');
-    dLog(fnName, blocks, visibleBlocks, gtDatasets);
+      .filterBy('visible');
+    dLog(fnName, visibleBlocks, blocks);
+    return visibleBlocks;
+  }
+
+  @computed('brushedOrViewedVCFBlocks')
+  get gtDatasets () {
+    const
+    fnName = 'gtDatasets',
+    /** brushedOrViewedVCFBlocksVisible.mapBy('datasetId') are Proxy,
+     * which is true of both its sources : .viewedVCFBlocks and .brushedVCFBlocks.
+     * so use .content
+     */
+    gtDatasets = this.brushedOrViewedVCFBlocksVisible.mapBy('datasetId.content');
+    dLog(fnName, gtDatasets);
     return gtDatasets;
+  }
+
+  @computed('gtDatasets')
+  get gtDatasetIds() {
+    const
+    fnName = 'gtDatasetIds',
+    datasetIds = this.gtDatasets.mapBy('id');
+    dLog(fnName, datasetIds);
+    return datasetIds;
   }
 
   @computed('gtDatasets')
   get gtDatasetTabs() {
     const
     fnName = 'gtDatasets',
-    datasetIds = this.gtDatasets.mapBy('id');
+    datasetIds = this.gtDatasetIds;
     if (! this.activeDatasetId && datasetIds.length) {
       dLog(fnName, 'initial activeDatasetId', datasetIds[0], this.activeDatasetId);
       later(() => {
@@ -661,7 +687,7 @@ export default class PanelManageGenotypeComponent extends Component {
     const
     fnName = 'dataScope',
     scope = this.brushedOrViewedScope,
-    gtDatasetIds = this.gtDatasets.mapBy('id'),
+    gtDatasetIds = this.gtDatasetIds,
     texts = (scope ? [scope] : []).concat(gtDatasetIds),
     text = texts.join('\n');
 
@@ -943,7 +969,7 @@ export default class PanelManageGenotypeComponent extends Component {
     blockColourMap = abBlocks.reduce((map, abBlock) => {
       const
       block = abBlock.block,
-      dataset = block.get('datasetId'),
+      dataset = block.get('datasetId.content'),
       axis1d = block.get('axis1d'),
       colour = axis1d.blockColourValue(block);
       datasetsSet.add(dataset);
@@ -963,9 +989,10 @@ export default class PanelManageGenotypeComponent extends Component {
     const
     fnName = 'datasetsClasses',
     datasetsColour = this.datasetsColour,
+    /** to remove duplicates, use .addObjects() instead of .concat(). */
     datasets =
       this.brushedOrViewedVCFDatasets
-      .concat(this.gtDatasets),
+      .addObjects(this.gtDatasets),
     classes = datasets.map(dataset => ({
       id : datasetId2Class(dataset.get('id')),
       colour : datasetsColour.get(dataset)
@@ -1205,9 +1232,11 @@ export default class PanelManageGenotypeComponent extends Component {
    * Filter if .requestSamplesFiltered.
    * @param limitSamples if true, apply this.samplesLimit.  Equal to
    * .samplesLimitEnable except when requesting headers - headerTextP().
+   * @param datasetId if defined, then return the samples for this dataset,
+   * otherwise for the selected dataset : this.lookupDatasetId
    * @return {samples, samplesOK}, where samplesOK is true if All or samples.length
    */
-  samplesOK(limitSamples) {
+  samplesOK(limitSamples, datasetId) {
     let samplesRaw, samples;
     const
     userSettings = this.args.userSettings,
@@ -1217,10 +1246,22 @@ export default class PanelManageGenotypeComponent extends Component {
     let ok = requestSamplesAll && ! requestSamplesFiltered && ! limitSamples;
     if (! ok) {
       if (requestSamplesAll) {
+        if (datasetId) {
+          // All sample names received for datasetId.
+          // As in vcfGenotypeSamples(). related : lookupBlockSamples(), vcfGenotypeSamplesText().
+          samplesRaw = this.sampleCache.sampleNames[datasetId]
+            .trim().split('\n');
+        } else {
         // All sample names received for lookupDatasetId.
         samplesRaw = this.samples;
+        }
       } else {
+        if (datasetId) {
+          // as in lookupBlockSamples() and blocksSelectedSamples()
+          samplesRaw = this.vcfGenotypeSamplesSelectedAll[datasetId] || [];
+        } else {
         samplesRaw = this.vcfGenotypeSamplesSelected || [];
+        }
       }
     }
     if (requestSamplesFiltered) {
@@ -1244,11 +1285,28 @@ export default class PanelManageGenotypeComponent extends Component {
     return {samples, samplesOK : ok};
   }
 
-  /** Lookup the genotype for the selected samples in the interval of the brushed block.
+  /** Lookup the genotype for the selected samples in the interval of, depending on autoLookup : 
+   * . all visible brushed VCF blocks, or 
+   * . the brushed block selected by the currently viewed Datasets tab.
    */
   vcfGenotypeLookup() {
     const
-    fnName = 'vcfGenotypeLookup',
+    fnName = 'vcfGenotypeLookup';
+    if (this.args.userSettings.autoLookup) {
+      this.vcfGenotypeLookupAllDatasets();
+    } else {
+      this.vcfGenotypeLookupSelected();
+    }
+  }
+
+  //----------------------------------------------------------------------------
+
+  /** Lookup the genotype for the selected samples in the interval of the brushed block,
+   * selected by the currently viewed Datasets tab.
+   */
+  vcfGenotypeLookupSelected() {
+    const
+    fnName = 'vcfGenotypeLookupSelected',
     /** this.axisBrush.block is currently the reference; lookup the data block. */
     // store = this.axisBrush?.get('block.store'),
     store = this.apiServerSelectedOrPrimary?.store,
@@ -1260,7 +1318,55 @@ export default class PanelManageGenotypeComponent extends Component {
     if (samplesOK && domainInteger && vcfDatasetId) { // && scope
       this.lookupMessage = null;
       let
-      scope = this.lookupScope,
+      scope = this.lookupScope;
+      /** .lookupDatasetId is derived from .lookupBlock so .lookupBlock must be defined here. */
+      let blockV = this.lookupBlock;
+
+      this.vcfGenotypeLookupDataset(blockV, vcfDatasetId, scope, domainInteger, samples, samplesLimitEnable);
+    }
+  }
+  /** Request VCF genotype for brushed datasets which are visible
+   */
+  vcfGenotypeLookupAllDatasets() {
+    // related : notes in showSamplesWithinBrush() re. isZoomedOut(), .rowLimit.
+    const
+    visibleBlocks = this.brushedOrViewedVCFBlocksVisible,
+    /** also based on brushedOrViewedVCFBlocksVisible, so it is parallel */
+    gtDatasetIds = this.gtDatasetIds;
+    visibleBlocks.forEach((blockV, i) => {
+      const
+      vcfDatasetId = gtDatasetIds[i],
+      /** use .name instead of .scope, because some VCF files use 'chr' prefix
+       * on chromosome name e.g. chr1A, and .name reflects that;
+       * as in lookupScope().
+       */
+      scope = blockV.name,
+      userSettings = this.args.userSettings,
+      samplesLimitEnable = userSettings.samplesLimitEnable,
+      {samples, samplesOK} = this.samplesOK(samplesLimitEnable, vcfDatasetId),
+      domainInteger = this.vcfGenotypeLookupDomain;
+      /* samplesOK() returns .samples '' if none are selected; passing
+       * vcfGenotypeLookupDataset( samples==='' ) will get all samples, which
+       * may be valid, but for now skip this dataset if ! .length.
+       */
+      if (samples.length) {
+        this.vcfGenotypeLookupDataset(blockV, vcfDatasetId, scope, domainInteger, samples, samplesLimitEnable);
+      }
+    });
+  }
+  /** Send API request for VCF genotype of the given vcfDatasetId.
+   * @param blockV
+   * @param vcfDatasetId one of the VCF genotype datasets on the brushed axis
+   * @param scope of the brushed axis
+   * @param domainInteger brushed domain on the axis / parent
+   * @param samples selected samples to request
+   * @param samplesLimitEnable  .args.userSettings.samplesLimitEnable
+   */
+  vcfGenotypeLookupDataset(blockV, vcfDatasetId, scope, domainInteger, samples, samplesLimitEnable) {
+    const fnName = 'vcfGenotypeLookupDataset';
+    if (scope) {
+      let
+      userSettings = this.args.userSettings,
       requestFormat = this.requestFormat,
       requestSamplesFiltered = userSettings.requestSamplesFiltered,
       /** If filtered or column-limited, then samples is a subset of All. */
@@ -1283,8 +1389,6 @@ export default class PanelManageGenotypeComponent extends Component {
             later(() => this.vcfExportText = combined, 1000);
           });
 
-          /** .lookupDatasetId is derived from .lookupBlock so .lookupBlock must be defined here. */
-          let blockV = this.lookupBlock;
           dLog(fnName, text.length, text && text.slice(0,200), blockV.get('id'));
           if (text && blockV) {
             const added = addFeaturesJson(
@@ -1434,6 +1538,7 @@ export default class PanelManageGenotypeComponent extends Component {
       let
       referenceBlock = this.axisBrush?.get('block'),
       /** expect : block.referenceBlock.id === referenceBlock.id
+       * Related : .brushedOrViewedVCFBlocksVisible()
        */
       blocks = this.brushedVCFBlocks.map((abb) => abb.block);
       /* Filter out blocks
@@ -1447,6 +1552,7 @@ export default class PanelManageGenotypeComponent extends Component {
             b.get('featuresCountIncludingBrush') <= this.rowLimit);
        */
       if (blocks.length === 0) {
+        // related : viewedVCFBlocks()
         blocks = this.blockService.viewed.filter((b) => b.get('isVCF'));
       }
       dLog(fnName, blocks.mapBy('id'));

@@ -277,6 +277,16 @@
                       </li>
 
                       <li>
+
+                        <input type="checkbox"
+                          style="margin-left: 3em;"
+                          checked={{@userSettings.autoLookup}}
+                          oninput={{action (mut @userSettings.autoLookup) value="target.checked"}}  >
+                        <label>Auto lookup - all datasets</label>
+
+                      </li>
+
+                      <li>
                         <input type="checkbox"
                           style="margin-left: 3em;"
                           checked={{@userSettings.replaceResults}}
