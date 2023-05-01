@@ -86,6 +86,7 @@
   },
   "private": true,
   "dependencies": {
+    "@solgenomics/brapijs": "git+https://github.com/solgenomics/BrAPI-js.git",
     "caniuse-lite": "^1.0.30001349",
     "colresizable": "github:felipedgarcia/colresizable",
     "ember-array-helper": ">=5",
