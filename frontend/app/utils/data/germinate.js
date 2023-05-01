@@ -1,13 +1,33 @@
-
-import BrAPI from '@solgenomics/brapijs';
-//'./build/BrAPI.js';
-import fetch from 'fetch';
-
-//------------------------------------------------------------------------------
+/*----------------------------------------------------------------------------*/
+/* Node.js globals */
+/* global exports */
+/* global require */
+/* global process */
+/*----------------------------------------------------------------------------*/
 
 /* global Headers */
 
 //------------------------------------------------------------------------------
+
+
+import BrAPI from '@solgenomics/brapijs';
+//'./build/BrAPI.js';
+
+//------------------------------------------------------------------------------
+
+const isNodeJs = typeof process !== 'undefined';
+
+var bent;
+if (isNodeJs) {
+  bent = require('bent');
+}
+// else
+import fetch from 'fetch';
+
+const fetchEndpoint = isNodeJs ? fetchEndpoint_bent : fetchEndpoint_fetch;
+
+//------------------------------------------------------------------------------
+
 
 
 /* from https://brapi.org/get-started/3
@@ -20,14 +40,14 @@ const serverURL = germinateServerURL; // testServerURL;
 const brapi_v = 'brapi/v2';
 const serverURLBrAPI = germinateServerURL + '/' + brapi_v;
 
-let germinateToken;
-germinateToken = 'd1e47fd3-480f-4306-88e0-517072af44e5';
+const germinateToken = isNodeJs && process.env.germinateToken;
 
 // let germinate = new Germinate(serverURL);
 
 class Germinate {
   constructor(/*serverURL*/) {
     if (! germinateToken) {
+      console.log('Germinate', serverURL, '$germinateToken', 'this', this);
       debugger;
     }
     if (germinateToken) {
@@ -53,7 +73,7 @@ Germinate.prototype.fetchEndpoint = fetchEndpoint;
  * @param endpoint e.g. 'marker/table'
  * @return result of fetch() - promise yielding response or error
  */
-function fetchEndpoint(endpoint, method = 'GET') {
+function fetchEndpoint_fetch(endpoint, method = 'GET') {
   const
   resultP =
     fetch(serverURL + '/' + endpoint, {
@@ -75,6 +95,29 @@ function fetchEndpoint(endpoint, method = 'GET') {
     });
   return resultP;
 }
+function fetchEndpoint_bent(endpoint, method = 'GET') {
+  const fnName = 'fetchEndpoint';
+  console.log(fnName, 'send request');
+  const
+  getJSON = bent(serverURL, 'json'),
+  headers = // {'Authorization' : this.accessToken};
+    {
+      // 'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/111.0',
+      'Accept': '*/*',
+      // 'Accept-Language': 'en-US,en;q=0.5',
+      'Content-Type': 'application/json;charset=utf-8',
+      'Authorization': 'Bearer ' + germinateToken,
+      'Sec-Fetch-Dest': 'empty',
+      'Sec-Fetch-Mode': 'cors',
+      'Sec-Fetch-Site': 'cross-site',
+      'Cache-Control': 'max-age=0'
+    },
+  // new Headers( headers )
+
+  promise = getJSON('/' + endpoint,  /*body*/undefined, headers);
+  return promise;
+}
+
 
 Germinate.prototype.markers = markers;
 function markers() {
@@ -106,21 +149,42 @@ function germplasm() {
 Germinate.prototype.samples = samples;
 function samples(dataset) {
   const samplesP =
-  this.fetchEndpoint(brapi_v + '/' + 'callsets/dataset' + '/' + dataset)
+  this.fetchEndpoint(brapi_v + '/' + 'callsets/dataset' + '/' + dataset);
+  /*
     .then(response => {
     console.log(response);
-  });
+  })*/
   return samplesP;
 }
 
+function isDefined(x) {
+  return (x !== undefined) && (x !== null);
+}
 
 Germinate.prototype.callsetsCalls = callsetsCalls;
 /* @param dataset, start, end
  * e.g. '1-593', '2932022', '2932028'
 */
 function callsetsCalls(dataset, start, end) {
-  this.fetchEndpoint(brapi_v + '/' + 'callsets'  + '/' + dataset + '/calls/' + start + '/' + end)
+  const fnName = 'callsetsCalls';
+  /** Optional location / position / variantName interval to filter SNPs */
+  let intervalParams = '';
+  if (isDefined(start)) {
+    intervalParams = '/' + start;
+    if (isDefined(end)) {
+      intervalParams += '/' + end;
+    }
+  }
+  const
+  endpoint = brapi_v + '/' + 'callsets'  + '/' + dataset + '/calls' + intervalParams,
+  callsP = this.fetchEndpoint(endpoint);
+  console.log(fnName, {serverURL, endpoint});
+
+/*
     .then(response => {
     console.log(response);
-  });
+  })
+*/
+
+  return callsP;
 }
