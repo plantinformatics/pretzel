@@ -1,5 +1,6 @@
 'use strict';
 
+const util = require('util');
 var { debounce }  = require('lodash/function');
 
 
@@ -1400,13 +1401,39 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
         if (dataset.tags?.includes('VCF')) {
           vcfGenotypeLookup(datasetId, scope, preArgs, nLines, undefined, cb);
         } else if (dataset.tags?.includes('Germinate')) {
-          germinateGenotypeLookup(datasetId, scope, preArgs, nLines, undefined, cb);
+          ensureSamplesParam(preArgs).then(
+            preArgs => germinateGenotypeLookup(datasetId, scope, preArgs, nLines, undefined, cb))
+            .catch(cb);
         } else {
           console.log(fnName, 'applicable to Genotype, not', dataset.tags, datasetId);
         }
       }
+
+      /** Ensure that preArgs.samples is defined : if undefined, request samples
+       * and use the first one.  */
+      function ensureSamplesParam(preArgs) {
+        let argsP;
+        if (! preArgs?.length) {
+          argsP = util.promisify(germinateGenotypeSamples)(datasetId, scope)
+            .then(samples => {
+              let sample;
+              if (samples.length) {
+                sample = samples[0];
+              } else {
+                sample = '';
+              }
+              // could use Object.assign() to avoid mutating preArgs.
+              preArgs.samples = sample;
+              return preArgs;
+            });
+        } else {
+          argsP = Promise(preArgs);
+        }
+        return argsP;
+      }
     }
   };
+
   /** POST version of Feature.search, which is addressed by verb GET.
    */
   Block.vcfGenotypeLookupPost = Block.vcfGenotypeLookup;
