@@ -18,6 +18,8 @@ import {
   datasetId2Class,
   vcfGenotypeLookup,
   addFeaturesJson,
+  resultIsGerminate,
+  addFeaturesGerminate,
   sampleIsFilteredOut,
   vcfFeatures2MatrixView, vcfFeatures2MatrixViewRows,
   rowsAddFeature,
@@ -26,7 +28,11 @@ import {
   featureSampleNames,
  } from '../../utils/data/vcf-feature';
 import { stringCountString } from '../../utils/string';
+
 import { text2EltId } from '../../utils/explorer-tabId';
+
+import { Germinate } from '../../utils/data/germinate';
+
 
 /* global $ */
 /* global d3 */
@@ -1156,17 +1162,19 @@ export default class PanelManageGenotypeComponent extends Component {
     {
       this.lookupMessage = null;
 
-      textP = this.auth.vcfGenotypeSamples(
-        this.apiServerSelectedOrPrimary, vcfDatasetId, scope,
+      textP = this.auth.genotypeSamples(
+        this.apiServerSelectedOrPrimary, this.lookupBlock, vcfDatasetId, scope,
         {} );
       textP.then(
         (text) => {
           const t = text?.text;
           dLog(fnName, t?.length || Object.keys(text), t?.slice(0, 60));
-          this.sampleCache.sampleNames[vcfDatasetId] = t;
+          const isGerminate = resultIsGerminate(t);
+          this.sampleCache.sampleNames[vcfDatasetId] = isGerminate ? t.join('\n') : t;
+          /* result from Germinate is currently an array of string sample names. */
           /** trim off trailing newline; other non-sample column info could be
            * removed; it is not a concern for the mapping. */
-          const sampleNames = t.trim().split('\n');
+          const sampleNames = isGerminate ? t : t.trim().split('\n');
           this.mapSamplesToBlock(sampleNames, this.lookupBlock);
           if ((vcfDatasetId === this.lookupDatasetId) &&
               (this.vcfGenotypeSamplesSelected === undefined)) {
@@ -1215,11 +1223,13 @@ export default class PanelManageGenotypeComponent extends Component {
 
   showError(fnName, error) {
     let
-    message = error.responseJSON?.error?.message || error;
+    message = error.responseJSON?.error?.message ?? error;
     dLog(fnName, message, error.status, error.statusText);
+    if (message?.split) {
     const match = message?.split('Error: Unable to run bcftools');
     if (match.length > 1) {
       message = match[0];
+    }
     }
     this.lookupMessage = message;
   }
@@ -1377,6 +1387,13 @@ export default class PanelManageGenotypeComponent extends Component {
       this.vcfExportText = null;
       textP.then(
         (text) => {
+          const
+          isGerminate = resultIsGerminate(text),
+          callsData = isGerminate && text;
+          if (isGerminate) {
+            text = callsData.map(snp => Object.entries(snp).join('\t')).join('\n');
+            dLog(fnName, text.length, callsData.length);
+          }
           // displays vcfGenotypeText in textarea, which triggers this.vcfGenotypeTextSetWidth();
           this.vcfGenotypeText = text;
           this.headerTextP.then((headerText) => {
@@ -1391,9 +1408,13 @@ export default class PanelManageGenotypeComponent extends Component {
 
           dLog(fnName, text.length, text && text.slice(0,200), blockV.get('id'));
           if (text && blockV) {
-            const added = addFeaturesJson(
-              blockV, this.requestFormat, this.args.userSettings.replaceResults,
-              this.args.selectedFeatures, text);
+            const
+            requestFormat = this.requestFormat,
+            replaceResults = this.args.userSettings.replaceResults,
+            selectedFeatures = this.args.selectedFeatures,
+            added = isGerminate ?
+              addFeaturesGerminate(blockV, requestFormat, replaceResults, selectedFeatures, callsData) :
+              addFeaturesJson(blockV, requestFormat, replaceResults, selectedFeatures, text);
 
             if (added.createdFeatures && added.sampleNames) {
               /* Update the filtered-out samples, including the received data,
@@ -1889,13 +1910,16 @@ export default class PanelManageGenotypeComponent extends Component {
       /** these params are not applicable when headerOnly : samples, domainInteger, rowLimit. */
       textP = vcfGenotypeLookup(
         this.auth, this.apiServerSelectedOrPrimary, samples, domainInteger,
-        requestOptions, vcfDatasetId, scope, this.rowLimit);
-      textP.then(
+        requestOptions, vcfDatasetId, scope, this.rowLimit)
+        .then(
         (text) => {
-          this.headerText = text;
+          const
+          isGerminate = resultIsGerminate(text);
+          this.headerText = isGerminate ? text.join('\t') : text;
           if (trace) {
             dLog(fnName, text);
           }
+          return this.headerText;
         })
         .catch(this.showError.bind(this, fnName));
       textP = toPromiseProxy(textP);
@@ -2134,4 +2158,20 @@ export default class PanelManageGenotypeComponent extends Component {
   }
 
   // ---------------------------------------------------------------------------
+
+  @computed
+  get germinate () {
+    let germinate;
+  try {
+    germinate = new Germinate();
+    console.log('germinate', germinate);
+    germinate.serverinfo(); // germplasm(); // callsets();
+  } catch (error) {
+    console.log('vcfGenotypeLookup', 'Germinate', error);
+  }
+    return germinate;
+  }
+
+  //----------------------------------------------------------------------------
+
 }

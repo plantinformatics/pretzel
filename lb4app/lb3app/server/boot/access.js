@@ -193,7 +193,7 @@ module.exports = function(app) {
       context.property == 'depthSearch' ||
       context.property == 'dnaSequenceSearch' ||
       context.property == 'dnaSequenceLookup' ||
-      context.property == 'vcfGenotypeSamples' ||
+      context.property == 'genotypeSamples' ||
       context.property == 'vcfGenotypeLookup' ||
       context.property == 'vcfGenotypeLookupPost' ||
         // Alias

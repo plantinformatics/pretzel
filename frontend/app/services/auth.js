@@ -364,17 +364,19 @@ export default Service.extend({
 
 
   /** Request DNA sequence lookup (Blast).
-   * @param parent  datasetId of parent / reference of the blast db which is to be searched
+   * @param block
+   * @param datasetId of parent / reference of the blast db which is to be searched
    * @param scope chromosome
    * @param options not used yet, may be for streaming result
    */
-  vcfGenotypeSamples(apiServer, parent, scope, options) {
-    dLog('services/auth vcfGenotypeSamples', parent, scope, options);
-    return this._ajax('Blocks/vcfGenotypeSamples', 'GET', {server : apiServer, parent, scope, options}, true);
+  genotypeSamples(apiServer, block, datasetId, scope, options) {
+    dLog('services/auth genotypeSamples', datasetId, scope, options);
+    const params = {server : apiServer, id : block.id, datasetId, scope, options};
+    return this._ajax('Blocks/genotypeSamples', 'GET', params, true);
   },
 
   /** Request DNA sequence lookup (Blast).
-   * @param parent  datasetId of parent / reference of the blast db which is to be searched
+   * @param datasetId of parent / reference of the VCF / Genotype db which is to be searched
    * @param scope chromosome
    * This is also included in preArgs.region 
    * @param preArgs args to be inserted in command line, this may be between
@@ -385,13 +387,13 @@ export default Service.extend({
    * @param nLines if defined, limit the output to nLines.
    * @param options not used yet, may be for streaming result
    */
-  vcfGenotypeLookup(apiServer, parent, scope, preArgs, nLines, options) {
-    dLog('services/auth vcfGenotypeLookup', parent, scope, preArgs, nLines, options);
+  vcfGenotypeLookup(apiServer, datasetId, scope, preArgs, nLines, options) {
+    dLog('services/auth vcfGenotypeLookup', datasetId, scope, preArgs, nLines, options);
     const
     paramLimit = 5,
     samples = preArgs.samples,
     post = samples?.length > paramLimit,
-    data = {parent, scope, preArgs, nLines, options};
+    data = {datasetId, scope, preArgs, nLines, options};
     return this._ajax(
       'Blocks/vcfGenotypeLookup' + (post ? 'Post' : ''),
       post ? 'POST' : 'GET',

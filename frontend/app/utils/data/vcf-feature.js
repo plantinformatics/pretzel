@@ -245,7 +245,10 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
         const fieldName = columnNames[i];
 
         let fieldNameF;
-        // overridden in the switch default.
+        /* vcfColumn2Feature[] provides Feature field name corresponding to the
+         * column name, for the common columns; for other cases this is
+         * overridden in the switch default.
+         */
         fieldNameF = vcfColumn2Feature[fieldName];
         /** maybe handle samples differently, e.g. Feature.values.samples: []
          * if (i > nColumnsBeforeSamples) { ... } else
@@ -384,6 +387,93 @@ function mergeFeatureValues(existingFeature, feature) {
     }
   });
 }
+
+//------------------------------------------------------------------------------
+
+/** @return true if the genotypeLookup API result is from Germinate,
+ * false if VCF, from bcftools
+ */
+function resultIsGerminate(data) {
+  return Array.isArray(data);
+}
+
+/** Parse Germinate genotype calls result and add features to block.
+ * @return
+ *  { createdFeatures : array of created Features,
+ *    sampleNames : array of sample names }
+ *
+ * @param block view dataset block for corresponding scope (chromosome)
+ * @param requestFormat 'CATG', 'Numerical', ...
+ * Unlike bcftools, Germinate probably sends results only in CATG (nucleotide)
+ * format, which is the format it uses for upload and storage in HDF.
+ * @param replaceResults  true means remove previous results for this block from block.features[] and selectedFeatures.
+ * @param selectedFeatures  same comment as per addFeaturesJson().
+ * @param data result from Germinate callsets/<datasetDbId>/calls request
+ */
+function addFeaturesGerminate(block, requestFormat, replaceResults, selectedFeatures, data) {
+  const fnName = 'addFeaturesGerminate';
+  dLog(fnName, block.id, block.mapName, data.length);
+
+  if (replaceResults) {
+    dLog(fnName, 'replaceResults not implemented');
+  }
+  const
+  store = block.get('store'),
+  columnNames = data.mapBy('callSetName'),
+  sampleNames = columnNames,
+  selectionFeatures = [],
+  createdFeatures = data.map((call, i) => {
+    const f = {values : {}};
+    /* Will lookup f.value in block.features interval tree and createdFeatures
+     * and if found, merge with existing feature - factor out use of
+     * mergeFeatureValues() in addFeaturesJson().
+     */
+    // call.callSetDbId identifies sample name : callSetName
+    // currently seeing in results : 'CnullT' - this can probably be fixed in java.
+    const genotypeValue = call.genotypeValue?.replace('null', '/');
+    f.values[call.callSetName] = genotypeValue;
+    const position = +call.variantName;
+    f.value_0 = position;
+    f.value = [position];
+
+    let feature = f;
+    /** sampleID corresponds to callSetName, so exclude it from the feature name/id */
+    const [datasetID, sampleID] = call.callSetDbId.split('-');
+    /* name is unique per row;  for 1 feature per cell, append : + '_' + call.callSetName */
+    feature._name = feature.id =
+      block.id + '_' + datasetID + '_' + call.variantName;
+    let existingFeature = store.peekRecord('Feature', feature.id);
+    if (existingFeature) {
+      mergeFeatureValues(existingFeature, feature);
+      feature = existingFeature;
+      // this is included in createdFeatures, since it is a result from the current request.
+    } else {
+      // addFeaturesJson() uses feature.blockId - not sure if that is applicable
+      feature.blockId = block;
+      // Replace Ember.Object() with models/feature.
+      feature = store.createRecord('Feature', feature);
+    }
+
+    return feature;
+  });
+
+  // copied from addFeaturesJson() - may be similar enough to factor.
+  createdFeatures.forEach(feature => {
+    let mapChrName = block.get('brushName');
+    let selectionFeature = {Chromosome : mapChrName, Feature : feature.name, Position : feature.value[0], feature};
+
+    createdFeatures.push(feature);
+    selectionFeatures.push(selectionFeature);
+    // block.features.addObject(feature);
+  });
+
+  selectedFeatures.pushObjects(selectionFeatures);
+  block.set('featureCount', block.get('features.length'));
+
+  let result = {createdFeatures, sampleNames};
+  return result;
+}
+
 
 // -----------------------------------------------------------------------------
 
@@ -1136,6 +1226,8 @@ export {
   datasetId2Class,
   vcfGenotypeLookup,
   addFeaturesJson,
+  resultIsGerminate,
+  addFeaturesGerminate,
   featureBlockColourValue,
   sampleIsFilteredOut,
   sampleName2ColumnName,

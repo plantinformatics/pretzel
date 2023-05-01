@@ -342,10 +342,17 @@ export default Model.extend({
     let isQTL =  this.hasTag('QTL') || this.get('datasetId._meta.type') === 'QTL';
     return isQTL;
   }),
-  isVCF : computed('datasetId.tags', function () {
-    let isVCF = this.hasTag('VCF');
-    return isVCF;
+  /** In the frontend VCF and Germinate are treated equally, so wherever isVCF
+   * is currently used can be changed to isGenotype.
+   * The tags define sets : view contains-subset Genotype contains-subset {VCF, Germinate},
+   * so only hasTag('Genotype') is required here, once the new tag Genotype is
+   * added to existing datasets.
+   */
+  isGenotype : computed('datasetId.tags', function () {
+    let isGenotype = this.hasTag('Genotype') || this.hasTag('VCF') || this.hasTag('Germinate');
+    return isGenotype;
   }),
+  isVCF : alias('isGenotype'),
   /** Result indicates how axis-tracks display of features of this block should be coloured.
    * @return
    *  undefined for blockColour,
