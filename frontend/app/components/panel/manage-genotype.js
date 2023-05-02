@@ -2165,7 +2165,7 @@ export default class PanelManageGenotypeComponent extends Component {
   try {
     germinate = new Germinate();
     console.log('germinate', germinate);
-    germinate.serverinfo(); // germplasm(); // callsets();
+    // germinate.serverinfo(); // germplasm(); // callsets();
   } catch (error) {
     console.log('vcfGenotypeLookup', 'Germinate', error);
   }

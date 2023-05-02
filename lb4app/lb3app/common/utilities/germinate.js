@@ -1,12 +1,32 @@
+/*----------------------------------------------------------------------------*/
+/* Node.js globals */
 /* global exports */
 /* global require */
 /* global process */
+/*----------------------------------------------------------------------------*/
+
 /* global Headers */
+
+//------------------------------------------------------------------------------
 
 const BrAPI = require('@solgenomics/brapijs');
 //'./build/BrAPI.js';
 
-const bent = require('bent');
+//------------------------------------------------------------------------------
+
+const isNodeJs = typeof process !== 'undefined';
+
+var bent;
+let env;
+if (isNodeJs) {
+  bent = require('bent');
+  env = process.env;
+}
+// else
+// import fetch from 'fetch';
+// import ENV from '../../config/environment';  env = ENV;
+
+const fetchEndpoint = isNodeJs ? fetchEndpoint_bent : fetchEndpoint_fetch;
 
 //------------------------------------------------------------------------------
 
@@ -16,29 +36,52 @@ const bent = require('bent');
  */
 const testServerURL = 'https://test-server.brapi.org/brapi/v2';
 const yambase = 'https://www.yambase.org/brapi/v1';
-const germinateServerURL = 'https://germinate.germinate.plantinformatics.io/api';
+const
+/** scheme + userinfo + host + port */
+germinateServerDomain = 'https://germinate.germinate.plantinformatics.io',
+germinateServerURL = germinateServerDomain + '/api';
 const serverURL = germinateServerURL; // testServerURL;
 const brapi_v = 'brapi/v2';
 const serverURLBrAPI = germinateServerURL + '/' + brapi_v;
 
-const germinateToken = process.env.germinateToken;
+const germinateToken = isNodeJs && env.germinateToken;
+
+//------------------------------------------------------------------------------
+
+const dLog = console.debug;
+
+const trace = 0;
+
+//------------------------------------------------------------------------------
 
 // let germinate = new Germinate(serverURL);
 
 class Germinate {
   constructor(/*serverURL*/) {
-    if (! germinateToken) {
-      console.log('Germinate', serverURL, '$germinateToken', 'this', this);
-      debugger;
-    }
-    if (germinateToken) {
-      console.log('Germinate', serverURL, germinateToken, 'this', this);
-      this.brapi_root = BrAPI(serverURLBrAPI, "v2.0", germinateToken);
-    }
+    this.init();
   }
-  
 }
 exports.Germinate = Germinate;
+
+Germinate.prototype.init = init;
+function init() {
+  const fnName = 'init';
+  if (! germinateToken) {
+    console.log('Germinate', serverURL, '$germinateToken', 'this', this);
+    this.login()
+      .then(token => {
+        console.log(fnName, token);
+        token && (this.token = token) && this.initBrAPIRoot(token); });
+  } else {
+    this.token = germinateToken;
+    this.initBrAPIRoot(germinateToken);
+  }
+}
+Germinate.prototype.initBrAPIRoot = initBrAPIRoot;
+function initBrAPIRoot(token) {
+  console.log('Germinate', serverURL, token, 'this', this);
+  this.brapi_root = BrAPI(serverURLBrAPI, "v2.0", token);
+}
 
 Germinate.prototype.serverinfo = serverinfo;
 function serverinfo() {
@@ -54,50 +97,145 @@ Germinate.prototype.fetchEndpoint = fetchEndpoint;
  * @param endpoint e.g. 'marker/table'
  * @return result of fetch() - promise yielding response or error
  */
-function fetchEndpoint0(endpoint, method = 'GET') {
+function fetchEndpoint_fetch(endpoint, method = 'GET', body = undefined) {
   const
-  resultP =
-    fetch(serverURL + '/' + endpoint, {
-      credentials : "include",
-      headers : new Headers({
+  fnName = 'fetchEndpoint_fetch',
+  token = this.token || 'null',
+  headerObj = {
         // 'User-Agent': ...,
-        'Accept': '*/*',
+        'Accept': '*/*',  // application/json, text/plain, 
         // 'Accept-Language': 'en-US,en;q=0.5',
-        'Content-Type': 'application/json;charset=utf-8',
-        'Authorization': 'Bearer ' + germinateToken,
+        'Content-Type': 'application/json;charset=utf-8', // text/plain
+        'Authorization': 'Bearer ' + token,
+/*
         'Sec-Fetch-Dest': 'empty',
         'Sec-Fetch-Mode': 'cors',
-        'Sec-Fetch-Site': 'cross-site',
-        'Cache-Control': 'max-age=0'
-      }),
-      referrer : 'http://localhost:4200/',
+        'Sec-Fetch-Site': 'cross-origin', // site
+        'Cache-Control': 'max-age=0',
+*/
+  },
+  /** referrer sets the referer header. refn https://en.wikipedia.org/wiki/HTTP_referer
+   * https://developer.mozilla.org/en-US/docs/Web/API/fetch  */
+  options = {
+      credentials : "include",
+      headers : /*new Headers(*/headerObj/*)*/,
+      referrer : germinateServerDomain + '/', // 'http://localhost:4200/',
       method,
       'mode': 'cors',
-    });
+    };
+  if (body) {
+    /** fetch() requires JSON.stringify(body), whereas
+     * bent() does not require body to be a string - it will JSON.stringify().
+     */
+    options.body = JSON.stringify(body);
+  }
+  console.log(fnName, headerObj, body);
+  const
+  resultP =
+    fetch(serverURL + '/' + endpoint, options);
   return resultP;
 }
-function fetchEndpoint(endpoint, method = 'GET') {
-  const fnName = 'fetchEndpoint';
+function fetchEndpoint_fetch_login(endpoint, method = 'GET', body = undefined) {
+  const
+  fnName = 'fetchEndpoint_fetch',
+  /** for login, .token is undefined.  `this` is not defined. */
+  token = /*this.token ||*/ 'null',
+
+  resultP = fetch(germinateServerURL + '/token', {
+    "credentials": "include",
+    "headers": {
+        "Accept": "application/json, text/plain, */*",
+        // "Accept-Language": "en_GB",
+        "Content-Type": "application/json; charset=utf-8",
+        "Authorization": "Bearer null",
+      /*
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "same-origin"
+        */
+    },
+    "referrer": germinateServerDomain + '/',
+    body : JSON.stringify(body),
+    "method": "POST",
+    "mode": "cors"
+  });
+
+  return resultP;
+}
+
+/**
+ * @param body bent() does not require body to be string - it will JSON.stringify().
+ */
+function fetchEndpoint_bent(endpoint, method = 'GET', body = undefined) {
+  const fnName = 'fetchEndpoint_bent';
   console.log(fnName, 'send request');
   const
-  getJSON = bent(serverURL, 'json'),
+  // maybe pass options {credentials, mode} to bent() ?
+  getJSON = bent(serverURL, method, 'json'),
+  token = this.token || 'null',
   headers = // {'Authorization' : this.accessToken};
     {
       // 'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/111.0',
       'Accept': '*/*',
       // 'Accept-Language': 'en-US,en;q=0.5',
       'Content-Type': 'application/json;charset=utf-8',
-      'Authorization': 'Bearer ' + germinateToken,
+      'Authorization': 'Bearer ' + token,
+/*
       'Sec-Fetch-Dest': 'empty',
       'Sec-Fetch-Mode': 'cors',
       'Sec-Fetch-Site': 'cross-site',
       'Cache-Control': 'max-age=0'
+*/
     },
   // new Headers( headers )
 
-  promise = getJSON('/' + endpoint,  /*body*/undefined, headers);
+  /** bent accepts body as obj or json. */
+  promise = getJSON('/' + endpoint, body, headers);
   return promise;
 }
+
+Germinate.prototype.login = login;
+function login() {
+  let tokenP;
+  const
+  fnName = 'login',
+  username = isNodeJs ? env.germinate_username : env.username,
+  password = isNodeJs ? env.germinate_password : env.password;
+  if (username && password) {
+    const
+    body = {username, password},
+    method = 'POST',
+    endpoint = 'token';
+
+    if (this.token) {
+      console.log(fnName, this.token);
+      debugger;
+    }
+    tokenP =
+      // fetchEndpoint_fetch_login(endpoint, method, body)
+    this.fetchEndpoint(endpoint, method, body)
+      .then(response => {
+        dLog(fnName, response);
+        /** fetch() response has .ok and .json() returns a promise.
+         * bent()() response is the parsed data.
+         */
+        const objP = response.ok ? response?.json() : Promise.resolve(response);
+        return objP;
+      })
+      .then(obj => {
+        console.log(fnName, obj);
+        return obj.token;
+      })
+      .catch(err => {
+        console.log(fnName, err);
+        return null;
+      });
+  } else {
+    tokenP = Promise.resolve(undefined);
+  }
+  return tokenP;
+}
+
 
 
 Germinate.prototype.markers = markers;

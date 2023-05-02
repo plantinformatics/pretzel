@@ -7,10 +7,11 @@ const { Germinate } = require('./germinate');
 
 let germinate;
 function useGerminate() {
+  const fnName = 'useGerminate';
   if (! germinate) {
     try {
       germinate = new Germinate();
-      console.log('germinate', germinate);
+      console.log(fnName, germinate);
       // germinate.serverinfo(); // germplasm(); // callsets();
     } catch (error) {
       console.log(fnName, 'Germinate', error);
