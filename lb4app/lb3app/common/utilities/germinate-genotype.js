@@ -65,7 +65,7 @@ function germinateGenotypeLookup(datasetId, scope, preArgs, nLines, undefined, c
       // e.g. '1-593'
       const
       callSetDbId = name2Id[sampleName],
-      dataP = (callSetDbId ? germinate.callsetsCalls(callSetDbId, start, end) : Promise([]))
+      dataP = (callSetDbId ? germinate.callsetsCalls(callSetDbId, start, end) : Promise.resolve([]))
         .then(response => response.result.data);
       return dataP;
     });

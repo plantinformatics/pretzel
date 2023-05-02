@@ -1413,7 +1413,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
        * and use the first one.  */
       function ensureSamplesParam(preArgs) {
         let argsP;
-        if (! preArgs?.length) {
+        if (! preArgs?.samples?.length) {
           argsP = util.promisify(germinateGenotypeSamples)(datasetId, scope)
             .then(samples => {
               let sample;
@@ -1427,7 +1427,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
               return preArgs;
             });
         } else {
-          argsP = Promise(preArgs);
+          argsP = Promise.resolve(preArgs);
         }
         return argsP;
       }

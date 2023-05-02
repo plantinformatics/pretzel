@@ -168,7 +168,7 @@ function fetchEndpoint_fetch_login(endpoint, method = 'GET', body = undefined) {
  */
 function fetchEndpoint_bent(endpoint, method = 'GET', body = undefined) {
   const fnName = 'fetchEndpoint_bent';
-  console.log(fnName, 'send request');
+  console.log(fnName, 'send request', endpoint);
   const
   // maybe pass options {credentials, mode} to bent() ?
   getJSON = bent(serverURL, method, 'json'),
