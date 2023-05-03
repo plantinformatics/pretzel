@@ -1,24 +1,54 @@
 const { Germinate } = require('./germinate');
+const { ErrorStatus } = require('./errorStatus.js');
 
 /* global exports */
 /* global require */
 
 //------------------------------------------------------------------------------
+/** The scope of this module is :
+ * . use of Germinate server connection to implement Pretzel genotype requests.
+ *
+ * Related ./germinate.js
+ */
+//------------------------------------------------------------------------------
 
-let germinate;
+let germinateInstance;
+/** Used by API requests to ensure Germinate session is connected and
+ * authenticated, so they can use it to fulfill requests.
+ * @return a promise which resolves with germinateInstance or
+ * rejects with ErrorStatus(), which the caller can pass to response cb.
+ */
 function useGerminate() {
   const fnName = 'useGerminate';
+  let connectedP;
+  if (! germinateInstance) {
+      germinateInstance = new Germinate();
+  }
+  connectedP = germinateInstance.connectedP()
+    .then(() => germinateInstance)
+    .catch(error => {
+      console.log(fnName, 'Germinate', error);
+      throw ErrorStatus(503, error) ; // statusCode
+    });
+
+/*
   if (! germinate) {
     try {
-      germinate = new Germinate();
       console.log(fnName, germinate);
       // germinate.serverinfo(); // germplasm(); // callsets();
     } catch (error) {
-      console.log(fnName, 'Germinate', error);
+      // throw
     }
   }
-  return germinate;
+*/
+  return connectedP;
 }
+
+/** refn : https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+502 Bad Gateway
+    This error response means that the server, while working as a gateway to get a response needed to handle the request, got an invalid response.
+503 Service Unavailable
+ */
 
 //------------------------------------------------------------------------------
 
@@ -32,7 +62,8 @@ function callSetCacheForBlock(datasetId, scope) {
 }
 exports.germinateGenotypeSamples = germinateGenotypeSamples;
 function germinateGenotypeSamples(datasetId, scope, cb) {
-  if ((germinate = useGerminate())) {
+  useGerminate()
+    .then((germinate) => {
     const samplesP = germinate.samples('1' /*datasetId, scope*/);
     samplesP
       .then(response => {
@@ -42,13 +73,15 @@ function germinateGenotypeSamples(datasetId, scope, cb) {
         cb(null, samples);
       })
       .catch(error => cb(error));
-  }
+    })
+    .catch(cb);
 }
 
 exports.germinateGenotypeLookup = germinateGenotypeLookup;
 function germinateGenotypeLookup(datasetId, scope, preArgs, nLines, undefined, cb) {
   const fnName = 'germinateGenotypeLookup';
-  if ((germinate = useGerminate())) {
+  useGerminate()
+    .then((germinate) => {
     // preArgs.samples '1-593'
     // preArgs.region : scope + ':' + domainInteger.join('-'),
     const
@@ -65,7 +98,9 @@ function germinateGenotypeLookup(datasetId, scope, preArgs, nLines, undefined, c
       // e.g. '1-593'
       const
       callSetDbId = name2Id[sampleName],
-      dataP = (callSetDbId ? germinate.callsetsCalls(callSetDbId, start, end) : Promise.resolve([]))
+      dataP = ! callSetDbId ? 
+        Promise.resolve([]) :
+        germinate.callsetsCalls(callSetDbId, start, end)
         .then(response => response.result.data);
       return dataP;
     });
@@ -74,7 +109,8 @@ function germinateGenotypeLookup(datasetId, scope, preArgs, nLines, undefined, c
         cb(null, samplesData.flat());
       })
       .catch(error => cb(error));
-  }
+    })
+    .catch(cb);
 }
 
 //------------------------------------------------------------------------------
