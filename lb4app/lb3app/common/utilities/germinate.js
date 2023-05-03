@@ -230,7 +230,8 @@ function fetchEndpoint_bent(endpoint, method = 'GET', body = undefined) {
   // new Headers( headers )
 
   /** bent accepts body as obj or json. */
-  promise = getJSON('/' + endpoint, body, headers);
+  promise = getJSON('/' + endpoint, body, headers)
+    .catch(error => { console.log(fnName, error); throw error; });
   return promise;
 }
 
