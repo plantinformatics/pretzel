@@ -8,6 +8,14 @@
 /* global Headers */
 
 //------------------------------------------------------------------------------
+/** The scope of this module is :
+ * . connection to a Germinate server
+ * . BrAPI requests are wrapped (currently)
+ * . provide fetchEndpoint() for other requests
+ *
+ * Related ./germinate-genotype.js
+ */
+//------------------------------------------------------------------------------
 
 import BrAPI from '@solgenomics/brapijs';
 //'./build/BrAPI.js';
@@ -64,23 +72,55 @@ class Germinate {
 export {Germinate};
 
 Germinate.prototype.init = init;
+/** If germinateToken is defined in the environment of the server,
+ * initialise the brapi library root BrAPINode.
+ */
 function init() {
   const fnName = 'init';
-  if (! germinateToken) {
-    console.log('Germinate', serverURL, '$germinateToken', 'this', this);
-    this.login()
-      .then(token => {
-        console.log(fnName, token);
-        token && (this.token = token) && this.initBrAPIRoot(token); });
-  } else {
-    this.token = germinateToken;
-    this.initBrAPIRoot(germinateToken);
+  if (germinateToken) {
+    this.setToken(germinateToken);
   }
+}
+Germinate.prototype.setToken = setToken;
+function setToken(token) {
+  this.token = token;
+  this.initBrAPIRoot(token);
+}
+Germinate.prototype.connect = connect;
+/** Use Germinate login 'api/token'
+ * @return a promise which yields undefined
+ */
+function connect() {
+  const fnName = 'connect';
+  console.log('Germinate', serverURL, '$germinateToken', 'this', this);
+  const
+  p =
+    this.login()
+    .then(token => {
+      console.log(fnName, token);
+      token && this.setToken(token); });
+  return p;
+}
+Germinate.prototype.connectedP = connectedP;
+/** @return a promise which resolves if/when connected and authenticated.
+ */
+function connectedP() {
+  let p;
+  if (! this.token) {
+    p = this.connect();
+  } else {
+    p = Promise.resolve();
+  }
+  return p;
 }
 Germinate.prototype.initBrAPIRoot = initBrAPIRoot;
 function initBrAPIRoot(token) {
   console.log('Germinate', serverURL, token, 'this', this);
   this.brapi_root = BrAPI(serverURLBrAPI, "v2.0", token);
+  /** it is possible to change token by creating a child BrAPINode, via 
+   * this.brapi_root.server(address, version, auth_token),
+   * so initBrAPIRoot() could be moved out of init().
+   */
 }
 
 Germinate.prototype.serverinfo = serverinfo;
@@ -168,7 +208,7 @@ function fetchEndpoint_fetch_login(endpoint, method = 'GET', body = undefined) {
  */
 function fetchEndpoint_bent(endpoint, method = 'GET', body = undefined) {
   const fnName = 'fetchEndpoint_bent';
-  console.log(fnName, 'send request');
+  console.log(fnName, 'send request', endpoint);
   const
   // maybe pass options {credentials, mode} to bent() ?
   getJSON = bent(serverURL, method, 'json'),
@@ -297,7 +337,9 @@ function callsetsCalls(dataset, start, end) {
   const
   endpoint = brapi_v + '/' + 'callsets'  + '/' + dataset + '/calls' + intervalParams,
   callsP = this.fetchEndpoint(endpoint);
-  console.log(fnName, {serverURL, endpoint});
+  if (trace) {
+    console.log(fnName, {serverURL, endpoint});
+  }
 
 /*
     .then(response => {
