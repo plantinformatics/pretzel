@@ -82,7 +82,7 @@ exports.germinateGenotypeSamples = germinateGenotypeSamples;
 function germinateGenotypeSamples(datasetId, scope, cb) {
   useGerminate()
     .then((germinate) => {
-    const samplesP = germinate.samples('1' /*datasetId, scope*/);
+    const samplesP = germinate.samples('4' /*datasetId, scope*/);
     samplesP
       .then(response => {
         const samples = response.result.data.map(d => d.callSetName);

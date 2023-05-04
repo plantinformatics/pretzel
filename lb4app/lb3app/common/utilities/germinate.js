@@ -330,13 +330,15 @@ function callsetsCalls(dataset, start, end) {
   /** Optional location / position / variantName interval to filter SNPs */
   let intervalParams = '';
   if (isDefined(start)) {
-    intervalParams = '/' + start;
+    intervalParams = '/position/' + start;
     if (isDefined(end)) {
       intervalParams += '/' + end;
     }
   }
   const
-  endpoint = brapi_v + '/' + 'callsets'  + '/' + dataset + '/calls' + intervalParams,
+  [mapid, sampleId] = dataset.split('-'),
+  endpoint = brapi_v + '/' + 'callsets'  + '/' + dataset + '/calls'
+    + '/mapid/' + mapid + intervalParams,
   callsP = this.fetchEndpoint(endpoint);
   if (trace) {
     console.log(fnName, {serverURL, endpoint});

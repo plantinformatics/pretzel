@@ -429,10 +429,14 @@ function addFeaturesGerminate(block, requestFormat, replaceResults, selectedFeat
      * mergeFeatureValues() in addFeaturesJson().
      */
     // call.callSetDbId identifies sample name : callSetName
-    // currently seeing in results : 'CnullT' - this can probably be fixed in java.
-    const genotypeValue = call.genotypeValue?.replace('null', '/');
+    // previously seeing in results : 'CnullT' - this is now fixed in java.
+    const genotypeValue = call.genotypeValue;
     f.values[call.callSetName] = genotypeValue;
-    const position = +call.variantName;
+    /* "variantName": "m2-23.0" 
+     * m2-23.0 => m2 is marker name and 23.0 is its position */
+    const
+    [markerName, positionText] = call.variantName.split('-'),
+    position = +positionText;
     f.value_0 = position;
     f.value = [position];
 
@@ -441,7 +445,7 @@ function addFeaturesGerminate(block, requestFormat, replaceResults, selectedFeat
     const [datasetID, sampleID] = call.callSetDbId.split('-');
     /* name is unique per row;  for 1 feature per cell, append : + '_' + call.callSetName */
     feature._name = feature.id =
-      block.id + '_' + datasetID + '_' + call.variantName;
+      block.id + '_' + datasetID + '_' + markerName;
     let existingFeature = store.peekRecord('Feature', feature.id);
     if (existingFeature) {
       mergeFeatureValues(existingFeature, feature);
