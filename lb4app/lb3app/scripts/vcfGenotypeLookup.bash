@@ -5,6 +5,20 @@
 
 # called from : common/utilities/vcf-genotype.js : vcfGenotypeLookup()
 
+# optional - passed when called via 
+# @param fileName
+# @param useFile
+# Required :
+# @param command	query | view | isec
+# @param datasetIdParam - names of VCF datasets, i.e. 1 or more datasetId, joined with !; 
+# where datasetId is a datablock not a reference / parent.
+# This is split into the array datasetIds.
+# @param scope		chromosome name, e.g. 1A
+# @param preArgs	remaining args : $*
+
+#  args to bcftools other than command vcfGz; named preArgs because they could
+#  be inserted between command and vcfGz arguments to bcftools.
+
 
 serverDir=$PWD
 # $inContainer is true (0) if running in a container.
@@ -37,10 +51,6 @@ then
 # else
   # ls -AF "$vcfDir"
 fi
-if [ -z "$datasetIdDir" ]
-then
-  unused_var=${datasetIdDir:=$blastDir/datasetId}
-fi
 set +x
 
 # Test if running within container.
@@ -70,7 +80,6 @@ echo  \
  bcftools=$bcftools, \
  blastDir=$blastDir, \
  vcfDir=$vcfDir, \
- datasetIdDir=$datasetIdDir, \
  >> $logFile
 
 # bcftools 'make install' installs by default in /usr/local/bin/
@@ -86,7 +95,7 @@ echo  \
 
 #-------------------------------------------------------------------------------
 
-# Given the argumements to bcftools, other than $parent, are in $*,
+# Given the argumements to bcftools, other than $datasetIdParam, are in $*,
 # extract the chromosome name, e.g. from "... chr1A ..." set chr="1A"
 function chrFromArgs()
 {
@@ -106,21 +115,21 @@ then
   fileName="$1"
   useFile="$2"
   command="$3"
-  parent="$4"
+  datasetIdParam="$4"
   scope="$5"
   shift 5
   # Switch off logging for preArgs, which contains samples which may be a large list.
   set +x
   preArgs="$*"
-  echo fileName="$fileName", useFile=$useFile, command="$command", parent="$parent", scope="$scope", preArgs=$preArgs  >> $logFile
+  echo fileName="$fileName", useFile=$useFile, command="$command", datasetIdParam="$datasetIdParam", scope="$scope", preArgs=$preArgs  >> $logFile
 else
   command="$1"
-  parent="$2"
+  datasetIdParam="$2"
   scope="$3"
   shift 3
   set +x
   preArgs="$*"
-  echo command="$command", parent="$parent", scope="$scope", preArgs=$preArgs  >> $logFile
+  echo command="$command", datasetIdParam="$datasetIdParam", scope="$scope", preArgs=$preArgs  >> $logFile
 fi
 set -x
 
@@ -155,11 +164,10 @@ function dev_result() {
 
 #-------------------------------------------------------------------------------
 
-# The given param $parent is actually the data dataset not the reference;
+# The given param $datasetIdParam is the data dataset not the reference;
 # possibly both will be required.
-datasetId=$parent
-# Sanitize datasetId. Allow only alphanumeric and -._ and space.
-datasetId=$(echo "$datasetId" | sed 's/[^-A-Za-z0-9._ ]/_/g')
+# Sanitize datasetIdParam. Allow only alphanumeric and -._ and space.
+datasetIdParam=$(echo "$datasetIdParam" | sed 's/[^-A-Za-z0-9._ ]/_/g')
 
 # for dataset.tags.vcfDb : $vcfDir/datasetname/chrXX.vcf.gz, chrXX.vcf.gz.csi
 # datasetname/ may be a symbolic link;
@@ -170,15 +178,18 @@ datasetId=$(echo "$datasetId" | sed 's/[^-A-Za-z0-9._ ]/_/g')
 # not required for vcf : datasetId2dbName(), $datasetIdDir
 
 # $datasetId is used directly, instead of $(datasetId2dbName ).
-dbName="$datasetId"
 
-# This directory check enables dev_result() for dev / loopback test, when blast is not installed.
-if false && [ -d ../../pretzel.A1 ]
-then
-  # sleep 10
-  dev_result "$region"
-  status=$?
-else 
+
+#-------------------------------------------------------------------------------
+
+# Convert one datasetId to $vcfGz
+# Echo $vcfGz to stdout
+# @param dbName  datasetId
+# @return status 0 if dbName dir has files $vcfGz and .csi, where vcfGz is $chr.vcf.gz
+function dbName2Vcf() {
+  dbName=$1
+  datasetId=$dbName
+
   # (! does not preserve $?, so if that is required, if cd ... ; then : ; else status=$?; echo 1>&$F_ERR "..."; exit $status; fi;  , and equivalent for each if. )
   status=1
   # relative to $vcfDir/$dbName/
@@ -196,6 +207,7 @@ else
   then
     echo 1>&$F_ERR 'Error:' "VCF file is not configured", "$datasetId", "$chr", "$vcfGz"
   else
+    status=0
     if [ ! -f "$vcfGz".csi ]
     then
       if ! bcftools index "$vcfGz"
@@ -204,14 +216,55 @@ else
         echo 1>&$F_ERR 'Error:' "No index $vcfGz.csi, and failed to build index."
       fi
     fi
-    if [ -f "$vcfGz".csi ]
+    if [ $status -eq 0 ]
     then
-      # Switch off logging for $command - contains preArgs, which contains samples which may be a large list.
+      echo "$dbName/$vcfGz"
+    fi
+  fi
+  return $status
+}
+
+
+function bcftoolsCommand() {
+  command="$1";   shift
+  vcfGz="$1";     shift
+  # ${preArgs[@]}
+  # ${@} is ${preArgs[@]}; used this way it is split into words correctly - i.e. 
+  # '%ID\t%POS\t%REF\t%ALT[\t%TGT]\n' is a single arg.
+  2>&$F_ERR "$bcftools" "$command" "$vcfGz" "${@}"
+}
+
+#-------------------------------------------------------------------------------
+
+# This directory check enables dev_result() for dev / loopback test, when blast is not installed.
+if false && [ -d ../../pretzel.A1 ]
+then
+  # sleep 10
+  dev_result "$region"
+  status=$?
+else 
+  datasetIds=($(echo "$datasetIdParam" | tr '!' ' '))
+  # result when break
+  status=1
+  for di in ${datasetIds[@]}; do
+    vcfGzs+=($(dbName2Vcf "$di"))
+    cd $serverDir
+    status=0
+  done
+  # later versions of bash : dbName2Vcf $di || break ... | readarray -t vcfGzs
+  echo >> $logFile vcfGzs="${vcfGzs[@]}"
+  # vcfGzs[] includes datasetId/ for each dataset
+  cd $serverDir/"$vcfDir"
+
+    if [ $status -eq 0 ]
+    then
+      # Switch off logging for ${@} - contains preArgs, which contains samples which may be a large list.
       # That won't be needed when preArgs.samples is output to a file, and -S (--samples-file) used instead.
       # see vcf-genotype.js : vcfGenotypeLookup() : preArgs.samples
-      set +x
+      # set +x
       # some elements in preArgs may contain white-space, e.g. format "%ID\t%POS[\t%TGT]\n"
-      if ! time "$bcftools" "$command" "$vcfGz" "${@}" 2>&$F_ERR
+      vcfGz=${vcfGzs[0]}
+      if ! time bcftoolsCommand "$command" "$vcfGz" "${@}"
       then
         echo 1>&$F_ERR 'Error:' "Unable to run bcftools $command $vcfGz $*"
       else
@@ -219,9 +272,11 @@ else
       fi
       set -x
     fi
-  fi
 
 fi
+
+
+
 
 # exit $status
 
