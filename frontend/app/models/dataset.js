@@ -1,4 +1,5 @@
 import { computed } from '@ember/object';
+import { alias } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 import { attr, hasMany, belongsTo } from '@ember-data/model';
 
@@ -99,9 +100,13 @@ export default Record.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  displayName : computed('_meta.displayName', function () {
+    return this.get('_meta.displayName') || this.get('id');
+  }),
+
   /** @return shortName if defined, otherwise name
    */
-  shortNameOrName : computed('datasetId._meta.shortName', function () {
+  shortNameOrName : computed('_meta.shortName', function () {
     return this.get('_meta.shortName') || this.get('id');
   }),
 

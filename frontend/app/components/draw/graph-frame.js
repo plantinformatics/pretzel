@@ -150,7 +150,9 @@ export default Component.extend({
   //----------------------------------------------------------------------------
 
   initGraphFrame : on('init', function() {
-    this.oa.graphFrame = this;
+    if (this.oa.graphFrame !== this) {
+      Ember_set(this, 'oa.graphFrame', this);
+    }
     this.oa.showResize = this.showResize.bind(this);
   }),
 

@@ -28,18 +28,18 @@ unused_var=${toolsDev=$resourcesDir/tools/dev}
 unused_var=${bcftools=bcftools}
 # or /faidx after blast/
 unused_var=${blastDir:=/mnt/data_blast/blast}
-unused_var=${vcfDir:=$blastDir/../vcf}
+# unused_var=${vcfDir:=$blastDir/../vcf}
 # blastDir=tmp/blast
 set -x
-if [ ! -d "$vcfDir" ]
+vcfDir=tmp/vcf
+if [ ! -e "$vcfDir" -a -e "$blastDir/vcf" ]
 then
-  vcfDir=tmp/vcf
-# else
-  # ls -AF "$vcfDir"
+  vcfDir="$blastDir/vcf"
 fi
+# if $datasetIdDir may be "" then this condition is required.
 if [ -z "$datasetIdDir" ]
 then
-  unused_var=${datasetIdDir:=$blastDir/datasetId}
+  unused_var=${datasetIdDir:=$vcfDir/datasetId}
 fi
 set +x
 

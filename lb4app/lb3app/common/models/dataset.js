@@ -285,10 +285,12 @@ module.exports = function(Dataset) {
       datasets = datasets
         .filter((dataset) => {
           /** true means filter out of datasets */
-          const out = dataset.aliases;
-          if (out) {
+          let out;
+          if ((out = dataset.aliases)) {
             aliasesP.push(loadAliases(dataset, models));
-          }
+          } else if ((out = dataset.datasetMetadata)) {
+            aliasesP.push(upload.datasetSetMeta(dataset.datasetMetadata, models, options));
+          } else 
           return ! out;
         });
 
@@ -315,6 +317,10 @@ module.exports = function(Dataset) {
         .catch((error) => cbCountDone(error))
           .then(() => loadAfterDelete(datasets[i]));
       });
+      // or : Promise.all(datasetRemovedPs.map(...)).then(() => aliasesToCb());
+      if (! datasets.length) {
+        aliasesToCb();
+      }
     
       function cbCountDone(error, result) {
         if (error) {
@@ -323,6 +329,15 @@ module.exports = function(Dataset) {
           /* if (! error) then result is dataset.name */
           if (++datasetsDone === datasets.length) {
             if (! error) {
+              aliasesToCb();
+            }
+          }
+        }
+      }
+      /** Convey results from non-dataset uploads, i.e. aliases and datasetMetadata,
+       * to cb
+       */
+      function aliasesToCb() {
               Promise.all(aliasesP)
                 .catch((error) => cb(error))
                 .then((aliasesDone) => {
@@ -335,9 +350,6 @@ module.exports = function(Dataset) {
                    */
                   cb(null, status);
                 });
-            }
-          }
-        }
       }
 
       /* loadAfterDelete() in spreadsheetUploadExternal() is similar but also
