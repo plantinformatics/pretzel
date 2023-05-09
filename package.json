@@ -25,7 +25,7 @@
   "//": "in frontend directory : Install Ember dependencies", 
   "//": "in backend directory : Install dependencies",
 	"//": "The message 'Entering directory' is common to e.g. make -w, and recognised by emacs compilation-mode to set default-directory",
-	"//": "optional env for ember in build:frontend :  handsOnTableLicenseKey=non-commercial-and-evaluation "
+	"//": "optional env for ember in build:frontend :  handsOnTableLicenseKey=non-commercial-and-evaluation ",
   "scripts": {
     "postinstall" : "ln -s ../frontend/dist backend/client",
     "go" : "npm run setup:frameworks && npm run build:frontend && npm run run:precheck && npm run run:backend",
