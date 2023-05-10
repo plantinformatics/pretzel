@@ -232,10 +232,31 @@ function dbName2Vcf() {
 function bcftoolsCommand() {
   command="$1";   shift
   vcfGz="$1";     shift
-  # ${preArgs[@]}
   # ${@} is ${preArgs[@]}; used this way it is split into words correctly - i.e. 
   # '%ID\t%POS\t%REF\t%ALT[\t%TGT]\n' is a single arg.
-  2>&$F_ERR "$bcftools" "$command" "$vcfGz" "${@}"
+  commonSNPs=all_common_SNPs.vcf
+  vcfGzs_=(
+    201028_40K_DAS5_samples_XT_exomeIDs/1A.vcf.gz
+    Triticum_aestivum_IWGSC_RefSeq_v1.0_vcf_data/chr1A.vcf.gz)
+  if [ ${#vcfGzs_[@]} -gt 1 ]
+  then
+    if [ ! -f "$commonSNPs" ]
+    then
+      2>&$F_ERR "$bcftools" isec -n=2 -c all -o "$commonSNPs" "${vcfGzs_[@]}"
+    fi
+    # -R, --regions-file
+    if [ "$command" = query ]
+    then
+      regionParams=($1 $2); shift 2;
+      "$bcftools" view "${regionParams[@]}" -O v -R "$commonSNPs" "$vcfGz" | \
+	2>&$F_ERR "$bcftools" "$command" "${@}"
+    else
+      2>&$F_ERR "$bcftools" view -O v -R "$commonSNPs" \
+		"$vcfGz"
+    fi
+  else
+    2>&$F_ERR "$bcftools" "$command" "$vcfGz" "${@}"
+  fi
 }
 
 #-------------------------------------------------------------------------------
