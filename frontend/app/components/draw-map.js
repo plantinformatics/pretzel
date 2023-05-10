@@ -507,7 +507,7 @@ export default Component.extend(Evented, {
                     /** use same structure as routes/mapview.js */
                     retHash[chr] = rc;
     const receiveChr = this.receiveChr || console.log;
-    this.get('receiveChr')(chr, rc, 'dataReceived');
+    this.get('receiveChr')?.(chr, rc, 'dataReceived');
       return retHash;
     }, {});
 

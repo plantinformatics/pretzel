@@ -129,12 +129,17 @@ export default class NamesFilter extends EmberObject {
     const
     maybeLC = this.maybeLC(caseInsensitive),
     nameMaybeLC = maybeLC(object.name),
+    displayNameMaybeLC = object.displayName && maybeLC(object.displayName),
     multiFnName = searchFilterAll ? 'every' : 'any',
     nameFiltersMaybeLC = this.maybeLCArray(caseInsensitive, nameFilters),
     matchAll = nameFiltersMaybeLC[multiFnName]((nameFilter) => {
       let
-      match = nameMaybeLC.includes(nameFilter);
+      /** matching .displayName, if it exists, is the main
+       * requirement; matching .name may be useful also. */
+      match = nameMaybeLC.includes(nameFilter) ||
+        (displayNameMaybeLC && maybeLC(displayNameMaybeLC).includes(nameFilter));
       if (! match && childNamesFn) {
+        /** depending on the cost of get('blocks'), it may be worthwhile to reverse the order of these loops : nameFilters / blocks */
         match = childNamesFn(object).any((block) => maybeLC(block).includes(nameFilter));
       }
       return match;

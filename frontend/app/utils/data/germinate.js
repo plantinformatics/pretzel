@@ -17,7 +17,8 @@
  */
 //------------------------------------------------------------------------------
 
-import BrAPI from '@solgenomics/brapijs';
+//import BrAPI from '@solgenomics/brapijs';
+function BrAPI() { console.log('BrAPI not imported'); }
 //'./build/BrAPI.js';
 
 //------------------------------------------------------------------------------

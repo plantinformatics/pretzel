@@ -86,7 +86,7 @@
   },
   "private": true,
   "dependencies": {
-    "@solgenomics/brapijs": "git+https://github.com/solgenomics/BrAPI-js.git",
+    "@solgenomics/brapijs": "https://github.com/solgenomics/BrAPI-js.git",
     "caniuse-lite": "^1.0.30001349",
     "colresizable": "github:felipedgarcia/colresizable",
     "ember-array-helper": ">=5",
@@ -102,7 +102,7 @@
     "ember-promise-helpers": "^1.0.9",
     "ember-radio-button": "^2.0.1",
     "ember-raf-scheduler": "",
-    "ember-sortable": "",
+    "ember-sortable": "^3",
     "ember-source": "^3.22.1",
     "ember-toggle": "^7.0.0",
     "ember-tooltips": "^3.4.5",

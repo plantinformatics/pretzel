@@ -532,9 +532,12 @@ export default ManageBase.extend({
            this.get('model.availableMapsTask._result.length'),
            this.get('mapviewDatasets.content.length'));
     }
-    if (datasetsBlocks)
+    if (datasetsBlocks) {
+      /** result from API is sorted by .id, with upper case preceding lower case. */
       datasetsBlocks =
-      datasetsBlocks.filter((block) => !block.get('isCopy'));
+      datasetsBlocks.filter((dataset) => !dataset.get('isCopy'))
+        .sortBy('displayName');
+    }
 
     return datasetsBlocks;
   }),
@@ -835,7 +838,7 @@ export default ManageBase.extend({
   }),
   datasetFilter(dataset, index, array) {
     let parentsSet = this.get('parentsSet'),
-    name = dataset.get('name'),
+    name = dataset.get('displayName'),
     found = parentsSet.has(name);
     if (index === 0)
     {
@@ -1386,7 +1389,7 @@ export default ManageBase.extend({
     /** can update this .nest() to d3.group() */
     n = d3.nest()
     /* the key function will return undefined or null for datasets without parents, which will result in a key of 'undefined' or 'null'. */
-      .key(function(f) { let p = f.get && f.get('parent'); return p ? p.get('name') : f.get('parentName'); })
+      .key(function(f) { let p = f.get && f.get('parent'); return p ? p.get('displayName') : f.get('parentName'); })
       .entries(withParentOnly ? withParent : datasets);
     /** this reduce is mapping an array  [{key, values}, ..] to a hash {key : value, .. } */
     let grouped =
@@ -1410,7 +1413,7 @@ export default ManageBase.extend({
                 // dataset may be {unmatched: Array(n)} - skip this
                 if (! dataset.get) return result2;
                 let
-                  name = dataset.get('name'),
+                  name = dataset.get('displayName'),
                 /** children may be a DS.PromiseManyArray. It should be fulfilled by now. */
                 children = dataset.get('children');
                 if (children.content)
@@ -1459,7 +1462,7 @@ export default ManageBase.extend({
           // dataset may be {unmatched: Array(n)} - skip this
           if (! dataset.get) return result2;
           let
-            name = dataset.get('name');
+            name = dataset.get('displayName');
 
           function filterBlocks(dataset) {
             return me.datasetFilterBlocks(tabName, dataset);

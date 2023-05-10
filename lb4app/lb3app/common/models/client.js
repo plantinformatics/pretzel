@@ -72,8 +72,14 @@ module.exports = function(Client) {
             to: process.env.EMAIL_ADMIN,
             from: process.env.EMAIL_FROM,
             subject: 'New Pretzel User Registration',
+
             email_user: userInstance.email, // for template
             email_recipient: process.env.EMAIL_ADMIN, // for template
+            // these fields populate the template contents
+            user_name : userInstance.name,
+            user_institution : userInstance.institution,
+            user_project : userInstance.project,
+
             host: process.env.API_HOST,
             template: path.resolve(__dirname, '../../server/views/verify_admin.ejs'),
             redirect: '/admin-verified',
