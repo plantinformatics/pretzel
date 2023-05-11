@@ -1370,6 +1370,29 @@ export default Model.extend({
   /** Express a binSize relative to screen pixels, using yRange and domain. */
   pxSize(binSize, yRange, domain) { return yRange * binSize / intervalSize(domain); },
 
+  //----------------------------------------------------------------------------
+
+  /** Record the positions at which this block has features.
+
+   * This is used for VCF view blocks, whose features have a single-base position.
+   * The Features are created in frontend (only) from API results.
+   *
+   * This is used to implement genotype table dataset (block) intersections,
+   * which doesn't require a mapping from position to feature, but
+   * featurePositions could be a map to feature, or a sparse array[position] -> feature,
+   * or an interval tree, or a single-position tree.
+   */
+  addFeaturePositions(createdFeatures) {
+    const
+    fnName = 'addFeaturePositions',
+    featurePositions = this[Symbol.for('featurePositions')] || (
+      this[Symbol.for('featurePositions')] = new Set()
+    );
+
+    createdFeatures.forEach(feature => {
+      featurePositions.add(feature.get('value.0'));
+    });
+  },
 
   /*--------------------------------------------------------------------------*/
 

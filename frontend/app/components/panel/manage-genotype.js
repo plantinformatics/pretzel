@@ -1465,6 +1465,39 @@ export default class PanelManageGenotypeComponent extends Component {
 
   //----------------------------------------------------------------------------
 
+  /** @return those blocks which have positionFilter and featurePositions
+   */
+  get blockIntersections() {
+    const
+    blocks = this.brushedOrViewedVCFBlocksVisible
+      .filter(block => block[Symbol.for('featurePositions')] && 
+              true || (block[Symbol.for('positionFilter')] ?? null) !== null);
+    return blocks;
+  }
+
+  /** If blocks ("datasets") are selected for intersection filtering,
+   * filter an array of features.
+   * @return features, or a filtered copy of it.
+   */
+  featureFilterPre(block, features) {
+    const
+    fnName = 'featureFilterPre',
+    blocks = this.blockIntersections;
+    if (blocks.length) {
+      const
+      featurePositions = blocks.map(block => block[Symbol.for('featurePositions')]);
+
+      features = features.filter(feature => 
+        blocks.find((block, blockIndex) => {
+          const
+          positionIsInBlock = featurePositions[blockIndex].has(feature.get('value.0')),
+          out = positionIsInBlock !== true; // block[Symbol.for('positionFilter')];
+          return out;
+        }) === undefined);
+    }
+    return features;
+  }
+
   featureFilter(feature) {
     const
     MAF = feature.values.MAF,
@@ -1590,7 +1623,9 @@ export default class PanelManageGenotypeComponent extends Component {
         /** equivalent : this.gtDatasetIds */
         gtDatasetIds = visibleBlocks.mapBy('datasetId.id'),
         featuresArrays = visibleBlocks
-          .map((b) => b.featuresInBrush)
+        /* featureFilterPre() is expected to filter out most features,
+         * so apply it before rowLimit; */
+          .map((b) => this.featureFilterPre(b, b.featuresInBrush))
           .filter((features) => features.length)
           .map((features) => features.slice(0, this.rowLimit));
 

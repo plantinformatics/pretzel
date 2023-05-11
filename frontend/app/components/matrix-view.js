@@ -30,7 +30,7 @@ import {
 import { toTitleCase } from '../utils/string';
 import { thenOrNow } from '../utils/common/promises';
 import { tableRowMerge } from '../utils/draw/progressive-table';
-import { eltWidthResizable } from '../utils/domElements';
+import { eltWidthResizable, noKeyfilter } from '../utils/domElements';
 
 
 // -----------------------------------------------------------------------------
@@ -1038,7 +1038,7 @@ export default Component.extend({
     Handsontable.renderers.TextRenderer.apply(instance, arguments);
     const
     tSNP = $(td).text();
-    if ((tSNP !== undefined) && (tSNP !== '') && (tSNP !== '.')) {
+    if ((tSNP !== undefined) && (tSNP !== '') && (tSNP !== '.') && (tSNP !== '0')) {
       const
       haplotypes = this.haplotypes,
       haplotype = haplotypes[tSNP] || (haplotypes[tSNP] = {column : this.haplotypeColumn++}),
@@ -1711,6 +1711,7 @@ export default Component.extend({
     $(resizeSel).height(this.get('colHeaderHeight'));
     /** as well as passing vertical=true, also : class="resizer vertical" */
     let dragResize = eltWidthResizable(resizeSel, undefined, bind(this, this.resizedByDrag), /* vertical*/ true);
+    dragResize.filter(noKeyfilter/*filter*/);
     if (! dragResize) {
       dLog(fnName, resizeSel);
     }

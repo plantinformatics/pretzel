@@ -265,8 +265,9 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
           break;
 
         case 'POS' :
-          value = [ +value ];
+          value = +value;
           f['value_0'] = value;
+          value = [ value ];
           break;
 
         case 'ID' :
@@ -363,6 +364,7 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
   });
   selectedFeatures.pushObjects(selectionFeatures);
   block.set('featureCount', block.get('features.length'));
+  block.addFeaturePositions(createdFeatures);
 
 
   if (! columnNames || ! sampleNames) {
@@ -473,6 +475,7 @@ function addFeaturesGerminate(block, requestFormat, replaceResults, selectedFeat
 
   selectedFeatures.pushObjects(selectionFeatures);
   block.set('featureCount', block.get('features.length'));
+  block.addFeaturePositions(createdFeatures);
 
   let result = {createdFeatures, sampleNames};
   return result;
