@@ -8,12 +8,19 @@
 # optional - passed when called via 
 # @param fileName
 # @param useFile
+#
 # Required :
 # @param command	query | view | isec
-# @param datasetIdParam - names of VCF datasets, i.e. 1 or more datasetId, joined with !; 
-# where datasetId is a datablock not a reference / parent.
-# This is split into the array datasetIds.
+# @param datasetIdParam - name of VCF dataset directory to lookup
+# Currently the the mongo database id of the dataset maps directly to
+# the VCF dir name, but could be e.g. dataset.meta.vcfFilename.
+# The dataset is a datablock not a reference / parent.
 # @param scope		chromosome name, e.g. 1A
+# @param isecFlags	none, or e.g. '-n=2', '-n~1100'
+# @param isecDatasetIds	none, or names of VCF datasets,
+# i.e. 1 or more datasetId, joined with !; 
+# where datasetId is a datablock not a reference / parent.
+# This is split into the array isecDatasetIdsArray.
 # @param preArgs	remaining args : $*
 
 #  args to bcftools other than command vcfGz; named preArgs because they could
@@ -112,29 +119,32 @@ function chrFromArgs()
 
 
 set -x
-# If running within container then unused args fileName=$1 useFile=$2
+# If called directly from Node.js childProcess / spawn then fd 3,4 are
+# defined for returning warnings, errors, respectively.
+#
+# If running from Node.js spawn (e.g. within container) then unused args fileName=$1 useFile=$2
 # are passed.  If running from Flask server they are not passed.
 if [ -e /proc/self/fd/3 ]
 then
   fileName="$1"
   useFile="$2"
-  command="$3"
-  datasetIdParam="$4"
-  scope="$5"
+  shift 2
+  echo fileName="$fileName", useFile=$useFile,   >> $logFile
+fi
+
+  command="$1"
+  datasetIdParam="$2"
+  scope="$3"
+  isecFlags="$4"
+  isecDatasetIds="$5"
   shift 5
   # Switch off logging for preArgs, which contains samples which may be a large list.
   set +x
   preArgs="$*"
-  echo fileName="$fileName", useFile=$useFile, command="$command", datasetIdParam="$datasetIdParam", scope="$scope", preArgs=$preArgs  >> $logFile
-else
-  command="$1"
-  datasetIdParam="$2"
-  scope="$3"
-  shift 3
-  set +x
-  preArgs="$*"
-  echo command="$command", datasetIdParam="$datasetIdParam", scope="$scope", preArgs=$preArgs  >> $logFile
-fi
+  echo command="$command", datasetIdParam="$datasetIdParam", scope="$scope", \
+       isecFlags="$isecFlags", isecDatasetIds="$isecDatasetIds",	\
+       preArgs=$preArgs  >> $logFile
+
 set -x
 
 
@@ -181,7 +191,7 @@ datasetIdParam=$(echo "$datasetIdParam" | sed 's/[^-A-Za-z0-9._ ]/_/g')
 
 # not required for vcf : datasetId2dbName(), $datasetIdDir
 
-# $datasetId is used directly, instead of $(datasetId2dbName ).
+# $datasetId is used via dbName2Vcf(), instead of $(datasetId2dbName ).
 
 
 #-------------------------------------------------------------------------------
@@ -234,25 +244,31 @@ function bcftoolsCommand() {
   vcfGz="$1";     shift
   # ${@} is ${preArgs[@]}; used this way it is split into words correctly - i.e. 
   # '%ID\t%POS\t%REF\t%ALT[\t%TGT]\n' is a single arg.
+  # commonSNPs="isec_$isecDatasetIds"
   commonSNPs=all_common_SNPs.vcf
+  # prototype params
   vcfGzs_=(
     201028_40K_DAS5_samples_XT_exomeIDs/1A.vcf.gz
     Triticum_aestivum_IWGSC_RefSeq_v1.0_vcf_data/chr1A.vcf.gz)
-  if [ ${#vcfGzs_[@]} -gt 1 ]
+  if [ ${#isecDatasetIdsArray[@]} -gt 1 ]
   then
     if [ ! -f "$commonSNPs" ]
     then
-      2>&$F_ERR "$bcftools" isec -n=2 -c all -o "$commonSNPs" "${vcfGzs_[@]}"
+      if [ -z "$isecFlags" ]
+      then
+        isecFlags=-n=2
+      fi
+      2>&$F_ERR "$bcftools" isec $isecFlags -c all -o "$commonSNPs" "${vcfGzs_[@]}"
     fi
     # -R, --regions-file
     if [ "$command" = query ]
     then
       regionParams=($1 $2); shift 2;
       "$bcftools" view "${regionParams[@]}" -O v -R "$commonSNPs" "$vcfGz" | \
-	2>&$F_ERR "$bcftools" "$command" "${@}"
+        2>&$F_ERR "$bcftools" "$command" "${@}"
     else
       2>&$F_ERR "$bcftools" view -O v -R "$commonSNPs" \
-		"$vcfGz"
+                "$vcfGz"
     fi
   else
     2>&$F_ERR "$bcftools" "$command" "$vcfGz" "${@}"
@@ -268,27 +284,34 @@ then
   dev_result "$region"
   status=$?
 else 
-  datasetIds=($(echo "$datasetIdParam" | tr '!' ' '))
-  # result when break
-  status=1
-  for di in ${datasetIds[@]}; do
-    vcfGzs+=($(dbName2Vcf "$di"))
+  vcfGz=$(dbName2Vcf "$datasetIdParam")
+
+  # This string is joined with datasetIdsSeparator in vcf-genotype.js : vcfGenotypeLookup().
+  isecDatasetIdsArray=($(echo "$isecDatasetIds" | tr '!' ' '))
+  echo >> $logFile datasetIdParam="$datasetIdParam", isecDatasetIdsArray="${isecDatasetIdsArray[@]}"
+  status=0
+  vcfGzs=()
+  for datasetId in "${isecDatasetIdsArray[@]}"; do
+    # result when break
+    status=1
+    vcfGzs+=( $(dbName2Vcf $datasetId || break) )
     cd $serverDir
     status=0
   done
+
   # later versions of bash : dbName2Vcf $di || break ... | readarray -t vcfGzs
-  echo >> $logFile vcfGzs="${vcfGzs[@]}"
+  echo >> $logFile vcfGz="$vcfGz" vcfGzs="${vcfGzs[@]}"
   # vcfGzs[] includes datasetId/ for each dataset
   cd $serverDir/"$vcfDir"
 
     if [ $status -eq 0 ]
     then
+      # ${@} corresponds to the parameter preArgs.
       # Switch off logging for ${@} - contains preArgs, which contains samples which may be a large list.
       # That won't be needed when preArgs.samples is output to a file, and -S (--samples-file) used instead.
       # see vcf-genotype.js : vcfGenotypeLookup() : preArgs.samples
       # set +x
       # some elements in preArgs may contain white-space, e.g. format "%ID\t%POS[\t%TGT]\n"
-      vcfGz=${vcfGzs[0]}
       if ! time bcftoolsCommand "$command" "$vcfGz" "${@}"
       then
         echo 1>&$F_ERR 'Error:' "Unable to run bcftools $command $vcfGz $*"

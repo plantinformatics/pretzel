@@ -18,21 +18,42 @@ const { binEvenLengthRound, binBoundaries } = require('../utilities/block-featur
 
 
 /**
- * @param parent  name of parent or view dataset, or vcf directory name
+ * @param datasetDir  name of directory containing the VCF dataset
  * @param scope e.g. '1A'; identifies the vcf file, i.e. datasetId/scope.vcf.gz
- * @param preArgs args to be inserted in command line, additional to the parent / vcf file name.
+ * @param preArgs args to be inserted in command line, additional to the datasetDir / vcf dir name.
  * See comment in frontend/app/services/auth.js : vcfGenotypeLookup()
  * @param nLines if defined, limit the output to nLines.
  * @param dataOutCb passed to childProcess() - see comment there.
  * If undefined, then dataOutReplyClosureLimit(cb, nLines) is used.
  * @param cb
  */
-function vcfGenotypeLookup(parent, scope, preArgs, nLines, dataOutCb, cb) {
+function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
+  /** Split out the optional parameters which are passed as separate params for
+   * processing separately to the remainder of preArgs, which are inserted as a
+   * list into the command.  */
+  let {isecFlags, isecDatasetIds, ... preArgs} = preArgs_ || {};
   const
   fnName = 'vcfGenotypeLookup',
   headerOnly = preArgs.headerOnly,
   command = ! headerOnly && preArgs.requestFormat ? 'query' : 'view';
-  let moreParams = [command, parent, scope, '-r', preArgs.region ];
+  /* isec is only meaningful with >1 datasets. The caller
+   * vcfGenotypeLookupDataset() only passes isecDatasetIds when
+   * isecDatasetIds.length > 1
+   */
+  if (Array.isArray(isecDatasetIds) /*&& (isecDatasetIds.length > 1)*/) {
+    /** this is split in vcfGenotypeLookup.bash with tr '!' ' '  */
+    const datasetIdsSeparator = '!';
+    isecDatasetIds = isecDatasetIds.join(datasetIdsSeparator);
+  }
+  /** The params passed to spawn (node:child_process) are passed as options.args
+   * to ChildProcess.spawn (node:internal/child_process) which calls
+   * spawn(options) which converts non-strings to strings, e.g. arrays are
+   * joined with ',' into a single string.  undefined -> 'undefined'.
+   */
+  let moreParams = [
+    command, datasetDir, scope,
+    isecFlags || '', isecDatasetIds || '',
+    '-r', preArgs.region ];
   /** from BCFTOOLS(1) :
       -h, --header-only
           output the VCF header only
@@ -72,7 +93,7 @@ function vcfGenotypeLookup(parent, scope, preArgs, nLines, dataOutCb, cb) {
     moreParams = moreParams.concat('-S', '/dev/null');
   }
   /** avoid tracing samples, and moreParams[9] which is the samples. */
-  console.log(fnName, parent, preArgs.region, preArgs.requestFormat, samples?.length, moreParams.slice(0, 9));
+  console.log(fnName, datasetDir, preArgs.region, preArgs.requestFormat, samples?.length, moreParams.slice(0, 9));
   if (! dataOutCb) {
     dataOutCb = dataOutReplyClosureLimit(cb, nLines);
   }
@@ -124,7 +145,7 @@ exports.vcfGenotypeFeaturesCounts = function(block, interval, nBins = 10, isZoom
 
     const
     scope = block.name,
-    parent = block.datasetId,
+    datasetDir = block.datasetId,
     // may be able to omit domainInteger if ! isZoomed 
     domainInteger = interval.map((d) => d.toFixed(0)),
     region = scope + ':' + domainInteger.join('-'),
@@ -143,7 +164,10 @@ exports.vcfGenotypeFeaturesCounts = function(block, interval, nBins = 10, isZoom
     }
     const [blockArg, ...intervalArgs] = arguments;
     const dataOutCb = dataReduceClosure(sumCb);
-    vcfGenotypeLookup(parent, scope, preArgs, /*nLines*/undefined, dataOutCb, cb);
+    vcfGenotypeLookup(
+      datasetDir, scope,
+      preArgs, /*nLines*/undefined, dataOutCb, cb
+    );
 
     /* vcfGenotypeLookup() includes %REF\t%ALT, which could be omitted in this case. */
   }

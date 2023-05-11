@@ -1381,7 +1381,13 @@ export default class PanelManageGenotypeComponent extends Component {
       requestSamplesFiltered = userSettings.requestSamplesFiltered,
       /** If filtered or column-limited, then samples is a subset of All. */
       requestSamplesAll = userSettings.requestSamplesAll && ! requestSamplesFiltered && ! samplesLimitEnable,
-      requestOptions = {requestFormat, requestSamplesAll},
+      requestOptions = {requestFormat, requestSamplesAll};
+      if (/* datasets selected for intersection */ this.gtDatasetIds.length > 1) {
+        const isecDatasetIds = this.gtDatasetIds;
+        requestOptions.isecDatasetIds = isecDatasetIds;
+        requestOptions.isecFlags = '-n' + isecDatasetIds.length;
+      }
+      const
       textP = vcfGenotypeLookup(this.auth, this.apiServerSelectedOrPrimary, samples, domainInteger,  requestOptions, vcfDatasetId, scope, this.rowLimit);
       // re-initialise file-anchor with the new @data
       this.vcfExportText = null;

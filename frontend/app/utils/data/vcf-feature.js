@@ -73,6 +73,7 @@ function datasetId2Class(datasetId) {
  * Not used if requestSamplesAll
  * @param domainInteger  [start,end] of interval, where start and end are integer values
  * @param requestOptions :
+ * {requestFormat, requestSamplesAll, headerOnly},
  * . requestFormat 'CATG' (%TGT) or 'Numerical' (%GT for 01)
  * . headerOnly true means -h (--header-only), otherwise -H (--no-header)
  *
@@ -85,13 +86,12 @@ function vcfGenotypeLookup(auth, server, samples, domainInteger, requestOptions,
   fnName = 'vcfGenotypeLookup',
 
   region = scope + ':' + domainInteger.join('-'),
-  {requestFormat, requestSamplesAll, headerOnly} = requestOptions,
+  requestFormat = requestOptions.requestFormat,
   /** this dataset has tSNP in INFO field */
   requestInfo = requestFormat && (vcfDatasetId === 'Triticum_aestivum_IWGSC_RefSeq_v1.0_vcf_data'),
-  preArgs = {
-    region, samples, requestFormat,
-    requestSamplesAll, headerOnly, requestInfo
-  };
+  preArgs = Object.assign({
+    region, samples, requestInfo
+  }, requestOptions);
   // parent is .referenceDatasetName
 
 
