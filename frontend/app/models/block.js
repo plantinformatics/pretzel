@@ -1372,14 +1372,21 @@ export default Model.extend({
 
   //----------------------------------------------------------------------------
 
+  get positionFilter() {
+    const
+    dataset = this.get('datasetId.content'),
+    pf = dataset[Symbol.for('positionFilter')];
+    return pf;
+  },
+
   /** Record the positions at which this block has features.
 
    * This is used for VCF view blocks, whose features have a single-base position.
    * The Features are created in frontend (only) from API results.
    *
    * This is used to implement genotype table dataset (block) intersections,
-   * which doesn't require a mapping from position to feature, but
-   * featurePositions could be a map to feature, or a sparse array[position] -> feature,
+   * which doesn't require a mapping from position to feature - a Set is sufficient,
+   * but featurePositions could be a map to feature, or a sparse array[position] -> feature,
    * or an interval tree, or a single-position tree.
    */
   addFeaturePositions(createdFeatures) {

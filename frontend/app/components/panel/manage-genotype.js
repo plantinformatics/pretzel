@@ -646,6 +646,8 @@ export default class PanelManageGenotypeComponent extends Component {
     return visibleBlocks;
   }
 
+  @alias('brushedOrViewedVCFBlocksVisible') gtBlocks;
+
   @computed('brushedOrViewedVCFBlocks')
   get gtDatasets () {
     const
@@ -1383,7 +1385,11 @@ export default class PanelManageGenotypeComponent extends Component {
       requestSamplesAll = userSettings.requestSamplesAll && ! requestSamplesFiltered && ! samplesLimitEnable,
       requestOptions = {requestFormat, requestSamplesAll};
       if (/* datasets selected for intersection */ this.gtDatasetIds.length > 1) {
-        const isecDatasetIds = this.gtDatasetIds;
+        const
+        /** filter out null and undefined */
+        isecDatasetIds = this.gtDatasets
+          .filter(dataset => 'boolean' === typeof dataset[Symbol.for('positionFilter')])
+          .mapBy('id');
         requestOptions.isecDatasetIds = isecDatasetIds;
         requestOptions.isecFlags = '-n' + isecDatasetIds.length;
       }
@@ -1465,13 +1471,20 @@ export default class PanelManageGenotypeComponent extends Component {
 
   //----------------------------------------------------------------------------
 
+  @tracked
+  datasetPositionFilterChangeCount = 0;
+  @action
+  changeDatasetPositionFilter(dataset, pf) {
+    this.datasetPositionFilterChangeCount++;
+  }
+
   /** @return those blocks which have positionFilter and featurePositions
    */
   get blockIntersections() {
     const
     blocks = this.brushedOrViewedVCFBlocksVisible
       .filter(block => block[Symbol.for('featurePositions')] && 
-              true || (block[Symbol.for('positionFilter')] ?? null) !== null);
+              ((block.positionFilter ?? null) !== null));
     return blocks;
   }
 
@@ -1485,15 +1498,21 @@ export default class PanelManageGenotypeComponent extends Component {
     blocks = this.blockIntersections;
     if (blocks.length) {
       const
+      /** refer : models/block.js : addFeaturePositions()  */
       featurePositions = blocks.map(block => block[Symbol.for('featurePositions')]);
+      const feature0 = features[0];
 
       features = features.filter(feature => 
         blocks.find((block, blockIndex) => {
           const
           positionIsInBlock = featurePositions[blockIndex].has(feature.get('value.0')),
-          out = positionIsInBlock !== true; // block[Symbol.for('positionFilter')];
+          out = positionIsInBlock !== block.positionFilter;
           return out;
         }) === undefined);
+      /** If all are filtered out, the headers are not displayed, so retain 1 feature. */
+      if (! features.length && feature0) {
+        features = [feature0];
+      }
     }
     return features;
   }
@@ -1597,10 +1616,11 @@ export default class PanelManageGenotypeComponent extends Component {
       const userSettings = this.args.userSettings;
       let
       referenceBlock = this.axisBrush?.get('block'),
-      /** expect : block.referenceBlock.id === referenceBlock.id
-       * Related : .brushedOrViewedVCFBlocksVisible()
+      /** parallel to .gtDatasetIds.
+       * expect : block.referenceBlock.id === referenceBlock.id
+       * Based on : .brushedOrViewedVCFBlocksVisible()
        */
-      blocks = this.brushedVCFBlocks.map((abb) => abb.block);
+      visibleBlocks = this.gtBlocks;
       /* Filter out blocks
        * which are isZoomedOut.  This is one way to enable .rowLimit
        * (or block.featuresCountsThreshold) to limit the
@@ -1611,17 +1631,11 @@ export default class PanelManageGenotypeComponent extends Component {
         .filter((b) => 
             b.get('featuresCountIncludingBrush') <= this.rowLimit);
        */
-      if (blocks.length === 0) {
-        // related : viewedVCFBlocks()
-        blocks = this.blockService.viewed.filter((b) => b.get('isVCF'));
-      }
-      dLog(fnName, blocks.mapBy('id'));
-      if (blocks.length) {
+      dLog(fnName, visibleBlocks.mapBy('id'));
+      if (visibleBlocks.length) {
         const
-        visibleBlocks = blocks
-          .filterBy('visible'),
-        /** equivalent : this.gtDatasetIds */
-        gtDatasetIds = visibleBlocks.mapBy('datasetId.id'),
+        // this.gtDatasets is equivalent to visibleBlocks.mapBy('datasetId.content'),
+        gtDatasetIds = this.gtDatasetIds,
         featuresArrays = visibleBlocks
         /* featureFilterPre() is expected to filter out most features,
          * so apply it before rowLimit; */
@@ -1778,6 +1792,7 @@ export default class PanelManageGenotypeComponent extends Component {
     'args.userSettings.mafThreshold',
     /** callRateThreshold -> sampleFilter, passed to vcfFeatures2MatrixView{,Rows{,Result}} -> sampleIsFilteredOut{,Blocks} */
     'args.userSettings.callRateThreshold',
+    'datasetPositionFilterChangeCount',
   )
   get selectedSampleEffect () {
     const fnName = 'selectedSampleEffect';

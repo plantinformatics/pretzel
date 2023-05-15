@@ -168,12 +168,14 @@ function nRows2HeightEx(nRows) {
  *
  * Column Names :
  * @param columnNamesParam  names of all columns
+ * @param gtDatasets parallel to gtDatasetColumns. gtDatasets[i].id === gtDatasetColumns[i]
  * @param gtDatasetColumns names of Genotype / VCF feature name ("Block") columns
  * @param datasetColumns names of non-Genotype feature name ("Block") columns
  * @param extraDatasetColumns names of non-Genotype feature .values[] fieldNames to display in columns
  *
  * @param selectBlock action
- * @param featureColumnDialogDataset action
+ * @param changeDatasetPositionFilter action (dataset, pf)
+ * @param featureColumnDialogDataset action (datasetId)
  * @param tablePositionChanged action
  * @param displayForm requestFormat
  *
@@ -578,12 +580,16 @@ export default Component.extend({
   getRowAttribute(table, visualRowIndex, visualColIndex) {
     let feature;
     const
+    fnName = 'getRowAttribute',
     physicalRow = table.toPhysicalRow(visualRowIndex);
     feature = this.data[physicalRow]?.[featureSymbol];
 
     const gtPlainRender = this.urlOptions.gtPlainRender;
-    if (! feature && table && (gtPlainRender & 0b10000000)) {
+    if (! feature && table /*&& (gtPlainRender & 0b10000000)*/) {
       feature = getRowAttribute(table, visualRowIndex, visualColIndex);
+      if (feature) {
+        dLog(fnName, feature, feature?.get('blockId.mapName'));
+      }
     }
 
     if (! feature && false) {
@@ -627,7 +633,7 @@ export default Component.extend({
     let cellProperties = {};
     let selectedBlock = this.get('selectedBlock');
     let numericalData = ! this.blockSamples && this.get('numericalData');
-    const sampleName = columnName2SampleName(prop);
+    const sampleName = prop && columnName2SampleName(prop);
     /** much of this would be better handled using table options.columns,
      * as is done in table-brushed.js : createTable().
      */
@@ -730,9 +736,40 @@ export default Component.extend({
       /* this.datasetColumns is defined by gtMergeRows. */
       if (row === -1) { // if row is header.
         const datasetId = columnName;
-        this.attrs.featureColumnDialogDataset(datasetId);
+        this.featureColumnDialogDataset(datasetId);
       }
     }
+  },
+
+  /**
+   * Called when user clicks in column header, i.e. row === -1.
+   * @return true if this column is one of .gtDatasetColumns[]
+   */
+  toggleDatasetPositionFilter(col) {
+    const
+    fnName = 'toggleDatasetPositionFilter',
+    columnName = this.columnNames[col],
+    isGt = this.gtDatasetColumns.includes(columnName);
+
+    if (isGt) {
+      /** toggle dataset positionFilter */
+      const
+      dataset = this.colToDataset(col);
+      if (dataset) {
+        /* null -> true -> false */
+        let pf = dataset[Symbol.for('positionFilter')];
+        switch (pf) {
+        default    :
+        case null  : pf = true; break;
+        case true  : pf = false; break;
+        case false : pf = null; break;
+        }
+        dLog(fnName, dataset[Symbol.for('positionFilter')], '->', pf, dataset.id);
+        dataset[Symbol.for('positionFilter')] = pf;
+        this.changeDatasetPositionFilter(dataset, pf);
+      }
+    }
+    return isGt;
   },
 
   // ---------------------------------------------------------------------------
@@ -741,16 +778,18 @@ export default Component.extend({
     let block;
     if ((coords.col == -1) || (coords.col < this.colSample0)) {
       // no column or column does not identify a block
-    } else if (this.blockSamples) {
+    } else if ((coords.row >= 0) && this.blockSamples) {
       let feature = this.getRowAttribute(this.table, coords.row, coords.col);
       /* no feature when select on column header.
        * block is not currently used when blockSamples anyway.
        */
       block = feature?.get('blockId');
     } else if (coords.row == -1) {
-      let col_name = $(td).find('span').text();
+      if (! this.toggleDatasetPositionFilter(coords.col)) {
+      let col_name = td.title || $(td).find('span').text();
       // ! this.blockSamples, so get .columns from .displayData
       block = this.get('columns')[col_name];
+      }
     }
     /* selectBlock() causes a switch to the Dataset tab, which is not desired
      * when using the genotype tab.
@@ -1121,8 +1160,10 @@ export default Component.extend({
       [fieldName, datasetId] = columnName.split('\t'),
       datasetId_ = datasetId || (dataset && Ember_get(dataset, 'id')),
       datasetClass = datasetId_ ? ' col-Dataset-' + datasetId2Class(datasetId_) : '',
+      // or dataset = this.colToDataset(col), using map() index;
+      positionFilterClass = this.positionFilterClass(columnName) || '',
       extraClassName = this.columnNameToClasses(fieldName);
-      return '<div class="head' + extraClassName + datasetClass + '">' + fieldName + '</div>';
+      return '<div class="head' + extraClassName + datasetClass  + '">' + positionFilterClass + fieldName + '</div>';
     });
     return colHeaders;
   }),
@@ -1134,6 +1175,21 @@ export default Component.extend({
         (columnNames) => columnNames?.includes(columnName));
     return isDatasetColumn;
   },
+  /** Map from physical columnIndex to dataset.
+
+   * This supports only gtDatasetColumns ; to support also datasetColumns /
+   * nonVCF.columnNames and extraDatasetColumns would require passing the
+   * corresponding datasets as params to matrix-view.
+   */
+  getColAttribute(col) {
+    const dataset = this.gtDatasets[col];
+    return dataset;
+  },
+  colToDataset(col) {
+    const dataset = this.getColAttribute(col);
+    return dataset;
+  },
+
 
   /** Map from columnName to CSS class names for the header element or data cell.
    * Used by colHeaders() and columnNamesToColumnOptions().
@@ -1188,6 +1244,19 @@ export default Component.extend({
         return options;
       });
     return columns;
+  },
+  positionFilterClass(columnName) {
+    let className;
+    const
+    col = this.gtDatasetColumns.indexOf(columnName),
+    dataset = this.colToDataset(col);
+    let pf;
+    if (dataset &&
+        (typeof (pf = dataset[Symbol.for('positionFilter')]) === "boolean")) {
+      // possibly : 'col-positionFilter-' + pf
+      className = pf ? '+' : '-';
+    }
+    return className;
   },
   /** Depending on gtMergeRows :       false | true
    * the rowHeader (left) column is :  Name  | Position

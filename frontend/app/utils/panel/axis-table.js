@@ -179,6 +179,9 @@ function afterOnCellMouseOverClosure(hasTable) {
  * @param table HandsOnTable
  * @param coords {row, col}  as passed to afterOnCellMouseDown
  *  coords 	CellCoords 	Hovered cell's visual coordinate object.
+ * coords.col may be -1; this is seen in calls from
+ * afterOnCellMouseOverClosure(), possibly when the mouse is hovered
+ * on the row header
  * @return feature, or undefined if (coords.row === -1)
  */
 function tableCoordsToFeature(table, coords) {
@@ -188,7 +191,7 @@ function tableCoordsToFeature(table, coords) {
     /* this may be ^A (Select All), or click outside, or click in header row.
      * No feature associated with those so return undefined.
      */
-  } else {
+  } else if (table) {
     // getDataAtCell(coords.row, coords.col)
     // table?.getDataAtRow(coords.row);
 
@@ -197,7 +200,9 @@ function tableCoordsToFeature(table, coords) {
      * data object as .feature
      * coords.{row,col} are visual indexes, as required by getRowAttribute().
      */
-    feature = table && getRowAttribute(table, coords.row, /*col*/undefined);
+    const col = coords.col === -1 ? 0 : coords.col;
+    feature = getRowAttribute(table, coords.row, col) ||
+      getRowAttribute(table, coords.row, /*col*/undefined);
     /*  for dataIsColumns (manage-genotype / matrix-view), this is the Ember
      *  data model feature object; for table-brushed this is the selection
      *  feature, which has attribute .feature which is the Ember object.
