@@ -333,6 +333,20 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
         // in this case feature.blockId is block
         let store = feature.blockId.get('store');
 
+        /** name is used in CSS selector, e.g. in utils/draw/axis.js :
+         * axisFeatureCircles_selectOne{,InAxis}(), and . and : are not valid
+         * for that use. */
+        const separator = '_';
+        if (feature._name === '.') {
+          // Use chr:position:ref:alt, with separator in place of ':'
+          feature._name = block.name + separator + feature.value[0];
+          ['ref', 'alt'].forEach(a => {
+            const value = feature.values[a];
+            if (value) {
+              feature._name += separator + value;
+            }
+          });
+        }
         // .id is used by axisFeatureCircles_eltId().
         // ._name may be also added to other blocks.
         feature.id = block.id + '_' + feature._name;
