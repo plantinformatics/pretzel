@@ -48,7 +48,7 @@ esac
 unused_var=${toolsDev=$resourcesDir/tools/dev}
 unused_var=${bcftools=bcftools}
 # or /faidx after blast/
-unused_var=${blastDir:=/mnt/data_blast/blast}
+unused_var=${blastDir:=/mnt/data_blast}
 # unused_var=${vcfDir:=$blastDir/../vcf}
 # blastDir=tmp/blast
 set -x
@@ -222,7 +222,9 @@ function dbName2Vcf() {
     echo 1>&$F_ERR 'Error:' "VCF file is not configured", "$datasetId", "$chr", "$vcfGz"
   else
     status=0
-    if [ ! -f "$vcfGz".csi ]
+    # If file does not have an index (.csi), create it.
+    # Use -e instead of -f, as csi file could be a file or symbolic link.
+    if [ ! -e "$vcfGz".csi ]
     then
       if ! bcftools index "$vcfGz"
       then
