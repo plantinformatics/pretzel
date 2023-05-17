@@ -347,6 +347,10 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
             }
           });
         }
+        if (feature._name) {
+          feature._name = datasetId2Class(feature._name);
+        }
+
         // .id is used by axisFeatureCircles_eltId().
         // ._name may be also added to other blocks.
         feature.id = block.id + '_' + feature._name;
