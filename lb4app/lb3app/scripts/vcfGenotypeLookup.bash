@@ -241,27 +241,38 @@ function dbName2Vcf() {
 }
 
 
-function bcftoolsCommand() {
-  command="$1";   shift
-  vcfGz="$1";     shift
-  # ${@} is ${preArgs[@]}; used this way it is split into words correctly - i.e. 
-  # '%ID\t%POS\t%REF\t%ALT[\t%TGT]\n' is a single arg.
-  # commonSNPs="isec_$isecDatasetIds"
-  commonSNPs=all_common_SNPs.vcf
-  # prototype params
-  vcfGzs_=(
-    201028_40K_DAS5_samples_XT_exomeIDs/1A.vcf.gz
-    Triticum_aestivum_IWGSC_RefSeq_v1.0_vcf_data/chr1A.vcf.gz)
-  if [ ${#isecDatasetIdsArray[@]} -gt 1 ]
+function prepareCommonSNPs() {
+  # Name is based on the combined names of the datasets to be intersected.
+  commonSNPs="isec.$chr.$isecDatasetIds.vcf"
+  if [ ${#vcfGzs[@]} -gt 0 ]
   then
     if [ ! -f "$commonSNPs" ]
     then
       if [ -z "$isecFlags" ]
       then
-        isecFlags=-n=2
+        isecFlags=-n=${#vcfGzs[@]}
+      else
+        # provide 0 return status
+        true
       fi
-      2>&$F_ERR "$bcftools" isec $isecFlags -c all -o "$commonSNPs" "${vcfGzs_[@]}"
+      2>&$F_ERR "$bcftools" isec $isecFlags -c all -o "$commonSNPs" "${vcfGzs[@]}"
+    else
+      true
     fi
+  else
+    true
+  fi
+
+}
+
+
+function bcftoolsCommand() {
+  command="$1";   shift
+  vcfGz="$1";     shift
+  # ${@} is ${preArgs[@]}; used this way it is split into words correctly - i.e. 
+  # '%ID\t%POS\t%REF\t%ALT[\t%TGT]\n' is a single arg.
+  if [ -n "$vcfGz" ]
+  then
     # -R, --regions-file
     if [ "$command" = query ]
     then
@@ -306,7 +317,8 @@ else
   # vcfGzs[] includes datasetId/ for each dataset
   cd $serverDir/"$vcfDir"
 
-    if [ $status -eq 0 ]
+  # if $vcfGz is empty then dbName2Vcf() has output an error.
+    if [ $status -eq 0 -a -n "$vcfGz" ]
     then
       # ${@} corresponds to the parameter preArgs.
       # Switch off logging for ${@} - contains preArgs, which contains samples which may be a large list.
@@ -314,9 +326,15 @@ else
       # see vcf-genotype.js : vcfGenotypeLookup() : preArgs.samples
       # set +x
       # some elements in preArgs may contain white-space, e.g. format "%ID\t%POS[\t%TGT]\n"
-      if ! time bcftoolsCommand "$command" "$vcfGz" "${@}"
+      #
+      # Within () vars set by prepareCommonSNPs are available to bcftoolsCommand.
+      if ! time ( prepareCommonSNPs && bcftoolsCommand "$command" "$vcfGz" "${@}" )
       then
+        status=$?
         echo 1>&$F_ERR 'Error:' "Unable to run bcftools $command $vcfGz $*"
+        # Possibly transient failure because 1 request is doing isec
+        # and another tries to read empty isec output.
+        [ -n "$isecDatasetIds" ] && 1>&$F_ERR ls -gGd "$commonSNPs"
       else
         status=$?	# 0
       fi
