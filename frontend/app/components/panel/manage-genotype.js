@@ -1387,11 +1387,16 @@ export default class PanelManageGenotypeComponent extends Component {
       if (/* datasets selected for intersection */ this.gtDatasetIds.length > 1) {
         const
         /** filter out null and undefined */
-        isecDatasetIds = this.gtDatasets
-          .filter(dataset => 'boolean' === typeof dataset[Symbol.for('positionFilter')])
-          .mapBy('id');
+        isecDatasets = this.gtDatasets
+          .filter(dataset => 'boolean' === typeof dataset[Symbol.for('positionFilter')]),
+        isecDatasetIds = isecDatasets
+          .mapBy('id'),
+        flags = isecDatasets.map(dataset => dataset[Symbol.for('positionFilter')]),
+        allTrue = flags.findIndex(flag => !flag) === -1,
+        isecFlags = allTrue ? isecDatasetIds.length :
+          '~' + flags.map(flag => flag ? '1' : '0').join('');
         requestOptions.isecDatasetIds = isecDatasetIds;
-        requestOptions.isecFlags = '-n' + isecDatasetIds.length;
+        requestOptions.isecFlags = '-n' + isecFlags;
       }
       const
       textP = vcfGenotypeLookup(this.auth, this.apiServerSelectedOrPrimary, samples, domainInteger,  requestOptions, vcfDatasetId, scope, this.rowLimit);
