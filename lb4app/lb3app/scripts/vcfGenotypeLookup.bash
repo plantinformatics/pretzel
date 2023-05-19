@@ -271,7 +271,7 @@ function bcftoolsCommand() {
   vcfGz="$1";     shift
   # ${@} is ${preArgs[@]}; used this way it is split into words correctly - i.e. 
   # '%ID\t%POS\t%REF\t%ALT[\t%TGT]\n' is a single arg.
-  if [ -n "$vcfGz" ]
+  if [ ${#isecDatasetIdsArray[@]} -gt 0 ]
   then
     # -R, --regions-file
     if [ "$command" = query ]
