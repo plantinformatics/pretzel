@@ -241,9 +241,12 @@ function dbName2Vcf() {
 }
 
 
+# Use bcftools isec to prepare a list of common SNPs between $isecDatasetIds ($vcfGzs).
+# Uses $isecFlags, $chr.
+# Sets $commonSNPs
 function prepareCommonSNPs() {
-  # Name is based on the combined names of the datasets to be intersected.
-  commonSNPs="isec.$chr.$isecDatasetIds.vcf"
+  # Name is based on the combined names of the datasets + chrs + isecFlags to be intersected.
+  commonSNPs="isec.$isecFlags.$chr.$isecDatasetIds.vcf"
   if [ ${#vcfGzs[@]} -gt 0 ]
   then
     if [ ! -f "$commonSNPs" ]
@@ -251,21 +254,25 @@ function prepareCommonSNPs() {
       if [ -z "$isecFlags" ]
       then
         isecFlags=-n=${#vcfGzs[@]}
+        commonSNPs="isec.$isecFlags.$chr.$isecDatasetIds.vcf"
       else
         # provide 0 return status
         true
       fi
-      2>&$F_ERR "$bcftools" isec $isecFlags -c all -o "$commonSNPs" "${vcfGzs[@]}"
+      2>&$F_ERR time "$bcftools" isec $isecFlags -c all -o "$commonSNPs" "${vcfGzs[@]}"
     else
       true
     fi
   else
     true
   fi
-
 }
 
-
+# Execute the bcftools command $command, applied to $vcfGz, and using $commonSNPs if isecDatasetIdsArray is not empty, 
+# and using params, which are of the form -r 1A:1188384-1191531
+# @param command
+# @param vcfGz
+# @param ...regionParams
 function bcftoolsCommand() {
   command="$1";   shift
   vcfGz="$1";     shift
@@ -326,17 +333,15 @@ else
       # see vcf-genotype.js : vcfGenotypeLookup() : preArgs.samples
       # set +x
       # some elements in preArgs may contain white-space, e.g. format "%ID\t%POS[\t%TGT]\n"
-      #
-      # Within () vars set by prepareCommonSNPs are available to bcftoolsCommand.
-      if ! time ( prepareCommonSNPs && bcftoolsCommand "$command" "$vcfGz" "${@}" )
+      if prepareCommonSNPs && time bcftoolsCommand "$command" "$vcfGz" "${@}"
       then
+        status=$?	# 0
+      else
         status=$?
-        echo 1>&$F_ERR 'Error:' "Unable to run bcftools $command $vcfGz $*"
+        echo 1>&$F_ERR 'Error:' "Unable to run bcftools $command $datasetIdParam $scope $isecFlags $isecDatasetIds $commonSNPs $vcfGz $*"
         # Possibly transient failure because 1 request is doing isec
         # and another tries to read empty isec output.
         [ -n "$isecDatasetIds" ] && 1>&$F_ERR ls -gGd "$commonSNPs"
-      else
-        status=$?	# 0
       fi
       set -x
     fi
