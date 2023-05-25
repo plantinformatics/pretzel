@@ -347,7 +347,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   }),
   /** @return the intersection of .domain, which incorporates .zoomedDomain, and .brushedDomain if defined.
    */
-  zoomedAndOrBrushedDomain : computed('brushedRegion', function () {
+  zoomedAndOrBrushedDomain : computed('brushedRegion', 'domain.{0,1}', function () {
     let domain = this.domain;
     const brushedDomain = this.brushedDomain;
     if (brushedDomain) {

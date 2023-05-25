@@ -1719,7 +1719,7 @@ export default class PanelManageGenotypeComponent extends Component {
               /** instead of this.selectedSamples (i.e. of lookupDatasetId), show
                * selected samples of all .brushedVCFBlocks.
                */
-              const selectedSamplesOfBrushed = this.blocksSelectedSamples(blocks);
+              const selectedSamplesOfBrushed = this.blocksSelectedSamples(visibleBlocks);
               if (selectedSamplesOfBrushed.length) {
                 sampleNames = selectedSamplesOfBrushed;
               }
@@ -2205,6 +2205,8 @@ export default class PanelManageGenotypeComponent extends Component {
   tablePositionChanged(features) {
     const fnName = 'tablePositionChanged';
     dLog(fnName, features);
+    // The caller may pass empty features[] to indicate the table is empty.
+    features = features.filter(f => f);
     if (features?.length) {
       const
       values = features.mapBy('value').flat(),
@@ -2215,6 +2217,12 @@ export default class PanelManageGenotypeComponent extends Component {
       axis1d = axes[0];
       axis1d.set('tablePosition', valueExtent);
       /* related : this.brushedOrViewedVCFAxes // axis-1d [] */
+    } else {
+      const axes = this.brushedOrViewedVCFAxes;
+      if (axes.length === 1) {
+        const axis1d = axes[0];
+        axis1d.set('tablePosition', null);
+      }
     }
   }
 

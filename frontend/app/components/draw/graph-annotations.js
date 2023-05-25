@@ -126,9 +126,10 @@ export default class DrawGraphAnnotationsComponent extends Component {
     model = this.args.model,
     tablesPanelRight = model.controls.window.tablesPanelRight,
     tableDim = this.tableYDimensions,
-    tableRowInterval = tableDim && this.tableRowInterval(tableDim),
+    tableRowInterval = tableDim && tableDim.offsetHeight && this.tableRowInterval(tableDim),
     layoutRight = model.layout.right,
-    tableIsVisible = tableDim && tablesPanelRight && layoutRight.visible && (layoutRight.tab === 'genotype'),
+    tableIsVisible = tableDim && tableDim.offsetHeight &&
+      tablesPanelRight && layoutRight.visible && (layoutRight.tab === 'genotype'),
     axes = tableIsVisible ? this.args.rightAxes || [] : [],
     stackLocation = this.axis1d?.location();
     if (selections) {
@@ -140,7 +141,10 @@ export default class DrawGraphAnnotationsComponent extends Component {
         .attr('class', arrowName)
         .attr('id', arrowIdFn),
       pM = pE.merge(pS);
-      pM.attr('d', axis1d => this.annotationPath(axis1d, tableX, tableRowInterval));
+      pM
+        .transition().duration(500)
+        .attr('d', axis1d => this.annotationPath(axis1d, tableX, tableRowInterval));
+      pS.exit().remove();
       if (trace) {
         dLog(fname, axes, viewportWidth, tableX, stackLocation, pS.nodes(), pE.nodes(), pM.node(), pM.nodes());
       }
@@ -174,7 +178,7 @@ export default class DrawGraphAnnotationsComponent extends Component {
         return path_;
       }, d3.path());
       if (trace) {
-        dLog(fname, intervalPx, interval, axisX, tablePosition, path);
+        dLog(fname, intervalPx, interval, axisX, tablePosition, tableRowInterval, path);
       }
     }
     return path;
@@ -186,9 +190,11 @@ export default class DrawGraphAnnotationsComponent extends Component {
     'axis1d.zoomed',
   )
   get renderEffect() {
-    later(this.renderOnceFn, 200);
+    // wait until after matrix-view.js : didRender() { ... renderOnceTable, 500 )
+    later(this.renderOnceFn, 500 + 300);
   }
 
+  @alias('args.model.userSettings.genotype.columnHeaderHeight') columnHeaderHeight;
   @computed(
     'axis1d.tablePosition',
     // .currentPosition.yDomain.{0,1}',	// Throttled
@@ -197,11 +203,13 @@ export default class DrawGraphAnnotationsComponent extends Component {
     'args.stacksView.oa.graphFrame.viewportWidth',
     'args.model.controls.window.tablesPanelRight',
     'args.model.layout.right.tab',
+    // used in renderGroup() -> renderAnnotations() -> annotationPath() -> tableRowInterval()
+    'columnHeaderHeight',
     // 'axis1d.axis2d.allocatedWidthRect',
     'axis1d.axis2d.allocatedWidthsMax.centre',
   )
   get zoomEffect() {
-    this.renderAnnotations();
+    later(this.renderOnceFn, 500 + 300);
   }
 
 
@@ -232,18 +240,20 @@ export default class DrawGraphAnnotationsComponent extends Component {
       offsetHeight = tableDiv.offsetHeight,// : 830
       offsetTop = tableDiv.offsetTop; // : 104
       dim = {offsetTop, offsetHeight};
-      dLog(dim, tableDiv);
+      dLog(fname, dim, tableDiv);
     }
     return dim;
   }
 
   tableRowInterval(tableDim) {
     const
-    genotypeSettings = this.args.model.userSettings.genotype,
     /** 300 is default of defaultColumnHeaderHeight(); could use .colHeaderHeight. */
-    columnHeaderHeight = genotypeSettings.columnHeaderHeight || 300,
-    interval = ! tableDim ? undefined :
-      [tableDim.offsetTop + columnHeaderHeight, tableDim.offsetHeight];
+    columnHeaderHeight = this.columnHeaderHeight || 300;
+    let interval;
+    if (tableDim) {
+      const top = interval = tableDim.offsetTop + columnHeaderHeight - 40;
+      interval = [Math.max(0, top), tableDim.offsetHeight + 80];
+    }
     return interval;
   }
 

@@ -31,7 +31,7 @@ import { toTitleCase } from '../utils/string';
 import { thenOrNow } from '../utils/common/promises';
 import { tableRowMerge } from '../utils/draw/progressive-table';
 import { eltWidthResizable, noKeyfilter } from '../utils/domElements';
-
+import { sparseArrayFirstIndex } from '../utils/common/arrays';
 
 // -----------------------------------------------------------------------------
 
@@ -520,6 +520,7 @@ export default Component.extend({
     }
 
     this.dragResizeListen();
+    this.afterScrollVertically_tablePosition();
   },
 
   highlightFeature,
@@ -553,6 +554,9 @@ export default Component.extend({
 
   /** After user scroll, pass the features of first and last visible rows to
    * tablePositionChanged().
+   *
+   * This is also called in {create,update}Table() so that tablePosition has an
+   * initial value before user scroll.
    */
   afterScrollVertically_tablePosition() {
     const
@@ -560,12 +564,106 @@ export default Component.extend({
     table = this.table,
     /** refn : https://github.com/handsontable/handsontable/issues/2429#issuecomment-406616217 */
     wtScroll = table.view.wt.wtScroll,
+    /** When called from event afterScrollVertically,
+     * .get{First,Last}VisibleRow() are defined; they may be -1 otherwise, e.g.
+     * table is empty / not initialised or no scroll yet.
+     */
     rows = [wtScroll.getFirstVisibleRow(),
-            wtScroll.getLastVisibleRow()],
-    //[0, table.countVisibleRows() - 1],
-    features = rows.map(row => this.getRowAttribute(table, row, 0));
-
+            wtScroll.getLastVisibleRow()];
+    let features;
+    if ((rows[0] === -1) || (rows[1] === -1)) {
+      features = this.getLimitFeatures();
+    } else {
+      /* considered using as a fall-back : rows = [0, table.countVisibleRows() - 1],
+       * but getLimitFeatures() is more direct.
+       */
+      features = rows.map(row => this.getRowAttribute(table, row, 0));
+    }
     this.tablePositionChanged(features);
+  },
+
+  /** Lookup the vertical position of the first and last visible rows.
+   * The position is relative to .ht_master > <table>
+   * The .ht_master > <table> has the same vertical position.
+   *
+   * Related : getLimitRowsPositions_jQuery(), which returns a good result in these cases when this function does not :
+   * after scroll : [ null, null ]
+   * after switching to features tab and back : Array [ 0, 0 ]
+   */
+  getLimitRowsPositions() {
+    const
+    table = this.table,
+    /* 0 is the first visible row, so expect that countVisibleRows()-1 is the
+     * last visible row; in devel it has appeared that countVisibleRows() is the
+     * last visible row.
+     * Related : table.countRenderedRows().
+     */
+    rows = [0, table.countVisibleRows()-1],
+    offsetTops = rows.map(rowIndex => {
+      const
+      /** may be null. */
+      td = table.getCell(rowIndex, 0),
+      top = td && (td.offsetTop + (rowIndex ? td.offsetHeight / 2 : 0));
+      return top;
+    });
+    return offsetTops;
+  },
+
+  /** Equivalent to getLimitRowsPositions(), using jQuery.
+   * It has been seen that this returned a result when getLimitRowsPositions()
+   * returns nulls from getCell() -> null.
+   * @return [top, bottom]  heights are not integers (but should be)
+   */
+  getLimitRowsPositions_jQuery() {
+    /** the elements in .ht_master and .ht_clone_left share the same top / height.     */
+    const
+    trs$ = $('div#observational-table.handsontable > .ht_master > .wtHolder > .wtHider > .wtSpreader > table.htCore > tbody > tr'),
+    /** .last() is equivalent to .at(-1); it returns a jQuery selection */
+    limitTr$ = [$(trs$[0]), $(trs$.last()[0])],
+    ths$ = limitTr$.map(tr$ => tr$.find("th")),
+    tops = ths$.map((th$, i) => th$.position().top + (i ? th$.height() : 0));
+    return tops;
+  },
+
+
+  /** @return [first, last] first and last visible features
+   */
+  getLimitFeatures() {
+    let features = [];
+    /** displayDataRows is undefined if empty. In that case (gtMergeRows) may be
+     * defined, with .length 0, so the result is undefined, as required.
+     */
+    if (this.displayDataRows) {
+      const d = this.displayDataRows;
+      features[0] = d[sparseArrayFirstIndex(d)];
+      features[1] = d.at(-1);
+    } else if (this.displayData) {
+      const f = this.displayData.find(d => d.features)?.features;
+      if (f) {
+        features[0] = f[0];
+        features[1] = f.at(-1);
+      }
+    }
+    /* both cases above (gtMergeRows : displayData{Rows,}) return row data features, e.g. :
+     * {
+     *   <datasetId>: String { "scaffold38755_1344396" },
+     *   Alt: Object { name: "20102 scaffold38755_1344396", value: "T", Symbol("feature"): {...} },
+     *   Name: String { "scaffold38755_1344396" },
+     *   Position: 1344396,
+     *   Ref: Object { name: "20102 scaffold38755_1344396", value: "G", Symbol("feature"): {...} },
+     * }
+     * or (displayData) :
+     * Object {
+     *   name: "scaffold44309_642586"
+     *   value: "scaffold44309_642586"
+     *   Symbol(feature): Object { store: {...}, isError: false, value_0: 14591817, ... }
+     * }
+     * Map those to Ember data model object Feature
+     */
+    if (features?.length) {
+      features = features.map(feature => (feature.Name || feature)[Symbol.for('feature')]);
+    }
+    return features;
   },
 
   //----------------------------------------------------------------------------
@@ -587,7 +685,7 @@ export default Component.extend({
     const gtPlainRender = this.urlOptions.gtPlainRender;
     if (! feature && table /*&& (gtPlainRender & 0b10000000)*/) {
       feature = getRowAttribute(table, visualRowIndex, visualColIndex);
-      if (feature) {
+      if ((trace > 1) && feature) {
         dLog(fnName, feature, feature?.get('blockId.mapName'));
       }
     }
@@ -1568,6 +1666,7 @@ export default Component.extend({
       }
       t.hide();
     }
+    this.afterScrollVertically_tablePosition();
   },
 
   setRowAttributes() {
@@ -1752,8 +1851,13 @@ export default Component.extend({
    * @param columnHeaderHeight initially .colHeaderHeight, then resizer height
    */
   setColumnHeaderHeight(columnHeaderHeight) {
-    /* this is not used for manage-genotype, instead .height = tableHeightFromParent() */
-    this.userSettings.columnHeaderHeight = columnHeaderHeight;
+    /* In the case of manage-genotype (i.e. ! fullPage), matrix-view does not
+     * use this, instead .height = tableHeightFromParent(), enabled by calculateTableHeight.
+     *
+     * Use Ember_set() because selectedSampleEffect() is dependent on
+     * columnHeaderHeight
+     */
+    Ember_set(this.userSettings, 'columnHeaderHeight', columnHeaderHeight);
     const body = d3.select('body');
     body.style('--matrixViewColumnHeaderHeight', columnHeaderHeight + 'px');
     const
