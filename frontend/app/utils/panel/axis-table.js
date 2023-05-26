@@ -2,6 +2,11 @@ import { axisFeatureCircles_selectOneInAxis } from '../draw/axis';
 
 /* global d3 */
 
+//------------------------------------------------------------------------------
+/** @file Relationship between axes and HandsOnTables, via Features which are the
+ * metadata of tables.
+ */
+
 /*----------------------------------------------------------------------------*/
 
 const featureSymbol = Symbol.for('feature');
@@ -65,7 +70,7 @@ function setRowAttributes(table, data, dataIsRows) {
        * Transitioning away from HandsOnTable would solve this difficulty of
        * associating metadata with table cells.
        */
-      feature = feature.Block[Symbol.for('feature')];
+      feature = (feature.Block || feature.Ref) [Symbol.for('feature')];
       Object.values(feature).forEach((value, physicalCol) => {
         const col = table.toVisualColumn(physicalCol);
         if (col !== null) {
@@ -215,6 +220,7 @@ function tableCoordsToFeature(table, coords) {
   return feature;
 }
 
+//------------------------------------------------------------------------------
 
 /** @param feature may be name of one feature, or an array of features -
  * selectedFeatures data : {
@@ -258,6 +264,7 @@ d3.selection.prototype.moveToFront = function() {
   });
 };
 
+//------------------------------------------------------------------------------
 
 export {
   stringGetFeature,

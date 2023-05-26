@@ -1128,10 +1128,14 @@ function AxisBrushZoom(oa) {
         else if (brushExtent) {
           let gBrush = d3.event.sourceEvent.target.parentElement;
           let newBrushExtent = brushedDomain.map(function (r) { return yp(r);});
-          if (trace_zoom > 1) {
+          // in d3.js:move() .__brush is expected to be defined.
+          const state = gBrush.__brush;
+          if (! state || (trace_zoom > 1)) {
             dLog(fnName, brushExtent, brushedDomain, gBrush, newBrushExtent);
           }
-          d3.select(gBrush).call(yp.brush.move, newBrushExtent);
+          if (state) {
+            d3.select(gBrush).call(yp.brush.move, newBrushExtent);
+          }
         }
       }
     });

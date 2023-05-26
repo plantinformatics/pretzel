@@ -104,6 +104,7 @@ function valueNameIsNotSample(valueName) {
  * .haplotypeFilterRef default : false
  * .showNonVCFFeatureNames default : true
  * .showAxisLDBlocks default : false
+ * .showTablePositionAlignment default : false
  * .cellSizeFactorInt default : 100
  * .cellSizeFactor default : 1
  *
@@ -335,6 +336,10 @@ export default class PanelManageGenotypeComponent extends Component {
 
     if (userSettings.showAxisLDBlocks === undefined) {
       userSettings.showAxisLDBlocks = false;
+    }
+
+    if (userSettings.showTablePositionAlignment === undefined) {
+      userSettings.showTablePositionAlignment = false;
     }
 
     if (userSettings.autoLookup === undefined) {
@@ -696,8 +701,16 @@ export default class PanelManageGenotypeComponent extends Component {
     fnName = 'dataScope',
     scope = this.brushedOrViewedScope,
     gtDatasetIds = this.gtDatasetIds,
+    /** The top-left corner cell is not rotated - text is horizontal.
+     * When gtMergeRows, the left column (row header) is narrow because it holds
+     * Position instead of feature name, so there is no width for the
+     * datasetIds; they seem unnecessary because the "Block" columns headers
+     * have the datasetIds - possibly added after gtDatasetIds were appended to
+     * scope here.  So disable this :
     texts = (scope ? [scope] : []).concat(gtDatasetIds),
     text = texts.join('\n');
+    */
+    text = scope;
 
     /* gtMergeRows : rowHeader is Position, which is narrower than name, and
      * datasetId gets truncated and moves the centre (where scope is

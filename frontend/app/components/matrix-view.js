@@ -23,6 +23,7 @@ import {
   highlightFeature,
 } from '../utils/panel/axis-table';
 import { afterSelectionFeatures } from '../utils/panel/feature-table';
+import { tableYDimensions } from '../utils/panel/table-dom';
 import {
   datasetId2Class,
   featureBlockColourValue, columnNameAppendDatasetId, columnName2SampleName, valueIsCopies,
@@ -515,12 +516,13 @@ export default Component.extend({
 
     this.set('table', table);
 
-    if (gtPlainRender & 0b100) {
+    if (true /*(gtPlainRender & 0b100)*/) {
       table.addHook('afterRender', this.afterRender.bind(this));
     }
 
     this.dragResizeListen();
     this.afterScrollVertically_tablePosition();
+    this.table.batchRender(bind(this, this.setRowAttributes));
   },
 
   highlightFeature,
@@ -532,6 +534,7 @@ export default Component.extend({
     if (scope) {
       this.showTextInTopLeftCorner(scope);
     }
+    this.set('model.layout.matrixView.tableYDimensions', tableYDimensions());
   },
   showTextInTopLeftCorner(text) {
     /* Within #observational-table there are 4 
@@ -1641,6 +1644,10 @@ export default Component.extend({
         const startTime = Date.now();
         console.time(fnName + ':updateSettings');
         table.updateSettings(settings);
+        /* try setting meta references to features in batchRender().
+         * In previous attempts it seemed to cause O(n2) rendering of cells.
+         */
+        this.table.batchRender(bind(this, this.setRowAttributes));
         if (gtPlainRender & 0b100000) {
           this.progressiveRowMergeInBatch();
         }

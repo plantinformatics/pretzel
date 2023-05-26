@@ -98,6 +98,8 @@ export default class DrawGraphAnnotationsComponent extends Component {
     this.renderGroup();
   }
 
+  /** Render the <g> which contains the graph annotation <paths>
+   */
   renderGroup() {
     const
     fname = 'render',
@@ -116,6 +118,10 @@ export default class DrawGraphAnnotationsComponent extends Component {
     }
   }
 
+  @alias('args.model.layout.matrixView.tableYDimensions') tableYDimensions;
+
+  /** Render the the graph annotation <paths>
+   */
   renderAnnotations() {
     const
     fname = 'renderAnnotations',
@@ -129,7 +135,8 @@ export default class DrawGraphAnnotationsComponent extends Component {
     tableRowInterval = tableDim && tableDim.offsetHeight && this.tableRowInterval(tableDim),
     layoutRight = model.layout.right,
     tableIsVisible = tableDim && tableDim.offsetHeight &&
-      tablesPanelRight && layoutRight.visible && (layoutRight.tab === 'genotype'),
+      tablesPanelRight && layoutRight.visible && (layoutRight.tab === 'genotype') &&
+      model.userSettings.genotype.showTablePositionAlignment,
     axes = tableIsVisible ? this.args.rightAxes || [] : [],
     stackLocation = this.axis1d?.location();
     if (selections) {
@@ -142,7 +149,7 @@ export default class DrawGraphAnnotationsComponent extends Component {
         .attr('id', arrowIdFn),
       pM = pE.merge(pS);
       pM
-        .transition().duration(500)
+        .transition().duration(100)
         .attr('d', axis1d => this.annotationPath(axis1d, tableX, tableRowInterval));
       pS.exit().remove();
       if (trace) {
@@ -151,11 +158,14 @@ export default class DrawGraphAnnotationsComponent extends Component {
     }
   }
 
+  /** @return the path d which draws a graph annotation line.
+   */
   annotationPath(axis1d, tableX, tableRowInterval) {
     let path;
     /** related : utils/draw/path-data.js : featureLineS3(), patham2()  */
     const
     fname = 'annotationPath',
+    /** Position on axis of features of first and last visible rows of table. */
     tablePosition = axis1d.tablePosition,
     interval = tablePosition || axis1d.zoomedAndOrBrushedDomain,
       // .axisBrushObj.brushedDomain,
@@ -191,7 +201,7 @@ export default class DrawGraphAnnotationsComponent extends Component {
   )
   get renderEffect() {
     // wait until after matrix-view.js : didRender() { ... renderOnceTable, 500 )
-    later(this.renderOnceFn, 500 + 300);
+    later(this.renderOnceFn, /*500 +*/ 300);
   }
 
   @alias('args.model.userSettings.genotype.columnHeaderHeight') columnHeaderHeight;
@@ -202,14 +212,17 @@ export default class DrawGraphAnnotationsComponent extends Component {
     'axis1d.zoomed', 'axis1d.extended', // 'axis1d.featureLength',
     'args.stacksView.oa.graphFrame.viewportWidth',
     'args.model.controls.window.tablesPanelRight',
-    'args.model.layout.right.tab',
+    'args.model.layout.right.{visible,tab}',
+    'args.model.userSettings.genotype.showTablePositionAlignment',
     // used in renderGroup() -> renderAnnotations() -> annotationPath() -> tableRowInterval()
     'columnHeaderHeight',
+    // used in tableRowInterval()
+    'tableYDimensions.{offsetTop,offsetHeight}',
     // 'axis1d.axis2d.allocatedWidthRect',
     'axis1d.axis2d.allocatedWidthsMax.centre',
   )
   get zoomEffect() {
-    later(this.renderOnceFn, 500 + 300);
+    later(this.renderOnceFn, /*500 +*/ 300);
   }
 
 
@@ -218,6 +231,9 @@ export default class DrawGraphAnnotationsComponent extends Component {
 
   //----------------------------------------------------------------------------
 
+  /** @return positions (interval) of features of right-most axis which are in
+   * first and last visible rows of genotype table.
+   */
   // @computed('stacksView.rightStack')
   get tablePositions() {
     const
@@ -228,23 +244,8 @@ export default class DrawGraphAnnotationsComponent extends Component {
     return tablePositions;
   }
 
-  /** Get the Y position of the top of the table, and its height. */
-  get tableYDimensions() {
-    let dim;
-    const
-    fname = 'tableYDimensions',
-    tableDiv$ = $('div#observational-table.handsontable');
-    if (tableDiv$.length) {
-      const
-      tableDiv = tableDiv$[0],
-      offsetHeight = tableDiv.offsetHeight,// : 830
-      offsetTop = tableDiv.offsetTop; // : 104
-      dim = {offsetTop, offsetHeight};
-      dLog(fname, dim, tableDiv);
-    }
-    return dim;
-  }
-
+  /** Add columnHeaderHeight to tableDim to get heights wrt graph top-level SVG element.
+   */
   tableRowInterval(tableDim) {
     const
     /** 300 is default of defaultColumnHeaderHeight(); could use .colHeaderHeight. */
@@ -259,6 +260,8 @@ export default class DrawGraphAnnotationsComponent extends Component {
 
   //----------------------------------------------------------------------------
 
+  /** Listen to window resize, and call renderAnnotations().
+   */
   initResizeListener() {
     const elt = window; // '.draw-map-container > div#holder';
     d3.select(elt)

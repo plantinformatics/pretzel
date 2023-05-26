@@ -167,6 +167,7 @@
           {{panel/axis-brushes}}
         {{else if (compare layout.right.tab '===' 'genotype')}}
           {{panel/manage-genotype
+            model=this.model
             selectBlock=(action this.actions.selectBlock)
             selectedBlock=selectedBlock
             selectedFeatures=selectedFeatures

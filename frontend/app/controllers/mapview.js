@@ -292,6 +292,7 @@ export default Controller.extend(Evented, {
       'visible': true,
       'tab': 'selection'
     },
+    matrixView : {tableYDimensions : null},
   }),
   splitViewDirection : computed('tablesPanelRight', function () {
     let direction = this.tablesPanelRight ? 'horizontal' : 'vertical';

@@ -562,13 +562,19 @@
 
                 <ul class="list-group borderless view-controls">
                   <li>
-
                     <input type="checkbox"
                       style="margin-left: 3em;"
                       checked={{@userSettings.showAxisLDBlocks}}
                       oninput={{action (mut @userSettings.showAxisLDBlocks) value="target.checked"}}  >
                     <label>LD Blocks colour in Axis Tracks</label>
+                  </li>
 
+                  <li>
+                    <input type="checkbox"
+                      style="margin-left: 3em;"
+                      checked={{@userSettings.showTablePositionAlignment}}
+                      oninput={{action (mut @userSettings.showTablePositionAlignment) value="target.checked"}}  >
+                    <label>Show table position alignment to axis</label>
                   </li>
                 </ul>
                 {{!---------------------------------------------------------------------}}
@@ -656,6 +662,7 @@
 </style>
 
 {{matrix-view
+  model=this.args.model
   userSettings=this.args.userSettings
   dataScope=this.dataScope
   displayData=this.displayData
