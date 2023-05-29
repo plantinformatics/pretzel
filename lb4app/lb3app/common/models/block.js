@@ -1349,7 +1349,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       /* postData */ '', 
       /* useFile */ false,
       /* fileName */ undefined,
-      /* moreParams */ ['query', datasetId, scope, /*preArgs*/ '-l'],
+      /* moreParams */ ['query', datasetId, scope, /*isecFlags*/ '', /*isecDatasetIds*/'', /*preArgs*/ '-l'],
       dataOutReplyClosure(cb), cb, /*progressive*/ false);
 
   };

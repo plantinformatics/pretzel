@@ -141,6 +141,15 @@ export default Record.extend({
     return has;
   },
 
+  //----------------------------------------------------------------------------
+
+  /** Access the dataset positionFilter attribute as a field,
+   * to factor the lookup, and to enable it to be used in dependencies.
+   */
+  get positionFilter() {
+    return this[Symbol.for('positionFilter')];
+  },
+
   /*--------------------------------------------------------------------------*/
 
   /** @return true if this dataset is owned by the logged-in user,

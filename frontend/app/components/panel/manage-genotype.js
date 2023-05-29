@@ -653,6 +653,8 @@ export default class PanelManageGenotypeComponent extends Component {
 
   @alias('brushedOrViewedVCFBlocksVisible') gtBlocks;
 
+  /** genotype datasets on the brushed / viewed axes
+   */
   @computed('brushedOrViewedVCFBlocks')
   get gtDatasets () {
     const
@@ -1340,6 +1342,9 @@ export default class PanelManageGenotypeComponent extends Component {
     {samples, samplesOK} = this.samplesOK(samplesLimitEnable),
     domainInteger = this.vcfGenotypeLookupDomain,
     vcfDatasetId = this.lookupDatasetId;
+    /* Possibly filter out .lookupBlock if .datasetId positionFilter === false,
+     * as is done in vcfGenotypeLookupAllDatasets().
+     */
     if (samplesOK && domainInteger && vcfDatasetId) { // && scope
       this.lookupMessage = null;
       let
@@ -1355,19 +1360,19 @@ export default class PanelManageGenotypeComponent extends Component {
   vcfGenotypeLookupAllDatasets() {
     // related : notes in showSamplesWithinBrush() re. isZoomedOut(), .rowLimit.
     const
-    visibleBlocks = this.brushedOrViewedVCFBlocksVisible,
-    /** also based on brushedOrViewedVCFBlocksVisible, so it is parallel */
-    gtDatasetIds = this.gtDatasetIds;
+    visibleBlocks = this.brushedOrViewedVCFBlocksVisible;
     visibleBlocks
     /** filter out blocks which are `minus` in the positionFilter - if requested
-     * the result should be empty. */
+     * the result should be empty.
+     * See table in vcfGenotypeLookupDataset().
+     */
       .filter(block => {
         const dataset = block.get('datasetId.content');
         return dataset[Symbol.for('positionFilter')] !== false;
       })
       .forEach((blockV, i) => {
       const
-      vcfDatasetId = gtDatasetIds[i],
+      vcfDatasetId = blockV.get('datasetId.id'),
       /** use .name instead of .scope, because some VCF files use 'chr' prefix
        * on chromosome name e.g. chr1A, and .name reflects that;
        * as in lookupScope().
@@ -1397,16 +1402,39 @@ export default class PanelManageGenotypeComponent extends Component {
   vcfGenotypeLookupDataset(blockV, vcfDatasetId, scope, domainInteger, samples, samplesLimitEnable) {
     const fnName = 'vcfGenotypeLookupDataset';
     if (scope) {
-      let
+      const
       userSettings = this.args.userSettings,
       requestFormat = this.requestFormat,
       requestSamplesFiltered = userSettings.requestSamplesFiltered,
       /** If filtered or column-limited, then samples is a subset of All. */
       requestSamplesAll = userSettings.requestSamplesAll && ! requestSamplesFiltered && ! samplesLimitEnable,
-      requestOptions = {requestFormat, requestSamplesAll};
-      if (/* datasets selected for intersection */ this.gtDatasetIds.length > 1) {
+      requestOptions = {requestFormat, requestSamplesAll},
+      /** Datasets selected for intersection.
+       * Used to indicate if any positionFilter are defined and hence isecFlags
+       * and isecDatasets will be set.  If no datasets other than this one
+       * (vcfDatasetId) have positionFilter, then isec is not required.
+       */
+      isecDatasetsNotSelf = this.gtDatasets
+          .filter(dataset =>
+            ('boolean' === typeof dataset.positionFilter) &&
+              (dataset.id !== vcfDatasetId));
+      if (isecDatasetsNotSelf.length) {
         const
-        /** filter out null and undefined;  include vcfDatasetId i.e. the dataset which is being requested. */
+        /** filter out null and undefined; include vcfDatasetId i.e. the dataset
+         * which is being requested.
+         * 
+         * table value indicates if dataset should be included in isecDatasets.
+         * |------------------------+-------------------------------+-------|
+         * |                        | (dataset.id === vcfDatasetId) |       |
+         * | dataset.positionFilter | true                          | false |
+         * |------------------------+-------------------------------+-------|
+         * | undefined              | true                          | false |
+         * | true                   | true                          | true  |
+         * | false                  | (true) N/A                    | true  |
+         * |------------------------+-------------------------------+-------|
+         *
+         * N/A : this case is filtered out in vcfGenotypeLookupAllDatasets().
+         */
         isecDatasets = this.gtDatasets
           .filter(dataset =>
             ('boolean' === typeof dataset[Symbol.for('positionFilter')]) ||
@@ -1450,7 +1478,6 @@ export default class PanelManageGenotypeComponent extends Component {
           dLog(fnName, text.length, text && text.slice(0,200), blockV.get('id'));
           if (text && blockV) {
             const
-            requestFormat = this.requestFormat,
             replaceResults = this.args.userSettings.replaceResults,
             selectedFeatures = this.args.selectedFeatures,
             added = isGerminate ?
@@ -1984,6 +2011,14 @@ export default class PanelManageGenotypeComponent extends Component {
     vcfDatasetId = this.lookupDatasetId,
     scope = this.lookupScope;
     let textP;
+    /** After a brush, this CP is re-evaluated, although the dependencies
+     * compare === with the previous values.  Could memo-ize the value based on
+     * dependency values.
+     *
+     * Related : with autoLookup may need to cache headerText per
+     * lookupDatasetId; depends on whether result vcfExportText combines
+     * brushedOrViewedVCFBlocksVisible into a single VCF.
+     */
     if (samplesOK && scope && vcfDatasetId) {
       const
       requestFormat = this.requestFormat,
