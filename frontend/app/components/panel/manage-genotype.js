@@ -1358,7 +1358,14 @@ export default class PanelManageGenotypeComponent extends Component {
     visibleBlocks = this.brushedOrViewedVCFBlocksVisible,
     /** also based on brushedOrViewedVCFBlocksVisible, so it is parallel */
     gtDatasetIds = this.gtDatasetIds;
-    visibleBlocks.forEach((blockV, i) => {
+    visibleBlocks
+    /** filter out blocks which are `minus` in the positionFilter - if requested
+     * the result should be empty. */
+      .filter(block => {
+        const dataset = block.get('datasetId.content');
+        return dataset[Symbol.for('positionFilter')] !== false;
+      })
+      .forEach((blockV, i) => {
       const
       vcfDatasetId = gtDatasetIds[i],
       /** use .name instead of .scope, because some VCF files use 'chr' prefix
@@ -1399,12 +1406,16 @@ export default class PanelManageGenotypeComponent extends Component {
       requestOptions = {requestFormat, requestSamplesAll};
       if (/* datasets selected for intersection */ this.gtDatasetIds.length > 1) {
         const
-        /** filter out null and undefined */
+        /** filter out null and undefined;  include vcfDatasetId i.e. the dataset which is being requested. */
         isecDatasets = this.gtDatasets
-          .filter(dataset => 'boolean' === typeof dataset[Symbol.for('positionFilter')]),
+          .filter(dataset =>
+            ('boolean' === typeof dataset[Symbol.for('positionFilter')]) ||
+              (dataset.id === vcfDatasetId)),
         isecDatasetIds = isecDatasets
           .mapBy('id'),
-        flags = isecDatasets.map(dataset => dataset[Symbol.for('positionFilter')]),
+        /** in isecDatasets[] dataset positionFilter is only nullish at this
+         * point if dataset.id is vcfDatasetId - use flag true in that case. */
+        flags = isecDatasets.map(dataset => dataset[Symbol.for('positionFilter')] ?? true),
         allTrue = flags.findIndex(flag => !flag) === -1,
         isecFlags = allTrue ? isecDatasetIds.length :
           '~' + flags.map(flag => flag ? '1' : '0').join('');
