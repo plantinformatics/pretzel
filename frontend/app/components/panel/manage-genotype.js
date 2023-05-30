@@ -1368,7 +1368,7 @@ export default class PanelManageGenotypeComponent extends Component {
      */
       .filter(block => {
         const dataset = block.get('datasetId.content');
-        return dataset[Symbol.for('positionFilter')] !== false;
+        return dataset.positionFilter !== false;
       })
       .forEach((blockV, i) => {
       const
@@ -1437,13 +1437,13 @@ export default class PanelManageGenotypeComponent extends Component {
          */
         isecDatasets = this.gtDatasets
           .filter(dataset =>
-            ('boolean' === typeof dataset[Symbol.for('positionFilter')]) ||
+            ('boolean' === typeof dataset.positionFilter) ||
               (dataset.id === vcfDatasetId)),
         isecDatasetIds = isecDatasets
           .mapBy('id'),
         /** in isecDatasets[] dataset positionFilter is only nullish at this
          * point if dataset.id is vcfDatasetId - use flag true in that case. */
-        flags = isecDatasets.map(dataset => dataset[Symbol.for('positionFilter')] ?? true),
+        flags = isecDatasets.map(dataset => dataset.positionFilter ?? true),
         allTrue = flags.findIndex(flag => !flag) === -1,
         isecFlags = allTrue ? isecDatasetIds.length :
           '~' + flags.map(flag => flag ? '1' : '0').join('');

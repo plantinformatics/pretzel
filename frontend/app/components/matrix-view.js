@@ -858,15 +858,15 @@ export default Component.extend({
       dataset = this.colToDataset(col);
       if (dataset) {
         /* null -> true -> false */
-        let pf = dataset[Symbol.for('positionFilter')];
+        let pf = dataset.positionFilter;
         switch (pf) {
         default    :
         case null  : pf = true; break;
         case true  : pf = false; break;
         case false : pf = null; break;
         }
-        dLog(fnName, dataset[Symbol.for('positionFilter')], '->', pf, dataset.id);
-        dataset[Symbol.for('positionFilter')] = pf;
+        dLog(fnName, dataset.positionFilter, '->', pf, dataset.id);
+        dataset.positionFilter = pf;
         this.changeDatasetPositionFilter(dataset, pf);
       }
     }
@@ -1353,7 +1353,7 @@ export default Component.extend({
     dataset = this.colToDataset(col);
     let pf;
     if (dataset &&
-        (typeof (pf = dataset[Symbol.for('positionFilter')]) === "boolean")) {
+        (typeof (pf = dataset.positionFilter) === "boolean")) {
       // possibly : 'col-positionFilter-' + pf
       className = pf ? '+' : '-';
     }

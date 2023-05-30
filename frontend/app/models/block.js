@@ -1372,12 +1372,7 @@ export default Model.extend({
 
   //----------------------------------------------------------------------------
 
-  get positionFilter() {
-    const
-    dataset = this.get('datasetId.content'),
-    pf = dataset[Symbol.for('positionFilter')];
-    return pf;
-  },
+  positionFilter : alias('datasetId.positionFilter'),
 
   /** Record the positions at which this block has features.
 

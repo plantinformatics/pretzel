@@ -149,6 +149,9 @@ export default Record.extend({
   get positionFilter() {
     return this[Symbol.for('positionFilter')];
   },
+  set positionFilter(pf) {
+    return this[Symbol.for('positionFilter')] = pf;
+  },
 
   /*--------------------------------------------------------------------------*/
 
