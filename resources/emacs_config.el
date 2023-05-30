@@ -58,6 +58,11 @@
        (js2-pretty-multiline-declarations . nil)
        (fill-column . 80)
        ))
+   (sh-mode
+    . ((sh-basic-offset . 2)	;; default 4
+       (fill-column . 80)
+       (indent-tabs-mode . nil)
+       ))
    )
  )
 
