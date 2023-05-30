@@ -191,7 +191,7 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
   nFeatures = 0;
   dLog(fnName, lines.length);
   if (text && text.length && (text.charAt(text.length-1) !== '\n')) {
-    dLog(fnName, 'discarding', lines[lines.length-1]);
+    dLog(fnName, 'discarding incomplete last line', lines[lines.length-1]);
     lines.splice(-1, 1);
   }
 

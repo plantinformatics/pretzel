@@ -242,24 +242,38 @@ function dbName2Vcf() {
 
 
 # Use bcftools isec to prepare a list of common SNPs between $isecDatasetIds ($vcfGzs).
-# Uses $isecFlags, $chr.
+# Uses $vcfGzs, $isecFlags, $chr.
 # Sets $commonSNPs
 function prepareCommonSNPs() {
-  # Name is based on the combined names of the datasets + chrs + isecFlags to be intersected.
-  commonSNPs="isec.$isecFlags.$chr.$isecDatasetIds.vcf"
+  # Until 7c5cabb3 commonSNPs file name was based on the combined names of the
+  # datasets + chrs + isecFlags to be intersected, enabling caching of
+  # intersection SNPs per-chromosome for each intersection of datasets.
+  # This is changed to a single file name because :
+  # -R overrides -r instead of intersect, so don't retain the intersection files /
+  # common SNPs; overwrite the previous file, and intersect just the required region,
+  # instead of the whole chromosome.
+  commonSNPs=region_common_SNPs.vcf
+  # commonSNPs="isec.$isecFlags.$chr.$isecDatasetIds.vcf"
   if [ ${#vcfGzs[@]} -gt 0 ]
   then
-    if [ ! -f "$commonSNPs" ]
+    if true # [ ! -f "$commonSNPs" ]
     then
       if [ -z "$isecFlags" ]
       then
         isecFlags=-n=${#vcfGzs[@]}
-        commonSNPs="isec.$isecFlags.$chr.$isecDatasetIds.vcf"
+        # commonSNPs="isec.$isecFlags.$chr.$isecDatasetIds.vcf"
       else
         # provide 0 return status
         true
       fi
-      2>&$F_ERR time "$bcftools" isec $isecFlags -c all -o "$commonSNPs" "${vcfGzs[@]}"
+      regionParams=($1 $2); shift 2;
+      # This outputs this note : "Note: -w option not given, printing list of sites..."
+      # The options suggested in this post :
+      #   https://github.com/samtools/bcftools/issues/334#issuecomment-147310754
+      # don't prevent the message; also tried without -o and -r.
+      # The note does not cause a non-zero return status.
+      2>&$F_ERR time "$bcftools" isec $isecFlags -c all -o "$commonSNPs" "${regionParams[@]}" "${vcfGzs[@]}"  |& \
+        fgrep -v "Note: -w option not given, printing list of sites..."
     else
       true
     fi
@@ -280,17 +294,26 @@ function bcftoolsCommand() {
   # '%ID\t%POS\t%REF\t%ALT[\t%TGT]\n' is a single arg.
   if [ ${#isecDatasetIdsArray[@]} -gt 0 ]
   then
+    # uses $vcfGzs.  $@ is "${regionParams[@]}"
+    regionParams=($1 $2); shift 2;
+    # Use absolute path for logFile because this is within cd ... "$vcfDir"
+    >> $serverDir/$logFile echo regionParams="${regionParams[@]}", "${@}"
+    if prepareCommonSNPs "${regionParams[@]}"
+       then
     # -R, --regions-file
     if [ "$command" = query ]
     then
-      regionParams=($1 $2); shift 2;
-      "$bcftools" view "${regionParams[@]}" -O v -R "$commonSNPs" "$vcfGz" | \
+      # regionParams are used by prepareCommonSNPs and cannot be used with
+      # -R "$commonSNPs", which incorporates them.
+      "$bcftools" view  -O v -R "$commonSNPs" "$vcfGz" | \
         2>&$F_ERR "$bcftools" "$command" "${@}"
     else
       2>&$F_ERR "$bcftools" view -O v -R "$commonSNPs" \
                 "$vcfGz"
     fi
+    fi
   else
+    # ${@} here is regionParams
     2>&$F_ERR "$bcftools" "$command" "$vcfGz" "${@}"
   fi
 }
@@ -310,6 +333,8 @@ else
   isecDatasetIdsArray=($(echo "$isecDatasetIds" | tr '!' ' '))
   echo >> $logFile datasetIdParam="$datasetIdParam", isecDatasetIdsArray="${isecDatasetIdsArray[@]}"
   status=0
+  # map from isecDatasetIdsArray to vcfGzs via dbName2Vcf;
+  # i.e. isecDatasetIdsArray is parallel to vcfGzs.
   vcfGzs=()
   for datasetId in "${isecDatasetIdsArray[@]}"; do
     # result when break
@@ -333,7 +358,7 @@ else
       # see vcf-genotype.js : vcfGenotypeLookup() : preArgs.samples
       # set +x
       # some elements in preArgs may contain white-space, e.g. format "%ID\t%POS[\t%TGT]\n"
-      if prepareCommonSNPs && time bcftoolsCommand "$command" "$vcfGz" "${@}"
+      if time bcftoolsCommand "$command" "$vcfGz" "${@}"
       then
         status=$?	# 0
       else
