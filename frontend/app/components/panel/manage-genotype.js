@@ -1277,7 +1277,8 @@ export default class PanelManageGenotypeComponent extends Component {
           // All sample names received for datasetId.
           // As in vcfGenotypeSamples(). related : lookupBlockSamples(), vcfGenotypeSamplesText().
           samplesRaw = this.sampleCache.sampleNames[datasetId]
-            .trim().split('\n');
+            ?.trim().split('\n');
+          ok &&= ! samplesRaw;
         } else {
         // All sample names received for lookupDatasetId.
         samplesRaw = this.samples;
@@ -1386,7 +1387,7 @@ export default class PanelManageGenotypeComponent extends Component {
        * vcfGenotypeLookupDataset( samples==='' ) will get all samples, which
        * may be valid, but for now skip this dataset if ! .length.
        */
-      if (samples.length) {
+      if (this.args.userSettings.requestSamplesAll || samples.length) {
         this.vcfGenotypeLookupDataset(blockV, vcfDatasetId, scope, domainInteger, samples, samplesLimitEnable);
       }
     });

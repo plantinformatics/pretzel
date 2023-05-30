@@ -373,9 +373,17 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
         let mapChrName = Ember_get(feature, 'blockId.brushName');
         let selectionFeature = {Chromosome : mapChrName, Feature : feature.name, Position : feature.value[0], feature};
 
+        /* vcfFeatures2MatrixView() uses createdFeatures to populate
+         * displayData; it could be renamed to resultFeatures; the
+         * feature is added to createdFeatures regardless of
+         * existingFeature.
+         */
         createdFeatures.push(feature);
         selectionFeatures.push(selectionFeature);
-        block.features.addObject(feature);
+        // If existingFeature then addObject(feature) is a no-op.
+        if (replaceResults || ! existingFeature) {
+          block.features.addObject(feature);
+        }
       }
 
     }

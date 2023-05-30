@@ -144,7 +144,8 @@ function getRowAttributeFromData(table, data, dataIsRows, visualRowIndex) {
 
   const dataIsColumns = ! dataIsRows && data.length && Array.isArray(data[0].features);
   if (dataIsColumns) {
-    data = data[0].features;
+    const df = data.find(d => d.features?.[0]);
+    data = df?.features;
   } else if (dataIsRows) {
     data = Object.values(data);
   }
