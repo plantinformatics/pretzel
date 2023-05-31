@@ -358,7 +358,7 @@ else
       # see vcf-genotype.js : vcfGenotypeLookup() : preArgs.samples
       # set +x
       # some elements in preArgs may contain white-space, e.g. format "%ID\t%POS[\t%TGT]\n"
-      if time bcftoolsCommand "$command" "$vcfGz" "${@}"
+      if bcftoolsCommand "$command" "$vcfGz" "${@}"
       then
         status=$?	# 0
       else
