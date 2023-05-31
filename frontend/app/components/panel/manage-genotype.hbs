@@ -193,6 +193,7 @@
                           {{!-- maybe autocomplete="sample-name", but samples names are mostly numeric so it may be more of an impediment than a benefit for the user --}}
                       </div>
 
+                      {{ensureSamplesForDatasetTabEffect}}
                       <div class="genotype-controls">
 
                         <select style="height:100px" class="form-control" multiple onchange={{action this.selectSample}}>

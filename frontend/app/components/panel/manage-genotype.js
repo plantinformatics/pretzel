@@ -1224,6 +1224,26 @@ export default class PanelManageGenotypeComponent extends Component {
     }
   }
 
+  /** When a dataset tab in the control dialog is displayed, request samples for
+   * the dataset if not already done.  
+   */
+  @computed('lookupDatasetId')
+  get ensureSamplesForDatasetTabEffect() {
+    const fnName = 'ensureSamplesForDatasetTabEffect';
+    /** Originally vcfGenotypeSamples() was manually triggered by user click;
+     * this function is added to improve the ergonomics of the user workflow,
+     * i.e. in the dataset tab the user will often want to select from the
+     * available samples, so pre-emptively request the samples to reduce button
+     * clicks.
+     * related : .ensureSamples();
+     */
+    if (! this.vcfGenotypeSamplesText) {
+      dLog(fnName);
+      this.vcfGenotypeSamples();
+    }
+
+  }
+
   //----------------------------------------------------------------------------
 
   /** block[sampleNamesSymbol] is a map from sampleName to block */
