@@ -282,7 +282,7 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
           dLog(fnName, fieldName, value, i);
         } else {
           /** match values. and meta.  */
-          let prefix = fieldNameF.match(/^(.+)\..*/);
+          let prefix = fieldNameF.match(/^([^.]+)\..*/);
           prefix = prefix && prefix[1];
           if (prefix) {
             /** replace A/A with A, 1/1 with 2 (i.e. x/y -> x+y). */
@@ -300,8 +300,13 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
             if (! f[prefix]) {
               f[prefix] = {};
             }
-            /* could use Ember_set() for both cases. */
-            Ember_set(f, fieldNameF, value);
+            if (fieldName.match(/\./)) {
+              // Ember_set() interprets dot in field name, so use [] =
+              f[prefix][fieldName] = value;
+            } else {
+              /* could also use Ember_set() when ! prefix. */
+              Ember_set(f, fieldNameF, value);
+            }
           } else {
             f[fieldNameF] = value;
           }
