@@ -651,6 +651,30 @@
 {{/if}}
 
 {{!-- --------------------------------------------------------------------- --}}
+
+{{#if this.intersectionDialogDataset}}
+
+  {{#ember-modal-dialog
+    onClose=(action (mut this.intersectionDialogDataset) null)
+    target="#observational-table"
+    translucentOverlay=true
+    clickOutsideToClose=false
+    onClickOverlay=(action this.userMessage "Use X to close dialog")
+    title="Change Dataset intersection state"
+    header-icon='search'
+  }}
+
+  <Panel::DatasetIntersectionDialog
+    @dataset={{this.intersectionDialogDataset}}
+    @close={{action (mut this.intersectionDialogDataset) null}}
+    @positionFilterChanged={{this.positionFilterChanged}}
+    />
+
+  {{/ember-modal-dialog}}
+{{/if}}
+
+{{!-- --------------------------------------------------------------------- --}}
+
 <div class="clear-both"></div>
 
 <style>
@@ -675,7 +699,9 @@
   extraDatasetColumns=this.extraDatasetColumns
   selectBlock=(action @selectBlock)
   changeDatasetPositionFilter=this.changeDatasetPositionFilter
+  datasetPositionFilterChangeCount=this.datasetPositionFilterChangeCount
   featureColumnDialogDataset=(action (mut this.featureColumnDialogDataset))
+  intersectionDialogDataset=(action (mut this.intersectionDialogDatasetId))
   selectedBlock=@selectedBlock
   blockSamples=true
   displayForm=this.requestFormat

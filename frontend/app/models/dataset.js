@@ -1,4 +1,4 @@
-import { computed } from '@ember/object';
+import { computed, set as Ember_set } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 import { attr, hasMany, belongsTo } from '@ember-data/model';
@@ -150,8 +150,18 @@ export default Record.extend({
     return this[Symbol.for('positionFilter')];
   },
   set positionFilter(pf) {
-    return this[Symbol.for('positionFilter')] = pf;
+    this[Symbol.for('positionFilter')] = pf;
+    Ember_set(this, 'positionFilterText', this.positionFilterTextFn);
   },
+  get positionFilterTextFn () {
+    const
+    pf = this.positionFilter,
+    text = (typeof pf === 'boolean') ? (pf ? '+' : '-') : '';
+    return text;
+  },
+  // Could use a Computed Propery for positionFilterText - maybe when changing to Tracked Properties in Ember4.
+  // positionFilterText : computed('positionFilter', function ),
+
 
   /*--------------------------------------------------------------------------*/
 

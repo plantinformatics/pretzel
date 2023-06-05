@@ -833,26 +833,36 @@ export default Component.extend({
     if (ldBlock) {
       later(() => this.table.render(), 1000);
     }
-    } else if (this.datasetColumns?.includes(columnName)) {
+    } else if ((row === -1) && this.datasetColumns?.includes(columnName)) {
+      // row is header.
       /* this.datasetColumns is defined by gtMergeRows. */
-      if (row === -1) { // if row is header.
+      /* Related : afterOnCellMouseDown() -> toggleDatasetPositionFilter();
+       * There is an overlap between afterSelectionHaplotype() and
+       * afterOnCellMouseDown() - if they cover the same events and cells then
+       * just 1 could be used.
+       */
         const datasetId = columnName;
         this.featureColumnDialogDataset(datasetId);
-      }
     }
   },
 
   /**
    * Called when user clicks in column header, i.e. row === -1.
+   * @param shiftKey  event.shiftKey
+   * @param col coords.col from afterOnCellMouseDown()
    * @return true if this column is one of .gtDatasetColumns[]
    */
-  toggleDatasetPositionFilter(col) {
+  toggleDatasetPositionFilter(shiftKey, col) {
     const
     fnName = 'toggleDatasetPositionFilter',
     columnName = this.columnNames[col],
     isGt = this.gtDatasetColumns.includes(columnName);
-
-    if (isGt) {
+    
+    if (isGt && ! shiftKey) {
+      // related : afterSelectionHaplotype() -> featureColumnDialogDataset(). changeDatasetPositionFilter
+      const datasetId = columnName;
+      this.intersectionDialogDataset(datasetId);
+    } else if (isGt) {
       /** toggle dataset positionFilter */
       const
       dataset = this.colToDataset(col);
@@ -867,6 +877,7 @@ export default Component.extend({
         }
         dLog(fnName, dataset.positionFilter, '->', pf, dataset.id);
         dataset.positionFilter = pf;
+        // currently just signals the change and updates the colHeader; could also make the change.
         this.changeDatasetPositionFilter(dataset, pf);
       }
     }
@@ -886,7 +897,7 @@ export default Component.extend({
        */
       block = feature?.get('blockId');
     } else if (coords.row == -1) {
-      if (! this.toggleDatasetPositionFilter(coords.col)) {
+      if (! this.toggleDatasetPositionFilter(event.shiftKey, coords.col)) {
       let col_name = td.title || $(td).find('span').text();
       // ! this.blockSamples, so get .columns from .displayData
       block = this.get('columns')[col_name];
@@ -1253,7 +1264,7 @@ export default Component.extend({
     dLog('columnNames', columnNames, this.colSample0);
     return columnNames;
   }),
-  colHeaders : computed('columnNames', function() {
+  colHeaders : computed('columnNames', 'datasetPositionFilterChangeCount', function() {
     const colHeaders = this.get('columnNames').map((columnName) => {
       const
       dataset = columnName[datasetSymbol],
@@ -1267,6 +1278,16 @@ export default Component.extend({
       return '<div class="head' + extraClassName + datasetClass  + '">' + positionFilterClass + fieldName + '</div>';
     });
     return colHeaders;
+  }),
+  positionFilterEffect : computed('datasetPositionFilterChangeCount', function () {
+    const fnName = 'positionFilterEffect';
+    if (this.table) {
+      const settings = {
+        colHeaders: this.colHeaders,
+      };
+      dLog(fnName);
+      this.table.updateSettings(settings);
+    }
   }),
   columnNameIsDatasetColumn(columnName) {
     // gtDatasetColumns were called 'Block' until 53c7c59f

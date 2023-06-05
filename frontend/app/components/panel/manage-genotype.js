@@ -236,6 +236,16 @@ export default class PanelManageGenotypeComponent extends Component {
   @tracked
   featureColumnDialogDataset = false;
 
+  /** Enable dialog to toggle VCF dataset intersection none/+/-.  */
+  @tracked
+  intersectionDialogDataset = false;
+  get intersectionDialogDatasetId() { return this.intersectionDialogDataset?.id; }
+  set intersectionDialogDatasetId(datasetId) {
+    const dataset = this.gtDatasets.find(dataset => dataset.id === datasetId);
+    this.intersectionDialogDataset = dataset;
+    dLog('intersectionDialogDatasetId', datasetId, dataset);
+  }
+
   /** selectedFeaturesValuesFields[datasetId] is selected from
    * .currentFeaturesValuesFields[datasetId],
    * where datasetId is a non-VCF dataset. */
@@ -614,6 +624,35 @@ export default class PanelManageGenotypeComponent extends Component {
   requestFormatChanged(value) {
     dLog('requestFormatChanged', value);
     this.requestFormat = value;
+  }
+
+  //----------------------------------------------------------------------------
+
+  /**
+   * @param value radio button can only provide a string value
+   */
+  @action
+  positionFilterChanged(valueText) {
+    const fnName = 'positionFilterChanged';
+    dLog(fnName, valueText);
+    let value = valueText;
+    if (typeof value === 'string') {
+      // the radio button values are lower case.
+      value = JSON.parse(valueText.toLowerCase());
+      dLog(fnName, value);
+    }
+    const dataset = this.intersectionDialogDataset;
+    if (! dataset) {
+      dLog(fnName, this.lookupDatasetId);
+      // const lookupDataset = this.lookupBlock.get('datasetId');
+    } else {
+      dataset.set('positionFilter', value);
+      this.datasetPositionFilterChangeCount++;
+      /** This works except it is incremental - prepending continuously;
+       * using instead : positionFilterEffect() -> updateSettings().
+       * this.showDatasetPositionFilter(dataset, dataset.positionFilterText);
+       */
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -1553,6 +1592,18 @@ export default class PanelManageGenotypeComponent extends Component {
   @action
   changeDatasetPositionFilter(dataset, pf) {
     this.datasetPositionFilterChangeCount++;
+  }
+  showDatasetPositionFilter(dataset, positionFilterText) {
+    const
+    datasetId = dataset.get('id'),
+    // positionFilterText = datasetId.positionFilterText,
+    // th.ht__highlight - class is ephemeral.
+    // change ht_master and/or ht_clone_top ?
+    // [title=' + datasetId + ']
+    head$ = $(
+      '#observational-table > div.ht_clone_top.handsontable > div.wtHolder > div.wtHider > div.wtSpreader > table.htCore > thead > tr > th > div > span.colHeader > div.head.col-Dataset-Name'),
+    prefix = positionFilterText + '  ';
+    head$.text(prefix + head$.text());
   }
 
   /** @return those blocks which have positionFilter and featurePositions
