@@ -70,12 +70,26 @@ export default Component.extend({
       this.set('errorMessage', error);
     }
   },
+  /** Inspect the API result for an error code or message.
+   * @param data result from API request
+   * The original recognises these formats :
+   * {error : [value]} return value
+   * {error : {statusCode : code}} return mapper[code]
+   * {error : {message}}   return message
+   * after 1534cfda, adding :
+   * {error : {statusCode: 401, code: "LOGIN_FAILED", name: "Error", message: "login failed" }} return mapper[code]
+   * @param mapper hash mapping from text error codes to error message to present to user.
+   * e.g. (user-login) : {
+   * LOGIN_FAILED: "Bad username / password. Please try again.",
+   * LOGIN_FAILED_EMAIL_NOT_VERIFIED: "The email has not been verified." }
+   * @return false if error code or message
+   */
   checkError(data, mapper) {
     try {
       if (data.error && data.error[0]) {
         return data.error[0]
       } else if (data.error && data.error.statusCode) {
-        let code = data.error.statusCode
+        const code = data.error.code || data.error.statusCode;
         if (mapper[code]) return mapper[code]
         else return data.error.message;
       } else {

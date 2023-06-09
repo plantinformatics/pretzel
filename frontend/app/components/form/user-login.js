@@ -1,5 +1,12 @@
 import BaseForm from './base';
 
+//------------------------------------------------------------------------------
+
+const dLog = console.debug;
+const trace = 1;
+
+//------------------------------------------------------------------------------
+
 /**
  * These optional parameters can be used to pre-populate the input fields, via URL query-params.  
  * @param identification
@@ -19,6 +26,7 @@ export default BaseForm.extend({
     "LOGIN_FAILED_EMAIL_NOT_VERIFIED": "The email has not been verified."
   },
   sendRequest(data) {
+    const fnName = 'sendRequest';
     this.setProperties({isProcessing: true})
 
     this.get('session')
@@ -28,7 +36,7 @@ export default BaseForm.extend({
       this.setProperties({isProcessing: false})
       reason = JSON.parse(reason)
 
-      // console.log('back in auth', reason)
+      dLog(fnName, 'back in auth', reason);
       let error = this.checkError(reason, this.get('errorMap'))
       if (error) {
         this.set('errorMessage', error);
