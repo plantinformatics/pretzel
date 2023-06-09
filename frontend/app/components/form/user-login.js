@@ -1,3 +1,5 @@
+import { computed } from '@ember/object';
+
 import BaseForm from './base';
 
 //------------------------------------------------------------------------------
@@ -68,5 +70,11 @@ export default BaseForm.extend({
     //                         + `&scope=${scope}`
     //   );
     // }
-  }
+  },
+
+  revealPassword : false,
+  passwordInputType : computed('revealPassword', function() {
+    return this.revealPassword ? 'text' : 'password';
+  }),
+
 });
