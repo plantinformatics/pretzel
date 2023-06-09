@@ -1722,6 +1722,15 @@ div#goto-feature > div
   width: 13em;
   text-align: left;
 }
+.col-Dataset-Name > i
+{
+  left: -20px;
+  top: 14px;
+  color: green;
+}
+.col-Dataset-Name > i.glyphicon-minus {
+  color: red;
+}
 
 /* genotype table : wrap text of datasetId and scope in top-left corner   */
 /* div.ht_clone_top_left_corner > div.wtHolder > div.wtHider > div.wtSpreader > table.htCore > thead > tr > th > div > span.colHeader.cornerHeader */

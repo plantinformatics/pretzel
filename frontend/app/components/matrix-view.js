@@ -1273,9 +1273,14 @@ export default Component.extend({
       datasetId_ = datasetId || (dataset && Ember_get(dataset, 'id')),
       datasetClass = datasetId_ ? ' col-Dataset-' + datasetId2Class(datasetId_) : '',
       // or dataset = this.colToDataset(col), using map() index;
-      positionFilterClass = this.positionFilterClass(columnName) || '',
-      extraClassName = this.columnNameToClasses(fieldName);
-      return '<div class="head' + extraClassName + datasetClass  + '">' + positionFilterClass + fieldName + '</div>';
+      positionFilterClass = this.positionFilterClass(columnName),
+      positionFilterIcon = positionFilterClass ?
+        '<i class="glyphicon glyphicon-' + positionFilterClass + '"></i>' : '',
+      extraClassName = this.columnNameToClasses(fieldName),
+      colHeader = '<div class="head' + extraClassName + datasetClass  + '">'
+        + positionFilterIcon
+        + fieldName + '</div>';
+      return colHeader;
     });
     return colHeaders;
   }),
@@ -1367,6 +1372,9 @@ export default Component.extend({
       });
     return columns;
   },
+  /** @return a class name for the positionFilter status of columnName which is a datasetId
+   * @param columnName datasetId
+   */
   positionFilterClass(columnName) {
     let className;
     const
@@ -1376,7 +1384,7 @@ export default Component.extend({
     if (dataset &&
         (typeof (pf = dataset.positionFilter) === "boolean")) {
       // possibly : 'col-positionFilter-' + pf
-      className = pf ? '+' : '-';
+      className = pf ? 'plus' : 'minus';
     }
     return className;
   },
