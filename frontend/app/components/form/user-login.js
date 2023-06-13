@@ -41,6 +41,7 @@ export default BaseForm.extend({
       /** In some cases, not yet characterised, the server sends a HTML
        * error page instead of jSON.
        */
+      let htmlPageError;
       if (reason.startsWith('<!DOCTYPE html>')) {
 	/** Parse a specific error page which is received in response to
 	 * authentication failure in login.
@@ -57,13 +58,14 @@ export default BaseForm.extend({
 	  // the title is probably duplicated in the <pre>.
 	  reason = match[2].startsWith(match[1]) ? '' : match[1] + ' ';
 	  reason += match[2];
+	  htmlPageError = reason;
 	}
       } else {
 	reason = JSON.parse(reason);
       }
 
       dLog(fnName, 'back in auth', reason);
-      let error = this.checkError(reason, this.get('errorMap'))
+      let error = htmlPageError || this.checkError(reason, this.get('errorMap'));
       if (error) {
         this.set('errorMessage', error);
         this.setProperties({password: ''})
