@@ -26,6 +26,7 @@ export default Base.extend({
   },
 
   authenticate: function(identification, password) {
+    const fnName = 'authenticate';
     /** This is equivalent to getConfiguredEnvironment() and it is also
      * equivalent to ENV, which can be imported here from
      * ../config/environment.js
@@ -68,6 +69,7 @@ export default Base.extend({
           });
         });
       }, function(xhr, status, error) {
+	console.log(fnName, xhr, status, error);
         var response = xhr.responseText;
         run(function(){
           reject(response);

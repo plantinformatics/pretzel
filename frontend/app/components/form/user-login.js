@@ -2,6 +2,8 @@ import { computed } from '@ember/object';
 
 import BaseForm from './base';
 
+import { htmlErrorParse } from '../../utils/common/html';
+
 //------------------------------------------------------------------------------
 
 const dLog = console.debug;
@@ -36,7 +38,29 @@ export default BaseForm.extend({
     .catch((reason) => {
       
       this.setProperties({isProcessing: false})
-      reason = JSON.parse(reason)
+      /** In some cases, not yet characterised, the server sends a HTML
+       * error page instead of jSON.
+       */
+      if (reason.startsWith('<!DOCTYPE html>')) {
+	/** Parse a specific error page which is received in response to
+	 * authentication failure in login.
+	 * This can be replaced by the equivalent : htmlErrorParse(),
+	 * which is not yet configured for Chrome.   Using DOMParser()
+	 * is less brittle than a regexp, as noted in :
+	 * https://stackoverflow.com/questions/1732348/regex-match-open-tags-except-xhtml-self-contained-tags/1732454#1732454
+	 */
+	/**
+ result e.g. Array(3) [ "<title>Error</title>\n</head>\n<body>\n<pre>Error: login failed<br>", "Error", "Error: login failed" ]
+	 */
+	const match = reason.match(/<title>([A-Za-z]+)<\/title>\n<\/head>\n<body>\n<pre>([A-Za-z: ]+)<br>/);
+	if (match) {
+	  // the title is probably duplicated in the <pre>.
+	  reason = match[2].startsWith(match[1]) ? '' : match[1] + ' ';
+	  reason += match[2];
+	}
+      } else {
+	reason = JSON.parse(reason);
+      }
 
       dLog(fnName, 'back in auth', reason);
       let error = this.checkError(reason, this.get('errorMap'))
