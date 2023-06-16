@@ -8,6 +8,8 @@ import { toTitleCase } from '../string';
 import { stringGetFeature, stringSetSymbol, stringSetFeature } from '../panel/axis-table';
 import { contentOf } from '../common/promises';
 
+/* global performance */
+
 // -----------------------------------------------------------------------------
 
 const dLog = console.debug;
@@ -1140,6 +1142,8 @@ function rowsAddFeature(rows, feature, nameColumn, valueIndex = 0) {
  */
 function annotateRowsFromFeatures(rows, features, selectedFeaturesValuesFields) {
   const
+  fnName = 'annotateRowsFromFeatures',
+  p1 = performance.mark('p1'),
   /** f.value.length may be 1.  intervals[*].length must be 2.
    * createIntervalTree() gets infinite recursion if intervals are not ordered.
    */
@@ -1148,10 +1152,15 @@ function annotateRowsFromFeatures(rows, features, selectedFeaturesValuesFields) 
     i[featureSymbol] = f;
     return i;
   }),
+  p2 = performance.mark('p2'),
   /** Build tree */
   intervalTree = createIntervalTree(intervals);
+  const p3 = performance.mark('p3');
+  let duration_12 = 0, measure_12;
 
-  rows.forEach((row, location, g) => {
+  /** rows is sparse; rows.forEach() is slow; Object.entries(rows).forEach() is OK.  */
+  Object.entries(rows).forEach(([location, row]) => {
+    const p_1 = performance.mark('p_1');
     /** Find all intervals containing query point */
     intervalTree.queryPoint(location, function(interval) {
       const
@@ -1170,7 +1179,26 @@ function annotateRowsFromFeatures(rows, features, selectedFeaturesValuesFields) 
         fields.forEach((fieldName) => rowAddFeatureField(row, feature, fieldName, feature.values[fieldName]));
       }
     });
+    const p_2 = performance.mark('p_2');
+    if (! measure_12) {
+      measure_12 = performance.measure('p_1-p_2', 'p_1', 'p_2');
+    }
+    duration_12 += measure_12.duration;
   });
+  const
+  p4 = performance.mark('p4'),
+  measure12 = performance.measure('p1-p2', 'p1', 'p2'),
+  measure23 = performance.measure('p2-p3', 'p2', 'p3'),
+  measure34 = performance.measure('p3-p4', 'p3', 'p4');
+  console.log(
+    fnName, 
+    '#rows', Object.keys(rows).length,
+    '#features', features.length,
+    '_12', duration_12,
+    '12', measure12.duration,
+    '23', measure23.duration,
+    '34', measure34.duration,
+  );
 }
 
 /**
