@@ -55,6 +55,19 @@
 
     </li>
 
+  {{#if urlOptions.naturalSearch}}
+  <div class="textInput" style="margin-left : 1em" >
+    <i class="glyphicon glyphicon-filter"></i>
+    {{input id="naturalQuery" type="search" value=naturalQuery
+      enter=(action this.naturalQueryChanged)
+      placeholder="Natural language search" }}
+  </div>
+  <div>
+    {{#each this.naturalQueryResult as |datasetId|}}
+      <div>{{datasetId}}</div>
+    {{/each}}
+  </div>
+  {{/if}}
 
   <div class="textInput">
     <i class="glyphicon glyphicon-filter"></i>

@@ -21,6 +21,7 @@ const { spreadsheetDataToJsObj } = require('../utilities/spreadsheet-read');
 const { loadAliases } = require('../utilities/load-aliases');
 const { cacheClearBlocks } = require('../utilities/localise-blocks');
 const { ErrorStatus } = require('../utilities/errorStatus.js');
+const { ensureItem, query } = require('../utilities/vectra_search.js');
 
 //------------------------------------------------------------------------------
 
@@ -460,6 +461,15 @@ module.exports = function(Dataset) {
       .catch((err) => cb(err));
   };
   
+  //----------------------------------------------------------------------------
+
+  Dataset.naturalSearch = function naturalSearch(search_text, options, cb) {
+    embedDatasets(Dataset);
+    console.log('naturalSearch', search_text);
+    query(search_text)
+      .then((results) => cb(null, results))
+      .catch((err) => cb(err));
+  };
 
   /*--------------------------------------------------------------------------*/
 
@@ -597,8 +607,50 @@ module.exports = function(Dataset) {
    description: "Clear cached copies of datasets / blocks / features from a secondary Pretzel API server."
   });
 
+  Dataset.remoteMethod('naturalSearch', {
+    accepts: [
+      {arg: 'search_text', type: 'string', required: true},
+      {arg: "options", type: "object", http: "optionsFromRequest"}
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'array', root: true},
+   description: "Use OpenAI to convert search_text to an vector embedding and search for matching datasets using Vectra."
+  });
+
+
 
   acl.assignRulesRecord(Dataset);
   acl.limitRemoteMethods(Dataset);
   acl.limitRemoteMethodsRelated(Dataset);
 };
+
+//------------------------------------------------------------------------------
+
+/** Indicate if embedDatasets() has been done. */
+let embeddingDone = 0;
+/** Call ensureItem() for each dataset, if this has not already been done.
+ */
+function embedDatasets(Dataset) {
+  if (embeddingDone++ === 0) {
+    console.log('embedDatasets', embeddingDone);
+    Dataset.find({})
+      .then(
+        datasets => {
+          datasets.forEach(dataset => {
+            const
+            /** _id is not present in dataset.__data */
+            id = dataset.getId(),
+            /** Initially used selected fields to minimise context size, but now
+             * requesting embedding of each dataset separately, and only once at
+             * startup, so size and cost is not a concern.
+             * description = pick(dataset.__data, ['_id', 'meta.type', 'meta.shortName', 'tags', 'meta.commonName', 'namespace' ]);
+             * description.id = id;
+             */
+            description = Object.assign({id}, dataset.__data);
+            ensureItem(id, JSON.stringify(description));
+          });
+        });
+  }
+}
+
+//------------------------------------------------------------------------------

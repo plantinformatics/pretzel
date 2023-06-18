@@ -97,6 +97,7 @@ export default ManageBase.extend({
   ontology : service('data/ontology'),
   trait : service('data/trait'),
   blockValues : service('data/block-values'),
+  auth : service(),
 
   init() {
     this._super(...arguments);
@@ -606,6 +607,26 @@ export default ManageBase.extend({
   nameFilterArray : alias('namesFilters.nameFilterArray'),
   nameFilterChanged(value) {
     this.namesFilters.nameFilterChanged(value);
+  },
+
+  //----------------------------------------------------------------------------
+
+  naturalQuery : '',
+  naturalQueryResult : null,
+  naturalQueryChanged(value) {
+    if (value?.length) {
+    this.auth.naturalSearch(value).then(results => {
+      if (results?.length) {
+        const ids = results.mapBy('item.id');
+        this.set('naturalQueryResult', ids);
+        const datasetId = results[0].item.id;
+        this.set('nameFilter', datasetId);
+        this.nameFilterChanged(datasetId);
+      } else {
+        this.set('naturalQueryResult', null);
+      }
+    });
+    }
   },
 
   //----------------------------------------------------------------------------

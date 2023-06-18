@@ -464,6 +464,17 @@ export default Service.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /**
+   * @param search_text natural language query text
+   * @return promise yielding result of OpenAI+Vectra search
+   */
+  naturalSearch(search_text, options) {
+    return this._ajax('Datasets/naturalSearch', 'GET', {search_text, options}, true);
+  },
+
+  //----------------------------------------------------------------------------
+
+
   checkError(data, mapper) {
     // dLog('checkError')
     try {

@@ -214,6 +214,7 @@ module.exports = function(app) {
         // Dataset
       context.property === 'cacheClear' ||
       context.property === 'cacheClearRequests' ||
+      context.property === 'naturalSearch' ||
         // Group 
       context.property === 'own' ||
       context.property === 'in' ||
