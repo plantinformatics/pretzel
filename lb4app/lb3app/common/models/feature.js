@@ -196,8 +196,13 @@ module.exports = function(Feature) {
     const fnName = 'dnaSequenceSearch';
     /** each user session may have 1 concurrent dnaSequenceSearch.
      * Use session id for a unique index for dnaSequence fileName.  */
-    let index = sessionIndex(options.accessToken.id),
-        queryStringFileName = 'dnaSequence.' + index + '.fasta';
+    // investigating why options.accessToken is undefined on a server.
+    if (! options.accessToken) {
+      console.log(fnName, 'options', options);
+    }
+    const
+    index = options.accessToken?.id ? sessionIndex(options.accessToken.id) : 0,
+    queryStringFileName = 'dnaSequence.' + index + '.fasta';
     console.log(fnName, dnaSequence.length, parent, searchType, index, queryStringFileName);
 
     /** Receive the results from the Blast.

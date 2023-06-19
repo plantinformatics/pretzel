@@ -45,6 +45,9 @@ envNames =
     'scriptsDir',
     'blastDir',
     'vcfDir',
+    'toolsDev',
+    'datasetIdDir',
+    'blastn',
 
     'DEBUG',
     'DOTENV_CONFIG_DEBUG',
