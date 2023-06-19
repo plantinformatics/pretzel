@@ -14,12 +14,13 @@ function arraysConcat(a, b) {
 
 /** @return the first index of the given sparse array, or undefined if the array is empty.
  * @desc
- * This uses O(1) time and space - it exits on the first iteration.
+ * This uses some, which in theory could use O(1) time and space - it exits on the first iteration.
+ * But in practice it is slow and variable, and Object.keys(array)[0] is fast.
  *
  * Equivalent to firstIndex = Object.keys(array)[0], which allocates an array of keys / indices.
  * Usage : array?.[sparseArrayFirstIndex(array)];
  */
-function sparseArrayFirstIndex(array) {
+function sparseArrayFirstIndex_via_some(array) {
   /** from :  https://stackoverflow.com/a/40917838, Dec 1, 2016 at 18:26, Nina Scholz
    * https://stackoverflow.com/questions/3570889/get-first-element-of-a-sparse-javascript-array
  */
@@ -31,7 +32,12 @@ function sparseArrayFirstIndex(array) {
   });
   return index;
 }
-
-
+/** Same as above sparseArrayFirstIndex_via_some(); tests indicate this will perform better.
+ * @see sparseArrayFirstIndex_via_some()
+ */
+function sparseArrayFirstIndex(array) {
+  const index = Object.keys(array)[0];
+  return index;
+}
 
 export { arraysConcat, sparseArrayFirstIndex };
