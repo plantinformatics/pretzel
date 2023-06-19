@@ -532,6 +532,12 @@ export default Service.extend({
          * Also limited by : nginx.conf : ... location / { ... proxy_read_timeout 180; }
          */
         config.timeout = timeout;
+        /* this is a frontend configuration, not an option for backend API.
+         * Defining it may cause API endpoint function to receive
+         * options.accessToken === undefined in some versions of node /
+         * loopback.
+         */
+        delete options.timeout;
       }
     }
 

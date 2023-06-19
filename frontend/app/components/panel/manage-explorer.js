@@ -615,7 +615,8 @@ export default ManageBase.extend({
   naturalQueryResult : null,
   naturalQueryChanged(value) {
     if (value?.length) {
-    this.auth.naturalSearch(value).then(results => {
+      const options = {server : this.apiServerSelectedOrPrimary};
+      this.auth.naturalSearch(value, options).then(results => {
       if (results?.length) {
         const ids = results.mapBy('item.id');
         this.set('naturalQueryResult', ids);

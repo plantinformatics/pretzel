@@ -47,6 +47,8 @@ function connectOpenAIApi() {
 }
 const apiP = connectOpenAIApi();
 
+const jsonPrompt = "The following is a JSON object containing metadata about a genomic dataset.\n---\n";
+const datasetPrompt = "The following are the ID and metadata attributes of a genomic dataset :\n";
 async function getVector(text /*: string*/) {
   const api = await apiP;
   const response = await api.createEmbedding({
@@ -60,7 +62,7 @@ async function addItem(id, text /*: string*/) {
   const index = await indexP;
   await index.insertItem({
     id,
-    vector: await getVector(text),
+    vector: await getVector(datasetPrompt + text),
     metadata: { text }
   });
 }
@@ -69,7 +71,7 @@ exports.ensureItem = ensureItem;
 async function ensureItem(id, text /*: string*/) {
   const index = await indexP;
   const idInIndex = await index.getItem(id);
-  // console.log('ensureItem', id, idInIndex);
+  console.log('ensureItem', id, !!idInIndex);
   if (! idInIndex) {
     await addItem(id, text);
   }

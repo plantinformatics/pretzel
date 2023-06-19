@@ -22,6 +22,8 @@ const { loadAliases } = require('../utilities/load-aliases');
 const { cacheClearBlocks } = require('../utilities/localise-blocks');
 const { ErrorStatus } = require('../utilities/errorStatus.js');
 const { ensureItem, query } = require('../utilities/vectra_search.js');
+const { flattenJSON } = require('../utilities/json_text.js');
+
 
 //------------------------------------------------------------------------------
 
@@ -464,7 +466,7 @@ module.exports = function(Dataset) {
   //----------------------------------------------------------------------------
 
   Dataset.naturalSearch = function naturalSearch(search_text, options, cb) {
-    embedDatasets(Dataset);
+    embedDatasets(Dataset, options);
     console.log('naturalSearch', search_text);
     query(search_text)
       .then((results) => cb(null, results))
@@ -629,14 +631,18 @@ module.exports = function(Dataset) {
 /** Indicate if embedDatasets() has been done. */
 let embeddingDone = 0;
 /** Call ensureItem() for each dataset, if this has not already been done.
+ * @param Dataset model
+ * @param options including session accessToken
  */
-function embedDatasets(Dataset) {
+function embedDatasets(Dataset, options) {
   if (embeddingDone++ === 0) {
     console.log('embedDatasets', embeddingDone);
-    Dataset.find({})
+    Dataset.find({}, options)
       .then(
         datasets => {
-          datasets.forEach(dataset => {
+          datasets
+            .filter(d => ! d.meta?._origin)
+            .forEach(dataset => {
             const
             /** _id is not present in dataset.__data */
             id = dataset.getId(),
@@ -646,8 +652,11 @@ function embedDatasets(Dataset) {
              * description = pick(dataset.__data, ['_id', 'meta.type', 'meta.shortName', 'tags', 'meta.commonName', 'namespace' ]);
              * description.id = id;
              */
-            description = Object.assign({id}, dataset.__data);
-            ensureItem(id, JSON.stringify(description));
+              description = Object.assign({id}, dataset.__data),
+              // JSON.stringify(description)
+              readable = flattenJSON(description);
+              console.log('embedDatasets', readable);
+              ensureItem(id, readable);
           });
         });
   }
