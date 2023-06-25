@@ -61,6 +61,7 @@
     {{input id="naturalQuery" type="search" value=naturalQuery
       enter=(action this.naturalQueryChanged)
       placeholder="Natural language search" }}
+    <BsButton @type="info" @onClick={{action (mut this.enableNaturalSearchDialog) true}}>Dialog</BsButton>
   </div>
   <div>
     {{#each this.naturalQueryResult as |datasetId|}}
@@ -359,3 +360,11 @@
 {{#if enableShow}}
   {{new-datasource-modal closeNewDatasourceModal=(action 'closeNewDatasourceModal')}} 
 {{/if}}
+
+{{!-- --------------------------------------------------------------------- --}}
+
+{{#if this.enableNaturalSearchDialog}}
+  <Form::NaturalSearch @close={{action (mut this.enableNaturalSearchDialog) false}} />
+{{/if}}
+
+{{!-- --------------------------------------------------------------------- --}}

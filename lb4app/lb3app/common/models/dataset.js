@@ -23,6 +23,7 @@ const { cacheClearBlocks } = require('../utilities/localise-blocks');
 const { ErrorStatus } = require('../utilities/errorStatus.js');
 const { ensureItem, query } = require('../utilities/vectra_search.js');
 const { flattenJSON } = require('../utilities/json_text.js');
+const { text2Commands } = require('../utilities/openai_query.js');
 
 
 //------------------------------------------------------------------------------
@@ -473,6 +474,15 @@ module.exports = function(Dataset) {
       .catch((err) => cb(err));
   };
 
+  Dataset.text2Commands = function text2CommandsEndpoint(commands_text, options, cb) {
+    console.log('naturalSearch', commands_text);
+    text2Commands(commands_text)
+      .then((results) => cb(null, results))
+      .catch((err) => cb(err));
+  };
+
+
+
   /*--------------------------------------------------------------------------*/
 
   /** Based on uploadDataset(), similar to @see upload().
@@ -619,6 +629,16 @@ module.exports = function(Dataset) {
    description: "Use OpenAI to convert search_text to an vector embedding and search for matching datasets using Vectra."
   });
 
+  Dataset.remoteMethod('text2Commands', {
+    accepts: [
+      {arg: 'commands_text', type: 'string', required: true},
+      {arg: "options", type: "object", http: "optionsFromRequest"}
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'array', root: true},
+   description: "Use OpenAI to convert commands_text to text commands for viewing datasets."
+  });
+
 
 
   acl.assignRulesRecord(Dataset);
@@ -642,24 +662,29 @@ function embedDatasets(Dataset, options) {
         datasets => {
           datasets
             .filter(d => ! d.meta?._origin)
-            .forEach(dataset => {
-            const
-            /** _id is not present in dataset.__data */
-            id = dataset.getId(),
-            /** Initially used selected fields to minimise context size, but now
-             * requesting embedding of each dataset separately, and only once at
-             * startup, so size and cost is not a concern.
-             * description = pick(dataset.__data, ['_id', 'meta.type', 'meta.shortName', 'tags', 'meta.commonName', 'namespace' ]);
-             * description.id = id;
-             */
-              description = Object.assign({id}, dataset.__data),
-              // JSON.stringify(description)
-              readable = flattenJSON(description);
-              console.log('embedDatasets', readable);
-              ensureItem(id, readable);
-          });
+            .forEach(dataset => datasetForEmbed);
         });
   }
+}
+
+function datasetForEmbed(dataset) {
+  const
+  /** _id is not present in dataset.__data */
+  id = dataset.getId(),
+  {tags, ...datasetSansTags} = dataset.__data,
+  tagsText = Array.isArray(description.tags) ? ' ' + description.tags.join(' ') : '',
+
+  /** Initially used selected fields to minimise context size, but now
+   * requesting embedding of each dataset separately, and only once at
+   * startup, so size and cost is not a concern.
+   * description = pick(dataset.__data, ['_id', 'meta.type', 'meta.shortName', 'tags', 'meta.commonName', 'namespace' ]);
+   * description.id = id;
+   */
+  description = Object.assign({id}, datasetSansTags),
+  // JSON.stringify(description)
+  readable = flattenJSON(description) + tagsText;
+  console.log('embedDatasets', readable);
+  ensureItem(id, readable);
 }
 
 //------------------------------------------------------------------------------

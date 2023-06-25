@@ -215,6 +215,7 @@ module.exports = function(app) {
       context.property === 'cacheClear' ||
       context.property === 'cacheClearRequests' ||
       context.property === 'naturalSearch' ||
+      context.property === 'text2Commands' ||
         // Group 
       context.property === 'own' ||
       context.property === 'in' ||

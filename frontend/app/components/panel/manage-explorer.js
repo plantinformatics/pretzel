@@ -630,6 +630,9 @@ export default ManageBase.extend({
     }
   },
 
+  /** Enable dialog for input of natual language search query".  */
+  enableNaturalSearchDialog : false,
+
   //----------------------------------------------------------------------------
 
   /* The two dependencies caseInsensitive and searchFilterAll impact on

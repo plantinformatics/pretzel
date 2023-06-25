@@ -472,6 +472,14 @@ export default Service.extend({
     return this._ajax('Datasets/naturalSearch', 'GET', {search_text, options}, true);
   },
 
+  /**
+   * @param commands_text natural language query text
+   * @return promise yielding result of OpenAI query
+   */
+  text2Commands(commands_text, options) {
+    return this._ajax('Datasets/text2Commands', 'GET', {commands_text, options}, true);
+  },
+
   //----------------------------------------------------------------------------
 
 

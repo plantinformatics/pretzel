@@ -17,7 +17,7 @@ function flattenJSON(json, prefix = '') {
       let value = json[key];
 
       // copies (dataset with .meta._origin) will normally be filtered out before this point.
-      if ((value === null) || (Array.isArray(value) && ! value.length) ||
+      if ((value === null) || (value === '') || (Array.isArray(value) && ! value.length) ||
           (key === '_origin') || (typeof value === 'object' && value._bsontype) ) {
       } else
       if (typeof value === 'object' && value !== null) {
