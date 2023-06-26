@@ -276,7 +276,7 @@ export default Component.extend({
     let
     text$ = $('textarea', this.element),
     currentVal = text$.val(),
-    array = (currentVal === "") ? [] : currentVal.split('\n');
+    array = ! currentVal ? [] : currentVal.split('\n');
     return array;
   },
   /** Combine the current input feature names and the brushed
@@ -293,7 +293,24 @@ export default Component.extend({
     let c = difference(a, b)
       .uniq();
     return c;
-  }
+  },
+
+  //----------------------------------------------------------------------------
+
+  /** Respond to change of queryParamsState.searchFeatureNames by
+   * copying it into input textarea featureNameListInput
+   */
+  searchFeatureNamesEffect: computed('queryParamsState.searchFeatureNames', function () {
+    const
+    featureNames = this.queryParamsState.searchFeatureNames,
+    value = featureNames.value;
+    if (featureNames.changed && value) {
+      const featureNamesArray = Array.isArray(value) ? value : [value];
+      this.appendSelectedFeatures(featureNamesArray, false);
+    }
+  }),
+
+  //----------------------------------------------------------------------------
 
 
   /*----------------------------------------------------------------------------*/

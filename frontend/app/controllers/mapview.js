@@ -4,10 +4,16 @@ import EmberObject, { computed, observer } from '@ember/object';
 import Evented from '@ember/object/evented';
 import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
-import { readOnly, alias } from '@ember/object/computed';
+import { readOnly, alias, reads, or } from '@ember/object/computed';
 import DS from 'ember-data';
 
+import QueryParams from 'ember-parachute';
+
+//------------------------------------------------------------------------------
+
 /* global d3 */
+
+//------------------------------------------------------------------------------
 
 import { stacks } from '../utils/stacks';
 import { axisFeatureCircles_selectOne, axisFeatureCircles_selectUnviewed } from '../utils/draw/axis';
@@ -23,14 +29,66 @@ dLog("controllers/mapview.js");
 let trace_dataflow = 0;
 let trace_select = 0;
 
-export default Controller.extend(Evented, {
+//------------------------------------------------------------------------------
+
+export const componentQueryParams = new QueryParams({
+  searchFeatureNames: {
+    defaultValue: '',
+    refresh: true
+  },
+});
+
+
+//------------------------------------------------------------------------------
+
+
+
+export default Controller.extend(Evented, componentQueryParams.Mixin, {
   dataset: service('data/dataset'),
   block: service('data/block'),
   view : service('data/view'),
   selectedService : service('data/selected'),
   apiServers: service(),
   controlsService : service('controls'),
+  queryParamsService : service('query-params'),
 
+  //----------------------------------------------------------------------------
+  // based on ember-parachute/README.md
+
+  // queryParamsChanged: reads('queryParamsState.searchFeatureNames'),
+  // or('queryParamsState.{page,search,tags}.changed'),
+
+  setup({ queryParams }) {
+    this.fetchData(queryParams);
+  },
+
+  queryParamsDidChange({ shouldRefresh, queryParams }) {
+    // if any query param with `refresh: true` is changed, `shouldRefresh` is `true`
+    if (shouldRefresh) {
+      this.fetchData(queryParams);
+    }
+  },
+
+  reset({ queryParams }, isExiting) {
+    if (isExiting) {
+      this.resetQueryParams();
+    }
+  },
+
+  /** Use the values of queryParams
+   */
+  fetchData(queryParams) {
+    // fetch data
+  },
+
+  actions: {
+    resetAll() {
+      // reset all query params to their default values specified in the query param map
+      this.resetQueryParams();
+    }
+  },
+
+  //----------------------------------------------------------------------------
 
   /** Array of available datasets populated from model 
    */
@@ -367,6 +425,7 @@ export default Controller.extend(Evented, {
       }
     });
 
+    this.queryParamsService.queryParamsHost = this;
     stacks.oa = this.oa;
 
     this._super.apply(this, arguments);

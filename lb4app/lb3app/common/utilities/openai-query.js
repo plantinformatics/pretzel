@@ -27,7 +27,7 @@ Reference assemblies are referred to by the species or variety name, and a versi
 Reply with these commands corresponding to the above actions :\
 1. display(dataset, chromosome), where chromosome is a name such as 1A, ... 7D.\
 2. dna_search(dna sequence text, reference assembly name).\
-3. position_interval = gene_or_marker_search(gene_or_marker_name).\
+3. position_interval = gene_or_marker_search(gene_or_marker_names).\
 4. zoom(start_position, end_position).\
 Interpret the following user request and express it in the form of the above commands.\
  --- \
