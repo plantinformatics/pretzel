@@ -21,9 +21,9 @@ const { spreadsheetDataToJsObj } = require('../utilities/spreadsheet-read');
 const { loadAliases } = require('../utilities/load-aliases');
 const { cacheClearBlocks } = require('../utilities/localise-blocks');
 const { ErrorStatus } = require('../utilities/errorStatus.js');
-const { ensureItem, query } = require('../utilities/vectra_search.js');
-const { flattenJSON } = require('../utilities/json_text.js');
-const { text2Commands } = require('../utilities/openai_query.js');
+const { ensureItem, query } = require('../utilities/vectra-search.js');
+const { flattenJSON } = require('../utilities/json-text.js');
+const { text2Commands } = require('../utilities/openai-query.js');
 
 
 //------------------------------------------------------------------------------
