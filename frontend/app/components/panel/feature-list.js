@@ -302,11 +302,23 @@ export default Component.extend({
    */
   searchFeatureNamesEffect: computed('queryParamsState.searchFeatureNames', function () {
     const
+    fnName = 'searchFeatureNamesEffect',
     featureNames = this.queryParamsState.searchFeatureNames,
     value = featureNames.value;
     if (featureNames.changed && value) {
-      const featureNamesArray = Array.isArray(value) ? value : [value];
+      /** if value is from URL, it may be comma-separated string instead of an array. */
+      if (typeof value === 'string') {
+        dLog(fnName, value);
+      }
+      const
+      featureNamesArray =
+        Array.isArray(value) ? value :
+        (typeof value === 'string') ? value.split(',') : [value];
       this.appendSelectedFeatures(featureNamesArray, false);
+      if (this.queryParamsState.naturalAuto.value) {
+        dLog(fnName, value);
+        this.getBlocksOfFeatures();
+      }
     }
   }),
 

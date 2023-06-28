@@ -32,9 +32,13 @@ let trace_select = 0;
 //------------------------------------------------------------------------------
 
 export const componentQueryParams = new QueryParams({
+  naturalAuto: {
+    defaultValue: false,
+    refresh: false
+  },
   searchFeatureNames: {
     defaultValue: '',
-    refresh: true
+    refresh: false
   },
 });
 

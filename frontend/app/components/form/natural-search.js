@@ -52,6 +52,7 @@ export default class FormNaturalSearchComponent extends Component {
   vars = {};
 
   interpretCommands(result) {
+    this.queryParams.queryParamsHost.set('naturalAuto', true);
     const
     lines = result.split('\n');
     lines.forEach(line => {
@@ -63,6 +64,7 @@ export default class FormNaturalSearchComponent extends Component {
         this.vars[varName] = this.gene_or_marker_search(params);
       }
     });
+    this.queryParams.queryParamsHost.set('naturalAuto', false);
   }
 
   /** Search for the given Feature (gene or marker) names.

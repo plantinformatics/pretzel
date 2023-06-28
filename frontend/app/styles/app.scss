@@ -2227,6 +2227,17 @@ div.genotype > div > div > textarea,
   height : 15ex;
   overflow-y : auto;
 }
+.natural-search > div > textarea
+{
+  min-width : 50em;
+  min-height : 20ex;
+}
+.natural-search .ember-tooltip-inner
+{
+  min-width: 40em;
+  /* min-height: 10em; */
+  padding: 1em;
+}
 
 /** Hide the panel-container-s when toggled off */
 #right-panel-content.right-panel-genotype.hideControls .panel-parent
