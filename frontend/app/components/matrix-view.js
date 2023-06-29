@@ -1601,7 +1601,7 @@ export default Component.extend({
     data.unshift(this.columnNames);
     const
     text = data
-      .map(d => d.map(c => c.value || c).join('\t'))
+      .map(d => d.map(c => (c === undefined) ? '' : (c.value || c)).join('\t'))
       .join('\n');
 
     return text;
@@ -1747,11 +1747,21 @@ export default Component.extend({
 
   setRowAttributes() {
     const
-    dataIsRows = !!this.displayDataRows,
-    /** if gtMergeRows then displayDataRows is sparse, indexed by Position.  */
-    data = dataIsRows ?
-      ( this.urlOptions.gtMergeRows ? Object.values(this.displayDataRows) : this.displayDataRows) :
-      this.displayData;
+    dataIsRows = !!this.displayDataRows;
+    let data;
+    if (dataIsRows) {
+      /** if gtMergeRows then displayDataRows is sparse, indexed by Position.  */
+      data = this.urlOptions.gtMergeRows ?
+        Object.values(this.displayDataRows) :
+        this.displayDataRows;
+    } else {
+      let featureColumn = this.columnNames.indexOf('Position');
+      if (featureColumn === -1) {
+        featureColumn = 0;
+      }
+      data = this.displayData[featureColumn].features;
+    }
+
     setRowAttributes(this.table, data, dataIsRows);
   },
 

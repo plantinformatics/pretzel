@@ -41,15 +41,26 @@ function stringSetFeature(sampleValue, feature) {
 
 /*----------------------------------------------------------------------------*/
 
-/** Assign Feature reference to each row. */
+/** Assign Feature reference to each row.
+ * @param table HandsOnTable
+ * @param data  array of data which correspond to rows, and is parallel.
+ * If dataIsRows then data are Features, otherwise row data which references a feature.
+ * @param dataIsRows  data passed to matrix-view may be in the form of columns (displayData), or rows (displayDataRows)
+ * The original use of matrix-view formulated the table data as columns
+ * corresponding to Blocks, each with an array of Features (parallel positions)
+ * manage-genotype :
+ * . vcfFeatures2MatrixView() provides the table data as columns, with each column
+ *   data element containing an array .features, which is passed as data here.
+ *   These are cell values {name, value, [featureSymbol]}.
+ * . vcfFeatures2MatrixViewRows() provides the table data as rows, with each row
+ *   corresponding to a Position (gtMergeRows) or a Feature (! gtMergeRows).
+ */
 function setRowAttributes(table, data, dataIsRows) {
   /** genotype data is samples[], and contains samples[i].features
    * These 2 uses should fall into alignment as the genotype table requirements evolve.
    */
-  const dataIsColumns = ! dataIsRows && data.length && Array.isArray(data[0].features);
-  if (dataIsColumns) {
-    data = data[0].features;
-  } else if (dataIsRows) {
+  const dataIsColumns = ! dataIsRows && data?.length;
+  if (dataIsRows) {
     /* displayDataRows is a sparse array, indexed by Position (value.0)
      * Object.values() returns the non-empty values, which will correspond to the table rows.
      */
@@ -65,13 +76,16 @@ function setRowAttributes(table, data, dataIsRows) {
 
       setRowAttribute(table, row, /*col*/undefined, feature);
     } else if (dataIsRows) {
-      /* Disabled because : feature.Block is no longer defined. value String should define [featureSymbol]. 
-       * Setting all cells is slow, so set just column 0 as a fall-back.
+      const featureColumnValues = Object.values(feature);
+      /* feature.Block is no longer defined, so use feature.Ref - it will have
+       * features in all rows whereas the dataset columns may not.
+       * value String should define [featureSymbol]. 
+       * Setting all cells is slow, so maybe set just column 0 as a fall-back.
        * Transitioning away from HandsOnTable would solve this difficulty of
        * associating metadata with table cells.
        */
       feature = (feature.Block || feature.Ref) [Symbol.for('feature')];
-      Object.values(feature).forEach((value, physicalCol) => {
+      featureColumnValues.forEach((value, physicalCol) => {
         const col = table.toVisualColumn(physicalCol);
         if (col !== null) {
           /* For gtMergeRows, a row can combine several Features, so it may be
