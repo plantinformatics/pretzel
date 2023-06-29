@@ -264,6 +264,12 @@ export default Component.extend({
     }
     this.fullPage = ! this.blockSamples;
     // later(() => ! this.isDestroying && this.createTable(), 1000);
+
+    /** matrix-view formats the data into the table; make that format available
+     * to manage-genotype which contains a user button to copy it to the
+     * clipboard.
+     */
+    this.tableApi.dataClipboard = () => this.dataClipboard;
   },
 
   didRender() {
@@ -1565,6 +1571,40 @@ export default Component.extend({
       data.push(d);
     });
     return data;
+  }),
+  /** Produce a TSV which is suited for copy / paste via the clipboard into a spreadsheet.
+   * Similar to data(), but returning rows as arrays instead of objects,
+   * and include the column header row and the row header (Position / Name) column.
+   * @return an array of, for each row, an array of : row header, cells in the order of .columnNames
+   */
+  dataClipboard : computed('columnNames', 'rows', 'dataByRow', function() {
+    const
+    fnName = 'dataClipboard',
+    rows = this.get('rows'),
+    dataByRow = this.get('dataByRow'),
+    data = rows
+      .map((row_name) => {
+        const
+        rowData = dataByRow[row_name],
+        d = this.get('columnNames')
+          .map(col_name => rowData[col_name]);
+        return d;
+      });
+    /** data[*] is e.g. string or String or 
+     * Object { name: "20102 scaffold38755_1190119", value: "C", Symbol("feature"): {...} }
+     * The following selects out the .value, but may be useful for the user
+     * select which field/s to copy, e.g. feature name or other
+     * feature.values. ...
+     */
+
+    // prepend the column headers
+    data.unshift(this.columnNames);
+    const
+    text = data
+      .map(d => d.map(c => c.value || c).join('\t'))
+      .join('\n');
+
+    return text;
   }),
   /** For each row, collate an array of cell data for each column,
    * and determine [min, avg, max] of each row.

@@ -348,6 +348,7 @@
 
                 </div>
 
+                {{#if this.vcfGenotypeLookupDomain}}
                 <div class="lookup-line">
 
                   <div class="interval-group">
@@ -361,6 +362,7 @@
                   </div>
 
                 </div>
+                {{/if}}
 
               </div>
 
@@ -439,7 +441,6 @@
 
                   <li>
                     <button type="button" class="btn btn-info btn-xs"
-                      style="margin-left: 2.5em;"
                       onclick={{action (pipe this.haplotypeFiltersClear this.haplotypeFiltersApply) }} >
                       Clear
                     </button>
@@ -564,7 +565,6 @@
                 <ul class="list-group borderless view-controls">
                   <li>
                     <input type="checkbox"
-                      style="margin-left: 3em;"
                       checked={{@userSettings.showAxisLDBlocks}}
                       oninput={{action (mut @userSettings.showAxisLDBlocks) value="target.checked"}}  >
                     <label>LD Blocks colour in Axis Tracks</label>
@@ -572,11 +572,15 @@
 
                   <li>
                     <input type="checkbox"
-                      style="margin-left: 3em;"
                       checked={{@userSettings.showTablePositionAlignment}}
                       oninput={{action (mut @userSettings.showTablePositionAlignment) value="target.checked"}}  >
                     <label>Show table position alignment to axis</label>
                   </li>
+
+                  <li>
+                    <BsButton @type="info" @onClick={{this.copyTableToClipboard}} class="margin-top">Copy table to clipboard</BsButton>
+                  </li>
+
                 </ul>
                 {{!---------------------------------------------------------------------}}
               </div>
@@ -708,6 +712,7 @@
   haplotypeToggle=this.haplotypeToggle
   haplotypeFilterSamples=this.haplotypeFilterSamples
   tablePositionChanged=this.tablePositionChanged
+  tableApi=this.tableApi
 }}
 
 {{!---------------------------------------------------------------------------}}

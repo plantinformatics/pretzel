@@ -11,6 +11,7 @@ import { uniq } from 'lodash/array';
 import NamesFilters from '../../utils/data/names-filters';
 import { toPromiseProxy, toArrayPromiseProxy } from '../../utils/ember-devel';
 import { thenOrNow, contentOf } from '../../utils/common/promises';
+import { clipboard_writeText } from '../../utils/common/html';
 import { intervalSize } from '../../utils/interval-calcs';
 import { overlapInterval } from '../../utils/draw/zoomPanCalcs';
 import {
@@ -251,6 +252,12 @@ export default class PanelManageGenotypeComponent extends Component {
    * where datasetId is a non-VCF dataset. */
   @tracked
   selectedFeaturesValuesFields = {};
+
+  /** dataClipboard() can be re-factored into manage-genotype, but that may pull
+   * out half of matrix-view - perhaps wait until changing table component, so
+   * use this action bundle to prototype and refine the requirements.
+   */
+  tableApi = { dataClipboard : null};
 
   //----------------------------------------------------------------------------
 
@@ -825,7 +832,7 @@ export default class PanelManageGenotypeComponent extends Component {
     return {names, selected};
   }
 
-  /** @return number of sample names in .vcfGenotypeSamplesText
+  /** @return sample names in .vcfGenotypeSamplesText
    */
   @computed('vcfGenotypeSamplesText')
   get samples() {
@@ -2069,6 +2076,17 @@ export default class PanelManageGenotypeComponent extends Component {
       // to enable trialling of action to filer after Clear
       this.matrixView = matrixView;
     }
+  }
+
+  //----------------------------------------------------------------------------
+
+  @action
+  copyTableToClipboard() {
+    const
+    fnName = 'copyTableToClipboard',
+    tableText = this.tableApi.dataClipboard();
+    dLog(fnName, tableText);
+    clipboard_writeText(tableText);
   }
 
 

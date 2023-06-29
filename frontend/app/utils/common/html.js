@@ -1,5 +1,9 @@
 //------------------------------------------------------------------------------
 
+const dLog = console.debug;
+
+//------------------------------------------------------------------------------
+
 /** Parse a specific error page which is received in response to
  * authentication failure in login.
  * @see components/form/user-login.js : sendRequest()
@@ -30,6 +34,24 @@ function htmlErrorParse(htmlText) {
 
 //------------------------------------------------------------------------------
 
+/** Copy the given text into the window manager clipboard.
+ * Browser security requires a user interaction shortly before
+ * navigator.clipboard is used.
+ */
+function clipboard_writeText(tableText) {
+  const fnName = 'clipboard_writeText';
+  // refn : https://developer.mozilla.org/en-US/docs/Web/API/Clipboard/writeText
+  navigator.clipboard.writeText(tableText).then(() => {
+    dLog(fnName, 'clipboard successfully set', tableText.length);
+  }, (error) => {
+    dLog(fnName, 'clipboard write failed : ', error);
+  });
+
+}
+
+//------------------------------------------------------------------------------
+
 export {
   htmlErrorParse,
+  clipboard_writeText,
 }

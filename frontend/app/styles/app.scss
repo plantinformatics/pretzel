@@ -1947,6 +1947,11 @@ div#left-panel-feature-search > div > div > div > ul > li > div > button
 }
 /*------------------------------------*/
 /* view-controls : text sub-label (div or span)  */
+div.genotype ul.view-controls > li > input,
+div.genotype ul.view-controls > li > button,
+{
+  margin-left : 3em;
+}
 ul.view-controls > li > div > .sub-label  {
   margin-left:2em;
   vertical-align: bottom;
