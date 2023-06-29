@@ -660,9 +660,10 @@ function embedDatasets(Dataset, options) {
     Dataset.find({}, options)
       .then(
         datasets => {
+          console.log('embedDatasets', datasets.length);
           datasets
             .filter(d => ! d.meta?._origin)
-            .forEach(dataset => datasetForEmbed);
+            .forEach(dataset => datasetForEmbed(dataset));
         });
   }
 }
@@ -672,7 +673,7 @@ function datasetForEmbed(dataset) {
   /** _id is not present in dataset.__data */
   id = dataset.getId(),
   {tags, ...datasetSansTags} = dataset.__data,
-  tagsText = Array.isArray(description.tags) ? ' ' + description.tags.join(' ') : '',
+  tagsText = Array.isArray(tags) ? ' ' + tags.join(' ') : '',
 
   /** Initially used selected fields to minimise context size, but now
    * requesting embedding of each dataset separately, and only once at
@@ -680,9 +681,10 @@ function datasetForEmbed(dataset) {
    * description = pick(dataset.__data, ['_id', 'meta.type', 'meta.shortName', 'tags', 'meta.commonName', 'namespace' ]);
    * description.id = id;
    */
-  description = Object.assign({id}, datasetSansTags),
+  description = Object.assign({/*id*/}, datasetSansTags),
+  prefix = 'The attributes of the dataset named ' + id + ' are :\n',
   // JSON.stringify(description)
-  readable = flattenJSON(description) + tagsText;
+  readable = prefix + flattenJSON(description).join(', ') + tagsText;
   console.log('embedDatasets', readable);
   ensureItem(id, readable);
 }

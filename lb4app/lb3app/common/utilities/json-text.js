@@ -26,7 +26,7 @@ function flattenJSON(json, prefix = '') {
         keyValuePairs.push(...nestedPairs);
       } else {
         let flatKey = prefix ? `${prefix}.${key}` : key;
-        let pair = `${flatKey}=${value}`;
+        let pair = `${flatKey} : ${value}`;
         keyValuePairs.push(pair);
       }
     }

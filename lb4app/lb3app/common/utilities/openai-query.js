@@ -35,6 +35,11 @@ Interpret the following user request and express it in the form of the above com
 
 //------------------------------------------------------------------------------
 
+/** probably switch to the recently-released function-calling API for more
+ * regular function/commands text.
+ * https://openai.com/blog/function-calling-and-other-api-updates, June 13, 2023
+ */
+
 exports.text2Commands = text2Commands;
 async function text2Commands(text /*: string*/) {
   const fnName = 'text2Commands';
