@@ -477,6 +477,7 @@ export default Component.extend({
       outsideClickDeselects: true,
       afterOnCellMouseDown: bind(this, this.afterOnCellMouseDown),
       afterOnCellMouseOver,
+      beforeCopy: bind(this, this.beforeCopy),
       headerTooltips: {
         rows: false,
         columns: true,
@@ -1576,6 +1577,10 @@ export default Component.extend({
    * Similar to data(), but returning rows as arrays instead of objects,
    * and include the column header row and the row header (Position / Name) column.
    * @return an array of, for each row, an array of : row header, cells in the order of .columnNames
+   * @desc
+   * This function overlaps with beforeCopy(); that function is given a copy of
+   * the data in the selection and mutates it, whereas this uses the whole table
+   * data and maps it.
    */
   dataClipboard : computed('columnNames', 'rows', 'dataByRow', function() {
     const
@@ -1606,6 +1611,48 @@ export default Component.extend({
 
     return text;
   }),
+  /** Pre-process the selected data when the user does rectangle-select and
+   * Ctrl-C Copy.
+   * Convert non-string cell data to string : i.e. String via .toString(),
+   * Object using .value which is string.
+   * Prepend column headers for the selected columns if the selection includes
+   * the first row.
+   * Could similarly prepend the row headers to each rowData; currently
+   * gtMergeRows includes Position in the table so only !gtMergeRows feature
+   * name is missed.
+   */
+  beforeCopy(data, coords) {
+    const fnName = 'beforeCopy';
+    /** If there are multiple selections, not clear whether user would want the
+     * column headers, so omit them.
+     * If the selection includes the first row, then probably the selection is
+     * whole columns or whole table, so prepend the column headers.
+     * When the user selects using the column headers - i.e. whole columns, then
+     * startRow is 0.
+     */
+    let columnHeaders;
+    if ((coords.length === 1) && (coords[0].startRow === 0)) {
+      const c0 = coords[0];
+      columnHeaders = this.columnNames.slice(c0.startCol, c0.endCol + 1)
+        .map(header => header.replaceAll('\t', ' : '));
+    }
+    /* the requirements for processing cellData here is the same as
+     * dataClipboard(). */
+    data.forEach(rowData => {
+      rowData.forEach((cellData, col) => {
+        if (cellData === undefined) {
+          rowData[col] = '';
+        } else if (cellData.value) {
+          rowData[col] = cellData.value;
+        } else if (typeof cellData === 'object') {
+          rowData[col] = cellData.toString();
+        }
+      });
+    });
+    if (columnHeaders) {
+      data.unshift(columnHeaders);
+    }
+  },
   /** For each row, collate an array of cell data for each column,
    * and determine [min, avg, max] of each row.
    * For genotype / blockSamples : numeric value may be 0, 1, 2.
