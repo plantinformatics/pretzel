@@ -53,14 +53,34 @@ envNames =
     'DOTENV_CONFIG_DEBUG',
     'DOTENV_CONFIG_PATH',
   ];
+const
+processFieldNames =
+  [
+    'pid',
+    'ppid',
+    'version',
+    /* undefined at this point, must be initialised later
+    'mainModule.filename',
+    'mainModule.path',
+    */
+  ];
+
 /** if name is DB_PASS, reduce value to true if defined. */
 function maskValue(name, value)
 {
   return (name == 'DB_PASS') ? (value ? true : value) : value;
 }
+const env = process.env;
 console.log(
   __dirname, 'process.env',
-  envNames.map((n) => [n, maskValue(n, process.env[n])]));
+  envNames.map((n) => [n, maskValue(n, env[n])]),
+  '\nprocess',
+  processFieldNames.map((n) => [n, process[n]]),
+  process.cwd(),
+  '\n',
+  new Date(),
+);
+// heartbeat log message : process. _eventsCount, memoryUsage()
 
 
 // validating provided environment variables
