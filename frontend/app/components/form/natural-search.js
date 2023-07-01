@@ -3,6 +3,7 @@ import { computed, action } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
+import { later } from '@ember/runloop';
 
 //------------------------------------------------------------------------------
 
@@ -151,13 +152,13 @@ export default class FormNaturalSearchComponent extends Component {
       blocks = datasets.map(dataset =>
         dataset?.dataset.blocks.findBy('name', chromosome))
         .filter(block => block);
-      blocks.forEach(block => this.args.loadBlock(block));
+      later(() => blocks.forEach(block => this.args.loadBlock(block)));
     }
     /* or nameChr2Block() or this.datasetService.datasetsByName,
     dataset = datasets[datasetName]; */
 
     dLog(fnName, datasetName, chromosome, datasets.length);
-    return dataset;
+    return datasets;
   }
   nameChr2Block(datasetName, chromosome) {
     if (! datasetName || ! chromosome) {

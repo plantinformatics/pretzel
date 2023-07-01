@@ -365,7 +365,7 @@
 
 {{#if this.enableNaturalSearchDialog}}
   <Form::NaturalSearch
-    loadBlock="loadBlock"
+    @loadBlock={{action this.actions.loadBlock}}
     @close={{action (mut this.enableNaturalSearchDialog) false}} />
 {{/if}}
 
