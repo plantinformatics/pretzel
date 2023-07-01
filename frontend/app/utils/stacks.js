@@ -1249,7 +1249,6 @@ stacks.sortLocation = function()
 Stack.prototype.location = function()
 {
   let l = this.axes[0].location();
-  checkIsNumber(l);
   return l;
 };
 /** Find this stack within stacks[] and return the index.
@@ -2199,7 +2198,18 @@ function x(axis)
 stacks.x = x;
 
 
-Stacked.prototype.location = function() { return checkIsNumber(oa.o[this.axisName]); };
+Stacked.prototype.location = function() {
+  const 
+  fnName = 'Stacked:location',
+  location = oa.o[this.axisName];
+  if (location === undefined) {
+    console.warning(fnName, this.axisName, Object.keys(oa.o), oa.o);
+    this.log();
+  } else {
+    checkIsNumber(location);
+  }
+  return location;
+};
 Block.prototype.axisTransformO = function ()
 {
   let transform;
@@ -2245,7 +2255,7 @@ Stacked.prototype.axisTransformO_orig = function ()
    * no need for scale when this.portion === 1
    */
   let scale = this.portion;
-  let xVal = checkIsNumber(oa.o[this.axisName]);
+  let xVal = this.location();
   xVal = Math.round(xVal);
   let rotateText = "", axis = this;
   if (! axis)
