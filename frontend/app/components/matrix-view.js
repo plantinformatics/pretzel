@@ -1801,15 +1801,16 @@ export default Component.extend({
       data = this.urlOptions.gtMergeRows ?
         Object.values(this.displayDataRows) :
         this.displayDataRows;
-    } else {
+    } else if (this.displayData) {  // check .displayData because there may be no current data
       let featureColumn = this.columnNames.indexOf('Position');
       if (featureColumn === -1) {
         featureColumn = 0;
       }
       data = this.displayData[featureColumn].features;
     }
-
-    setRowAttributes(this.table, data, dataIsRows);
+    if (data) {
+      setRowAttributes(this.table, data, dataIsRows);
+    }
   },
 
   afterScrollVertically() {
