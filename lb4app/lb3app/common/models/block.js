@@ -805,7 +805,9 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
      */
     useCache = ! isZoomed || ! interval,
     cacheId = fnName + '_' + blockId + '_' + nBins +  '_' + useBucketAuto,
-    result = useCache && cache.get(cacheId);
+    /** set this false to test without reading existing cache */
+    readCache = false,
+    result = readCache && useCache && cache.get(cacheId);
     if (result) {
       if (trace_block > 1) {
         console.log(fnName, cacheId, 'get', result[0]);

@@ -494,6 +494,8 @@ function cacheblocksFeaturesCounts(db, models, datasetId, options) {
         // first pass - assume parallel to blocks; can search for matching name.
         interval = parentBlocks[i]?.range;
         if (interval) {
+        // maybe : sum counts to check # features in dataset.
+          result = result.then((datasetSum) => {
           const
         /** frontend passes useBucketAuto=undefined, and useBucketAuto is
          * included in cacheId, so match that.  interval is required when
@@ -502,9 +504,10 @@ function cacheblocksFeaturesCounts(db, models, datasetId, options) {
         countsP = blockFeaturesCountsP.apply(
           models.Block,
           [blockId, interval, /*nBins*/100, /*isZoomed*/false,
-          /*useBucketAuto*/undefined, options, /*res*/undefined /*,cb*/]);
-        // maybe : sum counts to check # features in dataset.
-        result = result.then(countsP);
+          /*useBucketAuto*/undefined, options, /*res*/undefined /*,cb*/])
+              .then(counts => counts.reduce((blockSum, bin) => blockSum += bin.count, 0))
+              .then(blockSum => datasetSum += blockSum);
+            return countsP; });
         }
         return result;
       }, Promise.resolve(0));
