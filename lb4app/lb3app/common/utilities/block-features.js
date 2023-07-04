@@ -1,3 +1,5 @@
+const util = require('util');
+
 var { flatten }  = require('lodash/array');
 
 const { blockFilterValue0 } = require('./paths-aggr');
@@ -451,5 +453,76 @@ exports.cacheClearKey = function cacheClearKey(cache, cacheId)
   }
   return value;
 };
+
+//------------------------------------------------------------------------------
+
+exports.cacheblocksFeaturesCounts = cacheblocksFeaturesCounts;
+/** Pre-warm the cache of blockFeaturesCounts for each block of this dataset
+ * For dense datasets such as Exome SNPs and VCFs, the time taken to count
+ * features for the initial zoomed-out blockFeaturesCounts request can be
+ * several minutes, and the frontend client will time out in 1min, so pre-warm
+ * the cached results for each block.
+ * Perform the requests in series because 21 blocks in parallel would compete
+ * with each other in-efficiently.
+ * @param db
+ * @param models
+ * @param datasetId
+ * @param options
+ */
+function cacheblocksFeaturesCounts(db, models, datasetId, options) {
+  const fnName = 'cacheblocksFeaturesCounts';
+
+  const blockFeaturesCountsP = util.promisify(models.Block.blockFeaturesCounts);
+
+  const
+  /// datasetId -> dataset -> parent -> parent blocks
+  blocksP = datasetBlocks(models, datasetId),
+  parentBlocksP = models.Block.datasetLookup(datasetId, options)
+    .then(datasets => datasetBlocks(models, datasets[0].parent)),
+  resultP = blocksP
+    .then(blocks => parentBlocksP.then(parentBlocks =>
+      ensureCounts(blocks, parentBlocks)
+    ));
+
+  function ensureCounts(blocks, parentBlocks) {
+      console.log(fnName, datasetId, blocks.length);
+      const blockCountsP = blocks.reduce((result, block, i) => {
+        console.log(fnName, block.id);
+        /** select use of blockRecordValue() : blockGet() in blockRecordLookup(). */
+        const
+        blockId = block.id.toHexString(),
+        // first pass - assume parallel to blocks; can search for matching name.
+        interval = parentBlocks[i]?.range;
+        if (interval) {
+          const
+        /** frontend passes useBucketAuto=undefined, and useBucketAuto is
+         * included in cacheId, so match that.  interval is required when
+         * ! useBucketAuto.
+         */
+        countsP = blockFeaturesCountsP.apply(
+          models.Block,
+          [blockId, interval, /*nBins*/100, /*isZoomed*/false,
+          /*useBucketAuto*/undefined, options, /*res*/undefined /*,cb*/]);
+        // maybe : sum counts to check # features in dataset.
+        result = result.then(countsP);
+        }
+        return result;
+      }, Promise.resolve(0));
+      return blockCountsP;
+    }
+  // caller will resultP .then() and .catch()
+  return resultP;
+}
+//------------------------------------------------------------------------------
+
+/** Lookup the blocks of the given datasetId
+ * @return a promise yielding [blocks]
+ */
+function datasetBlocks(models, datasetId) {
+  const
+  where = {datasetId},
+  blocksP = models.Block.find({where}, /*options*/{});
+  return blocksP;
+}
 
 //------------------------------------------------------------------------------

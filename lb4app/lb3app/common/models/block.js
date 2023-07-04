@@ -813,7 +813,8 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       cb(null, result);
     } else {
       this.blockDatasetLookup(id, options)
-        .then(blockDatasetFeatureCounts.bind(this));
+        .then(blockDatasetFeatureCounts.bind(this))
+        .catch(cb);
 
       function blockDatasetFeatureCounts([block, dataset]) {
         if (dataset.tags?.includes('VCF')) {

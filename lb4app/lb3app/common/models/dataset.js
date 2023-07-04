@@ -20,6 +20,7 @@ var load = require('../utilities/load');
 const { spreadsheetDataToJsObj } = require('../utilities/spreadsheet-read');
 const { loadAliases } = require('../utilities/load-aliases');
 const { cacheClearBlocks } = require('../utilities/localise-blocks');
+const { cacheblocksFeaturesCounts } = require('../utilities/block-features');
 const { ErrorStatus } = require('../utilities/errorStatus.js');
 const { ensureItem, query } = require('../utilities/vectra-search.js');
 const { flattenJSON } = require('../utilities/json-text.js');
@@ -463,7 +464,20 @@ module.exports = function(Dataset) {
       .then((removed) => cb(null, removed))
       .catch((err) => cb(err));
   };
-  
+
+
+  Dataset.cacheblocksFeaturesCounts = function(id, options, cb) {
+    const
+    fnName = 'cacheblocksFeaturesCounts',
+    db = this.dataSource.connector,
+    models = this.app.models;
+    cacheblocksFeaturesCounts(db, models, id, options)
+      .then((result) => cb(null, result))
+      .catch((err) => {
+        console.log(fnName, err.statusCode, err);
+        cb(err);});
+  };
+
   //----------------------------------------------------------------------------
 
   Dataset.naturalSearch = function naturalSearch(search_text, options, cb) {
@@ -617,6 +631,16 @@ module.exports = function(Dataset) {
     http: {verb: 'get'},
     returns: {type: 'array', root: true},
    description: "Clear cached copies of datasets / blocks / features from a secondary Pretzel API server."
+  });
+
+  Dataset.remoteMethod('cacheblocksFeaturesCounts', {
+    accepts: [
+      {arg: 'id', type: 'string', required: true},
+      {arg: "options", type: "object", http: "optionsFromRequest"}
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'number', root: true},
+   description: "Pre-warm the cache of blockFeaturesCounts for each block of this dataset."
   });
 
   Dataset.remoteMethod('naturalSearch', {

@@ -214,6 +214,7 @@ module.exports = function(app) {
         // Dataset
       context.property === 'cacheClear' ||
       context.property === 'cacheClearRequests' ||
+      context.property === 'cacheblocksFeaturesCounts' ||
       context.property === 'naturalSearch' ||
       context.property === 'text2Commands' ||
         // Group 
