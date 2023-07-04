@@ -1801,7 +1801,7 @@ export default Component.extend({
       data = this.urlOptions.gtMergeRows ?
         Object.values(this.displayDataRows) :
         this.displayDataRows;
-    } else if (this.displayData) {  // check .displayData because there may be no current data
+    } else if (this.displayData.length && this.columnNames.length) {  // check .displayData because there may be no current data
       let featureColumn = this.columnNames.indexOf('Position');
       if (featureColumn === -1) {
         featureColumn = 0;

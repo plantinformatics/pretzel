@@ -381,11 +381,16 @@ function axisFeatureCircles_selectOneInAxis(axisS, feature) {
   if (! axisS) {
     let
     axis1d = feature.get('blockId.referenceBlockOrSelf.axis1d');
-    axisS = selectAxisOuter(axis1d);
+    axisS = axis1d && selectAxisOuter(axis1d);
   }
-  let
-  selector = "g > circle#" + axisFeatureCircles_eltId(feature),
-  circleS = axisS.selectAll(selector);
+  let circleS;
+  if (! axisS) {
+    circleS = d3.select();
+  } else {
+    let
+    selector = "g > circle#" + axisFeatureCircles_eltId(feature);
+    circleS = axisS.selectAll(selector);
+  }
   return circleS;
 }
 /** Select the circles of axes which have no viewed blocks.
