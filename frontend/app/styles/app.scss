@@ -2227,11 +2227,14 @@ div.genotype > div > div > textarea,
 {
   width: 28em;
 }
+/* textarea */
 .selectedSamplesInput
 {
   height : 15ex;
   overflow-y : auto;
+  resize: both;
 }
+
 .natural-search > div > textarea
 {
   min-width : 50em;
@@ -2262,6 +2265,7 @@ div.genotype ul.list-group
 .genotype-controls > .form-control
 {
   width: 75%;
+  resize: both;
 }
 .panel-parent
 {
