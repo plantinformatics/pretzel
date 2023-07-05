@@ -1021,9 +1021,14 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
           }
           return sampleName;
         }
+        /** caseRefAlt is a map function and sampleIsFilteredOut is a filter function.
+         * related : sampleNamesForTable */
+        let filterFn = ! options.userSettings.haplotypeFiltersEnable ? caseRefAlt :
+            (sampleName) => (sampleName = caseRefAlt(sampleName)) && ! sampleIsFilteredOut(block, sampleName) && sampleName;
+
         // can instead collate columnNames in following .reduce(), plus caseRefAlt().
         /* unchanged */ /* sampleNamesSet = */
-        featureSampleNames(sampleNamesSet, feature, caseRefAlt);
+        featureSampleNames(sampleNamesSet, feature, filterFn);
 
         const
         /** for valueToFormat(); the same is done in vcfFeatures2MatrixView() */
@@ -1249,6 +1254,7 @@ function featuresValuesFields(features) {
  * @param sampleNamesSet new Set() to accumulate sampleNames
  * @param feature
  * @param filterFn  if defined, process names, and if result is not undefined, add it to set.
+ * i.e. filterFn can play the role of both a map function and a filter function
  * @return sampleNamesSet, for use in .reduce().
  */
 function featureSampleNames(sampleNamesSet, feature, filterFn) {

@@ -414,11 +414,26 @@
             {{#tab.pane id=tabId title=tabTypeName}}
               <div class="genotype">
 
-                <label style="margin-left: 1em; margin-top: 1em" >LD Block Sample Filters</label>
+                <label style="margin-left: 1em; margin-top: 1em" >Sample Filters</label>
+
+                <div>
+                  <input type="checkbox"
+                    style="margin-left: 2em;"
+                    checked={{@userSettings.selectFeaturesByLDBlock}}
+                    oninput={{action (pipe 
+                    (action (mut @userSettings.selectFeaturesByLDBlock) value="target.checked")
+                    this.haplotypeFiltersApply) }}  >
+                  <label>Select Filtering Features / SNPs By LD Block</label>
+                </div>
+
+                <div style="margin-left: 1em; margin-top: 1em">
+                  <span>{{this.haplotypeFiltersCount}}</span>
+                  <label style="margin-left: 1em;" >LD Blocks</label>
+                </div>
                 <ul class="list-group borderless haplotypeFilters">
                   {{#each this.blocksHaplotypeFilters as |blockHF|}}
                     <li class="list-group-item">
-                      <label>{{blockHF.block.datasetId.id}}</label>
+                      <div>{{blockHF.block.datasetId.id}}</div>
                       <ul class="list-group">
                         {{#each blockHF.haplotypeFilters as |haplotype|}}
                           <li class="list-group-item">
@@ -437,11 +452,33 @@
                   {{/each}}
                 </ul>
 
+                <div style="margin-left: 1em; margin-top: 1em">
+                  <span>{{this.featureFiltersCount}}</span>
+                  <label style="margin-left: 1em;">Feature / SNP</label>
+                </div>
+                <ul class="list-group borderless featureFilters">
+                  {{#each this.blocksFeatureFilters as |blockFF|}}
+                    <li class="list-group-item">
+                      <div>{{blockFF.block.datasetId.id}}</div>
+                      <ul class="list-group">
+                        {{#each blockFF.featureFilters as |feature|}}
+                          <li class="list-group-item">
+                            <div>
+                              {{feature.value_0}} &nbsp; {{feature.values.ref}}/{{feature.values.alt}}
+                            </div>
+                          </li>
+                        {{/each}}
+                      </ul>
+
+                    </li>
+                  {{/each}}
+                </ul>
+
                 <ul class="list-group borderless view-controls">
 
                   <li>
                     <button type="button" class="btn btn-info btn-xs"
-                      onclick={{action (pipe this.haplotypeFiltersClear this.haplotypeFiltersApply) }} >
+                      onclick={{action (pipe this.haplotypeFiltersClear this.featureFiltersClear this.haplotypeFiltersApply) }} >
                       Clear
                     </button>
 
@@ -710,6 +747,7 @@
   blockSamples=true
   displayForm=this.requestFormat
   haplotypeToggle=this.haplotypeToggle
+  featureToggle=this.featureToggle
   haplotypeFilterSamples=this.haplotypeFilterSamples
   tablePositionChanged=this.tablePositionChanged
   tableApi=this.tableApi

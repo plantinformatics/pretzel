@@ -789,6 +789,7 @@ export default Component.extend({
       columnNames = this.get('columnNames');
       if (columnNames) {
         col_name = columnNames[col];
+        // overlap with afterSelectionHaplotype()
         if (col_name.startsWith('LD Block')) {
           this.haplotypeToggleRC(row, col);
           return;
@@ -824,6 +825,7 @@ export default Component.extend({
     }
   },
   /** afterSelection callback when ! gtSelectColumn, 
+   * for Ref / Alt columns it toggles the feature sample filter : featureToggleRC().
    * for 'LD Block' column it toggles the LD Block filter : haplotypeToggleRC().
    * For non-VCF column header (.datasetColumns), it shows a dialog to select additional feature fields
    */
@@ -831,9 +833,18 @@ export default Component.extend({
     const
     fnName = 'afterSelectionHaplotype',
     columnName = this.columnNames[col];
+    /// add this as a checkbox in Controls tab, default false
+    const selectFeaturesByLDBlock = this.userSettings.selectFeaturesByLDBlock;
     dLog(fnName, row, col);
     if (col === -1) {
       /** Ctrl-A Select-All causes row===-1 and col===-1 */
+    } else
+    if (! selectFeaturesByLDBlock && 
+        (columnName.startsWith('Ref') || columnName.startsWith('Alt'))) {
+      const feature = this.featureToggleRC(row, col, columnName);
+      if (feature) {
+        later(() => this.table.render(), 1000);
+      }
     } else
     if (columnName.startsWith('LD Block')) {
     const ldBlock = this.haplotypeToggleRC(row, col);
@@ -1967,6 +1978,29 @@ export default Component.extend({
       }
     }
     /* caller will do table.render() to make hideColumn() effective */
+  },
+
+  //----------------------------------------------------------------------------
+
+  /** Called from selection in Ref / Alt columns, which will toggle selection of
+   * this Feature / SNP.
+   * manage-genotype passes in action featureToggle, with signature (feature, columnName).
+   * @return feature
+   * @desc
+   * Based on haplotypeToggleRC()
+   */
+  featureToggleRC(row, col, columnName) {
+    const
+    fnName = 'featureToggleRC',
+    coords = {row, col},
+    feature = this.getRowAttribute(this.table, coords.row, coords.col);
+    /** afterSelectionHaplotype() gets called while table is re-rendering, and feature is undefined */
+    if (feature) {
+      dLog(fnName, coords, feature.name, columnName);
+        this.featureToggle(feature, columnName);
+        this.filterSamplesBySelectedHaplotypes();
+    }
+    return feature;
   },
 
   //----------------------------------------------------------------------------
