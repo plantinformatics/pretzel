@@ -2346,6 +2346,11 @@ div.genotype label
   min-width: 40em;
   min-height: 79ex;
 }
+.ember-modal-dialog.genotype > div.ember-view > div.tab-content
+{
+  min-width: 50em;
+}
+
 
 .genotype li.list-group-item
 {

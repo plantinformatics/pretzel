@@ -98,7 +98,7 @@ function valueNameIsNotSample(valueName) {
 
  * .showResultText default: false
  * .showConfigureLookup default: false
- * .showControlsFilters default: false
+ * .showSampleFilters default : false
 
  * .filterBySelectedSamples default : true
  * .mafUpper default : true
@@ -312,8 +312,8 @@ export default class PanelManageGenotypeComponent extends Component {
     if (userSettings.showConfigureLookup === undefined) {
       userSettings.showConfigureLookup = true;
     }
-    if (userSettings.showControlsFilters === undefined) {
-      userSettings.showControlsFilters = true;
+    if (userSettings.showSampleFilters === undefined) {
+      userSettings.showSampleFilters = false;
     }
 
     if (userSettings.filterBySelectedSamples === undefined) {
