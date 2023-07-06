@@ -991,11 +991,14 @@ export default class PanelManageGenotypeComponent extends Component {
   @action
   selectSample(event) {
     const
-    previousSelected = this.selectedSamples,
+    /** previous selected samples, possibly edited by user.
+     * Can use the same parsing as sampleNameListInput().  */
+    editedSamples = this.sampleNameListInputParse(this.selectedSamplesText),
     selectedSamples = $(event.target).val();
     this.selectedSamples.addObjects(selectedSamples);
     if (selectedSamples.length) {
-      this.selectedSamplesText = previousSelected.addObjects(selectedSamples).join('\n');
+      // Using .addObjects removes duplicates, which string concatenation wouldn't do.
+      this.selectedSamplesText = editedSamples.addObjects(selectedSamples).join('\n');
     }
   }
 
@@ -1015,9 +1018,6 @@ export default class PanelManageGenotypeComponent extends Component {
     return filteredSamples;
   }
 
-  // copied from feature-list, not used.
-  @tracked
-  activeInput = false;
   /* related user actions :
    *  change filter : doesn't change selectedSamples{,Text}
    *  user select -> append to selectedSamples ( -> selectedSamplesText)
@@ -1026,18 +1026,27 @@ export default class PanelManageGenotypeComponent extends Component {
   @tracked
   selectedSamplesText = '';
 
-  /** parse the contents of the textarea -> selectedSamples
+  /** parse the contents of the textarea
+   * @param value text contents of <Textarea>
+   * @return sample names array
    */
-  @action
-  sampleNameListInput(value) {
+  sampleNameListInputParse(value) {
     const
-    fnName = 'sampleNameListInput',
+    fnName = 'sampleNameListInputParse',
     /** empty lines are invalid sample names, so trim \n and white-space lines */
     selected = value
       .trimEnd(/\n/)
       .split(/\n *\t*/g)
       .filter((name) => !!name);
     dLog(fnName, value, selected);
+    return selected;
+  }
+  /** parse the contents of the textarea -> selectedSamples
+   */
+  @action
+  sampleNameListInput(value) {
+    const
+    selected = this.sampleNameListInputParse(value);
     this.selectedSamples = selected;
   }
 

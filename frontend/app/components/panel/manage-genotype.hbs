@@ -160,6 +160,7 @@
                         {{/ember-tooltip}}
                       </span>
 
+                      {{#if @userSettings.showSampleFilters}}
                       <span>
                         <input type="checkbox"
                           style="margin-left: 3em;"
@@ -171,6 +172,7 @@
                           Request genotype of samples selected by LD Block / tSNP filters
                         {{/ember-tooltip}}
                       </span>
+                      {{/if}}
 
                     </div>
 
@@ -215,7 +217,7 @@
                         <Textarea
                           class="selectedSamplesInput"
                           @value={{this.selectedSamplesText}}
-                          @input={{action (mut this.activeInput) true}}
+                          @input={{action (mut this.selectedSamplesText) value="target.value"}}
                           @enter={{this.sampleNameListInput}}
                           @insert-newline={{this.sampleNameListInput}}
                           @escape-press={{this.sampleNameListInput}}
