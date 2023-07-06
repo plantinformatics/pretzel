@@ -884,7 +884,7 @@ function AxisBrushZoom(oa) {
     axes.forEach(function(a) {
       let idName = axisEltId(a); // axis ids have "a" prefix
       let
-      domain = a.parent ? a.parent.domain : a.getDomain();
+      domain = a.parent ? a.parent.domain : a.referenceDomain;
       domain = maybeFlip(domain, a.flipped);
       a.setZoomed(false);
       a.y.domain(domain);

@@ -272,7 +272,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   yRange		: Stacked_p.yRange,
   yRange2		: Stacked_p.yRange2,
   domainCalc		: Stacked_p.domainCalc,
-  referenceDomain		: Stacked_p.referenceDomain,
+  // referenceDomain		: Stacked_p.referenceDomain,
   /* .domain can replace getDomain(); the latter does not incorporate .flipped,
    * ditto this.axis (block) .getDomain().
    */
@@ -713,6 +713,13 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
 
   //----------------------------------------------------------------------------
 
+  /** The zoomed-out axis domain.
+   * Equivalent to and replaces Stacked_p.referenceDomain().
+   */
+  referenceDomain : alias('referenceBlock.range'),
+
+  //----------------------------------------------------------------------------
+
   /** @return the domains of the data blocks of this axis.
    * The result does not contain a domain for data blocks with no features loaded.
    *
@@ -729,7 +736,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   /** @return the domains of all the blocks of this axis, including the reference block if any.
    * @description related @see axesDomains() (draw/block-adj)
    */
-  blocksDomains : computed('dataBlocksDomains.[]', 'referenceBlock.range', function () {
+  blocksDomains : computed('dataBlocksDomains.[]', 'referenceDomain', function () {
     let
       /* alternative :
        * dataBlocksMap = this.get('blockService.dataBlocks'),
@@ -739,7 +746,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
       /** see also domainCalc(), blocksUpdateDomain() */
       blocksDomains = this.get('dataBlocksDomains'),
     /** equivalent : Stacked:referenceDomain() */
-    referenceRange = this.get('referenceBlock.range');
+    referenceRange = this.get('referenceDomain');
     if (referenceRange) {
       dLog('referenceRange', referenceRange, blocksDomains);
       blocksDomains.push(referenceRange);
