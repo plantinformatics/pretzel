@@ -398,7 +398,7 @@ export default Service.extend({
       'Blocks/vcfGenotypeLookup' + (post ? 'Post' : ''),
       post ? 'POST' : 'GET',
       post ? JSON.stringify(data) : data,
-      true, apiServer);
+      true, /*onProgress*/ null, apiServer);
   },
 
 
