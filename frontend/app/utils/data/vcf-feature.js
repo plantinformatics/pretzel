@@ -69,8 +69,10 @@ function datasetId2Class(datasetId) {
 // -----------------------------------------------------------------------------
 
 /** Lookup the genotype for the selected samples in the interval of the brushed block.
+ * The server store to add the features to is derived from
+ * vcfGenotypeLookupDataset() param blockV, from brushedOrViewedVCFBlocksVisible,
+ * which matches vcfDatasetId : scope
  * @param auth  auth service for ajax
- * @param server store to add the features to
  * @param samples to request, may be undefined or []
  * Not used if requestSamplesAll
  * @param domainInteger  [start,end] of interval, where start and end are integer values
@@ -83,7 +85,7 @@ function datasetId2Class(datasetId) {
  * @param scope chromosome, e.g. 1A, or chr1A - match %CHROM chromosome in .vcf.gz file
  * @param rowLimit
  */
-function vcfGenotypeLookup(auth, server, samples, domainInteger, requestOptions, vcfDatasetId, scope, rowLimit) {
+function vcfGenotypeLookup(auth, samples, domainInteger, requestOptions, vcfDatasetId, scope, rowLimit) {
   const
   fnName = 'vcfGenotypeLookup',
 
@@ -111,7 +113,7 @@ function vcfGenotypeLookup(auth, server, samples, domainInteger, requestOptions,
    * (also the directory name could be e.g.  lookupDatasetId ._meta.vcfFilename instead of the default datasetId).
    */
   const
-  textP = auth.vcfGenotypeLookup(server, vcfDatasetId, scope, preArgs, rowLimit, {} )
+  textP = auth.vcfGenotypeLookup(vcfDatasetId, scope, preArgs, rowLimit, {} )
     .then(
       (textObj) => {
         const text = textObj.text;

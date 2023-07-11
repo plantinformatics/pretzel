@@ -996,9 +996,13 @@ export default class PanelManageGenotypeComponent extends Component {
     editedSamples = this.sampleNameListInputParse(this.selectedSamplesText),
     selectedSamples = $(event.target).val();
     this.selectedSamples.addObjects(selectedSamples);
-    if (selectedSamples.length) {
-      // Using .addObjects removes duplicates, which string concatenation wouldn't do.
-      this.selectedSamplesText = editedSamples.addObjects(selectedSamples).join('\n');
+    if (! this.selectedSamplesText && selectedSamples.length) {
+      this.selectedSamplesText = selectedSamples.join('\n');
+    } else {
+      if (selectedSamples.length) {
+        // Using .addObjects removes duplicates, which string concatenation wouldn't do.
+        this.selectedSamplesText = editedSamples.addObjects(selectedSamples).join('\n');
+      }
     }
   }
 
@@ -1355,7 +1359,7 @@ export default class PanelManageGenotypeComponent extends Component {
       this.lookupMessage = null;
 
       textP = this.auth.genotypeSamples(
-        this.apiServerSelectedOrPrimary, this.lookupBlock, vcfDatasetId, scope,
+        this.lookupBlock, vcfDatasetId, scope,
         {} );
       textP.then(
         (text) => {
@@ -1531,8 +1535,6 @@ export default class PanelManageGenotypeComponent extends Component {
     const
     fnName = 'vcfGenotypeLookupSelected',
     /** this.axisBrush.block is currently the reference; lookup the data block. */
-    // store = this.axisBrush?.get('block.store'),
-    store = this.apiServerSelectedOrPrimary?.store,
     userSettings = this.args.userSettings,
     samplesLimitEnable = userSettings.samplesLimitEnable,
     {samples, samplesOK} = this.samplesOK(samplesLimitEnable),
@@ -1647,7 +1649,7 @@ export default class PanelManageGenotypeComponent extends Component {
         requestOptions.isecFlags = '-n' + isecFlags;
       }
       const
-      textP = vcfGenotypeLookup(this.auth, this.apiServerSelectedOrPrimary, samples, domainInteger,  requestOptions, vcfDatasetId, scope, this.rowLimit);
+      textP = vcfGenotypeLookup(this.auth, samples, domainInteger,  requestOptions, vcfDatasetId, scope, this.rowLimit);
       // re-initialise file-anchor with the new @data
       this.vcfExportText = null;
       textP.then(
@@ -2268,7 +2270,7 @@ export default class PanelManageGenotypeComponent extends Component {
       requestOptions = {requestFormat, requestSamplesAll, headerOnly : true};
       /** these params are not applicable when headerOnly : samples, domainInteger, rowLimit. */
       textP = vcfGenotypeLookup(
-        this.auth, this.apiServerSelectedOrPrimary, samples, domainInteger,
+        this.auth, samples, domainInteger,
         requestOptions, vcfDatasetId, scope, this.rowLimit)
         .then(
         (text) => {
