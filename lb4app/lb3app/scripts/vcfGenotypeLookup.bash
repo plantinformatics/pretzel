@@ -313,9 +313,60 @@ function bcftoolsCommand() {
     fi
     fi
   else
+    >> $serverDir/$logFile echo ${#vcfGz}
+    if [ ${#isecDatasetIdsArray[@]} -gt 1 ]
+    then
+      >> $serverDir/$logFile echo Expecting just 1 vcf.gz : ${#vcfGz}
+    fi
+    # Use SNPList if preArgs contains no samples, i.e. -S /dev/null
+    if [ "$command" = counts ] || echo "$preArgs" | fgrep /dev/null >/dev/null 
+    then
+      if vcfGz_=$(ensureSNPList $vcfGz)
+      then
+        vcfGz="$vcfGz_"
+      fi
+      # SNPList=.SNPList
+      command=query
+    fi
+
     # ${@} here is regionParams
     2>&$F_ERR "$bcftools" "$command" "$vcfGz" "${@}"
   fi
+}
+
+#-------------------------------------------------------------------------------
+
+# @param vcfGzSamples	1 vcfGz
+ensureSNPList() {
+  status=0
+  vcfGzSamples="$1"
+  vcfGzSNPList=$(echo "$vcfGzSamples" | sed s/.vcf.gz/.SNPList.vcf.gz/g )
+  if [ ! -e "$vcfGzSNPList" ]
+  then
+    # only require information from cols 1-5, but VCF requires 1-9, i.e. including : QUAL FILTER INFO FORMAT
+    # Seems that 1 sample column is required, so request 1-10
+    zcat "$vcfGzSamples"  | cut -f1-10  | bgzip -c > "$vcfGzSNPList"
+  fi
+  if [ ! -e "$vcfGzSNPList".csi ]
+  then
+    # copied from dbName2Vcf()
+    if ! bcftools index "$vcfGzSNPList"
+    then
+      status=$?
+      # The GUI is likely to send 2 requests, which will cause the 2nd
+      # 'bcftools index' to clash; message to stderr in server log is :
+      #   index: the input is probably truncated, use -f to index anyway: 
+      # Seems like the .csi is still OK.
+      # Should probably either queue requests or create a lock file during index.
+      # The plan is to normally use /api/Datasets/cacheblocksFeaturesCounts
+      # which will send just 1 request.
+      # If failed to build index, use the original .vcf.gz with all samples.
+      vcfGzSNPList=
+      echo 1>&$F_ERR 'Error:' "No index $vcfGzSNPList.csi, and failed to build index."
+    fi
+  fi
+  echo -n $vcfGzSNPList
+  return $status
 }
 
 #-------------------------------------------------------------------------------

@@ -35,7 +35,8 @@ function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
   const
   fnName = 'vcfGenotypeLookup',
   headerOnly = preArgs.headerOnly,
-  command = ! headerOnly && preArgs.requestFormat ? 'query' : 'view';
+  command = headerOnly ? 'view' : preArgs.SNPList ? 'counts' :
+    preArgs.requestFormat ? 'query' : 'view';
   /* isec is only meaningful with >1 datasets. The caller
    * vcfGenotypeLookupDataset() only passes isecDatasetIds when
    * isecDatasetIds.length > 1
@@ -149,7 +150,7 @@ exports.vcfGenotypeFeaturesCounts = function(block, interval, nBins = 10, isZoom
     // may be able to omit domainInteger if ! isZoomed 
     domainInteger = interval.map((d) => d.toFixed(0)),
     region = scope + ':' + domainInteger.join('-'),
-    preArgs = {region, samples : null, requestFormat : 'CATG'},
+    preArgs = {region, samples : null, requestFormat : 'CATG', SNPList : true},
     summary = new vcfToSummary(...arguments);
     function sumCb(error, text) {
       let result;
