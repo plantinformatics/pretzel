@@ -887,7 +887,7 @@ function valueToFormat(requestFormat, refAltValues, valueIn) {
   const
   fnName = 'valueToFormat';
   let valueOut;
-  if ((valueIn === undefined) || (valueIn === './.') || (valueIn === '')) {
+  if ((valueIn === undefined) || (valueIn === './.') || (valueIn === '.|.') || (valueIn === '')) {
     valueOut = valueIn;
   } else {
     const
