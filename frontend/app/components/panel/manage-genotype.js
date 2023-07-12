@@ -991,18 +991,20 @@ export default class PanelManageGenotypeComponent extends Component {
   @action
   selectSample(event) {
     const
-    /** previous selected samples, possibly edited by user.
-     * Can use the same parsing as sampleNameListInput().  */
-    editedSamples = this.sampleNameListInputParse(this.selectedSamplesText),
     selectedSamples = $(event.target).val();
     this.selectedSamples.addObjects(selectedSamples);
-    if (! this.selectedSamplesText && selectedSamples.length) {
-      this.selectedSamplesText = selectedSamples.join('\n');
-    } else {
+    if (! this.selectedSamplesText) {
       if (selectedSamples.length) {
-        // Using .addObjects removes duplicates, which string concatenation wouldn't do.
-        this.selectedSamplesText = editedSamples.addObjects(selectedSamples).join('\n');
+        this.selectedSamplesText = selectedSamples.join('\n');
       }
+    } else if (selectedSamples.length) {
+      const
+      /** previous selected samples, possibly edited by user.
+       * Can use the same parsing as sampleNameListInput().  */
+      editedSamples = this.sampleNameListInputParse(this.selectedSamplesText);
+
+      // Using .addObjects removes duplicates, which string concatenation wouldn't do.
+      this.selectedSamplesText = editedSamples.addObjects(selectedSamples).join('\n');
     }
   }
 
