@@ -491,9 +491,13 @@ function cacheblocksFeaturesCounts(db, models, datasetId, options) {
       /** select use of blockRecordValue() : blockGet() in blockRecordLookup(). */
       const
       blockId = block.id.toHexString(),
-      // first pass - assume parallel to blocks; can search for matching name.
-      interval = parentBlocks[i]?.range;
-      if (interval) {
+      /** In dev on smaller data parentBlocks is parallel to blocks, but get
+       * some re-ordering in a larger db.  Search for matching scope. */
+      parentBlock = parentBlocks.find(b => b.scope === block.scope),
+      interval = parentBlock?.range;
+      if (! interval) {
+        console.log(fnName, 'not matched', block.scope, block.name, datasetId, parentBlocks.length);
+      } else {
         // maybe : sum counts to check # features in dataset.
         result = result.then((datasetSum) => {
           const
