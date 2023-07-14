@@ -989,14 +989,14 @@ function blockToMatrixColumn(singleBlock, block, sampleName, features) {
  * brushedVCFBlocks.reduce ( block.featuresInBrush.reduce() )
 
  * @param featureFilter filter applied to featuresArrays[*]
- * @param sampleFilter undefined or optional additional filter (callRate filter)
+ * @param sampleFilters array of optional additional filters (selected sample, callRate filter)
  * @param options { userSettings }
  * @return result : {rows, sampleNames}
  */
-function vcfFeatures2MatrixViewRows(requestFormat, featuresArrays, featureFilter, sampleFilter, options) {
+function vcfFeatures2MatrixViewRows(requestFormat, featuresArrays, featureFilter, sampleFilters, options) {
   const fnName = 'vcfFeatures2MatrixViewRows';
   const result = featuresArrays.reduce((res, features, datasetIndex) => {
-    res = vcfFeatures2MatrixViewRowsResult(res, requestFormat, features, featureFilter, sampleFilter, options, datasetIndex);
+    res = vcfFeatures2MatrixViewRowsResult(res, requestFormat, features, featureFilter, sampleFilters, options, datasetIndex);
     return res;
   }, {rows : [], sampleNames : []});
   return result;
@@ -1005,12 +1005,12 @@ function vcfFeatures2MatrixViewRows(requestFormat, featuresArrays, featureFilter
  * i.e. implement options.gtMergeRows
  * @param features block.featuresInBrush. one array, one block.
  * @param featureFilter filter applied to features
- * @param sampleFilter undefined or optional additional filter (callRate filter)
+ * @param sampleFilters array of optional additional filters (selected sample, callRate filter)
  * @param options { userSettings }
  * @param datasetIndex index of this dataset in the featuresArrays passed to vcfFeatures2MatrixViewRows().
  * @param result : {rows, sampleNames}. function can be called via .reduce()
  */
-function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featureFilter, sampleFilter, options, datasetIndex) {
+function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featureFilter, sampleFilters, options, datasetIndex) {
   const fnName = 'vcfFeatures2MatrixViewRowsResult';
   const showHaplotypeColumn = features.length && features[0].values.tSNP;
   const block = features.length && contentOf(features[0].blockId);
@@ -1039,10 +1039,15 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
           }
           return sampleName;
         }
-        /** caseRefAlt is a map function and sampleIsFilteredOut is a filter function.
+        if (options.userSettings.haplotypeFiltersEnable) {
+          sampleFilters.push((block, sampleName) => ! sampleIsFilteredOut(block, sampleName));
+        }
+        /** caseRefAlt is a map function and sampleFilters (including sampleIsFilteredOut) are filter functions.
          * related : sampleNamesForTable */
-        let filterFn = ! options.userSettings.haplotypeFiltersEnable ? caseRefAlt :
-            (sampleName) => (sampleName = caseRefAlt(sampleName)) && ! sampleIsFilteredOut(block, sampleName) && sampleName;
+        let filterFn =
+            (sampleName) => 
+            sampleFilters.every(fn => fn(block, sampleName)) &&
+            caseRefAlt(sampleName);
 
         // can instead collate columnNames in following .reduce(), plus caseRefAlt().
         /* unchanged */ /* sampleNamesSet = */
@@ -1057,8 +1062,8 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
         Object.entries(featureSamples)
           .filter(
             ([sampleName, sampleValue]) =>
-              (! options.userSettings.haplotypeFiltersEnable || ! sampleIsFilteredOut(block, sampleName)) &&
-              (! sampleFilter || sampleFilter(this.lookupBlock, sampleName)) )
+              sampleFilters.every(fn => fn(block, sampleName))
+          )
           // .filter(([sampleName, sampleValue]) => ! ['tSNP', 'MAF'].includes(sampleName))
           .reduce(
           (res2, [sampleName, sampleValue]) => {

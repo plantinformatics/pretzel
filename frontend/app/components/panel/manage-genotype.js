@@ -101,6 +101,10 @@ function valueNameIsNotSample(valueName) {
  * .showSampleFilters default : false
 
  * .filterBySelectedSamples default : true
+ * true means filter the data within scope (brush or zoomed domain) by samples
+ * selected in corresponding dataset tab of block
+ * Requests are narrowed to selected samples when ! requestSamplesAll.
+ *
  * .mafUpper default : true
  * .mafThreshold default 0
  * .callRateThreshold default 0
@@ -1794,7 +1798,8 @@ export default class PanelManageGenotypeComponent extends Component {
     return ok;
   }
 
-  /** @return undefined if callRateThreshold is 0, otherwise a filter function with signature
+  /** Optional filter by call rate of a sample within a block.
+   * @return undefined if callRateThreshold is 0, otherwise a filter function with signature
    * sampleFilter(block, sampleName) -> boolean, false means filter out
    */
   @computed('args.userSettings.callRateThreshold')
@@ -1812,6 +1817,15 @@ export default class PanelManageGenotypeComponent extends Component {
       return ok;
     };
     return fn;
+  }
+  sampleSelectedFilter(block, sampleName) {
+    const
+    datasetId = block.get('datasetId.id'),
+    samplesSelected = this.vcfGenotypeSamplesSelectedAll[datasetId],
+    // related : refAlt.includes(sampleName)
+    ok = valueNameIsNotSample(sampleName) ||
+      samplesSelected?.includes(sampleName);
+    return ok;
   }
 
   /** @return undefined if haplotypeFiltersCount is 0, otherwise
@@ -1852,7 +1866,7 @@ export default class PanelManageGenotypeComponent extends Component {
     const
     scope = this.lookupScope,
     vcfDatasetId = this.lookupDatasetId,
-    domainText = this.vcfGenotypeLookupDomain.join('-'),
+    domainText = this.vcfGenotypeLookupDomain ? this.vcfGenotypeLookupDomain.join('-') : '',
     samplesLength = this.vcfGenotypeSamplesSelected ? this.vcfGenotypeSamplesSelected.length : '',
     fileName = vcfDatasetId +
       '_' + scope +
@@ -1920,10 +1934,18 @@ export default class PanelManageGenotypeComponent extends Component {
           const options = {userSettings};
           if (this.urlOptions.gtMergeRows) {
             /** {rows, sampleNames}; */
+            let sampleFilters = [];
+            if (userSettings.filterBySelectedSamples && ! userSettings.requestSamplesAll) {
+              sampleFilters.push(this.sampleSelectedFilter.bind(this));
+            }
+            if (this.sampleFilter) {
+              sampleFilters.push(this.sampleFilter);
+            }
+
             const
             sampleGenotypes = 
               vcfFeatures2MatrixViewRows(
-                this.requestFormat, featuresArrays, this.featureFilter.bind(this), this.sampleFilter,
+                this.requestFormat, featuresArrays, this.featureFilter.bind(this), sampleFilters,
                 options);
             /** Insert datasetIds to this.columnNames.
              * Add features to : this.displayDataRows.
