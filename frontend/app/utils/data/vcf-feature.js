@@ -398,7 +398,7 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
     }
   });
   selectedFeatures.pushObjects(selectionFeatures);
-  block.set('featureCount', block.get('features.length'));
+  blockEnsureFeatureCount(block);
   block.addFeaturePositions(createdFeatures);
 
 
@@ -408,6 +408,22 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
 
   let result = {createdFeatures, sampleNames};
   return result;
+}
+
+//------------------------------------------------------------------------------
+
+/** If block.featureCount is undefined, then it can be set from block.features.length.
+ * This is used when features are added from genotype calls received from VCF or Germinate.
+ * The features received are likely only a small part of the chromosome, so the
+ * count is just a lower bound.  Also it is likely that block.featureCount will
+ * be defined from received blockFeaturesCounts; this is just a fall-back.
+ * (possibly the first vcf result may arrive before blockFeaturesCounts if
+ * blocks are viewed from URL)
+ */
+function blockEnsureFeatureCount(block) {
+  if (block.get('featureCount') === undefined) {
+    block.set('featureCount', block.get('features.length'));
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -509,7 +525,7 @@ function addFeaturesGerminate(block, requestFormat, replaceResults, selectedFeat
   });
 
   selectedFeatures.pushObjects(selectionFeatures);
-  block.set('featureCount', block.get('features.length'));
+  blockEnsureFeatureCount(block);
   block.addFeaturePositions(createdFeatures);
 
   let result = {createdFeatures, sampleNames};
