@@ -1833,7 +1833,10 @@ export default class PanelManageGenotypeComponent extends Component {
    * which returns +ve if column of sampleName2 should be shown to the right of sampleName1.
    * Related : columnNamesCmp().
    */
-  @computed('haplotypeFiltersCount', 'featureFiltersCount')
+  @computed(
+    'haplotypeFiltersCount', 'featureFiltersCount',
+    'args.userSettings.selectFeaturesByLDBlock',
+  )
   get sampleNamesCmp() {
     const
     selectFeaturesByLDBlock = this.args.userSettings.selectFeaturesByLDBlock,
@@ -2064,6 +2067,7 @@ export default class PanelManageGenotypeComponent extends Component {
   @computed(
     'axisBrush.brushedDomain',
 
+    // update : 0d6c0dd9 implements table column filtering by .selectedSamples.
     /* In vcfFeatures2MatrixViewRows() / gtMergeRows currently all samples
      * results received are displayed; vcfFeatures2MatrixView() filters by the
      * given added.sampleNames.   Added <select> for samples
@@ -2073,6 +2077,10 @@ export default class PanelManageGenotypeComponent extends Component {
      * dependancy should be enabled :
      */
     'vcfGenotypeSamplesSelected.[]',
+    /** This is equivalent in effect to vcfGenotypeSamplesSelected.[];
+     * performance is possibly similar.
+     * 'selectedCount',
+     */
 
     'blockService.viewedVisible',
     'requestFormat', 'rowLimit',
@@ -2085,6 +2093,11 @@ export default class PanelManageGenotypeComponent extends Component {
     /** callRateThreshold -> sampleFilter, passed to vcfFeatures2MatrixView{,Rows{,Result}} -> sampleIsFilteredOut{,Blocks} */
     'args.userSettings.callRateThreshold',
     'datasetPositionFilterChangeCount',
+
+    'args.userSettings.haplotypeFiltersEnable',
+    'args.userSettings.selectFeaturesByLDBlock',
+    'haplotypeFiltersCount',
+    'featureFiltersCount',
   )
   get selectedSampleEffect () {
     const fnName = 'selectedSampleEffect';
