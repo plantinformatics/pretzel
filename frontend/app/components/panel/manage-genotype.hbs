@@ -285,7 +285,14 @@
                           style="margin-left: 3em;"
                           checked={{@userSettings.autoLookup}}
                           oninput={{action (mut @userSettings.autoLookup) value="target.checked"}}  >
-                        <label>Auto lookup - all datasets</label>
+                        <label>Auto lookup - all datasets
+                        <EmberTooltip side="right" delay=500>
+                          <span>
+                            Request data for all VCFs in table when user clicks VCF Lookup.
+                            Otherwise, request VCF data from the dataset whose tab is selected in Datasets.
+                          </span>
+                        </EmberTooltip>
+                        </label>
 
                       </li>
 
@@ -338,6 +345,9 @@
                               oninput={{action (mut @userSettings.samplesLimitEnable) value="target.checked"}}  >
 
                           </Elem::InputRangeText>
+                          <EmberTooltip side="right" delay=500>
+                            <span>Limit of number of samples requested in VCF Lookup.</span>
+                          </EmberTooltip>
                         </div>
 
 
@@ -434,7 +444,14 @@
                     oninput={{action (pipe 
                     (action (mut @userSettings.selectFeaturesByLDBlock) value="target.checked")
                     this.haplotypeFiltersApply) }}  >
-                  <label>Select Filtering Features / SNPs By LD Block</label>
+                  <label>Select Filtering Features / SNPs By LD Block
+                    <EmberTooltip side="right" delay=500>
+                      <span>
+                        Select LD Blocks to select SNPs for Sample filter, by clicking in LD Block column.
+                        Otherwise select SNPs directly, by clicking in Ref or Alt column.
+                      </span>
+                    </EmberTooltip>
+                  </label>
                 </div>
 
                 <div style="margin-left: 1em; margin-top: 1em">
@@ -491,6 +508,9 @@
                     <button type="button" class="btn btn-info btn-xs"
                       onclick={{action (pipe this.haplotypeFiltersClear this.featureFiltersClear this.haplotypeFiltersApply) }} >
                       Clear
+                      <EmberTooltip side="right" delay=500>
+                        <span>Clear the selected SNPs or LD Block from the sample filter.</span>
+                      </EmberTooltip>
                     </button>
 
                     <input type="checkbox"
@@ -499,7 +519,11 @@
                       oninput={{action (pipe 
                       (action (mut @userSettings.haplotypeFilterRef) value="target.checked")
                       this.haplotypeFiltersApply) }}  >
-                    <label>Match Ref</label>
+                    <label>Match Ref
+                      <EmberTooltip side="right" delay=500>
+                        <span>Match against the SNP Ref value, in the sample filter based on SNP or LD Block.  Otherwise Alt.</span>
+                      </EmberTooltip>
+                    </label>
 
                     <input type="checkbox"
                       style="margin-left: 2em;"
@@ -507,7 +531,11 @@
                       oninput={{action (pipe 
                       (action (mut @userSettings.haplotypeFiltersEnable) value="target.checked")
                       this.haplotypeFiltersApply) }}  >
-                    <label>Filter</label>
+                    <label>Filter
+                      <EmberTooltip side="right" delay=500>
+                        <span>Show only columns which match the sample filter based on SNP or LD Block. Otherwise, sort by closeness of match.</span>
+                      </EmberTooltip>
+                    </label>
 
                   </li>
 
@@ -527,19 +555,31 @@
                       style="margin-left: 3em;"
                       checked={{@userSettings.filterBySelectedSamples}}
                       oninput={{action (mut @userSettings.filterBySelectedSamples) value="target.checked"}}  >
-                    <label>Selected samples</label>
+                    <label>Selected samples
+                      <EmberTooltip side="right" delay=500>
+                        <span>Show only columns of sample which are selected.</span>
+                      </EmberTooltip>
+                    </label>
 
                     <input type="checkbox"
                       style="margin-left: 3em;"
                       checked={{this.urlOptions.gtMergeRows}}
                       oninput={{action (mut this.urlOptions.gtMergeRows) value="target.checked"}}  >
-                    <label>Merge Rows</label>
+                    <label>Merge Rows
+                      <EmberTooltip side="right" delay=500>
+                        <span>Combine SNPs with the same Position from different datasets on the same row of the table.</span>
+                      </EmberTooltip>
+                    </label>
 
                     <input type="checkbox"
                       style="margin-left: 3em;"
                       checked={{@userSettings.showNonVCFFeatureNames}}
                       oninput={{action (mut @userSettings.showNonVCFFeatureNames) value="target.checked"}}  >
-                    <label>Feature Names</label>
+                    <label>Feature Names
+                      <EmberTooltip side="right" delay=500>
+                        <span>Show Feature names of non-VCF datasets in the cell, otherwise in hover text.</span>
+                      </EmberTooltip>
+                    </label>
 
                   </li>
                 </ul>
