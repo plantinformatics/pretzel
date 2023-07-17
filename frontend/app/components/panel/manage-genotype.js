@@ -1438,7 +1438,12 @@ export default class PanelManageGenotypeComponent extends Component {
    * @param block the lookupBlock use in API request which returned the sampleNames
    */
   mapSamplesToBlock(sampleNames, block) {
-    sampleNames.forEach((sampleName) => this.sampleName2Block[sampleName] = block);
+    sampleNames.forEach((sampleName) => {
+      const
+      blocks = this.sampleName2Block[sampleName] ||
+        (this.sampleName2Block[sampleName] = []);
+      blocks.addObject(block);
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -1845,10 +1850,24 @@ export default class PanelManageGenotypeComponent extends Component {
       const
       matchRates = sampleNames.map((sampleName) => {
         const
-        block = this.sampleName2Block[sampleName],
-        m = block?.[sampleMatchesSymbol][sampleName],
-        ratio = ! m || ! (m.matches + m.mismatches) ? 0 : 
-          m.matches / (m.matches + m.mismatches);
+        /** if a block is unviewed it will still be listed in sampleName2Block[].
+         * blocks will be [] if the sample has not yet been requested.
+         */
+        blocks = this.sampleName2Block[sampleName] || [],
+        /** sum of {,mis}match counts for blocks containing sampleName.  */
+        ms = blocks
+          .filter(block => block.isViewed)
+          .reduce((sum, block) => {
+          const
+          m = block?.[sampleMatchesSymbol]?.[sampleName];
+          if (m) {
+            sum.matches += m.matches;
+            sum.mismatches += m.mismatches;
+          }
+          return sum;
+        }, {matches : 0, mismatches : 0}),
+        ratio = ! (ms.matches + ms.mismatches) ? 0 :
+          ms.matches / (ms.matches + ms.mismatches);
         return ratio;
       }),
       cmp = matchRates[1] - matchRates[0];
