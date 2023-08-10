@@ -176,6 +176,19 @@ export default class PanelManageGenotypeComponent extends Component {
     this.sampleCache.sampleNames[this.lookupDatasetId] = names;
   }
 
+  /** For a VCF dataset, sampleNames are received via bcftools request, and does
+   * not change, so it is cached per dataset, by this function.
+   * @param block is this.lookupBlock, and indicates the dataset which the
+   * sampleNames should be stored for.
+   * The dataset's name is this.lookupDatasetId, which is not necessarily unique
+   * when using multiple servers - see datasetsForName().
+   */
+  datasetStoreSampleNames(block, sampleNames) {
+    const
+    dataset = block.get('datasetId');
+    dataset.sampleNames = sampleNames;
+  }
+
   @alias('args.userSettings.vcfGenotypeSamplesSelected')
   vcfGenotypeSamplesSelectedAll;
 
@@ -947,6 +960,7 @@ export default class PanelManageGenotypeComponent extends Component {
    */
   @computed('lookupDatasetId', 'receivedNamesCount')
   get lookupBlockSamples() {
+    /** related : datasetStoreSampleNames() */
     const names = this.sampleCache.sampleNames[this.lookupDatasetId];
     let selected = this.vcfGenotypeSamplesSelectedAll[this.lookupDatasetId];
     if (false && names?.length && ! selected) {
@@ -1360,8 +1374,7 @@ export default class PanelManageGenotypeComponent extends Component {
     scope = this.lookupScope,
     vcfDatasetId = this.lookupDatasetId;
     let textP;
-    if (scope && vcfDatasetId)
-    {
+    if (scope && vcfDatasetId)   {
       this.lookupMessage = null;
 
       textP = this.auth.genotypeSamples(
@@ -1377,6 +1390,7 @@ export default class PanelManageGenotypeComponent extends Component {
           /** trim off trailing newline; other non-sample column info could be
            * removed; it is not a concern for the mapping. */
           const sampleNames = isGerminate ? t : t.trim().split('\n');
+          this.datasetStoreSampleNames(this.lookupBlock, sampleNames);
           this.mapSamplesToBlock(sampleNames, this.lookupBlock);
           if ((vcfDatasetId === this.lookupDatasetId) &&
               (this.vcfGenotypeSamplesSelected === undefined)) {
@@ -1432,6 +1446,9 @@ export default class PanelManageGenotypeComponent extends Component {
   //----------------------------------------------------------------------------
 
   /** block[sampleNamesSymbol] is a map from sampleName to block */
+  /** sampleName2Block maps from sampleName to an array of blocks which have
+   * features with that sampleName.
+   */
   sampleName2Block = {}
   /** Record a mapping from sampleNames to the block which they are within.
    * @param sampleNames []
@@ -1445,6 +1462,32 @@ export default class PanelManageGenotypeComponent extends Component {
       blocks.addObject(block);
     });
   }
+
+  /** Map from sampleName to the viewed VCF blocks which contain that sampleName.
+   * @return blocks array
+   */
+  sampleName2Blocks(sampleName) {
+    let blocks;
+    if (this.sampleName2Block) {
+      /** if a block is unviewed it will still be listed in sampleName2Block[].
+       * blocks will be [] if the sample has not yet been requested.
+       */
+      blocks = this.sampleName2Block[sampleName];
+      if (blocks) {
+        blocks = blocks
+          .filter(block => block.isViewed);
+      }
+    }
+    if (! blocks) {
+      blocks = this.brushedOrViewedVCFBlocksVisible
+        .filter(block => {
+          const names = block.get('datasetId.sampleNames');
+          return names && names.includes(sampleName);
+        });
+     }
+    return blocks || [];
+  }
+
 
   // ---------------------------------------------------------------------------
 
@@ -1486,6 +1529,7 @@ export default class PanelManageGenotypeComponent extends Component {
         if (datasetId) {
           // All sample names received for datasetId.
           // As in vcfGenotypeSamples(). related : lookupBlockSamples(), vcfGenotypeSamplesText().
+          // Related : datasetStoreSampleNames().
           samplesRaw = this.sampleCache.sampleNames[datasetId]
             ?.trim().split('\n');
           ok &&= ! samplesRaw;
@@ -1850,13 +1894,9 @@ export default class PanelManageGenotypeComponent extends Component {
       const
       matchRates = sampleNames.map((sampleName) => {
         const
-        /** if a block is unviewed it will still be listed in sampleName2Block[].
-         * blocks will be [] if the sample has not yet been requested.
-         */
-        blocks = this.sampleName2Block[sampleName] || [],
+        blocks = this.sampleName2Blocks(sampleName),
         /** sum of {,mis}match counts for blocks containing sampleName.  */
         ms = blocks
-          .filter(block => block.isViewed)
           .reduce((sum, block) => {
           const
           m = block?.[sampleMatchesSymbol]?.[sampleName];

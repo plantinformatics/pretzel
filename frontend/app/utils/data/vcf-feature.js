@@ -993,10 +993,12 @@ function blockToMatrixColumn(singleBlock, block, sampleName, features) {
  * @param options { userSettings }
  * @return result : {rows, sampleNames}
  */
-function vcfFeatures2MatrixViewRows(requestFormat, featuresArrays, featureFilter, sampleFilters, options) {
+function vcfFeatures2MatrixViewRows(
+  requestFormat, featuresArrays, featureFilter, sampleFilters, sampleNamesCmp, options) {
   const fnName = 'vcfFeatures2MatrixViewRows';
   const result = featuresArrays.reduce((res, features, datasetIndex) => {
-    res = vcfFeatures2MatrixViewRowsResult(res, requestFormat, features, featureFilter, sampleFilters, options, datasetIndex);
+    res = vcfFeatures2MatrixViewRowsResult(
+      res, requestFormat, features, featureFilter, sampleFilters, sampleNamesCmp, options, datasetIndex);
     return res;
   }, {rows : [], sampleNames : []});
   return result;

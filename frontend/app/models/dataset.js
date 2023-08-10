@@ -162,6 +162,17 @@ export default Record.extend({
   // Could use a Computed Propery for positionFilterText - maybe when changing to Tracked Properties in Ember4.
   // positionFilterText : computed('positionFilter', function ),
 
+  //----------------------------------------------------------------------------
+
+  /** For a VCF dataset, sampleNames are received via bcftools request, and does
+   * not change, so it is cached per dataset.
+   */
+  get sampleNames() {
+    return this[Symbol.for('sampleNames')];
+  },
+  set sampleNames(names) {
+    this[Symbol.for('sampleNames')] = names;
+  },
 
   /*--------------------------------------------------------------------------*/
 
