@@ -100,7 +100,7 @@ For a quick start without installing any of the dependencies you will need docke
 ```
 mkdir -p ~/mongodata \
  && docker run --name mongo --detach --volume ~/mongodata:/data/db --net=host mongo \
- && until $(curl --silent --output /dev/null localhost:27017 || \`
+ && until $(curl --silent --output /dev/null localhost:27017 || \
     [ $(docker inspect -f '{{.State.Running}}' mongo) = "false" ]); do printf '.'; sleep 1; done \
  && docker run --name pretzel --detach --net=host plantinformaticscollaboration/pretzel:stable  \
  && until $(curl --silent --output /dev/null localhost:3000 || \
