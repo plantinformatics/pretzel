@@ -2008,6 +2008,7 @@ export default class PanelManageGenotypeComponent extends Component {
             sampleGenotypes = 
               vcfFeatures2MatrixViewRows(
                 this.requestFormat, featuresArrays, this.featureFilter.bind(this), sampleFilters,
+                this.sampleNamesCmp,
                 options);
             /** Insert datasetIds to this.columnNames.
              * Add features to : this.displayDataRows.

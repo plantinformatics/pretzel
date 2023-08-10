@@ -1008,11 +1008,14 @@ function vcfFeatures2MatrixViewRows(
  * @param features block.featuresInBrush. one array, one block.
  * @param featureFilter filter applied to features
  * @param sampleFilters array of optional additional filters (selected sample, callRate filter)
+ * @param sampleNamesCmp undefined, or a comparator function to sort sample columns
  * @param options { userSettings }
  * @param datasetIndex index of this dataset in the featuresArrays passed to vcfFeatures2MatrixViewRows().
  * @param result : {rows, sampleNames}. function can be called via .reduce()
  */
-function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featureFilter, sampleFilters, options, datasetIndex) {
+function vcfFeatures2MatrixViewRowsResult(
+  result, requestFormat, features, featureFilter, sampleFilters,
+  sampleNamesCmp, options, datasetIndex) {
   const fnName = 'vcfFeatures2MatrixViewRowsResult';
   const showHaplotypeColumn = features.length && features[0].values.tSNP;
   const block = features.length && contentOf(features[0].blockId);
@@ -1106,6 +1109,29 @@ function vcfFeatures2MatrixViewRowsResult(result, requestFormat, features, featu
     },
     result);
 
+  //----------------------------------------------------------------------------
+
+  /** Used as a .sort() comparator function.
+   * Order the given list of column names to match columnOrder[] if both column
+   * names are in columnOrderIndex[]; use sampleNamesCmp() if neither are,
+   * otherwise 0 : no order.
+   * @param n1, n2 column names, which may be sample names.
+   */
+  function columnNamesCmp(n1, n2) {
+    const
+    i1 = columnOrderIndex[n1],
+    i2 = columnOrderIndex[n2],
+    d1 = (i1 !== undefined),
+    d2 = (i2 !== undefined),
+    result = d1 && d2 ? i1 - i2 :
+      (d1 !== d2 || ! sampleNamesCmp) ? 0 :
+      sampleNamesCmp(n1, n2);
+
+    return result;
+  }
+
+  //----------------------------------------------------------------------------
+  
   const
   /** construct column names from the samples names accumulated from feature values.
    *
@@ -1300,20 +1326,6 @@ function featureSampleNames(sampleNamesSet, feature, filterFn) {
   return sampleNamesSet;
 }
 
-
-// -----------------------------------------------------------------------------
-
-/** Used as a .sort() comparator function.
- * Order the given list of column names to match columnOrder[].
- */
-function columnNamesCmp(n1, n2) {
-  return columnOrderIndex[n1] - columnOrderIndex[n2];
-}
-function columnNamesSort(columnNames) {
-  const
-  sorted = columnNames.sort(columnNamesCmp);
-  return sorted;
-}
 
 //------------------------------------------------------------------------------
 
