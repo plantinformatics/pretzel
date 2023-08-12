@@ -1465,12 +1465,12 @@ export default class PanelManageGenotypeComponent extends Component {
 
   /** Map from sampleName to the viewed VCF blocks which contain that sampleName.
    * @return blocks array
+   * Result may be [].
    */
   sampleName2Blocks(sampleName) {
     let blocks;
     if (this.sampleName2Block) {
       /** if a block is unviewed it will still be listed in sampleName2Block[].
-       * blocks will be [] if the sample has not yet been requested.
        */
       blocks = this.sampleName2Block[sampleName];
       if (blocks) {
@@ -1478,6 +1478,10 @@ export default class PanelManageGenotypeComponent extends Component {
           .filter(block => block.isViewed);
       }
     }
+    /* blocks will be undefined if the sample has not yet been requested,
+     * in this case use the brushed/viewed blocks, filtered via datasetId.sampleNames.
+     * result may be [].
+     */
     if (! blocks) {
       blocks = this.brushedOrViewedVCFBlocksVisible
         .filter(block => {
@@ -1485,7 +1489,7 @@ export default class PanelManageGenotypeComponent extends Component {
           return names && names.includes(sampleName);
         });
      }
-    return blocks || [];
+    return blocks;
   }
 
 
