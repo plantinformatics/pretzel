@@ -2160,6 +2160,7 @@ export default class PanelManageGenotypeComponent extends Component {
 
     'args.userSettings.haplotypeFiltersEnable',
     'args.userSettings.selectFeaturesByLDBlock',
+    'args.userSettings.haplotypeFilterRef',
     'haplotypeFiltersCount',
     'featureFiltersCount',
   )
