@@ -1307,7 +1307,17 @@ Stack.prototype.sideClasses = function ()
  * Configure the axis tickFormat to suit scale.domain().
  */
 Stacked.prototype.axisSide = function (scale) {
-  let stackClass = this.stack.sideClasses(),
+  /** this.stack should be defined, but sideClasses is non-critical;
+   * (saw undefined when refresh of secondary server and network had
+   * disconnected, possibly after switching to groups page and back to
+   * mapview).
+   */
+  if (! this.stack) {
+    dLog('axisSide', this);
+    this.log();
+  }
+  const
+  stackClass = this.stack ? this.stack.sideClasses() : '',
   extended = this.extended,
   /** use of d3.axisLeft() / axisRight() does not seem to update
    * text-anchor="start" on the axis group element g.axis, so for now this is

@@ -335,7 +335,7 @@ export default Component.extend({
     width =
       featureValuesWidths[columnName] ||
       (this.extraDatasetColumns?.includes(columnName) ? featureNamesWidth :
-       (this.datasetColumns?.includes(columnName) ?
+       (this.columnNameIsDatasetColumn(columnName, true) ?
         (this.userSettings.showNonVCFFeatureNames ? featureNamesWidth : this.cellSize) : 
 
       /* works, but padding-left is required also, to move the text.
@@ -797,7 +797,8 @@ export default Component.extend({
         /* selectedColumnName may be Ref, Alt, or a sample column, not Position, End, LD Block,
          * or one of the *datasetColumns.
          */
-        if (columnNameIsNotSample(col_name) && this.columnNameIsDatasetColumn(col_name) ) {
+        if (columnNameIsNotSample(col_name) &&
+            this.columnNameIsDatasetColumn(col_name, false) ) {
           col_name = undefined;
         }
         dLog(fnName, col_name);
@@ -852,6 +853,8 @@ export default Component.extend({
       later(() => this.table.render(), 1000);
     }
     } else if ((row === -1) && this.datasetColumns?.includes(columnName)) {
+      /* plan to use columnNameIsDatasetColumn(columnName, false), but currently 
+       * overlap with intersectionDialogDataset, which should be enabled also. */
       // row is header.
       /* this.datasetColumns is defined by gtMergeRows. */
       /* Related : afterOnCellMouseDown() -> toggleDatasetPositionFilter();
@@ -1312,11 +1315,20 @@ export default Component.extend({
       this.table.updateSettings(settings);
     }
   }),
-  columnNameIsDatasetColumn(columnName) {
+  /** @return true if the named column has a dataset attribute
+   * @param onlyBlock if true exclude extraDatasetColumns, i.e.
+   * include only the 'Block' column of each dataset, which shows a
+   * rectangle with dataset colour, or feature name.
+   */
+  columnNameIsDatasetColumn(columnName, onlyBlock) {
+    let columnNameLists = [this.gtDatasetColumns, this.datasetColumns];
+    if (! onlyBlock) {
+      columnNameLists.push(this.extraDatasetColumns);
+    }
     // gtDatasetColumns were called 'Block' until 53c7c59f
     const
     isDatasetColumn =
-      [this.gtDatasetColumns, this.datasetColumns, this.extraDatasetColumns].find(
+      columnNameLists.find(
         (columnNames) => columnNames?.includes(columnName));
     return isDatasetColumn;
   },
