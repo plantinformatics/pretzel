@@ -101,3 +101,12 @@ async function query(text /*: string*/) {
   }
   return results;
 }
+
+exports.datasetIdGetVector = datasetIdGetVector;
+/** Lookup dataset id in vectra
+ */
+async function datasetIdGetVector(id) {
+  const index = await indexP;
+  const vector = await index.getItem(id);
+  return vector;
+}

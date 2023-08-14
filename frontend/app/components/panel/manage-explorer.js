@@ -106,6 +106,9 @@ export default ManageBase.extend({
       debugger;
       window.alert('initRecursionCount : ' + initRecursionCount);
     }
+    if (window.PretzelFrontend) {
+      window.PretzelFrontend.manageExplorer = this;
+    }
 
     this.get('apiServers').on('receivedDatasets', this.receivedDatasetsFn);
     /** Initialise this.blocksService so that dependency blocksService.featureUpdateCount works. */
@@ -630,8 +633,20 @@ export default ManageBase.extend({
     }
   },
 
-  /** Enable dialog for input of natual language search query".  */
+  /** Enable dialog for input of natural language search query".  */
   enableNaturalSearchDialog : false,
+
+  //----------------------------------------------------------------------------
+
+  /** Enable dialog for display of dataset force graph ".  */
+  enableDatasetGraphDialog : false,
+
+  datasetEmbeddings : computed(function() {
+    const
+    server = this.apiServerSelectedOrPrimary,
+    embeddings = this.auth.getEmbeddings({server});
+    return embeddings;
+  }),
 
   //----------------------------------------------------------------------------
 

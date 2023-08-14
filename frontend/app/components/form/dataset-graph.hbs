@@ -1,0 +1,22 @@
+
+{{#ember-modal-dialog
+  onClose=@close
+  translucentOverlay=true
+  clickOutsideToClose=false
+  onClickOverlay=(action this.userMessage "Use X to close dialog")
+  title="Dataset force graph"
+  header-icon='search'
+}}
+
+  <div class="dataset-graph">
+
+    {{datasetEmbeddings.length}}
+
+    <BsButton @type="info" class="margin-top" @onClick={{@close}}>Close</BsButton>
+
+    {{yield}}
+
+  </div>
+
+
+{{/ember-modal-dialog}}

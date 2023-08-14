@@ -217,6 +217,7 @@ module.exports = function(app) {
       context.property === 'cacheblocksFeaturesCounts' ||
       context.property === 'naturalSearch' ||
       context.property === 'text2Commands' ||
+      context.property === 'getEmbeddings' ||
         // Group 
       context.property === 'own' ||
       context.property === 'in' ||

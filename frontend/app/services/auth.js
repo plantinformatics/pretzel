@@ -489,6 +489,10 @@ export default Service.extend({
     return this._ajax('Datasets/text2Commands', 'GET', {commands_text, options}, true);
   },
 
+  getEmbeddings(options) {
+    return this._ajax('Datasets/getEmbeddings', 'GET', {options}, true);
+  },
+
   //----------------------------------------------------------------------------
 
 

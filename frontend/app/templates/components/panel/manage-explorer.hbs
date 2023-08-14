@@ -62,6 +62,7 @@
       enter=(action this.naturalQueryChanged)
       placeholder="Natural language search" }}
     <BsButton @type="info" @onClick={{action (mut this.enableNaturalSearchDialog) true}}>Dialog</BsButton>
+    <BsButton @type="info" @onClick={{action (mut this.enableDatasetGraphDialog) true}}>Graph</BsButton>
   </div>
   <div>
     {{#each this.naturalQueryResult as |datasetId|}}
@@ -367,6 +368,14 @@
   <Form::NaturalSearch
     @loadBlock={{action this.actions.loadBlock}}
     @close={{action (mut this.enableNaturalSearchDialog) false}} />
+{{/if}}
+
+{{!-- --------------------------------------------------------------------- --}}
+
+{{#if this.enableDatasetGraphDialog}}
+  <Form::DatasetGraph
+    @datasetEmbeddings={{this.datasetEmbeddings}}
+    @close={{action (mut this.enableDatasetGraphDialog) false}} />
 {{/if}}
 
 {{!-- --------------------------------------------------------------------- --}}
