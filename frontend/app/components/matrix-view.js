@@ -839,8 +839,8 @@ export default Component.extend({
     dLog(fnName, row, col);
     if (col === -1) {
       /** Ctrl-A Select-All causes row===-1 and col===-1 */
-    } else
-    if (! selectFeaturesByLDBlock && 
+    } else if (
+      (row >= 0) && ! selectFeaturesByLDBlock && 
         (columnName.startsWith('Ref') || columnName.startsWith('Alt'))) {
       const feature = this.featureToggleRC(row, col, columnName);
       if (feature) {
@@ -918,6 +918,18 @@ export default Component.extend({
        */
       block = feature?.get('blockId');
     } else if (coords.row == -1) {
+      if (event.ctrlKey) {
+        // overlap with toggleDatasetPositionFilter()
+        const
+        row = coords.row,
+        col = coords.col,
+        columnName = this.columnNames[col],
+        isGt = this.gtDatasetColumns.includes(columnName);
+        const datasetId = columnName;
+        if (isGt) {
+          this.featureColumnDialogDataset(datasetId);
+        }
+      } else
       if (! this.toggleDatasetPositionFilter(event.shiftKey, coords.col)) {
       let col_name = td.title || $(td).find('span').text();
       // ! this.blockSamples, so get .columns from .displayData
