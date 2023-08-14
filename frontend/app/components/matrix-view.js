@@ -992,7 +992,27 @@ export default Component.extend({
         td.textContent = value;
       }
       this.valueDiagonal(td, value, valueToColourClass);
+      const matchRefAlt = this.userSettings.haplotypeFilterRef ? 'Ref' : 'Alt';
+      if (prop == matchRefAlt) {
+        const
+        dataset = prop[Symbol.for('dataset')],
+        feature = this.getRowAttribute(this.table, row, 0);
+        if (feature && this.featureIsFilter(feature)) {
+          td.classList.add('featureIsFilter');
+        }
+      }
     }
+  },
+  featureIsFilter(feature) {
+    const
+    block = feature.get('blockId.content'),
+    featureFiltersSymbol = Symbol.for('featureFilters'),
+    featureFilters = block?.[featureFiltersSymbol],
+    isFilter = featureFilters?.includes(feature);
+    if (isFilter) {
+      dLog('featureIsFilter', feature.value, feature.name);
+    }
+    return isFilter;
   },
   /**
    * The params td and value are from the Renderer signature.

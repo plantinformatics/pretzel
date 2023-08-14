@@ -1798,6 +1798,10 @@ div.ht_clone_top_left_corner span.colHeader.cornerHeader {
   background-color : black;
 }
 
+#observational-table td.featureIsFilter {
+  border: 2px solid green;
+}
+
 // -----------------------------------------------------------------------------
 
 // used in #observational-table / genotype view, to show colour of distinct alleles.
