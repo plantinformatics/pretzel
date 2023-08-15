@@ -1338,12 +1338,36 @@ export default InAxis.extend({
       return subElements;
     };
     function eachRect(blockId, i, g) {
+      const
+      fnName = 'eachRect';
       let
       /** match either rect or path */
       rs = d3.select(this).selectAll(".track")
         .data(trackBlocksData, trackKeyFn),
       re =  rs.enter(), rx = rs.exit();
-      dLog(rs.size(), re.size(),  'rx', rx.size());
+      dLog(fnName, rs.size(), re.size(),  'rx', rx.size());
+      /** Some QTL <rect>s and <path>s were losing class='track' when zooming in
+       * / out quickly, only seen when not split axis, - possibly a change
+       * between rect/path occurring at the same time as entry / exit.
+       * Adding to attributesForReplace() : .attr('class', 'track') has possibly fixed this;
+       * leaving this work-around enabled log it if it recurs and further help
+       * identify the cause.
+       * Testing this - seems to confirm it occurs exactly when
+       * the rect <-> path due to zoom change (probably via Zoom / Reset buttons).
+       */
+      const
+      lostClass = 
+      d3.select(this)
+        .selectAll("g > path, g > rect")
+        .filter(function() {
+          return ! this.classList.contains('track');
+        });
+      if (! lostClass.empty()) {
+        dLog(fnName, 'lostClass', lostClass.nodes());
+        lostClass
+          .attr('class', 'track');
+        dLog(fnName, 'lostClass', 'with class', lostClass.nodes());
+      }
 
       let
       blockC = thisAt.lookupAxisTracksBlock(blockId),
@@ -1445,6 +1469,7 @@ export default InAxis.extend({
       function attributesForReplace(d, i, g) {
         let s =
         d3.select(g[i])
+        .attr('class', 'track')
         .each(configureHoverFn)
         .transition().duration(featureTrackTransitionTime)
         .attr('width', pathOrRect(undefined, width));
