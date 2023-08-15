@@ -716,7 +716,12 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   /** The zoomed-out axis domain.
    * Equivalent to and replaces Stacked_p.referenceDomain().
    */
-  referenceDomain : alias('referenceBlock.range'),
+  referenceDomain : computed('referenceBlock.range', function () {
+    const
+    referenceBlock = this.referenceBlock,
+    domain = referenceBlock.range || referenceBlock.featuresDomain;
+    return domain;
+  }),
 
   //----------------------------------------------------------------------------
 
