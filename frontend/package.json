@@ -90,6 +90,7 @@
     "@solgenomics/brapijs": "https://github.com/solgenomics/BrAPI-js.git",
     "caniuse-lite": "^1.0.30001349",
     "colresizable": "github:felipedgarcia/colresizable",
+    "d3-bboxCollide": "^1.0.4",
     "ember-array-helper": ">=5",
     "ember-cli-build-date": "github:bracke/ember-cli-build-date",
     "ember-cli-htmlbars": "^5.3.1",
@@ -114,6 +115,7 @@
     "node-sass": "^7.0.3",
     "normalize-wheel": "^1.0.1",
     "numeric": "github:lukaiser/numeric",
-    "phantom": "^6.3.0"
+    "phantom": "^6.3.0",
+    "vector-cosine-similarity": "^1.8.0"
   }
 }

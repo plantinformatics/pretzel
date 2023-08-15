@@ -706,7 +706,7 @@ function embedDatasets(Dataset, options) {
           console.log(fnName, datasets.length);
           datasets
             .filter(d => ! d.meta?._origin)
-            .slice(0, 1)
+            // .slice(0, 30)
             .forEach(dataset => datasetForEmbed(dataset));
         });
   }
@@ -730,7 +730,7 @@ function getEmbeddings(Dataset, options) {
           embeddingsPromises =
             datasets
             .filter(d => ! d.meta?._origin)
-            .slice(0, 1)
+            // .slice(0, 30)
             .map(async dataset => {
               const
               id = dataset.id,
