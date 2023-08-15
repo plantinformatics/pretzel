@@ -71,8 +71,8 @@ export default class FormDatasetGraphComponent extends Component {
         n.idx = i;
         // n.x = i;
         // n.y = i;
-        n.height = 2;
-        n.width = n.id.length;
+        n.height = 2 * 8;
+        n.width = n.id.length * 10;
         return n;
       });
     return nodes;
@@ -115,11 +115,25 @@ export default class FormDatasetGraphComponent extends Component {
   chart(context)
   {
     // const context = DOM.context2d(width, height);
-    const width=1200, height=850;
+    const
+    canvas = context.canvas;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight - 80;
+    const
+    width = canvas.width,
+    height = canvas.height;
     // const nodes = this.radii().map(r => ({r}));
     const nodes = this.nodes;
 
-    const rectangleCollide = bboxCollide([[-10,-5],[10,5]]);
+    function bboxCollideFn(d, i, g) {
+      const
+      w2 = d.width / 2,
+      h2 = d.height / 2,
+      bbox = [[-w2, -h2], [w2, h2]];
+      return bbox;
+    }
+    // [[-200,-10], [200,10]]
+    const rectangleCollide = bboxCollide(bboxCollideFn);
 
     const
     simulation = d3.forceSimulation(nodes)
@@ -134,7 +148,7 @@ export default class FormDatasetGraphComponent extends Component {
           .distance((link) => this.force(link.source.idx, link.target.idx)))
       .force("charge", d3.forceManyBody().strength(-3000))
       .force("center", d3.forceCenter(width / 2, height / 2))
-      // .force("collide", rectangleCollide)
+      .force("collide", rectangleCollide)
       .on("tick", ticked);
     this.simulation = simulation;
     const me = this;
