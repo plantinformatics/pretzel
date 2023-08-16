@@ -603,6 +603,14 @@ export default Service.extend({
         );
         return xhr;
       };
+
+      /* Datasets/upload and /tableUpload use : 'POST', JSON.stringify(data),
+       * which prevents passing in options.timeout as dnaSequenceSearch() does.
+       */
+      if (config.timeout === undefined) {
+	config.timeout = 5 * 60 * 1000;
+      }
+
     }
 
     return $.ajax(config);
