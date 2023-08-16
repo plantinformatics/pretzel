@@ -86,7 +86,9 @@ exports.datasetParentContainsNamedFeatures = function(models, dataset, options, 
                         }
                       } else if (trace) {
                         let okFMs = parentBlockFeatures.filter((f) => (fms.indexOf(f.name) >= 0));
-                        console.log(fnName, f.name, fms, okFMs.length);
+			if (! okFMs.length || trace > 1) {
+                          console.log(fnName, f.name, fms, okFMs.length);
+			}
                         if (trace > 1) {
                           okFMs.forEach((f) => console.log(JSON.stringify(f)));
                         }
