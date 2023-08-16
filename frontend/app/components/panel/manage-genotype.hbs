@@ -605,6 +605,24 @@
                   </li>
                 </ul>
 
+                {{!---------------------------------------------------------------------------}}
+
+                <ul class="list-group borderless view-controls">
+
+                  <li>
+                    <input type="checkbox"
+                      style="margin-left: 3em;"
+                      checked={{@userSettings.snpPolymorphismFilter}}
+                      oninput={{action (mut @userSettings.snpPolymorphismFilter) value="target.checked"}}  >
+                    <label>SNP Polymorphism Filter
+                      <EmberTooltip side="right" delay=500>
+                        <span>Filter out monomorphic SNPs.</span>
+                      </EmberTooltip>
+                    </label>
+
+                  </li>
+                </ul>
+
                 {{!---------------------------------------------------------------------}}
 
                 <ul class="list-group borderless view-controls">

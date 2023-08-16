@@ -107,6 +107,10 @@ function valueNameIsNotSample(valueName) {
  *
  * .mafUpper default : true
  * .mafThreshold default 0
+ *
+ * .snpPolymorphismFilter default : false
+ * true means filter out monomorphic SNPs
+ *
  * .callRateThreshold default 0
  * .samplesLimit default 10
  * .samplesLimitEnable default false
@@ -337,6 +341,9 @@ export default class PanelManageGenotypeComponent extends Component {
       userSettings.filterBySelectedSamples = true;
     }
 
+    if (userSettings.snpPolymorphismFilter === undefined) {
+      userSettings.snpPolymorphismFilter = false;
+    }
     if (userSettings.mafUpper === undefined) {
       userSettings.mafUpper = false;
     }
@@ -1839,6 +1846,51 @@ export default class PanelManageGenotypeComponent extends Component {
         features = [feature0];
       }
     }
+    if (features && this.args.userSettings.snpPolymorphismFilter) {
+      features = this.snpPolymorphismFilter(block, features);
+    }
+
+    return features;
+  }
+
+  /** Calculate for each feature / SNP the count of values which are Alt and Ref.
+   * If the SNP has only Alt or only Ref then it is monomorphic and is of
+   * limited interest, so filter it out.
+   */
+  snpPolymorphismFilter(block, features) {
+    const requestSamplesAll = this.args.userSettings.requestSamplesAll;
+    features = features
+      .filter(feature => {
+        // related : featuresCountMatches(), haplotypeFilterSamples().
+        const
+        valuesKeys = Object.keys(feature.values),
+        /** can't apply this filter if no sample genotype values have been
+         * loaded for this feature. */
+        noSampleValues = (valuesKeys.length === 2) &&
+          valuesKeys.includes('ref') && valuesKeys.includes('alt'),
+        counts = noSampleValues ||
+          Object.entries(feature.values)
+          .reduce((result, [key, value]) => {
+            const sampleName = key;
+            if (! valueNameIsNotSample(sampleName) &&
+                (requestSamplesAll || this.sampleSelectedFilter(block, sampleName))) {
+              const gtValue = value; // feature.values[sampleName];
+              if (gtValue !== undefined) {
+                if ('012'.includes(gtValue)) {
+                  result[+gtValue]++;
+                } else if ('CATG'.includes(gtValue)) {
+                  // count nucleotide CATG value compared against features.values.{alt,ref}
+                  // count features.values.alt in gtValue
+                  // const altCopies = stringCountString(gtValue, features.values.alt);
+                  // result[altCopies]++;
+                }
+              }
+            }
+            return result;
+          }, [0, 0, 0]),
+        ok = noSampleValues || (counts[0] && counts[2]);
+        return ok;
+      });
     return features;
   }
 
@@ -2151,6 +2203,8 @@ export default class PanelManageGenotypeComponent extends Component {
     'args.userSettings.filterBySelectedSamples',
     /** showSamplesWithinBrush() uses gtMergeRows */
     'urlOptions.gtMergeRows',
+    /** featureFilterPre() -> snpPolymorphismFilter() */
+    'args.userSettings.snpPolymorphismFilter',
     /** showSamplesWithinBrush() -> featureFilter() uses .mafUpper, .mafThreshold */
     'args.userSettings.mafUpper',
     'args.userSettings.mafThreshold',
