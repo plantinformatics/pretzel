@@ -1672,7 +1672,8 @@ export default class PanelManageGenotypeComponent extends Component {
       requestSamplesFiltered = userSettings.requestSamplesFiltered,
       /** If filtered or column-limited, then samples is a subset of All. */
       requestSamplesAll = userSettings.requestSamplesAll && ! requestSamplesFiltered && ! samplesLimitEnable,
-      requestOptions = {requestFormat, requestSamplesAll},
+      snpPolymorphismFilter = userSettings.snpPolymorphismFilter,
+      requestOptions = {requestFormat, requestSamplesAll, snpPolymorphismFilter},
       /** Datasets selected for intersection.
        * Used to indicate if any positionFilter are defined and hence isecFlags
        * and isecDatasets will be set.  If no datasets other than this one

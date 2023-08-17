@@ -245,6 +245,7 @@ let dataOutUpload = (chunk, cb) => {
 
 /*----------------------------------------------------------------------------*/
 
+exports.stringCountString = stringCountString;
 /** Count occurrences of stringSearch in string.
  *
  * from : https://stackoverflow.com/a/10671743/18307804, method 3, Lorenz Lo Sauer.
@@ -268,12 +269,16 @@ const { ErrorStatus } = require('./errorStatus.js');
  * The signature of the result is function(chunk, cb), which matches param
  * dataOutCb of above childProcess().
  * @param cb
+ * @param lineFilter  if defined, apply it to filter the received lines.
+ * (May change this function signature to combine filter and map;
+ * i.e. lineFilter could return a modified line)
  * @param nLines if defined, limit the output to nLines.
  * (currently the whole of the last chunk containing line nLines is delivered).
  * If !progressive then nLines is not effective because dataOutCb receives the
  * combined chunks after child close.
  */
-exports.dataOutReplyClosureLimit = function dataOutReplyClosureLimit(cb, nLines) {
+exports.dataOutReplyClosureLimit = dataOutReplyClosureLimit;
+function dataOutReplyClosureLimit(cb, lineFilter, nLines) {
   let chunks = [];
   let lineCount = 0;
 
@@ -299,26 +304,55 @@ exports.dataOutReplyClosureLimit = function dataOutReplyClosureLimit(cb, nLines)
     let result;
     function finished() { return (nLines !== undefined) && (lineCount >= nLines); }
     if (! chunk) {
+      const
+      textResult = lineFilter ?
+        chunks.join('\n') + '\n' :
+        Buffer.concat(chunks).toString();
       // child status 0 (OK) and no output, so return [].
-      cb(null, Buffer.concat(chunks).toString());
+      cb(null, textResult);
     } else if (! finished()) {
       const text = chunk?.toString();
       // equiv : text?.startsWith('Error:')
       if (chunk && (chunk.length >= 6) && (chunk.asciiSlice(0,6) === 'Error:')) {
         cb(new ErrorStatus(400, text));
+      } else if (! text || (! lineFilter && (nLines === undefined))) {
+        cb(null, text);
       } else {
+        if (lineFilter) {
+          let truncatedLine;
+          let
+          lines = text.split('\n')
+            .filter(lineFilter);
+          if (nLines !== undefined) {
+            /** number of lines to complete nLines limit */
+            const toLimit = nLines - lineCount;
+            if (toLimit < 0) {
+              lines = [];
+            } else if (toLimit < lines.length) {
+              lines = lines.slice(0, toLimit);
+            }
+          }
+          /* All functions using childProcess() process the chunks as text, so
+           * the cb signature can change from (Buffer chunk) to (text).
+           * So far, the caller vcfGenotypeLookup() is changed to expect text[]
+           * instead of chunk[].
+           * See textResult above - changed for lineFilter to texts.join();
+           * that is probably similar performance to
+           * Buffer.concat(chunks).toString(), and that is the only material
+           * impact of dropping chunks from the signature.
+           */
+          lines.forEach(line => chunks.push(line));
+        } else
         /* childProcess() wraps the given cb : cbWrap calls cbOrig just once.
          * Otherwise, chunks could be catenated here into chunks.
          */
-        if (text && (nLines !== undefined)) {
+        if (nLines !== undefined) {
           lineCount += stringCountString(text, '\n');
           console.log(fnName, 'lineCount', lineCount, text.length, chunks.length);
           chunks.push(chunk);
           if (finished()) {
             result = chunks;
           }
-        } else {
-          cb(null, text);
         }
       }
     }
@@ -329,12 +363,13 @@ exports.dataOutReplyClosureLimit = function dataOutReplyClosureLimit(cb, nLines)
 /** call dataOutReplyClosureLimit() with nLines === undefined.
  */
 exports.dataOutReplyClosure = function dataOutReplyClosure(cb) {
-  return exports.dataOutReplyClosureLimit(cb, /*nLines*/undefined);
+  return exports.dataOutReplyClosureLimit(cb, /*lineFilter*/undefined, /*nLines*/undefined);
 };
 
 /** @return a dataOutCb for childProcess()
  * @param dataCb reduces the received data, and when called with text ===
- * undefined (when chunk === null) it sends the result via cb.
+ * undefined (when chunk === null) it returns the summary result, which dataReduce()
+ * sends via cb.
  */
 exports.dataReduceClosure = function dataReduceClosure(dataCb) {
 

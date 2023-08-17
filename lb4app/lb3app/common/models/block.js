@@ -1297,6 +1297,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     function dataOutReply(chunk, cb) {
       /** based on searchDataOut() */
       if (! chunk) {
+        // chunks is []
         cb(null, chunks);
       } else
       if (chunk && (chunk.length >= 6) && (chunk.asciiSlice(0,6) === 'Error:')) {

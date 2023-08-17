@@ -10,7 +10,8 @@ var createIntervalTree = require("interval-tree-1d");
 const { ApiServer, apiServers, blockServer } = require('./api-server');
 const { ErrorStatus } = require('./errorStatus.js');
 const {
- childProcess, dataOutReplyClosure, dataOutReplyClosureLimit, dataReduceClosure
+  childProcess, dataOutReplyClosure, dataOutReplyClosureLimit, dataReduceClosure,
+  stringCountString,
 } = require('../utilities/child-process');
 const { binEvenLengthRound, binBoundaries } = require('../utilities/block-features');
 
@@ -24,7 +25,7 @@ const { binEvenLengthRound, binBoundaries } = require('../utilities/block-featur
  * See comment in frontend/app/services/auth.js : vcfGenotypeLookup()
  * @param nLines if defined, limit the output to nLines.
  * @param dataOutCb passed to childProcess() - see comment there.
- * If undefined, then dataOutReplyClosureLimit(cb, nLines) is used.
+ * If undefined, then dataOutReplyClosureLimit(cb, lineFilter, nLines) is used.
  * @param cb
  */
 function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
@@ -96,7 +97,8 @@ function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
   /** avoid tracing samples, and moreParams[9] which is the samples. */
   console.log(fnName, datasetDir, preArgs.region, preArgs.requestFormat, samples?.length, moreParams.slice(0, 9));
   if (! dataOutCb) {
-    dataOutCb = dataOutReplyClosureLimit(cb, nLines);
+    const lineFilter = preArgs.snpPolymorphismFilter ? snpPolymorphismFilter : null;
+    dataOutCb = dataOutReplyClosureLimit(cb, lineFilter, nLines);
   }
 
   childProcess(
@@ -243,5 +245,43 @@ vcfToSummary.prototype.summarise = function() {
     return summaryArray;
 };
 
+
+//------------------------------------------------------------------------------
+
+/** Count sample genotype values 0 and 2 (number of copies of Alt).
+ * Filter the line out if it is monomorphic, i.e. either the number of 0's or
+ * the number of 2's is 0.
+ * @param line result of split('\n'), expected to be a string
+ * @return undefined or null if the line should be filtered out,
+ * otherwise return truthy (returning the line because lineFilter signature
+ * could be changed to filter&map).
+ */
+function snpPolymorphismFilter(line) {
+  if (line.startsWith('#')) {
+    return line;
+  }
+
+  const
+  /** e.g. # [1]ID\t[2]POS\t[3]REF\t[4]ALT\t[5]tSNP\t[6]MAF\t[7]Exo
+   * values are genotype call values of the samples
+   */
+  [/*chr,*/ name, position, ref, alt, tSNP, MAF, ...values] = line.split('\t');
+  let
+  counts = values.reduce((result, value) => {
+    /* Number of columns before sample genotype values may vary, so skip values
+     * which don't match the expected format for genotype values.  */
+    if (value.match(/[012ACTG]\/[012ACTG]/)) {
+      /* if (requestFormat === 'CATG') {
+         altCopies = stringCountString(value, alt);
+         }
+      */
+      const altCopies = stringCountString(value, '1');
+      result[altCopies]++;
+    }
+    return result;
+  }, [0, 0, 0]),
+  monomorphic = ! counts[0] || ! counts[2];
+  return ! monomorphic && line;
+}
 
 //------------------------------------------------------------------------------
