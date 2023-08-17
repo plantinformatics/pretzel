@@ -64,6 +64,9 @@ const sampleMatchesSymbol = Symbol.for('sampleMatches');
 /** Counts for calculating Call Rate of a sample.
  * sampleCount = block[callRateSymbol][sampleName] : {calls:0, misses:0}  */
 const callRateSymbol = Symbol.for('callRate');
+/** Indicate whether Alt or Ref value should be matched at this Feature / SNP.
+ * feature[matchRefSymbol] true/false.  */
+const matchRefSymbol = Symbol.for('matchRef');
 
 const tab_view_prefix = "tab-view-";
 const tab_view_prefix_Datasets = "tab-view-Datasets-";
@@ -664,7 +667,7 @@ export default class PanelManageGenotypeComponent extends Component {
   /** User may select tSNP values which are then used to filter samples,
    * in combination with a flag which selects match with Ref or non-Ref values :
    * columns of samples with the expected value are displayed.
-   * @return [] of tSNP
+   * @return [] of feature
    */
   @action
   blockFeatureFilters(block) {
@@ -685,8 +688,20 @@ export default class PanelManageGenotypeComponent extends Component {
      * blocks with the same feature.value.0
      */
     block = feature.get('blockId'),
-    filters = this.blockFeatureFilters(block);
-    this.arrayToggleObject(filters, feature);
+    filters = this.blockFeatureFilters(block),
+    matchRef = feature[matchRefSymbol],
+    // use == because columnName is currently String.
+    matchRefNew = columnName == 'Ref';
+    /** Toggle feature when the current key Ref/Alt is clicked again.
+     * If a different key is clicked for a feature, just change the key.
+     */
+    if ((matchRef === undefined) || (matchRef === matchRefNew)) {
+      this.arrayToggleObject(filters, feature);
+    }
+    if (matchRef !== matchRefNew) {
+      feature[matchRefSymbol] = matchRefNew;
+    }
+
 
     /** filtered/sorted display depends on .samples, which depends on
      * this.vcfGenotypeSamplesText, so request all sampleNames if not received.
@@ -2318,18 +2333,27 @@ export default class PanelManageGenotypeComponent extends Component {
    */
   @action
   haplotypeFilterSamples(showHideSampleFn, matrixView) {
+
+    /** match a (sample genotype call) value against the Ref/Alt value of the
+     * feature / SNP.  a rough factorisation; currently there is just 1 flag
+     * haplotypeFilterRef for all selected 'LD Blocks', and hence one instance
+     * of MatchRef, but these requirements are likely to evolve.  */
+    class MatchRef {
+      constructor(matchRef) {
+        this.matchKey = matchRef ? 'ref' : 'alt';
+        this.matchNumber = matchRef ? '0' : '2';
+      }
+      /** to match homozygous could use .startsWith(); that will also match 1/2 of heterozygous.
+       * Will check on (value === '1') : should it match depending on matchRef ?
+       * @param value sample/individual value at feature / SNP
+       * @param matchValue  ref/alt value at feature / SNP (depends on matchRef)
+       */
+      matchFn(value, matchValue) { return (value === this.matchNumber) || (value === '1') || value.includes(matchValue); }
+    }
+
     const
     userSettings = this.args.userSettings,
-    matchRef = userSettings.haplotypeFilterRef,
-    matchKey = matchRef ? 'ref' : 'alt',
-    matchNumber = matchRef ? '0' : '2',
-    /** to match homozygous could use .startsWith(); that will also match 1/2 of heterozygous.
-     * Will check on (value === '1') : should it match depending on matchRef ?
-     * @param value sample/individual value at feature / SNP
-     * @param matchValue  ref/alt value at feature / SNP (depends on matchRef)
-     */
-    matchFn = (value, matchValue) => (value === matchNumber) || (value === '1') || value.includes(matchValue),
-
+    matchRef = new MatchRef(userSettings.haplotypeFilterRef),
     ablocks = this.brushedOrViewedVCFBlocks;
     const selectFeaturesByLDBlock = this.args.userSettings.selectFeaturesByLDBlock;
 
@@ -2342,7 +2366,7 @@ export default class PanelManageGenotypeComponent extends Component {
       selected = block[haplotypeFiltersSymbol],
       matchesR = selected.reduce((matches, tSNP) => {
         const features = block[haplotypeFeaturesSymbol][tSNP];
-        featuresCountMatches(features, matches);
+        featuresCountMatches(features, matches, matchRef);
         return matches;
       }, {});
         blockMatches = matchesR;
@@ -2350,17 +2374,23 @@ export default class PanelManageGenotypeComponent extends Component {
         const
         features = block[featureFiltersSymbol];
         if (features) {
-          featuresCountMatches(features, blockMatches);
+          featuresCountMatches(features, blockMatches, /*matchRef*/null);
         }
       }
 
-      function featuresCountMatches(features, matches) {
+      /**
+       * @param matchRef MatchRef.  if not defined then construct it for each feature from feature[matchRefSymbol].
+       */
+      function featuresCountMatches(features, matches, matchRef) {
         features.forEach((feature) => {
+          if (! matchRef) {
+            matchRef = new MatchRef(feature[matchRefSymbol]);
+          }
           const
-          matchValue = feature.values[matchKey];
+          matchValue = feature.values[matchRef.matchKey];
           Object.entries(feature.values).forEach(([key, value]) => {
             if (! valueNameIsNotSample(key)) {
-              const match = matchFn(value, matchValue);
+              const match = matchRef.matchFn(value, matchValue);
               const sampleMatch = matches[key] || (matches[key] = {matches: 0, mismatches : 0});
               sampleMatch[match ? 'matches' : 'mismatches']++;
             }

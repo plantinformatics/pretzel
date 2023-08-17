@@ -1004,25 +1004,32 @@ export default Component.extend({
         td.textContent = value;
       }
       this.valueDiagonal(td, value, valueToColourClass);
+      /** Use this for 'LD Block' */
       const matchRefAlt = this.userSettings.haplotypeFilterRef ? 'Ref' : 'Alt';
-      if (prop == matchRefAlt) {
+      if (refAltHeadings.includes(prop_string))
+      {
         const
         dataset = prop[Symbol.for('dataset')],
         feature = this.getRowAttribute(this.table, row, 0);
-        if (feature && this.featureIsFilter(feature)) {
+        if (feature && this.featureIsFilter(feature, prop_string)) {
           td.classList.add('featureIsFilter');
         }
       }
     }
   },
-  featureIsFilter(feature) {
+  /**
+   * @param prop string (not String)
+   */
+  featureIsFilter(feature, prop) {
     const
     block = feature.get('blockId.content'),
     featureFiltersSymbol = Symbol.for('featureFilters'),
     featureFilters = block?.[featureFiltersSymbol],
-    isFilter = featureFilters?.includes(feature);
+    matchRef = feature[Symbol.for('matchRef')],
+    featureIsFilter = featureFilters?.includes(feature),
+    isFilter = featureIsFilter && (matchRef === (prop === 'Ref'));
     if (isFilter) {
-      dLog('featureIsFilter', feature.value, feature.name);
+      dLog('featureIsFilter', feature.value, feature.name, matchRef, prop);
     }
     return isFilter;
   },
