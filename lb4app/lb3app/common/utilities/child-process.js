@@ -281,6 +281,7 @@ exports.dataOutReplyClosureLimit = dataOutReplyClosureLimit;
 function dataOutReplyClosureLimit(cb, lineFilter, nLines) {
   let chunks = [];
   let lineCount = 0;
+  let truncatedLine;
 
   /* possibly add req to params and reference chunks there :
      let chunksSymbol = Symbol.for('dataOutChunks');
@@ -305,6 +306,7 @@ function dataOutReplyClosureLimit(cb, lineFilter, nLines) {
     function finished() { return (nLines !== undefined) && (lineCount >= nLines); }
     if (! chunk) {
       const
+      /** see comment re. textResult below.  */
       textResult = lineFilter ?
         chunks.join('\n') + '\n' :
         Buffer.concat(chunks).toString();
@@ -319,9 +321,19 @@ function dataOutReplyClosureLimit(cb, lineFilter, nLines) {
         cb(null, text);
       } else {
         if (lineFilter) {
-          let truncatedLine;
           let
-          lines = text.split('\n')
+          truncated = ! text.endsWith('\n'),
+          lines = text.split('\n');
+          if (lines.length) {
+            if (truncatedLine) {
+              lines[0] = truncatedLine + lines[0];
+              truncatedLine = null;
+            }
+            if (truncated) {
+              truncatedLine = lines.pop();
+            }
+          }
+          lines = lines
             .filter(lineFilter);
           if (nLines !== undefined) {
             /** number of lines to complete nLines limit */
