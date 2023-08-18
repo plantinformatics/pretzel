@@ -79,6 +79,16 @@ function valueNameIsNotSample(valueName) {
   return ['ref', 'alt', 'tSNP', 'MAF'].includes(valueName);
 }
 
+/**
+ * @return true if feature.values contains only non-sample values, as listed in
+ * valueNameIsNotSample().
+ */
+function featureHasSamplesLoaded(feature) {
+  const
+  valuesKeys = Object.keys(feature.values),
+  noSampleValues = valuesKeys.filter(valueNameIsNotSample).length === valuesKeys.length;
+  return ! noSampleValues;
+}
 
 // -----------------------------------------------------------------------------
 
@@ -1911,12 +1921,10 @@ export default class PanelManageGenotypeComponent extends Component {
       .filter(feature => {
         // related : featuresCountMatches(), haplotypeFilterSamples().
         const
-        valuesKeys = Object.keys(feature.values),
         /** can't apply this filter if no sample genotype values have been
          * loaded for this feature. */
-        noSampleValues = (valuesKeys.length === 2) &&
-          valuesKeys.includes('ref') && valuesKeys.includes('alt'),
-        counts = noSampleValues ||
+        haveSampleValues = featureHasSamplesLoaded(feature),
+        counts = haveSampleValues &&
           Object.entries(feature.values)
           .reduce((result, [key, value]) => {
             const sampleName = key;
@@ -1936,7 +1944,7 @@ export default class PanelManageGenotypeComponent extends Component {
             }
             return result;
           }, [0, 0, 0]),
-        ok = noSampleValues || (counts[0] && counts[2]);
+        ok = haveSampleValues && (counts[0] && counts[2]);
         return ok;
       });
     return features;
