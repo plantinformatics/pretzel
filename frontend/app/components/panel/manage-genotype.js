@@ -6,7 +6,7 @@ import { tracked } from '@glimmer/tracking';
 import { later } from '@ember/runloop';
 import { A as Ember_A } from '@ember/array';
 
-import { uniq } from 'lodash/array';
+import { uniq, intersection } from 'lodash/array';
 
 import NamesFilters from '../../utils/data/names-filters';
 import { toPromiseProxy, toArrayPromiseProxy } from '../../utils/ember-devel';
@@ -106,6 +106,7 @@ function featureHasSamplesLoaded(feature) {
  * Arrays of sample names selected by the user, per dataset. indexed by VCF datasetId
  * .vcfGenotypeSamplesSelected = {} (aliased as vcfGenotypeSamplesSelectedAll)
  *
+ * .samplesIntersection default : false
  * .requestFormat 'Numerical' (default), 'CATG'
  * .replaceResults default: false
 
@@ -326,6 +327,10 @@ export default class PanelManageGenotypeComponent extends Component {
     const userSettings = this.args.userSettings;
     if (userSettings.vcfGenotypeSamplesSelected === undefined) {
       userSettings.vcfGenotypeSamplesSelected = {};
+    }
+
+    if (userSettings.samplesIntersection === undefined) {
+      userSettings.samplesIntersection = false;
     }
 
     // possible values listed in comment before requestFormat
@@ -987,6 +992,22 @@ export default class PanelManageGenotypeComponent extends Component {
      */
     return b?.get('name');
   }
+  
+  /** @return an array of samples which are common to the viewed datasets
+   * @desc
+   * related : vcfGenotypeSamples
+   */
+  get sampleNamesIntersection() {
+    const
+    /** Could ensure samples are loaded for each of the viewed VCF datasets
+     * using .vcfGenotypeSamplesAllDatasets().
+     */
+    datasetSamples =
+    Object.values(this.sampleCache.sampleNames)
+      .map(value => this.samplesFromText(value)),
+    commonSamples = intersection.apply(undefined, datasetSamples);
+    return commonSamples;
+  }
   /** @return for .lookupDatasetId selected by user, the sampleNames array
    * received, and the .selectedSamples the user has selected from those.
    */
@@ -1004,10 +1025,9 @@ export default class PanelManageGenotypeComponent extends Component {
 
   /** @return sample names in .vcfGenotypeSamplesText
    */
-  @computed('vcfGenotypeSamplesText')
-  get samples() {
+  samplesFromText(text) {
     const
-    samples = this.vcfGenotypeSamplesText?.split('\n')
+    samples = text?.split('\n')
     ;//.map((name) => ({name, selected : false}));
     // text ends with \n, which creates '' at the end of the array, so pop that.
     if ((samples?.length && (samples[samples.length-1]) === '')) {
@@ -1017,6 +1037,15 @@ export default class PanelManageGenotypeComponent extends Component {
  
     return samples;
   }
+  @computed('vcfGenotypeSamplesText', 'args.userSettings.samplesIntersection')
+  get samples() {
+    const
+    samples = this.args.userSettings.samplesIntersection ?
+      this.sampleNamesIntersection :
+      this.samplesFromText(this.vcfGenotypeSamplesText);
+    return samples;
+  }
+
   @computed('samples')
   get vcfGenotypeSamplesCount() {
     const count = this.samples?.length;
@@ -1594,7 +1623,10 @@ export default class PanelManageGenotypeComponent extends Component {
     let ok = requestSamplesAll && ! requestSamplesFiltered && ! limitSamples;
     if (! ok) {
       if (requestSamplesAll) {
-        if (datasetId) {
+        if (userSettings.samplesIntersection) {
+          // .samples in this case is .sampleNamesIntersection
+          samplesRaw = this.samples;
+        } else if (datasetId) {
           // All sample names received for datasetId.
           // As in vcfGenotypeSamples(). related : lookupBlockSamples(), vcfGenotypeSamplesText().
           // Related : datasetStoreSampleNames().

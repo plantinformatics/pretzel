@@ -194,6 +194,20 @@
                           input=(action this.nameFilterChanged value="target.value")
                           placeholder="Filter available samples by name" }}
                           {{!-- maybe autocomplete="sample-name", but samples names are mostly numeric so it may be more of an impediment than a benefit for the user --}}
+
+                        <span>
+                          <input type="checkbox"
+                            style="margin-left: 3em;"
+                            checked={{@userSettings.samplesIntersection}}
+                            oninput={{pipe
+                              (action (mut @userSettings.samplesIntersection) value="target.checked")
+                               }}  >
+                          <label>Common</label>
+                          {{#ember-tooltip side="right" delay=500}}
+                            Select from samples which are common to the viewed VCF datasets
+                          {{/ember-tooltip}}
+                        </span>
+
                       </div>
 
                       {{ensureSamplesForDatasetTabEffect}}
