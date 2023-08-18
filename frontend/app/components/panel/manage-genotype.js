@@ -1385,22 +1385,24 @@ export default class PanelManageGenotypeComponent extends Component {
 
   // ---------------------------------------------------------------------------
 
-  /** Request the list of samples of the vcf of the brushed block.
+  /** Request the list of samples of vcfBlock.
    * @return undefined if scope or vcfDatasetId are not defined,
    * or a promise yielding received text
+   * @param vcfBlock
    */
-  vcfGenotypeSamples() {
+  vcfGenotypeSamplesDataset(vcfBlock) {
     /** implemented by common/models/block.js : Block.vcfGenotypeSamples().  */
     const
     fnName = 'vcfGenotypeSamples',
-    scope = this.lookupScope,
-    vcfDatasetId = this.lookupDatasetId;
+    vcfDatasetId = vcfBlock?.get('datasetId.id'),
+    /** as in .lookupScope */
+    scope = vcfBlock.get('name');
     let textP;
     if (scope && vcfDatasetId)   {
       this.lookupMessage = null;
 
       textP = this.auth.genotypeSamples(
-        this.lookupBlock, vcfDatasetId, scope,
+        vcfBlock, vcfDatasetId, scope,
         {} );
       textP.then(
         (text) => {
@@ -1412,8 +1414,8 @@ export default class PanelManageGenotypeComponent extends Component {
           /** trim off trailing newline; other non-sample column info could be
            * removed; it is not a concern for the mapping. */
           const sampleNames = isGerminate ? t : t.trim().split('\n');
-          this.datasetStoreSampleNames(this.lookupBlock, sampleNames);
-          this.mapSamplesToBlock(sampleNames, this.lookupBlock);
+          this.datasetStoreSampleNames(vcfBlock, sampleNames);
+          this.mapSamplesToBlock(sampleNames, vcfBlock);
           if ((vcfDatasetId === this.lookupDatasetId) &&
               (this.vcfGenotypeSamplesSelected === undefined)) {
             this.vcfGenotypeSamplesSelected = [];
@@ -1423,6 +1425,37 @@ export default class PanelManageGenotypeComponent extends Component {
         .catch(this.showError.bind(this, fnName));
     }
     return textP;
+  }
+
+  /** Request the list of samples of the vcf of the brushed block.
+   * @return undefined if scope or vcfDatasetId are not defined,
+   * or a promise yielding received text
+   */
+  vcfGenotypeSamples() {
+    /** implemented by common/models/block.js : Block.vcfGenotypeSamples().  */
+    const
+    fnName = 'vcfGenotypeSamples',
+    vcfBlock = this.lookupBlock,
+    textP = this.vcfGenotypeSamplesDataset(vcfBlock);
+    /* vcfGenotypeSamplesDataset() initialises .vcfGenotypeSamplesSelected in
+     * this case; could move to here. */
+
+    return textP;
+  }
+
+  /** Request vcfGenotypeSamples for vcf blocks for which
+   * vcfGenotypeSamplesText() is not defined.
+   */
+  vcfGenotypeSamplesAllDatasets() {
+    let vcfDatasetId;
+    // i.e. gtBlocks
+    this.brushedOrViewedVCFBlocksVisible
+      .filter(vcfBlock => 
+        ((vcfDatasetId = vcfBlock?.get('datasetId.id')) &&
+         ! this.sampleCache.sampleNames[vcfDatasetId]))
+      .forEach(vcfBlock =>
+        // returns promise
+        this.vcfGenotypeSamplesDataset(vcfBlock));
   }
 
   //----------------------------------------------------------------------------
@@ -1438,10 +1471,9 @@ export default class PanelManageGenotypeComponent extends Component {
     requestSamplesFiltered = userSettings.requestSamplesFiltered,
     samplesLimitEnable = userSettings.samplesLimitEnable;
 
-    if (requestSamplesAll && (requestSamplesFiltered || samplesLimitEnable) &&
-        ! this.vcfGenotypeSamplesText) {
+    if (requestSamplesAll && (requestSamplesFiltered || samplesLimitEnable)) {
       dLog('ensureSamples');
-      this.vcfGenotypeSamples();
+      this.vcfGenotypeSamplesAllDatasets();
     }
   }
 
@@ -1939,6 +1971,10 @@ export default class PanelManageGenotypeComponent extends Component {
     };
     return fn;
   }
+  /**
+   * @return true if sampleName is selected in dataset of block,
+   * or valueNameIsNotSample(sampleName), i.e. sampleName is ref/alt/etc.
+   */
   sampleSelectedFilter(block, sampleName) {
     const
     datasetId = block.get('datasetId.id'),

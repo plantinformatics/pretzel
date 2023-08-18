@@ -152,8 +152,9 @@
                         <input type="checkbox"
                           style="margin-left: 3em;"
                           checked={{@userSettings.requestSamplesAll}}
-                          oninput={{action (pipe (action (mut @userSettings.requestSamplesAll) value="target.checked")
-                            this.ensureSamples ) }}  >
+                          oninput={{pipe
+                            (action (mut @userSettings.requestSamplesAll) value="target.checked")
+                            this.ensureSamples }}  >
                         <label>All</label>
                         {{#ember-tooltip side="right" delay=500}}
                           Request genotype of All samples or select samples in list
@@ -165,8 +166,8 @@
                         <input type="checkbox"
                           style="margin-left: 3em;"
                           checked={{@userSettings.requestSamplesFiltered}}
-                          oninput={{action (pipe (action (mut @userSettings.requestSamplesFiltered) value="target.checked")
-                            this.ensureSamples ) }}  >
+                          oninput={{pipe (action (mut @userSettings.requestSamplesFiltered) value="target.checked")
+                            this.ensureSamples }}  >
                         <label>Filtered</label>
                         {{#ember-tooltip side="right" delay=500}}
                           Request genotype of samples selected by LD Block / tSNP filters
@@ -342,7 +343,8 @@
 
                             <input type="checkbox"
                               checked={{@userSettings.samplesLimitEnable}}
-                              oninput={{action (mut @userSettings.samplesLimitEnable) value="target.checked"}}  >
+                              oninput={{pipe (action (mut @userSettings.samplesLimitEnable) value="target.checked")
+                                this.ensureSamples }}  >
 
                           </Elem::InputRangeText>
                           <EmberTooltip side="right" delay=500>
