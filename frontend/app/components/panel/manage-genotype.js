@@ -2423,14 +2423,12 @@ export default class PanelManageGenotypeComponent extends Component {
       }
 
       /**
-       * @param matchRef MatchRef.  if not defined then construct it for each feature from feature[matchRefSymbol].
+       * @param matchRefIn MatchRef.  if not defined then construct it for each feature from feature[matchRefSymbol].
        */
-      function featuresCountMatches(features, matches, matchRef) {
+      function featuresCountMatches(features, matches, matchRefIn) {
         features.forEach((feature) => {
-          if (! matchRef) {
-            matchRef = new MatchRef(feature[matchRefSymbol]);
-          }
           const
+          matchRef = matchRefIn || new MatchRef(feature[matchRefSymbol]),
           matchValue = feature.values[matchRef.matchKey];
           Object.entries(feature.values).forEach(([key, value]) => {
             if (! valueNameIsNotSample(key)) {
