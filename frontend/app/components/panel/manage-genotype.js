@@ -2003,36 +2003,55 @@ export default class PanelManageGenotypeComponent extends Component {
     'args.userSettings.selectFeaturesByLDBlock',
   )
   get sampleNamesCmp() {
+    /* clear the cached results of sampleMatchesSum() */
+    this.matchesSummary = {};
     const
     selectFeaturesByLDBlock = this.args.userSettings.selectFeaturesByLDBlock,
     filtersCount = selectFeaturesByLDBlock ? this.haplotypeFiltersCount : this.featureFiltersCount,
     fn = ! filtersCount ? undefined : (...sampleNames) => {
       const
-      matchRates = sampleNames.map((sampleName) => {
-        const
-        blocks = this.sampleName2Blocks(sampleName),
-        /** sum of {,mis}match counts for blocks containing sampleName.  */
-        ms = blocks
-          .reduce((sum, block) => {
-          const
-          m = block?.[sampleMatchesSymbol]?.[sampleName];
-          if (m) {
-            sum.matches += m.matches;
-            sum.mismatches += m.mismatches;
-          }
-          return sum;
-        }, {matches : 0, mismatches : 0}),
-        ratio = ! (ms.matches + ms.mismatches) ? 0 :
-          ms.matches / (ms.matches + ms.mismatches);
-        return ratio;
-      }),
+      matchRates = sampleNames.map(this.sampleMatchesSum.bind(this)),
       cmp = matchRates[1] - matchRates[0];
       return cmp;
     };
     return fn;
   }
 
-  
+  /** result of sampleMatchesSum()
+   * [sampleName] -> {matches, mismatches}
+   */
+  matchesSummary = {};
+  /** Sum the matches of this sample with Alt or Ref value at the selected SNPs.
+   * Often samples will only be present in one block; this function sums the
+   * matches across the viewed blocks.
+   */
+  sampleMatchesSum(sampleName) {
+    let ratio = this.matchesSummary[sampleName];
+    if (ratio === undefined) {
+      const
+      blocks = this.sampleName2Blocks(sampleName),
+      /** sum of {,mis}match counts for blocks containing sampleName.  */
+      ms = blocks
+        .reduce((sum, block) => {
+          const
+          m = block?.[sampleMatchesSymbol]?.[sampleName];
+          if (m) {
+            if (! sum) {
+              sum = Object.assign({}, m);
+            } else {
+              sum.matches += m.matches;
+              sum.mismatches += m.mismatches;
+            }
+          }
+          return sum;
+        }, null);
+      ratio = ! ms || ! (ms.matches + ms.mismatches) ? 0 :
+        ms.matches / (ms.matches + ms.mismatches);
+      this.matchesSummary[sampleName] = ratio;
+    }
+    return ratio;
+  }
+
 
   //----------------------------------------------------------------------------
 
