@@ -1071,7 +1071,11 @@ export default class PanelManageGenotypeComponent extends Component {
   selectSample(event) {
     const
     selectedSamples = $(event.target).val();
-    this.selectedSamples.addObjects(selectedSamples);
+    if (! this.selectedSamples) {
+      this.selectedSamples = selectedSamples;
+    } else {
+      this.selectedSamples.addObjects(selectedSamples);
+    }
     if (! this.selectedSamplesText) {
       if (selectedSamples.length) {
         this.selectedSamplesText = selectedSamples.join('\n');
