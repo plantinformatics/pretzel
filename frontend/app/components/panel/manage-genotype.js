@@ -1138,6 +1138,24 @@ export default class PanelManageGenotypeComponent extends Component {
     selected = this.sampleNameListInputParse(value);
     this.selectedSamples = selected;
   }
+  /** Number of newlines in .selectedSamplesText when sampleNameListInputKey()
+   * was last called.
+   */
+  selectedSamplesTextLines = null;
+  /** Called by @input - any user edit key.
+   * Set this.selectedSamplesText to value.
+   * If edit is substantial, e.g. changes # lines, then sampleNameListInput().
+   */
+  @action
+  sampleNameListInputKey(value) {
+    this.selectedSamplesText = value;
+    const
+    lines = stringCountString(value, '\n');
+    if (lines != this.selectedSamplesTextLines) {
+      this.selectedSamplesTextLines = lines;
+      this.sampleNameListInput(value);
+    }
+  }
 
   //------------------------------------------------------------------------------
 
@@ -1514,7 +1532,13 @@ export default class PanelManageGenotypeComponent extends Component {
     requestSamplesFiltered = userSettings.requestSamplesFiltered,
     samplesLimitEnable = userSettings.samplesLimitEnable;
 
-    if (requestSamplesAll && (requestSamplesFiltered || samplesLimitEnable)) {
+    /** if Common (userSettings.samplesIntersection) and the intersection is
+     * empty, will use All+samplesLimit so get samples.
+     */
+    if (requestSamplesAll &&
+        (requestSamplesFiltered || samplesLimitEnable ||
+         (userSettings.samplesIntersection && ! this.samples?.length)
+        )) {
       dLog('ensureSamples');
       this.vcfGenotypeSamplesAllDatasets();
     }
