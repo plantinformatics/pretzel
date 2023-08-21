@@ -99,7 +99,7 @@ For a quick start without installing any of the dependencies you will need docke
 
 ```
 mkdir -p ~/mongodata \
- && docker run --name mongo --detach --volume ~/mongodata:/data/db --net=host mongo \
+ && docker run --name mongo --detach --volume ~/mongodata:/data/db --net=host mongo:5.0 \
  && until $(curl --silent --output /dev/null localhost:27017 || \
     [ $(docker inspect -f '{{.State.Running}}' mongo) = "false" ]); do printf '.'; sleep 1; done \
  && docker run --name pretzel --detach --net=host plantinformaticscollaboration/pretzel:stable  \
@@ -107,6 +107,8 @@ mkdir -p ~/mongodata \
     [ $(docker inspect -f '{{.State.Running}}' pretzel) = "false" ] ); do printf '.'; sleep 1; done \
  && docker logs pretzel
 ```
+
+mongoDb versions 4 and 5 have been tested with Pretzel.
 
 ## Docker on windows
 
