@@ -152,8 +152,8 @@ function featureHasSamplesLoaded(feature) {
 export default class PanelManageGenotypeComponent extends Component {
   @service() controls;
   @service() auth;
-  /** used for axisBrush.brushedAxes to instantiate axis-brush s. */
-  @service('data/flows-collate') flowsService;
+  @service('data/axis-brush') axisBrushService;
+
   @service('data/block') blockService;
   @service('data/vcf-genotype') sampleCache;
   @service('data/haplotype') haplotypeService;
@@ -446,6 +446,7 @@ export default class PanelManageGenotypeComponent extends Component {
   // ---------------------------------------------------------------------------
 
   /** Maximum interval for VCF lookup request.
+   * Units are Mb.
    * This initial default value is coordinated with hbs : <input ... value=1 ... intervalLimitInput >
    * If ! gtIntervalLimit, don't apply a limit.
    */
@@ -1182,11 +1183,11 @@ export default class PanelManageGenotypeComponent extends Component {
    * Dependency on .viewed provides update when a data block is added to an axis which is brushed.
    * axis1d.brushedBlocks also depends (indirectly) on viewed[].
    */
-  @computed('flowsService.axisBrush.brushedAxes', 'blockService.viewed.[]')
+  @computed('axisBrushService.brushedAxes', 'blockService.viewed.[]')
   get brushedVCFBlocks() {
     const
     fnName = 'brushedVCFBlocks',
-    axisBrushes = this.flowsService.axisBrush.brushedAxes,
+    axisBrushes = this.axisBrushService.brushedAxes,
     blocks = axisBrushes.map((ab) => {
       let
       axis1d = ab.block.get('axis1d'),
@@ -1409,12 +1410,24 @@ export default class PanelManageGenotypeComponent extends Component {
 
   // ---------------------------------------------------------------------------
 
+  get brushedDomain() {
+    const
+    axisBrush = this.axisBrush,
+    /** viewedVCFBlocks() returns a axisBrush with just block.  It is used when
+     * .brushedVCFBlocks is [], i.e. axisBrushService.brushedAxes is [], seen
+     * when axis reference block (axisBrush.block) is from secondary server,
+     * likely ensureAxisBrush(block) is not effectively setting r.block
+     */
+    brushedDomain = axisBrush && (axisBrush.brushedDomain || axisBrush.block.brushedDomain);
+    return brushedDomain;
+  }
+  // Note comment in selectedSampleEffect() re. dependency axisBrush.brushedDomain 
   /** .brushedDomain is not rounded, but could be because base positions are integral.
    * This result is rounded.
    */
   @computed('axisBrush.brushedDomain')
   get brushedDomainLength () {
-    let domain = this.axisBrush?.brushedDomain;
+    let domain = this.brushedDomain;
     if (domain) {
       domain = Math.abs(domain[1] - domain[0]).toFixed();
     }
@@ -1424,7 +1437,7 @@ export default class PanelManageGenotypeComponent extends Component {
   @computed('axisBrush.brushedDomain')
   get brushedDomainRounded () {
     /** copied from axis-brush.js */
-    let domain = this.axisBrush?.brushedDomain;
+    let domain = this.brushedDomain;
     if (domain) {
       domain = domain.map((d) => d.toFixed(2));
     }
@@ -1437,7 +1450,7 @@ export default class PanelManageGenotypeComponent extends Component {
      * could be factored to a library - probably 2 1-line functions - not compelling.
      */
     let
-    domain = this.axisBrush?.brushedDomain,
+    domain = this.brushedDomain,
     domainInteger = domain && 
       (intervalSize(domain) <= this.intervalLimit * 1e6) &&
       domain.map((d) => +d.toFixed(0));
@@ -2320,6 +2333,10 @@ export default class PanelManageGenotypeComponent extends Component {
   }
 
   @computed(
+    /** using axisBrush.brushedDomain as dependency works, but not
+     * .brushedDomain, which is normally equivalent.
+    'brushedDomain.{0,1}',
+     */
     'axisBrush.brushedDomain',
 
     // update : 0d6c0dd9 implements table column filtering by .selectedSamples.

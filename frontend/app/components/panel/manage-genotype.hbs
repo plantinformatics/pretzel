@@ -99,7 +99,7 @@
 
                   {{!-- --------------------------------------------------------- --}}
 
-                  {{log 'flowsService.axisBrush' flowsService.axisBrush}}
+                  {{log 'axisBrush' axisBrush}}
 
                   Server : 
                   {{this.apiServerSelectedOrPrimary.name}}
@@ -117,7 +117,7 @@
                           <th class="devel-visible">zoomCounter</th>
                         </tr>
 
-                      {{#each flowsService.axisBrush.brushedAxes as |block| }}
+                      {{#each axisBrush.brushedAxes as |block| }}
 
                         <tr>
                           <td>
