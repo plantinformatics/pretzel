@@ -468,7 +468,7 @@ export default ManageBase.extend({
 
   groupFilterSelected : undefined,
   groupsService : alias('apiServerSelectedOrPrimary.groups'),
-  groupsForFilter : computed('groupsIn', function () {
+  groupsForFilter : computed('groupsService.groupsIn', function () {
     const
     fnName = 'groupsForFilter',
     groupsP = this.get('groupsService').get('groupsInOwnNone');
