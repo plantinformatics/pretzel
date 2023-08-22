@@ -179,7 +179,7 @@
 
                     <div>
                       <label>List of samples from VCF</label>
-                      {{#if this.vcfGenotypeSamplesCount}}
+                      {{#if this.vcfGenotypeSamplesText}}
                         <span class="sample-count">( {{this.vcfGenotypeSamplesCount}} )</span>
                       {{else}}
                         <button type="button" onclick={{action this.vcfGenotypeSamples}} class="btn btn-info btn-xs">Get samples list</button>
@@ -726,8 +726,12 @@
     {{!-- ----------------------------------------------------------------- --}}
 
     {{#if this.vcfGenotypeLookupDomain}}
+      {{!-- disabled if ! All && no samples selected, or All && Common && no samples to select --}}
       <button type="button" onclick={{action this.vcfGenotypeLookup}}
-        disabled={{and (not @userSettings.requestSamplesAll) (not this.vcfGenotypeSamplesSelected.length)  }}
+        disabled={{or
+          (and (not @userSettings.requestSamplesAll) (not this.vcfGenotypeSamplesSelected.length))
+          (and @userSettings.requestSamplesAll @userSettings.samplesIntersection (not this.samples.length))
+        }}
         class="btn btn-info">VCF Lookup</button>
     {{else}}
       {{#if this.urlOptions.gtIntervalLimit}}

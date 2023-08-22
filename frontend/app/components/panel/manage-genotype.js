@@ -1535,11 +1535,11 @@ export default class PanelManageGenotypeComponent extends Component {
     /** if Common (userSettings.samplesIntersection) and the intersection is
      * empty, will use All+samplesLimit so get samples.
      */
-    if (requestSamplesAll &&
-        (requestSamplesFiltered || samplesLimitEnable ||
-         (userSettings.samplesIntersection && ! this.samples?.length)
-        )) {
-      dLog('ensureSamples');
+    if ((requestSamplesAll &&
+         (requestSamplesFiltered || samplesLimitEnable)) ||
+        userSettings.samplesIntersection
+       ) {
+      dLog('ensureSamples', Object.keys(this.sampleCache.sampleNames));
       this.vcfGenotypeSamplesAllDatasets();
     }
   }
