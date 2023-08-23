@@ -30,6 +30,8 @@ https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Comm
 
 .zip 	ZIP archive 	application/zip
 
+.gff,.gff3,.gtf    General Feature Format  text/gff3
+
 --}}
 
 <FileDropzone @name="files" class="border border-primary" style="min-height: 15ex;" as |dropzone queue|>
@@ -57,7 +59,8 @@ https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Comm
 	  application/vnd.ms-excel,
 	  application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,
 	  application/gzip,
-	  application/zip
+	  application/zip,
+	  text/gff3
         "
         @multiple={{true}}
         @onfileadd={{action this.uploadSpreadsheet}}>

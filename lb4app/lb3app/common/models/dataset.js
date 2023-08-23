@@ -18,6 +18,7 @@ var { clientIsInGroup, clientOwnsGroup, groupIsWritable } = require('../utilitie
 var upload = require('../utilities/upload');
 var load = require('../utilities/load');
 const { spreadsheetDataToJsObj } = require('../utilities/spreadsheet-read');
+const { gffDataToJsObj } = require('../utilities/gff_read');
 const { loadAliases } = require('../utilities/load-aliases');
 const { cacheClearBlocks } = require('../utilities/localise-blocks');
 const { cacheblocksFeaturesCounts } = require('../utilities/block-features');
@@ -78,6 +79,10 @@ module.exports = function(Dataset) {
       } else {
         this.spreadsheetUploadInternal(msg, options, models, cb);
       }
+    } else if (
+      msg.fileName.endsWith('.gff') || msg.fileName.endsWith('.gff3')
+    ) {
+        this.gffUpload(msg, options, models, cb);
     } else {
       cb(ErrorStatus(400, 'Unsupported file type'));
     }
@@ -456,6 +461,93 @@ module.exports = function(Dataset) {
     });
   }
 
+  //----------------------------------------------------------------------------
+
+
+  /**
+   * @param msg
+   * @param options
+   * @param models
+   * @param cb
+   * @desc
+   * return via cb : {errors, warnings, datasetName}
+   * .errors and .warnings may have [datasetName] : [] text messages
+   */
+  Dataset.gffUpload = function(msg, options, models, cb) {
+    // based on .spreadsheetUploadInternal
+    const fnName = 'gffUpload';
+    const fileName = msg.fileName;
+
+    console.log(fnName, msg.fileName, msg.data.length);
+    cb = this.spreadsheetUploadCbWrap(cb);
+
+
+    const dataObj = gffDataToJsObj(msg.data);
+    let dataset = dataObj.dataset;
+    dataset.name = msg.fileName.replace(/\.gff3?/, '');
+    let status = pick(dataObj, ['warnings', 'errors']);
+    status.datasetName = dataset.name;
+
+    const datasets = [dataset];
+    status.datasetsWithErrorsOrWarnings =
+      datasets.filter((d) => d.warnings?.length || d.errors?.length)
+      .map((dataset) => pick(dataset, ['name', 'errors', 'warnings']));
+
+
+    // if ! dataset then cbCountDone() is not called, so send warnings here.
+    if (status.errors?.length || (status.warnings?.length && ! dataset)) {
+      status.fileName = fileName;
+      /* status may contain {errors, warnings, .. } and Error() takes only a
+       * string, so send status result back as return value instead of error.
+       */
+      // ErrorStatus(400, JSON.stringify(status))
+      cb(null, status);
+    } else {
+
+      let datasetsDone = 0;
+      let datasetRemovedPs =
+      datasets.map((dataset) => {
+        const
+        datasetName = dataset.name,
+        replaceDataset = !!msg.replaceDataset;
+        console.log('before removeExisting "', datasetName, '"');
+        /* This will upload all datasets after all removed.
+         * i.e. wait for all removes to succeeed, then upload all datasets.
+         */
+        const promise = upload.removeExistingP(models, options, datasetName, replaceDataset);
+        return promise;
+      });
+      /* Added removeExistingP() to enable  :
+       *   Promise.all(datasetRemovedPs)
+       * which enables all of datasets[] to be removed before re-loading them
+       * The requirement is currently : remove each dataset individually before it is loaded.
+       */
+      datasetRemovedPs.forEach((datasetRemovedP, i) => {
+        datasetRemovedP
+          .catch((error) => cb(error))
+          .then(() => loadAfterDelete(datasets[i]));
+      });
+
+      function loadAfterDelete(datasetObj) {
+        function cbOneDataset(error, result) {
+          /* if ! error, expect that result === datasetObj.name  */
+          if (error?.message) {
+            error.message = datasetObj.name + ' : ' + error.message;
+          } else if (typeof error === 'string') {
+            error = datasetObj.name + ' : ' + error;
+          }
+          cb(error, result || datasetObj.name);
+        }
+
+
+        upload.uploadDataset(datasetObj, models, options, cbOneDataset);
+      }
+    }
+
+  };
+
+
+  //----------------------------------------------------------------------------
 
   Dataset.cacheClear = function(time, options, cb) {
     let db = this.dataSource.connector,
