@@ -924,6 +924,7 @@ export default Component.extend({
         row = coords.row,
         col = coords.col,
         columnName = this.columnNames[col],
+        /** related : columnNameIsDatasetColumn() */
         isGt = this.gtDatasetColumns.includes(columnName);
         const datasetId = columnName;
         if (isGt) {
@@ -1344,6 +1345,24 @@ export default Component.extend({
     });
     return colHeaders;
   }),
+  gtDatasetColumnIndexes : computed('columnNames', 'gtDatasetColumns', function () {
+    const
+    /** related : getColAttribute(col) assumes gtDatasetColumns[i] is in column i.
+     */
+    columnIndexes = this.gtDatasetColumns
+      .map(columnName => this.columnNames.indexOf(columnName));
+    return columnIndexes;
+  }),
+  gtDatasetFeatures(row) {
+    const
+    features = this.gtDatasetColumnIndexes
+      .map(col => this.getRowAttribute(this.table, row, col)),
+    /** If a genome doesn't have a feature on a row then its dataset cell will
+     * not have a value so getRowAttribute() will get no valueFeature and the
+     * row feature will be returned, so remove duplicates.  */
+    unique = [].addObjects(features);
+    return unique;
+  },
   positionFilterEffect : computed('datasetPositionFilterChangeCount', function () {
     const fnName = 'positionFilterEffect';
     if (this.table) {
@@ -2048,8 +2067,17 @@ export default Component.extend({
     /** afterSelectionHaplotype() gets called while table is re-rendering, and feature is undefined */
     if (feature) {
       dLog(fnName, coords, feature.name, columnName);
-        this.featureToggle(feature, columnName);
-        this.filterSamplesBySelectedHaplotypes();
+      /** Apply the toggle to all genotype features on the row,
+       * gtDatasetFeatures(row), which is expected to include the
+       * feature from coords.col.
+       * features contains unique values - important for the toggle operation.
+       */
+      const features = this.gtDatasetFeatures(row);
+      dLog(fnName, features.map(f => f.get('blockId.brushName')));
+      features.addObject(feature);
+      features.forEach(feature => 
+        this.featureToggle(feature, columnName));
+      this.filterSamplesBySelectedHaplotypes();
     }
     return feature;
   },

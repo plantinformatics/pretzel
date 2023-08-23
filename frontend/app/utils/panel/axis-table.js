@@ -83,6 +83,10 @@ function setRowAttributes(table, data, dataIsRows) {
        * Setting all cells is slow, so maybe set just column 0 as a fall-back.
        * Transitioning away from HandsOnTable would solve this difficulty of
        * associating metadata with table cells.
+       * Just 1 feature (from data[physicalRow].Ref) is written to all columns;
+       * preferably the col-Dataset-Name columns could each refer to their feature;
+       * the cell value has a Symbol reference to feature and that is used
+       * in getRowAttribute() : valueFeature.
        */
       feature = (feature.Block || feature.Ref) [Symbol.for('feature')];
       featureColumnValues.forEach((value, physicalCol) => {
@@ -137,8 +141,16 @@ function getRowAttribute(table, row, col) {
       dLog(fnName, 'col 0 -> null', table.countRows(), table.countCols());
     }
   }
+  const
+  value = table.getDataAtCell(row, col),
+  valueFeature = (typeof value === 'object') && value[Symbol.for('feature')];
+  /** Use valueFeature in preference to the cell meta .PretzelFeature,
+   * because setRowAttributes() writes just a single feature to all
+   * columns in the row : data[physicalRow].Ref[Symbol.for('feature')].
+   */
   let
-  feature = (col === null) ? undefined : table.getCellMeta(row, col)?.PretzelFeature;
+  feature = valueFeature ||
+    ((col === null) ? undefined : table.getCellMeta(row, col)?.PretzelFeature);
 
   if (! feature) {
     /** matrix-view no longer uses axis-table.js : setRowAttributes();
