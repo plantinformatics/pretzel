@@ -23,6 +23,7 @@ import {
   addFeaturesGerminate,
   sampleIsFilteredOut,
   vcfFeatures2MatrixView, vcfFeatures2MatrixViewRows,
+  valueIsMissing,
   rowsAddFeature,
   annotateRowsFromFeatures,
   featuresValuesFields,
@@ -2532,7 +2533,7 @@ export default class PanelManageGenotypeComponent extends Component {
           matchRef = matchRefIn || new MatchRef(feature[matchRefSymbol]),
           matchValue = feature.values[matchRef.matchKey];
           Object.entries(feature.values).forEach(([key, value]) => {
-            if (! valueNameIsNotSample(key)) {
+            if (! valueNameIsNotSample(key) && ! valueIsMissing(matchValue)) {
               const match = matchRef.matchFn(value, matchValue);
               const sampleMatch = matches[key] || (matches[key] = {matches: 0, mismatches : 0});
               sampleMatch[match ? 'matches' : 'mismatches']++;

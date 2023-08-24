@@ -889,6 +889,13 @@ function valueIsCopies(alleleValue) {
   return alleleValue?.match(/^[012]/);
 }
 
+const missingValues = ['./.', '.|.', '', undefined];
+function valueIsMissing(valueIn) {
+  const missing = missingValues.includes(valueIn);
+  return missing;
+}
+
+
 /** convert valueIn to requestFormat, if not already in that format.
  * @param requestFormat 'CATG', 'Numerical', ...
  * @param refAltValues  [refValue, altValue]
@@ -903,7 +910,7 @@ function valueToFormat(requestFormat, refAltValues, valueIn) {
   const
   fnName = 'valueToFormat';
   let valueOut;
-  if ((valueIn === undefined) || (valueIn === './.') || (valueIn === '.|.') || (valueIn === '')) {
+  if (valueIsMissing(valueIn)) {
     valueOut = valueIn;
   } else {
     const
@@ -1344,6 +1351,7 @@ export {
   columnName2SampleName,
   vcfFeatures2MatrixView, vcfFeatures2MatrixViewRows,
   valueIsCopies,
+  valueIsMissing,
   rowsAddFeature,
   annotateRowsFromFeatures,
   featuresValuesFields,
