@@ -297,7 +297,12 @@ export default class PanelManageGenotypeComponent extends Component {
    * out half of matrix-view - perhaps wait until changing table component, so
    * use this action bundle to prototype and refine the requirements.
    */
-  tableApi = { dataClipboard : null};
+  tableApi = {
+    dataClipboard : null,
+    // @tracked
+    topLeftDialog : null,
+  };
+
 
   //----------------------------------------------------------------------------
 

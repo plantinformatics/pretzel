@@ -808,6 +808,52 @@
 
 {{!-- --------------------------------------------------------------------- --}}
 
+{{#if this.tableApi.topLeftDialog}}
+  {{log 'topLeftDialog' this.tableApi.topLeftDialog}}
+  {{!-- #ember-wormhole destinationElement=this.tableApi.topLeftDialog --}}
+
+  {{#ember-tether
+    tetherTarget=this.tableApi.topLeftDialog
+  }}
+
+    <div id="topLeftDialog">
+
+      {{!-- these are copied from main dialog --}}
+      <div>
+        {{this.dataScope}}
+        {{log 'dataScope' this.dataScope}}
+      </div>
+      {{#if this.vcfGenotypeLookupDomain}}
+        <button type="button" onclick={{action this.vcfGenotypeLookup}}
+          disabled={{or
+            (and (not @userSettings.requestSamplesAll) (not this.vcfGenotypeSamplesSelected.length))
+            (and @userSettings.requestSamplesAll @userSettings.samplesIntersection (not this.samples.length))
+          }}
+          class="btn btn-info">VCF Lookup</button>
+      {{/if}}
+
+      <div>
+        {{#if this.vcfGenotypeLookupCount}}
+          {{this.vcfGenotypeLookupCount}}
+        {{/if}}
+        &nbsp;
+        {{#ember-tooltip side="right" delay=500}}
+          {{this.vcfGenotypeLookupCount}} Current Requests.
+          {{this.vcfGenotypeTextSizeDescription}}
+          {{this.vcfGenotypeText.length}}
+        {{/ember-tooltip}}
+
+      </div>
+
+    </div>
+
+  {{/ember-tether}}
+
+  {{!-- /ember-wormhole --}}
+{{/if}}
+
+{{!-- --------------------------------------------------------------------- --}}
+
 <div class="clear-both"></div>
 
 <style>

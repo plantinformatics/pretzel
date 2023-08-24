@@ -537,10 +537,16 @@ export default Component.extend({
   // ---------------------------------------------------------------------------
 
   afterRender(isForced) {
+    const topLeftDialogEnable = true;
+    if (! topLeftDialogEnable) {
     const scope = this.dataScope;
     if (scope) {
       this.showTextInTopLeftCorner(scope);
     }
+    } else {
+      this.topLeftDialogUpdate();
+    }
+
     this.set('model.layout.matrixView.tableYDimensions', tableYDimensions());
   },
   showTextInTopLeftCorner(text) {
@@ -555,9 +561,27 @@ export default Component.extend({
     if (cornerClones.length > 3) {
       cornerClones[3].textContent = text;
     }
+    this.addComponentClass();
+  },
+  addComponentClass() {
     /** gtMergeRows : datasetId is not displayed, so width is not set  */
     let ot = d3.select('#observational-table');
     ot.classed('gtMergeRows', this.urlOptions.gtMergeRows);
+  },
+
+  //----------------------------------------------------------------------------
+
+  /** Called by matrix-view afterRender()
+   */
+  // @action
+  topLeftDialogUpdate() {
+    const
+    fnName = 'topLeftDialogUpdate',
+    /** related : cornerClones */
+    topLeftDialog = $('#observational-table .ht_clone_top_left_corner .colHeader.cornerHeader')[0];
+    dLog(fnName, topLeftDialog);
+    Ember_set(this, 'tableApi.topLeftDialog', topLeftDialog);
+    this.addComponentClass();
   },
 
   //----------------------------------------------------------------------------

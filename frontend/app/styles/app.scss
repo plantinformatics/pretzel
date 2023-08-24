@@ -209,6 +209,9 @@ div.app-logo {
   content: "\21F9";
   right: -20px;
   position: relative;
+  left: 4px;
+  /* require a minimum of 121 to be above the HandsOnTable elements near this element. */
+  z-index: 181;
 }
 .resizer.vertical:not(.inFO):not(.no-resizer-icon)::after
 {
@@ -1666,6 +1669,8 @@ div#goto-feature > div
   /* to place the arrow outside-left, use width : 0px; and .resizer.vertical : right : 20px instead of inherit.
    * That is fine except when the right panel is placed below the graph - no space on left.
    */
+  overflow-x: visible;
+  width: 0px;
 }
 .gtResizeHeader > div
 {
@@ -1748,6 +1753,14 @@ div.ht_clone_top_left_corner span.colHeader.cornerHeader {
    *  (gtMergeRows ? Feature Position : Feature name)
    */
   width : 11em;
+}
+
+#topLeftDialog
+{
+  position: fixed;
+  /* require a minimum of 181 to be above the HandsOnTable elements near this element. */
+  z-index: 181;
+  padding-left: 12px;
 }
 
 /** when viewing matrix-view as plain text, clip the rgb() in the block column to avoid row height calculation. */
