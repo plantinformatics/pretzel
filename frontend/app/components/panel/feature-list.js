@@ -98,7 +98,16 @@ export default Component.extend({
    * having the user click '->Blocks' seems the right flow; can add that after
    * trialling.
    */
-  featureNameList  : computed('featureNameListEnter', function () {
+  featureNameList : computed('featureNameListEnter', function () {
+    return this.featureNameListGet();
+  }),
+  get featureNameListCurrent() {
+    return this.featureNameListGet();
+  },
+  /** Read text from textarea, format into 1 feature name per line.
+   * @return array of feature names, after formatting
+   */
+  featureNameListGet() {
     let
       featureList = {};
     /** jQuery handle of this textarea */
@@ -125,7 +134,7 @@ export default Component.extend({
       featureList.featureNameList = fl;
       featureList.empty = ! fl || (fl.length === 0);
       return featureList;
-    }),
+    },
   selectedFeatureNames  : computed('selectedFeatures', function () {
     let
     featureList = {};
@@ -153,7 +162,7 @@ export default Component.extend({
     let featureList,
       activeInput = this.get('activeInput');
     if (activeInput)
-      featureList = this.get('featureNameList');
+      featureList = this.get('featureNameListCurrent');
     else
       featureList = this.get('selectedFeatureNames');
     console.log('activeFeatureList', activeInput, featureList);
