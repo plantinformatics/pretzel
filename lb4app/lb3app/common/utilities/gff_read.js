@@ -70,27 +70,27 @@ function gffDataToJsObj(fileData, datasetAttributes) {
     }, datasetAttributes),
   datasetObj = gffObj.reduce(
     (result, g) => {
-      if (g.length !== 1) {
-        console.log(fnName, 'g.length !== 1', g);
-      } else {
-        g = g[0];
+      if (Array.isArray(g)) {
+        if (g.length !== 1) {
+          console.log(fnName, 'g.length !== 1', g);
+        } else {
+          g = g[0];
+        }
       }
       /** not used :
        * derived_features:[]
        */
+      const {Name, chromosome} = g.attributes;
       // if ((g.genome.length === 1) && (g.genome.length[0] === 'chromosome'))
       switch (g.type) {
       case 'region' :
-        const {Name, chromosome} = g.attributes;
-        block = {
-          name : Name[0],
-          scope : chromosome[0],
-          features : [],
-          // range : [g.start, g.end],
-        };
-        dataset.blocks.push(block);
+        block = newBlock(g, Name[0], chromosome[0]);
         break;
       case 'gene':
+        const scope = chromosome ? chromosome[0] : g.seq_id;
+        if (! block || (block.scope !== scope)) {
+          block = newBlock(g, scope, scope);
+        }
         feature = addFeature(g);
         break;
       default :
@@ -100,42 +100,73 @@ function gffDataToJsObj(fileData, datasetAttributes) {
       return result;
     },
     { dataset } );
+  function newBlock(g, name, scope) {
+    const
+    block = {
+      name,
+      scope,
+      features : [],
+      // range : [g.start, g.end],
+    };
+    dataset.blocks.push(block);
+    return block;
+  }
 
   function addFeature(g) {
     const
     fnName = 'addFeature',
-    values = pickNonNull(g, ['attributes', 'ID', 'score', 'strand', 'phase']),
+    values = pickNonNull(g, ['ID', 'score', 'strand', 'phase']),
     feature = {
       name : g.attributes.Name[0],
       value : [g.start, g.end],
       value_0 : g.start,
       values,
     };
+    if (g.attributes) {
+      /* ID is defined in g.attributes in iwgsc_refseqv2.1_annotation_200916_LC,
+       * and in g in GCF_018294505.1_IWGSC_CS_RefSeq_v2.1_genomic.gff
+       * There don't appear to be any field names overlapping between g.attributes and g
+       */
+      Object.assign(values, g.attributes);
+    }
     block.features.push(feature);
+    let
+    /** children, currently stored as feature.value[2] */
+    subElements = feature.value[2];
+    subElements = visitChildren(feature, subElements, g);
+    if (subElements?.length) {
+      feature.value[2] = subElements;
+    }
+
+    return feature;
+  }
+  function visitChildren(feature, subElements, g) {
     if (g.child_features.length) {
-      const
-      child_features = g.child_features
+      /** g.child_features seems to also be [Array[1]]  */
+      subElements = g.child_features
         .reduce((children, g) => {
-          if (g.length !== 1) {
-            console.log(fnName, 'g.length !== 1', g);
-          } else {
-            g = g[0];
+          if (Array.isArray(g)) {
+            if (g.length !== 1) {
+              console.log(fnName, 'g.length !== 1', g);
+            } else {
+              g = g[0];
+            }
           }
           /** if interval is the same as the current feature, just merge the attributes in. */
           if ((feature.value[0] === g.start) && (feature.value[1] === g.end)) {
             const childTypes = feature.values.childTypes || (feature.values.childTypes = []);
             childTypes.push(g.type);
           } else {
+            if (! children) {
+              children = [];
+            }
             children.push(childFeature(g));
           }
+          children = visitChildren(feature, children, g);
           return children;
-        }, []);
-      if (child_features.length) {
-        /** children, currently stored as feature.value[2] */
-        feature.value[2] = child_features;
-      }
+        }, subElements);
     }
-    return feature;
+    return subElements;
   }
   function childFeature(a) {
     const
