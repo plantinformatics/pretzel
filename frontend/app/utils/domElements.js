@@ -459,9 +459,9 @@ function responseTextParseHtml(responseText) {
   parser = new DOMParser(),
   doc = parser.parseFromString(responseText, 'text/html'),
   // doc.querySelector('title')
-  pre = doc.querySelector('body pre'),
+  pre = doc?.querySelector('body pre'),
   // &nbsp; precedes "at"
-  text = pre.replace(/at \/.*/, '');
+  text = pre?.textContent.replace(/at \/.*/, '');
   return text;
 }
 
