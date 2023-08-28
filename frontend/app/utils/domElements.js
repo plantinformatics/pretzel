@@ -447,6 +447,26 @@ function svgRootClassed(className, value) {
 
 /*----------------------------------------------------------------------------*/
 
+/** Parse the error message out of
+ * @param responseText from error.responseText
+ * @desc
+ * Related : components/form/base.js : checkError(), handleError(),
+ * some of which could be factored to this library.
+ */
+function responseTextParseHtml(responseText) {
+  const
+  fnName = 'responseTextParseHtml',
+  parser = new DOMParser(),
+  doc = parser.parseFromString(responseText, 'text/html'),
+  // doc.querySelector('title')
+  pre = doc.querySelector('body pre'),
+  // &nbsp; precedes "at"
+  text = pre.replace(/at \/.*/, '');
+  return text;
+}
+
+//------------------------------------------------------------------------------
+
 export {
   eltWidthResizable,
   eltResizeToAvailableWidth,
@@ -461,5 +481,6 @@ export {
   expRangeInitial,
   svgRootSelect,
   setCssVariable,
-  svgRootClassed
+  svgRootClassed,
+  responseTextParseHtml,
  };

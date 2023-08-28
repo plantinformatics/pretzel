@@ -1,6 +1,8 @@
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 
+import { responseTextParseHtml } from '../../utils/domElements';
+
 export default Component.extend({
   session: service('session'),
   auth: service('auth'),
@@ -65,7 +67,17 @@ export default Component.extend({
     console.log(err);
     this.setProperties({isProcessing: false})
 
-    let error = this.checkError(err.responseJSON, this.get('errorMap'))
+    let error;
+    /** Seen in testing :
+     * - remote server (production build) : err has .responseText but not
+     *   .responseJSON, and the responseText is an HTML error page.
+     * - local server (develop build) : .responseText is a stringify of .responseJSON
+     */
+    if (! err.responseJSON && err.responseText) {
+      error = responseTextParseHtml(err.responseText);
+    } else {
+      error = this.checkError(err.responseJSON, this.get('errorMap'));
+    }
     if (error) {
       this.set('errorMessage', error);
     }
@@ -74,6 +86,7 @@ export default Component.extend({
    * @param data result from API request
    * The original recognises these formats :
    * {error : [value]} return value
+   * {error : {code : code}} return mapper[code]
    * {error : {statusCode : code}} return mapper[code]
    * {error : {message}}   return message
    * after 1534cfda, adding :

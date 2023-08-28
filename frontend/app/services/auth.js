@@ -495,27 +495,6 @@ export default Service.extend({
 
   //----------------------------------------------------------------------------
 
-
-  checkError(data, mapper) {
-    // dLog('checkError')
-    try {
-      if (data.error && data.error[0]) {
-        return data.error[0]
-      } else if (data.error && data.error.code) {
-        let code = data.error.code
-        if (mapper[code]) return mapper[code]
-        else return code
-      } else {
-        return false
-      }
-    } catch (error) {
-      console.error(error)
-      // may need more sophisticated handling here depending upon
-      // type of error
-      return error
-    }
-  },
-
   /** Customised ajax caller
    * token may be actual token string, or equal true to trigger token fetch
    * onProgress is a callback accepting (percentComplete, data_direction)
