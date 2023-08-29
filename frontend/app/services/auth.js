@@ -587,7 +587,7 @@ export default Service.extend({
        * which prevents passing in options.timeout as dnaSequenceSearch() does.
        */
       if (config.timeout === undefined) {
-	config.timeout = 5 * 60 * 1000;
+        config.timeout = 10 * 60 * 1000;
       }
 
     }
