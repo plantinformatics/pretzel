@@ -51,7 +51,7 @@ const sbSizeThresholdMax = 1e9;
 export default class ElemInputRangeTextComponent extends Component {
 
 
-  /** .value is the minimum size for synteny blocks / trapezoids to be displayed.
+  /** .value is the result, used as a threshold value by the calling component.
    * The user has 2 controls for changing .value : text input and a range slider.
    * This component has an attribute .value and change action functions : value{Text,Linear}{,Changed}
    * The change functions set .value and the other attribute value
@@ -100,6 +100,13 @@ export default class ElemInputRangeTextComponent extends Component {
      */
     if ( /*(this.valueText !== value) && */ trace) {
       dLog('valueTextChanged', this.valueText, value);
+    }
+    /** connecting this action to input instead of enter changed value from
+     * string to a Proxy which defines target (the <input> element), which has
+     * .value. */
+    if (value.target) {
+      const proxy = value;
+      value = proxy.target.value;
     }
     /** value is a string. */
     value = +value;
