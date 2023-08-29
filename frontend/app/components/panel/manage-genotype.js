@@ -22,6 +22,7 @@ import {
   resultIsGerminate,
   addFeaturesGerminate,
   sampleIsFilteredOut,
+  columnName2SampleName,
   vcfFeatures2MatrixView, vcfFeatures2MatrixViewRows,
   valueIsMissing,
   rowsAddFeature,
@@ -2095,6 +2096,21 @@ export default class PanelManageGenotypeComponent extends Component {
     };
     return fn;
   }
+  /** Wrap sampleNamesCmp() - handle multiple blocks, and strip off
+   * the datasetId which is appended to sampleNames to form columnNames.
+   * Related : vcf-feature.js : columnNamesCmp()
+   * @param columnNames 2 columnNames to compare
+   */
+  columnNamesCmp(sampleNamesCmp, ...columnNames) {
+    const
+    /** these non-sample columns are prioritised to the left : Alt Ref, .. */
+    ns = columnNames.map(columnName => valueNameIsNotSample(columnName.toLowerCase())),
+    /** if columnNames[0] is Alt/Ref then cmp is -1;   if ... [1] then ... +1  */
+    cmp = ns[0] && ns[1] ? 0 : ns[0] ? -1 : ns[1] ? 1 :
+      sampleNamesCmp.apply(undefined, columnNames.map(columnName2SampleName));
+    return cmp;
+  }
+
 
   /** result of sampleMatchesSum()
    * [sampleName] -> {matches, mismatches}
@@ -2256,6 +2272,16 @@ export default class PanelManageGenotypeComponent extends Component {
             /* merge new values in - remember selections for datasets which are currently not visible. */
             // if (this.currentFeaturesValuesFields) Object.assign(this.currentFeaturesValuesFields, currentFeaturesValuesFields);
 
+            /** sampleNamesCmp() is already applied per-block (i.e. per array
+             * in featuresArrays[]) in vcfFeatures2MatrixViewRowsResult().
+             * columnNamesCmp(), which wraps sampleNamesCmp(), is applied across
+             * all the blocks (all of featuresArrays[]) in the following, so the
+             * per-block sort could be omitted.
+             */
+            sampleNames = this.sampleNamesCmp ? 
+              sampleGenotypes.sampleNames
+              .sort(this.columnNamesCmp.bind(this, this.sampleNamesCmp)) :
+              sampleGenotypes.sampleNames,
             /* Position value is returned by matrix-view : rowHeaders().
              * for gtMergeRows the Position column is hidden.
              * .sampleNames contains : [ 'Ref', 'Alt', 'tSNP', 'MAF' ]; 'tSNP' is mapped to 'LD Block'
@@ -2264,7 +2290,7 @@ export default class PanelManageGenotypeComponent extends Component {
               .concat(nonVCF.columnNames)
               .concat(['Position', 'Name'])
               .concat(extraDatasetColumns)
-              .concat(sampleGenotypes.sampleNames);
+              .concat(sampleNames);
 
             /** These are passed to matrix-view, so set them at one time. */
             setProperties(this, {
