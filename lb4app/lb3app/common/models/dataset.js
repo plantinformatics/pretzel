@@ -56,6 +56,16 @@ module.exports = function(Dataset) {
       upload.uploadParsedTryCb(models, jsonData, options, cb);
     }
 
+    if (! msg.fileName && (req.headers['content-type'] === 'text/gff3')) {
+      const
+      q = req.query,
+      datasetId = q.fileName || ('gff3_dataset_' + req.readableLength),
+      replaceDataset = typeof q.replaceDataset === 'string' ?
+        JSON.parse(q.replaceDataset.toLowerCase()) : true,
+      uint8Array = req.read(req.readableLength),
+      bodyData = uint8Array.asciiSlice();
+      this.gffUploadData(bodyData, datasetId, replaceDataset, options, models, cb);
+    } else
     // Parse as either .json or .gz
     // factored as handleJson()
     if (msg.fileName.endsWith('.json')) {
@@ -479,12 +489,29 @@ module.exports = function(Dataset) {
     const fileName = msg.fileName;
 
     console.log(fnName, msg.fileName, msg.data.length);
+    const
+    datasetId = msg.fileName.replace(/\.gff3?/, ''),
+    replaceDataset = !!msg.replaceDataset;
+    this.gffUploadData(msg.data, datasetId, replaceDataset, options, models, cb);
+  };
+  /** Parse and insert the given GFF data string into the database.
+   * @param data
+   * @param dataset
+   * @param replaceDataset
+   * @param options
+   * @param models
+   * @param cb
+   */
+  Dataset.gffUploadData = function(data, datasetId, replaceDataset, options, models, cb) {
+    // based on .spreadsheetUploadInternal
+    const fnName = 'gffUploadData';
+
     cb = this.spreadsheetUploadCbWrap(cb);
 
 
-    const dataObj = gffDataToJsObj(msg.data);
+    const dataObj = gffDataToJsObj(data);
     let dataset = dataObj.dataset;
-    dataset.name = msg.fileName.replace(/\.gff3?/, '');
+    dataset.name = datasetId;
     let status = pick(dataObj, ['warnings', 'errors']);
     status.datasetName = dataset.name;
 
@@ -508,8 +535,7 @@ module.exports = function(Dataset) {
       let datasetRemovedPs =
       datasets.map((dataset) => {
         const
-        datasetName = dataset.name,
-        replaceDataset = !!msg.replaceDataset;
+        datasetName = dataset.name;
         console.log('before removeExisting "', datasetName, '"');
         /* This will upload all datasets after all removed.
          * i.e. wait for all removes to succeeed, then upload all datasets.
