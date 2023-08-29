@@ -55,7 +55,7 @@ const sbSizeThresholdInitial = 20;
 const sbSizeThresholdMax = 1e9;
 
 const axisLayerModulusInitial = 5;
-const axisLayerModulusMax = 100;
+const axisLayerModulusMax = 1000;
 
 
 /** can be replaced by Math.clamp() when that is available
