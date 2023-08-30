@@ -100,6 +100,7 @@ RUN apk add --no-cache git \
      terminus-font	\
      curl	\
      jq	\
+openssh \
   && npm install bower -g
 
 
@@ -160,7 +161,7 @@ RUN date \
 RUN node --version
 RUN cd /frontend && (npm ci || npm install)  && bower install --allow-root
 
-RUN cd /app && npm install nodemon@1.18.8 && npm ci
+# RUN cd /app && npm install nodemon@1.18.8 && npm ci
 
 RUN cd /frontend && node_modules/ember-cli/bin/ember build --environment production
 

@@ -193,7 +193,7 @@ module.exports = function(app) {
       context.property == 'depthSearch' ||
       context.property == 'dnaSequenceSearch' ||
       context.property == 'dnaSequenceLookup' ||
-      context.property == 'vcfGenotypeSamples' ||
+      context.property == 'genotypeSamples' ||
       context.property == 'vcfGenotypeLookup' ||
       context.property == 'vcfGenotypeLookupPost' ||
         // Alias
@@ -214,6 +214,10 @@ module.exports = function(app) {
         // Dataset
       context.property === 'cacheClear' ||
       context.property === 'cacheClearRequests' ||
+      context.property === 'cacheblocksFeaturesCounts' ||
+      context.property === 'naturalSearch' ||
+      context.property === 'text2Commands' ||
+      context.property === 'getEmbeddings' ||
         // Group 
       context.property === 'own' ||
       context.property === 'in' ||

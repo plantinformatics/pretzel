@@ -37,9 +37,20 @@ export default Service.extend(Evented, {
   storeManager: service('multi-store'),
   controls : service(),
 
+  /** Map of servers, indexed by server .name */
   servers : EmberObject.create(),
   serversLength : 0,
+  /** Map from block and dataset ids to their server.
+   * Block and dataset ids could be mapped separately, but it is unlikely those
+   * namespaces will overlap - potentially a user could use a blockId as a
+   * datasetId, but they would have to copy one to get a match.
+   * Populated in services/data/dataset.js : taskGetList()
+   * id2Server contains only originals, not copies from other servers.
+   */
   id2Server : {},
+  /** Map to servers from objects which are passed to adapters/application.js : buildURL()
+   * This enables adding multiple server support without changing framework functions.
+   */
   obj2Server : new WeakMap(),
   /** Indexed by host url, value is an array of datasets, including blocks, returned from the api host. */
   datasetsBlocks : {},
@@ -214,18 +225,29 @@ export default Service.extend(Evented, {
 
   /*--------------------------------------------------------------------------*/
 
-
+  /** Associate server with the given object.
+   * @param id an object, typically adapterOptions
+   * @see obj2Server
+   */
   addId : function(server, id) {
     let map = this.get('obj2Server');
     map.set(id, server);
     return id;
   },
+  /** Lookup the server of the given id, which may be of a block or a dataset
+   * @param id  block or dataset
+   * @see id2Server
+   */
   id2ServerGet(blockId) {
     let
       id2Server = this.get('id2Server'),
     server = id2Server[blockId];
     return server;
   },
+  /** @return true if the server and database which this id comes from is
+   * remote, not primary.
+   * @param id  block or dataset
+   */
   id2RemoteRefn(blockId) {
     let
       id2Server = this.get('id2Server'),
@@ -235,6 +257,9 @@ export default Service.extend(Evented, {
       // or encode as text ? : blockId + '@' + server.host + '#' + server.token;
     return remote;
   },
+  /** @return the store for the server which this id comes from.
+   * @param id  block or dataset
+   */
   id2Store : function(blockId) {
     let
       id2Server = this.get('id2Server'),

@@ -55,11 +55,15 @@ then
   fileName=$1
   useFile=$2
   parent=$3
-  region=$(echo "$4" | sed 's/^chr//')
+  # Originally trimmed off any leading chr from region, but
+  # probably rely on block.name to match the chr in the vcf, i.e. chr7A or 7A
+  # region=$(echo "$4" | sed 's/^chr//')
+  region="$4"
   echo fileName="$fileName", useFile=$useFile, parent="$parent", region=$region  >> $logFile
 else
   parent=$1
-  region=$(echo "$2" | sed 's/^chr//')
+  # region=$(echo "$2" | sed 's/^chr//')
+  region="$2"
   echo parent="$parent", region=$region  >> $logFile
 fi
 
@@ -99,12 +103,12 @@ function datasetId2dbName()
   then
     dbName="$datasetId"
     echo 1>&$F_WARN 'Warning:' "no file '$datasetId.dbName', using '$datasetId'"
-  elif [ $inContainer -eq 0 ]
+  elif [ $inContainer -eq 0 -a !  -d "$datasetId".dir ]
   then
     # Can't use soft-link across container boundary, but can pass its path
     # The link may have a trailing /. Ensure that $dir has a trailing /.
-    dir=$( [ -L "$datasetId".dir ] && ls -ld "$datasetId".dir | sed 's/.*blast\/GENOME_REFERENCES\///;s/\([^/]\)$/\1\//' )
-    dbName=$dir$(cat "$datasetId".dbName)
+    dir=$( [ -L "$datasetId".dir ] && ls -ld "$datasetId".dir | sed 's/.*\/GENOME_REFERENCES\///;s/\([^/]\)$/\1\//' )
+    dbName=$blastDir/GENOME_REFERENCES/$dir$(cat "$datasetId".dbName)
   else
     dbName="$datasetId".dir/$(cat "$datasetId".dbName)
   fi

@@ -17,6 +17,19 @@
         value=password
         autocomplete="new-password"
         placeholder='Enter a New Password'}}
+      {{auth-input
+        type='text'
+        value=name
+        placeholder='Enter your name'}}
+      {{auth-input
+        type='text'
+        value=institution
+        placeholder='Enter the name of your institution'}}
+      {{!-- auth-input
+        type='text'
+        value=project
+        placeholder='Enter your project code, if applicable' --}}
+
       {{suggest-link
         suggest-text="Already have an account?"
         link-name="login"

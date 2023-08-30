@@ -16,6 +16,7 @@ import {
   noKeyfilter,
 } from '../../utils/domElements';
 
+import { intervalIntersect } from '../../utils/interval-calcs';
 import { contentOf } from '../../utils/common/promises';
 import AxisEvents from '../../utils/draw/axis-events';
 import AxisPosition from '../../mixins/axis-position';
@@ -271,7 +272,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   yRange		: Stacked_p.yRange,
   yRange2		: Stacked_p.yRange2,
   domainCalc		: Stacked_p.domainCalc,
-  referenceDomain		: Stacked_p.referenceDomain,
+  // referenceDomain		: Stacked_p.referenceDomain,
   /* .domain can replace getDomain(); the latter does not incorporate .flipped,
    * ditto this.axis (block) .getDomain().
    */
@@ -305,6 +306,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
    */
   dataBlocksFiltered(visible, showPaths) {
     const
+    /** construct a proxy which has the attributes used by dataBlocks(). */
     stacked = {blocks : this.dataBlocks, axisName : this.axisName, mapName : this.axis.mapName},
     blocks = Stacked.prototype.dataBlocks.apply(stacked, [...arguments]);
     return blocks;
@@ -342,6 +344,16 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     axisBrushZoom = AxisBrushZoom(stacks.oa),
     brushedDomain = brushedRegion && axisBrushZoom.axisRange2Domain(this, brushedRegion);
     return brushedDomain;
+  }),
+  /** @return the intersection of .domain, which incorporates .zoomedDomain, and .brushedDomain if defined.
+   */
+  zoomedAndOrBrushedDomain : computed('brushedRegion', 'domain.{0,1}', function () {
+    let domain = this.domain;
+    const brushedDomain = this.brushedDomain;
+    if (brushedDomain) {
+      domain = intervalIntersect(brushedDomain, domain);
+    }
+    return domain;
   }),
 
   /** Dependency on .dataBlocks provides update for this axis if brushed, when a
@@ -680,6 +692,39 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     return colour;
     },
 
+  //----------------------------------------------------------------------------
+
+  /** @return a mapping from datasets -> block colour
+   */
+  datasetsColour : computed('dataBlocks', function () {
+    const
+    fnName = 'datasetsColour',
+    dataBlocks = this.get('dataBlocks'),
+    blockColourMap = dataBlocks.reduce((map, block) => {
+      const
+      dataset = block.get('datasetId'),
+      colour = this.blockColourValue(block);
+      map.set(dataset, colour);
+      return map;
+    }, new Map());
+    dLog(fnName, blockColourMap, dataBlocks);
+    return blockColourMap;
+  }),
+
+  //----------------------------------------------------------------------------
+
+  /** The zoomed-out axis domain.
+   * Equivalent to and replaces Stacked_p.referenceDomain().
+   */
+  referenceDomain : computed('referenceBlock.range', function () {
+    const
+    referenceBlock = this.referenceBlock,
+    domain = referenceBlock.range || referenceBlock.featuresDomain;
+    return domain;
+  }),
+
+  //----------------------------------------------------------------------------
+
   /** @return the domains of the data blocks of this axis.
    * The result does not contain a domain for data blocks with no features loaded.
    *
@@ -696,7 +741,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   /** @return the domains of all the blocks of this axis, including the reference block if any.
    * @description related @see axesDomains() (draw/block-adj)
    */
-  blocksDomains : computed('dataBlocksDomains.[]', 'referenceBlock.range', function () {
+  blocksDomains : computed('dataBlocksDomains.[]', 'referenceDomain', function () {
     let
       /* alternative :
        * dataBlocksMap = this.get('blockService.dataBlocks'),
@@ -706,7 +751,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
       /** see also domainCalc(), blocksUpdateDomain() */
       blocksDomains = this.get('dataBlocksDomains'),
     /** equivalent : Stacked:referenceDomain() */
-    referenceRange = this.get('referenceBlock.range');
+    referenceRange = this.get('referenceDomain');
     if (referenceRange) {
       dLog('referenceRange', referenceRange, blocksDomains);
       blocksDomains.push(referenceRange);
@@ -824,6 +869,53 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     function () {
       this.updateBrushedFeatures();
     }),
+
+  //----------------------------------------------------------------------------
+
+  /** For visible data blocks on axis1d, collate features in
+   * .zoomedAndOrBrushedDomain.
+   * @param includeVCF if false, filter out VCF blocks, which are handled by
+   * manage-genotype : brushedOrViewedVCFBlocks() -> viewedVCFBlocks()
+   * @return undefined if .isDestroying, otherwise array of [block,
+   * featuresInInterval]
+   */
+  zoomedAndOrBrushedFeatures(includeVCF) {
+    const fnName = 'zoomedAndOrBrushedFeatures';
+    /** Based on extracts from axisFeatureCirclesBrushed(); potentially that
+     * function could use this.
+     */
+    if (this.isDestroying) {
+      return undefined;
+    }
+
+    const
+    interval = this.zoomedAndOrBrushedDomain,
+    valueInInterval = this.controlsView.valueInInterval,
+    brushExtent = this.brushedRegion,
+    yp = this.y,
+    brushedDomain_ = brushExtent?.map(
+      function(ypx) { return yp.invert(ypx /* *this.portion */); }),
+    brushedDomain = maybeFlip(brushedDomain_, this.flipped);
+
+    const
+    childBlocksIncludingVCF = this.dataBlocksFiltered(true, false)
+      .filterBy('visible'),
+    childBlocks = includeVCF ? childBlocksIncludingVCF :
+      childBlocksIncludingVCF.filter((b) => ! b.get('isVCF')),
+    blocksFeaturesInInterval = childBlocks.map(function (block) {
+      const
+      blockFeatures = block.get('features'),
+      featuresInInterval = blockFeatures.filter(
+        feature => valueInInterval(feature.value, interval));
+      dLog(fnName, block, featuresInInterval);
+      return [block, featuresInInterval];
+    });
+    dLog(fnName, blocksFeaturesInInterval);
+    return blocksFeaturesInInterval;
+  },
+
+  //----------------------------------------------------------------------------
+
   axisTitleFamily() {
     let axis = this.get('axisS');
     if (axis && ! axis.isDestroying) {

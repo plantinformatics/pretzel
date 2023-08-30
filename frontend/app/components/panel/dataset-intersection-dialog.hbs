@@ -1,0 +1,43 @@
+<!-- panel/dataset-intersection-dialog -->
+
+  <div class="genotype">
+    <div><label>{{@dataset.id}}</label></div>
+    <div><label>Toggle whether this dataset is (blank) either / + required / - excluded</label></div>
+
+    <div class="radio-button-list">
+
+      <div>
+        {{radio-button value='null' groupValue=this.positionFilterRadioValue}}
+        No filter
+      </div>
+
+      <div>
+        {{radio-button value='true' groupValue=this.positionFilterRadioValue}}
+        Intersecting features only (+)
+      </div>
+
+      <div>
+        {{radio-button value='false' groupValue=this.positionFilterRadioValue}}
+        Non-intersecting features only (-)
+      </div>
+
+    </div>
+    <div class="gt-dataset-filter-icon">
+      {{elem/icon-base name="filter"}}
+      <span class="overlay-text">{{@dataset.positionFilterText}}</span>
+    </div>
+    {{!-- prevent the following button from flowing onto the above 2 inline-block --}}
+    <div></div>
+
+
+    {{yield}}
+    <BsButton @type="info" class="margin-top" @onClick={{@close}}>OK</BsButton>
+
+    <span>&nbsp; &nbsp; ? 
+        {{#ember-tooltip side="right" delay=500}}
+        Toggle whether to filter by SNPs of this dataset.
+        Each dataset may be either required / excluded / not a filter.
+        {{/ember-tooltip}}
+    </span>
+
+  </div>

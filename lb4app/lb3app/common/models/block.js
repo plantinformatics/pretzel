@@ -1,5 +1,6 @@
 'use strict';
 
+const util = require('util');
 var { debounce }  = require('lodash/function');
 
 
@@ -21,6 +22,7 @@ const { childProcess, dataOutReplyClosure, dataOutReplyClosureLimit } = require(
 const { ArgsDebounce } = require('../utilities/debounce-args');
 const { ErrorStatus } = require('../utilities/errorStatus.js');
 const { vcfGenotypeLookup, vcfGenotypeFeaturesCounts } = require('../utilities/vcf-genotype');
+const { germinateGenotypeSamples, germinateGenotypeLookup } = require('../utilities/germinate-genotype');
 
 var ObjectId = require('mongodb').ObjectID
 
@@ -412,6 +414,30 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
 
   //----------------------------------------------------------------------------
 
+  /** @return promise yielding [dataset]
+   * @desc
+   * related : blockDatasetLookup()
+   */
+  Block.datasetLookup = function(datasetId, options) {
+    const fnName = 'datasetLookup';
+
+    const models = this.app.models;
+    const
+    datasetP =
+      models.Dataset.findById(datasetId, {}, options)
+      .then(dataset => {
+        if (! dataset) {
+          const errorText = 'Dataset ' + datasetId + ' not found. ' + fnName;
+          throw new ErrorStatus(400, errorText);
+        } else {
+          return [dataset];
+        }
+      });
+    return datasetP;
+  };
+
+  //----------------------------------------------------------------------------
+
   /** Lookup .namespace for the given blockIds.  Cached values are used if
    * available, since this is used in the high-use pathsaliases() api, and we
    * don't yet have an api for altering .namespace.
@@ -779,7 +805,9 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
      */
     useCache = ! isZoomed || ! interval,
     cacheId = fnName + '_' + blockId + '_' + nBins +  '_' + useBucketAuto,
-    result = useCache && cache.get(cacheId);
+    /** set this false to test without reading existing cache */
+    readCache = true,
+    result = readCache && useCache && cache.get(cacheId);
     if (result) {
       if (trace_block > 1) {
         console.log(fnName, cacheId, 'get', result[0]);
@@ -787,9 +815,10 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       cb(null, result);
     } else {
       this.blockDatasetLookup(id, options)
-        .then(blockDatabaseFeatureCounts.bind(this));
+        .then(blockDatasetFeatureCounts.bind(this))
+        .catch(cb);
 
-      function blockDatabaseFeatureCounts([block, dataset]) {
+      function blockDatasetFeatureCounts([block, dataset]) {
         if (dataset.tags?.includes('VCF')) {
           /** wrap cb to store the result in cache. */
           function cacheCb(error, result2) {
@@ -799,6 +828,8 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
             cb(error, result2);
           }
           vcfGenotypeFeaturesCounts(block, interval, nBins, isZoomed, cacheCb);
+        } else if (dataset.tags?.includes('Germinate')) {
+          console.log(fnName, 'not yet implemented for', dataset.tags);
         } else {
           let db = this.dataSource.connector;
           let cursor =
@@ -1266,6 +1297,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     function dataOutReply(chunk, cb) {
       /** based on searchDataOut() */
       if (! chunk) {
+        // chunks is []
         cb(null, chunks);
       } else
       if (chunk && (chunk.length >= 6) && (chunk.asciiSlice(0,6) === 'Error:')) {
@@ -1291,24 +1323,52 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
   // ---------------------------------------------------------------------------
 
   /**
-   * @param parent  name of parent or view dataset, or vcf directory name
+   * @param id  blockId.  block.scope === scope, and block.datasetId === datasetId
+   * @param datasetId  name of parent or view dataset, or vcf directory name
    * @param scope e.g. '1A'; identifies the vcf file, i.e. datasetId/scope.vcf.gz
    */
-  Block.vcfGenotypeSamples = function(parent, scope, cb) {
+  Block.genotypeSamples = function(id, datasetId, scope, options, cb) {
+    const fnName = 'genotypeSamples';
+    {
+      this.blockDatasetLookup(id, options)
+        .then(samples.bind(this));
+
+      function samples([block, dataset]) {
+        if (dataset.tags?.includes('VCF')) {
+          this.vcfGenotypeSamples(datasetId, scope, cb);
+        } else if (dataset.tags?.includes('Germinate')) {
+          this.germinateGenotypeSamples(datasetId, scope, cb);
+        } else {
+          console.log(fnName, 'applicable to Genotype, not', dataset.tags, datasetId);
+        }
+      }
+    }
+  };
+
+  Block.vcfGenotypeSamples = function(datasetId, scope, cb) {
+    const fnName = 'vcfGenotypeSamples';
+
     childProcess(
       'vcfGenotypeLookup.bash',
       /* postData */ '', 
       /* useFile */ false,
       /* fileName */ undefined,
-      /* moreParams */ ['query', parent, scope, /*preArgs*/ '-l'],
+      /* moreParams */ ['query', datasetId, scope, /*isecFlags*/ '', /*isecDatasetIds*/'', /*preArgs*/ '-l'],
       dataOutReplyClosure(cb), cb, /*progressive*/ false);
 
   };
 
-  Block.remoteMethod('vcfGenotypeSamples', {
+  Block.germinateGenotypeSamples = function(datasetId, scope, cb) {
+    const fnName = 'germinateGenotypeSamples';
+    germinateGenotypeSamples(datasetId, scope, cb);
+  };
+
+  Block.remoteMethod('genotypeSamples', {
     accepts: [
-      {arg: 'parent', type: 'string', required: true},
+      {arg: 'id', type: 'string', required: true},
+      {arg: 'datasetId', type: 'string', required: true},
       {arg: 'scope', type: 'string', required: true},
+      {arg: 'options', type: 'object', http: 'optionsFromRequest'},
     ],
     http: {verb: 'get'},
     returns: {arg: 'text', type: 'string'},
@@ -1318,27 +1378,77 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
   // ---------------------------------------------------------------------------
 
   /**
-   * @param parent  name of parent or view dataset, or vcf directory name
+   * @param datasetId  name of VCF / Genotype / view dataset, or vcf directory name
    * @param scope e.g. '1A'; identifies the vcf file, i.e. datasetId/scope.vcf.gz
+   * Could pass blockId instead  of datasetId and scope.
    * @param nLines if defined, limit the output to nLines.
-   * @param preArgs args to be inserted in command line, additional to the parent / vcf file name.
+   * @param preArgs args to be inserted in command line, additional to the vcf file name.
    * See comment in frontend/app/services/auth.js : vcfGenotypeLookup()
    */
-  Block.vcfGenotypeLookup = function(parent, scope, preArgs, nLines, cb) {
+  Block.vcfGenotypeLookup = function(datasetId, scope, preArgs, nLines, options, cb) {
     const
     fnName = 'vcfGenotypeLookup';
-    vcfGenotypeLookup(parent, scope, preArgs, nLines, undefined, cb);
+
+    /** Caching is generally not applicable to this request, because the region
+     * / interval is always present - when zoomed out only the features counts
+     * will be used.
+     * The sample names request genotypeSamples() could be cached.
+     * Possibly requests for dataset intersection wil be small enough to cache
+     * - leaving indentation room for this.
+     * Based on blockFeaturesCounts(), blockDatasetFeatureCounts() above.
+     */
+    {
+      this.datasetLookup(datasetId, options)
+        .then(genotypeLookup.bind(this));
+
+      function genotypeLookup([dataset]) {
+        if (dataset.tags?.includes('VCF')) {
+          vcfGenotypeLookup(datasetId, scope, preArgs, nLines, undefined, cb);
+        } else if (dataset.tags?.includes('Germinate')) {
+          ensureSamplesParam(preArgs).then(
+            preArgs => germinateGenotypeLookup(datasetId, scope, preArgs, nLines, undefined, cb))
+            .catch(cb);
+        } else {
+          console.log(fnName, 'applicable to Genotype, not', dataset.tags, datasetId);
+        }
+      }
+
+      /** Ensure that preArgs.samples is defined : if undefined, request samples
+       * and use the first one.  */
+      function ensureSamplesParam(preArgs) {
+        let argsP;
+        if (! preArgs?.samples?.length) {
+          argsP = util.promisify(germinateGenotypeSamples)(datasetId, scope)
+            .then(samples => {
+              let sample;
+              if (samples.length) {
+                sample = samples[0];
+              } else {
+                sample = '';
+              }
+              // could use Object.assign() to avoid mutating preArgs.
+              preArgs.samples = sample;
+              return preArgs;
+            });
+        } else {
+          argsP = Promise.resolve(preArgs);
+        }
+        return argsP;
+      }
+    }
   };
+
   /** POST version of Feature.search, which is addressed by verb GET.
    */
   Block.vcfGenotypeLookupPost = Block.vcfGenotypeLookup;
 
   const vcfGenotypeLookupOptions = {
     accepts: [
-      {arg: 'parent', type: 'string', required: true},
+      {arg: 'datasetId', type: 'string', required: true},
       {arg: 'scope', type: 'string', required: true},
       {arg: 'preArgs', type: 'object', required: false},
       {arg: 'nLines', type: 'number', required: false},
+      {arg: "options", type: "object", http: "optionsFromRequest"},
     ],
     http: {verb: 'get'},
     returns: {arg: 'text', type: 'string'},

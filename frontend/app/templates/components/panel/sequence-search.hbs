@@ -97,7 +97,7 @@ AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" }}
               >
                 <option value='' selected>None</option>
                 {{#each datasetsToSearch key="name" as |ds|}}
-                  <option value={{ds.name}}>{{ds.name}}</option>
+                  <option value={{ds.id}}>{{ds.displayName}}</option>
                 {{/each}}
               </select>
             </li>

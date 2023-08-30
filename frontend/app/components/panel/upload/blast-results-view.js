@@ -180,7 +180,20 @@ export default Component.extend({
         let feature = {
           name: row[c_name],
           // blast output chromosome has prefix 'chr' e.g. 'chr2A'; Pretzel uses simply '2A'.
-          block: chrName2Pretzel(row[c_chr]),
+          /** Update : Pretzel is switching to using Chr prefix to match with
+           * the VCFs, so this is no longer suitable.  A better approach would
+           * be, as is done with vcfGenotypeLookup(), to use Block .name to
+           * relate to the VCF file chromosome name, and reserve .scope for
+           * matching data blocks to their axis.  I.e.  chrName2Pretzel() could
+           * map .dataMatrix row[c_chr] from blocks.mapBy('name') to
+           * blocks.mapBy('scope'), where blocks is dataset.blocks.toArray() and
+           * dataset is as in resultParentBlocks(), i.e.  parentName =
+           * this.get('search.parent'); store =
+           * this.get('apiServers').get('primaryServer').get('store'), dataset =
+           * store.peekRecord('dataset', parentName); which could be a CP.  For
+           * the moment it is sufficient to disable use of chrName2Pretzel().
+           */
+          block: /*chrName2Pretzel*/(row[c_chr]),
           // Make sure val is a number, not a string.
           val: Number(row[c_pos])
         };
@@ -212,7 +225,7 @@ export default Component.extend({
     /** based on dataFeatures - see comments there. */
     let names =
     data
-      .map((row) => chrName2Pretzel(row[c_chr]));
+      .map((row) => /*chrName2Pretzel*/(row[c_chr]));
     dLog('blockNames', names.length, names[0]);
     return names;
   }),

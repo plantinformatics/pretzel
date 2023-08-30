@@ -2,42 +2,65 @@ import { axisFeatureCircles_selectOneInAxis } from '../draw/axis';
 
 /* global d3 */
 
+//------------------------------------------------------------------------------
+/** @file Relationship between axes and HandsOnTables, via Features which are the
+ * metadata of tables.
+ */
+
 /*----------------------------------------------------------------------------*/
 
 const featureSymbol = Symbol.for('feature');
 
-// const trace = 0;
+const trace = 0;
 const dLog = console.debug;
 
 /*----------------------------------------------------------------------------*/
 
-/** Alternative to featureSymbol for string values, which can't have [Symbol].
- * Store a mapping from string to Feature.
+/** Support featureSymbol for string values, which can't have [Symbol].
+ * Convert string to new String() object, then assign reference to Feature
+ * to [featureSymbol]
  */
-let stringsToFeatures = {};
 function stringGetFeature(sampleValue) {
-  return stringsToFeatures[sampleValue];
+  return sampleValue[featureSymbol];
 }
-/**
- * @return sampleValue, so that this can be used in a value pipeline
+/** Convert sampleValue to an Object (new String) if it is not already.
+ * to enable assigning a reference using the given Symbol.
+ * @return String object
+ */
+function stringSetSymbol(referenceSymbol, value, reference) {
+  const s = (typeof value === 'object') ? value : new String(value);
+  s[referenceSymbol] = reference;
+  return s;
+}
+/** Assign a reference to feature to the given sampleValue,
+ * converting it to String as required.
  */
 function stringSetFeature(sampleValue, feature) {
-  stringsToFeatures[sampleValue] = feature;
-  return sampleValue;
+  return stringSetSymbol(featureSymbol, sampleValue, feature);
 }
-
 
 /*----------------------------------------------------------------------------*/
 
-/** Assign Feature reference to each row. */
+/** Assign Feature reference to each row.
+ * @param table HandsOnTable
+ * @param data  array of data which correspond to rows, and is parallel.
+ * If dataIsRows then data are Features, otherwise row data which references a feature.
+ * @param dataIsRows  data passed to matrix-view may be in the form of columns (displayData), or rows (displayDataRows)
+ * The original use of matrix-view formulated the table data as columns
+ * corresponding to Blocks, each with an array of Features (parallel positions)
+ * manage-genotype :
+ * . vcfFeatures2MatrixView() provides the table data as columns, with each column
+ *   data element containing an array .features, which is passed as data here.
+ *   These are cell values {name, value, [featureSymbol]}.
+ * . vcfFeatures2MatrixViewRows() provides the table data as rows, with each row
+ *   corresponding to a Position (gtMergeRows) or a Feature (! gtMergeRows).
+ */
 function setRowAttributes(table, data, dataIsRows) {
   /** genotype data is samples[], and contains samples[i].features
    * These 2 uses should fall into alignment as the genotype table requirements evolve.
    */
-  const dataIsColumns = ! dataIsRows && data.length && Array.isArray(data[0].features);
-  if (dataIsColumns) {
-    data = data[0].features;
-  } else if (dataIsRows) {
+  const dataIsColumns = ! dataIsRows && data?.length;
+  if (dataIsRows) {
     /* displayDataRows is a sparse array, indexed by Position (value.0)
      * Object.values() returns the non-empty values, which will correspond to the table rows.
      */
@@ -53,10 +76,31 @@ function setRowAttributes(table, data, dataIsRows) {
 
       setRowAttribute(table, row, /*col*/undefined, feature);
     } else if (dataIsRows) {
-      Object.values(feature).forEach((value, physicalCol) => {
+      const featureColumnValues = Object.values(feature);
+      /* feature.Block is no longer defined, so use feature.Ref - it will have
+       * features in all rows whereas the dataset columns may not.
+       * value String should define [featureSymbol]. 
+       * Setting all cells is slow, so maybe set just column 0 as a fall-back.
+       * Transitioning away from HandsOnTable would solve this difficulty of
+       * associating metadata with table cells.
+       * Just 1 feature (from data[physicalRow].Ref) is written to all columns;
+       * preferably the col-Dataset-Name columns could each refer to their feature;
+       * the cell value has a Symbol reference to feature and that is used
+       * in getRowAttribute() : valueFeature.
+       */
+      feature = (feature.Block || feature.Ref) [Symbol.for('feature')];
+      featureColumnValues.forEach((value, physicalCol) => {
         const col = table.toVisualColumn(physicalCol);
         if (col !== null) {
-          const feature = value[featureSymbol] || stringGetFeature(value);
+          /* For gtMergeRows, a row can combine several Features, so it may be
+           * necessary to use a per-cell value for feature here.
+           * Currently used in rowHeaders() for feature .Position, which will be
+           * common for Features in a single row.
+           * Also used for cell hover (afterOnCellMouseOver() ->
+           * tableCoordsToFeature()), and for this it would be useful to have
+           * references to the individual features.
+           const feature = value[featureSymbol] || stringGetFeature(value);
+          */
           setRowAttribute(table, row, col, feature);
         }
       });
@@ -72,7 +116,12 @@ function setRowAttribute(table, row, col, feature) {
    * which used tr.__dataPretzelFeature__; CellMeta seems better.
    * This will transition to use Symbol.for('feature') once all uses are going via this function.
    */
-  if (getRowAttribute(table, row, col) !== feature) {
+  /* This was intended to save time and unnecessary updates, but it
+   * looks like getRowAttribute() -> value() is expensive (also), so
+   * try without this :
+  if (getRowAttribute(table, row, col) !== feature)
+  */
+ {
     table.setCellMeta(row, col || 0, 'PretzelFeature', feature);
   }
 }
@@ -93,7 +142,26 @@ function getRowAttribute(table, row, col) {
     }
   }
   const
-  feature = (col === null) ? undefined : table.getCellMeta(row, col)?.PretzelFeature;;
+  value = table.getDataAtCell(row, col),
+  valueFeature = (typeof value === 'object') && value[Symbol.for('feature')];
+  /** Use valueFeature in preference to the cell meta .PretzelFeature,
+   * because setRowAttributes() writes just a single feature to all
+   * columns in the row : data[physicalRow].Ref[Symbol.for('feature')].
+   */
+  let
+  feature = valueFeature ||
+    ((col === null) ? undefined : table.getCellMeta(row, col)?.PretzelFeature);
+
+  if (! feature) {
+    /** matrix-view no longer uses axis-table.js : setRowAttributes();
+     * Using references from cell values, which are available when gtMergeRows;
+     * perhaps use matrix-view .data[physicalRow] instead, as in matrix-view : getRowAttribute().
+     */
+    const
+    rowData = table.getDataAtRow(row),
+    featureRefn = rowData.find(value => value?.[featureSymbol]);
+    feature = featureRefn?.[featureSymbol];
+  }
   return feature;
 }
 
@@ -107,7 +175,8 @@ function getRowAttributeFromData(table, data, dataIsRows, visualRowIndex) {
 
   const dataIsColumns = ! dataIsRows && data.length && Array.isArray(data[0].features);
   if (dataIsColumns) {
-    data = data[0].features;
+    const df = data.find(d => d.features?.[0]);
+    data = df?.features;
   } else if (dataIsRows) {
     data = Object.values(data);
   }
@@ -134,7 +203,9 @@ function afterOnCellMouseOverClosure(hasTable) {
     let
     table = hasTable.table, // === this
     feature = tableCoordsToFeature(table, coords);
-    dLog('afterOnCellMouseOver', coords, TD, feature?.name, feature?.value);
+    if (trace) {
+      dLog('afterOnCellMouseOver', coords, TD, feature?.name, feature?.value);
+    }
     /** clears any previous highlights if feature is undefined */
     highlightFeature(feature);
   }
@@ -145,6 +216,9 @@ function afterOnCellMouseOverClosure(hasTable) {
  * @param table HandsOnTable
  * @param coords {row, col}  as passed to afterOnCellMouseDown
  *  coords 	CellCoords 	Hovered cell's visual coordinate object.
+ * coords.col may be -1; this is seen in calls from
+ * afterOnCellMouseOverClosure(), possibly when the mouse is hovered
+ * on the row header
  * @return feature, or undefined if (coords.row === -1)
  */
 function tableCoordsToFeature(table, coords) {
@@ -154,7 +228,7 @@ function tableCoordsToFeature(table, coords) {
     /* this may be ^A (Select All), or click outside, or click in header row.
      * No feature associated with those so return undefined.
      */
-  } else {
+  } else if (table) {
     // getDataAtCell(coords.row, coords.col)
     // table?.getDataAtRow(coords.row);
 
@@ -163,7 +237,9 @@ function tableCoordsToFeature(table, coords) {
      * data object as .feature
      * coords.{row,col} are visual indexes, as required by getRowAttribute().
      */
-    feature = table && getRowAttribute(table, coords.row, /*col*/undefined);
+    const col = coords.col === -1 ? 0 : coords.col;
+    feature = getRowAttribute(table, coords.row, col) ||
+      getRowAttribute(table, coords.row, /*col*/undefined);
     /*  for dataIsColumns (manage-genotype / matrix-view), this is the Ember
      *  data model feature object; for table-brushed this is the selection
      *  feature, which has attribute .feature which is the Ember object.
@@ -176,6 +252,7 @@ function tableCoordsToFeature(table, coords) {
   return feature;
 }
 
+//------------------------------------------------------------------------------
 
 /** @param feature may be name of one feature, or an array of features -
  * selectedFeatures data : {
@@ -219,9 +296,11 @@ d3.selection.prototype.moveToFront = function() {
   });
 };
 
+//------------------------------------------------------------------------------
 
 export {
   stringGetFeature,
+  stringSetSymbol,
   stringSetFeature,
   setRowAttributes,
   setRowAttribute,

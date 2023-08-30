@@ -1,30 +1,96 @@
 import Component from '@glimmer/component';
-import EmberObject, { computed, action, set } from '@ember/object';
+import EmberObject, { computed, action, set as Ember_set, setProperties } from '@ember/object';
 import { alias, reads } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { later } from '@ember/runloop';
 import { A as Ember_A } from '@ember/array';
 
+import { uniq, intersection } from 'lodash/array';
 
+import NamesFilters from '../../utils/data/names-filters';
 import { toPromiseProxy, toArrayPromiseProxy } from '../../utils/ember-devel';
+import { thenOrNow, contentOf } from '../../utils/common/promises';
+import { clipboard_writeText } from '../../utils/common/html';
 import { intervalSize } from '../../utils/interval-calcs';
 import { overlapInterval } from '../../utils/draw/zoomPanCalcs';
 import {
   refAlt,
+  datasetId2Class,
   vcfGenotypeLookup,
-  addFeaturesJson, vcfFeatures2MatrixView, vcfFeatures2MatrixViewRows,
+  addFeaturesJson,
+  resultIsGerminate,
+  addFeaturesGerminate,
+  sampleIsFilteredOut,
+  columnName2SampleName,
+  vcfFeatures2MatrixView, vcfFeatures2MatrixViewRows,
+  valueIsMissing,
+  rowsAddFeature,
+  annotateRowsFromFeatures,
+  featuresValuesFields,
   featureSampleNames,
  } from '../../utils/data/vcf-feature';
 import { stringCountString } from '../../utils/string';
 
+import { text2EltId } from '../../utils/explorer-tabId';
+
+import { Germinate } from '../../utils/data/germinate';
+
+
 /* global $ */
+/* global d3 */
 
 // -----------------------------------------------------------------------------
 
 const dLog = console.debug;
 
 const trace = 0;
+
+/** Feature SNP Positions which are selected for filtering.
+ * block[featureFiltersSymbol] -> [] of Feature (or Position)
+ */
+const featureFiltersSymbol = Symbol.for('featureFilters');
+/** tSNP values which are selected for filtering.
+ * block[haplotypeFiltersSymbol] -> [] of tSNP
+ */
+const haplotypeFiltersSymbol = Symbol.for('haplotypeFilters');
+/** array of Features / SNPs in a tagged SNP set, i.e. equal tSNP value.
+ * features = block[haplotypeFeaturesSymbol][tSNP]
+ */
+const haplotypeFeaturesSymbol = Symbol.for('haplotypeFeatures');
+/** Counts for filtering by LD Block (Haplotype) values
+ * block[sampleMatchesSymbol] : {matches: 0, mismatches : 0}
+ * also used in sampleIsFilteredOut{,Blocks}()
+ */
+const sampleMatchesSymbol = Symbol.for('sampleMatches');
+/** Counts for calculating Call Rate of a sample.
+ * sampleCount = block[callRateSymbol][sampleName] : {calls:0, misses:0}  */
+const callRateSymbol = Symbol.for('callRate');
+/** Indicate whether Alt or Ref value should be matched at this Feature / SNP.
+ * feature[matchRefSymbol] true/false.  */
+const matchRefSymbol = Symbol.for('matchRef');
+
+const tab_view_prefix = "tab-view-";
+const tab_view_prefix_Datasets = "tab-view-Datasets-";
+
+//------------------------------------------------------------------------------
+
+/** Given a key within Feature.values, classify it as sample (genotype data) or other field.
+ */
+function valueNameIsNotSample(valueName) {
+  return ['ref', 'alt', 'tSNP', 'MAF'].includes(valueName);
+}
+
+/**
+ * @return true if feature.values contains only non-sample values, as listed in
+ * valueNameIsNotSample().
+ */
+function featureHasSamplesLoaded(feature) {
+  const
+  valuesKeys = Object.keys(feature.values),
+  noSampleValues = valuesKeys.filter(valueNameIsNotSample).length === valuesKeys.length;
+  return ! noSampleValues;
+}
 
 // -----------------------------------------------------------------------------
 
@@ -42,25 +108,65 @@ const trace = 0;
  * Arrays of sample names selected by the user, per dataset. indexed by VCF datasetId
  * .vcfGenotypeSamplesSelected = {} (aliased as vcfGenotypeSamplesSelectedAll)
  *
+ * .samplesIntersection default : false
  * .requestFormat 'Numerical' (default), 'CATG'
  * .replaceResults default: false
+
  * .showResultText default: false
+ * .showConfigureLookup default: false
+ * .showSampleFilters default : false
+
  * .filterBySelectedSamples default : true
+ * true means filter the data within scope (brush or zoomed domain) by samples
+ * selected in corresponding dataset tab of block
+ * Requests are narrowed to selected samples when ! requestSamplesAll.
+ *
+ * .mafUpper default : true
+ * .mafThreshold default 0
+ *
+ * .snpPolymorphismFilter default : false
+ * true means filter out monomorphic SNPs
+ *
+ * .callRateThreshold default 0
+ * .samplesLimit default 10
+ * .samplesLimitEnable default false
+ * .selectFeaturesByLDBlock default false
+ * .haplotypeFilterRef default : false
+ * .showNonVCFFeatureNames default : true
+ * .showAxisLDBlocks default : false
+ * .showTablePositionAlignment default : false
+ * .cellSizeFactorInt default : 100
+ * .cellSizeFactor default : 1
+ *
+ * .haplotypeFiltersEnable default : false
+ * true means apply haplotypeFilters to filter out non-matchng sample columns;
+ * otherwise show the non-Ref Samples at the right of the matching samples - use
+ * .sort(sampleNamesCmp), instead of sampleIsFilteredOut().
+ *
+ * The user can choose how to determine the samples to request from bcftools.
+ * .requestSamplesAll boolean, default : false
+ *   All samples in VCF, or selected by user from list.
+ * .requestSamplesFiltered boolean, default : false
+ *   The samples indicated by requestSamplesAll can be optionally filtered before request.
+ *
  * @see userSettingsDefaults()
  */
 export default class PanelManageGenotypeComponent extends Component {
   @service() controls;
   @service() auth;
-  /** used for axisBrush.brushedAxes to instantiate axis-brush s. */
-  @service('data/flows-collate') flowsService;
+  @service('data/axis-brush') axisBrushService;
+
   @service('data/block') blockService;
   @service('data/vcf-genotype') sampleCache;
+  @service('data/haplotype') haplotypeService;
   @service('query-params') queryParamsService;
 
 
   @alias('controls.apiServerSelectedOrPrimary') apiServerSelectedOrPrimary;
 
   @alias('queryParamsService.urlOptions') urlOptions;
+
+  @alias('haplotypeService.haplotypeColourScale') haplotypeColourScale;
 
 
   // ---------------------------------------------------------------------------
@@ -90,9 +196,23 @@ export default class PanelManageGenotypeComponent extends Component {
     this.sampleCache.sampleNames[this.lookupDatasetId] = names;
   }
 
+  /** For a VCF dataset, sampleNames are received via bcftools request, and does
+   * not change, so it is cached per dataset, by this function.
+   * @param block is this.lookupBlock, and indicates the dataset which the
+   * sampleNames should be stored for.
+   * The dataset's name is this.lookupDatasetId, which is not necessarily unique
+   * when using multiple servers - see datasetsForName().
+   */
+  datasetStoreSampleNames(block, sampleNames) {
+    const
+    dataset = block.get('datasetId');
+    dataset.sampleNames = sampleNames;
+  }
+
   @alias('args.userSettings.vcfGenotypeSamplesSelected')
   vcfGenotypeSamplesSelectedAll;
 
+  /** see selectedSamples() */
   // @computed('lookupBlockSamples.selected')
   @computed('lookupDatasetId', 'receivedNamesCount')
   get vcfGenotypeSamplesSelected() {
@@ -117,6 +237,25 @@ export default class PanelManageGenotypeComponent extends Component {
   @tracked
   columnNames = null;
 
+  /** Genotype (VCF) datasets are allocated 1 column each, showing Block colour, and
+   * containing the feature name as cell title.
+   */
+  @tracked
+  gtDatasetColumns = null;
+
+  /** Non-VCF datasets are allocated 1 column each, displaying the feature name
+   * when enabled by showNonVCFFeatureNames.
+   */
+  @tracked
+  datasetColumns = null;
+
+  /** Extra fields of non-VCF datasets may be shown, displaying the Feature.values[fieldName].
+   * These are currently allocated 1 column per fieldName, but perhaps will
+   * change to 1 per dataset x fieldName.
+   */
+  @tracked
+  extraDatasetColumns = null;
+
   /** in .args.userSettings : */
   /** true means replace the previous result Features added to the block. */
   // replaceResults = undefined;
@@ -124,8 +263,9 @@ export default class PanelManageGenotypeComponent extends Component {
   @tracked
   axisBrushBlockIndex = undefined;
 
-  @tracked
-  showInputDialog = false;
+  // @tracked
+  @alias('args.userSettings.hideControls') 
+  showInputDialog;
 
   @alias('args.userSettings.showResultText')
   showResultText;
@@ -134,12 +274,59 @@ export default class PanelManageGenotypeComponent extends Component {
   @tracked
   lookupMessage = null;
 
+  /** Enable dialog to select fields of non-VCF dataset features to display as
+   * additional columns.  */
+  @tracked
+  featureColumnDialogDataset = false;
+
+  /** Enable dialog to toggle VCF dataset intersection none/+/-.  */
+  @tracked
+  intersectionDialogDataset = false;
+  get intersectionDialogDatasetId() { return this.intersectionDialogDataset?.id; }
+  set intersectionDialogDatasetId(datasetId) {
+    const dataset = this.gtDatasets.find(dataset => dataset.id === datasetId);
+    this.intersectionDialogDataset = dataset;
+    dLog('intersectionDialogDatasetId', datasetId, dataset);
+  }
+
+  /** selectedFeaturesValuesFields[datasetId] is selected from
+   * .currentFeaturesValuesFields[datasetId],
+   * where datasetId is a non-VCF dataset. */
+  @tracked
+  selectedFeaturesValuesFields = {};
+
+  /** dataClipboard() can be re-factored into manage-genotype, but that may pull
+   * out half of matrix-view - perhaps wait until changing table component, so
+   * use this action bundle to prototype and refine the requirements.
+   */
+  tableApi = {
+    dataClipboard : null,
+    // @tracked
+    topLeftDialog : null,
+  };
+
+
+  //----------------------------------------------------------------------------
+
+  // @action  // called via (action to pass target.value)
+  nameFilterChanged(value) {
+    this.namesFilters.nameFilterChanged(value);
+  }
+
   // ---------------------------------------------------------------------------
 
   constructor() {
     super(...arguments);
 
     this.userSettingsDefaults();
+    /* if (trace) { */
+      dLog('manage-genotype', 'constructor', 'this', this, 'args', Object.entries(this.args));
+    // used in development only, in Web Inspector console.
+    if (window.PretzelFrontend) {
+      window.PretzelFrontend.manageGenotype = this;
+    }
+
+    this.namesFilters = new NamesFilters();
   }
   /** Provide default values for args.userSettings; used in constructor().
    */
@@ -149,9 +336,17 @@ export default class PanelManageGenotypeComponent extends Component {
       userSettings.vcfGenotypeSamplesSelected = {};
     }
 
+    if (userSettings.samplesIntersection === undefined) {
+      userSettings.samplesIntersection = false;
+    }
+
     // possible values listed in comment before requestFormat
     this.requestFormat =
       userSettings.requestFormat || 'Numerical';  // alternate : CATG
+
+    /* most of the following flags are (mut) in checkboxes in .hbs, which
+     * may require that they have a defined initial value.
+     */
 
     if (userSettings.replaceResults === undefined) {
       userSettings.replaceResults = false;
@@ -160,9 +355,79 @@ export default class PanelManageGenotypeComponent extends Component {
     if (userSettings.showResultText === undefined) {
       userSettings.showResultText = false;
     }
+    if (userSettings.showConfigureLookup === undefined) {
+      userSettings.showConfigureLookup = true;
+    }
+    if (userSettings.showSampleFilters === undefined) {
+      userSettings.showSampleFilters = false;
+    }
 
     if (userSettings.filterBySelectedSamples === undefined) {
       userSettings.filterBySelectedSamples = true;
+    }
+
+    if (userSettings.snpPolymorphismFilter === undefined) {
+      userSettings.snpPolymorphismFilter = false;
+    }
+    if (userSettings.mafUpper === undefined) {
+      userSettings.mafUpper = false;
+    }
+    if (userSettings.mafThreshold === undefined) {
+      userSettings.mafThreshold = 0;
+    }
+    if (userSettings.callRateThreshold === undefined) {
+      userSettings.callRateThreshold = 0;
+    }
+
+    if (userSettings.samplesLimit === undefined) {
+      userSettings.samplesLimit = 10;
+    }
+    if (userSettings.samplesLimitEnable === undefined) {
+      userSettings.samplesLimitEnable = false;
+    }
+
+    if (userSettings.selectFeaturesByLDBlock === undefined) {
+      userSettings.selectFeaturesByLDBlock = false;
+    }
+    if (userSettings.haplotypeFilterRef === undefined) {
+      userSettings.haplotypeFilterRef = false;
+    }
+    if (userSettings.haplotypeFiltersEnable === undefined) {
+      userSettings.haplotypeFiltersEnable = false;
+    }
+
+    if (userSettings.requestSamplesAll === undefined) {
+      userSettings.requestSamplesAll = false;
+    }
+
+    if (userSettings.requestSamplesFiltered === undefined) {
+      userSettings.requestSamplesFiltered = false;
+    }
+
+    if (userSettings.showNonVCFFeatureNames === undefined) {
+      userSettings.showNonVCFFeatureNames = false;
+    }
+
+    if (userSettings.showAxisLDBlocks === undefined) {
+      userSettings.showAxisLDBlocks = false;
+    }
+
+    if (userSettings.showTablePositionAlignment === undefined) {
+      userSettings.showTablePositionAlignment = false;
+    }
+
+    if (userSettings.autoLookup === undefined) {
+      userSettings.autoLookup = true;
+    }
+
+    if (userSettings.cellSizeFactor === undefined) {
+      userSettings.cellSizeFactorInt = 100;
+      userSettings.cellSizeFactor = 1;
+    }
+
+
+    if (this.urlOptions.gtMergeRows === undefined) {
+      this.urlOptions.gtMergeRows = true;
     }
 
   }
@@ -179,18 +444,16 @@ export default class PanelManageGenotypeComponent extends Component {
     this.axisBrushBlockIndex = +value;
     /** save user setting for next component instance. */
     this.args.userSettings.lookupBlock = this.lookupBlock;
-    /*
+
     later(() => {
-      if (this.vcfGenotypeSamplesSelected === undefined) {
-        this.vcfGenotypeSamplesSelected = [];
-      }
+      this.selectedSamplesText = this.selectedSamples?.join('\n');
     });
-    */
   }
 
   // ---------------------------------------------------------------------------
 
   /** Maximum interval for VCF lookup request.
+   * Units are Mb.
    * This initial default value is coordinated with hbs : <input ... value=1 ... intervalLimitInput >
    * If ! gtIntervalLimit, don't apply a limit.
    */
@@ -226,6 +489,302 @@ export default class PanelManageGenotypeComponent extends Component {
   }
 
 
+
+  //----------------------------------------------------------------------------
+
+  /** Adjust table cell size.
+   * This initial default value is coordinated with hbs : <input ... value=100 ... cellSizeFactorInput >
+   * Factor domain is (0, 2], default 1.
+   * <input> range is [0, 200]; divide value by /100, i.e. value is %
+   * userSettings.cellSizeFactor{Int,} initialised in userSettingsDefaults().
+   */
+
+  @action
+  cellSizeFactorInput(event) {
+    this.args.userSettings.cellSizeFactorInt = +event.target.value;
+    /** default is 100% : value=100 in hbs
+     * event.target.value is a string; convert to a number.
+     * Exclude 0, map it to 0.01.
+     */
+    let value = (+event.target.value || 1) / 100;
+    dLog('cellSizeFactorInput', value, event.target.value);
+    /* cellSizeFactor is tracked by matrix-view.js : cellSize() */
+    Ember_set(this, 'args.userSettings.cellSizeFactor', value);
+  }
+
+
+  //----------------------------------------------------------------------------
+
+  mafThresholdMin = .001;
+  mafThresholdMax = 1;
+
+  /** @userSettings.mafUpper : true means use maf threshold as an upper limit. */
+
+  /** @return < or > to indicate whether .maf is an upper or lower threshold,
+   * respectively, depending on .mafUpper
+   */
+  @computed('args.userSettings.mafUpper')
+  get mafThresholdText() {
+    const
+    text = this.args.userSettings.mafUpper ? '<' : '>';
+    dLog('mafThresholdText', this.args.userSettings.mafUpper, text);
+    return text;
+  }
+
+  /**
+   * @param inputType "text" or "range"
+   */
+  @action
+  mafThresholdChanged(value, inputType) {
+    /* if (trace) { */
+    dLog('mafThresholdChanged', value, inputType);
+    Ember_set(this, 'args.userSettings.mafThreshold', value);
+  }
+
+  //----------------------------------------------------------------------------
+
+  /**
+   * @param inputType "text" or "range"
+   */
+  @action
+  callRateThresholdChanged(value, inputType) {
+    /* if (trace) { */
+    dLog('callRateThresholdChanged', value, inputType);
+    Ember_set(this, 'args.userSettings.callRateThreshold', value);
+  }
+
+  //----------------------------------------------------------------------------
+
+  /**
+   * @param inputType "text" or "range"
+   */
+  @action
+  samplesLimitChanged(value, inputType) {
+    /* if (trace) { */
+    dLog('samplesLimitChanged', value, inputType);
+    Ember_set(this, 'args.userSettings.samplesLimit', Math.round(value));
+  }
+
+  //----------------------------------------------------------------------------
+
+  /** User may select tSNP values which are then used to filter samples,
+   * in combination with a flag which selects match with Ref or non-Ref values :
+   * columns of samples with the expected value are displayed.
+   * @return [] of tSNP
+   */
+  @action
+  blockHaplotypeFilters(block) {
+    // equivalent : block = contentOf(block);
+    if (block.content) {
+      block = block.content;
+    }
+    const filters = block[haplotypeFiltersSymbol] || (block[haplotypeFiltersSymbol] = Ember_A());
+    return filters;
+  }
+
+  @action
+  haplotypeToggle(feature, haplotype) {
+    const
+    fnName = 'haplotypeToggle',
+    block = feature.get('blockId'),
+    filters = this.blockHaplotypeFilters(block);
+    this.arrayToggleObject(filters, haplotype);
+
+    /** filtered/sorted display depends on .samples, which depends on
+     * this.vcfGenotypeSamplesText, so request all sampleNames if not received.
+     */
+    let textP = ! this.vcfGenotypeSamplesText && this.vcfGenotypeSamples();
+    thenOrNow(textP, () => {
+      if (textP) {
+        dLog(fnName);
+      }
+      // Refresh display.
+      this.haplotypeFiltersSet();
+    });
+  }
+  /** If object is in array, remove it, otherwise add it.
+   * @param object  any value - string or object, etc
+   */
+  arrayToggleObject(array, object) {
+    const present = array.includes(object);
+    if (present) {
+      /* currently getting multiple calls to afterSelectionHaplotype(), so disable toggle off
+      */
+      array.removeObject(object);
+    } else {
+      array.addObject(object);
+    }
+    return present;
+  }
+
+  @action
+  haplotypeFiltersClear() {
+    const fnName = 'haplotypeFiltersClear';
+    dLog(fnName);
+    const
+    abBlocks = this.brushedOrViewedVCFBlocks;
+    abBlocks.forEach((abBlock) => {
+      const
+      block = abBlock.block,
+      selected = block[haplotypeFiltersSymbol];
+      if (abBlock.haplotypeFilters !== selected) {
+        dLog(fnName, abBlock, abBlock.haplotypeFilters, selected);
+      }
+      if (selected.length) {
+        selected.removeAt(0, selected.length);
+      }
+    });
+    // Refresh display.
+    this.haplotypeFiltersSet();
+    // also done in hbs via action pipe
+    // this.haplotypeFiltersApply();
+  }
+
+  @action
+  haplotypeFiltersApply() {
+    if (this.matrixView && ! this.matrixView.isDestroying) {
+      this.matrixView.filterSamplesBySelectedHaplotypes();
+      later(() => this.matrixView.table.render(), 2000);
+    }
+  }
+  
+
+  /** Use Ember_set() to signal update of tracked properties and trigger re-render. */
+  haplotypeFiltersSet() {
+    dLog('haplotypeFiltersSet');
+    let filterCount = 0;
+    const
+    abBlocks = this.blocksHaplotypeFilters;
+    abBlocks.forEach((abBlock) => {
+      const
+      block = abBlock.block;
+      Ember_set(abBlock, 'haplotypeFilters', abBlock.haplotypeFilters);
+      filterCount += abBlock.haplotypeFilters.length;
+    });
+    this.haplotypeFiltersCount = filterCount;
+  }
+  @tracked
+  haplotypeFiltersCount = 0;
+
+  /** Map haplotype / tSNP to a colour
+   * @param tSNP  string represention of a number
+   */
+  @action
+  haplotypeColour(tSNP) {
+    const colour = this.haplotypeColourScale(tSNP);
+    return colour;
+  }
+
+  //----------------------------------------------------------------------------
+  /** copied, with haplotype -> feature : blockHaplotypeFilters(),
+   * haplotypeToggle(), haplotypeFiltersClear(), haplotypeFiltersApply(),
+   * haplotypeFiltersSet().
+   * The requirements are in prototype phase; after settling possibly there
+   * will be enough commonality to factor some of this.
+   * The filter may be an array of features or positions; currently features and
+   * they are stored as block[featureFiltersSymbol] (copying the use of
+   * block[haplotypeFiltersSymbol]), but if they are positions then they don't
+   * need to be per-block - can be per axis-brush.
+   */
+
+  /** User may select tSNP values which are then used to filter samples,
+   * in combination with a flag which selects match with Ref or non-Ref values :
+   * columns of samples with the expected value are displayed.
+   * @return [] of feature
+   */
+  @action
+  blockFeatureFilters(block) {
+    // equivalent : block = contentOf(block);
+    if (block.content) {
+      block = block.content;
+    }
+    const filters = block[featureFiltersSymbol] || (block[featureFiltersSymbol] = Ember_A());
+    return filters;
+  }
+
+  @action
+  featureToggle(feature, columnName) {
+    const
+    fnName = 'featureToggle',
+    /** probably want to apply filter at SNP position to other VCF blocks in the
+     * table (abBlocks = this.brushedOrViewedVCFBlocks); match features in those
+     * blocks with the same feature.value.0
+     */
+    block = feature.get('blockId'),
+    filters = this.blockFeatureFilters(block),
+    matchRef = feature[matchRefSymbol],
+    // use == because columnName is currently String.
+    matchRefNew = columnName == 'Ref';
+    /** Toggle feature when the current key Ref/Alt is clicked again.
+     * If a different key is clicked for a feature, just change the key.
+     */
+    if ((matchRef === undefined) || (matchRef === matchRefNew)) {
+      this.arrayToggleObject(filters, feature);
+    }
+    if (matchRef !== matchRefNew) {
+      feature[matchRefSymbol] = matchRefNew;
+    }
+
+
+    /** filtered/sorted display depends on .samples, which depends on
+     * this.vcfGenotypeSamplesText, so request all sampleNames if not received.
+     */
+    let textP = ! this.vcfGenotypeSamplesText && this.vcfGenotypeSamples();
+    thenOrNow(textP, () => {
+      if (textP) {
+        dLog(fnName);
+      }
+      // Refresh display.
+      this.featureFiltersSet();
+    });
+  }
+
+  @action
+  featureFiltersClear() {
+    const fnName = 'featureFiltersClear';
+    dLog(fnName);
+    const
+    abBlocks = this.brushedOrViewedVCFBlocks;
+    abBlocks.forEach((abBlock) => {
+      const
+      block = abBlock.block,
+      selected = block[featureFiltersSymbol];
+      if (abBlock.featureFilters !== selected) {
+        dLog(fnName, abBlock, abBlock.featureFilters, selected);
+      }
+      if (selected.length) {
+        selected.removeAt(0, selected.length);
+      }
+    });
+    // Refresh display.
+    this.featureFiltersSet();
+    // also done in hbs via action pipe
+    // this.haplotypeFiltersApply();
+  }
+
+  /* haplotypeFiltersApply() -> filterSamplesBySelectedHaplotypes()
+   * also applies featureFilters, so there is no need for a separate
+   * @action featureFiltersApply() 
+   */
+ 
+
+  /** Use Ember_set() to signal update of tracked properties and trigger re-render. */
+  featureFiltersSet() {
+    dLog('featureFiltersSet');
+    let filterCount = 0;
+    const
+    abBlocks = this.blocksFeatureFilters;
+    abBlocks.forEach((abBlock) => {
+      const
+      block = abBlock.block;
+      Ember_set(abBlock, 'featureFilters', abBlock.featureFilters);
+      filterCount += abBlock.featureFilters.length;
+    });
+    this.featureFiltersCount = filterCount;
+  }
+  @tracked
+  featureFiltersCount = 0;
+
   // ---------------------------------------------------------------------------
 
 
@@ -242,7 +801,158 @@ export default class PanelManageGenotypeComponent extends Component {
     this.requestFormat = value;
   }
 
+  //----------------------------------------------------------------------------
+
+  /**
+   * @param value radio button can only provide a string value
+   */
+  @action
+  positionFilterChanged(valueText) {
+    const fnName = 'positionFilterChanged';
+    dLog(fnName, valueText);
+    let value = valueText;
+    if (typeof value === 'string') {
+      // the radio button values are lower case.
+      value = JSON.parse(valueText.toLowerCase());
+      dLog(fnName, value);
+    }
+    const dataset = this.intersectionDialogDataset;
+    if (! dataset) {
+      dLog(fnName, this.lookupDatasetId);
+      // const lookupDataset = this.lookupBlock.get('datasetId');
+    } else {
+      dataset.set('positionFilter', value);
+      this.datasetPositionFilterChangeCount++;
+      /** This works except it is incremental - prepending continuously;
+       * using instead : positionFilterEffect() -> updateSettings().
+       * this.showDatasetPositionFilter(dataset, dataset.positionFilterText);
+       */
+    }
+  }
+
   // ---------------------------------------------------------------------------
+
+  /** @return array of blocks and the haplotypes selected on them for filtering samples.
+   */
+  @computed('brushedOrViewedVCFBlocks')
+  get blocksHaplotypeFilters() {
+    const
+    fnName = 'blocksHaplotypeFilters',
+    axisBrushes = this.brushedOrViewedVCFBlocks,
+    blocksHF = axisBrushes.map(
+      (ab) => ({block : ab.block, haplotypeFilters : this.blockHaplotypeFilters(ab.block)}));
+    dLog(fnName, axisBrushes, blocksHF);
+    return blocksHF;
+  }
+  /** @return array of blocks and the features selected on them for filtering samples.
+   */
+  @computed('brushedOrViewedVCFBlocks')
+  get blocksFeatureFilters() {
+    /** copied from blocksHaplotypeFilters(), with haplotype -> feature
+     */
+    const
+    fnName = 'blocksFeatureFilters',
+    axisBrushes = this.brushedOrViewedVCFBlocks,
+    blocksHF = axisBrushes.map(
+      (ab) => ({block : ab.block, featureFilters : this.blockFeatureFilters(ab.block)}));
+    dLog(fnName, axisBrushes, blocksHF);
+    return blocksHF;
+  }
+
+  @computed('brushedOrViewedVCFBlocks')
+  get brushedOrViewedScope () {
+    const fnName = 'brushedOrViewedScope';
+    const scope = this.lookupScope || this.brushedOrViewedVCFBlocks.mapBy('scope').uniq();
+    dLog(fnName, scope);
+    return scope;
+  }
+
+  @computed('brushedOrViewedVCFBlocks')
+  get brushedOrViewedVCFBlocksVisible () {
+    const
+    fnName = 'brushedOrViewedVCFBlocks',
+    blocks = this.brushedOrViewedVCFBlocks
+      .map(abb => abb.block),
+    visibleBlocks = blocks
+      .filterBy('visible');
+    dLog(fnName, visibleBlocks, blocks);
+    return visibleBlocks;
+  }
+
+  @alias('brushedOrViewedVCFBlocksVisible') gtBlocks;
+
+  /** genotype datasets on the brushed / viewed axes
+   */
+  @computed('brushedOrViewedVCFBlocks')
+  get gtDatasets () {
+    const
+    fnName = 'gtDatasets',
+    /** brushedOrViewedVCFBlocksVisible.mapBy('datasetId') are Proxy,
+     * which is true of both its sources : .viewedVCFBlocks and .brushedVCFBlocks.
+     * so use .content
+     */
+    gtDatasets = this.brushedOrViewedVCFBlocksVisible.mapBy('datasetId.content');
+    dLog(fnName, gtDatasets);
+    return gtDatasets;
+  }
+
+  @computed('gtDatasets')
+  get gtDatasetIds() {
+    const
+    fnName = 'gtDatasetIds',
+    datasetIds = this.gtDatasets.mapBy('id');
+    dLog(fnName, datasetIds);
+    return datasetIds;
+  }
+
+  @computed('gtDatasets')
+  get gtDatasetTabs() {
+    const
+    fnName = 'gtDatasets',
+    datasetIds = this.gtDatasetIds;
+    if (! this.activeDatasetId && datasetIds.length) {
+      dLog(fnName, 'initial activeDatasetId', datasetIds[0], this.activeDatasetId);
+      later(() => {
+        this.setSelectedDataset(datasetIds[0]);
+      });
+    }
+    dLog(fnName, datasetIds, this.gtDatasets);
+    return datasetIds;
+  }
+
+  /** identify the reference datasetId and scope of the axis of the genotype
+   * datasets which are displayed in the table.
+   * There could be multiple such axes; the components handle that but it may not be used.
+   * This is displayed in the top-left corner of the table.
+   */
+  @computed('brushedOrViewedScope', 'gtDatasets')
+  get dataScope () {
+    const
+    fnName = 'dataScope',
+    scope = this.brushedOrViewedScope,
+    gtDatasetIds = this.gtDatasetIds,
+    /** The top-left corner cell is not rotated - text is horizontal.
+     * When gtMergeRows, the left column (row header) is narrow because it holds
+     * Position instead of feature name, so there is no width for the
+     * datasetIds; they seem unnecessary because the "Block" columns headers
+     * have the datasetIds - possibly added after gtDatasetIds were appended to
+     * scope here.  So disable this :
+    texts = (scope ? [scope] : []).concat(gtDatasetIds),
+    text = texts.join('\n');
+    */
+    text = scope;
+
+    /* gtMergeRows : rowHeader is Position, which is narrower than name, and
+     * datasetId gets truncated and moves the centre (where scope is
+     * positioned) out of view, so omit it.
+     if (gtDatasetIds?.length && ! this.urlOptions.gtMergeRows)
+    */
+    dLog(fnName, scope, gtDatasetIds, text);
+
+    return text;
+  }
+
+  //----------------------------------------------------------------------------
 
   /** @return the {axisBrush, vcfBlock} selected via gui pull-down
    */
@@ -290,11 +1000,59 @@ export default class PanelManageGenotypeComponent extends Component {
      */
     return b?.get('name');
   }
+
+  @tracked filterErrorText = null;
+  /** @return an array of samples which are common to the viewed datasets
+   * @desc
+   * related : vcfGenotypeSamples
+   */
+  get sampleNamesIntersection() {
+    const
+    fnName = 'sampleNamesIntersection',
+    /** Could ensure samples are loaded for each of the viewed VCF datasets
+     * using .vcfGenotypeSamplesAllDatasets().
+     */
+    datasetSamples =
+    Object.values(this.sampleCache.sampleNames)
+      .map(value => this.samplesFromText(value));
+    let commonSamples;
+
+    const filterText = this.sampleNameFilter;
+    if (filterText) {
+      let regexp;
+      function matchSample(sample) {
+        return sample.match(regexp)?.[0];
+      }
+      this.filterErrorText = null;
+      try {
+        regexp = new RegExp(filterText, 'i');
+      } catch (error) {
+        dLog(fnName, filterText, error.toString());
+        this.filterErrorText = error.toString();
+        return [];
+      }
+      const
+      matched = datasetSamples.map(samples => samples.map(matchSample)),
+      matchedFiltered = matched?.map(matches => matches.filter(match => match)),
+      commonMatches = intersection.apply(undefined, matchedFiltered),
+      commonMatchesSet = new Set(commonMatches),
+      commonSamplesAll = datasetSamples.map(
+        datasetSamples_i => datasetSamples_i.map((sample, i) => 
+          commonMatchesSet.has(matchSample(sample)) ? sample : null)
+          .filter(sample => sample));
+      commonSamples = intersection.apply(undefined, commonSamplesAll);
+      dLog(fnName, commonSamples);
+    } else {
+      commonSamples = intersection.apply(undefined, datasetSamples);
+    }
+    return commonSamples;
+  }
   /** @return for .lookupDatasetId selected by user, the sampleNames array
    * received, and the .selectedSamples the user has selected from those.
    */
   @computed('lookupDatasetId', 'receivedNamesCount')
   get lookupBlockSamples() {
+    /** related : datasetStoreSampleNames() */
     const names = this.sampleCache.sampleNames[this.lookupDatasetId];
     let selected = this.vcfGenotypeSamplesSelectedAll[this.lookupDatasetId];
     if (false && names?.length && ! selected) {
@@ -304,15 +1062,33 @@ export default class PanelManageGenotypeComponent extends Component {
     return {names, selected};
   }
 
-  /** @return number of sample names in .vcfGenotypeSamplesText
+  /** @return sample names in .vcfGenotypeSamplesText
    */
-  @computed('vcfGenotypeSamplesText')
-  get samples() {
+  samplesFromText(text) {
     const
-    samples = this.vcfGenotypeSamplesText?.split('\n')
+    samples = text?.split('\n')
     ;//.map((name) => ({name, selected : false}));
+    // text ends with \n, which creates '' at the end of the array, so pop that.
+    if ((samples?.length && (samples[samples.length-1]) === '')) {
+      dLog('samples', samples.length && samples.slice(samples.length-2, samples.length));
+      samples.pop();
+    }
+ 
     return samples;
   }
+  @computed(
+    'vcfGenotypeSamplesText',
+    'args.userSettings.samplesIntersection',
+    'sampleNameFilter',
+  )
+  get samples() {
+    const
+    samples = this.args.userSettings.samplesIntersection ?
+      this.sampleNamesIntersection :
+      this.samplesFromText(this.vcfGenotypeSamplesText);
+    return samples;
+  }
+
   @computed('samples')
   get vcfGenotypeSamplesCount() {
     const count = this.samples?.length;
@@ -323,10 +1099,6 @@ export default class PanelManageGenotypeComponent extends Component {
 
   @alias('vcfGenotypeSamplesSelected')
   selectedSamples;
-  /*
-  @tracked
-  selectedSamples = [];
-  */
 
   @reads('selectedSamples.length')
   selectedCount;
@@ -340,14 +1112,102 @@ export default class PanelManageGenotypeComponent extends Component {
    */
   @action
   selectSample(event) {
-    const selectedSamples = $(event.target).val();
-    this.selectedSamples = selectedSamples || [];
+    const
+    selectedSamples = $(event.target).val();
+    if (! this.selectedSamples) {
+      this.selectedSamples = selectedSamples;
+    } else {
+      this.selectedSamples.addObjects(selectedSamples);
+    }
+    if (! this.selectedSamplesText) {
+      if (selectedSamples.length) {
+        this.selectedSamplesText = selectedSamples.join('\n');
+      }
+    } else if (selectedSamples.length) {
+      const
+      /** previous selected samples, possibly edited by user.
+       * Can use the same parsing as sampleNameListInput().  */
+      editedSamples = this.sampleNameListInputParse(this.selectedSamplesText);
+
+      // Using .addObjects removes duplicates, which string concatenation wouldn't do.
+      this.selectedSamplesText = editedSamples.addObjects(selectedSamples).join('\n');
+    }
   }
 
+  /**
+   * @return undefined if .samples is undefined
+   */
+  @computed('samples', 'namesFilters.nameFilterArray')
+  get filteredSamples() {
+    // filtering is already applied in sampleNamesIntersection()
+    if (this.args.userSettings.samplesIntersection) {
+      return this.samples;
+    }
+    const
+    fnName = 'filteredSamples',
+    nameFilterArray = this.namesFilters.nameFilterArray,
+    filteredSamples = this.samples
+      ?.filter(sampleName => this.namesFilters.matchFilters(
+        sampleName, nameFilterArray,
+        /*this.caseInsensitive*/ true,
+        /*this.searchFilterAll*/ true));
+    return filteredSamples;
+  }
+
+  /* related user actions :
+   *  change filter : doesn't change selectedSamples{,Text}
+   *  user select -> append to selectedSamples ( -> selectedSamplesText)
+   *  paste -> (selectedSamplesText and) selectedSamples
+   */
+  @tracked
+  selectedSamplesText = '';
+
+  /** parse the contents of the textarea
+   * @param value text contents of <Textarea>
+   * @return sample names array
+   */
+  sampleNameListInputParse(value) {
+    const
+    fnName = 'sampleNameListInputParse',
+    /** empty lines are invalid sample names, so trim \n and white-space lines */
+    selected = value
+      .trimEnd(/\n/)
+      .split(/\n *\t*/g)
+      .filter((name) => !!name);
+    dLog(fnName, value, selected);
+    return selected;
+  }
+  /** parse the contents of the textarea -> selectedSamples
+   */
+  @action
+  sampleNameListInput(value) {
+    const
+    selected = this.sampleNameListInputParse(value);
+    this.selectedSamples = selected;
+  }
+  /** Number of newlines in .selectedSamplesText when sampleNameListInputKey()
+   * was last called.
+   */
+  selectedSamplesTextLines = null;
+  /** Called by @input - any user edit key.
+   * Set this.selectedSamplesText to value.
+   * If edit is substantial, e.g. changes # lines, then sampleNameListInput().
+   */
+  @action
+  sampleNameListInputKey(value) {
+    this.selectedSamplesText = value;
+    const
+    lines = stringCountString(value, '\n');
+    if (lines != this.selectedSamplesTextLines) {
+      this.selectedSamplesTextLines = lines;
+      this.sampleNameListInput(value);
+    }
+  }
 
   //------------------------------------------------------------------------------
 
   /** @return selectedSamples of the given blocks
+   * If no samples are selected, result is [].
    * @param blocks  VCF blocks, which may be brushed
    */
   blocksSelectedSamples(blocks) {
@@ -355,6 +1215,7 @@ export default class PanelManageGenotypeComponent extends Component {
     fnName = 'blocksSelectedSamples',
     brushedVCFDatasetIds = blocks.map((block) => block.get('datasetId.id')),
     selected = brushedVCFDatasetIds.map((datasetId) => this.vcfGenotypeSamplesSelectedAll[datasetId])
+      .filter((a) => a)
       .flat();
     return selected;
   }
@@ -368,17 +1229,17 @@ export default class PanelManageGenotypeComponent extends Component {
    * Dependency on .viewed provides update when a data block is added to an axis which is brushed.
    * axis1d.brushedBlocks also depends (indirectly) on viewed[].
    */
-  @computed('flowsService.axisBrush.brushedAxes', 'blockService.viewed.[]')
+  @computed('axisBrushService.brushedAxes', 'blockService.viewed.[]')
   get brushedVCFBlocks() {
     const
     fnName = 'brushedVCFBlocks',
-    axisBrushes = this.flowsService.axisBrush.brushedAxes,
+    axisBrushes = this.axisBrushService.brushedAxes,
     blocks = axisBrushes.map((ab) => {
       let
       axis1d = ab.block.get('axis1d'),
-      vcfBlocks = axis1d.brushedBlocks
+      vcfBlocks = ! axis1d ? [] : axis1d.brushedBlocks
         .filter(
-          (b) => b.get('datasetId').content.hasTag('VCF')),
+          (b) => b.get('isVCF')),
       ab1 = vcfBlocks.map((block) => ({axisBrush : ab, block}));
       return ab1;
     })
@@ -403,7 +1264,8 @@ export default class PanelManageGenotypeComponent extends Component {
         if (this.axisBrushBlockIndex === undefined) {
           this.args.userSettings.lookupBlock = undefined;
         }
-        dLog(fnName, this.axisBrushBlockIndex, blocks[this.axisBrushBlockIndex].block.id, blocks, lookupBlock.id);
+        /** .axisBrushBlockIndex maybe -1, when data block is un-viewed while brushed. */
+        dLog(fnName, this.axisBrushBlockIndex, blocks[this.axisBrushBlockIndex]?.block.id, blocks, lookupBlock.id);
       } else if ((this.axisBrushBlockIndex === undefined) || (this.axisBrushBlockIndex > blocks.length-1)) {
         /* first value is selected. if only 1 value then select onchange action will not be called.  */
         this.axisBrushBlockIndex = 0;
@@ -419,7 +1281,7 @@ export default class PanelManageGenotypeComponent extends Component {
     const
     fnName = 'viewedVCFBlocks',
     vcfBlocks = this.blockService.viewed.filter(
-      (b) => b.get('datasetId').content.hasTag('VCF')),
+      (b) => b.get('isVCF')),
     blocks = vcfBlocks.map((block) => ({
       axisBrush : EmberObject.create({block : block.referenceBlock}),
       block}));
@@ -442,6 +1304,149 @@ export default class PanelManageGenotypeComponent extends Component {
     return blocks;
   }
 
+  //----------------------------------------------------------------------------
+
+  /** @return a mapping from datasets -> block colour
+   * @desc
+   * Also set .brushedOrViewedVCFDatasets : array of datasets of brushedOrViewedVCFBlocks.
+   */
+  @computed('brushedOrViewedVCFBlocks')
+  get datasetsColour() {
+    /** related : axis-1d.js : datasetsColour() */
+    const
+    fnName = 'datasetsColour',
+    /** [{axisBrush, vcfBlock}, ...], refn : brushedVCFBlocks() */
+    abBlocks = this.brushedOrViewedVCFBlocks,
+    datasetsSet = new Set(),
+    blockColourMap = abBlocks.reduce((map, abBlock) => {
+      const
+      block = abBlock.block,
+      dataset = block.get('datasetId.content'),
+      axis1d = block.get('axis1d'),
+      colour = axis1d.blockColourValue(block);
+      datasetsSet.add(dataset);
+      map.set(dataset, colour);
+      return map;
+    }, new Map()),
+    datasets = Array.from(datasetsSet.keys());
+    dLog(fnName, blockColourMap, abBlocks, datasets);
+    Ember_set(this, 'brushedOrViewedVCFDatasets', datasets);
+    return blockColourMap;
+  }
+
+  /** @return the CSS class names for the datasets which are displayed in the table.
+   */
+  @computed('brushedOrViewedVCFDatasets', 'gtDatasetColumns')
+  get datasetsClasses() {
+    const
+    fnName = 'datasetsClasses',
+    datasetsColour = this.datasetsColour,
+    /** to remove duplicates, use .addObjects() instead of .concat(). */
+    datasets =
+      this.brushedOrViewedVCFDatasets
+      .addObjects(this.gtDatasets),
+    classes = datasets.map(dataset => ({
+      id : datasetId2Class(dataset.get('id')),
+      colour : datasetsColour.get(dataset)
+    }));
+    dLog(fnName, classes);
+    return classes;
+  }
+
+  //----------------------------------------------------------------------------
+
+  /** To enable non-VCF features to be displayed in the table,
+   * determine the non-VCF data blocks which are on the axes displayed in the table.
+   * @return axis1d []
+   */
+  @computed('brushedVCFBlocks')
+  /* brushedVCFBlocks depends on .brushedAxes, so will update when brush is
+   * started / ended, but not changed */
+  get brushedOrViewedVCFAxes() {
+    const
+    vcfBlocks = this.brushedVCFBlocks.map((abb) => abb.block),
+    axes = vcfBlocks.mapBy('axis1d').uniq();
+    return axes;
+  }
+  @computed('brushedOrViewedVCFAxes', 'brushedOrViewedVCFAxes.0.zoomCounter')
+  get nonVCFFeaturesWithinBrush() {
+    const
+    axes = this.brushedOrViewedVCFAxes,
+    axesBlocksFeatures = axes.map((axis1d) => {
+      const
+      blocksFeatures = axis1d.zoomedAndOrBrushedFeatures(/*includeVCF*/false);
+      return [axis1d, blocksFeatures];
+    });
+    return axesBlocksFeatures;
+  }
+  /** Map nonVCFFeaturesWithinBrush to a feature proxy with just
+   * { Block : feature.blockId, [datasetId.id] : feature.name, Position }
+   * @return {columnNames [], features [] }
+   * columnNames[] contains the .blockId.datasetId.id of filtered features.
+   */
+  @computed('nonVCFFeaturesWithinBrush')
+  get nonVCFFeaturesWithinBrushData() {
+    const
+    result = {columnNames : [], features : [] },
+    axesBlocksFeatures = this.nonVCFFeaturesWithinBrush;
+    axesBlocksFeatures.forEach(([axis1d, blocksFeatures]) => {
+      blocksFeatures.forEach(([block, blockFeatures]) => {
+        const
+        datasetId = block.get('datasetId.id');
+        result.features = result.features.concat(blockFeatures);
+        if (blockFeatures.length) {
+          result.columnNames.push(datasetId);
+        }
+      });
+    });
+    return result;
+  }
+
+  //----------------------------------------------------------------------------
+
+  @computed('selectedFeaturesValuesFields', 'featureColumnDialogDataset')
+  get selectedFeaturesValuesFieldsForDataset() {
+    let selected;
+    const datasetId = this.featureColumnDialogDataset;
+    if (datasetId) {
+      selected = this.selectedFeaturesValuesFields[datasetId] ||
+        (this.selectedFeaturesValuesFields[datasetId] = []);
+    }
+    return selected;
+  }
+
+  /** @return
+   * .currentFeaturesValuesFields[featureColumnDialogDataset] minus
+   * .selectedFeaturesValuesFields[featureColumnDialogDataset]
+   */
+  @computed('currentFeaturesValuesFields', 'selectedFeaturesValuesFieldsForDataset.[]')
+  get forSelectFeaturesValuesFields() {
+    const
+    fnName = 'forSelectFeaturesValuesFields',
+    datasetId = this.featureColumnDialogDataset,
+    current = this.currentFeaturesValuesFields[datasetId],
+    selected = this.selectedFeaturesValuesFields[datasetId],
+    /** Copy current and subtract selected from it, remainder is available for selection */
+    unselected = selected.reduce((set, field) => {
+      set.delete(field);
+      return set;
+    }, new Set(current)),
+    unselectedArray = Array.from(unselected);
+    return unselectedArray;
+  }  
+
+  /** Map the multi-select to an array of selected sample names.
+   * Based on @see selectSample().
+   * @desc
+   */
+  @action
+  selectFieldName(event) {
+    const
+    selectedFieldNames = $(event.target).val(),
+    datasetId = this.featureColumnDialogDataset;
+    this.selectedFeaturesValuesFields[datasetId] = selectedFieldNames || [];
+  }
+
   // ---------------------------------------------------------------------------
 
   /** dataset parent name of the selected block for lookup.
@@ -451,10 +1456,34 @@ export default class PanelManageGenotypeComponent extends Component {
 
   // ---------------------------------------------------------------------------
 
+  get brushedDomain() {
+    const
+    axisBrush = this.axisBrush,
+    /** viewedVCFBlocks() returns a axisBrush with just block.  It is used when
+     * .brushedVCFBlocks is [], i.e. axisBrushService.brushedAxes is [], seen
+     * when axis reference block (axisBrush.block) is from secondary server,
+     * likely ensureAxisBrush(block) is not effectively setting r.block
+     */
+    brushedDomain = axisBrush && (axisBrush.brushedDomain || axisBrush.block.brushedDomain);
+    return brushedDomain;
+  }
+  // Note comment in selectedSampleEffect() re. dependency axisBrush.brushedDomain 
+  /** .brushedDomain is not rounded, but could be because base positions are integral.
+   * This result is rounded.
+   */
+  @computed('axisBrush.brushedDomain')
+  get brushedDomainLength () {
+    let domain = this.brushedDomain;
+    if (domain) {
+      domain = Math.abs(domain[1] - domain[0]).toFixed();
+    }
+    return domain;
+  }
+
   @computed('axisBrush.brushedDomain')
   get brushedDomainRounded () {
     /** copied from axis-brush.js */
-    let domain = this.axisBrush?.brushedDomain;
+    let domain = this.brushedDomain;
     if (domain) {
       domain = domain.map((d) => d.toFixed(2));
     }
@@ -467,7 +1496,7 @@ export default class PanelManageGenotypeComponent extends Component {
      * could be factored to a library - probably 2 1-line functions - not compelling.
      */
     let
-    domain = this.axisBrush?.brushedDomain,
+    domain = this.brushedDomain,
     domainInteger = domain && 
       (intervalSize(domain) <= this.intervalLimit * 1e6) &&
       domain.map((d) => +d.toFixed(0));
@@ -476,26 +1505,37 @@ export default class PanelManageGenotypeComponent extends Component {
 
   // ---------------------------------------------------------------------------
 
-  /** Request the list of samples of the vcf of the brushed block.
+  /** Request the list of samples of vcfBlock.
+   * @return undefined if scope or vcfDatasetId are not defined,
+   * or a promise yielding received text
+   * @param vcfBlock
    */
-  vcfGenotypeSamples() {
+  vcfGenotypeSamplesDataset(vcfBlock) {
     /** implemented by common/models/block.js : Block.vcfGenotypeSamples().  */
     const
     fnName = 'vcfGenotypeSamples',
-    scope = this.lookupScope,
-    vcfDatasetId = this.lookupDatasetId;
-    if (scope && vcfDatasetId)
-    {
+    vcfDatasetId = vcfBlock?.get('datasetId.id'),
+    /** as in .lookupScope */
+    scope = vcfBlock.get('name');
+    let textP;
+    if (scope && vcfDatasetId)   {
       this.lookupMessage = null;
 
-      let textP = this.auth.vcfGenotypeSamples(
-        this.apiServerSelectedOrPrimary, vcfDatasetId, scope,
+      textP = this.auth.genotypeSamples(
+        vcfBlock, vcfDatasetId, scope,
         {} );
       textP.then(
         (text) => {
           const t = text?.text;
           dLog(fnName, t?.length || Object.keys(text), t?.slice(0, 60));
-          this.sampleCache.sampleNames[vcfDatasetId] = t;
+          const isGerminate = resultIsGerminate(t);
+          this.sampleCache.sampleNames[vcfDatasetId] = isGerminate ? t.join('\n') : t;
+          /* result from Germinate is currently an array of string sample names. */
+          /** trim off trailing newline; other non-sample column info could be
+           * removed; it is not a concern for the mapping. */
+          const sampleNames = isGerminate ? t : t.trim().split('\n');
+          this.datasetStoreSampleNames(vcfBlock, sampleNames);
+          this.mapSamplesToBlock(sampleNames, vcfBlock);
           if ((vcfDatasetId === this.lookupDatasetId) &&
               (this.vcfGenotypeSamplesSelected === undefined)) {
             this.vcfGenotypeSamplesSelected = [];
@@ -504,17 +1544,146 @@ export default class PanelManageGenotypeComponent extends Component {
         })
         .catch(this.showError.bind(this, fnName));
     }
+    return textP;
   }
+
+  /** Request the list of samples of the vcf of the brushed block.
+   * @return undefined if scope or vcfDatasetId are not defined,
+   * or a promise yielding received text
+   */
+  vcfGenotypeSamples() {
+    /** implemented by common/models/block.js : Block.vcfGenotypeSamples().  */
+    const
+    fnName = 'vcfGenotypeSamples',
+    vcfBlock = this.lookupBlock,
+    textP = this.vcfGenotypeSamplesDataset(vcfBlock);
+    /* vcfGenotypeSamplesDataset() initialises .vcfGenotypeSamplesSelected in
+     * this case; could move to here. */
+
+    return textP;
+  }
+
+  /** Request vcfGenotypeSamples for vcf blocks for which
+   * vcfGenotypeSamplesText() is not defined.
+   */
+  vcfGenotypeSamplesAllDatasets() {
+    let vcfDatasetId;
+    // i.e. gtBlocks
+    this.brushedOrViewedVCFBlocksVisible
+      .filter(vcfBlock => 
+        ((vcfDatasetId = vcfBlock?.get('datasetId.id')) &&
+         ! this.sampleCache.sampleNames[vcfDatasetId]))
+      .forEach(vcfBlock =>
+        // returns promise
+        this.vcfGenotypeSamplesDataset(vcfBlock));
+  }
+
+  //----------------------------------------------------------------------------
+
+  /** When user clicks All & Filtered, action ensureSamples() is used to request
+   * All sample names so that .samples is available for samplesOK() to filter.
+   */
+  @action
+  ensureSamples() {
+    const
+    userSettings = this.args.userSettings,
+    requestSamplesAll = userSettings.requestSamplesAll,
+    requestSamplesFiltered = userSettings.requestSamplesFiltered,
+    samplesLimitEnable = userSettings.samplesLimitEnable;
+
+    /** if Common (userSettings.samplesIntersection) and the intersection is
+     * empty, will use All+samplesLimit so get samples.
+     */
+    if ((requestSamplesAll &&
+         (requestSamplesFiltered || samplesLimitEnable)) ||
+        userSettings.samplesIntersection
+       ) {
+      dLog('ensureSamples', Object.keys(this.sampleCache.sampleNames));
+      this.vcfGenotypeSamplesAllDatasets();
+    }
+  }
+
+  /** When a dataset tab in the control dialog is displayed, request samples for
+   * the dataset if not already done.  
+   */
+  @computed('lookupDatasetId')
+  get ensureSamplesForDatasetTabEffect() {
+    const fnName = 'ensureSamplesForDatasetTabEffect';
+    /** Originally vcfGenotypeSamples() was manually triggered by user click;
+     * this function is added to improve the ergonomics of the user workflow,
+     * i.e. in the dataset tab the user will often want to select from the
+     * available samples, so pre-emptively request the samples to reduce button
+     * clicks.
+     * related : .ensureSamples();
+     */
+    if (! this.vcfGenotypeSamplesText) {
+      dLog(fnName);
+      this.vcfGenotypeSamples();
+    }
+
+  }
+
+  //----------------------------------------------------------------------------
+
+  /** block[sampleNamesSymbol] is a map from sampleName to block */
+  /** sampleName2Block maps from sampleName to an array of blocks which have
+   * features with that sampleName.
+   */
+  sampleName2Block = {}
+  /** Record a mapping from sampleNames to the block which they are within.
+   * @param sampleNames []
+   * @param block the lookupBlock use in API request which returned the sampleNames
+   */
+  mapSamplesToBlock(sampleNames, block) {
+    sampleNames.forEach((sampleName) => {
+      const
+      blocks = this.sampleName2Block[sampleName] ||
+        (this.sampleName2Block[sampleName] = []);
+      blocks.addObject(block);
+    });
+  }
+
+  /** Map from sampleName to the viewed VCF blocks which contain that sampleName.
+   * @return blocks array
+   * Result may be [].
+   */
+  sampleName2Blocks(sampleName) {
+    let blocks;
+    if (this.sampleName2Block) {
+      /** if a block is unviewed it will still be listed in sampleName2Block[].
+       */
+      blocks = this.sampleName2Block[sampleName];
+      if (blocks) {
+        blocks = blocks
+          .filter(block => block.isViewed);
+      }
+    }
+    /* blocks will be undefined if the sample has not yet been requested,
+     * in this case use the brushed/viewed blocks, filtered via datasetId.sampleNames.
+     * result may be [].
+     */
+    if (! blocks) {
+      blocks = this.brushedOrViewedVCFBlocksVisible
+        .filter(block => {
+          const names = block.get('datasetId.sampleNames');
+          return names && names.includes(sampleName);
+        });
+     }
+    return blocks;
+  }
+
 
   // ---------------------------------------------------------------------------
 
   showError(fnName, error) {
     let
-    message = error.responseJSON?.error?.message || error;
+    message = error.responseJSON?.error?.message ?? error;
     dLog(fnName, message, error.status, error.statusText);
+    if (message?.split) {
     const match = message?.split('Error: Unable to run bcftools');
     if (match.length > 1) {
       message = match[0];
+    }
     }
     this.lookupMessage = message;
   }
@@ -522,30 +1691,219 @@ export default class PanelManageGenotypeComponent extends Component {
 
   // ---------------------------------------------------------------------------
 
-  /** Lookup the genotype for the selected samples in the interval of the brushed block.
+  /** Determine sample names to request genotype for.
+   * if ! .requestSamplesAll, use selected samples.
+   * Filter if .requestSamplesFiltered.
+   * @param limitSamples if true, apply this.samplesLimit.  Equal to
+   * .samplesLimitEnable except when requesting headers - headerTextP().
+   * @param datasetId if defined, then return the samples for this dataset,
+   * otherwise for the selected dataset : this.lookupDatasetId
+   * @return {samples, samplesOK}, where samplesOK is true if All or samples.length
+   */
+  samplesOK(limitSamples, datasetId) {
+    let samplesRaw, samples;
+    const
+    userSettings = this.args.userSettings,
+    requestSamplesAll = userSettings.requestSamplesAll,
+    requestSamplesFiltered = userSettings.requestSamplesFiltered,
+    samplesLimit = userSettings.samplesLimit;
+    let ok = requestSamplesAll && ! requestSamplesFiltered && ! limitSamples;
+    if (! ok) {
+      if (requestSamplesAll) {
+        if (userSettings.samplesIntersection) {
+          // .samples in this case is .sampleNamesIntersection
+          samplesRaw = this.samples;
+        } else if (datasetId) {
+          // All sample names received for datasetId.
+          // As in vcfGenotypeSamples(). related : lookupBlockSamples(), vcfGenotypeSamplesText().
+          // Related : datasetStoreSampleNames().
+          samplesRaw = this.sampleCache.sampleNames[datasetId]
+            ?.trim().split('\n');
+          ok &&= ! samplesRaw;
+        } else {
+        // All sample names received for lookupDatasetId.
+        samplesRaw = this.samples;
+        }
+      } else {
+        if (datasetId) {
+          // as in lookupBlockSamples() and blocksSelectedSamples()
+          samplesRaw = this.vcfGenotypeSamplesSelectedAll[datasetId] || [];
+        } else {
+        samplesRaw = this.vcfGenotypeSamplesSelected || [];
+        }
+      }
+    }
+    if (requestSamplesFiltered) {
+      samplesRaw = samplesRaw
+        .filter(
+          (sampleName) =>
+            (! userSettings.haplotypeFiltersEnable || ! sampleIsFilteredOut(this.lookupBlock, sampleName)) &&
+            (! this.sampleFilter || this.sampleFilter(this.lookupBlock, sampleName)) );
+    }
+
+    if (limitSamples && (samplesRaw?.length > samplesLimit)) {
+      samplesRaw = samplesRaw.slice(0, samplesLimit);
+    }
+
+    /* Handle samplesLimit===0; that may not have a use since the features are
+     * already requested without samples. */
+    ok ||= (samplesRaw?.length || (limitSamples && !samplesLimit));
+    /** result is 1 string of names, separated by 1 newline.  */
+    samples = samplesRaw?.join('\n');
+
+    return {samples, samplesOK : ok};
+  }
+
+  /** Lookup the genotype for the selected samples in the interval of, depending on autoLookup : 
+   * . all visible brushed VCF blocks, or 
+   * . the brushed block selected by the currently viewed Datasets tab.
    */
   vcfGenotypeLookup() {
     const
-    fnName = 'vcfGenotypeLookup',
+    fnName = 'vcfGenotypeLookup';
+    if (this.args.userSettings.autoLookup) {
+      this.vcfGenotypeLookupAllDatasets();
+    } else {
+      this.vcfGenotypeLookupSelected();
+    }
+  }
+
+  //----------------------------------------------------------------------------
+
+  /** Lookup the genotype for the selected samples in the interval of the brushed block,
+   * selected by the currently viewed Datasets tab.
+   */
+  vcfGenotypeLookupSelected() {
+    const
+    fnName = 'vcfGenotypeLookupSelected',
     /** this.axisBrush.block is currently the reference; lookup the data block. */
-    // store = this.axisBrush?.get('block.store'),
-    store = this.apiServerSelectedOrPrimary?.store,
-    samplesRaw = this.vcfGenotypeSamplesSelected,
-    /** result is 1 string of names, separated by 1 newline.  */
-    samples = samplesRaw?.join('\n'),
+    userSettings = this.args.userSettings,
+    samplesLimitEnable = userSettings.samplesLimitEnable,
+    {samples, samplesOK} = this.samplesOK(samplesLimitEnable),
     domainInteger = this.vcfGenotypeLookupDomain,
     vcfDatasetId = this.lookupDatasetId;
-    if (samples?.length && domainInteger && vcfDatasetId) { // && scope
+    /* Possibly filter out .lookupBlock if .datasetId positionFilter === false,
+     * as is done in vcfGenotypeLookupAllDatasets().
+     */
+    if (samplesOK && domainInteger && vcfDatasetId) { // && scope
       this.lookupMessage = null;
       let
-      scope = this.lookupScope,
+      scope = this.lookupScope;
+      /** .lookupDatasetId is derived from .lookupBlock so .lookupBlock must be defined here. */
+      let blockV = this.lookupBlock;
+
+      this.vcfGenotypeLookupDataset(blockV, vcfDatasetId, scope, domainInteger, samples, samplesLimitEnable);
+    }
+  }
+  /** Request VCF genotype for brushed datasets which are visible
+   */
+  vcfGenotypeLookupAllDatasets() {
+    // related : notes in showSamplesWithinBrush() re. isZoomedOut(), .rowLimit.
+    const
+    visibleBlocks = this.brushedOrViewedVCFBlocksVisible;
+    visibleBlocks
+    /** filter out blocks which are `minus` in the positionFilter - if requested
+     * the result should be empty.
+     * See table in vcfGenotypeLookupDataset().
+     */
+      .filter(block => {
+        const dataset = block.get('datasetId.content');
+        return dataset.positionFilter !== false;
+      })
+      .forEach((blockV, i) => {
+      const
+      vcfDatasetId = blockV.get('datasetId.id'),
+      /** use .name instead of .scope, because some VCF files use 'chr' prefix
+       * on chromosome name e.g. chr1A, and .name reflects that;
+       * as in lookupScope().
+       */
+      scope = blockV.name,
+      userSettings = this.args.userSettings,
+      samplesLimitEnable = userSettings.samplesLimitEnable,
+      {samples, samplesOK} = this.samplesOK(samplesLimitEnable, vcfDatasetId),
+      domainInteger = this.vcfGenotypeLookupDomain;
+      /* samplesOK() returns .samples '' if none are selected; passing
+       * vcfGenotypeLookupDataset( samples==='' ) will get all samples, which
+       * may be valid, but for now skip this dataset if ! .length.
+       */
+      if (this.args.userSettings.requestSamplesAll || samples.length) {
+        this.vcfGenotypeLookupDataset(blockV, vcfDatasetId, scope, domainInteger, samples, samplesLimitEnable);
+      }
+    });
+  }
+  /** Send API request for VCF genotype of the given vcfDatasetId.
+   * @param blockV
+   * @param vcfDatasetId one of the VCF genotype datasets on the brushed axis
+   * @param scope of the brushed axis
+   * @param domainInteger brushed domain on the axis / parent
+   * @param samples selected samples to request
+   * @param samplesLimitEnable  .args.userSettings.samplesLimitEnable
+   */
+  vcfGenotypeLookupDataset(blockV, vcfDatasetId, scope, domainInteger, samples, samplesLimitEnable) {
+    const fnName = 'vcfGenotypeLookupDataset';
+    if (scope) {
+      const
+      userSettings = this.args.userSettings,
       requestFormat = this.requestFormat,
-      requestOptions = {requestFormat},
-      textP = vcfGenotypeLookup(this.auth, this.apiServerSelectedOrPrimary, samples, domainInteger,  requestOptions, vcfDatasetId, scope, this.rowLimit);
+      requestSamplesFiltered = userSettings.requestSamplesFiltered,
+      /** If filtered or column-limited, then samples is a subset of All. */
+      requestSamplesAll = userSettings.requestSamplesAll && ! requestSamplesFiltered && ! samplesLimitEnable,
+      snpPolymorphismFilter = userSettings.snpPolymorphismFilter,
+      requestOptions = {requestFormat, requestSamplesAll, snpPolymorphismFilter},
+      /** Datasets selected for intersection.
+       * Used to indicate if any positionFilter are defined and hence isecFlags
+       * and isecDatasets will be set.  If no datasets other than this one
+       * (vcfDatasetId) have positionFilter, then isec is not required.
+       */
+      isecDatasetsNotSelf = this.gtDatasets
+          .filter(dataset =>
+            ('boolean' === typeof dataset.positionFilter) &&
+              (dataset.id !== vcfDatasetId));
+      if (isecDatasetsNotSelf.length) {
+        const
+        /** filter out null and undefined; include vcfDatasetId i.e. the dataset
+         * which is being requested.
+         * 
+         * table value indicates if dataset should be included in isecDatasets.
+         * |------------------------+-------------------------------+-------|
+         * |                        | (dataset.id === vcfDatasetId) |       |
+         * | dataset.positionFilter | true                          | false |
+         * |------------------------+-------------------------------+-------|
+         * | undefined              | true                          | false |
+         * | true                   | true                          | true  |
+         * | false                  | (true) N/A                    | true  |
+         * |------------------------+-------------------------------+-------|
+         *
+         * N/A : this case is filtered out in vcfGenotypeLookupAllDatasets().
+         */
+        isecDatasets = this.gtDatasets
+          .filter(dataset =>
+            ('boolean' === typeof dataset.positionFilter) ||
+              (dataset.id === vcfDatasetId)),
+        isecDatasetIds = isecDatasets
+          .mapBy('id'),
+        /** in isecDatasets[] dataset positionFilter is only nullish at this
+         * point if dataset.id is vcfDatasetId - use flag true in that case. */
+        flags = isecDatasets.map(dataset => dataset.positionFilter ?? true),
+        allTrue = flags.findIndex(flag => !flag) === -1,
+        isecFlags = allTrue ? isecDatasetIds.length :
+          '~' + flags.map(flag => flag ? '1' : '0').join('');
+        requestOptions.isecDatasetIds = isecDatasetIds;
+        requestOptions.isecFlags = '-n' + isecFlags;
+      }
+      const
+      textP = vcfGenotypeLookup(this.auth, samples, domainInteger,  requestOptions, vcfDatasetId, scope, this.rowLimit);
       // re-initialise file-anchor with the new @data
       this.vcfExportText = null;
       textP.then(
         (text) => {
+          const
+          isGerminate = resultIsGerminate(text),
+          callsData = isGerminate && text;
+          if (isGerminate) {
+            text = callsData.map(snp => Object.entries(snp).join('\t')).join('\n');
+            dLog(fnName, text.length, callsData.length);
+          }
           // displays vcfGenotypeText in textarea, which triggers this.vcfGenotypeTextSetWidth();
           this.vcfGenotypeText = text;
           this.headerTextP.then((headerText) => {
@@ -558,15 +1916,25 @@ export default class PanelManageGenotypeComponent extends Component {
             later(() => this.vcfExportText = combined, 1000);
           });
 
-          /** .lookupDatasetId is derived from .lookupBlock so .lookupBlock must be defined here. */
-          let blockV = this.lookupBlock;
           dLog(fnName, text.length, text && text.slice(0,200), blockV.get('id'));
           if (text && blockV) {
-            const added = addFeaturesJson(
-              blockV, this.requestFormat, this.args.userSettings.replaceResults,
-              this.args.selectedFeatures, text);
+            const
+            replaceResults = this.args.userSettings.replaceResults,
+            selectedFeatures = this.args.selectedFeatures,
+            added = isGerminate ?
+              addFeaturesGerminate(blockV, requestFormat, replaceResults, selectedFeatures, callsData) :
+              addFeaturesJson(blockV, requestFormat, replaceResults, selectedFeatures, text);
 
             if (added.createdFeatures && added.sampleNames) {
+              /* Update the filtered-out samples, including the received data,
+               * for the selected haplotypeFilters.
+               * The received data (createdFeatures) is in lookupBlock, so could
+               * limit this update to lookupBlock.
+               * showHideSampleFn is passed undefined - this is just updating
+               * the sample status, and table display is done by
+               * showSamplesWithinBrush().
+               */
+              this.haplotypeFilterSamples(/*showHideSampleFn*/undefined, /*matrixView*/undefined);
               const showOtherBlocks = true;
               if (showOtherBlocks) {
                 this.showSamplesWithinBrush();
@@ -578,7 +1946,9 @@ export default class PanelManageGenotypeComponent extends Component {
                * than table data causing undefined / mis-aligned associated
                * features.
                */
-              const displayData = vcfFeatures2MatrixView(this.requestFormat, added);
+              const displayData = vcfFeatures2MatrixView
+                (this.requestFormat, added, this.featureFilter.bind(this), this.sampleFilter,
+                 this.sampleNamesCmp, /*options*/ {userSettings});
               this.displayData.addObjects(displayData);
               }
               // equivalent : displayData[0].features.length
@@ -596,6 +1966,230 @@ export default class PanelManageGenotypeComponent extends Component {
     }
   }
 
+  //----------------------------------------------------------------------------
+
+  @tracked
+  datasetPositionFilterChangeCount = 0;
+  @action
+  changeDatasetPositionFilter(dataset, pf) {
+    this.datasetPositionFilterChangeCount++;
+  }
+  showDatasetPositionFilter(dataset, positionFilterText) {
+    const
+    datasetId = dataset.get('id'),
+    // positionFilterText = datasetId.positionFilterText,
+    // th.ht__highlight - class is ephemeral.
+    // change ht_master and/or ht_clone_top ?
+    // [title=' + datasetId + ']
+    head$ = $(
+      '#observational-table > div.ht_clone_top.handsontable > div.wtHolder > div.wtHider > div.wtSpreader > table.htCore > thead > tr > th > div > span.colHeader > div.head.col-Dataset-Name'),
+    prefix = positionFilterText + '  ';
+    head$.text(prefix + head$.text());
+  }
+
+  /** @return those blocks which have positionFilter and featurePositions
+   */
+  get blockIntersections() {
+    const
+    blocks = this.brushedOrViewedVCFBlocksVisible
+      .filter(block => block[Symbol.for('featurePositions')] && 
+              ((block.positionFilter ?? null) !== null));
+    return blocks;
+  }
+
+  /** If blocks ("datasets") are selected for intersection filtering,
+   * filter an array of features.
+   * @return features, or a filtered copy of it.
+   */
+  featureFilterPre(block, features) {
+    const
+    fnName = 'featureFilterPre',
+    blocks = this.blockIntersections;
+    if (blocks.length) {
+      const
+      /** refer : models/block.js : addFeaturePositions()  */
+      featurePositions = blocks.map(block => block[Symbol.for('featurePositions')]);
+      const feature0 = features[0];
+
+      features = features.filter(feature => 
+        blocks.find((block, blockIndex) => {
+          const
+          positionIsInBlock = featurePositions[blockIndex].has(feature.get('value.0')),
+          out = positionIsInBlock !== block.positionFilter;
+          return out;
+        }) === undefined);
+      /** If all are filtered out, the headers are not displayed, so retain 1 feature. */
+      if (! features.length && feature0) {
+        features = [feature0];
+      }
+    }
+    if (features && this.args.userSettings.snpPolymorphismFilter) {
+      features = this.snpPolymorphismFilter(block, features);
+    }
+
+    return features;
+  }
+
+  /** Calculate for each feature / SNP the count of values which are Alt and Ref.
+   * If the SNP has only Alt or only Ref then it is monomorphic and is of
+   * limited interest, so filter it out.
+   */
+  snpPolymorphismFilter(block, features) {
+    const requestSamplesAll = this.args.userSettings.requestSamplesAll;
+    features = features
+      .filter(feature => {
+        // related : featuresCountMatches(), haplotypeFilterSamples().
+        const
+        /** can't apply this filter if no sample genotype values have been
+         * loaded for this feature. */
+        haveSampleValues = featureHasSamplesLoaded(feature),
+        counts = haveSampleValues &&
+          Object.entries(feature.values)
+          .reduce((result, [key, value]) => {
+            const sampleName = key;
+            if (! valueNameIsNotSample(sampleName) &&
+                (requestSamplesAll || this.sampleSelectedFilter(block, sampleName))) {
+              const gtValue = value; // feature.values[sampleName];
+              if (gtValue !== undefined) {
+                if ('012'.includes(gtValue)) {
+                  result[+gtValue]++;
+                } else if ('CATG'.includes(gtValue)) {
+                  // count nucleotide CATG value compared against features.values.{alt,ref}
+                  // count features.values.alt in gtValue
+                  // const altCopies = stringCountString(gtValue, features.values.alt);
+                  // result[altCopies]++;
+                }
+              }
+            }
+            return result;
+          }, [0, 0, 0]),
+        ok = haveSampleValues && (counts[0] && counts[2]);
+        return ok;
+      });
+    return features;
+  }
+
+  featureFilter(feature) {
+    const
+    MAF = feature.values.MAF,
+    /** don't filter datasets which don't have MAF */
+    ok = (MAF === undefined) || 
+      ((+MAF < this.args.userSettings.mafThreshold) === this.args.userSettings.mafUpper);
+    return ok;
+  }
+
+  /** Optional filter by call rate of a sample within a block.
+   * @return undefined if callRateThreshold is 0, otherwise a filter function with signature
+   * sampleFilter(block, sampleName) -> boolean, false means filter out
+   */
+  @computed('args.userSettings.callRateThreshold')
+  get sampleFilter() {
+    const
+    callRateThreshold = this.args.userSettings.callRateThreshold,
+    fn = ! callRateThreshold ? undefined : (block, sampleName) => {
+      const
+      sampleCount = block[callRateSymbol][sampleName],
+      /** OK (filter in) if callRate is undefined because of lack of counts. */
+      callRate = sampleCount && (sampleCount.calls + sampleCount.misses) ?
+        sampleCount.calls / (sampleCount.calls + sampleCount.misses) :
+        undefined,
+      ok = ! callRate || (callRate >= callRateThreshold);
+      return ok;
+    };
+    return fn;
+  }
+  /**
+   * @return true if sampleName is selected in dataset of block,
+   * or valueNameIsNotSample(sampleName), i.e. sampleName is ref/alt/etc.
+   */
+  sampleSelectedFilter(block, sampleName) {
+    const
+    datasetId = block.get('datasetId.id'),
+    samplesSelected = this.vcfGenotypeSamplesSelectedAll[datasetId],
+    // related : refAlt.includes(sampleName)
+    ok = valueNameIsNotSample(sampleName) ||
+      samplesSelected?.includes(sampleName);
+    return ok;
+  }
+
+  /** @return undefined if haplotypeFiltersCount is 0, otherwise
+   * a sort comparator function with signature (sampleName1, sampleName2),
+   * which returns +ve if column of sampleName2 should be shown to the right of sampleName1.
+   * Related : columnNamesCmp().
+   */
+  @computed(
+    'haplotypeFiltersCount', 'featureFiltersCount',
+    'args.userSettings.selectFeaturesByLDBlock',
+  )
+  get sampleNamesCmp() {
+    /* clear the cached results of sampleMatchesSum() */
+    this.matchesSummary = {};
+    const
+    selectFeaturesByLDBlock = this.args.userSettings.selectFeaturesByLDBlock,
+    filtersCount = selectFeaturesByLDBlock ? this.haplotypeFiltersCount : this.featureFiltersCount,
+    fn = ! filtersCount ? undefined : (...sampleNames) => {
+      const
+      matchRates = sampleNames.map(this.sampleMatchesSum.bind(this)),
+      cmp = matchRates[1] - matchRates[0];
+      return cmp;
+    };
+    return fn;
+  }
+  /** Wrap sampleNamesCmp() - handle multiple blocks, and strip off
+   * the datasetId which is appended to sampleNames to form columnNames.
+   * Related : vcf-feature.js : columnNamesCmp()
+   * @param columnNames 2 columnNames to compare
+   */
+  columnNamesCmp(sampleNamesCmp, ...columnNames) {
+    const
+    /** these non-sample columns are prioritised to the left : Alt Ref, .. */
+    ns = columnNames.map(columnName => valueNameIsNotSample(columnName.toLowerCase())),
+    /** if columnNames[0] is Alt/Ref then cmp is -1;   if ... [1] then ... +1  */
+    cmp = ns[0] && ns[1] ? 0 : ns[0] ? -1 : ns[1] ? 1 :
+      sampleNamesCmp.apply(undefined, columnNames.map(columnName2SampleName));
+    return cmp;
+  }
+
+
+  /** result of sampleMatchesSum()
+   * [sampleName] -> {matches, mismatches}
+   */
+  matchesSummary = {};
+  /** Sum the matches of this sample with Alt or Ref value at the selected SNPs.
+   * Often samples will only be present in one block; this function sums the
+   * matches across the viewed blocks.
+   */
+  sampleMatchesSum(sampleName) {
+    let ratio = this.matchesSummary[sampleName];
+    if (ratio === undefined) {
+      const
+      blocks = this.sampleName2Blocks(sampleName),
+      /** sum of {,mis}match counts for blocks containing sampleName.  */
+      ms = blocks
+        .reduce((sum, block) => {
+          const
+          m = block?.[sampleMatchesSymbol]?.[sampleName];
+          if (m) {
+            if (! sum) {
+              sum = Object.assign({}, m);
+            } else {
+              sum.matches += m.matches;
+              sum.mismatches += m.mismatches;
+            }
+          }
+          return sum;
+        }, null);
+      ratio = ! ms || ! (ms.matches + ms.mismatches) ? 0 :
+        ms.matches / (ms.matches + ms.mismatches);
+      this.matchesSummary[sampleName] = ratio;
+    }
+    return ratio;
+  }
+
+
+  //----------------------------------------------------------------------------
+
+
   @computed(
     'lookupDatasetId', 'lookupScope', 'vcfGenotypeLookupDomain',
     'vcfGenotypeSamplesSelected', 'requestFormat')
@@ -603,7 +2197,7 @@ export default class PanelManageGenotypeComponent extends Component {
     const
     scope = this.lookupScope,
     vcfDatasetId = this.lookupDatasetId,
-    domainText = this.vcfGenotypeLookupDomain.join('-'),
+    domainText = this.vcfGenotypeLookupDomain ? this.vcfGenotypeLookupDomain.join('-') : '',
     samplesLength = this.vcfGenotypeSamplesSelected ? this.vcfGenotypeSamplesSelected.length : '',
     fileName = vcfDatasetId +
       '_' + scope +
@@ -634,11 +2228,14 @@ export default class PanelManageGenotypeComponent extends Component {
     if (! this.axisBrush /* || ! this.lookupBlock*/) {
       // perhaps clear table
     } else {
+      const userSettings = this.args.userSettings;
       let
       referenceBlock = this.axisBrush?.get('block'),
-      /** expect : block.referenceBlock.id === referenceBlock.id
+      /** parallel to .gtDatasetIds.
+       * expect : block.referenceBlock.id === referenceBlock.id
+       * Based on : .brushedOrViewedVCFBlocksVisible()
        */
-      blocks = this.brushedVCFBlocks.map((abb) => abb.block);
+      visibleBlocks = this.gtBlocks;
       /* Filter out blocks
        * which are isZoomedOut.  This is one way to enable .rowLimit
        * (or block.featuresCountsThreshold) to limit the
@@ -649,44 +2246,135 @@ export default class PanelManageGenotypeComponent extends Component {
         .filter((b) => 
             b.get('featuresCountIncludingBrush') <= this.rowLimit);
        */
-      if (blocks.length === 0) {
-        blocks = this.blockService.viewed.filter((b) => b.hasTag('VCF'));
-      }
-      dLog(fnName, blocks.mapBy('id'));
-      if (blocks.length) {
+      dLog(fnName, visibleBlocks.mapBy('id'));
+      if (visibleBlocks.length) {
         const
-        featuresArrays = blocks
-        .filterBy('visible')
-          .map((b) => b.featuresInBrush)
+        // this.gtDatasets is equivalent to visibleBlocks.mapBy('datasetId.content'),
+        gtDatasetIds = this.gtDatasetIds,
+        featuresArrays = visibleBlocks
+        /* featureFilterPre() is expected to filter out most features,
+         * so apply it before rowLimit; */
+          .map((b) => this.featureFilterPre(b, b.featuresInBrush))
           .filter((features) => features.length)
           .map((features) => features.slice(0, this.rowLimit));
+
+        this.collateBlockHaplotypeFeatures(featuresArrays);
+        this.collateBlockSamplesCallRate(featuresArrays);
+
         if (featuresArrays.length) {
+          const options = {userSettings};
           if (this.urlOptions.gtMergeRows) {
             /** {rows, sampleNames}; */
-            let sampleGenotypes = 
-                vcfFeatures2MatrixViewRows(this.requestFormat, featuresArrays);
-            this.displayDataRows = sampleGenotypes.rows;
-            this.columnNames = ['Block', 'Name'].concat(sampleGenotypes.sampleNames);
+            let sampleFilters = [];
+            if (userSettings.filterBySelectedSamples && ! userSettings.requestSamplesAll) {
+              sampleFilters.push(this.sampleSelectedFilter.bind(this));
+            }
+            if (this.sampleFilter) {
+              sampleFilters.push(this.sampleFilter);
+            }
+
+            const
+            sampleGenotypes = 
+              vcfFeatures2MatrixViewRows(
+                this.requestFormat, featuresArrays, this.featureFilter.bind(this), sampleFilters,
+                this.sampleNamesCmp,
+                options);
+            /** Insert datasetIds to this.columnNames.
+             * Add features to : this.displayDataRows.
+             */
+            const nonVCF = this.nonVCFFeaturesWithinBrushData;
+            const displayDataRows = sampleGenotypes.rows;
+            /** Annotate rows with features from nonVCF.features which overlap them.
+             * nonVCFFeaturesWithinBrushData() could return []{datasetId, features : [] },
+             * and that datasetId could be passed to annotateRowsFromFeatures() with its features.
+             * or :
+             * For the purposes of annotateRowsFromFeatures() and
+             * featuresValuesFields(), the result nonVCF.features could be
+             * 1 array of features per block, as with featuresArrays above.
+             *
+             * Earlier functionality instead displayed start and end position of
+             * all of nonVCF.features, using rowsAddFeature(), until 54baad61.
+             */
+            annotateRowsFromFeatures(displayDataRows, nonVCF.features, this.selectedFeaturesValuesFields);
+            const currentFeaturesValuesFields = featuresValuesFields(nonVCF.features);
+            const
+            datasetIds = nonVCF.features.mapBy('blockId.datasetId.id').uniq(),
+            extraDatasetColumns = datasetIds
+              .map((datasetId) => this.selectedFeaturesValuesFields[datasetId])
+              .filter(x => x)
+              .flat(),
+
+            /** non- Genotype/VCF datasetColumns; they are passed separately to
+             * gtDatasetColumns as they may require different presentation. */
+            datasetColumns = nonVCF.columnNames,
+
+            /* merge new values in - remember selections for datasets which are currently not visible. */
+            // if (this.currentFeaturesValuesFields) Object.assign(this.currentFeaturesValuesFields, currentFeaturesValuesFields);
+
+            /** sampleNamesCmp() is already applied per-block (i.e. per array
+             * in featuresArrays[]) in vcfFeatures2MatrixViewRowsResult().
+             * columnNamesCmp(), which wraps sampleNamesCmp(), is applied across
+             * all the blocks (all of featuresArrays[]) in the following, so the
+             * per-block sort could be omitted.
+             */
+            sampleNames = this.sampleNamesCmp ? 
+              sampleGenotypes.sampleNames
+              .sort(this.columnNamesCmp.bind(this, this.sampleNamesCmp)) :
+              sampleGenotypes.sampleNames,
+            /* Position value is returned by matrix-view : rowHeaders().
+             * for gtMergeRows the Position column is hidden.
+             * .sampleNames contains : [ 'Ref', 'Alt', 'tSNP', 'MAF' ]; 'tSNP' is mapped to 'LD Block'
+             */
+            columnNames = gtDatasetIds
+              .concat(nonVCF.columnNames)
+              .concat(['Position', 'Name'])
+              .concat(extraDatasetColumns)
+              .concat(sampleNames);
+
+            /** These are passed to matrix-view, so set them at one time. */
+            setProperties(this, {
+              displayData : null,
+              displayDataRows,
+              gtDatasetColumns : gtDatasetIds,
+              datasetColumns,
+              extraDatasetColumns,
+              currentFeaturesValuesFields,
+              columnNames,
+            });
+
           } else {
             let sampleNames;
-            if (this.args.userSettings.filterBySelectedSamples) {
+            if (userSettings.filterBySelectedSamples) {
               /** instead of this.selectedSamples (i.e. of lookupDatasetId), show
                * selected samples of all .brushedVCFBlocks.
                */
-              const selectedSamplesOfBrushed = this.blocksSelectedSamples(blocks);
+              const selectedSamplesOfBrushed = this.blocksSelectedSamples(visibleBlocks);
               if (selectedSamplesOfBrushed.length) {
                 sampleNames = selectedSamplesOfBrushed;
               }
             }
             if (! sampleNames) {
-              sampleNames = this.featuresArraysToSampleNames(featuresArrays);
+              /** filter out tSNP and MAF because they are already covered, in
+               * vcfFeatures2MatrixView() : mafColumn, haplotypeColourColumn
+               */
+              sampleNames = this.featuresArraysToSampleNames(featuresArrays)
+                .filter(sampleName => ! ['tSNP', 'MAF'].includes(sampleName));
             }
 
             const
             features = featuresArrays.flat(),
             sampleGenotypes =  {createdFeatures : features, sampleNames},
-            displayData = vcfFeatures2MatrixView(this.requestFormat, sampleGenotypes);
-            this.displayData = displayData;
+            displayData = vcfFeatures2MatrixView
+            (this.requestFormat, sampleGenotypes, this.featureFilter.bind(this), this.sampleFilter,
+             this.sampleNamesCmp, options);
+            setProperties(this, {
+              displayData,
+              displayDataRows : null,
+              columnNames : null,
+              gtDatasetColumns : gtDatasetIds,
+              datasetColumns : null,
+              extraDatasetColumns : null,
+            });
           }
         }
       }
@@ -716,8 +2404,13 @@ export default class PanelManageGenotypeComponent extends Component {
   }
 
   @computed(
+    /** using axisBrush.brushedDomain as dependency works, but not
+     * .brushedDomain, which is normally equivalent.
+    'brushedDomain.{0,1}',
+     */
     'axisBrush.brushedDomain',
 
+    // update : 0d6c0dd9 implements table column filtering by .selectedSamples.
     /* In vcfFeatures2MatrixViewRows() / gtMergeRows currently all samples
      * results received are displayed; vcfFeatures2MatrixView() filters by the
      * given added.sampleNames.   Added <select> for samples
@@ -727,20 +2420,220 @@ export default class PanelManageGenotypeComponent extends Component {
      * dependancy should be enabled :
      */
     'vcfGenotypeSamplesSelected.[]',
+    /** This is equivalent in effect to vcfGenotypeSamplesSelected.[];
+     * performance is possibly similar.
+     * 'selectedCount',
+     */
 
     'blockService.viewedVisible',
     'requestFormat', 'rowLimit',
     'args.userSettings.filterBySelectedSamples',
+    /** showSamplesWithinBrush() uses gtMergeRows */
+    'urlOptions.gtMergeRows',
+    /** featureFilterPre() -> snpPolymorphismFilter() */
+    'args.userSettings.snpPolymorphismFilter',
+    /** showSamplesWithinBrush() -> featureFilter() uses .mafUpper, .mafThreshold */
+    'args.userSettings.mafUpper',
+    'args.userSettings.mafThreshold',
+    /** callRateThreshold -> sampleFilter, passed to vcfFeatures2MatrixView{,Rows{,Result}} -> sampleIsFilteredOut{,Blocks} */
+    'args.userSettings.callRateThreshold',
+    'datasetPositionFilterChangeCount',
+
+    'args.userSettings.haplotypeFiltersEnable',
+    'args.userSettings.selectFeaturesByLDBlock',
+    'args.userSettings.haplotypeFilterRef',
+    'haplotypeFiltersCount',
+    'featureFiltersCount',
   )
   get selectedSampleEffect () {
     const fnName = 'selectedSampleEffect';
     const viewedVisible = this.blockService.viewedVisible;
     dLog(fnName, viewedVisible.length);
     // remove all because sampleNames / columns may have changed.
-    if (this.displayData.length) {
+    if (this.displayData?.length) {
       this.displayData.removeAt(0, this.displayData.length);
     }
     this.showSamplesWithinBrush();
+  }
+
+  //----------------------------------------------------------------------------
+
+  /** Construct a map from haplotype / tSNP values to Feature arrays.
+   * @param featuresArrays  array of arrays of features, 1 array per block
+   */
+  collateBlockHaplotypeFeatures(featuresArrays) {
+    featuresArrays
+      .forEach(
+        (features) => {
+          const
+          blockp = features?.[0].get('blockId'),
+          /** blockp may be a proxy; want the actual Block, for reference via Symbol */
+          block = blockp && contentOf(blockp),
+          map = block[haplotypeFeaturesSymbol] || (block[haplotypeFeaturesSymbol] = {});
+          features
+          .reduce(
+            (map, feature) => {
+              const
+              tSNP = feature.values?.tSNP;
+              if (tSNP) {
+                const features = map[tSNP] || (map[tSNP] = Ember_A());
+                features.push(feature);
+              }
+              return map;
+            },
+            map);
+        }
+      );
+  }
+
+  //----------------------------------------------------------------------------
+
+  /** Construct a map per block from sample names to call rate.
+   * Call rate is defined as the genotype calls divided by the total number of
+   * Features / SNPs in the brushed interval.
+   * Genotype calls are e.g. 0, 1, 2; misses are './.'
+   * @param featuresArrays  array of arrays of features, 1 array per block
+   */
+  collateBlockSamplesCallRate(featuresArrays) {
+    const fnName = 'collateBlockSamplesCallRate';
+    const callKey = ['misses', 'calls'];
+    featuresArrays
+      .forEach(
+        (features) => {
+          const
+          blockp = features?.[0].get('blockId'),
+          /** blockp may be a proxy; want the actual Block, for reference via Symbol */
+          block = blockp && contentOf(blockp),
+          map = block[callRateSymbol] || (block[callRateSymbol] = {});
+          features
+          .reduce(
+            (map, feature) => {
+              // could do map=, but the 3 levels have the same value for map.
+              Object.entries(feature.values).reduce((map, [key, value], columnIndex) => {
+                if (! valueNameIsNotSample(key)) {
+                  /* could skip samples which are filtered out; would have to
+                  * return that info from vcfFeatures2MatrixView{,RowsResult}() */
+                  /** equivalent : this.columnNames[columnIndex] when gtMergeRows */
+                  const
+                  sampleName = key,
+                  call = value !== './.',
+                  sampleCount = map[key] || (map[key] = {calls:0, misses:0});
+                  sampleCount[callKey[+call]]++;
+                }
+                return map;
+              }, map);
+
+              return map;
+            },
+            map);
+          dLog(fnName, map, block.brushName);
+        });
+  }
+
+  /** for brushedOrViewedVCFBlocks, apply any haplotypeFilters which the blocks have.
+   *
+   * design :
+   * block *
+   *   Haplotype / tSNP *
+   *     feature *
+   *       sample *
+   *         accumulate : block : sample : count of matches and mismatches 
+   *
+   * @param showHideSampleFn if provided, after filtering, call this for each
+   * sample to hide/show the column.
+   */
+  @action
+  haplotypeFilterSamples(showHideSampleFn, matrixView) {
+
+    /** match a (sample genotype call) value against the Ref/Alt value of the
+     * feature / SNP.  a rough factorisation; currently there is just 1 flag
+     * haplotypeFilterRef for all selected 'LD Blocks', and hence one instance
+     * of MatchRef, but these requirements are likely to evolve.  */
+    class MatchRef {
+      constructor(matchRef) {
+        this.matchKey = matchRef ? 'ref' : 'alt';
+        this.matchNumber = matchRef ? '0' : '2';
+      }
+      /** to match homozygous could use .startsWith(); that will also match 1/2 of heterozygous.
+       * Will check on (value === '1') : should it match depending on matchRef ?
+       * @param value sample/individual value at feature / SNP
+       * @param matchValue  ref/alt value at feature / SNP (depends on matchRef)
+       */
+      matchFn(value, matchValue) { return (value === this.matchNumber) || (value === '1') || value.includes(matchValue); }
+    }
+
+    const
+    userSettings = this.args.userSettings,
+    matchRef = new MatchRef(userSettings.haplotypeFilterRef),
+    ablocks = this.brushedOrViewedVCFBlocks;
+    const selectFeaturesByLDBlock = this.args.userSettings.selectFeaturesByLDBlock;
+
+    ablocks.forEach((abBlock) => {
+      let blockMatches = {};
+      const
+      block = abBlock.block;
+      if (selectFeaturesByLDBlock) {
+        const
+      selected = block[haplotypeFiltersSymbol],
+      matchesR = selected.reduce((matches, tSNP) => {
+        const features = block[haplotypeFeaturesSymbol][tSNP];
+        featuresCountMatches(features, matches, matchRef);
+        return matches;
+      }, {});
+        blockMatches = matchesR;
+      } else {
+        const
+        features = block[featureFiltersSymbol];
+        if (features) {
+          featuresCountMatches(features, blockMatches, /*matchRef*/null);
+        }
+      }
+
+      /**
+       * @param matchRefIn MatchRef.  if not defined then construct it for each feature from feature[matchRefSymbol].
+       */
+      function featuresCountMatches(features, matches, matchRefIn) {
+        features.forEach((feature) => {
+          const
+          matchRef = matchRefIn || new MatchRef(feature[matchRefSymbol]),
+          matchValue = feature.values[matchRef.matchKey];
+          Object.entries(feature.values).forEach(([key, value]) => {
+            if (! valueNameIsNotSample(key) && ! valueIsMissing(matchValue)) {
+              const match = matchRef.matchFn(value, matchValue);
+              const sampleMatch = matches[key] || (matches[key] = {matches: 0, mismatches : 0});
+              sampleMatch[match ? 'matches' : 'mismatches']++;
+            }
+          });
+        });
+      }
+
+      block[sampleMatchesSymbol] = blockMatches;
+      if (showHideSampleFn && this.args.userSettings.haplotypeFiltersEnable) {
+        /* 
+         * block *
+         *   sample*
+         *     show/hide according to count
+         */
+        Object.entries(blockMatches).forEach(([sampleName, counts]) => {
+          showHideSampleFn(sampleName, counts);
+        });
+      }
+    });
+    if (matrixView) {
+      // to enable trialling of action to filer after Clear
+      this.matrixView = matrixView;
+    }
+  }
+
+  //----------------------------------------------------------------------------
+
+  @action
+  copyTableToClipboard() {
+    const
+    fnName = 'copyTableToClipboard',
+    tableText = this.tableApi.dataClipboard();
+    dLog(fnName, tableText);
+    clipboard_writeText(tableText);
   }
 
 
@@ -750,26 +2643,40 @@ export default class PanelManageGenotypeComponent extends Component {
   get headerTextP() {
     const
     fnName = 'headerText',
-    samplesRaw = this.vcfGenotypeSamplesSelected || [],
-    samples = samplesRaw?.join('\n'),
+    {samples, samplesOK} = this.samplesOK(false),
     domainInteger = [0, 1],
     vcfDatasetId = this.lookupDatasetId,
     scope = this.lookupScope;
     let textP;
-    if (samples?.length && scope && vcfDatasetId) {
+    /** After a brush, this CP is re-evaluated, although the dependencies
+     * compare === with the previous values.  Could memo-ize the value based on
+     * dependency values.
+     *
+     * Related : with autoLookup may need to cache headerText per
+     * lookupDatasetId; depends on whether result vcfExportText combines
+     * brushedOrViewedVCFBlocksVisible into a single VCF.
+     */
+    if (samplesOK && scope && vcfDatasetId) {
       const
       requestFormat = this.requestFormat,
-      requestOptions = {requestFormat, headerOnly : true};
+      userSettings = this.args.userSettings,
+      requestSamplesFiltered = userSettings.requestSamplesFiltered,
+      /** If filtered, then samples is a subset of All. */
+      requestSamplesAll = userSettings.requestSamplesAll && ! requestSamplesFiltered,
+      requestOptions = {requestFormat, requestSamplesAll, headerOnly : true};
       /** these params are not applicable when headerOnly : samples, domainInteger, rowLimit. */
       textP = vcfGenotypeLookup(
-        this.auth, this.apiServerSelectedOrPrimary, samples, domainInteger,
-        requestOptions, vcfDatasetId, scope, this.rowLimit);
-      textP.then(
+        this.auth, samples, domainInteger,
+        requestOptions, vcfDatasetId, scope, this.rowLimit)
+        .then(
         (text) => {
-          this.headerText = text;
+          const
+          isGerminate = resultIsGerminate(text);
+          this.headerText = isGerminate ? text.join('\t') : text;
           if (trace) {
             dLog(fnName, text);
           }
+          return this.headerText;
         })
         .catch(this.showError.bind(this, fnName));
       textP = toPromiseProxy(textP);
@@ -876,12 +2783,18 @@ export default class PanelManageGenotypeComponent extends Component {
     return count;
   }
 
+  /** Can use this to set width of textarea class="vcfGenotypeText".
+   * Currently using 100% instead - this may be useful when result does not need 100%
+   */
   @action
   vcfGenotypeTextWidthStyle() {
     const
     fnName = 'vcfGenotypeTextSetWidth',
     text = this.vcfGenotypeText,
-    lastRowWidth = text.length - text.lastIndexOf('\n', text.length-2),
+    /** last line may be truncated so to measure length of 2nd last line */
+    lastChar = text.length-1,
+    lastNewline = text.lastIndexOf('\n', lastChar - 1),
+    lastRowWidth = lastNewline - text.lastIndexOf('\n', lastNewline - 1),
     style = lastRowWidth ? 'width:' + lastRowWidth + 'em' : '';
     console.log(fnName, arguments, lastRowWidth, style);
     return style;
@@ -894,5 +2807,136 @@ export default class PanelManageGenotypeComponent extends Component {
     alert(text);
   }
 
+  //----------------------------------------------------------------------------
+
+
+
+  /** comments as in manage-explorer.js; copied from manage-{explorer,view} */
+  @tracked
+  activeId = 'tab-view-Datasets';
+
+  /** invoked from hbs via {{compute (action this.tabName2Id tabTypeName ) }}
+   * @param tabName text displayed on the tab for user identification of the contents.
+   * @return string suitable for naming a html tab, based on tabName.
+   */
+  @action
+  tabName2Id(tabName) {
+    let
+    id = tab_view_prefix + text2EltId(tabName);
+    if (trace)
+      dLog('tabName2Id', id, tabName);
+    return id;
+  }
+
+  /** Receive user tab selection changes, for controls dialog.
+   * @param id  tab name
+   */
+  @action
+  onChangeTab(id, previous) {
+    const fnName = 'onChangeTab';
+    dLog(fnName, this, id, previous, arguments);
+
+    this.activeId = id;
+  }
+
+  //----------------------------------------------------------------------------
+
+  /** activeIdDatasets, tabName2IdDatasets() are analogous to and based on 
+   * activeId, tabName2Id() above.
+   */
+  @tracked
+  activeIdDatasets = null;
+  @tracked
+  activeDatasetId = null;
+
+  /** invoked from hbs via {{compute (action this.tabName2Id tabTypeName ) }}
+   * @param tabName text displayed on the tab for user identification of the contents.
+   * @return string suitable for naming a html tab, based on tabName.
+   */
+  @action
+  tabName2IdDatasets(tabName) {
+    let
+    id = tab_view_prefix_Datasets + text2EltId(tabName);
+    if (trace)
+      dLog('tabName2IdDatasets', id, tabName);
+    return id;
+  }
+
+  //----------------------------------------------------------------------------
+
+
+  /** Receive user selection of VCF / genotype dataset via tab selection change
+   * of Datasets Samples tabs.
+   * @param datasetId
+   */
+  @action
+  selectDataset(datasetId) {
+    const fnName = 'selectDataset';
+    dLog(fnName, this, datasetId, arguments);
+
+    const
+      gtDatasetIds = this.gtDatasetTabs,
+      i = gtDatasetIds.findIndex(tabId => tabId === datasetId);
+      if (i < 0) {
+        dLog(fnName, i, datasetId, gtDatasetIds);
+      } else {
+        dLog(fnName, i, gtDatasetIds[i], datasetId);
+        // sets .axisBrushBlockIndex
+        this.mut_axisBrushBlockIndex(i);
+      }
+    this.setSelectedDataset(datasetId);
+  }
+  setSelectedDataset(datasetId) {
+    this.activeDatasetId = datasetId;
+    this.activeIdDatasets = this.tabName2IdDatasets(datasetId);
+  }
+
+
+  //----------------------------------------------------------------------------
+
+  /** Called by matrix-view afterScrollVertically()
+   * @param features of first and last visible rows after vertical scroll by user.
+   */
+  @action
+  tablePositionChanged(features) {
+    const fnName = 'tablePositionChanged';
+    dLog(fnName, features);
+    // The caller may pass empty features[] to indicate the table is empty.
+    features = features.filter(f => f);
+    if (features?.length) {
+      const
+      values = features.mapBy('value').flat(),
+      valueExtent = d3.extent(values),
+      axes = features.mapBy('blockId.axis1d'),
+      /** Features could be of multiple axes; can pass all features and collate
+       * extents for each axis separately.  */
+      axis1d = axes[0];
+      axis1d.set('tablePosition', valueExtent);
+      /* related : this.brushedOrViewedVCFAxes // axis-1d [] */
+    } else {
+      const axes = this.brushedOrViewedVCFAxes;
+      if (axes.length === 1) {
+        const axis1d = axes[0];
+        axis1d.set('tablePosition', null);
+      }
+    }
+  }
+
   // ---------------------------------------------------------------------------
+
+  @computed
+  get germinate () {
+    let germinate;
+  try {
+    germinate = new Germinate();
+    console.log('germinate', germinate);
+    // germinate.serverinfo(); // germplasm(); // callsets();
+  } catch (error) {
+    console.log('vcfGenotypeLookup', 'Germinate', error);
+  }
+    return germinate;
+  }
+
+  //----------------------------------------------------------------------------
+
 }

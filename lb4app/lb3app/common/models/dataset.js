@@ -18,9 +18,15 @@ var { clientIsInGroup, clientOwnsGroup, groupIsWritable } = require('../utilitie
 var upload = require('../utilities/upload');
 var load = require('../utilities/load');
 const { spreadsheetDataToJsObj } = require('../utilities/spreadsheet-read');
+const { gffDataToJsObj } = require('../utilities/gff_read');
 const { loadAliases } = require('../utilities/load-aliases');
 const { cacheClearBlocks } = require('../utilities/localise-blocks');
+const { cacheblocksFeaturesCounts } = require('../utilities/block-features');
 const { ErrorStatus } = require('../utilities/errorStatus.js');
+const { ensureItem, query, datasetIdGetVector } = require('../utilities/vectra-search.js');
+const { flattenJSON } = require('../utilities/json-text.js');
+const { text2Commands } = require('../utilities/openai-query.js');
+
 
 //------------------------------------------------------------------------------
 
@@ -50,6 +56,16 @@ module.exports = function(Dataset) {
       upload.uploadParsedTryCb(models, jsonData, options, cb);
     }
 
+    if (! msg.fileName && (req.headers['content-type'] === 'text/gff3')) {
+      const
+      q = req.query,
+      datasetId = q.fileName || ('gff3_dataset_' + req.readableLength),
+      replaceDataset = typeof q.replaceDataset === 'string' ?
+        JSON.parse(q.replaceDataset.toLowerCase()) : true,
+      uint8Array = req.read(req.readableLength),
+      bodyData = uint8Array.asciiSlice();
+      this.gffUploadData(bodyData, datasetId, replaceDataset, options, models, cb);
+    } else
     // Parse as either .json or .gz
     // factored as handleJson()
     if (msg.fileName.endsWith('.json')) {
@@ -73,6 +89,10 @@ module.exports = function(Dataset) {
       } else {
         this.spreadsheetUploadInternal(msg, options, models, cb);
       }
+    } else if (
+      msg.fileName.endsWith('.gff') || msg.fileName.endsWith('.gff3')
+    ) {
+        this.gffUpload(msg, options, models, cb);
     } else {
       cb(ErrorStatus(400, 'Unsupported file type'));
     }
@@ -285,10 +305,12 @@ module.exports = function(Dataset) {
       datasets = datasets
         .filter((dataset) => {
           /** true means filter out of datasets */
-          const out = dataset.aliases;
-          if (out) {
+          let out;
+          if ((out = dataset.aliases)) {
             aliasesP.push(loadAliases(dataset, models));
-          }
+          } else if ((out = dataset.datasetMetadata)) {
+            aliasesP.push(upload.datasetSetMeta(dataset.datasetMetadata, models, options));
+          } else 
           return ! out;
         });
 
@@ -315,6 +337,10 @@ module.exports = function(Dataset) {
         .catch((error) => cbCountDone(error))
           .then(() => loadAfterDelete(datasets[i]));
       });
+      // or : Promise.all(datasetRemovedPs.map(...)).then(() => aliasesToCb());
+      if (! datasets.length) {
+        aliasesToCb();
+      }
     
       function cbCountDone(error, result) {
         if (error) {
@@ -323,6 +349,15 @@ module.exports = function(Dataset) {
           /* if (! error) then result is dataset.name */
           if (++datasetsDone === datasets.length) {
             if (! error) {
+              aliasesToCb();
+            }
+          }
+        }
+      }
+      /** Convey results from non-dataset uploads, i.e. aliases and datasetMetadata,
+       * to cb
+       */
+      function aliasesToCb() {
               Promise.all(aliasesP)
                 .catch((error) => cb(error))
                 .then((aliasesDone) => {
@@ -335,9 +370,6 @@ module.exports = function(Dataset) {
                    */
                   cb(null, status);
                 });
-            }
-          }
-        }
       }
 
       /* loadAfterDelete() in spreadsheetUploadExternal() is similar but also
@@ -439,6 +471,109 @@ module.exports = function(Dataset) {
     });
   }
 
+  //----------------------------------------------------------------------------
+
+
+  /**
+   * @param msg
+   * @param options
+   * @param models
+   * @param cb
+   * @desc
+   * return via cb : {errors, warnings, datasetName}
+   * .errors and .warnings may have [datasetName] : [] text messages
+   */
+  Dataset.gffUpload = function(msg, options, models, cb) {
+    // based on .spreadsheetUploadInternal
+    const fnName = 'gffUpload';
+    const fileName = msg.fileName;
+
+    console.log(fnName, msg.fileName, msg.data.length);
+    const
+    datasetId = msg.fileName.replace(/\.gff3?/, ''),
+    replaceDataset = !!msg.replaceDataset;
+    this.gffUploadData(msg.data, datasetId, replaceDataset, options, models, cb);
+  };
+  /** Parse and insert the given GFF data string into the database.
+   * @param data
+   * @param dataset
+   * @param replaceDataset
+   * @param options
+   * @param models
+   * @param cb
+   */
+  Dataset.gffUploadData = function(data, datasetId, replaceDataset, options, models, cb) {
+    // based on .spreadsheetUploadInternal
+    const fnName = 'gffUploadData';
+
+    cb = this.spreadsheetUploadCbWrap(cb);
+
+
+    const dataObj = gffDataToJsObj(data);
+    let dataset = dataObj.dataset;
+    dataset.name = datasetId;
+    let status = pick(dataObj, ['warnings', 'errors']);
+    status.datasetName = dataset.name;
+
+    const datasets = [dataset];
+    status.datasetsWithErrorsOrWarnings =
+      datasets.filter((d) => d.warnings?.length || d.errors?.length)
+      .map((dataset) => pick(dataset, ['name', 'errors', 'warnings']));
+
+
+    // if ! dataset then cbCountDone() is not called, so send warnings here.
+    if (status.errors?.length || (status.warnings?.length && ! dataset)) {
+      status.fileName = fileName;
+      /* status may contain {errors, warnings, .. } and Error() takes only a
+       * string, so send status result back as return value instead of error.
+       */
+      // ErrorStatus(400, JSON.stringify(status))
+      cb(null, status);
+    } else {
+
+      let datasetsDone = 0;
+      let datasetRemovedPs =
+      datasets.map((dataset) => {
+        const
+        datasetName = dataset.name;
+        console.log('before removeExisting "', datasetName, '"');
+        /* This will upload all datasets after all removed.
+         * i.e. wait for all removes to succeeed, then upload all datasets.
+         */
+        const promise = upload.removeExistingP(models, options, datasetName, replaceDataset);
+        return promise;
+      });
+      /* Added removeExistingP() to enable  :
+       *   Promise.all(datasetRemovedPs)
+       * which enables all of datasets[] to be removed before re-loading them
+       * The requirement is currently : remove each dataset individually before it is loaded.
+       */
+      datasetRemovedPs.forEach((datasetRemovedP, i) => {
+        datasetRemovedP
+          .catch((error) => cb(error))
+          .then(() => loadAfterDelete(datasets[i]));
+      });
+
+      function loadAfterDelete(datasetObj) {
+        function cbOneDataset(error, result) {
+          /* if ! error, expect that result === datasetObj.name  */
+          if (error?.message) {
+            error.message = datasetObj.name + ' : ' + error.message;
+          } else if (typeof error === 'string') {
+            error = datasetObj.name + ' : ' + error;
+          }
+          cb(error, result || datasetObj.name);
+        }
+
+
+        upload.uploadDataset(datasetObj, models, options, cbOneDataset);
+      }
+    }
+
+  };
+
+
+  //----------------------------------------------------------------------------
 
   Dataset.cacheClear = function(time, options, cb) {
     let db = this.dataSource.connector,
@@ -447,7 +582,45 @@ module.exports = function(Dataset) {
       .then((removed) => cb(null, removed))
       .catch((err) => cb(err));
   };
-  
+
+
+  Dataset.cacheblocksFeaturesCounts = function(id, options, cb) {
+    const
+    fnName = 'cacheblocksFeaturesCounts',
+    db = this.dataSource.connector,
+    models = this.app.models;
+    cacheblocksFeaturesCounts(db, models, id, options)
+      .then((result) => cb(null, result))
+      .catch((err) => {
+        console.log(fnName, err.statusCode, err);
+        cb(err);});
+  };
+
+  //----------------------------------------------------------------------------
+
+  Dataset.naturalSearch = function naturalSearch(search_text, options, cb) {
+    embedDatasets(Dataset, options);
+    console.log('naturalSearch', search_text);
+    query(search_text)
+      .then((results) => cb(null, results))
+      .catch((err) => cb(err));
+  };
+
+  Dataset.text2Commands = function text2CommandsEndpoint(commands_text, options, cb) {
+    console.log('text2Commands', commands_text);
+    text2Commands(commands_text)
+      .then((results) => cb(null, results))
+      .catch((err) => cb(err));
+  };
+
+
+  Dataset.getEmbeddings = function getEmbeddingsEndpoint(options, cb) {
+    getEmbeddings(Dataset, options)
+      .then((results) => cb(null, results))
+      .catch((err) => cb(err));
+  };
+
+
 
   /*--------------------------------------------------------------------------*/
 
@@ -585,8 +758,129 @@ module.exports = function(Dataset) {
    description: "Clear cached copies of datasets / blocks / features from a secondary Pretzel API server."
   });
 
+  Dataset.remoteMethod('cacheblocksFeaturesCounts', {
+    accepts: [
+      {arg: 'id', type: 'string', required: true},
+      {arg: "options", type: "object", http: "optionsFromRequest"}
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'number', root: true},
+   description: "Pre-warm the cache of blockFeaturesCounts for each block of this dataset."
+  });
+
+  Dataset.remoteMethod('naturalSearch', {
+    accepts: [
+      {arg: 'search_text', type: 'string', required: true},
+      {arg: "options", type: "object", http: "optionsFromRequest"}
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'array', root: true},
+   description: "Use OpenAI to convert search_text to an vector embedding and search for matching datasets using Vectra."
+  });
+
+  Dataset.remoteMethod('text2Commands', {
+    accepts: [
+      {arg: 'commands_text', type: 'string', required: true},
+      {arg: "options", type: "object", http: "optionsFromRequest"}
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'array', root: true},
+   description: "Use OpenAI to convert commands_text to text commands for viewing datasets."
+  });
+
+  Dataset.remoteMethod('getEmbeddings', {
+    accepts: [
+      {arg: "options", type: "object", http: "optionsFromRequest"}
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'array', root: true},
+   description: "Get vector embeddings of metadata of all datasets."
+  });
+
+
+
 
   acl.assignRulesRecord(Dataset);
   acl.limitRemoteMethods(Dataset);
   acl.limitRemoteMethodsRelated(Dataset);
 };
+
+//------------------------------------------------------------------------------
+
+/** Indicate if embedDatasets() has been done. */
+let embeddingP;
+
+/** Call ensureItem() for each dataset, if this has not already been done.
+ * @param Dataset model
+ * @param options including session accessToken
+ */
+function embedDatasets(Dataset, options) {
+  const fnName = 'embedDatasets';
+  if (! embeddingP) {
+    console.log(fnName);
+    embeddingP = Dataset.find({}, options)
+      .then(
+        datasets => {
+          console.log(fnName, datasets.length);
+          datasets
+            .filter(d => ! d.meta?._origin)
+            // .slice(0, 30)
+            .forEach(dataset => datasetForEmbed(dataset));
+        });
+  }
+  return embeddingP;
+}
+
+function getEmbeddings(Dataset, options) {
+  const
+  fnName = 'getEmbeddings',
+  embedP = ! embeddingP ?
+    embedDatasets(Dataset, options) :
+    Promise.resolve(),
+  resultP = embedP.then(() => {
+    const
+    embeddingsP = 
+      Dataset.find({}, options)
+      .then(
+        datasets => {
+          console.log(fnName, datasets.length);
+          const
+          embeddingsPromises =
+            datasets
+            .filter(d => ! d.meta?._origin)
+            // .slice(0, 30)
+            .map(async dataset => {
+              const
+              id = dataset.id,
+              vector = await datasetIdGetVector(id);
+              return {id, vector};
+            });
+          return Promise.all(embeddingsPromises);
+        });
+    return embeddingsP;
+  });
+  return resultP;
+}
+
+function datasetForEmbed(dataset) {
+  const
+  /** _id is not present in dataset.__data */
+  id = dataset.getId(),
+  {tags, ...datasetSansTags} = dataset.__data,
+  tagsText = Array.isArray(tags) ? ' ' + tags.join(' ') : '',
+
+  /** Initially used selected fields to minimise context size, but now
+   * requesting embedding of each dataset separately, and only once at
+   * startup, so size and cost is not a concern.
+   * description = pick(dataset.__data, ['_id', 'meta.type', 'meta.shortName', 'tags', 'meta.commonName', 'namespace' ]);
+   * description.id = id;
+   */
+  description = Object.assign({/*id*/}, datasetSansTags),
+  prefix = 'The attributes of the dataset named ' + id + ' are :\n',
+  // JSON.stringify(description)
+  readable = prefix + flattenJSON(description).join(', ') + tagsText;
+  console.log('embedDatasets', readable);
+  ensureItem(id, readable);
+}
+
+//------------------------------------------------------------------------------

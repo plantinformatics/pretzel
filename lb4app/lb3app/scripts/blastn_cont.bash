@@ -7,14 +7,24 @@ logFile=~/log/blast/blastn_cont
 # examples:
 #   OUN333/newdir/190509_OUN333_pseudomolecules_V1.00
 #   190509_RGT_Planet_pseudomolecules_V1/190509_RGT_Planet_pseudomolecules_V1.fasta
-B=${blastDir:-/mnt/data_blast/blast}/GENOME_REFERENCES
+
+echo fileName,dbName=$* >> $logFile
+unused_var=${blastDir:=/mnt/data_blast/blast}
+case "$2" in
+  *.dir/*)
+    B=$blastDir/datasetId
+    ;;
+  *)
+    B=$blastDir/GENOME_REFERENCES
+    ;;
+esac
 [ -d $B ] || { status=$?; echo 1>&2 "dir $B is not present." $status ; exit $status; }
 
 # $blastnIsInstalled is 0 (true) if blastn is installed locally, otherwise use blast container.
 which blastn 2>/dev/null; blastnIsInstalled=$?
 # or blastVersion=`blastn -version` ; blastnIsInstalled=$?
 
-echo $PWD, $* >> $logFile
+echo PWD=$PWD, fileName,dbName=$*, blastDir=$blastDir >> $logFile
 # fileName is e.g. /tmp/tmpo4kfn__8/cbf064c0.query.fasta
 fileName=$1
 dbName=$2
@@ -39,6 +49,7 @@ fi
 
 if [ $blastnIsInstalled -eq 0 ]
 then
+  echo blastn  -outfmt '6 std qlen slen' -query  "$queryFile"  -db $B/$dbName  >> $logFile
   blastn  -outfmt '6 std qlen slen' -query  "$queryFile"  -db $B/$dbName
 else
   docker run  --rm  -v \

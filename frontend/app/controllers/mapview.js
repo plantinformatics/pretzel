@@ -4,10 +4,16 @@ import EmberObject, { computed, observer } from '@ember/object';
 import Evented from '@ember/object/evented';
 import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
-import { readOnly, alias } from '@ember/object/computed';
+import { readOnly, alias, reads, or } from '@ember/object/computed';
 import DS from 'ember-data';
 
+import QueryParams from 'ember-parachute';
+
+//------------------------------------------------------------------------------
+
 /* global d3 */
+
+//------------------------------------------------------------------------------
 
 import { stacks } from '../utils/stacks';
 import { axisFeatureCircles_selectOne, axisFeatureCircles_selectUnviewed } from '../utils/draw/axis';
@@ -23,14 +29,70 @@ dLog("controllers/mapview.js");
 let trace_dataflow = 0;
 let trace_select = 0;
 
-export default Controller.extend(Evented, {
+//------------------------------------------------------------------------------
+
+export const componentQueryParams = new QueryParams({
+  naturalAuto: {
+    defaultValue: false,
+    refresh: false
+  },
+  searchFeatureNames: {
+    defaultValue: '',
+    refresh: false
+  },
+});
+
+
+//------------------------------------------------------------------------------
+
+
+
+export default Controller.extend(Evented, componentQueryParams.Mixin, {
   dataset: service('data/dataset'),
   block: service('data/block'),
   view : service('data/view'),
   selectedService : service('data/selected'),
   apiServers: service(),
   controlsService : service('controls'),
+  queryParamsService : service('query-params'),
 
+  //----------------------------------------------------------------------------
+  // based on ember-parachute/README.md
+
+  // queryParamsChanged: reads('queryParamsState.searchFeatureNames'),
+  // or('queryParamsState.{page,search,tags}.changed'),
+
+  setup({ queryParams }) {
+    this.fetchData(queryParams);
+  },
+
+  queryParamsDidChange({ shouldRefresh, queryParams }) {
+    // if any query param with `refresh: true` is changed, `shouldRefresh` is `true`
+    if (shouldRefresh) {
+      this.fetchData(queryParams);
+    }
+  },
+
+  reset({ queryParams }, isExiting) {
+    if (isExiting) {
+      this.resetQueryParams();
+    }
+  },
+
+  /** Use the values of queryParams
+   */
+  fetchData(queryParams) {
+    // fetch data
+  },
+
+  actions: {
+    resetAll() {
+      // reset all query params to their default values specified in the query param map
+      this.resetQueryParams();
+    }
+  },
+
+  //----------------------------------------------------------------------------
 
   /** Array of available datasets populated from model 
    */
@@ -292,6 +354,7 @@ export default Controller.extend(Evented, {
       'visible': true,
       'tab': 'selection'
     },
+    matrixView : {tableYDimensions : null},
   }),
   splitViewDirection : computed('tablesPanelRight', function () {
     let direction = this.tablesPanelRight ? 'horizontal' : 'vertical';
@@ -366,6 +429,7 @@ export default Controller.extend(Evented, {
       }
     });
 
+    this.queryParamsService.queryParamsHost = this;
     stacks.oa = this.oa;
 
     this._super.apply(this, arguments);
@@ -519,10 +583,23 @@ export default Controller.extend(Evented, {
    * components div;   the remainder of the template is disabled via {{#if
    * (compare layout.right.tab '===' 'paths')}} which wraps the whole component.
    */
-  rightPanelClass : computed('layout.right.tab', function () {
-    let tab = this.get('layout.right.tab');
-    dLog('rightPanelClass', tab);
-    return 'right-panel-' + tab;
-  }),
+  rightPanelClass : computed(
+    'layout.right.tab',
+    'userSettings.genotype.hideControls',
+    function () {
+      let tab = this.get('layout.right.tab');
+      dLog('rightPanelClass', tab);
+      let
+      classNames = 'right-panel-' + tab,
+      /** Add hideControls to classNames when .userSettings.genotype.hideControls is true.
+       * This class could be omitted when tab is not genotype; the css selector is :
+       * .right-panel-genotype.hideControls .panel-parent
+       */
+      rightPanelGenotype_hideControls = this.userSettings.genotype.hideControls;
+      if (rightPanelGenotype_hideControls) {
+        classNames += ' hideControls';
+      }
+      return classNames;
+    }),
 
 });

@@ -1,0 +1,23 @@
+
+<li class="list-group-item input-range-text">
+  <div>
+    <label for="range-maf" class="inline-margin" >{{@labelText}}</label>
+    {{yield}}
+    <span class="sub-label filter-group-col">
+      {{#unless @disabled}}
+        {{input
+          type="text"
+          value=this.valueText
+          input=(action this.valueTextChanged value=target.value)
+        }}
+      {{/unless}}
+    </span>
+  </div>
+  <input type="range"
+   id="range-maf"
+   min="0" max={{this.nSteps}}
+   value={{this.valueLinear}}
+   oninput={{action this.valueLinearChanged value="target.value"}}
+   disabled={{@disabled}}
+  />
+</li>

@@ -1,7 +1,6 @@
 const { findLastIndex } = require('lodash/array');  // 'lodash.findlastindex'
 const { pick } = require('lodash/object');
 
-
 /* global exports */
 /* global require */
 
@@ -61,7 +60,7 @@ function spreadsheetDataToJsObj(fileData) {
   metadata = sheets.Metadata && readMetadataSheet(sheets.Metadata),
   chromosomeRenaming = parseSheet(sheets, 'Chromosome Renaming', readChromosomeRenaming), 
   chromosomesToOmit = parseSheet(sheets, 'Chromosomes to Omit', readChromosomesToOmit);
-  sheetNames.metadata = Array.from(Object.keys(metadata));
+  sheetNames.metadata = ! metadata ? [] : Array.from(Object.keys(metadata));
   const
   nonDatasetSheets = ['User Guide', 'Metadata', 'Chromosome Renaming', 'Chromosomes to Omit'],
   datasets = 
@@ -98,6 +97,8 @@ function spreadsheetDataToJsObj(fileData) {
            * returning data in dataset.aliases[]
            */
           dataset = sheetToAliases(typeAndName.datasetName, sheet, datasetMetadata);
+        } else if (typeAndName.sheetType === 'AddMetadata') {
+          dataset = sheetToDatasetsMetadata(typeAndName.datasetName, sheet, datasetMetadata);
         } else {
         /** if parentName column, result may be array of datasets */
         dataset = sheetToDataset(
@@ -138,7 +139,7 @@ function spreadsheetDataToJsObj(fileData) {
   status.datasets = datasets
     .reduce((result, dataset) => {
       const ok = /* ! dataset.sheetName || */  dataset.name &&
-            (dataset.blocks?.length || dataset.aliases?.length);
+            (dataset.blocks?.length || dataset.aliases?.length || dataset.datasetMetadata?.length);
       ['warnings', 'errors'].forEach((fieldName) => {
         const df = dataset[fieldName];
         if (df?.length > datasetErrorWarningLimit) {
@@ -358,18 +359,25 @@ function sheetToDataset(
 /** Translate sheet data to an array of row objects, using the required header
  * row to name the object fields corresponding to columns.
  * Used for features : sheetToDataset and aliases : sheetToAliases().
+ * @param sheet
+ * @param headerRenaming  undefined, or a function to rename column header names.
+ * signature : (header : string) => renamedHeader : string
  * @return { rowObjects, headerRow }
  * rowObjects : array of row objects
  * headerRow : array of column names parallel to sheet columns
  */
-function sheetToObj(sheet) {
+function sheetToObj(sheet, headerRenaming) {
   /** if A1 starts with # then warn : 1st row must be headers
    * index of first row (A1-Z1) is 0
    */
-  const
+  let
   // -	check for overlap of header names caused by header rename : first check for the target names
   /** map headerRow using header renaming */
-  headerRow = sheet2RowArray(sheet, 0).map(normaliseHeader),
+  headerRow = sheet2RowArray(sheet, 0).map(normaliseHeader);
+  if (headerRenaming) {
+    headerRow = headerRow.map(headerRenaming);
+  }
+  const
   rowIsComment = sheet2ColArray(sheet, 0)
     .map((ai) => (typeof ai === 'string') && ai.startsWith('#')),
   /** options.header        result    index
@@ -387,6 +395,14 @@ function sheetToObj(sheet) {
   /** remove first (header) row */
     .filter((f, i) => i > 0)
   ;
+  /** Apply a heuristic to recognise MS Excel Serial Date values and convert
+   * them to JavaScript Date. */
+  headerRow.filter((header) => header.match(fieldNameDateRegexp))
+    .forEach((header) => {
+      rowObjects.forEach((row) => {
+        row[header] = excelSerialDate2JS(header, row[header]); });
+       });
+
   return {rowObjects, headerRow};
 }
 
@@ -447,6 +463,35 @@ function sheetToAliases(datasetName, sheet, metadata) {
 
   return dataset;
 }
+//------------------------------------------------------------------------------
+
+/** Translate the sheet data into an array of datasets metadata.
+ * The result is used in datasetSetMeta(), which adds the meta to the corresponding datasets.
+ * The sheet is of type 'AddMetadata|'.
+ *
+ * Later : perhaps add the meta for datasets which don't exist to metadata; this
+ * could be used in spreadsheets which were loading datasets, i.e. the meta would
+ * be added after the data from other sheets (re-)created the datasets.
+ */
+function sheetToDatasetsMetadata(datasetName, sheet, metadata) {
+  const 
+  fnName = 'sheetToDatasetsMetadata',
+  {rowObjects, headerRow} = sheetToObj(sheet, renameDisplayNameField),
+  dataset = {name : 'AddMetadata', datasetMetadata : rowObjects};
+  console.log(fnName, headerRow, rowObjects.length, rowObjects[0]);
+
+  return dataset;
+}
+function renameDisplayNameField(header) {
+  /** This could be instead included in headerRenaming instead of passing
+   * renameDisplayNameField to sheetToObj().
+   * Counter to that, it is probably only applicable to AddMetadata, which
+   * argues for it being defined here.
+   */
+  const fieldName = (header === 'Display name') ? 'displayName' : header;
+  return fieldName;
+}
+
 
 //------------------------------------------------------------------------------
 
@@ -672,6 +717,23 @@ function normaliseFieldName(fieldName) {
 
 //------------------------------------------------------------------------------
 
+const fieldNameDateRegexp = /date/i;
+/** Recognise a MS Excel Serial Date by its value and field name, and convert to JavaScript Date.
+ * @param fieldName
+ * @param value
+ */
+function excelSerialDate2JS(fieldName, value) {
+  // this can also be applied to metadataEntries
+
+  if (fieldName.match(fieldNameDateRegexp) &&
+      (typeof value === 'number') && (value > 30000) && (value < 80000) ) {
+    /** Interpret value as MS Excel Serial Date, which is : days after January 1, 1900.
+     * from https://stackoverflow.com/a/67130235, William Denman */
+    value = new Date(Date.UTC(0, 0, /*excelSerialDate*/value - 1));
+  }
+  return value;
+}
+
 
 /** Numeric cell values may present with an 18 digit mantissa instead of a few
  * digits, i.e. they need to be rounded.
@@ -685,8 +747,9 @@ function normaliseFieldName(fieldName) {
  * Currently applied to pos,end columns in featureAttributes(), but could be
  * applied to all columns, in cellValue().
  * @param pos if type is not number then returned unchanged.
+ * @param convertStringToNumber if true and typeof pos is string then convert to number
  */
-function roundNumber(pos) {
+function roundNumber(pos, convertStringToNumber) {
   /** based on snps2Dataset.pl : roundPosition()   */
   if (typeof pos === 'number') {
     const
@@ -700,6 +763,13 @@ function roundNumber(pos) {
         .replace(/\.$/, '');
       pos = +rounded;
     }
+  } else if ((typeof pos === 'string') && convertStringToNumber) {
+    /** Use + to convert it to number.
+     * If the user enters e.g. "12.5" or '13.5' then pos will be a string
+     * containing quotes, i.e. '“12.5”' or "'13.5’" respectively.
+     * Use trimAndDeletePunctuation() to remove those quotes.
+     */
+    pos = +trimAndDeletePunctuation(pos);
   }
   return pos;
 }
@@ -977,11 +1047,11 @@ function featureAttributes(feature) {
   {pos, end, Chromosome, name, parentName, __comment__, ...values} = feature,
   value = [];
   if (pos !== undefined) {
-    pos = roundNumber(pos);
+    pos = roundNumber(pos, true);
     value.push(pos);
   }
   if (end !== undefined) {
-    end = roundNumber(end);
+    end = roundNumber(end, true);
     value.push(end);
   }
   let featureOut = pick(feature, ['value', 'Chromosome', 'name', 'parentName']);
@@ -1001,7 +1071,7 @@ function featureAttributes(feature) {
      */
     valuesKeys.forEach((key) => {
       if (key !== 'flankingMarkers') {
-        values[key] = roundNumber(values[key]);
+        values[key] = roundNumber(values[key], false);
       }
     });
     featureOut.values = values;

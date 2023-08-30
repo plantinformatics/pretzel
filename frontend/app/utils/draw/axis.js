@@ -212,6 +212,15 @@ function yAxisTitleTransform(axisTitleLayout)
 
 /*----------------------------------------------------------------------------*/
 
+/** Designed to be used as an d3 .attr('id' ) function 
+ * @return a function to construct a DOM element id from a prefix and an object which has an id field, named idField.
+ * @param d d3 selection datum
+ * @desc
+ * Example usage : selection.attr('id', eltIdFn('ar-', 'axisName') )
+ */
+function eltIdFn(prefix, idField) { return (d) => prefix + d[idField]; }
+
+
 /** g.axis-outer Element Id Prefix */
 const axisOuterEip = 'id';
 /** Used for group element, class "axis-outer"; required because id may start with
@@ -372,11 +381,16 @@ function axisFeatureCircles_selectOneInAxis(axisS, feature) {
   if (! axisS) {
     let
     axis1d = feature.get('blockId.referenceBlockOrSelf.axis1d');
-    axisS = selectAxisOuter(axis1d);
+    axisS = axis1d && selectAxisOuter(axis1d);
   }
-  let
-  selector = "g > circle#" + axisFeatureCircles_eltId(feature),
-  circleS = axisS.selectAll(selector);
+  let circleS;
+  if (! axisS) {
+    circleS = d3.select();
+  } else {
+    let
+    selector = "g > circle#" + axisFeatureCircles_eltId(feature);
+    circleS = axisS.selectAll(selector);
+  }
   return circleS;
 }
 /** Select the circles of axes which have no viewed blocks.
@@ -424,7 +438,7 @@ let
 let
   /** axisTitle is not currently using schemeCategory10, so can use it here. */
   trait_colour_scale =
-  d3.scaleOrdinal().range(d3.schemeCategory10);
+  d3.scaleOrdinal().range(d3.schemeCategory20);
 
 
 /** for the stroke and fill of axis title menu
@@ -481,6 +495,7 @@ export {
   ensureYscaleDomain,
   yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform,
   axisConfig,
+  eltIdFn,
   eltId, stackEltId, axisEltId, eltIdAll,
   axisEltIdTitle, axisEltIdClipPath, axisEltIdClipPath2d,
   selectAxisOuter, selectAxisUse, eltIdGpRef,

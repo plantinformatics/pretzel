@@ -10,7 +10,8 @@ var createIntervalTree = require("interval-tree-1d");
 const { ApiServer, apiServers, blockServer } = require('./api-server');
 const { ErrorStatus } = require('./errorStatus.js');
 const {
- childProcess, dataOutReplyClosure, dataOutReplyClosureLimit, dataReduceClosure
+  childProcess, dataOutReplyClosure, dataOutReplyClosureLimit, dataReduceClosure,
+  stringCountString,
 } = require('../utilities/child-process');
 const { binEvenLengthRound, binBoundaries } = require('../utilities/block-features');
 
@@ -18,21 +19,43 @@ const { binEvenLengthRound, binBoundaries } = require('../utilities/block-featur
 
 
 /**
- * @param parent  name of parent or view dataset, or vcf directory name
+ * @param datasetDir  name of directory containing the VCF dataset
  * @param scope e.g. '1A'; identifies the vcf file, i.e. datasetId/scope.vcf.gz
- * @param preArgs args to be inserted in command line, additional to the parent / vcf file name.
+ * @param preArgs args to be inserted in command line, additional to the datasetDir / vcf dir name.
  * See comment in frontend/app/services/auth.js : vcfGenotypeLookup()
  * @param nLines if defined, limit the output to nLines.
  * @param dataOutCb passed to childProcess() - see comment there.
- * If undefined, then dataOutReplyClosureLimit(cb, nLines) is used.
+ * If undefined, then dataOutReplyClosureLimit(cb, lineFilter, nLines) is used.
  * @param cb
  */
-function vcfGenotypeLookup(parent, scope, preArgs, nLines, dataOutCb, cb) {
+function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
+  /** Split out the optional parameters which are passed as separate params for
+   * processing separately to the remainder of preArgs, which are inserted as a
+   * list into the command.  */
+  let {isecFlags, isecDatasetIds, ... preArgs} = preArgs_ || {};
   const
   fnName = 'vcfGenotypeLookup',
   headerOnly = preArgs.headerOnly,
-  command = ! headerOnly && preArgs.requestFormat ? 'query' : 'view';
-  let moreParams = [command, parent, scope, '-r', preArgs.region ];
+  command = headerOnly ? 'view' : preArgs.SNPList ? 'counts' :
+    preArgs.requestFormat ? 'query' : 'view';
+  /* isec is only meaningful with >1 datasets. The caller
+   * vcfGenotypeLookupDataset() only passes isecDatasetIds when
+   * isecDatasetIds.length > 1
+   */
+  if (Array.isArray(isecDatasetIds) /*&& (isecDatasetIds.length > 1)*/) {
+    /** this is split in vcfGenotypeLookup.bash with tr '!' ' '  */
+    const datasetIdsSeparator = '!';
+    isecDatasetIds = isecDatasetIds.join(datasetIdsSeparator);
+  }
+  /** The params passed to spawn (node:child_process) are passed as options.args
+   * to ChildProcess.spawn (node:internal/child_process) which calls
+   * spawn(options) which converts non-strings to strings, e.g. arrays are
+   * joined with ',' into a single string.  undefined -> 'undefined'.
+   */
+  let moreParams = [
+    command, datasetDir, scope,
+    isecFlags || '', isecDatasetIds || '',
+    '-r', preArgs.region ];
   /** from BCFTOOLS(1) :
       -h, --header-only
           output the VCF header only
@@ -49,22 +72,33 @@ function vcfGenotypeLookup(parent, scope, preArgs, nLines, dataOutCb, cb) {
      *        %TGT            Translated genotype (e.g. C/A)
      */
     formatGT = (preArgs.requestFormat === 'CATG') ? '%TGT' : '%GT',
-    format = '%ID\t%POS' + '\t%REF\t%ALT' + '[\t' + formatGT + ']\n';
+    requestInfo = preArgs.requestInfo && JSON.parse(preArgs.requestInfo),
+    format = '%ID\t%POS' + '\t%REF\t%ALT' +
+      (requestInfo ? '\t%INFO/tSNP\t%INFO/MAF' : '') +
+      '[\t' + formatGT + ']\n';
     moreParams = moreParams.concat(headerOption, '-f', format);
     if (headerOnly) {
       moreParams.push('--force-samples');
     }
   }
-  if (preArgs.samples?.length) {
-    moreParams = moreParams.concat('-s', preArgs.samples.replaceAll('\n', ','));
+  const samples = preArgs.samples;
+  if (samples?.length) {
+    const
+    samplesJoined = samples
+      .trimEnd(/\n/)
+      .replaceAll('\n', ',');
+    moreParams = moreParams.concat('-s', samplesJoined);
+  } else if (preArgs.requestSamplesAll) {
+    // bcftools default is All samples, no option required.
   } else {
     // There is not an option for 0 samples, except via using an empty file :
     moreParams = moreParams.concat('-S', '/dev/null');
   }
-  /** avoid tracing preArgs.samples, and moreParams[9] which is the samples. */
-  console.log(fnName, parent, preArgs.region, preArgs.requestFormat, preArgs.samples?.length, moreParams.slice(0, 9));
+  /** avoid tracing samples, and moreParams[9] which is the samples. */
+  console.log(fnName, datasetDir, preArgs.region, preArgs.requestFormat, samples?.length, moreParams.slice(0, 9));
   if (! dataOutCb) {
-    dataOutCb = dataOutReplyClosureLimit(cb, nLines);
+    const lineFilter = preArgs.snpPolymorphismFilter ? snpPolymorphismFilter : null;
+    dataOutCb = dataOutReplyClosureLimit(cb, lineFilter, nLines);
   }
 
   childProcess(
@@ -114,11 +148,11 @@ exports.vcfGenotypeFeaturesCounts = function(block, interval, nBins = 10, isZoom
 
     const
     scope = block.name,
-    parent = block.datasetId,
+    datasetDir = block.datasetId,
     // may be able to omit domainInteger if ! isZoomed 
     domainInteger = interval.map((d) => d.toFixed(0)),
     region = scope + ':' + domainInteger.join('-'),
-    preArgs = {region, samples : null, requestFormat : 'CATG'},
+    preArgs = {region, samples : null, requestFormat : 'CATG', SNPList : true},
     summary = new vcfToSummary(...arguments);
     function sumCb(error, text) {
       let result;
@@ -133,7 +167,10 @@ exports.vcfGenotypeFeaturesCounts = function(block, interval, nBins = 10, isZoom
     }
     const [blockArg, ...intervalArgs] = arguments;
     const dataOutCb = dataReduceClosure(sumCb);
-    vcfGenotypeLookup(parent, scope, preArgs, /*nLines*/undefined, dataOutCb, cb);
+    vcfGenotypeLookup(
+      datasetDir, scope,
+      preArgs, /*nLines*/undefined, dataOutCb, cb
+    );
 
     /* vcfGenotypeLookup() includes %REF\t%ALT, which could be omitted in this case. */
   }
@@ -208,5 +245,43 @@ vcfToSummary.prototype.summarise = function() {
     return summaryArray;
 };
 
+
+//------------------------------------------------------------------------------
+
+/** Count sample genotype values 0 and 2 (number of copies of Alt).
+ * Filter the line out if it is monomorphic, i.e. either the number of 0's or
+ * the number of 2's is 0.
+ * @param line result of split('\n'), expected to be a string
+ * @return undefined or null if the line should be filtered out,
+ * otherwise return truthy (returning the line because lineFilter signature
+ * could be changed to filter&map).
+ */
+function snpPolymorphismFilter(line) {
+  if (line.startsWith('#')) {
+    return line;
+  }
+
+  const
+  /** e.g. # [1]ID\t[2]POS\t[3]REF\t[4]ALT\t[5]tSNP\t[6]MAF\t[7]Exo
+   * values are genotype call values of the samples
+   */
+  [/*chr,*/ name, position, ref, alt, tSNP, MAF, ...values] = line.split('\t');
+  let
+  counts = values.reduce((result, value) => {
+    /* Number of columns before sample genotype values may vary, so skip values
+     * which don't match the expected format for genotype values.  */
+    if (value.match(/[012ACTG]\/[012ACTG]/)) {
+      /* if (requestFormat === 'CATG') {
+         altCopies = stringCountString(value, alt);
+         }
+      */
+      const altCopies = stringCountString(value, '1');
+      result[altCopies]++;
+    }
+    return result;
+  }, [0, 0, 0]),
+  monomorphic = ! counts[0] || ! counts[2];
+  return ! monomorphic && line;
+}
 
 //------------------------------------------------------------------------------

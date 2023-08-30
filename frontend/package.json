@@ -1,6 +1,6 @@
 {
   "name": "pretzel-frontend",
-  "version": "2.16.0",
+  "version": "2.17.0",
   "description": "Frontend code for Pretzel",
   "repository": "",
   "license": "MIT",
@@ -48,6 +48,7 @@
     "ember-cli-terser": "^4.0.1",
     "ember-cli-test-loader": "^3.0.0",
     "ember-component-inbound-actions": "^1.3.1",
+    "ember-concurrency-decorators": "^2.0.3",
     "ember-content-editable": "1.0.5",
     "ember-data": "^3.22.1",
     "ember-data-model-fragments": "^4.0.0",
@@ -58,6 +59,7 @@
     "ember-local-storage": "^1.7.2",
     "ember-maybe-import-regenerator": "^0.1.6",
     "ember-modal-dialog": "^3.0.3",
+    "ember-parachute": "^1.0.2",
     "ember-qunit": "^4.6.0",
     "ember-raf-scheduler": "^0.1.0",
     "ember-resolver": "^8.0.2",
@@ -85,8 +87,10 @@
   },
   "private": true,
   "dependencies": {
+    "@solgenomics/brapijs": "https://github.com/solgenomics/BrAPI-js.git",
     "caniuse-lite": "^1.0.30001349",
     "colresizable": "github:felipedgarcia/colresizable",
+    "d3-bboxCollide": "^1.0.4",
     "ember-array-helper": ">=5",
     "ember-cli-build-date": "github:bracke/ember-cli-build-date",
     "ember-cli-htmlbars": "^5.3.1",
@@ -100,7 +104,7 @@
     "ember-promise-helpers": "^1.0.9",
     "ember-radio-button": "^2.0.1",
     "ember-raf-scheduler": "",
-    "ember-sortable": "",
+    "ember-sortable": "^3",
     "ember-source": "^3.22.1",
     "ember-toggle": "^7.0.0",
     "ember-tooltips": "^3.4.5",
@@ -111,6 +115,7 @@
     "node-sass": "^7.0.3",
     "normalize-wheel": "^1.0.1",
     "numeric": "github:lukaiser/numeric",
-    "phantom": "^6.3.0"
+    "phantom": "^6.3.0",
+    "vector-cosine-similarity": "^1.8.0"
   }
 }

@@ -3,303 +3,896 @@
 
 {{#if this.showInputDialog}}
 
-{{#ember-modal-dialog
-  onClose=(action (mut this.showInputDialog) false)
-  targetAttachment="center"
-  translucentOverlay=true
-  clickOutsideToClose=false
-  onClickOverlay=(action this.userMessage "Use X to close Samples dialog")
+  {{#ember-modal-dialog
+    containerClassNames="genotype"
+    onClose=(action (mut this.showInputDialog) false)
+    targetAttachment="center"
+    translucentOverlay=true
+    clickOutsideToClose=false
+    onClickOverlay=(action this.userMessage "Use X to close dialog")
 
-  modal-id="split-container-dialog-modal"
-  title="VCF Lookup Inputs"
-  header-icon='search'
-}}
+    title="Genotype Table Controls, Datasets, Samples, Filters, VCF Lookup Inputs"
+    header-icon='search'
+  }}
 
 
-{{!-- Genotypes --}}
+    {{!-- Genotypes --}}
 
-{{log 'flowsService.axisBrush' flowsService.axisBrush}}
+    {{!-- ----------------------------------------------------------------- --}}
+    {{!-- tabTypeName is the text displayed on the tab for user identification of the contents, aka tabName.  --}}
 
-Server : 
-{{this.apiServerSelectedOrPrimary.name}}
+    <BsTab @customTabs={{true}} @onChange={{action this.onChangeTab}} @activeId={{this.activeId}} as |tab|>
+      <BsNav @type="tabs" as |nav|>
+        <ul class="nav nav-tabs li-active-extra counts">
 
-<div class="genotype">
-<div class="axis-brushes">
+          {{#let 'Datasets' as |tabTypeName|}}
+            {{#let (compute (action this.tabName2Id 'Datasets')) as |tabId|}}
+              <nav.item class="active-detail"
+                @active={{and (eq this.activeDatasetId tabTypeName) (bs-eq tab.activeId tabId) }}>
+                <a href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
+                <div>{{this.selectedCount}}</div>
+              </nav.item>
+            {{/let}}
+          {{/let}}
 
-<table>
-  <tr>
-    <th>Dataset Name</th>
-    <th>Scope</th>
-    <th>Interval</th>
-    <!-- ----------------------------- -->
-    <th class="devel-visible">BlockId</th>
-    <th class="devel-visible">zoomCounter</th>
-  </tr>
+          {{#let 'Lookup' as |tabTypeName|}}
+            {{#let (compute (action this.tabName2Id tabTypeName)) as |tabId|}}
+              <nav.item class="active-detail" @active={{bs-eq tab.activeId tabId}}><a href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
+                <div>{{this.brushedDomainLength}}</div>
+              </nav.item>
+            {{/let}}
+          {{/let}}
 
-{{#each flowsService.axisBrush.brushedAxes as |block| }}
+          {{#let 'Result' as |tabTypeName|}}
+            {{#let (compute (action this.tabName2Id tabTypeName)) as |tabId|}}
+              <nav.item class="active-detail" @active={{bs-eq tab.activeId tabId}}><a href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
+                <div>
+                  {{this.vcfGenotypeTextSizeDescription}}
+                  , {{this.vcfGenotypeLookupCount}} current requests.
+                  {{this.vcfGenotypeText.length}}
+                </div>
+              </nav.item>
+            {{/let}}
+          {{/let}}
 
-  <tr>
-    <td>
-      {{!-- datasetName --}}
-      <div>{{block.axis.referenceBlock.datasetId.id}}</div>
-      <div>{{block.axis.axis1d.referenceBlock.datasetId.id}}</div>
-    </td>
-    <td>{{block.block.scope}}</td>
-    <td>{{brushedDomainRounded}}</td>
-    <!-- ----------------------------- -->
-    <td class="devel-visible">{{blockId}}</td>
-    <td class="devel-visible">{{zoomCounter}}</td>
-    <td style="display:none;"> {{features.length}} <!-- for features request. --></td>
-  </tr>
+          {{#let 'Controls' as |tabTypeName|}}
+            {{#let (compute (action this.tabName2Id tabTypeName)) as |tabId|}}
+              <nav.item class="active-detail" @active={{bs-eq tab.activeId tabId}}><a href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
+                <div>{{!-- this.blocksHaplotypeFilters.mapBy('haplotypeFilters').flat() --}}</div>
+              </nav.item>
+            {{/let}}
+          {{/let}}
 
-{{/each}}
+        </ul>
+      </BsNav>
 
-</table>
+      {{!-- --------------------------------------------------------------- --}}
 
-</div>
+      <div class="tab-content">
 
-<div>{{referenceDatasetName}}</div>
+        {{#let 'Datasets' as |tabTypeName|}}
+          {{#let (compute (action this.tabName2Id tabTypeName)) as |tabId|}}
 
-<div class="select-wrap">
-  <select onchange={{action this.mut_axisBrushBlockIndex value="target.value"}}>
-    {{#each this.brushedOrViewedVCFBlocks as |abbChoice abbIndex|}}
-      <option value={{abbIndex}} selected={{eq this.axisBrushBlockIndex abbIndex}}>{{abbIndex}} : {{abbChoice.block.datasetId.id}} : {{abbChoice.block.scope}}</option>
-    {{/each}}
-  </select>
-</div>
+            {{#tab.pane id=tabId title=tabTypeName}}
 
-<div>
-  <label>List of samples from VCF</label>
-  {{#if this.vcfGenotypeSamplesCount}}
-    <span class="sample-count">( {{this.vcfGenotypeSamplesCount}} )</span>
-  {{else}}
-    <button type="button" onclick={{action this.vcfGenotypeSamples}} class="btn btn-info btn-xs">Get samples list</button>
-  {{/if}}
+              {{!-- --------------------------------------------------------- --}}
 
-  <div class="genotype-controls">
+              <BsTab @customTabs={{true}} @onChange={{action this.selectDataset}} @activeId={{this.activeIdDatasets}} as |tab|>
+                <BsNav @type="tabs" as |nav|>
+                  <ul class="nav nav-tabs li-active-extra counts">
 
-    <select style="height:100px" class="form-control" multiple onchange={{action this.selectSample}}>
-      {{#each this.samples as |sampleChoice|}}
-      <option value={{sampleChoice}} selected={{include this.selectedSamples sampleChoice}}>{{sampleChoice}}</option>
+                    {{#each this.gtDatasetTabs as |tabTypeName|}}
+                      {{#let (compute (action this.tabName2IdDatasets tabTypeName)) as |tabId|}}
+                        <nav.item class="active-detail"
+                          @active={{bs-eq this.activeDatasetId tabTypeName }}>
+                          <a href={{concat "#" tabId}} role="tab" onclick={{action (pipe (action tab.select tabId) (action this.selectDataset tabTypeName) ) }}>{{tabTypeName}}</a>
+                          <div>{{this.selectedCount}}</div>
+                        </nav.item>
+                      {{/let}}
+                    {{/each}}
+
+                  </ul>
+                </BsNav>
+
+                <div class="tab-content">
+
+
+                  {{!-- --------------------------------------------------------- --}}
+
+                  {{log 'axisBrush' axisBrush}}
+
+                  Server : 
+                  {{this.apiServerSelectedOrPrimary.name}}
+
+                  <div class="genotype">
+                    <div class="axis-brushes">
+
+                      <table>
+                        <tr>
+                          <th>Dataset Name</th>
+                          <th>Scope</th>
+                          <th>Interval</th>
+                          <!-- ----------------------------- -->
+                          <th class="devel-visible">BlockId</th>
+                          <th class="devel-visible">zoomCounter</th>
+                        </tr>
+
+                      {{#each axisBrush.brushedAxes as |block| }}
+
+                        <tr>
+                          <td>
+                            {{!-- datasetName --}}
+                            <div>{{block.axis.referenceBlock.datasetId.id}}</div>
+                            <div>{{block.axis.axis1d.referenceBlock.datasetId.id}}</div>
+                          </td>
+                          <td>{{block.block.scope}}</td>
+                          <td>{{brushedDomainRounded}}</td>
+                          <!-- ----------------------------- -->
+                          <td class="devel-visible">{{blockId}}</td>
+                          <td class="devel-visible">{{zoomCounter}}</td>
+                          <td style="display:none;"> {{features.length}} <!-- for features request. --></td>
+                        </tr>
+
+                      {{/each}}
+
+                      </table>
+
+                    </div>
+
+                    <div>{{referenceDatasetName}}</div>
+
+                    <div>
+                      <label style="display:inline">Request Samples :
+                        {{#ember-tooltip side="right" delay=500}}
+                        Which samples / individuals to request genotype of
+                        {{/ember-tooltip}}
+                      </label>
+
+                      <span>
+                        <input type="checkbox"
+                          style="margin-left: 3em;"
+                          checked={{@userSettings.requestSamplesAll}}
+                          oninput={{pipe
+                            (action (mut @userSettings.requestSamplesAll) value="target.checked")
+                            this.ensureSamples }}  >
+                        <label>All</label>
+                        {{#ember-tooltip side="right" delay=500}}
+                          Request genotype of All samples or select samples in list
+                        {{/ember-tooltip}}
+                      </span>
+
+                      {{#if @userSettings.showSampleFilters}}
+                      <span>
+                        <input type="checkbox"
+                          style="margin-left: 3em;"
+                          checked={{@userSettings.requestSamplesFiltered}}
+                          oninput={{pipe (action (mut @userSettings.requestSamplesFiltered) value="target.checked")
+                            this.ensureSamples }}  >
+                        <label>Filtered</label>
+                        {{#ember-tooltip side="right" delay=500}}
+                          Request genotype of samples selected by LD Block / tSNP filters
+                        {{/ember-tooltip}}
+                      </span>
+                      {{/if}}
+
+                    </div>
+
+                    <div>
+                      <label>List of samples from VCF</label>
+                      {{#if this.vcfGenotypeSamplesText}}
+                        <span class="sample-count">( {{this.vcfGenotypeSamplesCount}} )</span>
+                      {{else}}
+                        <button type="button" onclick={{action this.vcfGenotypeSamples}} class="btn btn-info btn-xs">Get samples list</button>
+                      {{/if}}
+
+                      <div class="genotypeSampleFilter_textInput">
+                        <label class="" style="margin-right: 1em;">
+                          <i class="glyphicon glyphicon-filter"></i>
+                          Search / Filter
+                        </label>
+                        {{input id="sampleNameFilter" type="search" value=sampleNameFilter
+                          input=(action this.nameFilterChanged value="target.value")
+                          placeholder="Filter available samples by name" }}
+                          {{!-- maybe autocomplete="sample-name", but samples names are mostly numeric so it may be more of an impediment than a benefit for the user --}}
+
+                        <span>
+                          <input type="checkbox"
+                            style="margin-left: 3em;"
+                            checked={{@userSettings.samplesIntersection}}
+                            oninput={{pipe
+                              (action (mut @userSettings.samplesIntersection) value="target.checked")
+                                this.ensureSamples
+                               }}  >
+                          <label>Common</label>
+                          {{#ember-tooltip side="right" delay=500}}
+                            Select from samples which are common to the viewed VCF datasets
+                          {{/ember-tooltip}}
+                        </span>
+                        <div>
+                          {{this.filterErrorText}}
+                        </div>
+
+                      </div>
+
+                      {{ensureSamplesForDatasetTabEffect}}
+                      <div class="genotype-controls">
+
+                        <select style="height:100px" class="form-control" multiple onchange={{action this.selectSample}}>
+                          {{#each this.filteredSamples as |sampleChoice|}}
+                          <option value={{sampleChoice}} selected={{include this.selectedSamples sampleChoice}}>{{sampleChoice}}</option>
+                          {{/each}}
+                        </select>
+
+                      </div>
+                    </div>
+
+                    <div>
+                      <label>Selected samples to be requested in VCF Lookup</label>
+                      {{#if this.selectedCount}}
+                        <span class="sample-count">( {{selectedCount}} )</span>
+                      {{/if}}
+
+                      <div>
+                        <Textarea
+                          class="selectedSamplesInput"
+                          @value={{this.selectedSamplesText}}
+                          @input={{action this.sampleNameListInputKey value="target.value" }}
+                          @enter={{this.sampleNameListInput}}
+                          @insert-newline={{this.sampleNameListInput}}
+                          @escape-press={{this.sampleNameListInput}}
+                          placeholder="Sample Names"
+                          >
+                        </Textarea>
+                      </div>
+
+                    </div>
+
+                  {{!-- --------------------------------------------------------------------- --}}
+                  </div>
+                  {{!-- --------------------------------------------------------------------- --}}
+
+
+                </div>      {{!-- end of class="tab-content" --}}
+
+              </BsTab>
+              {{!-- --------------------------------------------------------------------- --}}
+
+            {{/tab.pane}}
+          {{/let}}
+        {{/let}}
+
+        {{!-- ------------------------------------------------------------- --}}
+
+        {{#let 'Lookup' as |tabTypeName|}}
+          {{#let (compute (action this.tabName2Id tabTypeName)) as |tabId|}}
+
+            {{#tab.pane id=tabId title=tabTypeName}}
+
+              <div class="genotype">
+
+                <div class="genotype-controls">
+                  <div>
+                    <ul class="view-controls"
+                      style="min-width: fit-content; list-style-type: none; padding-left: 0px;">
+                      {{!-- possibly : class="list-group" --}}
+
+                      <li> {{!-- possibly :  class="list-group-item" --}}
+                        <label style="display:inline">Format :
+                        {{#ember-tooltip side="right" delay=500}}
+                          Format for request and display
+                        {{/ember-tooltip}}
+                        </label>
+                        {{radio-button value='CATG' groupValue=requestFormat
+                          changed=(action requestFormatChanged preventDefault=false)
+                        }}
+                        ACGT &nbsp;&nbsp;
+                        <span>
+                        {{radio-button value='Numerical' groupValue=requestFormat
+                          changed=(action requestFormatChanged preventDefault=false)
+                        }}
+                        012 &nbsp;&nbsp;
+                        {{#ember-tooltip side="right" delay=500}}
+                          Dosage / # allele copies of Alt
+                        {{/ember-tooltip}}
+                        </span>
+
+                      </li>
+
+                      <li>
+
+                        <input type="checkbox"
+                          style="margin-left: 3em;"
+                          checked={{@userSettings.autoLookup}}
+                          oninput={{action (mut @userSettings.autoLookup) value="target.checked"}}  >
+                        <label>Auto lookup - all datasets
+                        <EmberTooltip side="right" delay=500>
+                          <span>
+                            Request data for all VCFs in table when user clicks VCF Lookup.
+                            Otherwise, request VCF data from the dataset whose tab is selected in Datasets.
+                          </span>
+                        </EmberTooltip>
+                        </label>
+
+                      </li>
+
+                      <li>
+                        <input type="checkbox"
+                          style="margin-left: 3em;"
+                          checked={{@userSettings.replaceResults}}
+                          oninput={{action (mut @userSettings.replaceResults) value="target.checked"}}  >
+                        <label>Replace previous results.</label>
+                      </li>
+
+                      <li class="list-group-item horiz-2">
+                        {{#if this.urlOptions.gtIntervalLimit}}
+                        <div>
+                          <label>Interval limit</label>
+                          <span class="sub-label">{{ this.intervalLimit }} Mb</span>
+                          <input type="range"
+                           value=0
+                           oninput={{action this.intervalLimitInput}}
+                           min="1" max="100"
+                          />
+                        </div>
+                        {{/if}}
+
+                        <div>
+                          <label>Rows</label>
+                          {{#ember-tooltip side="right" delay=500}}
+                            Limit of rows in result, and rows displayed per dataset.
+                          {{/ember-tooltip}}
+                          <span class="sub-label">{{ this.rowLimit }}</span>
+                          <input type="range"
+                           value=100
+                           oninput={{action this.rowLimitInput}}
+                           min="1" max="1000"
+                          />
+                        </div>
+
+                        <div class="samplesLimit border-none-lgi">
+                          <Elem::InputRangeText
+                            @labelText="Samples Limit : "
+                            @allowZero=true
+                            @valueInitial={{this.args.userSettings.samplesLimit}}
+                            @valueMin=1
+                            @valueMax=1000
+                            @valueChanged={{action (fn this.samplesLimitChanged)}}
+                            @disabled={{not @userSettings.samplesLimitEnable}} >
+
+                            <input type="checkbox"
+                              checked={{@userSettings.samplesLimitEnable}}
+                              oninput={{pipe (action (mut @userSettings.samplesLimitEnable) value="target.checked")
+                                this.ensureSamples }}  >
+
+                          </Elem::InputRangeText>
+                          <EmberTooltip side="right" delay=500>
+                            <span>Limit of number of samples requested in VCF Lookup.</span>
+                          </EmberTooltip>
+                        </div>
+
+
+
+                      </li>
+
+                    </ul>
+
+                  </div>
+
+                </div>
+
+                {{#if this.vcfGenotypeLookupDomain}}
+                <div class="lookup-line">
+
+                  <div class="interval-group">
+                    <label>VCF Genotype for brushed interval</label>
+                    <div>
+                      {{!-- evaluating vcfGenotypeLookupDomain here enables following object-at to work. --}}
+                      <div style="display:none">vcfGenotypeLookupDomain{{this.vcfGenotypeLookupDomain}}</div>
+                      <div>{{object-at 0 this.vcfGenotypeLookupDomain}}</div>
+                      <div>{{object-at 1 this.vcfGenotypeLookupDomain}}</div>
+                    </div>
+                  </div>
+
+                </div>
+                {{/if}}
+
+              </div>
+
+              {{!-- --------------------------------------------------------------- --}}
+
+              {{#if lookupMessage}}
+                {{elem/panel-message warningMessage=lookupMessage}}
+              {{/if}}
+
+              {{!-- --------------------------------------------------------------- --}}
+
+              <div class="genotype">
+                {{#if this.vcfExportText.length}}
+                  <button type="button" class="btn btn-info btn-xs">
+                    {{#component "ember-csv@file-anchor" data=this.vcfExportText fileName=this.vcfExportFileName}} VCF Download{{/component}}
+                  </button>
+                {{/if}}
+              </div>
+
+            {{/tab.pane}}
+          {{/let}}
+        {{/let}}
+
+        {{!-- ------------------------------------------------------------- --}}
+
+        {{#let 'Result' as |tabTypeName|}}
+          {{#let (compute (action this.tabName2Id tabTypeName)) as |tabId|}}
+
+            {{#tab.pane id=tabId title=tabTypeName}}
+
+              {{#if this.headerText}}
+                <textarea class="vcfGenotypeText" >{{this.headerText}}</textarea>
+              {{/if}}
+              <div>
+                {{!-- style={{compute (action this.vcfGenotypeTextWidthStyle) --}}
+                <textarea class="vcfGenotypeText" >
+                  {{this.vcfGenotypeText}}</textarea>
+              </div>
+
+            {{/tab.pane}}
+          {{/let}}
+        {{/let}}
+
+        {{!-- ------------------------------------------------------------- --}}
+
+        {{#let 'Controls' as |tabTypeName|}}
+          {{#let (compute (action this.tabName2Id tabTypeName)) as |tabId|}}
+
+            {{#tab.pane id=tabId title=tabTypeName}}
+              <div class="genotype">
+
+                <span style="margin:1em; width: 20%;">
+                  {{#elem/icon-toggle state=@userSettings.showSampleFilters iconTrue='collapse-down' iconFalse='expand' }}
+                    {{#ember-tooltip side="right" delay=500}}
+                      Toggle display of Sample filtering by Features / SNPs and LD Blocks.
+                    {{/ember-tooltip}}
+                  {{/elem/icon-toggle}}
+                </span>
+
+                <label style="margin-left: 1em; margin-top: 1em" >Sample Filters</label>
+                {{#if @userSettings.showSampleFilters}}
+
+                <div>
+                  <input type="checkbox"
+                    style="margin-left: 2em;"
+                    checked={{@userSettings.selectFeaturesByLDBlock}}
+                    oninput={{action (pipe 
+                    (action (mut @userSettings.selectFeaturesByLDBlock) value="target.checked")
+                    this.haplotypeFiltersApply) }}  >
+                  <label>Select Filtering Features / SNPs By LD Block
+                    <EmberTooltip side="right" delay=500>
+                      <span>
+                        Select LD Blocks to select SNPs for Sample filter, by clicking in LD Block column.
+                        Otherwise select SNPs directly, by clicking in Ref or Alt column.
+                      </span>
+                    </EmberTooltip>
+                  </label>
+                </div>
+
+                <div style="margin-left: 1em; margin-top: 1em">
+                  <span>{{this.haplotypeFiltersCount}}</span>
+                  <label style="margin-left: 1em;" >LD Blocks</label>
+                </div>
+                <ul class="list-group borderless haplotypeFilters">
+                  {{#each this.blocksHaplotypeFilters as |blockHF|}}
+                    <li class="list-group-item">
+                      <div>{{blockHF.block.datasetId.id}}</div>
+                      <ul class="list-group">
+                        {{#each blockHF.haplotypeFilters as |haplotype|}}
+                          <li class="list-group-item">
+                            <div>
+                              {{!-- 2 nbsp creates a square block --}}
+                              <span style="background-color : {{compute this.haplotypeColour haplotype }}">
+                                &nbsp; &nbsp;
+                              </span>
+                              {{haplotype}}
+                            </div>
+                          </li>
+                        {{/each}}
+                      </ul>
+
+                    </li>
+                  {{/each}}
+                </ul>
+
+                <div style="margin-left: 1em; margin-top: 1em">
+                  <span>{{this.featureFiltersCount}}</span>
+                  <label style="margin-left: 1em;">Feature / SNP</label>
+                </div>
+                <ul class="list-group borderless featureFilters">
+                  {{#each this.blocksFeatureFilters as |blockFF|}}
+                    <li class="list-group-item">
+                      <div>{{blockFF.block.datasetId.id}}</div>
+                      <ul class="list-group">
+                        {{#each blockFF.featureFilters as |feature|}}
+                          <li class="list-group-item">
+                            <div>
+                              {{feature.value_0}} &nbsp; {{feature.values.ref}}/{{feature.values.alt}}
+                            </div>
+                          </li>
+                        {{/each}}
+                      </ul>
+
+                    </li>
+                  {{/each}}
+                </ul>
+
+                <ul class="list-group borderless view-controls">
+
+                  <li>
+                    <button type="button" class="btn btn-info btn-xs"
+                      onclick={{action (pipe this.haplotypeFiltersClear this.featureFiltersClear this.haplotypeFiltersApply) }} >
+                      Clear
+                      <EmberTooltip side="right" delay=500>
+                        <span>Clear the selected SNPs or LD Block from the sample filter.</span>
+                      </EmberTooltip>
+                    </button>
+
+                    <input type="checkbox"
+                      style="margin-left: 2em;"
+                      checked={{@userSettings.haplotypeFilterRef}}
+                      oninput={{action (pipe 
+                      (action (mut @userSettings.haplotypeFilterRef) value="target.checked")
+                      this.haplotypeFiltersApply) }}  >
+                    <label>Match Ref
+                      <EmberTooltip side="right" delay=500>
+                        <span>Match against the SNP Ref value, in the sample filter based on SNP or LD Block.  Otherwise Alt.</span>
+                      </EmberTooltip>
+                    </label>
+
+                    <input type="checkbox"
+                      style="margin-left: 2em;"
+                      checked={{@userSettings.haplotypeFiltersEnable}}
+                      oninput={{action (pipe 
+                      (action (mut @userSettings.haplotypeFiltersEnable) value="target.checked")
+                      this.haplotypeFiltersApply) }}  >
+                    <label>Filter
+                      <EmberTooltip side="right" delay=500>
+                        <span>Show only columns which match the sample filter based on SNP or LD Block. Otherwise, sort by closeness of match.</span>
+                      </EmberTooltip>
+                    </label>
+
+                  </li>
+
+
+                </ul>
+
+                <hr>
+
+                {{/if}} {{!-- end of if showSampleFilters }}
+
+                {{!---------------------------------------------------------------------------}}
+
+                <ul class="list-group borderless view-controls">
+
+                  <li>
+                    <input type="checkbox"
+                      style="margin-left: 3em;"
+                      checked={{@userSettings.filterBySelectedSamples}}
+                      oninput={{action (mut @userSettings.filterBySelectedSamples) value="target.checked"}}  >
+                    <label>Selected samples
+                      <EmberTooltip side="right" delay=500>
+                        <span>Show only columns of sample which are selected.</span>
+                      </EmberTooltip>
+                    </label>
+
+                    <input type="checkbox"
+                      style="margin-left: 3em;"
+                      checked={{this.urlOptions.gtMergeRows}}
+                      oninput={{action (mut this.urlOptions.gtMergeRows) value="target.checked"}}  >
+                    <label>Merge Rows
+                      <EmberTooltip side="right" delay=500>
+                        <span>Combine SNPs with the same Position from different datasets on the same row of the table.</span>
+                      </EmberTooltip>
+                    </label>
+
+                    <input type="checkbox"
+                      style="margin-left: 3em;"
+                      checked={{@userSettings.showNonVCFFeatureNames}}
+                      oninput={{action (mut @userSettings.showNonVCFFeatureNames) value="target.checked"}}  >
+                    <label>Feature Names
+                      <EmberTooltip side="right" delay=500>
+                        <span>Show Feature names of non-VCF datasets in the cell, otherwise in hover text.</span>
+                      </EmberTooltip>
+                    </label>
+
+                  </li>
+                </ul>
+
+                {{!---------------------------------------------------------------------}}
+
+                <ul class="list-group borderless view-controls">
+                  <li class="list-group-item horiz-2">
+
+                    <div>
+                      <label>Cell size factor</label>
+                      {{#ember-tooltip side="right" delay=500}}
+                        Adjust table cell size.
+                      {{/ember-tooltip}}
+                      <span class="sub-label">{{ this.args.userSettings.cellSizeFactor }}</span>
+                      <input type="range"
+                       value={{ this.args.userSettings.cellSizeFactorInt }}
+                       oninput={{action this.cellSizeFactorInput}}
+                       min="1" max="200"
+                      />
+                    </div>
+
+                  </li>
+                </ul>
+
+                {{!---------------------------------------------------------------------------}}
+
+                <ul class="list-group borderless view-controls">
+
+                  <li>
+                    <input type="checkbox"
+                      style="margin-left: 3em;"
+                      checked={{@userSettings.snpPolymorphismFilter}}
+                      oninput={{action (mut @userSettings.snpPolymorphismFilter) value="target.checked"}}  >
+                    <label>SNP Polymorphism Filter
+                      <EmberTooltip side="right" delay=500>
+                        <span>Filter out monomorphic SNPs.</span>
+                      </EmberTooltip>
+                    </label>
+
+                  </li>
+                </ul>
+
+                {{!---------------------------------------------------------------------}}
+
+                <ul class="list-group borderless view-controls">
+                  <li>
+
+                    <div style="display : inline-block;">
+                      <Elem::InputRangeText
+                        @labelText="SNP MAF Threshold : "
+                        @allowZero=true
+                        @valueInitial={{this.args.userSettings.mafThreshold}}
+                        @valueMin={{this.mafThresholdMin}}
+                        @valueMax={{this.mafThresholdMax}}
+                        @valueChanged={{action (fn this.mafThresholdChanged)}} >
+
+                      <span class="filter-group-col">
+                        <input type="checkbox" id="gtInputMafUpper" name="mafUpper" checked={{@userSettings.mafUpper}}
+                          oninput={{action (mut @userSettings.mafUpper) value="target.checked"}} 
+                        >
+                        <EmberTooltip side="right" delay=500>
+                          <span>Use threshold as an upper / lower limit.</span>
+                        </EmberTooltip>
+                      </span>
+
+                      {{this.mafThresholdText}}
+                      </Elem::InputRangeText>
+
+                    </div>
+
+                    <div style="display : inline-block;">
+                      <Elem::InputRangeText
+                        @labelText="Sample Call Rate : "
+                        @allowZero=true
+                        @valueInitial={{this.args.userSettings.callRateThreshold}}
+                        @valueMin=0.001
+                        @valueMax=1
+                        @valueChanged={{action (fn this.callRateThresholdChanged)}} >
+                      </Elem::InputRangeText>
+                    </div>
+
+
+                  </li>
+
+
+                </ul>
+
+                {{!---------------------------------------------------------------------}}
+
+                <ul class="list-group borderless view-controls">
+                  <li>
+                    <input type="checkbox"
+                      checked={{@userSettings.showAxisLDBlocks}}
+                      oninput={{action (mut @userSettings.showAxisLDBlocks) value="target.checked"}}  >
+                    <label>LD Blocks colour in Axis Tracks</label>
+                  </li>
+
+                  <li>
+                    <input type="checkbox"
+                      checked={{@userSettings.showTablePositionAlignment}}
+                      oninput={{action (mut @userSettings.showTablePositionAlignment) value="target.checked"}}  >
+                    <label>Show table position alignment to axis</label>
+                  </li>
+
+                  <li>
+                    <BsButton @type="info" @onClick={{this.copyTableToClipboard}} class="margin-top">Copy table to clipboard</BsButton>
+                  </li>
+
+                </ul>
+                {{!---------------------------------------------------------------------}}
+              </div>
+
+
+            {{/tab.pane}}
+          {{/let}}
+        {{/let}}
+
+        {{!-- ------------------------------------------------------------- --}}
+
+
+      </div>      {{!-- end of class="tab-content" --}}
+
+    </BsTab>
+
+
+    {{!-- ----------------------------------------------------------------- --}}
+
+    {{#if this.vcfGenotypeLookupDomain}}
+      {{!-- disabled if ! All && no samples selected, or All && Common && no samples to select --}}
+      <button type="button" onclick={{action this.vcfGenotypeLookup}}
+        disabled={{or
+          (and (not @userSettings.requestSamplesAll) (not this.vcfGenotypeSamplesSelected.length))
+          (and @userSettings.requestSamplesAll @userSettings.samplesIntersection (not this.samples.length))
+        }}
+        class="btn btn-info">VCF Lookup</button>
+    {{else}}
+      {{#if this.urlOptions.gtIntervalLimit}}
+        <span>VCF Lookup Region limit is {{this.intervalLimit}}Mb</span>
+      {{/if}}
+    {{/if}}
+
+    {{!-----------------------------------------------------------------------}}
+
+    <BsButton @type="info" @onClick={{action (mut this.showInputDialog) false}}>Close</BsButton>
+
+
+    {{!-- ----------------------------------------------------------------- --}}
+
+
+  {{/ember-modal-dialog}}
+{{/if}}
+
+{{!-- --------------------------------------------------------------------- --}}
+
+{{#if this.featureColumnDialogDataset}}
+
+  {{!-- tried modal-id param - no affect --}}
+  {{#ember-modal-dialog
+    onClose=(action (mut this.featureColumnDialogDataset) null)
+    targetAttachment="center"
+    translucentOverlay=true
+    clickOutsideToClose=false
+    onClickOverlay=(action this.userMessage "Use X to close dialog")
+    title="Select additional columns"
+    header-icon='search'
+  }}
+
+  <div class="genotype">
+    <label>Select additional columns</label>
+
+    <select style="height:100px" class="form-control" multiple onchange={{action this.selectFieldName}}>
+      {{#each this.selectedFeaturesValuesFieldsForDataset as |fieldName|}}
+        <option value={{fieldName}} selected={{include this.selectedFeaturesValuesFieldsForDataset fieldName}}>{{fieldName}}</option>
+      {{/each}}
+      {{#each this.forSelectFeaturesValuesFields as |fieldName|}}
+        <option value={{fieldName}}>{{fieldName}}</option>
       {{/each}}
     </select>
 
-  </div>
-</div>
-
-<div>
-  <label>Selected samples to be requested in VCF Lookup</label>
-  {{#if this.selectedCount}}
-    <span class="sample-count">( {{selectedCount}} )</span>
-  {{/if}}
-  <div>
-    <ul class="list-group">
-      {{#each this.selectedSamples as |sample|}}
-        <li class="list-group-item">{{sample}}</li>
-      {{else}}
-        <li class="list-group-item">(No samples selected)</li>
-      {{/each}}
-    </ul>
+    <BsButton @type="info" @onClick={{action (mut this.featureColumnDialogDataset) null}}>OK</BsButton>
   </div>
 
-</div>
-
-
-
-{{!---------------------------------------------------------------------------}}
-
-<BsButton @type="info" @onClick={{action (mut this.showInputDialog) false}}>OK</BsButton>
-
-{{!-- --------------------------------------------------------------------- --}}
-
-</div>
-
-{{/ember-modal-dialog}}
+  {{/ember-modal-dialog}}
 {{/if}}
 
 {{!-- --------------------------------------------------------------------- --}}
 
-<div class="genotype">
+{{#if this.intersectionDialogDataset}}
 
-  {{#elem/button-base
-    icon="search"
-    classColour="info"
-    onClick=(action (mut this.showInputDialog) true)
-    }}
-    <span>Samples ...</span>
+  {{#ember-modal-dialog
+    onClose=(action (mut this.intersectionDialogDataset) null)
+    target="#observational-table"
+    translucentOverlay=true
+    clickOutsideToClose=false
+    onClickOverlay=(action this.userMessage "Use X to close dialog")
+    title="Change Dataset intersection state"
+    header-icon='search'
+  }}
 
-     {{#ember-tooltip side="right" delay=500}}
-       Show/hide the Samples selection dialog.
-     {{/ember-tooltip}}
+  <Panel::DatasetIntersectionDialog
+    @dataset={{this.intersectionDialogDataset}}
+    @close={{action (mut this.intersectionDialogDataset) null}}
+    @positionFilterChanged={{this.positionFilterChanged}}
+    />
 
-  {{/elem/button-base}}
-
-
-  <div class="genotype-controls">
-    <div>
-      <ul class="view-controls"
-        style="min-width: fit-content; list-style-type: none; padding-left: 0px;">
-        {{!-- possibly : class="list-group" --}}
-
-        <li> {{!-- possibly :  class="list-group-item" --}}
-          <label style="display:inline">Format :
-          {{#ember-tooltip side="right" delay=500}}
-            Format for request and display
-          {{/ember-tooltip}}
-          </label>
-          {{radio-button value='CATG' groupValue=requestFormat
-            changed=(action requestFormatChanged preventDefault=false)
-          }}
-          ACGT &nbsp;&nbsp;
-          <span>
-          {{radio-button value='Numerical' groupValue=requestFormat
-            changed=(action requestFormatChanged preventDefault=false)
-          }}
-          012 &nbsp;&nbsp;
-          {{#ember-tooltip side="right" delay=500}}
-            Dosage / # allele copies of Alt
-          {{/ember-tooltip}}
-          </span>
-
-        </li>
-
-      <li>
-        <input type="checkbox"
-          style="margin-left: 3em;"
-          checked={{@userSettings.replaceResults}}
-          oninput={{action (mut @userSettings.replaceResults) value="target.checked"}}  >
-        <label>Replace previous results.</label>
-      </li>
-
-      <li class="list-group-item horiz-2">
-        {{#if this.urlOptions.gtIntervalLimit}}
-        <div>
-          <label>Interval limit</label>
-          <span class="sub-label">{{ this.intervalLimit }} Mb</span>
-          <input type="range"
-           value=0
-           oninput={{action this.intervalLimitInput}}
-           min="1" max="100"
-          />
-        </div>
-        {{/if}}
-
-        <div>
-          <label>Rows</label>
-          {{#ember-tooltip side="right" delay=500}}
-            Limit of rows in result, and rows displayed per dataset.
-          {{/ember-tooltip}}
-          <span class="sub-label">{{ this.rowLimit }}</span>
-          <input type="range"
-           value=100
-           oninput={{action this.rowLimitInput}}
-           min="1" max="1000"
-          />
-        </div>
-      </li>
-
-      </ul>
-
-    </div>
-
-  </div>
-
-  <div class="lookup-line">
-
-  {{#if this.vcfGenotypeLookupDomain}}
-    <button type="button" onclick={{action this.vcfGenotypeLookup}}
-      disabled={{not this.vcfGenotypeSamplesSelected.length}}
-      class="btn btn-info btn-xs">VCF Lookup</button>
-  {{else}}
-    {{#if this.urlOptions.gtIntervalLimit}}
-      <span>VCF Lookup Region limit is {{this.intervalLimit}}Mb</span>
-    {{/if}}
-  {{/if}}
-
-  <div class="interval-group">
-    <label>VCF Genotype for brushed interval</label>
-    <div>
-      {{!-- evaluating vcfGenotypeLookupDomain here enables following object-at to work. --}}
-      <div style="display:none">vcfGenotypeLookupDomain{{this.vcfGenotypeLookupDomain}}</div>
-      <div>{{object-at 0 this.vcfGenotypeLookupDomain}}</div>
-      <div>{{object-at 1 this.vcfGenotypeLookupDomain}}</div>
-    </div>
-  </div>
-
-  </div>
-
-</div>
-
-{{!-- --------------------------------------------------------------------- --}}
-
-{{#if lookupMessage}}
-  {{elem/panel-message warningMessage=lookupMessage}}
+  {{/ember-modal-dialog}}
 {{/if}}
 
 {{!-- --------------------------------------------------------------------- --}}
 
-<div class="genotype">
-  {{#if this.vcfExportText.length}}
-    <button type="button" class="btn btn-info btn-xs">
-      {{#component "ember-csv@file-anchor" data=this.vcfExportText fileName=this.vcfExportFileName}} VCF Download{{/component}}
-    </button>
-  {{/if}}
-</div>
+{{#if this.tableApi.topLeftDialog}}
+  {{log 'topLeftDialog' this.tableApi.topLeftDialog}}
+  {{!-- #ember-wormhole destinationElement=this.tableApi.topLeftDialog --}}
 
-  <div style="margin-top:2ex">
+  {{#ember-tether
+    tetherTarget=this.tableApi.topLeftDialog
+  }}
 
-    {{#elem/panel-container state="primary" showComponent=showResultText as |panelContainer|}}
+    <div id="topLeftDialog">
 
-      {{#elem/panel-heading icon="transfer" panelContainer=panelContainer}}
-        Result text
-      {{/elem/panel-heading}}
-
-      {{#if panelContainer.showComponent}}
-
-        {{#if this.headerText}}
-          <textarea class="vcfGenotypeText" >{{this.headerText}}</textarea>
-        {{/if}}
+      {{!-- these are copied from main dialog --}}
       <div>
-        <textarea class="vcfGenotypeText"
-          style={{compute (action this.vcfGenotypeTextWidthStyle)}} >
-          {{this.vcfGenotypeText}}</textarea>
+        {{this.dataScope}}
+        {{log 'dataScope' this.dataScope}}
+      </div>
+      {{#if this.vcfGenotypeLookupDomain}}
+        <button type="button" onclick={{action this.vcfGenotypeLookup}}
+          disabled={{or
+            (and (not @userSettings.requestSamplesAll) (not this.vcfGenotypeSamplesSelected.length))
+            (and @userSettings.requestSamplesAll @userSettings.samplesIntersection (not this.samples.length))
+          }}
+          class="btn btn-info">VCF Lookup</button>
+      {{/if}}
+
+      <div>
+        {{#if this.vcfGenotypeLookupCount}}
+          {{this.vcfGenotypeLookupCount}}
+        {{/if}}
+        &nbsp;
+        {{#ember-tooltip side="right" delay=500}}
+          {{this.vcfGenotypeLookupCount}} Current Requests.
+          {{this.vcfGenotypeTextSizeDescription}}
+          {{this.vcfGenotypeText.length}}
+        {{/ember-tooltip}}
+
       </div>
 
-      {{else}}
-        {{this.vcfGenotypeTextSizeDescription}}
-        , {{this.vcfGenotypeLookupCount}} current requests.
-      {{/if}} {{!-- showComponent --}}
-    {{/elem/panel-container}}
+    </div>
 
+  {{/ember-tether}}
 
-  </div>
-
-
+  {{!-- /ember-wormhole --}}
+{{/if}}
 
 {{!-- --------------------------------------------------------------------- --}}
+
 <div class="clear-both"></div>
 
+<style>
+  {{#each datasetsClasses as |datasetsClass|}}
+    {{concat ".col-Dataset-" datasetsClass.id}}
+    {
+      border-left : 5px solid {{datasetsClass.colour}};
+    }
+  {{/each}}
+</style>
+
 {{matrix-view
+  model=this.args.model
+  userSettings=this.args.userSettings
+  dataScope=this.dataScope
   displayData=this.displayData
   displayDataRows=this.displayDataRows
   columnNamesParam=this.columnNames
+  gtDatasets=this.gtDatasets
+  gtDatasetColumns=this.gtDatasetColumns
+  datasetColumns=this.datasetColumns
+  extraDatasetColumns=this.extraDatasetColumns
   selectBlock=(action @selectBlock)
+  changeDatasetPositionFilter=this.changeDatasetPositionFilter
+  datasetPositionFilterChangeCount=this.datasetPositionFilterChangeCount
+  featureColumnDialogDataset=(action (mut this.featureColumnDialogDataset))
+  intersectionDialogDataset=(action (mut this.intersectionDialogDatasetId))
   selectedBlock=@selectedBlock
   blockSamples=true
   displayForm=this.requestFormat
+  haplotypeToggle=this.haplotypeToggle
+  featureToggle=this.featureToggle
+  haplotypeFilterSamples=this.haplotypeFilterSamples
+  tablePositionChanged=this.tablePositionChanged
+  tableApi=this.tableApi
 }}
-
-{{!---------------------------------------------------------------------------}}
-
-<ul class="list-group view-controls">
-  <li>
-    <input type="checkbox"
-      style="margin-left: 3em;"
-      checked={{@userSettings.filterBySelectedSamples}}
-      oninput={{action (mut @userSettings.filterBySelectedSamples) value="target.checked"}}  >
-    <label>Selected samples</label>
-  </li>
-</ul>
 
 {{!---------------------------------------------------------------------------}}
 

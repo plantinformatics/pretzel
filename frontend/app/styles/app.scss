@@ -192,6 +192,7 @@ div.app-logo {
 }
 .resizer:hover
 {
+  /* The dashed hover border is positioned for horizontal / width resizer; it is out of place for vertical */
   border: 1px #337ab7 dashed;
   border-radius :  6px;
   margin-right: -7px  !important;	/* -6px - 1px to balance the border 1px */
@@ -208,6 +209,16 @@ div.app-logo {
   content: "\21F9";
   right: -20px;
   position: relative;
+  left: 4px;
+  /* require a minimum of 121 to be above the HandsOnTable elements near this element. */
+  z-index: 181;
+}
+.resizer.vertical:not(.inFO):not(.no-resizer-icon)::after
+{
+  right : inherit;
+  bottom: calc(0px - var(--matrixViewColumnHeaderHeight));
+  /** ↧ Downwards Arrow from Bar.   https://symbl.cc/en/21A7/ */
+  content: "\21A7";
 }
 /*.foreignObject*/ .resizer.inFO {
   position : inherit;
@@ -751,6 +762,13 @@ g.horizTick.labelledFeatures > text.horizTick {
     text-shadow: initial
 }
 
+path.genotypeEdge
+{
+  fill : none;
+  stroke: black;
+  stroke-dasharray: 15 15;
+}
+
 path.syntenyEdge
 {
   fill-opacity: calc(var(--path-stroke-opacity)*0.33);
@@ -1029,6 +1047,10 @@ li.dropdown-submenu > ul.dropdown-menu {
   margin-top: 2ex;
   margin-right: 1em;
   display: flex;
+}
+div.textInput button.btn-info
+{
+  margin-left: 1em;
 }
 .textInput #nameFilter
 {
@@ -1633,21 +1655,59 @@ div#goto-feature > div
   height: 100%;
 }
 
+.right-panel-genotype,
+.right-panel-genotype > .matrix-view
+{
+  height: 100%;
+  width : 100%;
+  display : flex;
+}
+.gtResizeHeader
+{
+  display : flex;
+  flex-direction : column;
+  /* to place the arrow outside-left, use width : 0px; and .resizer.vertical : right : 20px instead of inherit.
+   * That is fine except when the right panel is placed below the graph - no space on left.
+   */
+  overflow-x: visible;
+  width: 0px;
+}
+.gtResizeHeader > div
+{
+  /* border : solid green 1px; */
+}
+
 #observational-table {
-  flex: 1;
+  /* flex: 1; */
+  font-size : var(--matrixViewFontSize);
+}
+#observational-table th,
+#observational-table td
+{
+  line-height : var(--matrixViewLineHeight);
+  height : var(--matrixViewHeight);
+}
+
+#observational-table .handsontable th
+{
+  /* default 'top' causes a few px empty space at the bottom of column headers.  */
+  vertical-align: inherit;
 }
 
 #observational-table .wtHolder
 {
-  height : fit-content !important;
+  /* height : fit-content !important; */
 }
 /* .col-sample */
 #observational-table .head
 {
-  margin-top: 210px;
+  /* used --matrixViewColumnHeaderHeight * 0.84, and the threshold was at 250px, so 250px * (1 - .84) -> 40px */
+  margin-top: calc(var(--matrixViewColumnHeaderHeight) - 40px);
   margin-left: 7px;
   transform-origin: left;
   transform: rotate(-90deg);
+  /* space above dataset colour border-left rectangle. */
+  padding-left: 10px;
 }
 #observational-table .head.col-Position
 {
@@ -1657,7 +1717,58 @@ div#goto-feature > div
 #observational-table td.col-Alt
 {
   border-right-width: 5px;
+  border-right-color: rgb(243, 243, 243);
 }
+#observational-table th > div > span.colHeader > .col-Dataset-Name
+{
+  /* handsontable th has white-space: nowrap, so override that */
+  white-space: initial;
+  /* datasetId may be long, without spaces. */
+  overflow-wrap: anywhere;
+  /* height:0em prevents first line being rotated left of the left edge,
+   * but causes a few px indent from the bottom, so use margin-left instead. */
+  margin-left: 2ex;
+  width: 13em;
+  text-align: left;
+}
+.col-Dataset-Name > i
+{
+  left: -20px;
+  top: 14px;
+  color: green;
+}
+.col-Dataset-Name > i.glyphicon-minus {
+  color: red;
+}
+
+/* genotype table : wrap text of datasetId and scope in top-left corner   */
+/* div.ht_clone_top_left_corner > div.wtHolder > div.wtHider > div.wtSpreader > table.htCore > thead > tr > th > div > span.colHeader.cornerHeader */
+div.ht_clone_top_left_corner span.colHeader.cornerHeader {
+  /* display: block; */
+  white-space : normal;
+  margin-top : 5ex;
+}
+#observational-table:not(.gtMergeRows) span.colHeader.cornerHeader {
+  /* depends on rowHeaders() width, i.e.  length of
+   *  (gtMergeRows ? Feature Position : Feature name)
+   */
+  width : 11em;
+}
+
+#topLeftDialog
+{
+  position: fixed;
+  /* require a minimum of 181 to be above the HandsOnTable elements near this element. */
+  z-index: 181;
+  padding-left: 12px;
+}
+
+/** when viewing matrix-view as plain text, clip the rgb() in the block column to avoid row height calculation. */
+#observational-table table.htCore > tbody > tr > td {
+  white-space: nowrap;
+}
+
+
 
 //------------------------------------------------------------------------------
 
@@ -1668,7 +1779,8 @@ div#goto-feature > div
 /** colours representing N copies of Alt value */
 /* copyNum_0 : Ref */
 #observational-table td.copyNum_0 {
-  background-color : #5cb85c;  /*green, was orange*/
+  /** copyNum_0, 2 colours from MS Teams 2023Mar10 chat 14:36, KLF */
+  background-color : #b1c1e8;  /* pale blue/grey. was  #5cb85c green, prev orange*/
 }
 /* copyNum_1 : Het */
 #observational-table td.copyNum_1 {
@@ -1676,7 +1788,7 @@ div#goto-feature > div
 }
 /* copyNum_2 : Alt */
 #observational-table td.copyNum_2 {
-  background-color : #337ab7; /*blue*/
+  background-color : #ffc8ae; /* pale orange, was #337ab7 blue*/
 }
 
 #observational-table td.relativeColour_equal {
@@ -1697,6 +1809,10 @@ div#goto-feature > div
 }
 #observational-table td.nucleotide_T {
   background-color : black;
+}
+
+#observational-table td.featureIsFilter {
+  border: 2px solid green;
 }
 
 // -----------------------------------------------------------------------------
@@ -1734,6 +1850,30 @@ div#goto-feature > div
 .diagonal-triangle.allele2-.copyNum_2
 {
   background-image : linear-gradient(130deg, #fff0 40%, #337ab7 0%) !important;  /*blue*/
+}
+
+//------------------------------------------------------------------------------
+
+.radio-button-list,
+.gt-dataset-filter-icon
+{
+  display: inline-block;
+}
+.gt-dataset-filter-icon span.glyphicon-filter
+{
+  font-size: 45px;
+}
+.gt-dataset-filter-icon span.overlay-text
+{
+  font-size: 35px;
+  position: relative;
+  left: -43px;
+  top: -17px;
+  width: 1em;
+  display: inline-block;
+  text-align: center;
+
+  color: white;
 }
 
 
@@ -1824,6 +1964,11 @@ div#left-panel-feature-search > div > div > div > ul > li > div > button
 }
 /*------------------------------------*/
 /* view-controls : text sub-label (div or span)  */
+div.genotype ul.view-controls > li > input,
+div.genotype ul.view-controls > li > button,
+{
+  margin-left : 3em;
+}
 ul.view-controls > li > div > .sub-label  {
   margin-left:2em;
   vertical-align: bottom;
@@ -1966,10 +2111,48 @@ body:not(.tablesPanelRight) .metaeditor-panel {
 
 
 #right-panel-content.right-panel-dataset,
-#right-panel-content.right-panel-genotype,
+// #right-panel-content.right-panel-genotype,
 {
   overflow-y: auto;
 }
+/* .view-controls */
+/* original : #right-panel-content.right-panel-genotype input#range-maf */
+.input-range-text input[type=range] {
+  width : 100%;
+}
+.input-range-text input[type=text] {
+  width : 5em;
+}
+
+.haplotypeFilters,
+.featureFilters
+{
+  margin-left : 1em;
+}
+
+.haplotypeFilters ul .list-group-item
+{
+  /* reduce vertical padding.  Inherit horizontal padding : 15px from
+   * bootstap list-group.scss : .list-group-item */
+  padding: 3px 15px;
+}
+/* gap between colour block and tSNP number (text) */
+.haplotypeFilters ul .list-group-item > div > span
+{
+  margin-right: 1em;
+}
+
+.border-none-lgi .list-group-item
+{
+  border : none;
+}
+li.list-group-item.horiz-2 > div.samplesLimit
+{
+  width : 19em;
+  margin-top : 2em;
+}
+
+
 body.tablesPanelRight #right-panel-content.right-panel-dataset > div
 {
   height:650px;
@@ -2053,7 +2236,7 @@ div.metaeditor-panel div.jsoneditor-tree button.jsoneditor-contextmenu-button {
 /*#right-panel-content.right-panel-dataset >*/ .axis-brushes > table > div > textarea,
 textarea.vcfGenotypeText
 {
-  width: 100%;
+  width: 50em;
   height: 20ex;
   overflow: auto;
 }
@@ -2064,7 +2247,69 @@ textarea.vcfGenotypeSamplesText
 div.genotype > div > div > textarea,
 .vcfGenotypeSamplesSelected
 {
-  width: 20em;
+  width: 28em;
+}
+/* textarea */
+.selectedSamplesInput
+{
+  height : 15ex;
+  overflow-y : auto;
+  resize: both;
+}
+
+.natural-search > div > textarea
+{
+  min-width : 50em;
+  min-height : 20ex;
+}
+.natural-search .ember-tooltip-inner
+{
+  min-width: 40em;
+  /* min-height: 10em; */
+  padding: 1em;
+}
+
+/** Hide the panel-container-s when toggled off */
+#right-panel-content.right-panel-genotype.hideControls .panel-parent
+{
+  display : none;
+}
+
+div.genotype ul.list-group
+{
+  width:40em;
+}
+.panel-parent > .panel-primary
+{
+  width: fit-content;
+  margin-right: 1em;
+}
+.genotype-controls > .form-control
+{
+  width: 75%;
+  resize: both;
+}
+.panel-parent
+{
+  width: 1200px;
+  display: flex;
+  flex-wrap: wrap;
+}
+.panel-parent > .panel-primary {
+  height: fit-content;
+}
+
+/** plan to add .panel-children-are-closed when all panel-container children have showComponent=false.
+ * In the case of manage-genotype, the 3 closed panel-container-s can be placed in a horizontal line.
+  */
+.panel-parent.panel-children-are-closed
+{
+  display : flex;
+}
+.panel-parent.panel-children-are-closed > .panel-primary
+{
+  flex : 1;
+  margin-right : 1em;
 }
 
 .vcfGenotypeSamplesSelected
@@ -2075,11 +2320,10 @@ div.genotype > div > div > textarea,
 }
 .right-panel-genotype
 {
-  margin-top: 1em;
 }
 div.genotype
 {
-  margin-left : 1em;
+  margin: 1em;
 }
 /* vertical space above labelled inputs in manage-genotype : lookup inputs dialog.
  * Don't apply to the x-toggle label (in div.x-toggle-component >) 
@@ -2097,11 +2341,34 @@ div.genotype label
   color: white;
 }
 
+.ember-modal-dialog.genotype > .btn
+{
+  margin: 1em 0em;
+  margin-left: 3em;
+}
+
+/* added for manage-genotype, but applicable to other modals also. */
+.ember-modal-dialog
+{
+  max-height: calc(100vh - 20px);
+  overflow-y: auto;
+}
 .ember-modal-dialog div.genotype ul.list-group
 {
   overflow-y: auto;
   max-height: 40vh;
 }
+.ember-modal-dialog.genotype
+{
+  min-width: 40em;
+  min-height: 79ex;
+}
+.ember-modal-dialog.genotype > div.ember-view > div.tab-content
+{
+  min-width: 50em;
+  min-height: 88ex;
+}
+
 
 .genotype li.list-group-item
 {
@@ -2116,6 +2383,11 @@ div.genotype label
   display: flex;
   margin-top: 1em;
 }
+.margin-top
+{
+  margin-top: 1em;
+}
+
 .genotype-controls > div {
   min-width: 28em;
 }
@@ -2124,7 +2396,6 @@ div.genotype label
 }
 .lookup-line > button {
   margin-top: auto;
-  margin-bottom: 1em;
 }
 .lookup-line > .interval-group {
   display: flex;

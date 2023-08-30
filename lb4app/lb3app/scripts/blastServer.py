@@ -32,6 +32,8 @@ def my_callback_fn(context, future):
 
 # callback_fn=my_callback_fn, 
 # was : scripts/
-shell2http.register_command(endpoint="blastn", command_name="/home/ec2-user/pretzel/backend/scripts/blastn_cont.bash", callback_fn=my_callback_fn, decorators=[])
-shell2http.register_command(endpoint="dnaSequenceLookup", command_name="/home/ec2-user/pretzel/backend/scripts/dnaSequenceLookup.bash", callback_fn=my_callback_fn, decorators=[])
+# /backend/ is changed to /lb4app/lb3app/, maybe temporarily
+scriptsDir="/home/ec2-user/pretzel/lb4app/lb3app/scripts"
+shell2http.register_command(endpoint="blastn", command_name=(scriptsDir+"/blastn_cont.bash"), callback_fn=my_callback_fn, decorators=[])
+shell2http.register_command(endpoint="dnaSequenceLookup", command_name=(scriptsDir+"/dnaSequenceLookup.bash"), callback_fn=my_callback_fn, decorators=[])
 

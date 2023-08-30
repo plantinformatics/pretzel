@@ -53,7 +53,9 @@ export default Ember.Component.extend({
   actions: {
     onHide : function () {
       dLog(FileName, ': onHide');
-      this.hide();
+      if (! this.isDestroying) {
+        this.hide();
+      }
     },
 
     /** button actions : axis / block : */

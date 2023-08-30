@@ -1,12 +1,25 @@
 // -----------------------------------------------------------------------------
+/** @file Handle selection in a handsOnTable which has feature rows.
+ */
+
+// -----------------------------------------------------------------------------
 
 const dLog = console.debug;
 
 // -----------------------------------------------------------------------------
 
-/** Handle selection in a handsOnTable when has feature rows.
+/** Handle selection in a handsOnTable which has feature rows.
  * Used by afterSelection() in table-brushed.js and matrix-view.js.
  * See also ./axis-table.js
+ * @param this
+ * e.g. afterSelectionFeatures.apply(this, [this.table].concat(Array.from(arguments)));
+ * @param table
+ * @param row
+ * @param col
+ * @return features
+ * @desc
+ * Effect : this.set('tableSelectedFeatures', features);
+ * this.highlightFeature(features); // except for genotype table
  */
 function afterSelectionFeatures(table, row, col) {
   const fnName = 'afterSelectionFeatures';
