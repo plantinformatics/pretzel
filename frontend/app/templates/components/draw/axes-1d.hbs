@@ -8,7 +8,9 @@
      as |axis1d|}}
     <div>axis : {{axis1d.axis.id}}, {{axis1d.extended}}</div>
     {{#if axis1d.is2d}}
-      {{axis-2d drawMap=drawMap data=drawMap.oa axis1d=axis1d axisID=axis1d.axis.id axisObj=(hash axisID=axis1d.axis.id extended=axis1d.extended) }}
+      {{axis-2d
+        model=model
+        drawMap=drawMap data=drawMap.oa axis1d=axis1d axisID=axis1d.axis.id axisObj=(hash axisID=axis1d.axis.id extended=axis1d.extended) }}
     {{/if}}
 
     {{draw/axis-ticks-selected axis1d=axis1d axisId=axis.id

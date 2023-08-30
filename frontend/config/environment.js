@@ -8,6 +8,7 @@
 'use strict';
 
 module.exports = function(environment) {
+  const env = process.env;
   var ENV = {
     modulePrefix: 'pretzel-frontend',
     environment: environment,
@@ -53,6 +54,14 @@ module.exports = function(environment) {
     // ENV.APP.LOG_TRANSITIONS = true;
     // ENV.APP.LOG_TRANSITIONS_INTERNAL = true;
     // ENV.APP.LOG_VIEW_LOOKUPS = true;
+
+    // if defined, add $germinate_{username,password} in ENV.germinate.
+    if (env.germinate_username) {
+      const
+      username = env.germinate_username,
+      password = env.germinate_password;
+      ENV.germinate = {username, password};
+    }
   }
 
   if (environment === 'test') {

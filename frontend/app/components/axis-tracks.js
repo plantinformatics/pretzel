@@ -1078,12 +1078,7 @@ export default InAxis.extend({
         let
         feature = thisAt.featureData2Feature.get(d),
         isQTL = feature?.get('blockId.isQTL'),
-        p = this.parentElement,
-        gBlock = subElements ? p.parentElement : p,
-        blockId = gBlock.__data__;
-  if (! subElements && (typeof blockId !== "string") && blockId.description && (typeof p.parentElement.__data__ === "string")) {
-      blockId = p.parentElement.__data__;
-  }
+        blockId = thisAt.trackElt2BlockId(subElements, this);
   let
         blockC = thisAt.lookupAxisTracksBlock(blockId),
         trackWidth = blockC.trackWidth,
@@ -1109,7 +1104,14 @@ export default InAxis.extend({
      * This is used in combination with height(), which returns a positive value.
      */
     function yPosn(d) { /*console.log("yPosn", d);*/
-      let px = d.map((yi) => y(yi)),
+      let
+      /** d is [start, end], with an optional d[2] for subElements : an array of
+       * [start, end, subElementTypeName]
+       * Here just the [start, end] is required.
+       */
+      px = d
+        .slice(0, 2)
+        .map((yi) => y(yi)),
           // pxPlus = intervalDirection(px, true);
           pxMin = Math.min.apply(undefined, px);
       return pxMin;
@@ -1336,12 +1338,36 @@ export default InAxis.extend({
       return subElements;
     };
     function eachRect(blockId, i, g) {
+      const
+      fnName = 'eachRect';
       let
       /** match either rect or path */
       rs = d3.select(this).selectAll(".track")
         .data(trackBlocksData, trackKeyFn),
       re =  rs.enter(), rx = rs.exit();
-      dLog(rs.size(), re.size(),  'rx', rx.size());
+      dLog(fnName, rs.size(), re.size(),  'rx', rx.size());
+      /** Some QTL <rect>s and <path>s were losing class='track' when zooming in
+       * / out quickly, only seen when not split axis, - possibly a change
+       * between rect/path occurring at the same time as entry / exit.
+       * Adding to attributesForReplace() : .attr('class', 'track') has possibly fixed this;
+       * leaving this work-around enabled log it if it recurs and further help
+       * identify the cause.
+       * Testing this - seems to confirm it occurs exactly when
+       * the rect <-> path due to zoom change (probably via Zoom / Reset buttons).
+       */
+      const
+      lostClass = 
+      d3.select(this)
+        .selectAll("g > path, g > rect")
+        .filter(function() {
+          return ! this.classList.contains('track');
+        });
+      if (! lostClass.empty()) {
+        dLog(fnName, 'lostClass', lostClass.nodes());
+        lostClass
+          .attr('class', 'track');
+        dLog(fnName, 'lostClass', 'with class', lostClass.nodes());
+      }
 
       let
       blockC = thisAt.lookupAxisTracksBlock(blockId),
@@ -1443,6 +1469,7 @@ export default InAxis.extend({
       function attributesForReplace(d, i, g) {
         let s =
         d3.select(g[i])
+        .attr('class', 'track')
         .each(configureHoverFn)
         .transition().duration(featureTrackTransitionTime)
         .attr('width', pathOrRect(undefined, width));
@@ -1582,7 +1609,7 @@ export default InAxis.extend({
         let t0 = selection.node();
         if (t0) {
           /** may not be blockId, e.g subElements, so default to false. */
-          let blockId = t0.parentElement.__data__,
+          let blockId = thisAt.trackElt2BlockId(subElements, t0),
               block = blockId && thisAt.lookupBlockView(blockId),
               out = block && ! block.block.get('isQTL') && block.block.isZoomedRightOut();
           /** if selection is a transition */
@@ -1602,10 +1629,25 @@ export default InAxis.extend({
       }
       let
       qtlColourBy = block.get('useFeatureColour'),
-      featureColour = qtlColourBy ?
-          (interval) => {
+      showAxisLDBlocks = thisAt.model.userSettings.genotype?.showAxisLDBlocks,
+      /** Alternately this can be enabled by (qtlColourBy !== 'Block') - that is
+       * implemented in block : useFeatureColour()
+       * userSettings.genotype is populated by manage-genotype; showAxisLDBlocks defaults to false.
+       */
+      useHaplotypeColour = showAxisLDBlocks && block && block.get('isVCF'),
+      /** @param g[i] is <rect>
+       * @param this is <g clip-path>, the parent of <rect class="track" >
+       */
+      featureColour = useHaplotypeColour || (qtlColourBy && (qtlColourBy !== 'Haplotype')) ?
+          (interval, i, g) => {
             let feature = thisAt.featureData2Feature.get(interval);
-            return feature.colour(qtlColourBy); } :
+            /** when haplotypeColour is undefined, e.g. tSNP === undefined or
+             * '.', fall back to blockTrackColourI().
+             */
+            const
+            trackRect = g[i],
+            colour = feature.colour(qtlColourBy) || blockTrackColourI.apply(trackRect);
+            return colour; } :
           blockTrackColourI;
 
       rm
@@ -1663,7 +1705,9 @@ export default InAxis.extend({
     /** subElements */
     function eachGroup(blockId, i, g) {
       let
-      egs = bs.selectAll("g.element")
+      /** this === g[i] */
+      tracksG = d3.select(this),
+      egs = tracksG.selectAll("g.element")
       // probably add geneKeyFn showing sub-element details, e.g. typeName, start/end, sequence?
         .data(trackBlocksData, trackKeyFn),
       ege =  egs.enter(), egx = egs.exit();
@@ -2153,6 +2197,25 @@ export default InAxis.extend({
     return tracks;
   }),
 
+  trackElt2BlockId(subElements, trackElt) {
+    const
+    fnName = 'trackElt2BlockId',
+    p = trackElt.parentElement,
+    gBlock = subElements ? p.parentElement : p;
+    let
+    blockId = gBlock.__data__;
+    /* equivalent : check on parent.getAttribute('clip-path') in blockTrackColourI()  */
+    if (! subElements && (typeof blockId !== "string") && blockId.description && (typeof p.parentElement.__data__ === "string")) {
+      dLog(fnName, subElements, trackElt, p, gBlock, blockId, p.parentElement.__data__);
+      blockId = p.parentElement.__data__;
+    }
+    if (typeof blockId !== 'string') {
+      dLog(fnName, subElements, trackElt, p, gBlock, blockId);
+    }
+    return blockId;
+  },
+
+
   lookupBlock(blockId) {
     let
     block = this.blockService.peekBlock(blockId);
@@ -2223,7 +2286,7 @@ export default InAxis.extend({
     // yDomain = this.get('yDomain'),
     tracksLayout = regionOfTree(subEltTree.intervalTree[blockId], undefined, sizeThreshold, undefined, false),
     data = tracksLayout.intervals;
-    blockState.set('layoutWidth', tracksLayout.nLayers * this.get('trackWidth') * 2);
+    blockState.set('layoutWidth', (2 + tracksLayout.nLayers) * this.get('trackWidth') * 2);
     return data;
   },
 
@@ -2364,7 +2427,8 @@ export default InAxis.extend({
 
     let allocatedWidth = this.get('allocatedWidth');
 
-    let width = ((allocatedWidth && allocatedWidth[1]) ??  this.get('layoutWidth')) + axisBlocksEnd;
+    const layoutWidth = this.get('layoutWidth');
+    let width = ((allocatedWidth && allocatedWidth[1]) || layoutWidth.centre ) + axisBlocksEnd;
     return width;
   }),
   /** Render changes related to a change of .layoutWidth

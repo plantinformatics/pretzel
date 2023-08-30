@@ -15,6 +15,7 @@ const dLog = console.debug;
 
 export default Model.extend({
   ontology : service('data/ontology'),
+  haplotypeService : service('data/haplotype'),
   controls : service(),
 
   //----------------------------------------------------------------------------
@@ -95,12 +96,39 @@ export default Model.extend({
     return colour;
   },
 
+  //----------------------------------------------------------------------------
+
+  /** Map values.tSNP (LD Block / Haplotype / tagged SNP set) to per-set colour.
+   *
+   * It seems likely that a concept of Haplotype separate from tSNP will be
+   * added, so the naming may change; currently the name tSNP is used where it
+   * relates directly to the Feature values.tSNP, and the term Haplotype is used
+   * for higher level functionality related to selection / filtering / colouring
+   * by Haplotype, which is concerned with the role of Haplotype rather than how
+   * it is implemented (tSNP).
+   * tSNP values identifies LD Blocks.
+   *
+   * @return undefined if values.tSNP is undefined
+   */
+  get haplotypeColour() {
+    const
+    tSNP = this.get('values.tSNP'),
+    colour = tSNP && ((tSNP === '.') ? undefined : this.haplotypeService.haplotypeColourScale(tSNP));
+    /** when tSNP === undefined or '.', fall back to blockTrackColourI in
+     * axis-tracks.js : appendRect() : featureColour()
+     */
+    return colour;
+  },
+  
+  //----------------------------------------------------------------------------
+
 
   colour(qtlColourBy) {
     let colour;
     switch (qtlColourBy) {
     case 'Trait' : colour = this.get('traitColour');  break;
     case 'Ontology' : colour = this.get('ontologyColour');  break;
+    case 'Haplotype' : colour = this.get('haplotypeColour');  break;  // LD Block / tSNP
     default : dLog('colour', qtlColourBy); break;
     }
     return colour;

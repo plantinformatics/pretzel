@@ -11,6 +11,8 @@ import IconBase from './icon-base';
 
 /**
 * @param state  boolean value which is toggled by clicking the component
+* click() toggles .state and also toggles the value which is passed in because it is 2-way bound.
+* e.g. {{#elem/icon-toggle state=userSettings.genotype.hideControls }}
 * @param iconTrue name of icon to show when value is true
 * @param iconFalse   name of icon to show when value is false
 */

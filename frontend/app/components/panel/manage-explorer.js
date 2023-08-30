@@ -57,6 +57,7 @@ import {
 
 import { noGroup } from '../../utils/data/groups';
 
+import NamesFilters from '../../utils/data/names-filters';
 
 import ManageBase from './manage-base'
 
@@ -96,6 +97,7 @@ export default ManageBase.extend({
   ontology : service('data/ontology'),
   trait : service('data/trait'),
   blockValues : service('data/block-values'),
+  auth : service(),
 
   init() {
     this._super(...arguments);
@@ -104,10 +106,14 @@ export default ManageBase.extend({
       debugger;
       window.alert('initRecursionCount : ' + initRecursionCount);
     }
+    if (window.PretzelFrontend) {
+      window.PretzelFrontend.manageExplorer = this;
+    }
 
     this.get('apiServers').on('receivedDatasets', this.receivedDatasetsFn);
     /** Initialise this.blocksService so that dependency blocksService.featureUpdateCount works. */
     let blocksService = this.get('blocksService');
+    this.namesFilters = new NamesFilters();
   },
   receivedDatasetsFn : computed( function() {
     return (datasets) => {
@@ -462,7 +468,7 @@ export default ManageBase.extend({
 
   groupFilterSelected : undefined,
   groupsService : alias('apiServerSelectedOrPrimary.groups'),
-  groupsForFilter : computed('groupsIn', function () {
+  groupsForFilter : computed('groupsService.groupsIn', function () {
     const
     fnName = 'groupsForFilter',
     groupsP = this.get('groupsService').get('groupsInOwnNone');
@@ -530,9 +536,12 @@ export default ManageBase.extend({
            this.get('model.availableMapsTask._result.length'),
            this.get('mapviewDatasets.content.length'));
     }
-    if (datasetsBlocks)
+    if (datasetsBlocks) {
+      /** result from API is sorted by .id, with upper case preceding lower case. */
       datasetsBlocks =
-      datasetsBlocks.filter((block) => !block.get('isCopy'));
+      datasetsBlocks.filter((dataset) => !dataset.get('isCopy'))
+        .sortBy('displayName');
+    }
 
     return datasetsBlocks;
   }),
@@ -594,27 +603,53 @@ export default ManageBase.extend({
     }
     return data;
   }),
+
+  //----------------------------------------------------------------------------
+
+  nameFilter : alias('namesFilters.nameFilter'),
+  nameFilterArray : alias('namesFilters.nameFilterArray'),
   nameFilterChanged(value) {
-    // dLog('nameFilterChanged', value);
-    // debounce(this, this.nameFilterChangedSet, 2000);
-    // use lodash_debounce() instead because it has option : leading
-    this.get('nameFilterDebouncedLodash')();
+    this.namesFilters.nameFilterChanged(value);
   },
-  nameFilterDebouncedLodash : computed(function () {
-    let debounced = lodash_debounce(() => this.nameFilterChangedSet(), 500, { maxWait: 2000, leading: true });
-    return debounced;
-  }),
-  nameFilterChangedSet() {
-    dLog('nameFilterChangedSet', 'set', this.nameFilter);
-    this.set('nameFilterDebounced', this.nameFilter);
+
+  //----------------------------------------------------------------------------
+
+  naturalQuery : '',
+  naturalQueryResult : null,
+  naturalQueryChanged(value) {
+    if (value?.length) {
+      const options = {server : this.apiServerSelectedOrPrimary};
+      this.auth.naturalSearch(value, options).then(results => {
+      if (results?.length) {
+        const ids = results.mapBy('item.id');
+        this.set('naturalQueryResult', ids);
+        const datasetId = results[0].item.id;
+        this.set('nameFilter', datasetId);
+        this.nameFilterChanged(datasetId);
+      } else {
+        this.set('naturalQueryResult', null);
+      }
+    });
+    }
   },
-  nameFilterArray : computed('nameFilterDebounced', function () {
-    let
-    nameFilter = this.get('nameFilterDebounced'),
-    array = !nameFilter || (nameFilter === '') ? [] :
-      nameFilter.split(/[ \t]/);
-    return array;
+
+  /** Enable dialog for input of natural language search query".  */
+  enableNaturalSearchDialog : false,
+
+  //----------------------------------------------------------------------------
+
+  /** Enable dialog for display of dataset force graph ".  */
+  enableDatasetGraphDialog : false,
+
+  datasetEmbeddings : computed(function() {
+    const
+    server = this.apiServerSelectedOrPrimary,
+    embeddings = this.auth.getEmbeddings({server});
+    return embeddings;
   }),
+
+  //----------------------------------------------------------------------------
+
   /* The two dependencies caseInsensitive and searchFilterAll impact on
    * datasetOrBlockMatch(), called by dataPre, so they could be moved downstream
    * to dataPre (it would have to change from filter to computed to add those
@@ -640,22 +675,10 @@ export default ManageBase.extend({
    * @param nameFilters array of text to match against names of datasets / blocks
    */
   datasetOrBlockMatch(dataset, nameFilters) {
-    const maybeLC  = this.caseInsensitive ? (string) => string.toLowerCase() : (string) => string; 
-    let
-    multiFnName = this.searchFilterAll ? 'every' : 'any';
-    if (this.caseInsensitive) {
-      nameFilters = nameFilters.map((n) => n.toLowerCase());
-    }
-    let
-    matchAll = nameFilters[multiFnName]((nameFilter) => {
-      let
-      match = maybeLC(dataset.name).includes(nameFilter);
-      if (! match) {
-        /** depending on the cost of get('blocks'), it may be worthwhile to reverse the order of these loops : nameFilters / blocks */
-        match = dataset.get('blocks').any((block) => maybeLC(block.name).includes(nameFilter));
-      }
-      return match;
-    });
+    const
+    childNamesFn = (dataset) => dataset.get('blocks').mapBy('name'),
+    matchAll = this.namesFilters.matchFiltersObj(
+      dataset, nameFilters, this.caseInsensitive, this.searchFilterAll, childNamesFn);
     return matchAll;
   },
   /**
@@ -664,19 +687,10 @@ export default ManageBase.extend({
    * @param nameFilters array of text to match against name
    */
   nameMatch(name, nameFilters) {
-    const maybeLC  = this.caseInsensitive ? (string) => string.toLowerCase() : (string) => string; 
-    let
-    multiFnName = this.searchFilterAll ? 'every' : 'any';
-    if (this.caseInsensitive) {
-      /** this can be factored out a couple of levels. */
-      nameFilters = nameFilters.map((n) => n.toLowerCase());
-    }
-    let
-    matchAll = nameFilters[multiFnName]((nameFilter) => {
-      let
-      match = maybeLC(name).includes(nameFilter);
-      return match;
-    });
+    const
+    matchAll = this.namesFilters.matchFilters(
+      name, nameFilters, this.caseInsensitive, this.searchFilterAll);
+
     return matchAll;
   },
   /** Filter blockTraits[fieldName] (e.g. blockTraits.Traits) by nameFilters
@@ -864,7 +878,7 @@ export default ManageBase.extend({
   }),
   datasetFilter(dataset, index, array) {
     let parentsSet = this.get('parentsSet'),
-    name = dataset.get('name'),
+    name = dataset.get('displayName'),
     found = parentsSet.has(name);
     if (index === 0)
     {
@@ -1415,7 +1429,7 @@ export default ManageBase.extend({
     /** can update this .nest() to d3.group() */
     n = d3.nest()
     /* the key function will return undefined or null for datasets without parents, which will result in a key of 'undefined' or 'null'. */
-      .key(function(f) { let p = f.get && f.get('parent'); return p ? p.get('name') : f.get('parentName'); })
+      .key(function(f) { let p = f.get && f.get('parent'); return p ? p.get('displayName') : f.get('parentName'); })
       .entries(withParentOnly ? withParent : datasets);
     /** this reduce is mapping an array  [{key, values}, ..] to a hash {key : value, .. } */
     let grouped =
@@ -1439,7 +1453,7 @@ export default ManageBase.extend({
                 // dataset may be {unmatched: Array(n)} - skip this
                 if (! dataset.get) return result2;
                 let
-                  name = dataset.get('name'),
+                  name = dataset.get('displayName'),
                 /** children may be a DS.PromiseManyArray. It should be fulfilled by now. */
                 children = dataset.get('children');
                 if (children.content)
@@ -1488,7 +1502,7 @@ export default ManageBase.extend({
           // dataset may be {unmatched: Array(n)} - skip this
           if (! dataset.get) return result2;
           let
-            name = dataset.get('name');
+            name = dataset.get('displayName');
 
           function filterBlocks(dataset) {
             return me.datasetFilterBlocks(tabName, dataset);

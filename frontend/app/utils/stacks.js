@@ -1249,7 +1249,6 @@ stacks.sortLocation = function()
 Stack.prototype.location = function()
 {
   let l = this.axes[0].location();
-  checkIsNumber(l);
   return l;
 };
 /** Find this stack within stacks[] and return the index.
@@ -1308,7 +1307,17 @@ Stack.prototype.sideClasses = function ()
  * Configure the axis tickFormat to suit scale.domain().
  */
 Stacked.prototype.axisSide = function (scale) {
-  let stackClass = this.stack.sideClasses(),
+  /** this.stack should be defined, but sideClasses is non-critical;
+   * (saw undefined when refresh of secondary server and network had
+   * disconnected, possibly after switching to groups page and back to
+   * mapview).
+   */
+  if (! this.stack) {
+    dLog('axisSide', this);
+    this.log();
+  }
+  const
+  stackClass = this.stack ? this.stack.sideClasses() : '',
   extended = this.extended,
   /** use of d3.axisLeft() / axisRight() does not seem to update
    * text-anchor="start" on the axis group element g.axis, so for now this is
@@ -2199,7 +2208,18 @@ function x(axis)
 stacks.x = x;
 
 
-Stacked.prototype.location = function() { return checkIsNumber(oa.o[this.axisName]); };
+Stacked.prototype.location = function() {
+  const 
+  fnName = 'Stacked:location',
+  location = oa.o[this.axisName];
+  if (location === undefined) {
+    console.warning(fnName, this.axisName, Object.keys(oa.o), oa.o);
+    this.log();
+  } else {
+    checkIsNumber(location);
+  }
+  return location;
+};
 Block.prototype.axisTransformO = function ()
 {
   let transform;
@@ -2245,7 +2265,7 @@ Stacked.prototype.axisTransformO_orig = function ()
    * no need for scale when this.portion === 1
    */
   let scale = this.portion;
-  let xVal = checkIsNumber(oa.o[this.axisName]);
+  let xVal = this.location();
   xVal = Math.round(xVal);
   let rotateText = "", axis = this;
   if (! axis)

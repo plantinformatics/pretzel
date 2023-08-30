@@ -1,0 +1,42 @@
+
+{{#ember-modal-dialog
+  onClose=@close
+  translucentOverlay=true
+  clickOutsideToClose=false
+  onClickOverlay=(action this.userMessage "Use X to close dialog")
+  title="Natural language search input"
+  header-icon='search'
+}}
+
+  <div class="natural-search">
+    <div>
+      <Textarea
+        class="naturalSearchInput"
+        @value={{this.searchText}}
+        @enter={{this.searchTextInput}}
+        @insert-newline={{this.searchTextInput}}
+        @escape-press={{this.searchTextInput}}
+        placeholder="Enter a description of what you are trying to view and do"
+        >
+      </Textarea>
+    </div>
+
+    <BsButton @type="info" class="margin-top" @onClick={{@close}}>Close</BsButton>
+
+    <span>&nbsp; &nbsp; ? 
+        {{#ember-tooltip side="right-end" delay=500}}
+        Enter a description of what you are trying to view and do.
+        Identify the data you are interested in : species, assemblies, chromosomes, markers, genes, QTLs.
+        Indicate what searches you require - provide DNA sequence where applicable.
+        Indicate the chromosome regions you would like the view to zoom to.
+        {{/ember-tooltip}}
+    </span>
+
+  </div>
+
+
+    {{yield}}
+
+    <div>{{this.naturalQueryResult}}</div>
+
+{{/ember-modal-dialog}}

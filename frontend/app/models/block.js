@@ -238,7 +238,7 @@ export default Model.extend({
     let isReference = this.isData || ! this.get('datasetId.parentName');
     return isReference;
   }),
-  currentDomain : computed('zoomedDomain', 'referenceBlock', 'range',  function () {
+  currentDomain : computed('zoomedDomain', 'referenceBlockOrSelf.range', 'featuresDomain', function () {
     let domain = this.get('zoomedDomain');
     if (! domain)  {
       let referenceBlock = this.get('referenceBlockOrSelf');
@@ -342,18 +342,37 @@ export default Model.extend({
     let isQTL =  this.hasTag('QTL') || this.get('datasetId._meta.type') === 'QTL';
     return isQTL;
   }),
+  /** In the frontend VCF and Germinate are treated equally, so wherever isVCF
+   * is currently used can be changed to isGenotype.
+   * The tags define sets : view contains-subset Genotype contains-subset {VCF, Germinate},
+   * so only hasTag('Genotype') is required here, once the new tag Genotype is
+   * added to existing datasets.
+   */
+  isGenotype : computed('datasetId.tags', function () {
+    let isGenotype = this.hasTag('Genotype') || this.hasTag('VCF') || this.hasTag('Germinate');
+    return isGenotype;
+  }),
+  isVCF : alias('isGenotype'),
   /** Result indicates how axis-tracks display of features of this block should be coloured.
    * @return
    *  undefined for blockColour,
    *  !== undefined for featureColour, e.g. :
    * 'Ontology' for ontologyColour,
    * 'Trait' for traitColour.
+   * 'Haplotype' for haplotypeColour.  (LD Block / tSNP)
    */
   get useFeatureColour() {
+    let qtlColourBy = this.get('controls.viewed.qtlColourBy');
     let useColour;
-    if (this.get('isQTL')) {
-      let qtlColourBy = this.get('controls.viewed.qtlColourBy');
-      useColour = qtlColourBy && (qtlColourBy !== 'Block') ? qtlColourBy : undefined;
+    /** To disable haplotypeColour when 'Block' is selected :
+     *   Move the VCF case to after the QTL case
+     */
+    if (this.get('isVCF')) {
+      useColour = 'Haplotype';
+    } else if (! qtlColourBy || (qtlColourBy === 'Block')) {
+      useColour = undefined;
+    } else if (this.get('isQTL')) {
+      useColour = qtlColourBy;
     }
     return useColour;
   },
@@ -1310,6 +1329,21 @@ export default Model.extend({
       return brushable;
     }),
 
+  //----------------------------------------------------------------------------
+
+  /** Block Colour
+   * Currently based on colours allocated to data blocks in axis title menu and
+   * used to colour axis tracks, later this will map to "Dataset Colour",
+   * i.e. all axes will use a common colour for data blocks of a single dataset.
+   * @return rgb() colour string
+   */
+  get colourValue() {
+    const
+    axis1d = this.get('axis1d'),
+    blockColourValue = axis1d.blockColourValue(this);
+    return blockColourValue;
+  },
+
   /*--------------------------------------------------------------------------*/
 
   /** @return current .zoomedDomain, or .limits
@@ -1336,6 +1370,31 @@ export default Model.extend({
   /** Express a binSize relative to screen pixels, using yRange and domain. */
   pxSize(binSize, yRange, domain) { return yRange * binSize / intervalSize(domain); },
 
+  //----------------------------------------------------------------------------
+
+  positionFilter : alias('datasetId.positionFilter'),
+
+  /** Record the positions at which this block has features.
+
+   * This is used for VCF view blocks, whose features have a single-base position.
+   * The Features are created in frontend (only) from API results.
+   *
+   * This is used to implement genotype table dataset (block) intersections,
+   * which doesn't require a mapping from position to feature - a Set is sufficient,
+   * but featurePositions could be a map to feature, or a sparse array[position] -> feature,
+   * or an interval tree, or a single-position tree.
+   */
+  addFeaturePositions(createdFeatures) {
+    const
+    fnName = 'addFeaturePositions',
+    featurePositions = this[Symbol.for('featurePositions')] || (
+      this[Symbol.for('featurePositions')] = new Set()
+    );
+
+    createdFeatures.forEach(feature => {
+      featurePositions.add(feature.get('value.0'));
+    });
+  },
 
   /*--------------------------------------------------------------------------*/
 

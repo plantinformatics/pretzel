@@ -11,11 +11,25 @@
       value=this.identification
       autocomplete="username"
       placeholder='Email Address'}}
+
     {{auth-input
-      type='password'
+      type=this.passwordInputType
       value=this.password
       autocomplete="current-password"
       placeholder='Password'}}
+
+    <div>
+      <span style="margin-left: 3em;">
+        {{input type="checkbox" checked=this.revealPassword
+          id="checkbox-revealPassword" }}
+        <label for="checkbox-revealPassword" title="Show Password">
+          <i class="glyphicon glyphicon-eye-open"></i></label>
+        {{#ember-tooltip side="right" delay=500}}
+          Show password input
+        {{/ember-tooltip}}
+      </span>
+    </div>
+
     {{suggest-link
       suggest-text="Forgotten your password?"
       link-name="reset-request"

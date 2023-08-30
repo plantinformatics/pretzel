@@ -1,4 +1,5 @@
-import { computed } from '@ember/object';
+import { computed, set as Ember_set } from '@ember/object';
+import { alias } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 import { attr, hasMany, belongsTo } from '@ember-data/model';
 
@@ -99,9 +100,13 @@ export default Record.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  displayName : computed('_meta.displayName', function () {
+    return this.get('_meta.displayName') || this.get('id');
+  }),
+
   /** @return shortName if defined, otherwise name
    */
-  shortNameOrName : computed('datasetId._meta.shortName', function () {
+  shortNameOrName : computed('_meta.shortName', function () {
     return this.get('_meta.shortName') || this.get('id');
   }),
 
@@ -134,6 +139,39 @@ export default Record.extend({
     let tags = this.get('tags'),
     has = tags && tags.length && (tags.indexOf(tag) >= 0);
     return has;
+  },
+
+  //----------------------------------------------------------------------------
+
+  /** Access the dataset positionFilter attribute as a field,
+   * to factor the lookup, and to enable it to be used in dependencies.
+   */
+  get positionFilter() {
+    return this[Symbol.for('positionFilter')];
+  },
+  set positionFilter(pf) {
+    this[Symbol.for('positionFilter')] = pf;
+    Ember_set(this, 'positionFilterText', this.positionFilterTextFn);
+  },
+  get positionFilterTextFn () {
+    const
+    pf = this.positionFilter,
+    text = (typeof pf === 'boolean') ? (pf ? '+' : '-') : '';
+    return text;
+  },
+  // Could use a Computed Propery for positionFilterText - maybe when changing to Tracked Properties in Ember4.
+  // positionFilterText : computed('positionFilter', function ),
+
+  //----------------------------------------------------------------------------
+
+  /** For a VCF dataset, sampleNames are received via bcftools request, and does
+   * not change, so it is cached per dataset.
+   */
+  get sampleNames() {
+    return this[Symbol.for('sampleNames')];
+  },
+  set sampleNames(names) {
+    this[Symbol.for('sampleNames')] = names;
   },
 
   /*--------------------------------------------------------------------------*/

@@ -186,6 +186,7 @@ export default Component.extend({
     // stacksAdjust{,Y}() have parameters, so .bind is used.
     axisApi.stacksAdjustY = this.stacksAdjustY.bind(this);
     axisApi.stacksAdjust = this.stacksAdjust.bind(this);
+    dLog('stacks-view', 'init', this, axisApi, this.oa, stacks);
   },
 
   //----------------------------------------------------------------------------
@@ -664,6 +665,27 @@ export default Component.extend({
   }),
 
   // ---------------------------------------------------------------------------
+
+  
+  /** @return stack which is on the right, i.e. adjacent to the right panel :
+   * genotype table.
+   * Also update when : this.splitViewDirection,  drag
+   */
+  rightStack : computed('stacks.length', 'block.stacksCount', function () {
+    const
+    stackXMax = this.stacks
+      .reduce((result, stack) => {
+        const x = stack.axes?.[0].location();
+        if ((result.max === undefined) || (x > result.max)) {
+          result.max = x;
+          result.stack = stack;
+        }
+        return result;
+      }, {max : undefined, stack : undefined});
+    return stackXMax.stack;
+  }),
+
+  //----------------------------------------------------------------------------
 
   axes() {
     return this.stacks.mapBy('liveAxes').flat();

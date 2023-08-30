@@ -83,8 +83,14 @@ function overlapInterval1(values, interval) {
   * and interval-overlap.js : inInterval() and inDomain(), which are equivalent, but look less efficient.
   */
       // use `any` so that search completes as soon as one value is found in range.
-  let ok =
-    values.any(function (d) { return inRange(d, interval); });
+  const
+  /** evaluate only value[0] and value[1] [start,end]; ignore value[2] etc -
+   * some earlier datasets put extra feature values in value[] after start,end;
+   * now the convention is to put extra values in values{}, and value[] has only
+   * start,end.
+   */
+  ok =
+    values.any(function (d, i) { return (i <= 1) && inRange(d, interval); });
   return ok;
 }
 function overlapInterval(values, interval) {

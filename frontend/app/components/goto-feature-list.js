@@ -32,15 +32,18 @@ export default Component.extend({
       console.log("getBlocksOfFeatures", this);
       let 
         activeFeatureList = this.get('activeFeatureList'),
-      selectedFeatureNames = activeFeatureList.hasOwnProperty('selectedFeatures') ?
+      selectedFeatureNames = ! activeFeatureList ?
+        this.queryParamsState.searchFeatureNames.value?.split(',') :
+        activeFeatureList.hasOwnProperty('selectedFeatures') ?
         activeFeatureList.selectedFeatures
         : activeFeatureList.featureNameList,
       /** this.blocksUnique() doesn't return blocksUnique because that value is
        * available only after a promise resolves. If the input for the search is
        * empty, then set blocksOfFeatures to []. */
-      blocksUnique = activeFeatureList.empty ? []
+      blocksUnique =
+        (activeFeatureList ? activeFeatureList.empty : ! selectedFeatureNames.length) ? []
         : this.blocksUnique(selectedFeatureNames);
-      if (activeFeatureList.empty)
+      if (activeFeatureList?.empty)
         this.set('blocksOfFeatures', blocksUnique);
     },
 

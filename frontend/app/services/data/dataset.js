@@ -84,8 +84,10 @@ export default Service.extend(Evented, {
      * This is mostly to support existing references to block/chr.mapName; they can be all changed to .get('datasetId').get('id') or 'name'
      */
     datasets.forEach(function(dataset) {
+      /** .name is now aliased to .displayName */
       let datasetName = dataset.get('name');
-      id2Server[datasetName] = server;
+      /** adapters/application.js : buildURL() reads id2Server[id] */
+      id2Server[dataset.get('id')] = server;
       let blocks = dataset.get('blocks');
       if (blocks) {
         blocks.forEach(function(block) {

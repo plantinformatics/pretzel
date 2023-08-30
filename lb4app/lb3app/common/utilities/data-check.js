@@ -20,6 +20,7 @@ const trace = 1;
  */
 exports.datasetParentContainsNamedFeatures = function(models, dataset, options, cb) {
   const fnName = 'datasetParentContainsNamedFeatures';
+  let traceCount = trace > 1 ? 100 : 50;
   /** originally (77969f1e) required just 1 of the FMs of each feature to be
    * found in the parent block; this is changed to check that all FMs of each
    * feature are found.
@@ -82,11 +83,13 @@ exports.datasetParentContainsNamedFeatures = function(models, dataset, options, 
                         } else
                         if (requireAllFMs || ! f.value[0]) {
                           errorMsg = 'Block ' + block.name + ' Feature ' + f.name + ' Flanking Markers ' + unmatchedFMs.join(',') + ' are not in parent ' + dataset.parent + ' name ' + block.name;
-                          if (trace) { console.log(fnName, errorMsg); }
+                          if (trace && traceCount-- > 0) { console.log(fnName, errorMsg); }
                         }
-                      } else if (trace) {
+                      } else if (trace && (traceCount-- > 0)) {
                         let okFMs = parentBlockFeatures.filter((f) => (fms.indexOf(f.name) >= 0));
-                        console.log(fnName, f.name, fms, okFMs.length);
+			if (! okFMs.length || (trace > 1)) {
+                          console.log(fnName, f.name, fms, okFMs.length);
+			}
                         if (trace > 1) {
                           okFMs.forEach((f) => console.log(JSON.stringify(f)));
                         }

@@ -364,17 +364,21 @@ export default Service.extend({
 
 
   /** Request DNA sequence lookup (Blast).
-   * @param parent  datasetId of parent / reference of the blast db which is to be searched
+   * apiServer is derived from block.id (could also use datasetId).
+   * @param block
+   * @param datasetId of parent / reference of the blast db which is to be searched
    * @param scope chromosome
    * @param options not used yet, may be for streaming result
    */
-  vcfGenotypeSamples(apiServer, parent, scope, options) {
-    dLog('services/auth vcfGenotypeSamples', parent, scope, options);
-    return this._ajax('Blocks/vcfGenotypeSamples', 'GET', {server : apiServer, parent, scope, options}, true);
+  genotypeSamples(block, datasetId, scope, options) {
+    dLog('services/auth genotypeSamples', datasetId, scope, options);
+    const params = {id : block.id, datasetId, scope, options};
+    return this._ajax('Blocks/genotypeSamples', 'GET', params, true);
   },
 
-  /** Request DNA sequence lookup (Blast).
-   * @param parent  datasetId of parent / reference of the blast db which is to be searched
+  /** Request genotype calls.
+   * apiServer is derived from datasetId.
+   * @param datasetId of parent / reference of the VCF / Genotype db which is to be searched
    * @param scope chromosome
    * This is also included in preArgs.region 
    * @param preArgs args to be inserted in command line, this may be between
@@ -385,18 +389,25 @@ export default Service.extend({
    * @param nLines if defined, limit the output to nLines.
    * @param options not used yet, may be for streaming result
    */
-  vcfGenotypeLookup(apiServer, parent, scope, preArgs, nLines, options) {
-    dLog('services/auth vcfGenotypeLookup', parent, scope, preArgs, nLines, options);
+  vcfGenotypeLookup(datasetId, scope, preArgs, nLines, options) {
+    dLog('services/auth vcfGenotypeLookup', datasetId, scope, preArgs, nLines, options);
     const
-    paramLimit = 5,
+    // max URL length is ~2000 chars
+    paramLimit = 50,
+    /** result of samplesOK() is 1 string of names, separated by 1 newline between names.   */
     samples = preArgs.samples,
     post = samples?.length > paramLimit,
-    data = {parent, scope, preArgs, nLines, options};
+    data = {datasetId, scope, preArgs, nLines, options};
+    // if (post) _server() won't be able to access data.datasetId, so pass apiServer
+    const
+    id2Server = this.get('apiServers.id2Server'),
+    apiServer = id2Server[data.datasetId];
     return this._ajax(
       'Blocks/vcfGenotypeLookup' + (post ? 'Post' : ''),
       post ? 'POST' : 'GET',
       post ? JSON.stringify(data) : data,
-      true, apiServer);
+      true,
+      /*onProgress*/ null, apiServer);
   },
 
 
@@ -462,25 +473,27 @@ export default Service.extend({
 
   /*--------------------------------------------------------------------------*/
 
-  checkError(data, mapper) {
-    // dLog('checkError')
-    try {
-      if (data.error && data.error[0]) {
-        return data.error[0]
-      } else if (data.error && data.error.code) {
-        let code = data.error.code
-        if (mapper[code]) return mapper[code]
-        else return code
-      } else {
-        return false
-      }
-    } catch (error) {
-      console.error(error)
-      // may need more sophisticated handling here depending upon
-      // type of error
-      return error
-    }
+  /**
+   * @param search_text natural language query text
+   * @return promise yielding result of OpenAI+Vectra search
+   */
+  naturalSearch(search_text, options) {
+    return this._ajax('Datasets/naturalSearch', 'GET', {search_text, options}, true);
   },
+
+  /**
+   * @param commands_text natural language query text
+   * @return promise yielding result of OpenAI query
+   */
+  text2Commands(commands_text, options) {
+    return this._ajax('Datasets/text2Commands', 'GET', {commands_text, options}, true);
+  },
+
+  getEmbeddings(options) {
+    return this._ajax('Datasets/getEmbeddings', 'GET', {options}, true);
+  },
+
+  //----------------------------------------------------------------------------
 
   /** Customised ajax caller
    * token may be actual token string, or equal true to trigger token fetch
@@ -519,6 +532,12 @@ export default Service.extend({
          * Also limited by : nginx.conf : ... location / { ... proxy_read_timeout 180; }
          */
         config.timeout = timeout;
+        /* this is a frontend configuration, not an option for backend API.
+         * Defining it may cause API endpoint function to receive
+         * options.accessToken === undefined in some versions of node /
+         * loopback.
+         */
+        delete options.timeout;
       }
     }
 
@@ -563,6 +582,14 @@ export default Service.extend({
         );
         return xhr;
       };
+
+      /* Datasets/upload and /tableUpload use : 'POST', JSON.stringify(data),
+       * which prevents passing in options.timeout as dnaSequenceSearch() does.
+       */
+      if (config.timeout === undefined) {
+        config.timeout = 10 * 60 * 1000;
+      }
+
     }
 
     return $.ajax(config);
@@ -625,8 +652,10 @@ export default Service.extend({
         return blockId.blockId || blockId;
       }
       const
+      id2Server = this.get('apiServers.id2Server'),
       /** @param blockId may be local or remote reference. */
-      blockIdServer = (blockId) => this.get('apiServers.id2Server')[blockLocalId(blockId)];
+      blockIdServer = (blockId) => id2Server[blockLocalId(blockId)],
+      datasetIdServer = (datasetId) => id2Server[datasetId];
 
       /** recognise the various names for blockId params.
        * lookup the servers for the given blockIds.
@@ -645,9 +674,18 @@ export default Service.extend({
        */
       blockServers = blockIds && blockIds.map((blockId) => blockIdServer(blockId)),
       blockId = data.block,
-      blockServer = blockId && blockIdServer(blockId);
+      blockServer = blockId && blockIdServer(blockId),
+      datasetId = data.datasetId,
+      datasetServer = datasetId && datasetIdServer(datasetId);
+      if (datasetServer) {
+        if (blockServer && blockServer !== datasetServer) {
+          dLog(fnName, 'data .id and .datasetId are from different servers - unexpected', 
+               data, blockIds, blockServers, blockId, blockServer, datasetServer);
+        }
+        requestServer = blockServer || datasetServer;
+      } else
       if (blockServer) {
-        if (blockServers.length) {
+        if (blockServers.length && ((blockIds[0] !== blockId) || blockIds.length > 1)) {
           dLog(fnName, 'data has both single and multiple block params - unexpected', 
                data, blockIds, blockServers, blockId, blockServer);
         }

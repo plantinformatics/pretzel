@@ -3,17 +3,17 @@
 <div class="row" style="background: rgba(0,0,0,0);">
   <div class="col-sm-4 col-sm-offset-4">
     <div class="">
-      {{#if title}}
-        <h1 class="title">{{title}}</h1>
+      {{#if @title}}
+        <h1 class="title">{{@title}}</h1>
       {{/if}}
       {{!--nested content appears here--}}
       {{yield}}
-      {{#if errorMessage}}
+      {{#if @errorMessage}}
         <br>
         {{#elem/panel-form
           name="danger"
           heading="Error"}}
-          {{errorMessage}}
+          {{@errorMessage}}
         {{/elem/panel-form}}
       {{/if}}
     </div>

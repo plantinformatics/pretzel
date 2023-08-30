@@ -12,7 +12,11 @@ import { task, didCancel } from 'ember-concurrency';
 
 import { stacks, Stacked } from '../../utils/stacks';
 import { storeFeature } from '../../utils/feature-lookup';
-import { vcfGenotypeLookup, addFeaturesJson } from '../../utils/data/vcf-feature';
+import {
+  vcfGenotypeLookup, addFeaturesJson,
+  resultIsGerminate,
+  addFeaturesGerminate,
+} from '../../utils/data/vcf-feature';
 import { updateDomain } from '../../utils/stacksLayout';
 
 import {
@@ -744,12 +748,19 @@ export default Service.extend({
         function receivedDataVCF(text) {
           if (text && block) {
             const
-            /** not used because 0 samples. */
-            requestFormat = 'CATG';
+            /** not used because 0 samples.
+             * not used by Germinate because value from HDF is not re-formatted.
+             */
+            requestFormat = 'CATG',
+            isGerminate = resultIsGerminate(text),
+            callsData = isGerminate && text,
+            replaceResults = false,
             /** pass [] for selectedFeatures - don't update selectedFeatures */
-            const added = addFeaturesJson(
-              block, requestFormat, /*replaceResults*/ false,
-              /*selectedFeatures*/ [], text);
+            selectedFeatures = [],
+            /** similar in vcfGenotypeLookupDataset() */
+            added = isGerminate ?
+              addFeaturesGerminate(block, requestFormat, replaceResults, selectedFeatures, callsData) :
+              addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures, text);
           }
         }
 
@@ -810,7 +821,7 @@ export default Service.extend({
      * vcfGenotypeLookup().
      */
     textP = vcfGenotypeLookup(
-      this.auth, block.server, /*samples*/[], domainInteger,
+      this.auth, /*samples*/[], domainInteger,
       {requestFormat}, vcfDatasetId, block.name, rowLimit
     );
 

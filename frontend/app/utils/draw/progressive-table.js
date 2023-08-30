@@ -11,6 +11,9 @@ import {
 
 const dLog = console.debug;
 
+const featureSymbol = Symbol.for('feature');
+
+
 //------------------------------------------------------------------------------
 
 const progressiveMergeLimit = 10;
@@ -48,7 +51,10 @@ function tableRowMerge(table, data, currentData, columnNames, colHeaders) {
     d0Array = rowObjDataToArray(d0, columnNames),
     cmp = d1IsArray ? dataRowArrayCmp(d0Array, d1) : dataRowCmp(d0, d1),
     visualRowIndex1 = table.toVisualRow(i1),
-    feature = d0[Symbol.for('feature')];
+    /* .Block is replaced by {gt,}DatasetColumns; OK because it's just a
+     * fall-back, and tableRowMerge() is disabled becasue it didn't achieve its
+     * goal of improved render performance. */
+    feature = d0[featureSymbol] || d0?.Block?.[featureSymbol];
 
     if (visualRowIndex1 === null) {
       remainingChanges++;
@@ -93,7 +99,7 @@ function tableRowMerge(table, data, currentData, columnNames, colHeaders) {
       a1.splice(i1, 1);
       table.alter('remove_row', visualRowIndex1);
       // deleting the only row seems to cause columns to be forgotten.
-      if (false && ! table.getData().length) {
+      if (table_getData_length(table) === 0) {
         table.updateSettings({colHeaders});
       }
       /* don't count deleting as a change : if a large block of data becomes
@@ -109,14 +115,14 @@ function tableRowMerge(table, data, currentData, columnNames, colHeaders) {
     a1.splice(i1, length);
     const visualRowIndex1 = table.toVisualRow(i1);
     table.alter('remove_row', visualRowIndex1, length);
-    if (false && ! table.getData().length) {
+    if (table_getData_length(table) === 0) {
       table.updateSettings({colHeaders});
     }
   } else for (; (i0 < a0.length) && (remainingChanges-- > 0); i0++, i1++) {
     const
     d0 = a0[i0],
     d0Array = rowObjDataToArray(d0, columnNames),
-    feature = d0[Symbol.for('feature')];
+    feature = d0[featureSymbol] || d0?.Block?.[featureSymbol];
     // insert d0
     a1.splice(i1, 0, d0);
     /* append to table, so use countRows(). after insert toVisualRow(i1) will be
@@ -150,6 +156,13 @@ function rowObjDataToArray(rowData, columnNames) {
     rowData :
     columnNames.map((name) => rowData[name]);
   return rowDataArray;
+}
+
+function table_getData_length(table) {
+  const
+  data = table.getData ? table.getData() : table.getSettings()?.data,
+  length = data?.length;
+  return length;
 }
 
 /**

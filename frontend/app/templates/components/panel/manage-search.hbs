@@ -7,6 +7,7 @@
   {{#if panelContainer.showComponent}}
 
   {{goto-feature-list  class="panel panel-primary"
+    queryParamsState=queryParamsState
     selectedFeatures=selectedFeatures
     updateFeaturesInBlocks="updateFeaturesInBlocks"
     loadBlock=(action loadBlock)
