@@ -1000,20 +1000,51 @@ export default class PanelManageGenotypeComponent extends Component {
      */
     return b?.get('name');
   }
-  
+
+  @tracked filterErrorText = null;
   /** @return an array of samples which are common to the viewed datasets
    * @desc
    * related : vcfGenotypeSamples
    */
   get sampleNamesIntersection() {
     const
+    fnName = 'sampleNamesIntersection',
     /** Could ensure samples are loaded for each of the viewed VCF datasets
      * using .vcfGenotypeSamplesAllDatasets().
      */
     datasetSamples =
     Object.values(this.sampleCache.sampleNames)
-      .map(value => this.samplesFromText(value)),
-    commonSamples = intersection.apply(undefined, datasetSamples);
+      .map(value => this.samplesFromText(value));
+    let commonSamples;
+
+    const filterText = this.sampleNameFilter;
+    if (filterText) {
+      let regexp;
+      function matchSample(sample) {
+        return sample.match(regexp)?.[0];
+      }
+      this.filterErrorText = null;
+      try {
+        regexp = new RegExp(filterText, 'i');
+      } catch (error) {
+        dLog(fnName, filterText, error.toString());
+        this.filterErrorText = error.toString();
+        return [];
+      }
+      const
+      matched = datasetSamples.map(samples => samples.map(matchSample)),
+      matchedFiltered = matched?.map(matches => matches.filter(match => match)),
+      commonMatches = intersection.apply(undefined, matchedFiltered),
+      commonMatchesSet = new Set(commonMatches),
+      commonSamplesAll = datasetSamples.map(
+        datasetSamples_i => datasetSamples_i.map((sample, i) => 
+          commonMatchesSet.has(matchSample(sample)) ? sample : null)
+          .filter(sample => sample));
+      commonSamples = intersection.apply(undefined, commonSamplesAll);
+      dLog(fnName, commonSamples);
+    } else {
+      commonSamples = intersection.apply(undefined, datasetSamples);
+    }
     return commonSamples;
   }
   /** @return for .lookupDatasetId selected by user, the sampleNames array
@@ -1045,7 +1076,11 @@ export default class PanelManageGenotypeComponent extends Component {
  
     return samples;
   }
-  @computed('vcfGenotypeSamplesText', 'args.userSettings.samplesIntersection')
+  @computed(
+    'vcfGenotypeSamplesText',
+    'args.userSettings.samplesIntersection',
+    'sampleNameFilter',
+  )
   get samples() {
     const
     samples = this.args.userSettings.samplesIntersection ?
@@ -1104,6 +1139,10 @@ export default class PanelManageGenotypeComponent extends Component {
    */
   @computed('samples', 'namesFilters.nameFilterArray')
   get filteredSamples() {
+    // filtering is already applied in sampleNamesIntersection()
+    if (this.args.userSettings.samplesIntersection) {
+      return this.samples;
+    }
     const
     fnName = 'filteredSamples',
     nameFilterArray = this.namesFilters.nameFilterArray,
