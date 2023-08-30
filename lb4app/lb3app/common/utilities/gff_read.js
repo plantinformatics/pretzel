@@ -43,41 +43,41 @@ Correlate with frontend/app/components/axis-tracks.js : ShapeDescription : const
 class GffParse {
   /** current block, feature
   let block, feature;
- */
+  */
 
-/**
- * @param fileData
- * @param datasetAttributes Object
- * Required fields : name (or the caller can set result.dataset.name)
- * Optional fields : parent, namespace.
- * @return : {dataset}
- *
- * Caller :  Dataset.gffUploadInternal() 
- */
-gffDataToJsObj(fileData, datasetAttributes) {
-  const fnName = 'gffDataToJsObj';
-  const
-  gffObj = parseStringSync(fileData),
-  dataset = this.dataset = this.startDataset(datasetAttributes),
-  datasetObj = gffObj.reduce(
-    this.featureParsed.bind(this),
-    { dataset } );
+  /**
+   * @param fileData
+   * @param datasetAttributes Object
+   * Required fields : name (or the caller can set result.dataset.name)
+   * Optional fields : parent, namespace.
+   * @return : {dataset}
+   *
+   * Caller :  Dataset.gffUploadInternal() 
+   */
+  gffDataToJsObj(fileData, datasetAttributes) {
+    const fnName = 'gffDataToJsObj';
+    const
+    gffObj = parseStringSync(fileData),
+    dataset = this.dataset = this.startDataset(datasetAttributes),
+    datasetObj = gffObj.reduce(
+      this.featureParsed.bind(this),
+      { dataset } );
 
-  return datasetObj;
-}
+    return datasetObj;
+  }
 
   startDataset(datasetAttributes) {
     const
-  /** based on {dataset,block,Feature}Header in pretzel/resources/tools/dev/gff32Dataset.pl */
-  dataset = Object.assign(
-    {
-      type : 'linear',
-      tags : [
-        'geneElements'
-      ],
-      meta : { shortName : 'IWGSC_genes_HC'  },
-      blocks : [],
-    }, datasetAttributes);
+    /** based on {dataset,block,Feature}Header in pretzel/resources/tools/dev/gff32Dataset.pl */
+    dataset = Object.assign(
+      {
+        type : 'linear',
+        tags : [
+          'geneElements'
+        ],
+        meta : { shortName : 'IWGSC_genes_HC'  },
+        blocks : [],
+      }, datasetAttributes);
     return dataset;
   }
 
@@ -119,35 +119,35 @@ gffDataToJsObj(fileData, datasetAttributes) {
    */
   featureParsed(result, g)  {
     const fnName = 'featureParsed';
-      if (Array.isArray(g)) {
-        if (g.length !== 1) {
-          console.log(fnName, 'g.length !== 1', g);
-        } else {
-          g = g[0];
-        }
+    if (Array.isArray(g)) {
+      if (g.length !== 1) {
+        console.log(fnName, 'g.length !== 1', g);
+      } else {
+        g = g[0];
       }
-      /** not used :
-       * derived_features:[]
-       */
-      const {Name, chromosome} = g.attributes;
-      // if ((g.genome.length === 1) && (g.genome.length[0] === 'chromosome'))
-      switch (g.type) {
-      case 'region' :
-        this.block = this.newBlock(g, Name[0], chromosome[0]);
-        break;
-      case 'gene':
-        const scope = chromosome ? chromosome[0] : g.seq_id;
-        if (! this.block || (this.block.scope !== scope)) {
-          this.block = this.newBlock(g, scope, scope);
-        }
-        this.feature = this.addFeature(g);
-        break;
-      default :
-        console.log(fnName, 'g.type', g.type);
-        break;
-      }
-      return result;
     }
+    /** not used :
+     * derived_features:[]
+     */
+    const {Name, chromosome} = g.attributes;
+    // if ((g.genome.length === 1) && (g.genome.length[0] === 'chromosome'))
+    switch (g.type) {
+    case 'region' :
+      this.block = this.newBlock(g, Name[0], chromosome[0]);
+      break;
+    case 'gene':
+      const scope = chromosome ? chromosome[0] : g.seq_id;
+      if (! this.block || (this.block.scope !== scope)) {
+        this.block = this.newBlock(g, scope, scope);
+      }
+      this.feature = this.addFeature(g);
+      break;
+    default :
+      console.log(fnName, 'g.type', g.type);
+      break;
+    }
+    return result;
+  }
 
   newBlock(g, name, scope) {
     const
@@ -193,41 +193,41 @@ gffDataToJsObj(fileData, datasetAttributes) {
 } // GffParse
 exports.GffParse = GffParse;
 
-  function visitChildren(feature, subElements, g) {
-    const fnName = 'visitChildren';
-    if (g.child_features.length) {
-      /** g.child_features seems to also be [Array[1]]  */
-      subElements = g.child_features
-        .reduce((children, g) => {
-          if (Array.isArray(g)) {
-            if (g.length !== 1) {
-              console.log(fnName, 'g.length !== 1', g);
-            } else {
-              g = g[0];
-            }
-          }
-          /** if interval is the same as the current feature, just merge the attributes in. */
-          if ((feature.value[0] === g.start) && (feature.value[1] === g.end)) {
-            const childTypes = feature.values.childTypes || (feature.values.childTypes = []);
-            childTypes.push(g.type);
+function visitChildren(feature, subElements, g) {
+  const fnName = 'visitChildren';
+  if (g.child_features.length) {
+    /** g.child_features seems to also be [Array[1]]  */
+    subElements = g.child_features
+      .reduce((children, g) => {
+        if (Array.isArray(g)) {
+          if (g.length !== 1) {
+            console.log(fnName, 'g.length !== 1', g);
           } else {
-            if (! children) {
-              children = [];
-            }
-            children.push(childFeature(g));
+            g = g[0];
           }
-          children = visitChildren(feature, children, g);
-          return children;
-        }, subElements);
-    }
-    return subElements;
+        }
+        /** if interval is the same as the current feature, just merge the attributes in. */
+        if ((feature.value[0] === g.start) && (feature.value[1] === g.end)) {
+          const childTypes = feature.values.childTypes || (feature.values.childTypes = []);
+          childTypes.push(g.type);
+        } else {
+          if (! children) {
+            children = [];
+          }
+          children.push(childFeature(g));
+        }
+        children = visitChildren(feature, children, g);
+        return children;
+      }, subElements);
   }
-  function childFeature(a) {
-    const
-    // print '[', $a[start], ',', $a[end], ', "', $a[type], '"]';
-    child = [a.start, a.end, a.type];
-    return child;
-  }
+  return subElements;
+}
+function childFeature(a) {
+  const
+  // print '[', $a[start], ',', $a[end], ', "', $a[type], '"]';
+  child = [a.start, a.end, a.type];
+  return child;
+}
 
 
 function x1(fileData) {
