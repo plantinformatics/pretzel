@@ -18,7 +18,7 @@ var { clientIsInGroup, clientOwnsGroup, groupIsWritable } = require('../utilitie
 var upload = require('../utilities/upload');
 var load = require('../utilities/load');
 const { spreadsheetDataToJsObj } = require('../utilities/spreadsheet-read');
-const { gffDataToJsObj } = require('../utilities/gff_read');
+const { GffParse } = require('../utilities/gff_read');
 const { loadAliases } = require('../utilities/load-aliases');
 const { cacheClearBlocks } = require('../utilities/localise-blocks');
 const { cacheblocksFeaturesCounts } = require('../utilities/block-features');
@@ -62,9 +62,19 @@ module.exports = function(Dataset) {
       datasetId = q.fileName || ('gff3_dataset_' + req.readableLength),
       replaceDataset = typeof q.replaceDataset === 'string' ?
         JSON.parse(q.replaceDataset.toLowerCase()) : true,
+/*
       uint8Array = req.read(req.readableLength),
       bodyData = uint8Array.asciiSlice();
-      this.gffUploadData(bodyData, datasetId, replaceDataset, options, models, cb);
+*/
+      parser = new GffParse(),
+      // gffUploadData() also sets dataset.name = datasetId
+      dataset = parser.startDataset({name : datasetId});
+      parser.dataset = dataset;
+      parser.bodyPipe(req)
+        .then(dataObj =>
+      // gffDataToJsObj(bodyData);
+          this.gffUploadData(dataObj, datasetId, replaceDataset, options, models, cb)
+        );
     } else
     // Parse as either .json or .gz
     // factored as handleJson()
@@ -491,25 +501,26 @@ module.exports = function(Dataset) {
     console.log(fnName, msg.fileName, msg.data.length);
     const
     datasetId = msg.fileName.replace(/\.gff3?/, ''),
-    replaceDataset = !!msg.replaceDataset;
-    this.gffUploadData(msg.data, datasetId, replaceDataset, options, models, cb);
+    replaceDataset = !!msg.replaceDataset,
+    parser = new GffParse(),
+    dataObj = parser.gffDataToJsObj(msg.data, {name : datasetId});
+    this.gffUploadData(dataObj, datasetId, replaceDataset, options, models, cb);
   };
   /** Parse and insert the given GFF data string into the database.
-   * @param data
+   * @param dataObj
    * @param dataset
    * @param replaceDataset
    * @param options
    * @param models
    * @param cb
    */
-  Dataset.gffUploadData = function(data, datasetId, replaceDataset, options, models, cb) {
+  Dataset.gffUploadData = function(dataObj, datasetId, replaceDataset, options, models, cb) {
     // based on .spreadsheetUploadInternal
     const fnName = 'gffUploadData';
 
     cb = this.spreadsheetUploadCbWrap(cb);
 
 
-    const dataObj = gffDataToJsObj(data);
     let dataset = dataObj.dataset;
     dataset.name = datasetId;
     let status = pick(dataObj, ['warnings', 'errors']);

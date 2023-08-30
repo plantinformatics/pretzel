@@ -40,24 +40,34 @@ Correlate with frontend/app/components/axis-tracks.js : ShapeDescription : const
 //------------------------------------------------------------------------------
 
 
-exports.gffDataToJsObj = gffDataToJsObj;
+class GffParse {
+  /** current block, feature
+  let block, feature;
+ */
+
 /**
  * @param fileData
  * @param datasetAttributes Object
- * Required fields : name
+ * Required fields : name (or the caller can set result.dataset.name)
  * Optional fields : parent, namespace.
- * @return : {errors, warnings, datasets[], datasetNames}
- * datasets[] may have .errors and .warnings
+ * @return : {dataset}
  *
  * Caller :  Dataset.gffUploadInternal() 
  */
-function gffDataToJsObj(fileData, datasetAttributes) {
+gffDataToJsObj(fileData, datasetAttributes) {
   const fnName = 'gffDataToJsObj';
-  /** current block, feature */
-  let block, feature;
   const
   gffObj = parseStringSync(fileData),
+  dataset = this.dataset = this.startDataset(datasetAttributes),
+  datasetObj = gffObj.reduce(
+    this.featureParsed.bind(this),
+    { dataset } );
 
+  return datasetObj;
+}
+
+  startDataset(datasetAttributes) {
+    const
   /** based on {dataset,block,Feature}Header in pretzel/resources/tools/dev/gff32Dataset.pl */
   dataset = Object.assign(
     {
@@ -67,9 +77,48 @@ function gffDataToJsObj(fileData, datasetAttributes) {
       ],
       meta : { shortName : 'IWGSC_genes_HC'  },
       blocks : [],
-    }, datasetAttributes),
-  datasetObj = gffObj.reduce(
-    (result, g) => {
+    }, datasetAttributes);
+    return dataset;
+  }
+
+  /** pipe the message body contents into the gff parser.
+   * @return : promise yielding {dataset}
+   */
+  bodyPipe(req) {
+    let result = { dataset : this.dataset };
+    const promise = new Promise((resolve, reject) => {
+      req
+        .pipe(gff.parseStream({ parseAll: true }))
+        .on('data', (data) => {
+          if (data.directive) {
+            console.log('got a directive', data);
+          } else if (data.comment) {
+            console.log('got a comment', data);
+          } else if (data.sequence) {
+            console.log('got a sequence from a FASTA section');
+          } else {
+            // console.log('got a feature', data);
+            result = this.featureParsed(result, data);
+          }
+        })
+      // refn : @gmod/gff/src/gff-to-json.ts
+        .on('error', (err) => {
+          console.error(err);
+          reject(err);
+        })
+        .on('end', () => {
+          resolve(result);
+        });
+    });
+    return promise;
+  }
+
+  /**
+   * @param result { dataset }
+   * @param g parsed feature data
+   */
+  featureParsed(result, g)  {
+    const fnName = 'featureParsed';
       if (Array.isArray(g)) {
         if (g.length !== 1) {
           console.log(fnName, 'g.length !== 1', g);
@@ -84,23 +133,23 @@ function gffDataToJsObj(fileData, datasetAttributes) {
       // if ((g.genome.length === 1) && (g.genome.length[0] === 'chromosome'))
       switch (g.type) {
       case 'region' :
-        block = newBlock(g, Name[0], chromosome[0]);
+        this.block = this.newBlock(g, Name[0], chromosome[0]);
         break;
       case 'gene':
         const scope = chromosome ? chromosome[0] : g.seq_id;
-        if (! block || (block.scope !== scope)) {
-          block = newBlock(g, scope, scope);
+        if (! this.block || (this.block.scope !== scope)) {
+          this.block = this.newBlock(g, scope, scope);
         }
-        feature = addFeature(g);
+        this.feature = this.addFeature(g);
         break;
       default :
         console.log(fnName, 'g.type', g.type);
         break;
       }
       return result;
-    },
-    { dataset } );
-  function newBlock(g, name, scope) {
+    }
+
+  newBlock(g, name, scope) {
     const
     block = {
       name,
@@ -108,11 +157,11 @@ function gffDataToJsObj(fileData, datasetAttributes) {
       features : [],
       // range : [g.start, g.end],
     };
-    dataset.blocks.push(block);
+    this.dataset.blocks.push(block);
     return block;
   }
 
-  function addFeature(g) {
+  addFeature(g) {
     const
     fnName = 'addFeature',
     values = pickNonNull(g, ['ID', 'score', 'strand', 'phase']),
@@ -129,7 +178,7 @@ function gffDataToJsObj(fileData, datasetAttributes) {
        */
       Object.assign(values, g.attributes);
     }
-    block.features.push(feature);
+    this.block.features.push(feature);
     let
     /** children, currently stored as feature.value[2] */
     subElements = feature.value[2];
@@ -140,7 +189,12 @@ function gffDataToJsObj(fileData, datasetAttributes) {
 
     return feature;
   }
+
+} // GffParse
+exports.GffParse = GffParse;
+
   function visitChildren(feature, subElements, g) {
+    const fnName = 'visitChildren';
     if (g.child_features.length) {
       /** g.child_features seems to also be [Array[1]]  */
       subElements = g.child_features
@@ -175,9 +229,6 @@ function gffDataToJsObj(fileData, datasetAttributes) {
     return child;
   }
 
-
-  return datasetObj;
-}
 
 function x1(fileData) {
   let status = {
