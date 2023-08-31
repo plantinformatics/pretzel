@@ -136,7 +136,13 @@ class GffParse {
       this.block = this.newBlock(g, Name[0], chromosome[0]);
       break;
     case 'gene':
-      const scope = chromosome ? chromosome[0] : g.seq_id;
+    case 'match':
+      let scope;
+      if (! chromosome && (g.type === 'match')) {
+        scope = g.attributes?.description[0]?.match(/^([^ ]+) /)?.[1];
+      } else {
+        scope = chromosome ? chromosome[0] : g.seq_id;
+      }
       if (! this.block || (this.block.scope !== scope)) {
         this.block = this.newBlock(g, scope, scope);
       }
@@ -165,8 +171,11 @@ class GffParse {
     const
     fnName = 'addFeature',
     values = pickNonNull(g, ['ID', 'score', 'strand', 'phase']),
+    name = (g.type === 'match') ?
+      g.seq_id + '_' + g.attributes.ID :
+      g.attributes.Name[0],
     feature = {
-      name : g.attributes.Name[0],
+      name,
       value : [g.start, g.end],
       value_0 : g.start,
       values,
