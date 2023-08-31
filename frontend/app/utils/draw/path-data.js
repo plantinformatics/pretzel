@@ -899,7 +899,7 @@ function PathDataUtils(oa) {
         flow_g.selectAll("g > path")
       );
     }
-    const pathClasses = pathClasses(oa);
+    const pathClasses = PathClasses(oa);
     pathClasses.pathColourUpdate(pa, flow);
   }
   const eventBus = oa.eventBus;
