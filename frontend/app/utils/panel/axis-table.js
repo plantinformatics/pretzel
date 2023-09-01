@@ -143,7 +143,7 @@ function getRowAttribute(table, row, col) {
   }
   const
   value = table.getDataAtCell(row, col),
-  valueFeature = (typeof value === 'object') && value[Symbol.for('feature')];
+  valueFeature = value && (typeof value === 'object') && value[Symbol.for('feature')];
   /** Use valueFeature in preference to the cell meta .PretzelFeature,
    * because setRowAttributes() writes just a single feature to all
    * columns in the row : data[physicalRow].Ref[Symbol.for('feature')].
