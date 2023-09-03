@@ -442,7 +442,7 @@ export default Model.extend({
         dLog('taskGetLimits', bfc._id);
       else {
         dLog('taskGetLimits', bfc, this);
-        this.set('featureLimits', [bfc.min, bfc.max]);
+        this.set('featureLimits', [+bfc.min, +bfc.max]);
         if (! this.get('featureValueCount'))
           this.set('featureValueCount', bfc.featureCount);
       }

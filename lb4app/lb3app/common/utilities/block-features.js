@@ -100,7 +100,8 @@ function binEvenLengthRound(interval, nBins) {
   if (interval && (interval.length === 2) && (nBins > 0)) {
     /* if (interval[1] < interval[0])
      interval = interval.sort(); */
-    let intervalLength = interval[1] - interval[0],
+    /** handle -ve interval direction - could occur with only -ve features in block. */
+    let intervalLength = Math.abs(interval[1] - interval[0]),
     binLength = intervalLength / nBins,
     digits = Math.floor(Math.log10(binLength)),
     eN1 = Math.exp(digits * Math.log(10)),

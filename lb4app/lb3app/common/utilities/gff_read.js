@@ -3,6 +3,7 @@ const { pick } = require('lodash/object');
 const gff = require('@gmod/gff').default;
 const { parseStream, parseStringSync } = gff;
 
+const { maybeFlip } = require('./interval-overlap');
 
 /* global exports */
 /* global require */
@@ -171,13 +172,15 @@ class GffParse {
     const
     fnName = 'addFeature',
     values = pickNonNull(g, ['ID', 'score', 'strand', 'phase']),
+    a = g.attributes,
     name = (g.type === 'match') ?
       g.seq_id + '_' + g.attributes.ID :
       g.attributes.Name[0],
+    value = featureValue(g),
     feature = {
       name,
-      value : [g.start, g.end],
-      value_0 : g.start,
+      value,
+      value_0 : value[0],
       values,
     };
     if (g.attributes) {
@@ -202,6 +205,25 @@ class GffParse {
 } // GffParse
 exports.GffParse = GffParse;
 
+function featureValue(g) {
+  const
+  a = g.attributes,
+  /** gff generated from blast results has g.attributes.blast_sbjct_{start,end}
+   * which are close to the gene position, and g.start which is -ve,
+   *   start = blast_query_start - blast_sbjct_start + 1
+   *   end = blast_query_end + 1
+   * so use blast_sbjct_{start,end} in this case.
+   */
+  valueDir = (a.blast_sbjct_start !== undefined) ? 
+    [+a.blast_sbjct_start[0], +a.blast_sbjct_end[0]] :
+    [g.start, g.end],
+  /** valueDir is directional, but -ve block domain is not currently handled. */
+  value = maybeFlip(valueDir, valueDir[0] > valueDir[1]);
+  return value;
+}
+
+
+
 function visitChildren(feature, subElements, g) {
   const fnName = 'visitChildren';
   if (g.child_features.length) {
@@ -223,7 +245,7 @@ function visitChildren(feature, subElements, g) {
           if (! children) {
             children = [];
           }
-          children.push(childFeature(g));
+          children.push(childFeature(feature.value, g));
         }
         children = visitChildren(feature, children, g);
         return children;
@@ -231,10 +253,15 @@ function visitChildren(feature, subElements, g) {
   }
   return subElements;
 }
-function childFeature(a) {
+function childFeature(parentValue, g) {
   const
+  childValue = featureValue(g),
+  /** it looks like the child values are relative, perhaps relative to the parent feature start.  */
+  value = (g.type === 'match_part') ?
+    childValue.map(v => v + parentValue[0]) :
+    childValue,
   // print '[', $a[start], ',', $a[end], ', "', $a[type], '"]';
-  child = [a.start, a.end, a.type];
+  child = [value[0], value[1], g.type];
   return child;
 }
 

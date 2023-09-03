@@ -323,6 +323,10 @@ path.track.element.utr {
   stroke-dasharray : 25;
   stroke : blue;
 }
+path.track.element.match_part {
+  stroke-width : 6;
+  stroke : purple;
+}
 path.track.element.intron {
   fill : none;
 }

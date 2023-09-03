@@ -112,3 +112,18 @@ exports.domainFilterPathAliases = domainFilterPathAliases;
 exports.logArrayEnds = logArrayEnds;
 
 /*----------------------------------------------------------------------------*/
+
+/** maybeFlip() is copied from frontend/app/utils/draw/axis.js */
+
+exports.maybeFlip = maybeFlip;
+/** @param domain [min,max], e.g. result of d3.extent()
+ * @return if flipped, [max,min]
+ */
+function maybeFlip(domain, flipped)
+{
+  return flipped
+    ? [domain[1], domain[0]]
+    : domain;
+}
+
+//------------------------------------------------------------------------------
