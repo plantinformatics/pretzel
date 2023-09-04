@@ -685,7 +685,11 @@ module.exports = function(Dataset) {
     if (! data) {
       console.log(fnName, ''+dataset?.id, dataset, ctx);
     } else
-    if (data.groupId) {
+      /** If dataset is a copy from another server (it has ._origin), then the
+       * group is an object of the remote server, which does any required group
+       * permission check.
+       */
+    if (data.groupId && ! data.meta?._origin) {
       let
       /** similar : models/group.js : sessionClientId(context),
        * utilities/identity.js : gatherClientId() */
