@@ -1,5 +1,8 @@
 'use strict';
 
+const YAML = require('yaml');
+
+
 /* global module */
 /* global require */
 /* global Buffer */
@@ -879,9 +882,15 @@ function getEmbeddings(Dataset, options) {
 
 function datasetForEmbed(dataset) {
   const
-  /** _id is not present in dataset.__data */
+  /** _id is not present in dataset.__data
+   * .__data does contain .name, which is equal.
+   */
   id = dataset.getId(),
-  {tags, ...datasetSansTags} = dataset.__data,
+  /** Reformat the tags array into a text list.
+   * Omit clientId, groupId because they are hexadecimal DB ids and not
+   * semantically informative.
+   */
+  {tags, clientId, groupId, ...datasetSansTags} = dataset.__data,
   tagsText = Array.isArray(tags) ? ' ' + tags.join(' ') : '',
 
   /** Initially used selected fields to minimise context size, but now
@@ -891,11 +900,24 @@ function datasetForEmbed(dataset) {
    * description.id = id;
    */
   description = Object.assign({/*id*/}, datasetSansTags),
-  prefix = 'The attributes of the dataset named ' + id + ' are :\n',
+  prefix = 'The YAML form of the dataset named ' + id + ' is :\n',
   // JSON.stringify(description)
-  readable = prefix + flattenJSON(description).join(', ') + tagsText;
+  // datasetToText(description)
+  readable = prefix + datasetToYaml(description) + 'tags: ' + tagsText;
+  function datasetToText(description) {
+    return flattenJSON(description).join(', ');
+  }
+
   console.log('embedDatasets', readable);
   ensureItem(id, readable);
+}
+
+/**
+ * @return string with a trailing newline
+ */
+function datasetToYaml(dataset) {
+  const text = YAML.stringify(dataset, /*options*/ undefined);
+  return text;
 }
 
 //------------------------------------------------------------------------------

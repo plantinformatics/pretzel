@@ -71,8 +71,8 @@ export default class FormDatasetGraphComponent extends Component {
         n.idx = i;
         // n.x = i;
         // n.y = i;
-        n.height = 2 * 8;
-        n.width = n.id.length * 10;
+        n.height = 3;
+        n.width = n.id.length * 3;
         return n;
       });
     return nodes;
@@ -172,10 +172,11 @@ export default class FormDatasetGraphComponent extends Component {
 
   drawNode(ctx, d) {
     // from https://stackoverflow.com/a/24565574
-    ctx.font="20px Georgia";
+    ctx.font="6px Georgia";
     ctx.textAlign="center"; 
     ctx.textBaseline = "middle";
-    ctx.fillStyle = "#000000";
+    const scheme = document.documentElement.getAttribute('data-darkreader-scheme');
+    ctx.fillStyle = scheme === 'dark' ? '#ffffff': '#000000';
     ctx.fillText(d.id, d.x + d.width/2, d.y + d.height/2);
   }
 
