@@ -62,6 +62,7 @@ module.exports = function(defaults) {
   app.import('node_modules/bootstrap/js/tab.js');
   app.import('node_modules/bootstrap/js/dropdown.js');
   app.import('node_modules/numeric/lib/numeric.latest.js');
+  app.import('node_modules/tsne-js/build/tsne.min.js');
 
   return app.toTree();
 };

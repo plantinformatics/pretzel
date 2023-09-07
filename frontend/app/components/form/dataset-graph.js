@@ -3,6 +3,8 @@ import { computed, action } from '@ember/object';
 
 import { bboxCollide } from 'd3-bboxCollide';
 import { cosineSimilarity } from 'vector-cosine-similarity';
+import TSNE from 'tsne-js';
+
 
 /* global d3 */
 
@@ -56,11 +58,72 @@ export default class FormDatasetGraphComponent extends Component {
   }
 
   @action
-  start() {
+  initialise() {
+    this.canvasSetup(this.canvasContext);
+    if (this.nodesWithPosition) {
+      this.drawGraph();
+    }
+  }
+
+  @computed()
+  get canvasContext() {
     const canvas = document.getElementById("dataset-graph-canvas");
     const ctx = canvas.getContext("2d");
-    this.chart(ctx);
+    return ctx;
   }
+  @action
+  step() {
+    this.chart(this.canvasContext);
+  }
+  //----------------------------------------------------------------------------
+
+  /**
+   * @param nodes .x,.y are added to each of nodes[], and nodes is returned.
+   * @return nodes
+   */
+  tsnePosition(nodes) {
+    const
+    inputData = nodes.map((n, i) => nodes.map((m, j) => this.force(i, j)));
+
+    let model = new TSNE({
+      dim: 2,
+      perplexity: 30.0,
+      earlyExaggeration: 4.0,
+      learningRate: 100.0,
+      nIter: 1000,
+      metric: 'euclidean'
+    });
+
+    // inputData is a nested array which can be converted into an ndarray
+    // alternatively, it can be an array of coordinates (second argument should be specified as 'sparse')
+    model.init({
+      data: inputData,
+      type: 'dense'
+    });
+
+    // `error`,  `iter`: final error and iteration number
+    // note: computation-heavy action happens here
+    let [error, iter] = model.run();
+
+    if (false) {
+    // rerun without re-calculating pairwise distances, etc.
+    let [error, iter] = model.rerun();
+    }
+
+    // `output` is unpacked ndarray (regular nested javascript array)
+    let output = model.getOutput();
+
+    // `outputScaled` is `output` scaled to a range of [-1, 1]
+    let outputScaled = model.getOutputScaled();
+
+    const {width, height} = this.canvasDimensions;
+    nodes.forEach((n, i) => {
+      n.x = (1 + outputScaled[i][0]) * width / 2;
+      n.y = (1 + outputScaled[i][1]) * height / 2;
+    });
+    return nodes;
+  }
+
   //----------------------------------------------------------------------------
   // based on https://observablehq.com/@d3/collision-detection
 
@@ -77,6 +140,12 @@ export default class FormDatasetGraphComponent extends Component {
       });
     return nodes;
   }
+  @computed('nodes')
+  get nodesWithPosition() {
+    const nodes = this.tsnePosition(this.nodes);
+    return nodes;
+  }
+
   @computed('nodes')
   get links() {
     const
@@ -111,9 +180,7 @@ export default class FormDatasetGraphComponent extends Component {
     return f;
   }
 
-
-  chart(context)
-  {
+  canvasSetup(context) {
     // const context = DOM.context2d(width, height);
     const
     canvas = context.canvas;
@@ -122,8 +189,15 @@ export default class FormDatasetGraphComponent extends Component {
     const
     width = canvas.width,
     height = canvas.height;
+    this.canvasDimensions = {width, height};
+  }
+  chart(context)
+  {
+    const
+    {width, height} = this.canvasDimensions;
+
     // const nodes = this.radii().map(r => ({r}));
-    const nodes = this.nodes;
+    const nodes = this.nodesWithPosition;
 
     function bboxCollideFn(d, i, g) {
       const
@@ -149,14 +223,21 @@ export default class FormDatasetGraphComponent extends Component {
       .force("charge", d3.forceManyBody().strength(-3000))
       .force("center", d3.forceCenter(width / 2, height / 2))
       .force("collide", rectangleCollide)
-      .on("tick", ticked);
+      .on("tick", this.drawGraph.bind(this));
     this.simulation = simulation;
-    const me = this;
 
-    function ticked() {
+    return context.canvas;
+  }
+
+    drawGraph() {
+      const
+      context = this.canvasContext,
+      {width, height} = this.canvasDimensions;
       context.clearRect(0, 0, width, height);
       context.save();
       context.beginPath();
+      const nodes = this.nodesWithPosition;
+      const me = this;
       for (const d of nodes) {
         me.drawNode(context, d);
       }
@@ -167,8 +248,6 @@ export default class FormDatasetGraphComponent extends Component {
       context.restore();
     }
 
-    return context.canvas;
-  }
 
   drawNode(ctx, d) {
     // from https://stackoverflow.com/a/24565574

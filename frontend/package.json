@@ -116,6 +116,7 @@
     "normalize-wheel": "^1.0.1",
     "numeric": "github:lukaiser/numeric",
     "phantom": "^6.3.0",
+    "tsne-js": "^1.0.3",
     "vector-cosine-similarity": "^1.8.0"
   }
 }

@@ -15,7 +15,8 @@
     <div>
     {{this.datasetEmbeddings.length}}
 
-    <BsButton @type="info" class="margin-top" @onClick={{this.start}}>Start</BsButton>
+    <BsButton @type="info" class="margin-top" @onClick={{this.initialise}}>Init</BsButton>
+    <BsButton @type="info" class="margin-top" @onClick={{this.step}}>Step</BsButton>
 
     <BsButton @type="info" class="margin-top" @onClick={{@close}}>Close</BsButton>
     </div>
