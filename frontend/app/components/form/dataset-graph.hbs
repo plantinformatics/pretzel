@@ -19,6 +19,11 @@
     <BsButton @type="info" class="margin-top" @onClick={{this.step}}>Step</BsButton>
 
     <BsButton @type="info" class="margin-top" @onClick={{@close}}>Close</BsButton>
+
+    {{input type="search" value=naturalQuery
+      enter=(action this.naturalQueryChanged)
+      placeholder="Natural language search" }}
+
     </div>
 
     {{yield}}

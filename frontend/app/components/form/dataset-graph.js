@@ -1,5 +1,7 @@
 import Component from '@glimmer/component';
 import { computed, action } from '@ember/object';
+import { inject as service } from '@ember/service';
+
 
 import { bboxCollide } from 'd3-bboxCollide';
 import { cosineSimilarity } from 'vector-cosine-similarity';
@@ -27,6 +29,9 @@ function userMessage(text) {
 
 
 export default class FormDatasetGraphComponent extends Component {
+  
+  @service()
+  auth;
 
   userMessage = userMessage;
 
@@ -49,6 +54,30 @@ export default class FormDatasetGraphComponent extends Component {
       this.simulation.stop();
     }
   }
+
+  //----------------------------------------------------------------------------
+
+  naturalQuery = '';
+  naturalQueryResult = null;
+  naturalQueryChanged(value) {
+    if (value?.length) {
+      const options = {server : this.apiServerSelectedOrPrimary};
+      this.auth.naturalSearch(value, options).then(results => {
+        if (results?.length) {
+          const ids = results.mapBy('item.id');
+          this.naturalQueryResult = ids;
+          // const datasetId = results[0].item.id;
+        } else {
+          this.naturalQueryResult = null;
+        }
+        if (this.canvasContext && this.nodesWithPosition) {
+          this.drawGraph();
+        }
+    });
+    }
+  }
+
+  //----------------------------------------------------------------------------
 
 
   @computed('args.datasetEmbeddings')
@@ -255,7 +284,9 @@ export default class FormDatasetGraphComponent extends Component {
     ctx.textAlign="center"; 
     ctx.textBaseline = "middle";
     const scheme = document.documentElement.getAttribute('data-darkreader-scheme');
-    ctx.fillStyle = scheme === 'dark' ? '#ffffff': '#000000';
+    const datasetId = d.id;
+    const searchFilterMatch = this.naturalQueryResult?.includes(datasetId);
+    ctx.fillStyle = searchFilterMatch ? "red" : scheme === 'dark' ? '#ffffff': '#000000';
     ctx.fillText(d.id, d.x + d.width/2, d.y + d.height/2);
   }
 
