@@ -70,7 +70,8 @@ export default class FormDatasetGraphComponent extends Component {
         } else {
           this.naturalQueryResult = null;
         }
-        if (this.canvasContext && this.nodesWithPosition) {
+        // canvasDimensions is used by nodesWithPosition -> tsnePosition()
+        if (this.canvasContext && this.canvasDimensions && this.nodesWithPosition) {
           this.drawGraph();
         }
     });
@@ -169,7 +170,7 @@ export default class FormDatasetGraphComponent extends Component {
       });
     return nodes;
   }
-  @computed('nodes')
+  @computed('nodes', 'canvasDimensions')
   get nodesWithPosition() {
     const nodes = this.tsnePosition(this.nodes);
     return nodes;
@@ -279,13 +280,16 @@ export default class FormDatasetGraphComponent extends Component {
 
 
   drawNode(ctx, d) {
-    // from https://stackoverflow.com/a/24565574
-    ctx.font="6px Georgia";
-    ctx.textAlign="center"; 
-    ctx.textBaseline = "middle";
-    const scheme = document.documentElement.getAttribute('data-darkreader-scheme');
     const datasetId = d.id;
     const searchFilterMatch = this.naturalQueryResult?.includes(datasetId);
+    const fontSize = searchFilterMatch ? 12 : 6;
+
+    // based on https://stackoverflow.com/a/24565574
+    ctx.font=fontSize + "px Georgia";
+    ctx.textAlign="center"; 
+    ctx.textBaseline = "middle";
+
+    const scheme = document.documentElement.getAttribute('data-darkreader-scheme');
     ctx.fillStyle = searchFilterMatch ? "red" : scheme === 'dark' ? '#ffffff': '#000000';
     ctx.fillText(d.id, d.x + d.width/2, d.y + d.height/2);
   }
