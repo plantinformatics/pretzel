@@ -17,6 +17,8 @@ import { toPromiseProxy } from '../../utils/ember-devel';
 
 const dLog = console.debug;
 
+const useCanvas = false;
+
 //------------------------------------------------------------------------------
 
 /** Show a message to the user, using alert().
@@ -72,10 +74,7 @@ export default class FormDatasetGraphComponent extends Component {
         } else {
           this.naturalQueryResult = null;
         }
-        // canvasDimensions is used by nodesWithPosition -> tsnePosition()
-        if (this.canvasContext && this.canvasDimensions && this.nodesWithPosition) {
-          this.drawGraph();
-        }
+        this.drawGraphIfReady();
       });
     }
   }
@@ -103,12 +102,15 @@ export default class FormDatasetGraphComponent extends Component {
     return proxy;
   }
 
+  svgS = null;
+
   @action
   initialise() {
-    this.canvasSetup(this.canvasContext);
-    if (this.nodesWithPosition) {
-      this.drawGraph();
+    if (! useCanvas) {
+      this.svgS = d3.select('svg#dataset-graph-svg');
     }
+    this.setupDimensions();
+    this.drawGraphIfReady();
   }
 
   @computed()
@@ -119,7 +121,11 @@ export default class FormDatasetGraphComponent extends Component {
   }
   @action
   step() {
-    this.chart(this.canvasContext);
+    if (useCanvas) {
+      this.chart(this.canvasContext);
+    } else {
+      dLog('step', 'not implemented for SVG');
+    }
   }
   //----------------------------------------------------------------------------
 
@@ -128,15 +134,18 @@ export default class FormDatasetGraphComponent extends Component {
    * @return nodes
    */
   tsnePosition(nodes) {
+    const fnName = 'tsnePosition';
+    dLog(fnName, nodes.length);
     const
     inputData = nodes.map((n, i) => nodes.map((m, j) => this.force(i, j)));
+    dLog(fnName, nodes.length);
 
     let model = new TSNE({
       dim: 2,
       perplexity: 30.0,
       earlyExaggeration: 4.0,
       learningRate: 100.0,
-      nIter: 1000,
+      nIter: 100/*0*/,
       metric: 'euclidean'
     });
 
@@ -161,12 +170,15 @@ export default class FormDatasetGraphComponent extends Component {
 
     // `outputScaled` is `output` scaled to a range of [-1, 1]
     let outputScaled = model.getOutputScaled();
+    dLog(fnName, outputScaled.length);
 
-    const {width, height} = this.canvasDimensions;
+    const {width, height} = this.graphDimensions;
     nodes.forEach((n, i) => {
       n.x = (1 + outputScaled[i][0]) * width / 2;
       n.y = (1 + outputScaled[i][1]) * height / 2;
     });
+    dLog(fnName, nodes.length);
+
     return nodes;
   }
 
@@ -187,7 +199,7 @@ export default class FormDatasetGraphComponent extends Component {
       });
     return nodes;
   }
-  @computed('nodes', 'canvasDimensions')
+  @computed('nodes', 'graphDimensions')
   get nodesWithPosition() {
     const nodes = this.tsnePosition(this.nodes);
     return nodes;
@@ -227,21 +239,29 @@ export default class FormDatasetGraphComponent extends Component {
     return f;
   }
 
-  canvasSetup(context) {
-    // const context = DOM.context2d(width, height);
+  graphDimensions = null;
+  setupDimensions() {
     const
-    canvas = context.canvas;
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight - 80;
-    const
-    width = canvas.width,
-    height = canvas.height;
-    this.canvasDimensions = {width, height};
+    width = window.innerWidth,
+    height = window.innerHeight - 80;
+    this.graphDimensions = {width, height};
+
+    if (useCanvas) {
+      // const context = DOM.context2d(width, height);
+      const
+      canvas = this.canvasContext.canvas;
+      canvas.width = width;
+      canvas.height = height;
+    } else {
+      this.svgS
+        .attr('width', width /* "100%" */)
+        .attr('height', height);
+    }
   }
   chart(context)
   {
     const
-    {width, height} = this.canvasDimensions;
+    {width, height} = this.graphDimensions;
 
     // const nodes = this.radii().map(r => ({r}));
     const nodes = this.nodesWithPosition;
@@ -270,23 +290,34 @@ export default class FormDatasetGraphComponent extends Component {
       .force("charge", d3.forceManyBody().strength(-3000))
       .force("center", d3.forceCenter(width / 2, height / 2))
       .force("collide", rectangleCollide)
-      .on("tick", this.drawGraph.bind(this));
+      .on("tick", this.drawGraphCanvas.bind(this));
     this.simulation = simulation;
 
     return context.canvas;
   }
 
-  drawGraph() {
+  drawGraphIfReady() {
+    if (useCanvas) {
+        // graphDimensions is used by nodesWithPosition -> tsnePosition()
+        if (this.canvasContext && this.graphDimensions && this.nodesWithPosition) {
+          this.drawGraphCanvas();
+        }
+    } else {
+      this.drawGraphSVG();
+    }
+  }
+
+  drawGraphCanvas() {
     const
     context = this.canvasContext,
-    {width, height} = this.canvasDimensions;
+    {width, height} = this.graphDimensions;
     context.clearRect(0, 0, width, height);
     context.save();
     context.beginPath();
     const nodes = this.nodesWithPosition;
     const me = this;
     for (const d of nodes) {
-      me.drawNode(context, d);
+      me.drawNodeCanvas(context, d);
     }
     context.fillStyle = "#ddd";
     context.fill();
@@ -295,22 +326,53 @@ export default class FormDatasetGraphComponent extends Component {
     context.restore();
   }
 
+  drawGraphSVG() {
+    const
+    svg = this.svgS,
+    data = this.nodesWithPosition,
+    textS = svg.selectAll('text')
+      .data(data, d => d.id),
+    textA = textS.enter()
+      .append('text')
+      .text(d => d.id),
+    me = this;
+    textS.merge(textA)
+      .attr('x', d => d.x + d.width/2)
+      .attr('y', d => d.y + d.height/2)
+      .each(function (d) {
+        const
+        datasetId = d.id,
+        {fontSize, colour} = me.nodeTextAttrs(datasetId);
+        d3.select(this)
+          .attr('font-size', fontSize + 'px')
+          .attr('stroke', colour);
+      });
 
-  drawNode(ctx, d) {
-    const datasetId = d.id;
+    textS.exit().remove();
+  }
+
+  nodeTextAttrs(datasetId) {
     let searchFilterMatch = this.datasetIdInResult(datasetId);
     if (searchFilterMatch === -1) {
       searchFilterMatch = undefined;
     }
     const fontSize = searchFilterMatch ? 6 + 2 * (3 - searchFilterMatch) : 6;
 
+    const scheme = document.documentElement.getAttribute('data-darkreader-scheme');
+    const colour = (searchFilterMatch !== undefined) ? "red" : scheme === 'dark' ? '#ffffff': '#000000';
+    return {fontSize, colour};
+  }
+
+  drawNodeCanvas(ctx, d) {
+    const datasetId = d.id;
+    const {fontSize, colour} = this.nodeTextAttrs(datasetId);
+
     // based on https://stackoverflow.com/a/24565574
     ctx.font=fontSize + "px Georgia";
     ctx.textAlign="center"; 
     ctx.textBaseline = "middle";
 
-    const scheme = document.documentElement.getAttribute('data-darkreader-scheme');
-    ctx.fillStyle = (searchFilterMatch !== undefined) ? "red" : scheme === 'dark' ? '#ffffff': '#000000';
+    ctx.fillStyle = colour;
     ctx.fillText(d.id, d.x + d.width/2, d.y + d.height/2);
   }
 

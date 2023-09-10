@@ -2273,6 +2273,11 @@ div.genotype > div > div > textarea,
   padding: 1em;
 }
 
+.dataset-graph.ember-modal-dialog
+{
+  width : 100%;
+}
+
 /** Hide the panel-container-s when toggled off */
 #right-panel-content.right-panel-genotype.hideControls .panel-parent
 {

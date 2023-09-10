@@ -1,5 +1,6 @@
 
 {{#ember-modal-dialog
+  containerClassNames="dataset-graph"
   onClose=@close
   translucentOverlay=true
   clickOutsideToClose=false
@@ -10,7 +11,8 @@
 
   <div class="dataset-graph">
 
-    <canvas id="dataset-graph-canvas" width="1400" height="850"></canvas>
+    <canvas id="dataset-graph-canvas" ></canvas>
+    <svg id="dataset-graph-svg" ></svg>
 
     <div>
     {{this.datasetEmbeddings.length}}
