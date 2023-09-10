@@ -30,6 +30,9 @@ const { ensureItem, query, datasetIdGetVector } = require('../utilities/vectra-s
 const { flattenJSON } = require('../utilities/json-text.js');
 const { text2Commands } = require('../utilities/openai-query.js');
 
+const cacheLibraryName = '../utilities/results-cache'; // 'memory-cache';
+const cache = require(cacheLibraryName);
+
 
 //------------------------------------------------------------------------------
 
@@ -613,11 +616,14 @@ module.exports = function(Dataset) {
   //----------------------------------------------------------------------------
 
   Dataset.naturalSearch = function naturalSearch(search_text, options, cb) {
-    embedDatasets(Dataset, options);
     console.log('naturalSearch', search_text);
+    /** embedDatasets() -> datasetForEmbed() -> ensureItem(), adding to index
+     * which is used by query() */
+    embedDatasets(Dataset, options).then(() => {
     query(search_text)
       .then((results) => cb(null, results))
       .catch((err) => cb(err));
+    });
   };
 
   Dataset.text2Commands = function text2CommandsEndpoint(commands_text, options, cb) {
@@ -852,6 +858,26 @@ function embedDatasets(Dataset, options) {
 function getEmbeddings(Dataset, options) {
   const
   fnName = 'getEmbeddings',
+  cacheId = fnName,
+  useCache = true;
+  let cached, embeddingsP;
+  if (useCache && (cached = cache.get(cacheId))) {
+    embeddingsP = Promise.resolve(cached);
+  } else {
+    embeddingsP = getEmbeddingsNoCache(Dataset, options);
+    embeddingsP
+      .then(datasetsVectors => {
+        if (useCache)
+          cache.put(cacheId, datasetsVectors);
+      });
+  }
+  return embeddingsP;
+}
+
+function getEmbeddingsNoCache(Dataset, options) {
+  const
+  fnName = 'getEmbeddingsNoCache',
+  // or just embedDatasets(Dataset, options)
   embedP = ! embeddingP ?
     embedDatasets(Dataset, options) :
     Promise.resolve(),
@@ -882,6 +908,7 @@ function getEmbeddings(Dataset, options) {
 
 function datasetForEmbed(dataset) {
   const
+  fnName = 'datasetForEmbed',
   /** _id is not present in dataset.__data
    * .__data does contain .name, which is equal.
    */
@@ -908,7 +935,7 @@ function datasetForEmbed(dataset) {
     return flattenJSON(description).join(', ');
   }
 
-  console.log('embedDatasets', readable);
+  console.log(fnName, readable);
   ensureItem(id, readable);
 }
 
