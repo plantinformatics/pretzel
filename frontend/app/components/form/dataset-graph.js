@@ -59,11 +59,13 @@ export default class FormDatasetGraphComponent extends Component {
 
   naturalQuery = '';
   naturalQueryResult = null;
+  naturalQueryResultRaw = null;
   naturalQueryChanged(value) {
     if (value?.length) {
       const options = {server : this.apiServerSelectedOrPrimary};
       this.auth.naturalSearch(value, options).then(results => {
         if (results?.length) {
+          this.naturalQueryResultRaw = results;
           const ids = results.mapBy('item.id');
           this.naturalQueryResult = ids;
           // const datasetId = results[0].item.id;
@@ -76,6 +78,20 @@ export default class FormDatasetGraphComponent extends Component {
         }
     });
     }
+  }
+
+  /**
+   * @return undefined if naturalQueryResult is not defined,
+   * index of datasetId in naturalQueryResult, or -1 if not found.
+   */
+  datasetIdInResult(datasetId) {
+    const
+    // this.datasetEmbeddings.findBy('id', this.naturalQueryResult[0])
+
+    // or dr = this.naturalQueryResultRaw.findBy('item.id', datasetId); score = dr?.score;
+    // orig : this.naturalQueryResult?.includes(datasetId);
+    score = this.naturalQueryResult?.indexOf(datasetId);
+    return score;
   }
 
   //----------------------------------------------------------------------------
@@ -281,8 +297,11 @@ export default class FormDatasetGraphComponent extends Component {
 
   drawNode(ctx, d) {
     const datasetId = d.id;
-    const searchFilterMatch = this.naturalQueryResult?.includes(datasetId);
-    const fontSize = searchFilterMatch ? 12 : 6;
+    let searchFilterMatch = this.datasetIdInResult(datasetId);
+    if (searchFilterMatch === -1) {
+      searchFilterMatch = undefined;
+    }
+    const fontSize = searchFilterMatch ? 6 + 2 * (3 - searchFilterMatch) : 6;
 
     // based on https://stackoverflow.com/a/24565574
     ctx.font=fontSize + "px Georgia";
@@ -290,7 +309,7 @@ export default class FormDatasetGraphComponent extends Component {
     ctx.textBaseline = "middle";
 
     const scheme = document.documentElement.getAttribute('data-darkreader-scheme');
-    ctx.fillStyle = searchFilterMatch ? "red" : scheme === 'dark' ? '#ffffff': '#000000';
+    ctx.fillStyle = (searchFilterMatch !== undefined) ? "red" : scheme === 'dark' ? '#ffffff': '#000000';
     ctx.fillText(d.id, d.x + d.width/2, d.y + d.height/2);
   }
 
