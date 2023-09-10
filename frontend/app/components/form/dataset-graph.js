@@ -76,7 +76,7 @@ export default class FormDatasetGraphComponent extends Component {
         if (this.canvasContext && this.canvasDimensions && this.nodesWithPosition) {
           this.drawGraph();
         }
-    });
+      });
     }
   }
 
@@ -175,7 +175,8 @@ export default class FormDatasetGraphComponent extends Component {
 
   @computed('args.datasetEmbeddings')
   get nodes() {
-      const nodes = this.args.datasetEmbeddings.responseJSON
+    const
+    nodes = this.args.datasetEmbeddings.responseJSON
       .map((n, i) => {
         n.idx = i;
         // n.x = i;
@@ -258,8 +259,8 @@ export default class FormDatasetGraphComponent extends Component {
     const
     simulation = d3.forceSimulation(nodes)
       .velocityDecay(0.2)
-        // .force("x", d3.forceX().strength(0.002))
-        // .force("y", d3.forceY().strength(0.002))
+    // .force("x", d3.forceX().strength(0.002))
+    // .force("y", d3.forceY().strength(0.002))
     // d3.forceCollide().radius(d => d.r + 0.5).iterations(2)
       .force(
         "link",
@@ -275,24 +276,24 @@ export default class FormDatasetGraphComponent extends Component {
     return context.canvas;
   }
 
-    drawGraph() {
-      const
-      context = this.canvasContext,
-      {width, height} = this.canvasDimensions;
-      context.clearRect(0, 0, width, height);
-      context.save();
-      context.beginPath();
-      const nodes = this.nodesWithPosition;
-      const me = this;
-      for (const d of nodes) {
-        me.drawNode(context, d);
-      }
-      context.fillStyle = "#ddd";
-      context.fill();
-      context.strokeStyle = "#333";
-      context.stroke();
-      context.restore();
+  drawGraph() {
+    const
+    context = this.canvasContext,
+    {width, height} = this.canvasDimensions;
+    context.clearRect(0, 0, width, height);
+    context.save();
+    context.beginPath();
+    const nodes = this.nodesWithPosition;
+    const me = this;
+    for (const d of nodes) {
+      me.drawNode(context, d);
     }
+    context.fillStyle = "#ddd";
+    context.fill();
+    context.strokeStyle = "#333";
+    context.stroke();
+    context.restore();
+  }
 
 
   drawNode(ctx, d) {
@@ -311,10 +312,6 @@ export default class FormDatasetGraphComponent extends Component {
     const scheme = document.documentElement.getAttribute('data-darkreader-scheme');
     ctx.fillStyle = (searchFilterMatch !== undefined) ? "red" : scheme === 'dark' ? '#ffffff': '#000000';
     ctx.fillText(d.id, d.x + d.width/2, d.y + d.height/2);
-  }
-
-  radii() {
-    return (Array.from({length: 1000}, d3.randomUniform(4, 18)));
   }
 
 }
