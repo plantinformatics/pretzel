@@ -1,6 +1,8 @@
 import Component from '@glimmer/component';
-import { computed, action } from '@ember/object';
+import { computed, action, set as Ember_set } from '@ember/object';
 import { inject as service } from '@ember/service';
+import { later } from '@ember/runloop';
+import { tracked } from '@glimmer/tracking';
 
 
 import { bboxCollide } from 'd3-bboxCollide';
@@ -18,6 +20,7 @@ import { toPromiseProxy } from '../../utils/ember-devel';
 const dLog = console.debug;
 
 const useCanvas = false;
+const textTransitionTime = 500;
 
 //------------------------------------------------------------------------------
 
@@ -110,7 +113,14 @@ export default class FormDatasetGraphComponent extends Component {
       this.svgS = d3.select('svg#dataset-graph-svg');
     }
     this.setupDimensions();
-    this.drawGraphIfReady();
+
+    later(() => {
+      const n = this.nodesWithPositionRun;
+      // progressData() calls drawGraphIfReady()
+      // may change to pass nodes to drawGraph*()
+      // n && this.drawGraphIfReady();
+    });
+
   }
 
   @computed()
@@ -133,7 +143,7 @@ export default class FormDatasetGraphComponent extends Component {
    * @param nodes .x,.y are added to each of nodes[], and nodes is returned.
    * @return nodes
    */
-  tsnePosition(nodes) {
+  tsnePosition(nodes, progressData) {
     const fnName = 'tsnePosition';
     dLog(fnName, nodes.length);
     const
@@ -145,7 +155,7 @@ export default class FormDatasetGraphComponent extends Component {
       perplexity: 30.0,
       earlyExaggeration: 4.0,
       learningRate: 100.0,
-      nIter: 100/*0*/,
+      nIter: 150/*1000*/,
       metric: 'euclidean'
     });
 
@@ -155,6 +165,9 @@ export default class FormDatasetGraphComponent extends Component {
       data: inputData,
       type: 'dense'
     });
+    model.on('progressData', progressData, /*context*/model);
+    // context is not passed to progressData.
+    this.model = model;
 
     // `error`,  `iter`: final error and iteration number
     // note: computation-heavy action happens here
@@ -164,13 +177,20 @@ export default class FormDatasetGraphComponent extends Component {
     // rerun without re-calculating pairwise distances, etc.
     let [error, iter] = model.rerun();
     }
+    model.removeListener('progressData', progressData, /*context*/model);
+    dLog(fnName, nodes.length);
+
+    return this.nodesScaled(model, nodes);
+  }
+  nodesScaled(model, nodes) {
+    const fnName = 'nodesScaled';
 
     // `output` is unpacked ndarray (regular nested javascript array)
     let output = model.getOutput();
 
     // `outputScaled` is `output` scaled to a range of [-1, 1]
     let outputScaled = model.getOutputScaled();
-    dLog(fnName, outputScaled.length);
+    dLog(fnName, outputScaled[0], outputScaled.length);
 
     const {width, height} = this.graphDimensions;
     nodes.forEach((n, i) => {
@@ -181,6 +201,12 @@ export default class FormDatasetGraphComponent extends Component {
 
     return nodes;
   }
+  progressData(outputScaled, model) {
+    dLog('progressData', outputScaled[0], model, arguments);
+    Ember_set(this, 'nodesWithPosition', this.nodesScaled(this.model, this.nodes));
+    this.drawGraphIfReady();
+  }
+
 
   //----------------------------------------------------------------------------
   // based on https://observablehq.com/@d3/collision-detection
@@ -199,9 +225,13 @@ export default class FormDatasetGraphComponent extends Component {
       });
     return nodes;
   }
+  @tracked
+  nodesWithPosition = null;
   @computed('nodes', 'graphDimensions')
-  get nodesWithPosition() {
-    const nodes = this.tsnePosition(this.nodes);
+  get nodesWithPositionRun() {
+    const fnName = 'nodesWithPositionRun';
+    const nodes = this.tsnePosition(this.nodes, this.progressData.bind(this));
+    Ember_set(this, 'nodesWithPosition', nodes);
     return nodes;
   }
 
@@ -239,12 +269,13 @@ export default class FormDatasetGraphComponent extends Component {
     return f;
   }
 
+  @tracked
   graphDimensions = null;
   setupDimensions() {
     const
     width = window.innerWidth,
     height = window.innerHeight - 80;
-    this.graphDimensions = {width, height};
+    Ember_set(this, 'graphDimensions', {width, height});
 
     if (useCanvas) {
       // const context = DOM.context2d(width, height);
@@ -337,6 +368,7 @@ export default class FormDatasetGraphComponent extends Component {
       .text(d => d.id),
     me = this;
     textS.merge(textA)
+      // .transition().duration(textTransitionTime)
       .attr('x', d => d.x + d.width/2)
       .attr('y', d => d.y + d.height/2)
       .each(function (d) {
