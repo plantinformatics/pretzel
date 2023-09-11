@@ -839,19 +839,55 @@ let embeddingP;
  * @param options including session accessToken
  */
 function embedDatasets(Dataset, options) {
-  const fnName = 'embedDatasets';
-  if (! embeddingP) {
-    console.log(fnName);
-    embeddingP = Dataset.find({}, options)
-      .then(
-        datasets => {
-          console.log(fnName, datasets.length);
-          datasets
-            .filter(d => ! d.meta?._origin)
-            // .slice(0, 30)
-            .forEach(dataset => datasetForEmbed(dataset));
+  const
+  fnName = 'embedDatasets',
+  cacheId = fnName,
+  useCache = true;
+  let cached;
+  if (embeddingP) {
+    // no action required
+  } else if (useCache && (cached = cache.get(cacheId))) {
+    console.log(fnName, 'cache.get', cacheId, cached.length);
+    embeddingP = Promise.resolve(cached);
+  } else {
+    embeddingP = embedDatasetsNoCache(Dataset, options);
+    if (useCache) {
+      /* result is array of undefined; it simply signifies that the item is
+       * stored in vectra. */
+      embeddingP
+        .then(vectors => {
+          console.log(fnName, 'cache.put', cacheId, vectors.length);
+          cache.put(cacheId, vectors);
         });
+    }
+
   }
+  return embeddingP;
+}
+
+/** Call ensureItem() for each dataset, if this has not already been done.
+ * @param Dataset model
+ * @param options including session accessToken
+ * @return promise which resolves with no value for each dataset when
+ * datasetForEmbed() has resolved for each dataset
+ */
+function embedDatasetsNoCache(Dataset, options) {
+  const fnName = 'embedDatasetsNoCache';
+  console.log(fnName);
+  embeddingP = Dataset.find({}, options)
+    .then(
+      datasets => {
+        console.log(fnName, datasets.length);
+        const
+        datasetsP =
+        datasets
+          .filter(d => ! d.meta?._origin)
+          // .slice(0, 30)
+          .map(dataset => datasetForEmbed(dataset)),
+        allP = Promise.all(datasetsP);
+        return allP;
+      });
+
   return embeddingP;
 }
 
@@ -862,12 +898,14 @@ function getEmbeddings(Dataset, options) {
   useCache = true;
   let cached, embeddingsP;
   if (useCache && (cached = cache.get(cacheId))) {
+    console.log(fnName, 'cache.get', cacheId, cached.length);
     embeddingsP = Promise.resolve(cached);
   } else {
     embeddingsP = getEmbeddingsNoCache(Dataset, options);
     embeddingsP
       .then(datasetsVectors => {
         if (useCache)
+          console.log(fnName, 'cache.put', cacheId, datasetsVectors.length);
           cache.put(cacheId, datasetsVectors);
       });
   }
@@ -906,6 +944,9 @@ function getEmbeddingsNoCache(Dataset, options) {
   return resultP;
 }
 
+/**
+ * @return promise yielding undefined
+ */
 function datasetForEmbed(dataset) {
   const
   fnName = 'datasetForEmbed',
@@ -936,7 +977,8 @@ function datasetForEmbed(dataset) {
   }
 
   console.log(fnName, readable);
-  ensureItem(id, readable);
+  const embedP = ensureItem(id, readable);
+  return embedP;
 }
 
 /**
