@@ -62,3 +62,18 @@ The `flattenJSON` function recursively traverses the JSON object and generates k
 */
 
 //------------------------------------------------------------------------------
+
+exports.parseBooleanFields = parseBooleanFields;
+/** Handle boolean args in objects passed as remoteMethod params.  The boolean args are being received as  strings, e.g.
+ * vcfGenotypeLookup() : preArgs : {... , requestInfo: 'false', requestFormat: 'Numerical', requestSamplesAll: 'true', snpPolymorphismFilter: 'false'}
+ * Parse these to convert to native boolean values true, false.
+ */
+function parseBooleanFields(object, fieldNames) {
+  fieldNames.forEach(fieldName => {
+    if (typeof object[fieldName] === 'string') {
+      object[fieldName] = JSON.parse(object[fieldName]);
+    }
+  });
+}
+
+//------------------------------------------------------------------------------

@@ -23,6 +23,7 @@ const { ArgsDebounce } = require('../utilities/debounce-args');
 const { ErrorStatus } = require('../utilities/errorStatus.js');
 const { vcfGenotypeLookup, vcfGenotypeFeaturesCounts } = require('../utilities/vcf-genotype');
 const { germinateGenotypeSamples, germinateGenotypeLookup } = require('../utilities/germinate-genotype');
+const { parseBooleanFields } = require('../utilities/json-text');
 
 var ObjectId = require('mongodb').ObjectID
 
@@ -1388,6 +1389,8 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
   Block.vcfGenotypeLookup = function(datasetId, scope, preArgs, nLines, options, cb) {
     const
     fnName = 'vcfGenotypeLookup';
+
+    parseBooleanFields(preArgs, ['snpPolymorphismFilter', 'requestSamplesAll', 'requestInfo']);
 
     /** Caching is generally not applicable to this request, because the region
      * / interval is always present - when zoomed out only the features counts

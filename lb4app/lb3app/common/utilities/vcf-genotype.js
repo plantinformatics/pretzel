@@ -72,7 +72,7 @@ function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
      *        %TGT            Translated genotype (e.g. C/A)
      */
     formatGT = (preArgs.requestFormat === 'CATG') ? '%TGT' : '%GT',
-    requestInfo = preArgs.requestInfo && JSON.parse(preArgs.requestInfo),
+    requestInfo = preArgs.requestInfo,
     format = '%ID\t%POS' + '\t%REF\t%ALT' +
       (requestInfo ? '\t%INFO/tSNP\t%INFO/MAF' : '') +
       '[\t' + formatGT + ']\n';
