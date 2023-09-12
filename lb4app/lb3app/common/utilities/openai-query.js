@@ -18,7 +18,7 @@ const openai = new OpenAIApi(configuration);
 
 const prompt = 
 "\
-Act as the user interface for an genomic application which can :\
+Act as the user interface for a genomic application which can :\
 1. display datasets containing genes or markers on axes which correspond to chromosomes\
 2. search for DNA sequence in reference assemblies and display the matched positions on the axes\
 3. search for genes and markers by name and display their positions on the axes\
