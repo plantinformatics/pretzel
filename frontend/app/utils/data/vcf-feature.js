@@ -53,6 +53,18 @@ const cellMultiFeatures = false;
 
 //------------------------------------------------------------------------------
 
+/**
+ * @return true if value is 0, 1, 2, or 0/0, 0/1, 1/0, 1/1,
+ * @param value is defined, and is a string
+ * It is assumed to be well-formed - only the first char is checked.
+ */
+function gtValueIsNumeric(value) {
+  const char = value[0];
+  return ['0', '1', '2'].includes(char);
+}
+
+//------------------------------------------------------------------------------
+
 /** Convert punctuation in datasetId to underscore, to sanitize it and enable
  * use of the result as a CSS class name.
  *
@@ -694,10 +706,11 @@ function sampleIsFilteredOut(block, sampleName) {
   let hide;
   // matches may be empty
   if (matches) {
+    // counts is now distance, replacing {matches,mismatches}.
     /** matches may not contain all samples of block, because of samplesLimit. */
     const counts = matches[sampleName];
     /** also done in matrix-view.js : showHideSampleFn() */
-    hide = counts?.mismatches;
+    hide = counts;
   }
   return hide;
 }
@@ -1340,6 +1353,7 @@ function featureSampleNames(sampleNamesSet, feature, filterFn) {
 export {
   refAlt,
   datasetId2Class,
+  gtValueIsNumeric,
   vcfGenotypeLookup,
   addFeaturesJson,
   resultIsGerminate,

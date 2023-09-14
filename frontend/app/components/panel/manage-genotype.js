@@ -17,6 +17,7 @@ import { overlapInterval } from '../../utils/draw/zoomPanCalcs';
 import {
   refAlt,
   datasetId2Class,
+  gtValueIsNumeric,
   vcfGenotypeLookup,
   addFeaturesJson,
   resultIsGerminate,
@@ -59,7 +60,7 @@ const haplotypeFiltersSymbol = Symbol.for('haplotypeFilters');
  */
 const haplotypeFeaturesSymbol = Symbol.for('haplotypeFeatures');
 /** Counts for filtering by LD Block (Haplotype) values
- * block[sampleMatchesSymbol] : {matches: 0, mismatches : 0}
+ * block[sampleMatchesSymbol] : distance (previously {matches: 0, mismatches : 0})
  * also used in sampleIsFilteredOut{,Blocks}()
  */
 const sampleMatchesSymbol = Symbol.for('sampleMatches');
@@ -2129,8 +2130,11 @@ export default class PanelManageGenotypeComponent extends Component {
     filtersCount = selectFeaturesByLDBlock ? this.haplotypeFiltersCount : this.featureFiltersCount,
     fn = ! filtersCount ? undefined : (...sampleNames) => {
       const
+      /** distance averages for the samples.  */
       matchRates = sampleNames.map(this.sampleMatchesSum.bind(this)),
-      cmp = matchRates[1] - matchRates[0];
+      /** if missing data is given undefined distance, then columns stop sorting at the missing data. */
+      containsUndefined = matchRates.indexOf(undefined) !== -1,
+      cmp = containsUndefined ? 0 : matchRates[0] - matchRates[1];
       return cmp;
     };
     return fn;
@@ -2152,7 +2156,7 @@ export default class PanelManageGenotypeComponent extends Component {
 
 
   /** result of sampleMatchesSum()
-   * [sampleName] -> {matches, mismatches}
+   * [sampleName] -> distance (previously {matches, mismatches})
    */
   matchesSummary = {};
   /** Sum the matches of this sample with Alt or Ref value at the selected SNPs.
@@ -2162,25 +2166,29 @@ export default class PanelManageGenotypeComponent extends Component {
   sampleMatchesSum(sampleName) {
     let ratio = this.matchesSummary[sampleName];
     if (ratio === undefined) {
+      let distanceCount = 0;
       const
       blocks = this.sampleName2Blocks(sampleName),
       /** sum of {,mis}match counts for blocks containing sampleName.  */
       ms = blocks
         .reduce((sum, block) => {
           const
+          /** m is now distance, replacing {matches,mismatches}. */
           m = block?.[sampleMatchesSymbol]?.[sampleName];
-          if (m) {
+          if (m !== undefined) {
+            distanceCount++;
             if (! sum) {
-              sum = Object.assign({}, m);
+              sum = m;
             } else {
-              sum.matches += m.matches;
-              sum.mismatches += m.mismatches;
+              sum += m;
             }
           }
           return sum;
         }, null);
-      ratio = ! ms || ! (ms.matches + ms.mismatches) ? 0 :
-        ms.matches / (ms.matches + ms.mismatches);
+      /* ! distanceCount implies ms is null.
+       * missing data is not sorted
+       */
+      ratio = ! distanceCount ? undefined : ms / distanceCount;
       this.matchesSummary[sampleName] = ratio;
     }
     return ratio;
@@ -2311,19 +2319,31 @@ export default class PanelManageGenotypeComponent extends Component {
             /* merge new values in - remember selections for datasets which are currently not visible. */
             // if (this.currentFeaturesValuesFields) Object.assign(this.currentFeaturesValuesFields, currentFeaturesValuesFields);
 
+            sn = sampleGenotypes.sampleNames,
+            // use == because .sampleNames are String
+            altColumnIndex = sn.findIndex(s => s == 'Alt'),
+            firstSampleIndex = altColumnIndex === -1 ? 0 : altColumnIndex + 1,
+            /** altColumnIndex and firstSampleIndex can be replaced by keeping
+             * the left/fixed columns separated earlier in the pipeline, in
+             * vcfFeatures2MatrixViewRowsResult() */
+            columnNamesFixed = sn.slice(0, firstSampleIndex),
+            sampleNamesPreSort = sn.slice(firstSampleIndex),
             /** sampleNamesCmp() is already applied per-block (i.e. per array
              * in featuresArrays[]) in vcfFeatures2MatrixViewRowsResult().
              * columnNamesCmp(), which wraps sampleNamesCmp(), is applied across
              * all the blocks (all of featuresArrays[]) in the following, so the
              * per-block sort could be omitted.
              */
-            sampleNames = this.sampleNamesCmp ? 
-              sampleGenotypes.sampleNames
+            sampleNamesPostSort = this.sampleNamesCmp ? 
+              sampleNamesPreSort
               .sort(this.columnNamesCmp.bind(this, this.sampleNamesCmp)) :
-              sampleGenotypes.sampleNames,
+              sampleNamesPreSort,
+            sampleNames = columnNamesFixed.concat(sampleNamesPostSort),
+
             /* Position value is returned by matrix-view : rowHeaders().
              * for gtMergeRows the Position column is hidden.
              * .sampleNames contains : [ 'Ref', 'Alt', 'tSNP', 'MAF' ]; 'tSNP' is mapped to 'LD Block'
+             * \t<datasetId> is appended to 'MAF' and 'LD Block'.
              */
             columnNames = gtDatasetIds
               .concat(nonVCF.columnNames)
@@ -2551,15 +2571,48 @@ export default class PanelManageGenotypeComponent extends Component {
      * of MatchRef, but these requirements are likely to evolve.  */
     class MatchRef {
       constructor(matchRef) {
+        this.matchRef = matchRef;
         this.matchKey = matchRef ? 'ref' : 'alt';
         this.matchNumber = matchRef ? '0' : '2';
       }
       /** to match homozygous could use .startsWith(); that will also match 1/2 of heterozygous.
        * Will check on (value === '1') : should it match depending on matchRef ?
        * @param value sample/individual value at feature / SNP
+       * This function is not called if valueIsMissing(value).
        * @param matchValue  ref/alt value at feature / SNP (depends on matchRef)
        */
       matchFn(value, matchValue) { return (value === this.matchNumber) || (value === '1') || value.includes(matchValue); }
+      /**
+       * Param comments of matchFn() apply here also.
+       * @return undefined if value is missing data, i.e. './.'
+       */
+      distanceFn(value, matchValue) {
+        const fnName = 'distanceFn';
+        /** number of copies of Alt / Ref, for matchRef true / false. */
+        let distance;
+        const numeric = gtValueIsNumeric(value);
+        if (value === './.') {
+          distance = this.matchRef ? 0 : 2;
+        } else {
+        switch (value.length) {
+        case 3 :
+          if (numeric) { matchValue = this.matchRef ? '1' : '0'; }
+          distance = 2 - stringCountString(value, matchValue);
+          break;
+        case 1:
+          if (numeric) {
+            distance = this.matchRef ? +value : 2 - value;
+          } else {
+            distance = value === this.matchNumber;
+          }
+          break;
+        default : dLog(fnName, 'invalid genotype value', value);
+          break;
+        }
+        }
+
+        return distance;
+      }
     }
 
     const
@@ -2590,6 +2643,7 @@ export default class PanelManageGenotypeComponent extends Component {
       }
 
       /**
+       * @param matches[sampleName] is now distance, replacing {matches,mismatches}.
        * @param matchRefIn MatchRef.  if not defined then construct it for each feature from feature[matchRefSymbol].
        */
       function featuresCountMatches(features, matches, matchRefIn) {
@@ -2598,10 +2652,11 @@ export default class PanelManageGenotypeComponent extends Component {
           matchRef = matchRefIn || new MatchRef(feature[matchRefSymbol]),
           matchValue = feature.values[matchRef.matchKey];
           Object.entries(feature.values).forEach(([key, value]) => {
-            if (! valueNameIsNotSample(key) && ! valueIsMissing(matchValue)) {
-              const match = matchRef.matchFn(value, matchValue);
-              const sampleMatch = matches[key] || (matches[key] = {matches: 0, mismatches : 0});
-              sampleMatch[match ? 'matches' : 'mismatches']++;
+            if (! valueNameIsNotSample(key) && matchValue /*&& ! valueIsMissing(value)*/) {
+              const distance = matchRef.distanceFn(value, matchValue);
+              if (distance !== undefined) {
+                matches[key] = (matches[key] ?? 0) + distance;
+              }
             }
           });
         });
@@ -2613,6 +2668,7 @@ export default class PanelManageGenotypeComponent extends Component {
          * block *
          *   sample*
          *     show/hide according to count
+         * counts is now distance, replacing {matches,mismatches}.
          */
         Object.entries(blockMatches).forEach(([sampleName, counts]) => {
           showHideSampleFn(sampleName, counts);

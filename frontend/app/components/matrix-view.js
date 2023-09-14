@@ -2059,9 +2059,10 @@ export default Component.extend({
     this.haplotypeFilterSamples(this.showHideSampleFn.bind(this), this);
   },
   showHideSampleFn(sampleName, counts) {  
-    if (counts.matches || counts.mismatches) {
+    // counts is now distance, replacing {matches,mismatches}.
+    if (counts !== undefined) {
       const
-      hide = counts.mismatches,
+      hide = counts,
       columnIndex = this.columnNames.indexOf(sampleName),
       table = this.table,
       hiddenColumnsPlugin = table.getPlugin('hiddenColumns');
