@@ -2277,6 +2277,10 @@ div.genotype > div > div > textarea,
 {
   width : 100%;
 }
+.dataset-graph > div > *
+{
+  margin-left : 1em;
+}
 
 /** Hide the panel-container-s when toggled off */
 #right-panel-content.right-panel-genotype.hideControls .panel-parent

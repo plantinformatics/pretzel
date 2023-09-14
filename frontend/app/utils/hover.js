@@ -26,13 +26,23 @@ const trace = 0;
 
 import $ from 'jquery';
 
-/** hover.js is now also imported by draw-map, so stacks.oa is not defined. */
-let urlOptions = stacks?.oa?.eventBus.get('urlOptions');
+let
+config = {
+  /** If true, show the popover over the element which is hovered.
+   * If false, show the popover at the top-right corner of the graph area.
+   *  : urlOptions && urlOptions.hoverNearElement
+   */
+  hoverNearElement : false,
+  container : 'div#holder',
+  popoverTarget : '#popoverTarget',
+};
+function hoverConfigure(hoverNearElement, container, popoverTarget) {
+  config.hoverNearElement = hoverNearElement;
+  config.container = container;
+  config.popoverTarget = popoverTarget;
+}
 
-/** If true, show the popover over the element which is hovered.
- * If false, show the popover at the top-right corner of the graph area.
- */
-const hoverNearElement = urlOptions && urlOptions.hoverNearElement;
+
 
 /** Set up an element hover (mouseover) event to display text.
  * @param context client data
@@ -57,11 +67,12 @@ function showHover(context, textFn, d, i, g) {
   // console.log("configureHover", location, this, this.outerHTML);
   let text = textFn.apply(this, [context, d, i, g]);
   let isHtml = text.startsWith('<div') || text.startsWith('<span');
+  const hoverNearElement = config.hoverNearElement;
 
   /** jQuery selection of target element to display popover near.
    * if hoverNearElement then node_ is also the source element which originates the hover.
    */
-  let node_ = hoverNearElement ? $(this) : $('#popoverTarget');
+  let node_ = hoverNearElement ? $(this) : $(config.popoverTarget);
   if (node_.popover) {
     /** refn : node_modules/bootstrap/js/popover.js */
     let data    = node_.data('bs.popover');
@@ -79,7 +90,7 @@ function showHover(context, textFn, d, i, g) {
         trigger : "manual",	// was : click hover
         sticky: true,
         delay: {show: 200, hide: 3000},
-        container: 'div#holder',
+        container: config.container,
         placement : hoverNearElement ? "auto right" : "left",
         // comment re. title versus content in @see draw-map.js: configureHorizTickHover() 
         content : text
@@ -103,7 +114,7 @@ function showHover(context, textFn, d, i, g) {
 }
 function hideHover() {
   /** jQuery selection of target element to display popover near. */
-  let node_ = hoverNearElement ? $(this) : $('#popoverTarget');
+  let node_ = config.hoverNearElement ? $(this) : $(config.popoverTarget);
   // for devel, comment this out to enable styling of popover in Web Inspector
   node_.popover('hide');
   if (trace) {
@@ -168,6 +179,7 @@ function  configureHorizTickHover_orig(location)
 //------------------------------------------------------------------------------
 
 export {
+  hoverConfigure,
   configureHover, configureHorizTickHover,
   configureHorizTickHover_orig,
 };

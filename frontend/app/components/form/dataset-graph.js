@@ -13,6 +13,7 @@ import TSNE from 'tsne-js';
 /* global d3 */
 
 import { toPromiseProxy } from '../../utils/ember-devel';
+import { hoverConfigure, configureHover } from '../../utils/hover';
 
 
 //------------------------------------------------------------------------------
@@ -367,6 +368,7 @@ export default class FormDatasetGraphComponent extends Component {
       .append('text')
       .text(d => d.id),
     me = this;
+    // hoverConfigure(false, '#dataset-graph', '#popoverTargetDg');
     textS.merge(textA)
       // .transition().duration(textTransitionTime)
       .attr('x', d => d.x + d.width/2)
@@ -378,9 +380,23 @@ export default class FormDatasetGraphComponent extends Component {
         d3.select(this)
           .attr('font-size', fontSize + 'px')
           .attr('stroke', colour);
-      });
+      })
+      // .each(function(d, i, g) { return me.configureHover(this, d, i, g); })
+      .on('mouseover', d => { this.datasetIdSelected = d.id; })
+    ;
 
     textS.exit().remove();
+  }
+  @tracked
+  datasetIdSelected = null;
+  configureHover(element, d, i, g) {
+    return configureHover.apply(element, [this, this.description.bind(element)]);
+  }
+  /**
+   * @param this  element
+   */
+  description(me, d, i, g) {
+    return d.id;
   }
 
   nodeTextAttrs(datasetId) {
