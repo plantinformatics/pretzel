@@ -11,6 +11,7 @@ import TSNE from 'tsne-js';
 
 
 /* global d3 */
+/* global Worker */
 
 import { toPromiseProxy } from '../../utils/ember-devel';
 import { hoverConfigure, configureHover } from '../../utils/hover';
@@ -21,7 +22,7 @@ import { hoverConfigure, configureHover } from '../../utils/hover';
 const dLog = console.debug;
 
 const useCanvas = false;
-const textTransitionTime = 500;
+const textTransitionTime = 100;
 
 //------------------------------------------------------------------------------
 
@@ -50,6 +51,13 @@ export default class FormDatasetGraphComponent extends Component {
     }
 
     dLog('constructor', this.args.datasetEmbeddings);
+  }
+
+  @computed()
+  get worker() {
+      /*, import.meta.url { type: "module" }*/
+    const worker = new Worker('assets/web-workers/tsne-position.js');
+    return worker;
   }
 
   simulation = null;
@@ -140,6 +148,29 @@ export default class FormDatasetGraphComponent extends Component {
   }
   //----------------------------------------------------------------------------
 
+  /** Same as tsnePosition(), via web worker.
+   */
+  tsnePositionWorker(nodes, progressData) {
+    const
+    worker = this.worker;
+    // worker = new Worker('assets/web-workers/tsne-position.js', { type: "module" });
+    worker.postMessage([nodes, this.graphDimensions]);
+    worker.onmessage = (e) => {
+      dLog("Message received from worker", e.data, e);
+      /* worker sends an initial message data={ started : true},
+       * and a final message data={ finished : true}.
+       * The start and finish messages do not contain .outputScaled
+       */
+      if ((! e.data.started) && ! e.data.finished) {
+        progressData(e.data.outputScaled);
+      }
+    };
+    worker.onerrormessage = (e) => {
+      dLog("Error message received from worker", e);
+    };
+
+  }
+
   /**
    * @param nodes .x,.y are added to each of nodes[], and nodes is returned.
    * @return nodes
@@ -204,7 +235,8 @@ export default class FormDatasetGraphComponent extends Component {
   }
   progressData(outputScaled, model) {
     dLog('progressData', outputScaled[0], model, arguments);
-    Ember_set(this, 'nodesWithPosition', this.nodesScaled(this.model, this.nodes));
+    // outputScaled is from : this.nodesScaled(this.model, this.nodes)
+    Ember_set(this, 'nodesWithPosition', outputScaled);
     this.drawGraphIfReady();
   }
 
@@ -231,7 +263,7 @@ export default class FormDatasetGraphComponent extends Component {
   @computed('nodes', 'graphDimensions')
   get nodesWithPositionRun() {
     const fnName = 'nodesWithPositionRun';
-    const nodes = this.tsnePosition(this.nodes, this.progressData.bind(this));
+    const nodes = this.tsnePositionWorker(this.nodes, this.progressData.bind(this));
     Ember_set(this, 'nodesWithPosition', nodes);
     return nodes;
   }
@@ -360,6 +392,7 @@ export default class FormDatasetGraphComponent extends Component {
 
   drawGraphSVG() {
     const
+    fnName = 'drawGraphSVG',
     svg = this.svgS,
     data = this.nodesWithPosition,
     textS = svg.selectAll('text')
@@ -369,8 +402,10 @@ export default class FormDatasetGraphComponent extends Component {
       .text(d => d.id),
     me = this;
     // hoverConfigure(false, '#dataset-graph', '#popoverTargetDg');
-    textS.merge(textA)
-      // .transition().duration(textTransitionTime)
+    const
+    textM = textS.merge(textA);
+    textM
+      .transition().duration(textTransitionTime)
       .attr('x', d => d.x + d.width/2)
       .attr('y', d => d.y + d.height/2)
       .each(function (d) {
@@ -381,9 +416,14 @@ export default class FormDatasetGraphComponent extends Component {
           .attr('font-size', fontSize + 'px')
           .attr('stroke', colour);
       })
-      // .each(function(d, i, g) { return me.configureHover(this, d, i, g); })
-      .on('mouseover', d => { this.datasetIdSelected = d.id; })
     ;
+    /* .transition() does not provide .on('mouseover') etc.
+     * The mouseover / hover is only useful for the last call, and could be done
+     * when {finished} is received.
+     */
+    textM
+    // .each(function(d, i, g) { return me.configureHover(this, d, i, g); })
+      .on('mouseover', d => { this.datasetIdSelected = d.id; });
 
     textS.exit().remove();
   }
