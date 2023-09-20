@@ -42,6 +42,8 @@ const trace = 1;
 const datasetSymbol = Symbol.for('dataset');
 const featureSymbol = Symbol.for('feature');
 
+const sampleFiltersSymbol = Symbol.for('sampleFilters');
+
 // -----------------------------------------------------------------------------
 
 /**
@@ -858,13 +860,14 @@ export default Component.extend({
     const
     fnName = 'afterSelectionHaplotype',
     columnName = this.columnNames[col];
-    /// add this as a checkbox in Controls tab, default false
-    const selectFeaturesByLDBlock = this.userSettings.selectFeaturesByLDBlock;
+    let value, feature, tags;
+    /** .sampleFilterTypeName is set via tab change in Controls tab. */
+    const sampleFilterTypeName = this.userSettings.sampleFilterTypeName;
     dLog(fnName, row, col);
     if (col === -1) {
       /** Ctrl-A Select-All causes row===-1 and col===-1 */
     } else if (
-      (row >= 0) && ! selectFeaturesByLDBlock && 
+      (row >= 0) && (sampleFilterTypeName === 'feature') && 
         (columnName.startsWith('Ref') || columnName.startsWith('Alt'))) {
       const feature = this.featureToggleRC(row, col, columnName);
       if (feature) {
@@ -876,6 +879,17 @@ export default Component.extend({
     if (ldBlock) {
       later(() => this.table.render(), 1000);
     }
+    } else if (
+      this.datasetColumns.includes(columnName) &&
+        (value = this.table.getDataAtCell(row, col)) &&
+        (feature = value?.[0]?.[Symbol.for('feature')]) && 
+        (tags = feature.get('blockId.datasetId.tags')) &&
+        tags.includes('variantInterval')
+    ) {
+      /* feature here is the variantInterval dataset feature, whereas
+       * tableCoordsToFeature(t, {row, col}) returns the SNP feature.
+       */
+      this.variantIntervalToggle(feature);
     } else if ((row === -1) && this.datasetColumns?.includes(columnName)) {
       /* plan to use columnNameIsDatasetColumn(columnName, false), but currently 
        * overlap with intersectionDialogDataset, which should be enabled also. */
@@ -1029,9 +1043,10 @@ export default Component.extend({
         td.textContent = value;
       }
       this.valueDiagonal(td, value, valueToColourClass);
+      const selectFeatures = this.userSettings.sampleFilterTypeName === 'feature';
       /** Use this for 'LD Block' */
       const matchRefAlt = this.userSettings.haplotypeFilterRef ? 'Ref' : 'Alt';
-      if (refAltHeadings.includes(prop_string))
+      if (selectFeatures && refAltHeadings.includes(prop_string))
       {
         const
         dataset = prop[Symbol.for('dataset')],
@@ -1048,8 +1063,7 @@ export default Component.extend({
   featureIsFilter(feature, prop) {
     const
     block = feature.get('blockId.content'),
-    featureFiltersSymbol = Symbol.for('featureFilters'),
-    featureFilters = block?.[featureFiltersSymbol],
+    featureFilters = block?.[sampleFiltersSymbol].feature,
     matchRef = feature[Symbol.for('matchRef')],
     featureIsFilter = featureFilters?.includes(feature),
     isFilter = featureIsFilter && (matchRef === (prop === 'Ref'));
@@ -2056,7 +2070,7 @@ export default Component.extend({
   //----------------------------------------------------------------------------
 
   filterSamplesBySelectedHaplotypes() {
-    this.haplotypeFilterSamples(this.showHideSampleFn.bind(this), this);
+    this.filterSamples(this.showHideSampleFn.bind(this), this);
   },
   showHideSampleFn(sampleName, counts) {  
     // counts is now distance, replacing {matches,mismatches}.

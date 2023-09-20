@@ -58,7 +58,7 @@
           {{#let 'Controls' as |tabTypeName|}}
             {{#let (compute (action this.tabName2Id tabTypeName)) as |tabId|}}
               <nav.item class="active-detail" @active={{bs-eq tab.activeId tabId}}><a href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
-                <div>{{!-- this.blocksHaplotypeFilters.mapBy('haplotypeFilters').flat() --}}</div>
+                <div>{{!-- this.blocksHaplotypeFilters.mapBy('filters').flat() --}}</div>
               </nav.item>
             {{/let}}
           {{/let}}
@@ -457,76 +457,147 @@
                 <label style="margin-left: 1em; margin-top: 1em" >Sample Filters</label>
                 {{#if @userSettings.showSampleFilters}}
 
-                <div>
-                  <input type="checkbox"
-                    style="margin-left: 2em;"
-                    checked={{@userSettings.selectFeaturesByLDBlock}}
-                    oninput={{action (pipe 
-                    (action (mut @userSettings.selectFeaturesByLDBlock) value="target.checked")
-                    this.haplotypeFiltersApply) }}  >
-                  <label>Select Filtering Features / SNPs By LD Block
-                    <EmberTooltip side="right" delay=500>
-                      <span>
-                        Select LD Blocks to select SNPs for Sample filter, by clicking in LD Block column.
-                        Otherwise select SNPs directly, by clicking in Ref or Alt column.
-                      </span>
-                    </EmberTooltip>
-                  </label>
-                </div>
+                {{!-- ----------------------------------------------------- --}}
 
-                <div style="margin-left: 1em; margin-top: 1em">
-                  <span>{{this.haplotypeFiltersCount}}</span>
-                  <label style="margin-left: 1em;" >LD Blocks</label>
-                </div>
-                <ul class="list-group borderless haplotypeFilters">
-                  {{#each this.blocksHaplotypeFilters as |blockHF|}}
-                    <li class="list-group-item">
-                      <div>{{blockHF.block.datasetId.id}}</div>
-                      <ul class="list-group">
-                        {{#each blockHF.haplotypeFilters as |haplotype|}}
-                          <li class="list-group-item">
-                            <div>
-                              {{!-- 2 nbsp creates a square block --}}
-                              <span style="background-color : {{compute this.haplotypeColour haplotype }}">
-                                &nbsp; &nbsp;
-                              </span>
-                              {{haplotype}}
-                            </div>
-                          </li>
+                {{!-- check : selectSampleFilter activeSampleFilter tabName2IdDatasets selectedCount activeIdDatasets --}}
+                {{#elem/tab-names
+                  idPrefix='tab-view-SampleFilter-'
+                  names=this.sampleFilterTabNames
+                  activeName=this.args.userSettings.sampleFilterTypeName
+                  setSelected=this.setSelectedSampleFilter
+                  as |tn|}}
+
+                  <BsTab @customTabs={{true}} @onChange={{action tn.onChangeTab}} @activeId={{tn.activeId}} as |tab|>
+                    <BsNav @type="tabs" as |nav|>
+                      <ul class="nav nav-tabs li-active-extra counts">
+
+                        {{#each this.sampleFilterTypesArray as |tabType|}}
+                          {{#let (compute (action tn.tabName2Id tabType.name)) as |tabId|}}
+                          {{log 'activeTabId' tab.activeId tabId (bs-eq tab.activeId tabId) }}
+                          {{!-- tab.activeId === tn.activeId --}}
+                            <nav.item class="active-detail"
+                              @active={{bs-eq tab.activeId tabId }}>
+                              <a href={{concat "#" tabId}} role="tab"
+                                onclick={{action (pipe (action tab.select tabId)
+                                (action tn.selectTabName tabType.name tab) ) }}>{{tabType.text}}</a>
+                              <div>{{this.selectedCount}}</div>
+                            </nav.item>
+                          {{/let}}
                         {{/each}}
+
                       </ul>
+                    </BsNav>
 
-                    </li>
-                  {{/each}}
-                </ul>
+                    <div class="tab-content">
 
-                <div style="margin-left: 1em; margin-top: 1em">
-                  <span>{{this.featureFiltersCount}}</span>
-                  <label style="margin-left: 1em;">Feature / SNP</label>
-                </div>
-                <ul class="list-group borderless featureFilters">
-                  {{#each this.blocksFeatureFilters as |blockFF|}}
-                    <li class="list-group-item">
-                      <div>{{blockFF.block.datasetId.id}}</div>
-                      <ul class="list-group">
-                        {{#each blockFF.featureFilters as |feature|}}
-                          <li class="list-group-item">
-                            <div>
-                              {{feature.value_0}} &nbsp; {{feature.values.ref}}/{{feature.values.alt}}
+
+                      {{!-- ----------------------------------------------- --}}
+                      {{#let 'haplotype' as |tabTypeName|}}
+                        {{#let (compute (action tn.tabName2Id tabTypeName)) as |tabId|}}
+
+                          {{!-- pane title is not apparent in the generated DOM.
+                            It appears in ember-bootstrap/addon/components/base/bs-tab/pane.js
+                          --}}
+                          {{#tab.pane id=tabId title=tabTypeName}}
+
+                            <p>{{tabTypeName}}</p>
+
+                            <div style="margin-left: 1em; margin-top: 1em">
+                              <span>{{this.haplotypeFiltersCount}}</span>
+                              <label style="margin-left: 1em;" >LD Blocks</label>
                             </div>
-                          </li>
-                        {{/each}}
-                      </ul>
+                            <ul class="list-group borderless haplotypeFilters">
+                              {{#each this.blocksHaplotypeFilters as |blockHF|}}
+                                <li class="list-group-item">
+                                  <div>{{blockHF.block.datasetId.id}}</div>
+                                  <ul class="list-group">
+                                    {{#each blockHF.sampleFilters.haplotype as |haplotype|}}
+                                      <li class="list-group-item">
+                                        <div>
+                                          {{!-- 2 nbsp creates a square block --}}
+                                          <span style="background-color : {{compute this.haplotypeColour haplotype }}">
+                                            &nbsp; &nbsp;
+                                          </span>
+                                          {{haplotype}}
+                                        </div>
+                                      </li>
+                                    {{/each}}
+                                  </ul>
 
-                    </li>
-                  {{/each}}
-                </ul>
+                                </li>
+                              {{/each}}
+                            </ul>
+
+                          {{/tab.pane}}
+                        {{/let}}
+                      {{/let}}
+                      {{!-- ----------------------------------------------- --}}
+                      {{#let 'variantInterval' as |tabTypeName|}}
+                        {{#let (compute (action tn.tabName2Id tabTypeName)) as |tabId|}}
+
+                          {{#tab.pane id=tabId title=tabTypeName}}
+
+                            <p>{{tabTypeName}}</p>
+
+                          {{/tab.pane}}
+                        {{/let}}
+                      {{/let}}
+                      {{!-- ----------------------------------------------- --}}
+                      {{#let 'feature' as |tabTypeName|}}
+                        {{#let (compute (action tn.tabName2Id tabTypeName)) as |tabId|}}
+
+                          {{#tab.pane id=tabId title=tabTypeName}}
+
+                            <p>{{tabTypeName}}</p>
+
+                            <div style="margin-left: 1em; margin-top: 1em">
+                              <span>{{this.featureFiltersCount}}</span>
+                              <label style="margin-left: 1em;">Feature / SNP</label>
+                            </div>
+                            <ul class="list-group borderless featureFilters">
+                              {{#each this.blocksFeatureFilters as |blockFF|}}
+                                <li class="list-group-item">
+                                  <div>{{blockFF.block.datasetId.id}}</div>
+                                  <ul class="list-group">
+                                    {{#each blockFF.sampleFilters.feature as |feature|}}
+                                      <li class="list-group-item">
+                                        <div>
+                                          {{feature.value_0}} &nbsp; {{feature.values.ref}}/{{feature.values.alt}}
+                                        </div>
+                                      </li>
+                                    {{/each}}
+                                  </ul>
+
+                                </li>
+                              {{/each}}
+                            </ul>
+
+                          {{/tab.pane}}
+                        {{/let}}
+                      {{/let}}
+                      {{!-- ----------------------------------------------- --}}
+
+
+        {{!-- ------------------------------------------------------------- --}}
+
+
+
+
+
+                    </div>      {{!-- end of class="tab-content" --}}
+
+                  </BsTab>
+                {{/elem/tab-names}}
+
+                {{!-- ----------------------------------------------------- --}}
+
+
 
                 <ul class="list-group borderless view-controls">
 
                   <li>
                     <button type="button" class="btn btn-info btn-xs"
-                      onclick={{action (pipe this.haplotypeFiltersClear this.featureFiltersClear this.haplotypeFiltersApply) }} >
+                      onclick={{action (pipe this.sampleFiltersClear this.haplotypeFiltersApply) }} >
                       Clear
                       <EmberTooltip side="right" delay=500>
                         <span>Clear the selected SNPs or LD Block from the sample filter.</span>
@@ -889,7 +960,7 @@
   displayForm=this.requestFormat
   haplotypeToggle=this.haplotypeToggle
   featureToggle=this.featureToggle
-  haplotypeFilterSamples=this.haplotypeFilterSamples
+  filterSamples=this.filterSamples
   tablePositionChanged=this.tablePositionChanged
   tableApi=this.tableApi
 }}

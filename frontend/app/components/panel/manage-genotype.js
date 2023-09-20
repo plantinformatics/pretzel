@@ -1,3 +1,5 @@
+// {{!-- check : selectSampleFilter activeSampleFilter tabName2IdDatasets selectedCount activeIdDatasets --}}
+
 import Component from '@glimmer/component';
 import EmberObject, { computed, action, set as Ember_set, setProperties } from '@ember/object';
 import { alias, reads } from '@ember/object/computed';
@@ -8,12 +10,15 @@ import { A as Ember_A } from '@ember/array';
 
 import { uniq, intersection } from 'lodash/array';
 
+import createIntervalTree from 'interval-tree-1d';
+
 import NamesFilters from '../../utils/data/names-filters';
 import { toPromiseProxy, toArrayPromiseProxy } from '../../utils/ember-devel';
 import { thenOrNow, contentOf } from '../../utils/common/promises';
 import { clipboard_writeText } from '../../utils/common/html';
 import { intervalSize } from '../../utils/interval-calcs';
 import { overlapInterval } from '../../utils/draw/zoomPanCalcs';
+import { featuresIntervalsForTree } from '../../utils/data/features';
 import {
   refAlt,
   datasetId2Class,
@@ -31,7 +36,7 @@ import {
   featuresValuesFields,
   featureSampleNames,
  } from '../../utils/data/vcf-feature';
-import { stringCountString } from '../../utils/string';
+import { stringCountString, toTitleCase } from '../../utils/string';
 
 import { text2EltId } from '../../utils/explorer-tabId';
 
@@ -47,14 +52,26 @@ const dLog = console.debug;
 
 const trace = 0;
 
-/** Feature SNP Positions which are selected for filtering.
- * block[featureFiltersSymbol] -> [] of Feature (or Position)
+const featureSymbol = Symbol.for('feature');
+
+
+/** Attribute of a block, used for filtering or sorting samples.
+ * 1 of 3 types of filter : (tied to : sampleFilterTabs, sampleFilterKeys) :
+ *
+ * * 'variantInterval'
+ * 'Variant Interval' Features which are selected for filtering.
+ * block[sampleFiltersSymbol].variantInterval -> [] of 'Variant Interval' Feature
+ * i.e. which have variantInterval in .blockId.datasetId.tags.
+ *
+ * * 'feature'
+ * Feature SNP Positions which are selected for filtering.
+ * block[sampleFiltersSymbol].feature -> [] of Feature (or Position)
+ *
+ * * 'LD Block' / 'haplotype'
+ * tSNP values which are selected for filtering.
+ * block[sampleFiltersSymbol].haplotype -> [] of tSNP
  */
-const featureFiltersSymbol = Symbol.for('featureFilters');
-/** tSNP values which are selected for filtering.
- * block[haplotypeFiltersSymbol] -> [] of tSNP
- */
-const haplotypeFiltersSymbol = Symbol.for('haplotypeFilters');
+const sampleFiltersSymbol = Symbol.for('sampleFilters');
 /** array of Features / SNPs in a tagged SNP set, i.e. equal tSNP value.
  * features = block[haplotypeFeaturesSymbol][tSNP]
  */
@@ -73,6 +90,15 @@ const matchRefSymbol = Symbol.for('matchRef');
 
 const tab_view_prefix = "tab-view-";
 const tab_view_prefix_Datasets = "tab-view-Datasets-";
+
+class SampleFiltersCount extends EmberObject {
+  @tracked
+  haplotype = null;
+  @tracked
+  feature = null;
+  @tracked
+  variantInterval = null;
+};
 
 //------------------------------------------------------------------------------
 
@@ -131,7 +157,7 @@ function featureHasSamplesLoaded(feature) {
  * .callRateThreshold default 0
  * .samplesLimit default 10
  * .samplesLimitEnable default false
- * .selectFeaturesByLDBlock default false
+ * .sampleFilterTypeName default 'variantInterval'
  * .haplotypeFilterRef default : false
  * .showNonVCFFeatureNames default : true
  * .showAxisLDBlocks default : false
@@ -328,6 +354,8 @@ export default class PanelManageGenotypeComponent extends Component {
     }
 
     this.namesFilters = new NamesFilters();
+    Object.entries(this.sampleFilterTypes).forEach(
+      ([name, value]) => value.name = name );
   }
   /** Provide default values for args.userSettings; used in constructor().
    */
@@ -387,8 +415,8 @@ export default class PanelManageGenotypeComponent extends Component {
       userSettings.samplesLimitEnable = false;
     }
 
-    if (userSettings.selectFeaturesByLDBlock === undefined) {
-      userSettings.selectFeaturesByLDBlock = false;
+    if (userSettings.sampleFilterTypeName === undefined) {
+      userSettings.sampleFilterTypeName = 'variantInterval';
     }
     if (userSettings.haplotypeFilterRef === undefined) {
       userSettings.haplotypeFilterRef = false;
@@ -568,18 +596,32 @@ export default class PanelManageGenotypeComponent extends Component {
 
   //----------------------------------------------------------------------------
 
-  /** User may select tSNP values which are then used to filter samples,
+  /** Return the sampleFilters for block and filterTypeName.
+   * for filterTypeName === 'haplotype' i.e. 'LD Block' / tSNP :
+   * User may select tSNP values which are then used to filter samples,
    * in combination with a flag which selects match with Ref or non-Ref values :
    * columns of samples with the expected value are displayed.
+   * @param filterTypeName sample filter type name; one of : 'haplotype', 'variantInterval', 'feature'
    * @return [] of tSNP
    */
-  @action
-  blockHaplotypeFilters(block) {
+  blockSampleFilters(block, filterTypeName) {
     // equivalent : block = contentOf(block);
     if (block.content) {
       block = block.content;
     }
-    const filters = block[haplotypeFiltersSymbol] || (block[haplotypeFiltersSymbol] = Ember_A());
+    const
+    sampleFilters = block[sampleFiltersSymbol] || (block[sampleFiltersSymbol] = {}),
+    filters = sampleFilters[filterTypeName] || (sampleFilters[filterTypeName] = Ember_A());
+    return filters;
+  }
+
+  @computed('args.userSettings.sampleFilterTypeName')
+  get selectedFilters() {
+    // not used yet.
+    const
+    filterTypeName = this.args.userSettings.sampleFilterTypeName,
+    cpName = 'blocks' + toTitleCase(filterTypeName) + 'Filters',
+    filters = this[cpName];
     return filters;
   }
 
@@ -588,7 +630,8 @@ export default class PanelManageGenotypeComponent extends Component {
     const
     fnName = 'haplotypeToggle',
     block = feature.get('blockId'),
-    filters = this.blockHaplotypeFilters(block);
+    filterTypeName = 'haplotype',
+    filters = this.blockSampleFilters(block, filterTypeName);
     this.arrayToggleObject(filters, haplotype);
 
     /** filtered/sorted display depends on .samples, which depends on
@@ -600,7 +643,7 @@ export default class PanelManageGenotypeComponent extends Component {
         dLog(fnName);
       }
       // Refresh display.
-      this.haplotypeFiltersSet();
+      this.sampleFiltersSet(filterTypeName);
     });
   }
   /** If object is in array, remove it, otherwise add it.
@@ -618,26 +661,35 @@ export default class PanelManageGenotypeComponent extends Component {
     return present;
   }
 
+  /** Clear selected filters of the type indicated by current tab.
+   * filterTypeName : default to args.userSettings.sampleFilterTypeName
+   */
   @action
-  haplotypeFiltersClear() {
-    const fnName = 'haplotypeFiltersClear';
-    dLog(fnName);
+  sampleFiltersClear(buttonTarget) {
+    const fnName = 'sampleFiltersClear';
+    const filterTypeName = this.args.userSettings.sampleFilterTypeName;
+    dLog(fnName, filterTypeName);
     const
     abBlocks = this.brushedOrViewedVCFBlocks;
-    abBlocks.forEach((abBlock) => {
+    abBlocks.forEach((abBlock, i) => {
       const
       block = abBlock.block,
-      selected = block[haplotypeFiltersSymbol];
-      if (abBlock.haplotypeFilters !== selected) {
-        dLog(fnName, abBlock, abBlock.haplotypeFilters, selected);
+      selected = block[sampleFiltersSymbol][filterTypeName],
+      blocksTypeFilters = 'blocks' + toTitleCase(filterTypeName) + 'Filters';
+      /** selected is equal to one of :
+       * this.blocksFeatureFilters[i].sampleFilters.feature
+       * this.blocksHaplotypeFilters[i].sampleFilters.haplotype
+       */
+      if (selected !== this[blocksTypeFilters][i].sampleFilters[filterTypeName]) {
+        dLog(fnName, abBlock, this[blocksTypeFilters][i], selected);
       }
       if (selected.length) {
         selected.removeAt(0, selected.length);
       }
     });
     // Refresh display.
-    this.haplotypeFiltersSet();
-    // also done in hbs via action pipe
+    this.sampleFiltersSet(filterTypeName);
+    // done in hbs via action pipe
     // this.haplotypeFiltersApply();
   }
 
@@ -651,21 +703,44 @@ export default class PanelManageGenotypeComponent extends Component {
   
 
   /** Use Ember_set() to signal update of tracked properties and trigger re-render. */
-  haplotypeFiltersSet() {
-    dLog('haplotypeFiltersSet');
+  sampleFiltersSet(filterTypeName) {
+    dLog('sampleFiltersSet');
     let filterCount = 0;
     const
-    abBlocks = this.blocksHaplotypeFilters;
+    abBlocks = this.blocksSampleFilters(filterTypeName);
     abBlocks.forEach((abBlock) => {
       const
-      block = abBlock.block;
-      Ember_set(abBlock, 'haplotypeFilters', abBlock.haplotypeFilters);
-      filterCount += abBlock.haplotypeFilters.length;
+      block = abBlock.block,
+      filters = abBlock.sampleFilters[filterTypeName];
+      // Value unchanged - notify update.
+      Ember_set(abBlock, 'sampleFilters.' + filterTypeName, filters);
+      filterCount += filters.length;
     });
-    this.haplotypeFiltersCount = filterCount;
+    Ember_set(this, 'sampleFiltersCount.' + filterTypeName, filterCount);
   }
+  /** Counts of the 3 types of Sample Filters.
+   * index is sample filter type name, defined in sampleFilterKeys.
+   * sampleFiltersCount[index] is the number of selected tSNPs or features
+   */
   @tracked
-  haplotypeFiltersCount = 0;
+  sampleFiltersCount = {}; // new SampleFiltersCount();
+
+  @alias('sampleFiltersCount.haplotype') haplotypeFiltersCount;
+  @alias('sampleFiltersCount.feature') featureFiltersCount;
+
+  /** @return the count of filters for the currently selected 'Sample Filters' tab.
+   */
+  @computed(
+    'sampleFiltersCount.{haplotype,feature,variantInterval}',
+    'args.userSettings.sampleFilterTypeName',
+  )
+  get sampleFiltersCountSelected() {
+    const
+    filterTypeName = this.args.userSettings.sampleFilterTypeName,
+    filtersCount = this.sampleFiltersCount[filterTypeName];
+    return filtersCount;
+  }
+
 
   /** Map haplotype / tSNP to a colour
    * @param tSNP  string represention of a number
@@ -680,6 +755,10 @@ export default class PanelManageGenotypeComponent extends Component {
   /** copied, with haplotype -> feature : blockHaplotypeFilters(),
    * haplotypeToggle(), haplotypeFiltersClear(), haplotypeFiltersApply(),
    * haplotypeFiltersSet().
+   * Now replaced by : blockSampleFilters(, 'feature'),
+   * sampleFiltersClear(, 'feature'),
+   * sampleFiltersSet(, 'feature').
+   *
    * The requirements are in prototype phase; after settling possibly there
    * will be enough commonality to factor some of this.
    * The filter may be an array of features or positions; currently features and
@@ -687,21 +766,6 @@ export default class PanelManageGenotypeComponent extends Component {
    * block[haplotypeFiltersSymbol]), but if they are positions then they don't
    * need to be per-block - can be per axis-brush.
    */
-
-  /** User may select tSNP values which are then used to filter samples,
-   * in combination with a flag which selects match with Ref or non-Ref values :
-   * columns of samples with the expected value are displayed.
-   * @return [] of feature
-   */
-  @action
-  blockFeatureFilters(block) {
-    // equivalent : block = contentOf(block);
-    if (block.content) {
-      block = block.content;
-    }
-    const filters = block[featureFiltersSymbol] || (block[featureFiltersSymbol] = Ember_A());
-    return filters;
-  }
 
   @action
   featureToggle(feature, columnName) {
@@ -712,7 +776,8 @@ export default class PanelManageGenotypeComponent extends Component {
      * blocks with the same feature.value.0
      */
     block = feature.get('blockId'),
-    filters = this.blockFeatureFilters(block),
+    filterTypeName = 'feature',
+    filters = this.blockSampleFilters(block, filterTypeName),
     matchRef = feature[matchRefSymbol],
     // use == because columnName is currently String.
     matchRefNew = columnName == 'Ref';
@@ -736,55 +801,16 @@ export default class PanelManageGenotypeComponent extends Component {
         dLog(fnName);
       }
       // Refresh display.
-      this.featureFiltersSet();
+      this.sampleFiltersSet(filterTypeName);
     });
   }
 
-  @action
-  featureFiltersClear() {
-    const fnName = 'featureFiltersClear';
-    dLog(fnName);
-    const
-    abBlocks = this.brushedOrViewedVCFBlocks;
-    abBlocks.forEach((abBlock) => {
-      const
-      block = abBlock.block,
-      selected = block[featureFiltersSymbol];
-      if (abBlock.featureFilters !== selected) {
-        dLog(fnName, abBlock, abBlock.featureFilters, selected);
-      }
-      if (selected.length) {
-        selected.removeAt(0, selected.length);
-      }
-    });
-    // Refresh display.
-    this.featureFiltersSet();
-    // also done in hbs via action pipe
-    // this.haplotypeFiltersApply();
-  }
 
-  /* haplotypeFiltersApply() -> filterSamplesBySelectedHaplotypes()
+  /* haplotypeFiltersApply() -> filterSamplesBySelectedHaplotypes() -> filterSamples()
    * also applies featureFilters, so there is no need for a separate
    * @action featureFiltersApply() 
    */
  
-
-  /** Use Ember_set() to signal update of tracked properties and trigger re-render. */
-  featureFiltersSet() {
-    dLog('featureFiltersSet');
-    let filterCount = 0;
-    const
-    abBlocks = this.blocksFeatureFilters;
-    abBlocks.forEach((abBlock) => {
-      const
-      block = abBlock.block;
-      Ember_set(abBlock, 'featureFilters', abBlock.featureFilters);
-      filterCount += abBlock.featureFilters.length;
-    });
-    this.featureFiltersCount = filterCount;
-  }
-  @tracked
-  featureFiltersCount = 0;
 
   // ---------------------------------------------------------------------------
 
@@ -838,26 +864,30 @@ export default class PanelManageGenotypeComponent extends Component {
   @computed('brushedOrViewedVCFBlocks')
   get blocksHaplotypeFilters() {
     const
-    fnName = 'blocksHaplotypeFilters',
-    axisBrushes = this.brushedOrViewedVCFBlocks,
-    blocksHF = axisBrushes.map(
-      (ab) => ({block : ab.block, haplotypeFilters : this.blockHaplotypeFilters(ab.block)}));
-    dLog(fnName, axisBrushes, blocksHF);
-    return blocksHF;
+    blocksF = this.blocksSampleFilters('haplotype');
+    return blocksF;
+  }
+  blocksSampleFilters(filterTypeName) {
+    const
+    fnName = 'blocksSampleFilters',
+    axisBrushes = this.brushedOrViewedVCFBlocks,  // maybe : Visible
+    /* .sampleFilters.[filterTypeName]. replaces .haplotypeFilters and .featureFilters
+     * - only 1 filterTypeName is used at a time */
+    blocksF = axisBrushes.map(
+      (ab) => ({
+        block : ab.block,
+        sampleFilters : {
+          [filterTypeName] : this.blockSampleFilters(ab.block, filterTypeName)}}));
+    dLog(fnName, filterTypeName, axisBrushes, blocksF);
+    return blocksF;
   }
   /** @return array of blocks and the features selected on them for filtering samples.
    */
   @computed('brushedOrViewedVCFBlocks')
   get blocksFeatureFilters() {
-    /** copied from blocksHaplotypeFilters(), with haplotype -> feature
-     */
     const
-    fnName = 'blocksFeatureFilters',
-    axisBrushes = this.brushedOrViewedVCFBlocks,
-    blocksHF = axisBrushes.map(
-      (ab) => ({block : ab.block, featureFilters : this.blockFeatureFilters(ab.block)}));
-    dLog(fnName, axisBrushes, blocksHF);
-    return blocksHF;
+    blocksF = this.blocksSampleFilters('feature');
+    return blocksF;
   }
 
   @computed('brushedOrViewedVCFBlocks')
@@ -1935,7 +1965,7 @@ export default class PanelManageGenotypeComponent extends Component {
                * the sample status, and table display is done by
                * showSamplesWithinBrush().
                */
-              this.haplotypeFilterSamples(/*showHideSampleFn*/undefined, /*matrixView*/undefined);
+              this.filterSamples(/*showHideSampleFn*/undefined, /*matrixView*/undefined);
               const showOtherBlocks = true;
               if (showOtherBlocks) {
                 this.showSamplesWithinBrush();
@@ -2039,7 +2069,7 @@ export default class PanelManageGenotypeComponent extends Component {
     const requestSamplesAll = this.args.userSettings.requestSamplesAll;
     features = features
       .filter(feature => {
-        // related : featuresCountMatches(), haplotypeFilterSamples().
+        // related : featuresCountMatches(), filterSamples().
         const
         /** can't apply this filter if no sample genotype values have been
          * loaded for this feature. */
@@ -2113,21 +2143,19 @@ export default class PanelManageGenotypeComponent extends Component {
     return ok;
   }
 
-  /** @return undefined if haplotypeFiltersCount is 0, otherwise
+  /** @return undefined if sampleFiltersCount[sampleFilterTypeName] is 0, otherwise
    * a sort comparator function with signature (sampleName1, sampleName2),
    * which returns +ve if column of sampleName2 should be shown to the right of sampleName1.
    * Related : columnNamesCmp().
    */
   @computed(
-    'haplotypeFiltersCount', 'featureFiltersCount',
-    'args.userSettings.selectFeaturesByLDBlock',
+    'sampleFiltersCountSelected',
   )
   get sampleNamesCmp() {
     /* clear the cached results of sampleMatchesSum() */
     this.matchesSummary = {};
     const
-    selectFeaturesByLDBlock = this.args.userSettings.selectFeaturesByLDBlock,
-    filtersCount = selectFeaturesByLDBlock ? this.haplotypeFiltersCount : this.featureFiltersCount,
+    filtersCount = this.sampleFiltersCountSelected,
     fn = ! filtersCount ? undefined : (...sampleNames) => {
       const
       /** distance averages for the samples.  */
@@ -2460,10 +2488,9 @@ export default class PanelManageGenotypeComponent extends Component {
     'datasetPositionFilterChangeCount',
 
     'args.userSettings.haplotypeFiltersEnable',
-    'args.userSettings.selectFeaturesByLDBlock',
+    'args.userSettings.sampleFilterTypeName',
     'args.userSettings.haplotypeFilterRef',
-    'haplotypeFiltersCount',
-    'featureFiltersCount',
+    'sampleFiltersCountSelected',
   )
   get selectedSampleEffect () {
     const fnName = 'selectedSampleEffect';
@@ -2504,6 +2531,35 @@ export default class PanelManageGenotypeComponent extends Component {
             map);
         }
       );
+  }
+
+  //----------------------------------------------------------------------------
+
+/* variantInterval feature + viewed VCF datasets -> variantSet SNPs
+*/
+  @computed('brushedOrViewedVCFBlocksVisible')
+  get variantSets() {
+    /** selected variantInterval -> interval tree,
+     * -> find intervals and append
+     */
+    // based on annotateRowsFromFeatures()
+    const
+    features = this.selectedVariantIntervals,
+    intervals = featuresIntervalsForTree(features),
+    intervalTree = createIntervalTree(intervals),
+    sets = {};
+
+    Object.entries(this.displayDataRows).forEach(([location, row]) => {
+      /** Find all intervals containing query point */
+      intervalTree.queryPoint(location, function(interval) {
+        const
+        feature = interval[featureSymbol],
+        intervalName = interval.join('_'),
+        variantSet = sets[intervalName] || (sets[intervalName] = []);
+        variantSet.push(feature);
+      });
+    });
+    return sets;
   }
 
   //----------------------------------------------------------------------------
@@ -2550,8 +2606,12 @@ export default class PanelManageGenotypeComponent extends Component {
         });
   }
 
-  /** for brushedOrViewedVCFBlocks, apply any haplotypeFilters which the blocks have.
+  /** for brushedOrViewedVCFBlocks, apply any sampleFilters which the blocks have.
+   * Used for all 3 types of Sample Filters :
+   * sampleFilterTabs = ['Variant Intervals', 'LD Blocks', 'Features'];
    *
+   * Originally written for tSNP 'LD Blocks'; later the term 'haplotypes' was
+   * changed to 'LD Blocks' in the GUI and in some variable & function names.
    * design :
    * block *
    *   Haplotype / tSNP *
@@ -2563,7 +2623,8 @@ export default class PanelManageGenotypeComponent extends Component {
    * sample to hide/show the column.
    */
   @action
-  haplotypeFilterSamples(showHideSampleFn, matrixView) {
+  filterSamples(showHideSampleFn, matrixView) {
+    const fnName = 'filterSamples';
 
     /** match a (sample genotype call) value against the Ref/Alt value of the
      * feature / SNP.  a rough factorisation; currently there is just 1 flag
@@ -2619,24 +2680,26 @@ export default class PanelManageGenotypeComponent extends Component {
     userSettings = this.args.userSettings,
     matchRef = new MatchRef(userSettings.haplotypeFilterRef),
     ablocks = this.brushedOrViewedVCFBlocks;
-    const selectFeaturesByLDBlock = this.args.userSettings.selectFeaturesByLDBlock;
+    const
+    filterTypeName = this.args.userSettings.sampleFilterTypeName;
 
     ablocks.forEach((abBlock) => {
       let blockMatches = {};
       const
-      block = abBlock.block;
-      if (selectFeaturesByLDBlock) {
+      block = abBlock.block,
+      filterArray = this.blockSampleFilters(block, filterTypeName);
+      if (filterTypeName === 'haplotype') {
         const
-      selected = block[haplotypeFiltersSymbol],
-      matchesR = selected.reduce((matches, tSNP) => {
-        const features = block[haplotypeFeaturesSymbol][tSNP];
-        featuresCountMatches(features, matches, matchRef);
-        return matches;
-      }, {});
+        selected = filterArray,
+        matchesR = selected.reduce((matches, tSNP) => {
+          const features = block[haplotypeFeaturesSymbol][tSNP];
+          featuresCountMatches(features, matches, matchRef);
+          return matches;
+        }, {});
         blockMatches = matchesR;
       } else {
         const
-        features = block[featureFiltersSymbol];
+        features = filterArray;
         if (features) {
           featuresCountMatches(features, blockMatches, /*matchRef*/null);
         }
@@ -2945,6 +3008,55 @@ export default class PanelManageGenotypeComponent extends Component {
   setSelectedDataset(datasetId) {
     this.activeDatasetId = datasetId;
     this.activeIdDatasets = this.tabName2IdDatasets(datasetId);
+  }
+
+  /** factored from selectDataset() - this would be passed to elem/tab-names
+   * when that is used for datasets */
+  @action
+  setSelectedDatasetAction(datasetId, i) {
+    if (i >= 0) {
+      // sets .axisBrushBlockIndex
+      this.mut_axisBrushBlockIndex(i);
+    }
+    this.setSelectedDataset(datasetId);
+  }
+
+  //----------------------------------------------------------------------------
+
+  /** .name is added in constructor()
+   * i.e. this.sampleFilterTypes[name].name === name
+   */
+  sampleFilterTypes = {
+    variantInterval : {text : 'Variant Intervals'},
+    haplotype :       {text : 'LD Blocks'},
+    feature :         {text : 'Features'},
+  };
+  @computed
+  get sampleFilterTypesArray() {
+    return Object.values(this.sampleFilterTypes);
+  }
+  @computed
+  get sampleFilterTabNames() {
+    return Object.keys(this.sampleFilterTypes);
+  }
+  sampleFilterTabs = ['Variant Intervals', 'LD Blocks', 'Features'];
+  sampleFilterKeys = ['variantInterval', 'haplotype', 'feature'];
+
+  /** Map from sampleFilterTabs to a filterTypeName which can be used in a variable name or
+   * array index, e.g. haplotypeFiltersCount, featureFiltersCount
+   * @param text  from .args.userSettings.selectFeaturesByLDBlock
+   */
+  filterText2Key(text) {
+    const
+    index = this.sampleFilterTabs.indexOf(text),
+    filterTypeName = index < 0 ? undefined : this.sampleFilterKeys[index];
+    return filterTypeName;
+  }
+
+  @action
+  setSelectedSampleFilter(id, i) {
+    Ember_set(this, 'args.userSettings.sampleFilterTypeName', id);
+    this.haplotypeFiltersApply();
   }
 
 

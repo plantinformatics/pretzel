@@ -3,10 +3,10 @@ import { A as Ember_A } from '@ember/array';
 
 import createIntervalTree from 'interval-tree-1d';
 
-import { intervalOrdered } from '../interval-calcs';
 import { toTitleCase } from '../string';
 import { stringGetFeature, stringSetSymbol, stringSetFeature } from '../panel/axis-table';
 import { contentOf } from '../common/promises';
+import { featuresIntervalsForTree } from './features';
 
 /* global performance */
 
@@ -1220,14 +1220,7 @@ function annotateRowsFromFeatures(rows, features, selectedFeaturesValuesFields) 
   const
   fnName = 'annotateRowsFromFeatures',
   p1 = performance.mark('p1'),
-  /** f.value.length may be 1.  intervals[*].length must be 2.
-   * createIntervalTree() gets infinite recursion if intervals are not ordered.
-   */
-  intervals = features.map(f => {
-    const i = f.value.length > 1 ? intervalOrdered(f.value) : [f.value[0], f.value[0]+1];
-    i[featureSymbol] = f;
-    return i;
-  }),
+  intervals = featuresIntervalsForTree(features),
   p2 = performance.mark('p2'),
   /** Build tree */
   intervalTree = createIntervalTree(intervals);
