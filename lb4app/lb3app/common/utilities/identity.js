@@ -40,8 +40,17 @@ exports.queryFilterAccessible = (ctx) => {
     console.log(fnName, ctx, clientId, this, clientGroups);
     debugger;
   }
-  let groups = clientGroups.clientGroups.clientGroups[clientId];
-  // console.log(fnName, clientId, groups, ctx?.options.property);
+  /** add read permission for Records / Datasets which are in groups which the
+   * client is in or owns.
+   */
+  const
+  inGroups  = clientGroups.clientGroups.clientGroups[clientId],
+  ownGroups = Object.values(clientGroups.clientGroups.groups)
+    .filter(group => group.clientId?.toJSON() === clientId)
+    .map(group => group._id.toJSON()),
+  groups = inGroups.concat(ownGroups);
+  // console.log(fnName, clientId, inGroups, ownGroups, ctx?.options.property);
+  cirquePush(fnName + ' ' + clientId + '. ' + inGroups.join() + '. ' + ownGroups.join());
 
   if (!ctx.query) {
     ctx.query = {};
@@ -103,7 +112,10 @@ exports.clientOwnsGroup = function(clientId, groupId) {
   groups = clientGroups.clientGroups?.groups,
   group = groups && groups[groupId.toString()],
   ok = group?.clientId.equals(clientId);
-  console.log(fnName, ok, clientId.toString(), groupId.toString(), clientGroups.clientGroups);
+  if (! ok) {
+    cirquePush(fnName + ' ' + ok + ' ' + clientId.toString() + ' ' + groupId.toString());
+    // console.log( ... , clientGroups.clientGroups);
+  }
   return ok;
 };
 

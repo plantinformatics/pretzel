@@ -199,12 +199,14 @@ export default Record.extend({
       let
       groups = this.get('server.groups'),
       /** if ! inGroup, then lookup of .groupId.* will cause 401. */
-      inGroup = groups.inGroup(groupId);
+      inGroup = groups.inGroup(groupId),
+      /** owner of group can see datasets in group, even if not a member. */
+      ownGroup = this.get('groupId.owner');
 
       /** .groupId is likely a Proxy, with .content which may be null.
        * That case is handled by the above check on groupId.id.
        */
-      visible = inGroup; //  && this.get('groupId.isVisible');
+      visible = inGroup || ownGroup; //  && this.get('groupId.isVisible');
     }
     return visible;
     }),
