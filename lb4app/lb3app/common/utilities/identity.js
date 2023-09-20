@@ -48,9 +48,9 @@ exports.queryFilterAccessible = (ctx) => {
   ownGroups = Object.values(clientGroups.clientGroups.groups)
     .filter(group => group.clientId?.toJSON() === clientId)
     .map(group => group._id.toJSON()),
-  groups = inGroups.concat(ownGroups);
+  groups = inGroups ? inGroups.concat(ownGroups) : ownGroups;
   // console.log(fnName, clientId, inGroups, ownGroups, ctx?.options.property);
-  cirquePush(fnName + ' ' + clientId + '. ' + inGroups.join() + '. ' + ownGroups.join());
+  cirquePush(fnName + ' ' + clientId + '. ' + inGroups?.join() + '. ' + ownGroups.join());
 
   if (!ctx.query) {
     ctx.query = {};
