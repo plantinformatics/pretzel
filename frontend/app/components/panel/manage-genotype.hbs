@@ -539,6 +539,39 @@
 
                             <p>{{tabTypeName}}</p>
 
+                            <div style="margin-left: 1em; margin-top: 1em">
+                              <span>{{this.variantIntervalFiltersCount}}</span>
+                              <label style="margin-left: 1em;" >Variant Intervals</label>
+                            </div>
+                            <ul class="list-group borderless haplotypeFilters">
+                              {{#each blocksVariantInterval as |blockVi|}}
+                                <li class="list-group-item">
+                                  {{blockVi.datasetId.id}}
+                                </li>
+                              {{/each}}
+                            </ul>
+                            <ul class="list-group borderless haplotypeFilters">
+                              {{#each this.blocksVariantIntervalFilters as |blockViF|}}
+                                <li class="list-group-item">
+                                  <div>{{blockViF.block.datasetId.id}}</div>
+                                  <ul class="list-group">
+                                    {{#each blockViF.sampleFilters.variantInterval as |variantInterval|}}
+                                      <li class="list-group-item">
+                                        <div>
+                                          {{!-- 2 nbsp creates a square block --}}
+                                          <span style="background-color : {{compute this.variantIntervalColour variantInterval }}">
+                                            &nbsp; &nbsp;
+                                          </span>
+                                          {{object-at 0 variantInterval.value}} - {{object-at 1 variantInterval.value}}
+                                        </div>
+                                      </li>
+                                    {{/each}}
+                                  </ul>
+
+                                </li>
+                              {{/each}}
+                            </ul>
+
                           {{/tab.pane}}
                         {{/let}}
                       {{/let}}
@@ -960,6 +993,7 @@
   displayForm=this.requestFormat
   haplotypeToggle=this.haplotypeToggle
   featureToggle=this.featureToggle
+  variantIntervalToggle=this.variantIntervalToggle
   filterSamples=this.filterSamples
   tablePositionChanged=this.tablePositionChanged
   tableApi=this.tableApi

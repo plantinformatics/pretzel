@@ -889,7 +889,8 @@ export default Component.extend({
       /* feature here is the variantInterval dataset feature, whereas
        * tableCoordsToFeature(t, {row, col}) returns the SNP feature.
        */
-      this.variantIntervalToggle(feature);
+      const rowSNPFeature = tableCoordsToFeature(this.table, {row, col});
+      this.variantIntervalToggle(rowSNPFeature, feature);
     } else if ((row === -1) && this.datasetColumns?.includes(columnName)) {
       /* plan to use columnNameIsDatasetColumn(columnName, false), but currently 
        * overlap with intersectionDialogDataset, which should be enabled also. */

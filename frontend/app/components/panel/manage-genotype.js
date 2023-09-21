@@ -190,6 +190,7 @@ export default class PanelManageGenotypeComponent extends Component {
   @alias('queryParamsService.urlOptions') urlOptions;
 
   @alias('haplotypeService.haplotypeColourScale') haplotypeColourScale;
+  @alias('haplotypeService.variantIntervalColourScale') variantIntervalColourScale;
 
 
   // ---------------------------------------------------------------------------
@@ -629,10 +630,13 @@ export default class PanelManageGenotypeComponent extends Component {
     filterTypeName = 'haplotype',
     filters = this.blockSampleFilters(block, filterTypeName);
     this.arrayToggleObject(filters, haplotype);
-
+    this.ensureSamplesThenRender(filterTypeName);
+  }
     /** filtered/sorted display depends on .samples, which depends on
      * this.vcfGenotypeSamplesText, so request all sampleNames if not received.
      */
+  ensureSamplesThenRender(filterTypeName) {
+    const fnName = 'ensureSamplesThenRender';
     let textP = ! this.vcfGenotypeSamplesText && this.vcfGenotypeSamples();
     thenOrNow(textP, () => {
       if (textP) {
@@ -746,6 +750,19 @@ export default class PanelManageGenotypeComponent extends Component {
     const colour = this.haplotypeColourScale(tSNP);
     return colour;
   }
+  /** Map variantInterval to a colour
+   * @param variantInterval  feature in a dataset which has tag 'variantInterval'
+   */
+  @action
+  variantIntervalColour(variantInterval) {
+    const
+    /** string represention of a [start, end] interval.
+     * Possibly .name will be a useful identier; [start, end] is relatively unique and significant.
+     */
+    text = variantInterval.value.join('-'),
+    colour = this.variantIntervalColourScale(text);
+    return colour;
+  }
 
   //----------------------------------------------------------------------------
   /** copied, with haplotype -> feature : blockHaplotypeFilters(),
@@ -787,18 +804,7 @@ export default class PanelManageGenotypeComponent extends Component {
       feature[matchRefSymbol] = matchRefNew;
     }
 
-
-    /** filtered/sorted display depends on .samples, which depends on
-     * this.vcfGenotypeSamplesText, so request all sampleNames if not received.
-     */
-    let textP = ! this.vcfGenotypeSamplesText && this.vcfGenotypeSamples();
-    thenOrNow(textP, () => {
-      if (textP) {
-        dLog(fnName);
-      }
-      // Refresh display.
-      this.sampleFiltersSet(filterTypeName);
-    });
+    this.ensureSamplesThenRender(filterTypeName);
   }
 
 
@@ -807,6 +813,25 @@ export default class PanelManageGenotypeComponent extends Component {
    * @action featureFiltersApply() 
    */
  
+  //----------------------------------------------------------------------------
+
+  /** User has clicked on a cell which is part of the representation of a Variant Interval.
+   * @param feature row feature - SNP;  the samples of this feature will be sorted.
+   * @param variantIntervalFeature feature which defines the Variant Interval, which in
+   * turn defines the Variant Set of SNPs to compare values against the selected
+   * Realised Haplotype/s.
+   */
+  @action
+  variantIntervalToggle(feature, variantIntervalFeature) {
+    const
+    fnName = 'variantIntervalToggle',
+    block = feature.get('blockId'), // or variantIntervalFeature ?
+    filterTypeName = 'variantInterval',
+    filters = this.blockSampleFilters(block, filterTypeName);
+    dLog(fnName, feature, variantIntervalFeature, filters);
+    this.arrayToggleObject(filters, variantIntervalFeature);
+    this.ensureSamplesThenRender(filterTypeName);
+  }
 
   // ---------------------------------------------------------------------------
 
@@ -885,6 +910,35 @@ export default class PanelManageGenotypeComponent extends Component {
     blocksF = this.blocksSampleFilters('feature');
     return blocksF;
   }
+  /** @return array of blocks and the variantIntervals selected on them for filtering samples.
+   */
+  @computed('brushedOrViewedVCFBlocks')
+  get blocksVariantIntervalFilters() {
+    const
+    blocksF = this.blocksSampleFilters('variantInterval');
+    return blocksF;
+  }
+  @computed(
+    'brushedOrViewedVCFBlocks',
+    // .viewed[] for the variantInterval (non-VCF) blocks
+    'blockService.viewed.length',
+    'sampleFiltersCount.variantInterval')
+  get blocksVariantInterval() {
+    const
+    blocksF = this.blocksSampleFilters('variantInterval')
+      .mapBy('sampleFilters.variantInterval')
+      .flat(),
+    /** if VI from multiple blocks of a dataset are selected this will not
+     * uniq() the dataset name.
+     * feature .blockId is (currently) a Proxy, and each feature of 1 block has a unique Proxy.
+     */
+    blocks = blocksF.mapBy('blockId')
+      .mapBy('content')
+      .uniq();
+      // .mapBy('datasetId.name');
+    return blocks;
+  }
+
 
   @computed('brushedOrViewedVCFBlocks')
   get brushedOrViewedScope () {
@@ -2694,7 +2748,8 @@ export default class PanelManageGenotypeComponent extends Component {
       const
       block = abBlock.block,
       filterArray = this.blockSampleFilters(block, filterTypeName);
-      if (filterTypeName === 'haplotype') {
+      switch (filterTypeName) {
+      case 'haplotype': {
         const
         selected = filterArray,
         matchesR = selected.reduce((matches, tSNP) => {
@@ -2703,12 +2758,19 @@ export default class PanelManageGenotypeComponent extends Component {
           return matches;
         }, {});
         blockMatches = matchesR;
-      } else {
+      }
+        break;
+      case 'variantInterval' : {
+      }
+        break;
+      case 'feature' : {
         const
         features = filterArray;
         if (features) {
           featuresCountMatches(features, blockMatches, /*matchRef*/null);
         }
+      }
+        break;
       }
 
       /**

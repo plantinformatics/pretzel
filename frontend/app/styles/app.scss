@@ -2134,6 +2134,7 @@ body:not(.tablesPanelRight) .metaeditor-panel {
   margin-left : 1em;
 }
 
+/* .haplotypeFilters is also used for variantInterval */
 .haplotypeFilters ul .list-group-item
 {
   /* reduce vertical padding.  Inherit horizontal padding : 15px from
