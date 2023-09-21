@@ -21,6 +21,7 @@ import { overlapInterval } from '../../utils/draw/zoomPanCalcs';
 import { featuresIntervalsForTree } from '../../utils/data/features';
 import {
   refAlt,
+  valueNameIsNotSample,
   datasetId2Class,
   gtValueIsNumeric,
   vcfGenotypeLookup,
@@ -35,6 +36,7 @@ import {
   annotateRowsFromFeatures,
   featuresValuesFields,
   featureSampleNames,
+  featuresSampleMAF,
  } from '../../utils/data/vcf-feature';
 import { stringCountString, toTitleCase } from '../../utils/string';
 
@@ -101,12 +103,6 @@ class SampleFiltersCount extends EmberObject {
 };
 
 //------------------------------------------------------------------------------
-
-/** Given a key within Feature.values, classify it as sample (genotype data) or other field.
- */
-function valueNameIsNotSample(valueName) {
-  return ['ref', 'alt', 'tSNP', 'MAF'].includes(valueName);
-}
 
 /**
  * @return true if feature.values contains only non-sample values, as listed in
@@ -1954,7 +1950,9 @@ export default class PanelManageGenotypeComponent extends Component {
             selectedFeatures = this.args.selectedFeatures,
             added = isGerminate ?
               addFeaturesGerminate(blockV, requestFormat, replaceResults, selectedFeatures, callsData) :
-              addFeaturesJson(blockV, requestFormat, replaceResults, selectedFeatures, text);
+              addFeaturesJson(blockV, requestFormat, replaceResults, selectedFeatures, text),
+            options = {requestSamplesAll : userSettings.requestSamplesAll, selectedSamples : added.sampleNames /*this.selectedSamples*/};
+            featuresSampleMAF(added.createdFeatures, options);
 
             if (added.createdFeatures && added.sampleNames) {
               /* Update the filtered-out samples, including the received data,
@@ -2222,7 +2220,6 @@ export default class PanelManageGenotypeComponent extends Component {
     return ratio;
   }
 
-
   //----------------------------------------------------------------------------
 
 
@@ -2298,7 +2295,16 @@ export default class PanelManageGenotypeComponent extends Component {
         this.collateBlockSamplesCallRate(featuresArrays);
 
         if (featuresArrays.length) {
-          const options = {userSettings};
+          const
+          /** catenate selectedSamples of all blocks; may instead pass
+           * vcfGenotypeSamplesSelectedAll in options, and featureSampleMAF()
+           * can lookup via all[feature.get('blockId.datasetId.id')]
+           * options.selectedSamples is used by featureSampleMAF()
+           *  related : .samplesOK(true) or .sampleNames
+           */
+          all = Object.values(this.vcfGenotypeSamplesSelectedAll),
+          selectedSamples = all.length ? [].concat.apply(all[0], all.slice(1)) : [],
+          options = {userSettings, selectedSamples};
           if (this.urlOptions.gtMergeRows) {
             /** {rows, sampleNames}; */
             let sampleFilters = [];

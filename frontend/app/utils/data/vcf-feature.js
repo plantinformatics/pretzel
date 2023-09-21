@@ -3,10 +3,11 @@ import { A as Ember_A } from '@ember/array';
 
 import createIntervalTree from 'interval-tree-1d';
 
-import { toTitleCase } from '../string';
+import { stringCountString, toTitleCase } from '../string';
 import { stringGetFeature, stringSetSymbol, stringSetFeature } from '../panel/axis-table';
 import { contentOf } from '../common/promises';
 import { featuresIntervalsForTree } from './features';
+
 
 /* global performance */
 
@@ -50,6 +51,14 @@ columnOrderIndex = columnOrder.reduce(
 /** for multiple features in a cell, i.e. merge rows - multiple features at a
  * position from different vcf datasets; could also merge columns (samples).  */
 const cellMultiFeatures = false;
+
+//------------------------------------------------------------------------------
+
+/** Given a key within Feature.values, classify it as sample (genotype data) or other field.
+ */
+function valueNameIsNotSample(valueName) {
+  return ['ref', 'alt', 'tSNP', 'MAF'].includes(valueName);
+}
 
 //------------------------------------------------------------------------------
 
@@ -1037,6 +1046,11 @@ function vcfFeatures2MatrixViewRowsResult(
   result, requestFormat, features, featureFilter, sampleFilters,
   sampleNamesCmp, options, datasetIndex) {
   const fnName = 'vcfFeatures2MatrixViewRowsResult';
+  const
+  userSettings = options.userSettings,
+  optionsMAF = {
+    requestSamplesAll : userSettings.requestSamplesAll,
+    selectedSamples : options.selectedSamples};
   const showHaplotypeColumn = features.length && features[0].values.tSNP;
   const block = features.length && contentOf(features[0].blockId);
   const
@@ -1049,6 +1063,7 @@ function vcfFeatures2MatrixViewRowsResult(
   features.reduce(
     (res, feature) => {
       if (featureFilter(feature)) {
+        featureSampleMAF(feature, optionsMAF);
         const
         row = rowsAddFeature(res.rows, feature, 'Name', 0);
         if (showHaplotypeColumn) {
@@ -1342,9 +1357,78 @@ function featureSampleNames(sampleNamesSet, feature, filterFn) {
 
 //------------------------------------------------------------------------------
 
+function featuresSampleMAF(features, options) {
+  features.forEach(feature => featureSampleMAF(feature, options));
+}
+function featureSampleMAF(feature, options) {
+  const
+  fnName = 'featuresSampleMAF',
+  { selectedSamples,  requestSamplesAll } = options;
+  if (requestSamplesAll || selectedSamples) {
+    const
+    alt = feature.values.alt,
+    counts = Object.entries(feature.values)
+      .reduce((sum, [sampleName, value]) => {
+        if (! valueNameIsNotSample(sampleName) &&
+            (requestSamplesAll || selectedSamples.includes(sampleName))) {
+          // skip missing data : './.' or '.|.'
+          if (value[0] !== '.' ) {
+            // assumes diploid values
+            sum.count += 2;
+            sum.copies += copiesOfAlt(value, alt);
+          }
+        }
+        return sum;
+      }, {count : 0, copies : 0}),
+    maf = counts.count ? counts.copies / counts.count : undefined;
+    dLog(fnName, maf, counts);
+    if (maf !== undefined) {
+      feature.values.MAF = maf;
+    }
+    /* possibly : else if (feature.values.MAF !== undefined) { delete feature.values.MAF ; }
+     * tried setting undefined or null - "undefined" is shown in table,
+     * and null breaks stringSetFeature() -> stringSetSymbol().
+     */
+  }
+}
+
+/** Count the copies of Alt in the given genotype value.
+ * @param value string  genotype value.
+ * Either numeric or nucleotide representation.
+ * Either 1 or 2 values; 2 values are separated by | or /.
+ * @param alt string. 1 char. Nucleotide representation of the Alternate allele.
+ */
+function copiesOfAlt(value, alt) {
+  const fnName = 'copiesOfAlt';
+  let copies;
+  if ((typeof value !== 'string') ||
+      ! (value.length == 1 || value.length == 3)) {
+    dLog('fnName', value, alt);
+  } else {
+    if (/^[012]/.test(value)) {
+      // numeric
+      if (value.length === 1) {
+        copies = +value;
+      } else {
+        copies = +value[0] + value[2];
+      }
+    } else {
+      // nucleotide
+      copies = stringCountString(value, alt);
+      if (value.length === 1) {
+        copies *= 2;
+      }
+    }
+  }
+  return copies;
+}
+
+//------------------------------------------------------------------------------
+
 
 export {
   refAlt,
+  valueNameIsNotSample,
   datasetId2Class,
   gtValueIsNumeric,
   vcfGenotypeLookup,
@@ -1363,4 +1447,6 @@ export {
   annotateRowsFromFeatures,
   featuresValuesFields,
   featureSampleNames,
+  featuresSampleMAF,
+  featureSampleMAF,
 };

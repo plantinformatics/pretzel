@@ -16,6 +16,7 @@ import {
   vcfGenotypeLookup, addFeaturesJson,
   resultIsGerminate,
   addFeaturesGerminate,
+  featuresSampleMAF,
 } from '../../utils/data/vcf-feature';
 import { updateDomain } from '../../utils/stacksLayout';
 
@@ -761,6 +762,10 @@ export default Service.extend({
             added = isGerminate ?
               addFeaturesGerminate(block, requestFormat, replaceResults, selectedFeatures, callsData) :
               addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures, text);
+            if (added.createFeatures) {
+              // All the samples in the result were requested, so calculate MAF across all.
+              featuresSampleMAF(added.createFeatures, {requestSamplesAll : true, selectedSamples : undefined});
+            }
           }
         }
 
