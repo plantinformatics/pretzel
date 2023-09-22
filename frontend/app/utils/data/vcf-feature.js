@@ -7,6 +7,7 @@ import { stringCountString, toTitleCase } from '../string';
 import { stringGetFeature, stringSetSymbol, stringSetFeature } from '../panel/axis-table';
 import { contentOf } from '../common/promises';
 import { featuresIntervalsForTree } from './features';
+import { intervalsIntersect } from '../interval-calcs';
 
 
 /* global performance */
@@ -1381,7 +1382,7 @@ function featureSampleMAF(feature, options) {
         return sum;
       }, {count : 0, copies : 0}),
     maf = counts.count ? counts.copies / counts.count : undefined;
-    dLog(fnName, maf, counts);
+    // dLog(fnName, maf, counts);
     if (maf !== undefined) {
       feature.values.MAF = maf;
     }
@@ -1425,6 +1426,65 @@ function copiesOfAlt(value, alt) {
 
 //------------------------------------------------------------------------------
 
+/** Support a repeated storage pattern : object[symbol][fieldName] is an array.
+ */
+function objectSymbolNameArray(object, symbol, fieldName) {
+  // equivalent : object = contentOf(object);
+  if (object.content) {
+    object = object.content;
+  }
+  const
+  arrays = object[symbol] || (object[symbol] = {}),
+  array = arrays[fieldName] || (arrays[fieldName] = Ember_A());
+  return array;
+}
+function objectSymbol(object, symbol) {
+  if (object.content) {
+    object = object.content;
+  }
+  const
+  arrays = object[symbol] || (object[symbol] = {});
+  return arrays;
+}
+
+/** possible alternative to CP get variantSets().
+ * usage :
+ * for viewed VCF blocks
+ *  for selected variantIntervals
+ *    getVariantSet(variantInterval, block)
+ *
+ * @param variantInterval feature of dataset with tag 'variantInterval'
+ * @param block VCF block
+ * @return array of features : SNPs in block which are within variantInterval.value
+ */
+function getVariantSet(variantInterval, block) {
+  /* filter block features; store result in block[symbol][vi-name]   */
+  const
+  fnName = 'getVariantSet',
+  features = block.get('features').toArray()
+    .filter(feature => intervalsIntersect(feature.value, variantInterval.value)),
+  variantIntervalName = variantInterval.value.join('-'),
+  sets = objectSymbol(block, variantSetSymbol);
+  // i.e. block[variantSetSymbol][variantIntervalName] = features;
+  sets[variantIntervalName] = features;
+  return features;
+}
+/**
+ * block  VCF / genotype block
+ * @return [] of SNP feature in
+ */
+ function blockVariantSets(block) {
+   return 
+  }
+
+/** Variant Sets.
+ * The result of intersecting a Variant Interval with a VCF block.
+ * block[variantSetSymbol][variantIntervalName] is an array of features of block which overlap the named variantInterval.
+ */
+const variantSetSymbol = Symbol.for('variantSet');
+
+//------------------------------------------------------------------------------
+
 
 export {
   refAlt,
@@ -1449,4 +1509,5 @@ export {
   featureSampleNames,
   featuresSampleMAF,
   featureSampleMAF,
+  objectSymbolNameArray,
 };

@@ -123,6 +123,17 @@ function toArrayPromiseProxy(valueP) {
   return proxy;
 }
 
+//------------------------------------------------------------------------------
+
+/** Apply addObjects() to array for each of the given arrays.
+ * @return array
+ */
+function addObjectArrays(array, arrays) {
+  /** result === array */
+  const result = arrays.reduce((union, add) => union.addObjects(add), array);
+  return result;
+}
+
 // -----------------------------------------------------------------------------
 
 let objectDependenciesCache = new WeakMap();
@@ -191,6 +202,7 @@ export {
   pollTaskFn,
   nowOrLater,  promiseText, toPromiseProxy,
   toArrayPromiseProxy,
+  addObjectArrays,
   compareDependencies,
   findParent,
   blockInfo,

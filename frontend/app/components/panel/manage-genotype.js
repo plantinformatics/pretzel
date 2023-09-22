@@ -13,7 +13,7 @@ import { uniq, intersection } from 'lodash/array';
 import createIntervalTree from 'interval-tree-1d';
 
 import NamesFilters from '../../utils/data/names-filters';
-import { toPromiseProxy, toArrayPromiseProxy } from '../../utils/ember-devel';
+import { toPromiseProxy, toArrayPromiseProxy, addObjectArrays } from '../../utils/ember-devel';
 import { thenOrNow, contentOf } from '../../utils/common/promises';
 import { clipboard_writeText } from '../../utils/common/html';
 import { intervalSize } from '../../utils/interval-calcs';
@@ -37,6 +37,7 @@ import {
   featuresValuesFields,
   featureSampleNames,
   featuresSampleMAF,
+  objectSymbolNameArray,
  } from '../../utils/data/vcf-feature';
 import { stringCountString, toTitleCase } from '../../utils/string';
 
@@ -602,14 +603,7 @@ export default class PanelManageGenotypeComponent extends Component {
    * @return [] of tSNP
    */
   blockSampleFilters(block, filterTypeName) {
-    // equivalent : block = contentOf(block);
-    if (block.content) {
-      block = block.content;
-    }
-    const
-    sampleFilters = block[sampleFiltersSymbol] || (block[sampleFiltersSymbol] = {}),
-    filters = sampleFilters[filterTypeName] || (sampleFilters[filterTypeName] = Ember_A());
-    return filters;
+    return objectSymbolNameArray(block, sampleFiltersSymbol, filterTypeName);
   }
 
   @computed('args.userSettings.sampleFilterTypeName')
@@ -2604,19 +2598,25 @@ export default class PanelManageGenotypeComponent extends Component {
      */
     // based on annotateRowsFromFeatures()
     const
-    features = this.selectedVariantIntervals,
-    intervals = featuresIntervalsForTree(features),
+    viBlockFeatures = this.blocksVariantIntervalFilters
+      .mapBy('sampleFilters.variantInterval'),
+    viFeatures = addObjectArrays([], viBlockFeatures),
+    intervals = featuresIntervalsForTree(viFeatures),
     intervalTree = createIntervalTree(intervals),
+    gtDatasetColumns = this.gtDatasetColumns,
     sets = {};
 
     Object.entries(this.displayDataRows).forEach(([location, row]) => {
       /** Find all intervals containing query point */
       intervalTree.queryPoint(location, function(interval) {
         const
-        feature = interval[featureSymbol],
+        /** this is the variantInterval feature - want the row feature. */
+        viFeature = interval[featureSymbol],
+        rowFeatures = gtDatasetColumns.map(datasetId => row[datasetId]?.[featureSymbol]),
         intervalName = interval.join('_'),
         variantSet = sets[intervalName] || (sets[intervalName] = []);
-        variantSet.push(feature);
+        /* rowFeatures will not be on other rows, so .addObjects() is not required for uniqueness */
+        variantSet.pushObjects(rowFeatures);
       });
     });
     return sets;
@@ -2761,6 +2761,12 @@ export default class PanelManageGenotypeComponent extends Component {
       }
         break;
       case 'variantInterval' : {
+        const
+        sets = this.variantSets,  //  - getVariantSets() or get variantSets()
+        features = addObjectArrays([], Object.values(sets))
+        // may get undefined from blocks without overlapping features.
+          .filter(f => f);
+        featuresCountMatches(features, blockMatches, matchRef);
       }
         break;
       case 'feature' : {

@@ -227,6 +227,18 @@ function intervalIntersect(i1, i2) {
     intervalJoin('intersect', i1, i2);
   return intersect;
 }
+/** @return true if the given intervals intersect / overlap.
+ * @param i1, i2 are arrays [start, end] or [start].
+ * This function does not depend on direction.
+ */
+function intervalsIntersect(i1, i2) {
+  const
+  intersect =
+    ((i2.length > 1) && i1.find((i) => ! inInterval(i2, i))) ||
+    ((i1.length > 1) && i2.find((i) => ! inInterval(i1, i))) ||
+    (i1[0] === i2[0]);
+  return intersect;
+}
 
 /** @return true if the 2 intervals have a common endpoint.
  * Form of i1 and i2 is : [number, number].
@@ -281,6 +293,7 @@ export {
   intervalJoin,
   intervalSubtract2,
   intervalIntersect,
+  intervalsIntersect,
   intervalsAbut,
   truncateMantissa
 };
