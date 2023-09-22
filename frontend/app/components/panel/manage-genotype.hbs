@@ -500,8 +500,6 @@
                           --}}
                           {{#tab.pane id=tabId title=tabTypeName}}
 
-                            <p>{{tabTypeName}}</p>
-
                             <div style="margin-left: 1em; margin-top: 1em">
                               <span>{{this.haplotypeFiltersCount}}</span>
                               <label style="margin-left: 1em;" >LD Blocks</label>
@@ -536,8 +534,6 @@
                         {{#let (compute (action tn.tabName2Id tabTypeName)) as |tabId|}}
 
                           {{#tab.pane id=tabId title=tabTypeName}}
-
-                            <p>{{tabTypeName}}</p>
 
                             <div style="margin-left: 1em; margin-top: 1em">
                               <span>{{this.variantIntervalFiltersCount}}</span>
@@ -580,8 +576,6 @@
                         {{#let (compute (action tn.tabName2Id tabTypeName)) as |tabId|}}
 
                           {{#tab.pane id=tabId title=tabTypeName}}
-
-                            <p>{{tabTypeName}}</p>
 
                             <div style="margin-left: 1em; margin-top: 1em">
                               <span>{{this.featureFiltersCount}}</span>

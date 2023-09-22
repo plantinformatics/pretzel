@@ -891,6 +891,7 @@ export default Component.extend({
        */
       const rowSNPFeature = tableCoordsToFeature(this.table, {row, col});
       this.variantIntervalToggle(rowSNPFeature, features[0]);
+      this.filterSamplesBySelectedHaplotypes();
     } else if ((row === -1) && this.datasetColumns?.includes(columnName)) {
       /* plan to use columnNameIsDatasetColumn(columnName, false), but currently 
        * overlap with intersectionDialogDataset, which should be enabled also. */

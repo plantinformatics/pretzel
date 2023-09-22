@@ -2520,7 +2520,7 @@ export default class PanelManageGenotypeComponent extends Component {
      * in samples dialog in place of content-editable
      * vcfGenotypeSamplesSelected, then it would make sense to narrow the
      * display to just the samples the user currently selected, and then this
-     * dependancy should be enabled :
+     * dependency should be enabled :
      */
     'vcfGenotypeSamplesSelected.[]',
     /** This is equivalent in effect to vcfGenotypeSamplesSelected.[];
@@ -2594,8 +2594,9 @@ export default class PanelManageGenotypeComponent extends Component {
  * @return [variantInterval name] -> [feature, ...]
  * Overlapping features of all VCF / genotype blocks are included in the 1 array.
  */
-  @computed('brushedOrViewedVCFBlocksVisible')
+  @computed('brushedOrViewedVCFBlocksVisible', 'sampleFiltersCountSelected')
   get variantSets() {
+    // dependency could be : 'sampleFiltersCount.variantInterval'
     /** selected variantInterval -> interval tree,
      * -> find intervals and append
      */
