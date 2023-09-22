@@ -41,6 +41,26 @@ function stringSetFeature(sampleValue, feature) {
 
 /*----------------------------------------------------------------------------*/
 
+function getCellFeatures(table, row, col) {
+  const
+  value = table.getDataAtCell(row, col) ?? [],
+  values = Array.isArray(value) ? value : [value],
+  features = values.map(featureString => featureString?.[featureSymbol]);
+  return features;
+}
+
+/**
+ * @return undefined if cell has no features or none with a dataset with the given tag.
+ */
+function cellFeaturesWithDatasetTag(table, row, col, tag) {
+  const
+  features = getCellFeatures(table, row, col)
+    ?.filter(feature => feature.get('blockId.datasetId.tags')?.includes(tag));
+  return features?.length ? features : undefined;
+}
+
+//------------------------------------------------------------------------------
+
 /** Assign Feature reference to each row.
  * @param table HandsOnTable
  * @param data  array of data which correspond to rows, and is parallel.
@@ -302,6 +322,8 @@ export {
   stringGetFeature,
   stringSetSymbol,
   stringSetFeature,
+  getCellFeatures,
+  cellFeaturesWithDatasetTag,
   setRowAttributes,
   setRowAttribute,
   getRowAttribute,

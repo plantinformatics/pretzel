@@ -912,6 +912,7 @@ export default class PanelManageGenotypeComponent extends Component {
     blocksF = this.blocksSampleFilters('variantInterval');
     return blocksF;
   }
+  /** Blocks of selected Variant Intervals  */
   @computed(
     'brushedOrViewedVCFBlocks',
     // .viewed[] for the variantInterval (non-VCF) blocks
@@ -2590,7 +2591,9 @@ export default class PanelManageGenotypeComponent extends Component {
   //----------------------------------------------------------------------------
 
 /* variantInterval feature + viewed VCF datasets -> variantSet SNPs
-*/
+ * @return [variantInterval name] -> [feature, ...]
+ * Overlapping features of all VCF / genotype blocks are included in the 1 array.
+ */
   @computed('brushedOrViewedVCFBlocksVisible')
   get variantSets() {
     /** selected variantInterval -> interval tree,
@@ -2612,7 +2615,10 @@ export default class PanelManageGenotypeComponent extends Component {
         const
         /** this is the variantInterval feature - want the row feature. */
         viFeature = interval[featureSymbol],
-        rowFeatures = gtDatasetColumns.map(datasetId => row[datasetId]?.[featureSymbol]),
+        /** filter out undefined from blocks without features overlapping this row. */
+        rowFeatures = gtDatasetColumns
+          .map(datasetId => row[datasetId]?.[featureSymbol])
+          .filter(f => f),
         intervalName = interval.join('_'),
         variantSet = sets[intervalName] || (sets[intervalName] = []);
         /* rowFeatures will not be on other rows, so .addObjects() is not required for uniqueness */
@@ -2763,9 +2769,7 @@ export default class PanelManageGenotypeComponent extends Component {
       case 'variantInterval' : {
         const
         sets = this.variantSets,  //  - getVariantSets() or get variantSets()
-        features = addObjectArrays([], Object.values(sets))
-        // may get undefined from blocks without overlapping features.
-          .filter(f => f);
+        features = addObjectArrays([], Object.values(sets));
         featuresCountMatches(features, blockMatches, matchRef);
       }
         break;

@@ -15,6 +15,8 @@ import { task, didCancel } from 'ember-concurrency';
 import config from '../config/environment';
 
 import {
+  getCellFeatures,
+  cellFeaturesWithDatasetTag,
   setRowAttributes,
   getRowAttribute,
   getRowAttributeFromData,
@@ -42,6 +44,7 @@ const trace = 1;
 const datasetSymbol = Symbol.for('dataset');
 const featureSymbol = Symbol.for('feature');
 
+/** comment in components/panel/manage-genotype.js */
 const sampleFiltersSymbol = Symbol.for('sampleFilters');
 
 // -----------------------------------------------------------------------------
@@ -860,7 +863,7 @@ export default Component.extend({
     const
     fnName = 'afterSelectionHaplotype',
     columnName = this.columnNames[col];
-    let value, feature, tags;
+    let value, feature, features, tags;
     /** .sampleFilterTypeName is set via tab change in Controls tab. */
     const sampleFilterTypeName = this.userSettings.sampleFilterTypeName;
     dLog(fnName, row, col);
@@ -881,16 +884,13 @@ export default Component.extend({
     }
     } else if (
       this.datasetColumns.includes(columnName) &&
-        (value = this.table.getDataAtCell(row, col)) &&
-        (feature = value?.[0]?.[Symbol.for('feature')]) && 
-        (tags = feature.get('blockId.datasetId.tags')) &&
-        tags.includes('variantInterval')
+        (features = cellFeaturesWithDatasetTag(this.table, row, col, 'variantInterval'))
     ) {
-      /* feature here is the variantInterval dataset feature, whereas
+      /* features[0] here is the variantInterval dataset feature, whereas
        * tableCoordsToFeature(t, {row, col}) returns the SNP feature.
        */
       const rowSNPFeature = tableCoordsToFeature(this.table, {row, col});
-      this.variantIntervalToggle(rowSNPFeature, feature);
+      this.variantIntervalToggle(rowSNPFeature, features[0]);
     } else if ((row === -1) && this.datasetColumns?.includes(columnName)) {
       /* plan to use columnNameIsDatasetColumn(columnName, false), but currently 
        * overlap with intersectionDialogDataset, which should be enabled also. */
@@ -1258,6 +1258,24 @@ export default Component.extend({
       td.title = hoverText;
       $(td).text(cellText);
     }
+    const sampleFilterTypeName = this.userSettings.sampleFilterTypeName;
+    if (sampleFilterTypeName === 'variantInterval') {
+      /* or  features?.filter(
+        feature => feature.get('blockId.datasetId.tags')?.includes('variantInterval')); */
+      const
+      viFeatures = cellFeaturesWithDatasetTag(this.table, row, col, 'variantInterval');
+      if (viFeatures?.length) {
+          const
+          rowFeature = this.getRowAttribute(instance, /*visualRowIndex*/ row),
+          block = rowFeature?.get('blockId'),
+          sampleFilters = block?.content[sampleFiltersSymbol],
+          isSelected = sampleFilters?.variantInterval.includes(viFeatures[0]);
+          if (isSelected) {
+            td.classList.add('featureIsFilter');
+          }
+        }
+      }
+
   },
 
   featureNameHoverText(feature) {
