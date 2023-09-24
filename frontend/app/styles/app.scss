@@ -1816,7 +1816,8 @@ div.ht_clone_top_left_corner span.colHeader.cornerHeader {
 }
 
 #observational-table td.featureIsFilter {
-  border: 2px solid green;
+  border: 2px dashed green;
+  border-left-width : 23px !important;
 }
 
 // -----------------------------------------------------------------------------
