@@ -1056,14 +1056,15 @@ function vcfFeatures2MatrixViewRowsResult(
   const block = features.length && contentOf(features[0].blockId);
   const
   dataset = block?.get('datasetId'),
-  datasetId = dataset?.get('id');
+  datasetId = dataset?.get('id'),
+  enableFeatureFilters = dataset.get('enableFeatureFilters');
 
   let sampleNamesSet = new Set();
 
   // result =
   features.reduce(
     (res, feature) => {
-      if (featureFilter(feature)) {
+      if (! enableFeatureFilters || featureFilter(feature)) {
         featureSampleMAF(feature, optionsMAF);
         const
         row = rowsAddFeature(res.rows, feature, 'Name', 0);
@@ -1358,9 +1359,15 @@ function featureSampleNames(sampleNamesSet, feature, filterFn) {
 
 //------------------------------------------------------------------------------
 
+/** Calculate sample MAF for features.
+ */
 function featuresSampleMAF(features, options) {
   features.forEach(feature => featureSampleMAF(feature, options));
 }
+/** Calculate sample MAF for feature, for the loaded samples, either selected or
+ * all samples.
+ * Update feature.values.MAF, replacing any value read from the API request.
+ */
 function featureSampleMAF(feature, options) {
   const
   fnName = 'featuresSampleMAF',

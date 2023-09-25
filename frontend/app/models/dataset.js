@@ -5,9 +5,19 @@ import { attr, hasMany, belongsTo } from '@ember-data/model';
 
 import Record from './record';
 
+//------------------------------------------------------------------------------
 
 const dLog = console.debug;
 const trace = 1;
+
+//------------------------------------------------------------------------------
+
+/** dataset[enableFeatureFiltersSymbol] true/false enables feature filters
+ * in the genotype table for this dataset
+ */
+const enableFeatureFiltersSymbol = Symbol.for('enableFeatureFilters');
+
+//------------------------------------------------------------------------------
 
 export default Record.extend({
   apiServers : service(),
@@ -172,6 +182,20 @@ export default Record.extend({
   },
   set sampleNames(names) {
     this[Symbol.for('sampleNames')] = names;
+    return names;
+  },
+
+  //------------------------------------------------------------------------------
+
+  /** dataset[enableFeatureFiltersSymbol] true/false enables feature filters
+   * in the genotype table for this dataset
+   */
+  get enableFeatureFilters() {
+    return this[enableFeatureFiltersSymbol];
+  },
+  set enableFeatureFilters(value) {
+    this[enableFeatureFiltersSymbol] = value;
+    return value;
   },
 
   /*--------------------------------------------------------------------------*/

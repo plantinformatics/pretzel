@@ -91,6 +91,10 @@ const callRateSymbol = Symbol.for('callRate');
  * feature[matchRefSymbol] true/false.  */
 const matchRefSymbol = Symbol.for('matchRef');
 
+/** dataset[enableFeatureFiltersSymbol] true/false enables feature filters for this dataset
+ */
+const enableFeatureFiltersSymbol = Symbol.for('enableFeatureFilters');
+
 const tab_view_prefix = "tab-view-";
 const tab_view_prefix_Datasets = "tab-view-Datasets-";
 
@@ -981,6 +985,16 @@ export default class PanelManageGenotypeComponent extends Component {
     return datasetIds;
   }
 
+  get gtDatasetIdsToFilter() {
+    const
+    fnName = 'gtDatasetIdsToFilter',
+    datasetIds = this.gtDatasets
+      .filter(dataset => dataset[enableFeatureFiltersSymbol])
+      .mapBy('id');
+    dLog(fnName, datasetIds);
+    return datasetIds;
+  }
+
   @computed('gtDatasets')
   get gtDatasetTabs() {
     const
@@ -1494,6 +1508,7 @@ export default class PanelManageGenotypeComponent extends Component {
   /** @return
    * .currentFeaturesValuesFields[featureColumnDialogDataset] minus
    * .selectedFeaturesValuesFields[featureColumnDialogDataset]
+   * [] if .featureColumnDialogDataset is undefined - dialog is not enabled
    */
   @computed('currentFeaturesValuesFields', 'selectedFeaturesValuesFieldsForDataset.[]')
   get forSelectFeaturesValuesFields() {
@@ -1501,17 +1516,21 @@ export default class PanelManageGenotypeComponent extends Component {
     fnName = 'forSelectFeaturesValuesFields',
     datasetId = this.featureColumnDialogDataset,
     current = this.currentFeaturesValuesFields[datasetId],
-    selected = this.selectedFeaturesValuesFields[datasetId],
+    selected = this.selectedFeaturesValuesFields[datasetId];
+    let unselectedArray = [];
+    if (selected) {
+      const
     /** Copy current and subtract selected from it, remainder is available for selection */
     unselected = selected.reduce((set, field) => {
       set.delete(field);
       return set;
-    }, new Set(current)),
-    unselectedArray = Array.from(unselected);
+    }, new Set(current));
+      unselectedArray = Array.from(unselected);
+    }
     return unselectedArray;
   }  
 
-  /** Map the multi-select to an array of selected sample names.
+  /** Set the .selectedFeaturesValuesFields for .featureColumnDialogDataset
    * Based on @see selectSample().
    * @desc
    */
@@ -1521,6 +1540,25 @@ export default class PanelManageGenotypeComponent extends Component {
     selectedFieldNames = $(event.target).val(),
     datasetId = this.featureColumnDialogDataset;
     this.selectedFeaturesValuesFields[datasetId] = selectedFieldNames || [];
+  }
+
+  //----------------------------------------------------------------------------
+
+  /** Set the enableFeatureFiltersSymbol for gtDatasets from the datasetIds
+   * selected by the user.
+   */
+  @action
+  selectDatasetId(event) {
+    // Based on @see selectedFieldName().
+    const
+    fnName = 'selectDatasetId',
+    selectedDatasetIds = $(event.target).val(),
+    datasets = this.gtDatasets;
+    datasets.forEach(
+      dataset => dataset[enableFeatureFiltersSymbol] =
+        selectedDatasetIds.includes(dataset.get('id')));
+    dLog(fnName, selectedDatasetIds,
+         datasets.map(dataset => dataset[enableFeatureFiltersSymbol]));
   }
 
   // ---------------------------------------------------------------------------
@@ -2336,7 +2374,13 @@ export default class PanelManageGenotypeComponent extends Component {
         featuresArrays = visibleBlocks
         /* featureFilterPre() is expected to filter out most features,
          * so apply it before rowLimit; */
-          .map((b) => this.featureFilterPre(b, b.featuresInBrush))
+          .map((b) => {
+            let features = b.featuresInBrush;
+            if (b.get('datasetId.enableFeatureFilters')) {
+              features = this.featureFilterPre(b, features);
+            }
+            return features;
+          })
           .filter((features) => features.length)
           .map((features) => features.slice(0, this.rowLimit));
 
@@ -2364,6 +2408,11 @@ export default class PanelManageGenotypeComponent extends Component {
               sampleFilters.push(this.sampleFilter);
             }
 
+            /** Could change signature of featureFilter to block => featureFilter,
+             * enabling : block => block.get('datasetId.enableFeatureFilters') ||
+             * feature => featureFilter(feature)
+             * and vcfFeatures2MatrixViewRowsResult() : if (! featureFilter || featureFilter(feature))
+             */
             const
             sampleGenotypes = 
               vcfFeatures2MatrixViewRows(

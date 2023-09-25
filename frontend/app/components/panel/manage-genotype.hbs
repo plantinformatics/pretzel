@@ -788,6 +788,24 @@
 
                 {{!---------------------------------------------------------------------}}
 
+                <div class="gtDatasetIdsToFilter">
+                  <label>Datasets to filter</label>
+
+                  {{!-- based on similar <select> for selectedFeaturesValuesFieldsForDataset /
+                    forSelectFeaturesValuesFields; this could be factored to a component,
+                    but plan to use e.g. ember-power-select after next frontend version updates.
+                  --}}
+
+                  <select class="form-control" multiple onchange={{action this.selectDatasetId}}>
+                    {{#each this.gtDatasetIds as |fieldName|}}
+                      <option value={{fieldName}} selected={{include this.gtDatasetIdsToFilter fieldName}}>{{fieldName}}</option>
+                    {{/each}}
+                  </select>
+                </div>
+
+                {{!-----------------------------------------------------------}}
+
+
                 <ul class="list-group borderless view-controls">
                   <li>
                     <input type="checkbox"
@@ -869,7 +887,7 @@
   <div class="genotype">
     <label>Select additional columns</label>
 
-    <select style="height:100px" class="form-control" multiple onchange={{action this.selectFieldName}}>
+    <select class="form-control" multiple onchange={{action this.selectFieldName}}>
       {{#each this.selectedFeaturesValuesFieldsForDataset as |fieldName|}}
         <option value={{fieldName}} selected={{include this.selectedFeaturesValuesFieldsForDataset fieldName}}>{{fieldName}}</option>
       {{/each}}
@@ -878,7 +896,7 @@
       {{/each}}
     </select>
 
-    <BsButton @type="info" @onClick={{action (mut this.featureColumnDialogDataset) null}}>OK</BsButton>
+    <BsButton class="margin-top" @type="info" @onClick={{action (mut this.featureColumnDialogDataset) null}}>OK</BsButton>
   </div>
 
   {{/ember-modal-dialog}}

@@ -2425,6 +2425,16 @@ div.genotype label
   justify-content: flex-end;
 }
 
+/*----------------------------------------------------------------------------*/
+
+.gtDatasetIdsToFilter > select
+{
+  width : fit-content;
+  /* overridden by : select[multiple] { height: auto; }
+  height : fit-content;
+   */
+}
+
 /* -------------------------------------------------------------------------- */
 
 .h-100 {
