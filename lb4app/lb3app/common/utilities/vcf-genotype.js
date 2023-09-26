@@ -72,9 +72,14 @@ function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
      *        %TGT            Translated genotype (e.g. C/A)
      */
     formatGT = (preArgs.requestFormat === 'CATG') ? '%TGT' : '%GT',
+    /** now INFO/MAF is added if not present, by
+     * vcfGenotypeLookup.{bash,Makefile} : dbName2Vcf() / %.MAF.vcf.gz
+     * So requestInfo means just 'request INFO/tSNP'.
+     */
     requestInfo = preArgs.requestInfo,
     format = '%ID\t%POS' + '\t%REF\t%ALT' +
-      (requestInfo ? '\t%INFO/tSNP\t%INFO/MAF' : '') +
+      (requestInfo ? '\t%INFO/tSNP' : '') +
+      '\t%INFO/MAF' +
       '[\t' + formatGT + ']\n';
     moreParams = moreParams.concat(headerOption, '-f', format);
     if (headerOnly) {

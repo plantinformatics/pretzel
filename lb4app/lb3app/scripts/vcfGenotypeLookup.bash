@@ -26,6 +26,10 @@
 #  args to bcftools other than command vcfGz; named preArgs because they could
 #  be inserted between command and vcfGz arguments to bcftools.
 
+# stdin : not read
+# stdout : echo $vcfGz to stdout - see dbName2Vcf().
+# stderr : set -x is used, which outputs to stderr, and appears in the node.js server stderr log
+
 
 serverDir=$PWD
 # $inContainer is true (0) if running in a container.
@@ -44,6 +48,8 @@ case $PWD in
     resourcesDir=resources
     ;;
 esac
+# relative to $serverDir
+unused_var=${scriptsDir=lb3app/scripts}
 # Default value of toolsDev, if not set above.
 unused_var=${toolsDev=$resourcesDir/tools/dev}
 unused_var=${bcftools=bcftools}
@@ -87,6 +93,7 @@ echo  \
  inContainer=$inContainer, \
  serverDir=$serverDir, \
  resourcesDir=$resourcesDir, \
+ scriptsDir=$scriptsDir, \
  toolsDev=$toolsDev, \
  bcftools=$bcftools, \
  blastDir=$blastDir, \
@@ -208,20 +215,27 @@ function dbName2Vcf() {
   status=1
   # relative to $vcfDir/$dbName/
   # Some vcf files may have "chr" before $chr.
-  vcfGz="$chr.vcf.gz"
+  # Raw .vcf.gz provided to Pretzel by the data administrator.
+  # This may contain INFO/MAF, otherwise it will be added.
+  vcfInputGz="$chr.vcf.gz"
   if ! cd "$vcfDir"
   then
     echo 1>&$F_ERR 'Error:' "VCF file is not configured"
   elif ! cd "$dbName"
   then
     echo 1>&$F_ERR 'Error:' "VCF dataset dir is not configured", "$datasetId"
-  elif [ ! -f "$vcfGz" ]
-    # $vcfGz may be a symbolic link.
+  elif [ ! -f "$vcfInputGz" ]
+    # $vcfInputGz may be a symbolic link here.
     # bash(1) " ... Except for -h and -L, all FILE-related tests dereference symbolic links."
   then
-    echo 1>&$F_ERR 'Error:' "VCF file is not configured", "$datasetId", "$chr", "$vcfGz"
+    echo 1>&$F_ERR 'Error:' "VCF file is not configured", "$datasetId", "$chr", "$vcfInputGz"
   else
     status=0
+    # This file will have INFO/MAF.
+    vcfGz=$(echo "$vcfInputGz" | sed 's/.vcf/.MAF.vcf/')
+    # Use -e instead of -f, as $vcfInputGz could be a file or symbolic link.
+    [ -e "$vcfGz" ] || make -f $serverDir/$scriptsDir/vcfGenotypeLookup.Makefile "$vcfGz"
+
     # If file does not have an index (.csi), create it.
     # Use -e instead of -f, as csi file could be a file or symbolic link.
     if [ ! -e "$vcfGz".csi ]
