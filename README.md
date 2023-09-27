@@ -238,12 +238,15 @@ cd pretzel/frontend
 npm install
 bower install
 # cd into backend directory
-cd ../backend
+cd ../lb4app
 # Install dependencies
 npm install
 ```
 
-Note that `npm install` in `backend/` and `frontend/` will install the Express.js and
+As part of the process of updating the backend server from Loopback version 3 to 4, backend/ has been renamed to lb4app/lb3app/.
+(the current plan is to rename lb4app/ to backend/).
+
+Note that `npm install` in `lb4app/` and `frontend/` will install the Express.js and
 Ember.js dependencies, including Express.js and Ember.js themselves, into those directories. For
 example, `ember` is in `frontend/node_modules/ember-cli/bin/`.
 
@@ -262,8 +265,7 @@ cd ..
 The Loopback backend expects the compiled client in its client/ sub-directory. You can simply create a soft link:
 
 ```
-ln -s ../frontend/dist backend/client
-ln -s ../../../../backend/common/utilities/interval-overlap.js frontend/app/utils/draw/.
+ln -s ../frontend/dist lb4app/client
 ```
 
 ## Running
@@ -273,8 +275,8 @@ ln -s ../../../../backend/common/utilities/interval-overlap.js frontend/app/util
 You should now be able to start the Loopback backend:
 
 ```
-cd backend
-EMAIL_VERIFY=NONE AUTH=ALL node server/server.js
+cd lb4app
+EMAIL_VERIFY=NONE AUTH=ALL node lb3app/server/server.js
 ```
 Note that this runs the app without any authentication or security and is only suitable for local installs or internal networks. See below for details on setting up user accounts and authentication.
 
