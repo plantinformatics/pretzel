@@ -468,9 +468,11 @@ exports.cacheblocksFeaturesCounts = cacheblocksFeaturesCounts;
  * @param db
  * @param models
  * @param datasetId
+ * @param isZoomed	true causes blockFeaturesCounts() : useCache to be false
+ * This enables creating .MAF.vcf.gz{,.csi} etc without recalculating the zoomed-out histogram.
  * @param options
  */
-function cacheblocksFeaturesCounts(db, models, datasetId, options) {
+function cacheblocksFeaturesCounts(db, models, datasetId, isZoomed, options) {
   const fnName = 'cacheblocksFeaturesCounts';
 
   const blockFeaturesCountsP = util.promisify(models.Block.blockFeaturesCounts);
@@ -508,7 +510,7 @@ function cacheblocksFeaturesCounts(db, models, datasetId, options) {
            */
           countsP = blockFeaturesCountsP.apply(
             models.Block,
-            [blockId, interval, /*nBins*/100, /*isZoomed*/false,
+            [blockId, interval, /*nBins*/100, isZoomed,
              /*useBucketAuto*/undefined, options, /*res*/undefined /*,cb*/])
             .then(counts => counts.reduce((blockSum, bin) => blockSum += bin.count, 0))
             .then(blockSum => datasetSum += blockSum);

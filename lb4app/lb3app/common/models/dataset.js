@@ -601,15 +601,18 @@ module.exports = function(Dataset) {
   };
 
 
-  Dataset.cacheblocksFeaturesCounts = function(id, options, cb) {
+  /**
+   * @param isZoomed	true causes blockFeaturesCounts() : useCache to be false
+   */
+  Dataset.cacheblocksFeaturesCounts = function(id, isZoomed, options, cb) {
     const
     fnName = 'cacheblocksFeaturesCounts',
     db = this.dataSource.connector,
     models = this.app.models;
-    cacheblocksFeaturesCounts(db, models, id, options)
+    cacheblocksFeaturesCounts(db, models, id, isZoomed, options)
       .then((result) => cb(null, result))
       .catch((err) => {
-        console.log(fnName, err.statusCode, err);
+        console.log(fnName, id, isZoomed, err.statusCode, err);
         cb(err);});
   };
 
@@ -785,6 +788,7 @@ module.exports = function(Dataset) {
   Dataset.remoteMethod('cacheblocksFeaturesCounts', {
     accepts: [
       {arg: 'id', type: 'string', required: true},
+      {arg: 'isZoomed', type: 'boolean', required: false, default : 'false'},
       {arg: "options", type: "object", http: "optionsFromRequest"}
     ],
     http: {verb: 'get'},

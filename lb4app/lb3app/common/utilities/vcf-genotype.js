@@ -36,8 +36,14 @@ function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
   const
   fnName = 'vcfGenotypeLookup',
   headerOnly = preArgs.headerOnly,
+  /** These parameters are supported by view only, not query, so if
+   * present then view | query will be used.
+   * In that case moreParams will be passed to view, and paramsForQuery
+   * will be passed to query.
+   */
+  viewRequired = preArgs.snpPolymorphismFilter || preArgs.mafThreshold,
   command = headerOnly ? 'view' : preArgs.SNPList ? 'counts' :
-    preArgs.requestFormat ? 'query' : 'view';
+    preArgs.requestFormat ? (viewRequired ? 'view_query' : 'query') : 'view';
   /* isec is only meaningful with >1 datasets. The caller
    * vcfGenotypeLookupDataset() only passes isecDatasetIds when
    * isecDatasetIds.length > 1
@@ -57,13 +63,25 @@ function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
     isecFlags || '', isecDatasetIds || '',
     '-r', preArgs.region ];
   /** from BCFTOOLS(1) :
+   bcftools view [OPTIONS] file.vcf.gz [REGION [...]]
       -h, --header-only
           output the VCF header only
 
       -H, --no-header
           suppress the header in VCF output
+
+   bcftools query [OPTIONS] file.vcf.gz [file.vcf.gz [...]]
+       -H, --print-header
+           print header
+
+  * headerOnly implies command==='view' i.e. -h
+  * When ! headerOnly, the header is required;
+  * *  for view : --with-header is default
+  * *  for query : use -H
   */
-  const headerOption = headerOnly ? '-h' : '-H';
+  const
+  headerOption = headerOnly ? /*command===view*/'-h' :
+    (command === 'view') ? '' : '-H';
 
   if (preArgs.requestFormat) {
     const
@@ -81,9 +99,19 @@ function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
       (requestInfo ? '\t%INFO/tSNP' : '') +
       '\t%INFO/MAF' +
       '[\t' + formatGT + ']\n';
-    moreParams = moreParams.concat(headerOption, '-f', format);
+    /** Params passed to query if view|query is used, otherwise to command. */
+    const paramsForQuery = ['-queryStart', headerOption, '-f', format, '-queryEnd'];
+    moreParams = moreParams.concat(paramsForQuery);
     if (headerOnly) {
       moreParams.push('--force-samples');
+    }
+    if (preArgs.snpPolymorphismFilter) {
+      moreParams.push('--genotype');
+      moreParams.push('het');
+    }
+    if (preArgs.mafThreshold) {
+      moreParams.push('--min-af');
+      moreParams.push('' + preArgs.mafThreshold);
     }
   }
   const samples = preArgs.samples;
@@ -100,9 +128,9 @@ function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
     moreParams = moreParams.concat('-S', '/dev/null');
   }
   /** avoid tracing samples, and moreParams[9] which is the samples. */
-  console.log(fnName, datasetDir, preArgs.region, preArgs.requestFormat, samples?.length, moreParams.slice(0, 9));
+  console.log(fnName, datasetDir, preArgs.region, preArgs.requestFormat, samples?.length, moreParams.slice(0, 9+3));
   if (! dataOutCb) {
-    const lineFilter = preArgs.snpPolymorphismFilter ? snpPolymorphismFilter : null;
+    const lineFilter = false && preArgs.snpPolymorphismFilter ? snpPolymorphismFilter : null;
     dataOutCb = dataOutReplyClosureLimit(cb, lineFilter, nLines);
   }
 

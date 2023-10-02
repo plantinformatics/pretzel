@@ -22,6 +22,9 @@
 # where datasetId is a datablock not a reference / parent.
 # This is split into the array isecDatasetIdsArray.
 # @param preArgs	remaining args : $*
+# preArgs may contain -queryStart paramsForQuery -queryEnd
+# paramsForQuery : Params passed to query if view|query is used, otherwise to command.
+
 
 #  args to bcftools other than command vcfGz; named preArgs because they could
 #  be inserted between command and vcfGz arguments to bcftools.
@@ -147,10 +150,27 @@ fi
   shift 5
   # Switch off logging for preArgs, which contains samples which may be a large list.
   set +x
-  preArgs="$*"
+
+  preArgsAll=("${@}")
+  # split preArgsAll into 2 arrays : preArgs and paramsForQuery.
+  # paramsForQuery is demarcated by -queryStart and -queryEnd.
+  preArgs=(); paramsForQuery=(); inQuery=;
+  for argVal in "${preArgsAll[@]}"; do
+    case "$argVal" in
+      -queryStart) inQuery='1';;
+      -queryEnd)   inQuery=;;
+      *) if [ -z "$inQuery" ] ;
+         then preArgs+=("$argVal");
+         else paramsForQuery+=("$argVal");
+         fi
+         ;;
+    esac;
+  done
+
   echo command="$command", datasetIdParam="$datasetIdParam", scope="$scope", \
        isecFlags="$isecFlags", isecDatasetIds="$isecDatasetIds",	\
-       preArgs=$preArgs  >> $logFile
+       paramsForQuery="${paramsForQuery[@]}",	\
+       preArgs="${preArgs[@]}"  >> $logFile
 
 set -x
 
@@ -300,15 +320,17 @@ function prepareCommonSNPs() {
 # and using params, which are of the form -r 1A:1188384-1191531
 # @param command
 # @param vcfGz
-# @param ...regionParams
+# @param ..."${preArgs[@]}", using only the initial regionParams
+# Uses : "${preArgs[@]}" "${paramsForQuery[@]}" 
 function bcftoolsCommand() {
   command="$1";   shift
   vcfGz="$1";     shift
+  >> $serverDir/$logFile echo isecDatasetIdsArray : ${#isecDatasetIdsArray[@]} ${isecDatasetIdsArray[@]}, vcfGzs ${#vcfGzs[@]} ${vcfGzs[@]}
   # ${@} is ${preArgs[@]}; used this way it is split into words correctly - i.e. 
   # '%ID\t%POS\t%REF\t%ALT[\t%TGT]\n' is a single arg.
   if [ ${#isecDatasetIdsArray[@]} -gt 0 ]
   then
-    # uses $vcfGzs.  $@ is "${regionParams[@]}"
+    # uses $vcfGzs.  $@ is preArgs, starting with "${regionParams[@]}"
     regionParams=($1 $2); shift 2;
     # Use absolute path for logFile because this is within cd ... "$vcfDir"
     >> $serverDir/$logFile echo regionParams="${regionParams[@]}", "${@}"
@@ -319,8 +341,8 @@ function bcftoolsCommand() {
     then
       # regionParams are used by prepareCommonSNPs and cannot be used with
       # -R "$commonSNPs", which incorporates them.
-      "$bcftools" view  -O v -R "$commonSNPs" "$vcfGz" | \
-        2>&$F_ERR "$bcftools" "$command" "${@}"
+      2>&$F_ERR "$bcftools" view  -O v -R "$commonSNPs" "$vcfGz" "${preArgs[@]}" | \
+        2>&$F_ERR "$bcftools" "$command" "${paramsForQuery[@]}"
     else
       2>&$F_ERR "$bcftools" view -O v -R "$commonSNPs" \
                 "$vcfGz"
@@ -328,12 +350,13 @@ function bcftoolsCommand() {
     fi
   else
     >> $serverDir/$logFile echo ${#vcfGz}
+    # Perhaps this check should be on ${#vcfGzs[@]}, but that is equal - seems it must be 0 at this point ?
     if [ ${#isecDatasetIdsArray[@]} -gt 1 ]
     then
       >> $serverDir/$logFile echo Expecting just 1 vcf.gz : ${#vcfGz}
     fi
     # Use SNPList if preArgs contains no samples, i.e. -S /dev/null
-    if [ "$command" = counts ] || echo "$preArgs" | fgrep /dev/null >/dev/null 
+    if [ "$command" = counts ] || echo "${preArgs[@]}" | fgrep /dev/null >/dev/null 
     then
       if vcfGz_=$(ensureSNPList $vcfGz)
       then
@@ -343,8 +366,14 @@ function bcftoolsCommand() {
       command=query
     fi
 
-    # ${@} here is regionParams
-    2>&$F_ERR "$bcftools" "$command" "$vcfGz" "${@}"
+    # ${@} here is preArgs, starting with regionParams
+    if [ "$command" = view_query ]
+    then
+      2>&$F_ERR "$bcftools" view  "$vcfGz"  "${regionParams[@]}"  "${preArgs[@]}" -Ou | \
+        2>&$F_ERR "$bcftools" query "${paramsForQuery[@]}"
+    else
+      2>&$F_ERR "$bcftools" "$command" "$vcfGz" "${regionParams[@]}" "${preArgs[@]}" "${paramsForQuery[@]}"
+    fi
   fi
 }
 
@@ -423,12 +452,12 @@ else
       # see vcf-genotype.js : vcfGenotypeLookup() : preArgs.samples
       # set +x
       # some elements in preArgs may contain white-space, e.g. format "%ID\t%POS[\t%TGT]\n"
-      if bcftoolsCommand "$command" "$vcfGz" "${@}"
+      if bcftoolsCommand "$command" "$vcfGz" "${preArgs[@]}" # uses ... "${preArgs[@]}" "${paramsForQuery[@]}"
       then
         status=$?	# 0
       else
         status=$?
-        echo 1>&$F_ERR 'Error:' "Unable to run bcftools $command $datasetIdParam $scope $isecFlags $isecDatasetIds $commonSNPs $vcfGz $*"
+        echo 1>&$F_ERR 'Error:' "Unable to run bcftools $command $datasetIdParam $scope $isecFlags $isecDatasetIds $commonSNPs $vcfGz ${preArgs[@]}"
         # Possibly transient failure because 1 request is doing isec
         # and another tries to read empty isec output.
         [ -n "$isecDatasetIds" ] && 1>&$F_ERR ls -gGd "$commonSNPs"
