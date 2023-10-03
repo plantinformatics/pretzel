@@ -36,13 +36,18 @@ function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
   const
   fnName = 'vcfGenotypeLookup',
   headerOnly = preArgs.headerOnly,
+  /** snpPolymorphismFilter is not applicable if SNPList because if the
+   * number of samples requested is <=1 then every row appears homozygous.
+   */
+  snpPolymorphismFilter = ! preArgs.SNPList && preArgs.snpPolymorphismFilter,
   /** These parameters are supported by view only, not query, so if
    * present then view | query will be used.
    * In that case moreParams will be passed to view, and paramsForQuery
    * will be passed to query.
    */
-  viewRequired = preArgs.snpPolymorphismFilter || preArgs.mafThreshold,
-  command = headerOnly ? 'view' : preArgs.SNPList ? 'counts' :
+  viewRequired = snpPolymorphismFilter || preArgs.mafThreshold,
+  command = headerOnly ? 'view' : preArgs.SNPList ?
+    (viewRequired ? 'counts_view' : 'counts_query') :
     preArgs.requestFormat ? (viewRequired ? 'view_query' : 'query') : 'view';
   /* isec is only meaningful with >1 datasets. The caller
    * vcfGenotypeLookupDataset() only passes isecDatasetIds when
@@ -105,10 +110,12 @@ function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
     if (headerOnly) {
       moreParams.push('--force-samples');
     }
-    if (preArgs.snpPolymorphismFilter) {
+    /** default is no het filter, i.e. false */
+    if (snpPolymorphismFilter) {
       moreParams.push('--genotype');
       moreParams.push('het');
     }
+    /** default is no MAF filter, i.e. >= 0, (MAF is >=0) */
     if (preArgs.mafThreshold) {
       moreParams.push('--min-af');
       moreParams.push('' + preArgs.mafThreshold);
@@ -152,6 +159,8 @@ exports.vcfGenotypeLookup = vcfGenotypeLookup;
  * @param block  object instance of Block model
  * @param interval  bin boundaries within this range
  * @param nBins number of bins to group block's features into
+ * @param isZoomed
+ * @param userOptions optional. user settings : {mafThreshold, snpPolymorphismFilter}
  *
  * @return Promise yielding : Array	: binned feature counts
  * in the same format as block-features.js :
@@ -160,7 +169,8 @@ exports.vcfGenotypeLookup = vcfGenotypeLookup;
  * { "_id" : 33000000, "count" : 38201, "idWidth" : [ 1000000 ] }
  * { "_id" : 34000000, "count" : 47323, "idWidth" : [ 1000000 ] }
  */
-exports.vcfGenotypeFeaturesCounts = function(block, interval, nBins = 10, isZoomed, cb) {
+exports.vcfGenotypeFeaturesCounts = function(
+  block, interval, nBins = 10, isZoomed, userOptions, cb) {
   // header comment copied from block-features.js : blockFeaturesCounts()
   const fnName = 'vcfGenotypeFeaturesCounts';
   let result;
@@ -186,7 +196,12 @@ exports.vcfGenotypeFeaturesCounts = function(block, interval, nBins = 10, isZoom
     domainInteger = interval.map((d) => d.toFixed(0)),
     region = scope + ':' + domainInteger.join('-'),
     preArgs = {region, samples : null, requestFormat : 'CATG', SNPList : true},
+    // arguments 1-3 are used : block, interval, nBins
     summary = new vcfToSummary(...arguments);
+    if (userOptions) {
+      Object.entries(userOptions).forEach(([key, value]) =>
+        { if (value !== undefined) { preArgs[key] = value; } });
+    }
     function sumCb(error, text) {
       let result;
       if (error) {

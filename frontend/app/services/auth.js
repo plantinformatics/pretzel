@@ -304,10 +304,21 @@ export default Service.extend({
     return this._ajax('Blocks/pathsByReference', 'GET', {id : [blockA, blockB], blockA, blockB, reference, max_distance, options : options}, true);
   },
 
-  getBlockFeaturesCounts(block, interval, nBins, isZoomed, useBucketAuto, options) {
+  /** Get histogram of features counts for block in interval.
+   * @param block  blockId, named id in API endpoint for access check supported by loopback
+   * @param nBins number of bins to partition the block's features into
+   * @param interval  undefined or range of locations of features to count
+   * @param isZoomed  true means interval should be used to constrain the location of counted features.
+   * @param useBucketAuto default false, which means $bucket with
+   * boundaries calculated from interval and nBins; otherwise use
+   * $bucketAuto.
+   * @param userOptions user settings : {mafThreshold, snpPolymorphismFilter}
+   * @param options loopback options for find etc, also .server which is used and not sent.
+   */
+  getBlockFeaturesCounts(block, interval, nBins, isZoomed, useBucketAuto, userOptions, options) {
     if (trace_paths)
       dLog('services/auth getBlockFeaturesCounts', block, interval, nBins, isZoomed, useBucketAuto, options);
-    return this._ajax('Blocks/blockFeaturesCounts', 'GET', {id : block, block, interval, nBins, isZoomed, useBucketAuto, options}, true);
+    return this._ajax('Blocks/blockFeaturesCounts', 'GET', {id : block, block, interval, nBins, isZoomed, useBucketAuto, userOptions, options}, true);
   },
 
   getBlockFeaturesCount(blocks, options) {

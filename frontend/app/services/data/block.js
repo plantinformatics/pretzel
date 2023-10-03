@@ -9,6 +9,7 @@ import Service, { inject as service } from '@ember/service';
 import { task, didCancel } from 'ember-concurrency';
 
 import { keyBy } from 'lodash/collection';
+import { pick } from 'lodash/object';
 
 //------------------------------------------------------------------------------
 
@@ -583,8 +584,11 @@ export default Service.extend(Evented, {
                   dLog('getCountsForInterval', interval);
                   countsP = Promise.resolve([]);
                 } else {
+                  const
+                  /** userOptions is optional, and the fields are optional. */
+                  userOptions = pick(this.controls.userSettings.genotype, ['mafThreshold', 'snpPolymorphismFilter']);
                   countsP =
-                  this.get('auth').getBlockFeaturesCounts(blockId, interval, nBins, !!zoomedDomain, useBucketAuto, /*options*/{});
+                  this.get('auth').getBlockFeaturesCounts(blockId, interval, nBins, !!zoomedDomain, useBucketAuto, userOptions, /*options*/{});
                 }
                 return countsP;
               };

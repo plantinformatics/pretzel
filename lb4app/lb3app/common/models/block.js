@@ -791,8 +791,14 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
    * @param useBucketAuto default false, which means $bucket with
    * boundaries calculated from interval and nBins; otherwise use
    * $bucketAuto.
+   * @param userOptions user settings : {mafThreshold, snpPolymorphismFilter}
+   * @param options loopback options
    */
-  Block.blockFeaturesCounts = function(id, interval, nBins, isZoomed, useBucketAuto, options, res, cb) {
+  Block.blockFeaturesCounts = function(id, interval, nBins, isZoomed, useBucketAuto, userOptions, options, res, cb) {
+
+    if (userOptions) {
+      parseBooleanFields(userOptions, ['snpPolymorphismFilter', 'mafThreshold']);
+    }
 
   let
     fnName = 'blockFeaturesCounts',
@@ -805,7 +811,15 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
      * i.e. just the new part would be queried.
      */
     useCache = ! isZoomed || ! interval,
-    cacheId = fnName + '_' + blockId + '_' + nBins +  '_' + useBucketAuto,
+    cacheIdOptions = ! userOptions ? '' : Object.entries(userOptions)
+      .reduce((result, [name, value]) => {
+        if (['mafThreshold', 'snpPolymorphismFilter'].includes(name)
+            && (value !== undefined) && (value !== null) && (value !== '')) {
+          result += '_' + value;
+        }
+        return result;
+      }, ''),
+    cacheId = fnName + '_' + blockId + '_' + nBins +  '_' + useBucketAuto + cacheIdOptions,
     /** set this false to test without reading existing cache */
     readCache = true,
     result = readCache && useCache && cache.get(cacheId);
@@ -828,7 +842,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
             }
             cb(error, result2);
           }
-          vcfGenotypeFeaturesCounts(block, interval, nBins, isZoomed, cacheCb);
+          vcfGenotypeFeaturesCounts(block, interval, nBins, isZoomed, userOptions, cacheCb);
         } else if (dataset.tags?.includes('Germinate')) {
           console.log(fnName, 'not yet implemented for', dataset.tags);
         } else {
@@ -1125,6 +1139,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       {arg: 'nBins', type: 'number', required: false},
       {arg: 'isZoomed', type: 'boolean', required: false, default : 'false'},
       {arg: 'useBucketAuto', type: 'boolean', required: false, default : 'false'},
+      {arg: 'userOptions', type: 'object', required: false},
       {arg: "options", type: "object", http: "optionsFromRequest"},
       {arg: 'res', type: 'object', 'http': {source: 'res'}},
     ],

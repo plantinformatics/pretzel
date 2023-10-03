@@ -67,6 +67,9 @@ exports.parseBooleanFields = parseBooleanFields;
 /** Handle boolean args in objects passed as remoteMethod params.  The boolean args are being received as  strings, e.g.
  * vcfGenotypeLookup() : preArgs : {... , requestInfo: 'false', requestFormat: 'Numerical', requestSamplesAll: 'true', snpPolymorphismFilter: 'false'}
  * Parse these to convert to native boolean values true, false.
+ *
+ * Use this also for numeric values - JSON.parse() works for those also, e.g.
+ * Block.blockFeaturesCounts : userOptions : { ... mafThreshold : '0', ... }
  */
 function parseBooleanFields(object, fieldNames) {
   fieldNames.forEach(fieldName => {

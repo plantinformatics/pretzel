@@ -356,14 +356,16 @@ function bcftoolsCommand() {
       >> $serverDir/$logFile echo Expecting just 1 vcf.gz : ${#vcfGz}
     fi
     # Use SNPList if preArgs contains no samples, i.e. -S /dev/null
-    if [ "$command" = counts ] || echo "${preArgs[@]}" | fgrep /dev/null >/dev/null 
+    # In this case view outputs on stderr : 'Warn: subsetting has removed all samples'
+    # because the SNPList has 1 column and none are selected.  'query' does not output this warning.
+    if [ "$command" = counts_query -o "$command" = counts_view ] || echo "${preArgs[@]}" | fgrep /dev/null >/dev/null 
     then
       if vcfGz_=$(ensureSNPList $vcfGz)
       then
         vcfGz="$vcfGz_"
       fi
       # SNPList=.SNPList
-      command=query
+      command=$(echo "$command" | sed s/counts_//)
     fi
 
     # ${@} here is preArgs, starting with regionParams
