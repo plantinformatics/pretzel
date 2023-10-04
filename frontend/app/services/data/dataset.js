@@ -198,6 +198,8 @@ export default Service.extend(Evented, {
  
   /** Collate the datasets of the servers by the given keyFunction.
    * The calling ComputedProperty should depend on 'apiServers.datasetsWithServerName.[]'.
+   * @param keyFunction	e.g. function nameFn (dataset) { return dataset.get('id') || null; }
+   * @return [key] -> [{dataset, serverName}, ... ]
    */
   datasetsByFunction : function datasetsByFunction (keyFunction) {
     let
@@ -211,7 +213,7 @@ export default Service.extend(Evented, {
         rp.push({dataset, serverName});
       });
       return result;
-    });
+    }, {});
     dLog('datasetsByFunction', datasetsByValue);
     return datasetsByValue;
   },
@@ -236,6 +238,14 @@ export default Service.extend(Evented, {
     dLog('datasetsByNameAllServers', datasetsByName);
     return datasetsByName;
   }),
+  /** Group datasets on all stores/servers by _meta.type.
+   */
+  datasetsByTypeAllServers : computed('apiServers.datasetsWithServerName.[]', function () {
+    function typeFn (dataset) { return dataset.get('_meta.type') || null; }
+    let datasetsByType = this.datasetsByFunction(typeFn);
+    dLog('datasetsByTypeAllServers', datasetsByType);
+    return datasetsByType;
+  }),
   /** Lookup the datasets matching the given parentName, i.e. dataset.parentName === parentName.
    *
    * @param parentName  to match
@@ -259,7 +269,21 @@ export default Service.extend(Evented, {
     if (original)
       datasets = datasets.filter((d) => ! d.dataset.get('_meta._origin'));
     return datasets;
-  }
+  },
+  /** Lookup the datasets matching the given type.
+   *
+   * @param typeName  to match, e.g. 'Genome'
+   * @param original  if true then exclude copied / cached datasets (having ._meta._origin)
+   * @return [ {dataset, serverName}, ... ]
+   */
+  datasetsForType : function(typeName, original) {
+    const
+    datasetsByType = this.get('datasetsByTypeAllServers'),
+    datasets = datasetsByType[typeName];
+    if (original)
+      datasets = datasets.filter((d) => ! d.dataset.get('_meta._origin'));
+    return datasets;
+  },
   
   
 });

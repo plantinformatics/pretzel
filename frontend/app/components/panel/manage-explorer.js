@@ -475,6 +475,9 @@ export default ManageBase.extend({
     return groupsP;
   }),
 
+  /**
+   * @param selectedGroup  null or { id, name, ... } Ember Object
+   */
   selectedGroupChanged(selectedGroup) {
     if (selectedGroup === noGroup) {
       selectedGroup = null;

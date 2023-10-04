@@ -24,6 +24,12 @@
   <modal.body>
   <div class="table labelled-inputs">
 
+      <div class="input-label">Server Type</div>
+       {{form/select-group
+          selectedValue=this.typeSelected
+          values=(to-array-promise-proxy this.typesForSelect)
+          selectedGroupChanged=(action this.selectedTypeChanged) }}
+
       <div class="input-label">Host : Port</div>
       <input name="host" placeholder="e.g. http://localhost:5000"  autofocus="autofocus" autocomplete="url">
 
@@ -32,6 +38,14 @@
 
       <div class="input-label">Password</div>
       <input name="password" type="password" autocomplete="current-password">
+
+      {{#if this.typeIsGerminate}}
+      <div class="input-label">Parent for genotype datasets</div>
+       {{form/select-group
+          selectedValue=this.datasetSelected
+          values=(to-array-promise-proxy this.datasetsForSelect)
+          selectedGroupChanged=(action this.selectedDatasetChanged) }}
+      {{/if}}
 
   </div>
 
