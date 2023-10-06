@@ -1,10 +1,10 @@
-const util = require('util');
+// const util = require('util');
+// promisify = util.promisify;
+import bluebird from 'bluebird';
+const promisify = bluebird/*Promise*/.promisify;
 
-const { Germinate } = require('./germinate');
-const { ErrorStatus } = require('./errorStatus.js');
-
-/* global exports */
-/* global require */
+import { Germinate } from './germinate';
+// const { ErrorStatus } = require('./errorStatus.js');
 
 //------------------------------------------------------------------------------
 /** The scope of this module is :
@@ -15,22 +15,29 @@ const { ErrorStatus } = require('./errorStatus.js');
 //------------------------------------------------------------------------------
 
 let germinateInstance;
+export { useGerminate };
 /** Used by API requests to ensure Germinate session is connected and
  * authenticated, so they can use it to fulfill requests.
+ * @param username, password  optional. Used in frontend not in backend.
  * @return a promise which resolves with germinateInstance or
  * rejects with ErrorStatus(), which the caller can pass to response cb.
  */
-function useGerminate() {
+function useGerminate(username, password) {
   const fnName = 'useGerminate';
   let connectedP;
   if (! germinateInstance) {
       germinateInstance = new Germinate();
   }
+  // if pre-existing germinateInstance and it has these fields, they are overridden.
+  if (username && password) {
+    germinateInstance.setCredentials(username, password);
+  }
   connectedP = germinateInstance.connectedP()
     .then(() => germinateInstance)
     .catch(error => {
       console.log(fnName, 'Germinate', error);
-      throw ErrorStatus(503, error) ; // statusCode
+      // ErrorStatus() is used in server, not useful in frontend/.
+      throw Error(error); // ErrorStatus(503, error) ; // statusCode
     });
 
 /*
@@ -73,12 +80,12 @@ function callSetCacheForBlockP(datasetId, scope) {
   name2DbId = callSetCacheForBlock(datasetId, scope),
   /** if name2DbId is not empty, yield it, otherwise get samples then yield it. */
   p = name2DbId && Object.keys(name2DbId).length ? Promise.resolve(name2DbId) : 
-    util.promisify(germinateGenotypeSamples)(datasetId, scope)
+    promisify(germinateGenotypeSamples)(datasetId, scope)
     .then(samples => callSetCacheForBlock(datasetId, scope));
   return p;
 }
 
-exports.germinateGenotypeSamples = germinateGenotypeSamples;
+export { germinateGenotypeSamples };
 function germinateGenotypeSamples(datasetId, scope, cb) {
   useGerminate()
     .then((germinate) => {
@@ -95,7 +102,7 @@ function germinateGenotypeSamples(datasetId, scope, cb) {
     .catch(cb);
 }
 
-exports.germinateGenotypeLookup = germinateGenotypeLookup;
+export { germinateGenotypeLookup };
 function germinateGenotypeLookup(datasetId, scope, preArgs, nLines, undefined, cb) {
   const
   fnName = 'germinateGenotypeLookup',

@@ -12,6 +12,11 @@ import {
   default as ApiServer,
   removePunctuation
 } from '../components/service/api-server';
+import {
+  default as ApiServerGerminate
+} from '../components/service/api-server-germinate';
+
+import { useGerminate } from '../utils/data/germinate-genotype';
 
 // import ENV from '../../config/environment';
 
@@ -81,7 +86,7 @@ export default Service.extend(Evented, {
        * adapter.host(), so it is not necessary to do apiOrigin || siteOrigin
        * here.
        */
-      let primaryServer = this.addServer(apiOrigin || siteOrigin, undefined, token, clientId);
+      let primaryServer = this.addServer(undefined, apiOrigin || siteOrigin, undefined, token, clientId);
       console.log('primaryServer', primaryServer);
       primaryServer.getVersion();
     }
@@ -92,8 +97,8 @@ export default Service.extend(Evented, {
       let protocol='http://', host = 'plantinformatics.io', // ENV.apiHost,
       /** e.g. map :4200 to :4201, (/00$/, '01') */
       host2 = host.replace(/^/, 'dev.');
-      // this.addServer(protocol + host, 'My.Email@gmail.com', undefined);
-      this.addServer(protocol + host2, 'My.Email@gmail.com', undefined /* , clientId */ );
+      // this.addServer(undefined, protocol + host, 'My.Email@gmail.com', undefined);
+      this.addServer(undefined, protocol + host2, 'My.Email@gmail.com', undefined /* , clientId */ );
     }
   },
 
@@ -108,9 +113,10 @@ export default Service.extend(Evented, {
 
   /** Add a new ApiServer.
    * Store it in this.servers, indexed by .name = .host_safe()
+   * @param typeName  'Pretzel' (default) or 'Germinate'
    * @return server (Ember Object) ApiServer
    */
-  addServer : function (url, user, token, clientId) {
+  addServer : function (typeName = 'Pretzel', url, user, token, clientId) {
     // const MyComponent = Ember.getOwner(this).factoryFor('component:service/api-server');
     let serverBase = 
       {
@@ -362,14 +368,19 @@ export default Service.extend(Evented, {
 
   // ---------------------------------------------------------------------------
 
-
-  ServerLogin: function(url, user, password) {
+  /**
+   * @return a promise yielding server or throwing error
+   */
+  ServerLogin: function(typeName, url, user, password) {
     let me = this;
     if ((url.indexOf('http://') == -1) &&
         (url.indexOf('https://') == -1)) {
       url = 'http://' + url;
     }
-    let promise = 
+    const
+    typeIsGerminate = (typeName === 'Germinate'),
+    loginP = typeIsGerminate ?
+        useGerminate(user, password) :
     $.ajax({
       url: url + '/api/Clients/login',
       type: 'POST',
@@ -379,12 +390,18 @@ export default Service.extend(Evented, {
         email: user,
         password: password
       })
-    }).then(function(response) {
-      let token = response.id;
+    }),
+    promise = loginP.then(function(response) {
+      // if typeIsGerminate then response is instance of Germinate.
+      let token = typeIsGerminate ? response.token : response.id;
       let server =
-        me.addServer(url, user, token, response.userId);
+          me.addServer(typeName, url, user, token, response.userId);
+      if (typeIsGerminate) {
+        server.germinateInstance = response;
+      }
       server.getDatasets();
       server.getVersion();
+      return server;
     }).catch(function (error) {
       let
       re = error && error.responseJSON && error.responseJSON.error,

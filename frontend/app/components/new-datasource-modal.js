@@ -38,10 +38,12 @@ export default Component.extend({
 
   actions: {
     onConfirm() {
-      console.log('onConfirm');
+      const fnName = 'onConfirm';
+      console.log(fnName);
       let host = $('input[name=host]', this.element).val();
       let user = $('input[name=user]', this.element).val();
       let password = $('input[name=password]', this.element).val();
+      const serverType = this.typeSelected.id;
       if (host == "" || user == "" || password == "") {
         /* host, user, password are required inputs.
          * Can make 'confirm' button sensitive when they are non-empty.
@@ -51,11 +53,7 @@ export default Component.extend({
          * This can be changed to use ember input binding value= instead of
          * jQuery $('input[name=...]', this.element).val() (or .value ?).
          */
-        dLog('onConfirm', 'empty input', host, user, password.length);
-      }
-      else if (this.typeIsGerminate) {
-        const warningText = this.typeSelected.id + ' not implemented';
-        this.set('errorText', warningText);
+        dLog(fnName, 'empty input', host, user, password.length);
       }
       else {
         if (host.match(/\/mapview\/.*/)) {
@@ -68,9 +66,15 @@ export default Component.extend({
         }
 
         this.set('errorText', null);
-        let promise = this.get('apiServers').ServerLogin(host, user, password);
+        let promise = this.get('apiServers').ServerLogin(serverType, host, user, password);
         promise
-          .then(() => { this.close(); })
+          .then((server) => {
+            if (this.typeIsGerminate) {
+              server.parentName = this.datasetSelected;
+              dLog(fnName, server);
+            }
+            this.close();
+          })
           .catch((error) => {
             let
             errorText = error ?

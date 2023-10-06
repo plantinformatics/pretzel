@@ -47,7 +47,7 @@ const testServerURL = 'https://test-server.brapi.org/brapi/v2';
 const yambase = 'https://www.yambase.org/brapi/v1';
 const
 /** scheme + userinfo + host + port */
-germinateServerDomain = 'https://germinate.germinate.plantinformatics.io',
+germinateServerDomain = 'https://germinate.plantinformatics.io',
 germinateServerURL = germinateServerDomain + '/api';
 const serverURL = germinateServerURL; // testServerURL;
 const brapi_v = 'brapi/v2';
@@ -86,6 +86,11 @@ Germinate.prototype.setToken = setToken;
 function setToken(token) {
   this.token = token;
   this.initBrAPIRoot(token);
+}
+Germinate.prototype.setCredentials = setCredentials;
+function setCredentials(username, password) {
+  this.username = username;
+  this.password = password;
 }
 Germinate.prototype.connect = connect;
 /** Use Germinate login 'api/token'
@@ -237,12 +242,12 @@ function fetchEndpoint_bent(endpoint, method = 'GET', body = undefined) {
 }
 
 Germinate.prototype.login = login;
-function login() {
+function login(username_, password_) {
   let tokenP;
   const
   fnName = 'login',
-  username = isNodeJs ? env.germinate_username : env.username,
-  password = isNodeJs ? env.germinate_password : env.password;
+  username = username_ || this.username || (isNodeJs ? env.germinate_username : env.username),
+  password = password_ || this.password || (isNodeJs ? env.germinate_password : env.password);
   if (username && password) {
     const
     body = {username, password},

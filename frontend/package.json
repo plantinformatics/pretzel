@@ -88,6 +88,7 @@
   "private": true,
   "dependencies": {
     "@solgenomics/brapijs": "https://github.com/solgenomics/BrAPI-js.git",
+    "bluebird": "^3.7.2",
     "caniuse-lite": "^1.0.30001349",
     "colresizable": "github:felipedgarcia/colresizable",
     "d3-bboxCollide": "^1.0.4",
