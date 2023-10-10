@@ -125,8 +125,10 @@ export default Service.extend(Evented, {
         token : token,
         clientId
       },
+    typeIsGerminate = (typeName === 'Germinate'),
     ownerInjection = getOwner(this).ownerInjection(),
-    server = ApiServer.create(
+    apiServerClass = typeIsGerminate ? ApiServerGerminate : ApiServer,
+    server = apiServerClass.create(
       ownerInjection,
       serverBase),
     servers = this.get('servers'),

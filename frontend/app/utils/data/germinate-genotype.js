@@ -89,7 +89,7 @@ export { germinateGenotypeSamples };
 function germinateGenotypeSamples(datasetId, scope, cb) {
   useGerminate()
     .then((germinate) => {
-    const samplesP = germinate.samples('4' /*datasetId, scope*/);
+    const samplesP = germinate.samples(datasetId);
     samplesP
       .then(response => {
         const samples = response.result.data.map(d => d.callSetName);
@@ -138,6 +138,34 @@ function germinateGenotypeLookup(datasetId, scope, preArgs, nLines, undefined, c
       .catch(error => cb(error));
     })
     .catch(cb);
+}
+
+//------------------------------------------------------------------------------
+/** copied from lb4app/lb3app/common/models/block.js : Block.vcfGenotypeLookup() :  ensureSamplesParam() */
+
+export { ensureSamplesParam };
+
+/** Ensure that preArgs.samples is defined : if undefined, request samples
+ * and use the first one.  */
+function ensureSamplesParam(datasetId, scope, preArgs) {
+  let argsP;
+  if (! preArgs?.samples?.length) {
+    argsP = promisify(germinateGenotypeSamples)(datasetId, scope)
+      .then(samples => {
+        let sample;
+        if (samples.length) {
+          sample = samples[0];
+        } else {
+          sample = '';
+        }
+        // could use Object.assign() to avoid mutating preArgs.
+        preArgs.samples = sample;
+        return preArgs;
+      });
+  } else {
+    argsP = Promise.resolve(preArgs);
+  }
+  return argsP;
 }
 
 //------------------------------------------------------------------------------

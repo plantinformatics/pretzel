@@ -206,7 +206,10 @@ export default Service.extend(Evented, {
       datasetsWithServerName = this.get('apiServers.datasetsWithServerName'),
     datasetsByValue = datasetsWithServerName.reduce(function(result, d) {
       let serverName = d.serverName;
-      d.datasetsBlocks.forEach(function (dataset) {
+      /** allow apiServer .datasetsBlocks to be undefined, e.g. when
+       * datasets request fails after a successful login.
+       */
+      d.datasetsBlocks?.forEach(function (dataset) {
         /** key will be .parentName or .id (name)  */
         let key = keyFunction(dataset),
         rp = result[key] || (result[key] = []);

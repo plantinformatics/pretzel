@@ -535,7 +535,8 @@ export default Service.extend(Evented, {
         blockIds.map((blockId) => [blockId, this.peekBlock(blockId)])
         /** URL mapsToView may contain blockId of another server which is not
          * currently connected, and hence blockAndId[1] is undefined. */
-        .filter((blockAndId) => blockAndId[1] && blockAndId[1].get('isData'))
+        .filter((blockAndId) => blockAndId[1] && blockAndId[1].get('isData')
+                && ! blockAndId[1].hasTag('Germinate'))
         .map(
           (blockAndId) => {
           let [blockId, block] = blockAndId;

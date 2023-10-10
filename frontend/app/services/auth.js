@@ -13,6 +13,12 @@ import {
 import { omitBy, extendWith } from 'lodash/object';
 import { after } from 'lodash/function';
 
+import bluebird from 'bluebird';
+const promisify = bluebird/*Promise*/.promisify;
+
+import {
+  germinateGenotypeSamples, germinateGenotypeLookup, ensureSamplesParam,
+} from '../utils/data/germinate-genotype';
 
 /* global EventSource */
 
@@ -31,6 +37,10 @@ const SSE_EventID_EOF = '-1';
 function omitUndefined(value) {
   return JSON.parse(JSON.stringify(value));
 }
+
+const
+germinateGenotypeSamplesP = promisify(germinateGenotypeSamples),
+germinateGenotypeLookupP = promisify(germinateGenotypeLookup);
 
 /*----------------------------------------------------------------------------*/
 
@@ -522,6 +532,34 @@ export default Service.extend({
         {server : apiServer, data : dataIn} :
         this._server(route, dataIn),
      url = this._endpoint(server, route);
+
+    const featuresCountEndpoints = [
+      'Blocks/blockFeaturesCount',
+      'Blocks/blockFeatureLimits'];
+    const vcfGenotypeEndpoints = [
+      'Blocks/genotypeSamples',
+      'Blocks/vcfGenotypeLookup',
+    ];
+    if ((server.serverType === 'Germinate')) {
+      dLog(route, featuresCountEndpoints.includes(route));
+      let vcfGenotypeP;
+      if (route === 'Blocks/genotypeSamples') {
+        /** could handle this in genotypeSamples(), if block.hasTag('Germinate') */
+        const
+        {datasetId, scope} = dataIn;
+        vcfGenotypeP = germinateGenotypeSamplesP(datasetId, scope);
+      } else if (route === 'Blocks/vcfGenotypeLookup') {
+        const
+        {datasetId, scope, preArgs, nLines} = dataIn;
+        /** copied from lb4app/lb3app/common/models/block.js : Block.vcfGenotypeLookup() : genotypeLookup() */
+        vcfGenotypeP =
+          ensureSamplesParam(datasetId, scope, preArgs).then(
+            preArgs => germinateGenotypeLookupP(datasetId, scope, preArgs, nLines, undefined));
+      } else  {
+        vcfGenotypeP = Promise.resolve([]);
+      }
+      return vcfGenotypeP;
+    }
 
     let config = {
       url,

@@ -69,6 +69,7 @@ export default Component.extend({
         let promise = this.get('apiServers').ServerLogin(serverType, host, user, password);
         promise
           .then((server) => {
+            server.serverType = serverType;
             if (this.typeIsGerminate) {
               server.parentName = this.datasetSelected;
               dLog(fnName, server);

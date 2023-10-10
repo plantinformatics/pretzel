@@ -35,7 +35,12 @@ if (isNodeJs) {
 import fetch from 'fetch';
 import ENV from '../../config/environment';  env = ENV.germinate;
 
-const fetchEndpoint = isNodeJs ? fetchEndpoint_bent : fetchEndpoint_fetch;
+/**
+ * signature : (endpoint, method = 'GET', body = undefined) -> promise
+ * @param this  Germinate
+ * @see fetchEndpoint()
+ */
+const fetchEndpointFn = isNodeJs ? fetchEndpoint_bent : fetchEndpoint_fetch;
 
 //------------------------------------------------------------------------------
 
@@ -138,8 +143,39 @@ function serverinfo() {
     });
 }
 
+//------------------------------------------------------------------------------
+
 Germinate.prototype.fetchEndpoint = fetchEndpoint;
+/** Call bent() or fetch() for Node.js or browser respectively.
+ * @param this  Germinate
+ * @param endpoint
+ * @param method = 'GET'
+ * @param body = undefined
+ * @return promise yielding body of API response
+ */
+function fetchEndpoint() {
+  const
+  fetchEndpointP = fetchEndpointFn.apply(this, arguments)
+    .then(response => responseValueP(response));
+  return fetchEndpointP;
+}
+
+/** Access the value from fetchEndpoint().
+ * fetch() response has .ok and .json() returns a promise.
+ * bent()() response is the parsed data.
+ *
+ * This is used in all cases of fetchEndpoint().
+ */
+function responseValueP(response) {
+  const value = response.ok ? response?.json() : Promise.resolve(response);
+  return value;
+}
+
+//--------------------------------------
+
+
 /** Use fetch() for an endpoint which is not BrAPI, i.e. is not in serverURLBrAPI.
+ * @param this  Germinate
  * @param endpoint e.g. 'marker/table'
  * @return result of fetch() - promise yielding response or error
  */
@@ -210,6 +246,7 @@ function fetchEndpoint_fetch_login(endpoint, method = 'GET', body = undefined) {
 }
 
 /**
+ * @param this  Germinate
  * @param body bent() does not require body to be string - it will JSON.stringify().
  */
 function fetchEndpoint_bent(endpoint, method = 'GET', body = undefined) {
@@ -241,6 +278,8 @@ function fetchEndpoint_bent(endpoint, method = 'GET', body = undefined) {
   return promise;
 }
 
+//------------------------------------------------------------------------------
+
 Germinate.prototype.login = login;
 function login(username_, password_) {
   let tokenP;
@@ -261,14 +300,6 @@ function login(username_, password_) {
     tokenP =
       // fetchEndpoint_fetch_login(endpoint, method, body)
     this.fetchEndpoint(endpoint, method, body)
-      .then(response => {
-        dLog(fnName, response);
-        /** fetch() response has .ok and .json() returns a promise.
-         * bent()() response is the parsed data.
-         */
-        const objP = response.ok ? response?.json() : Promise.resolve(response);
-        return objP;
-      })
       .then(obj => {
         console.log(fnName, obj);
         return obj.token;
@@ -283,7 +314,31 @@ function login(username_, password_) {
   return tokenP;
 }
 
+//------------------------------------------------------------------------------
 
+
+Germinate.prototype.maps = maps;
+/** Get the list of genotype datasets.
+ */
+function maps() {
+  const
+  promise = this.fetchEndpoint(brapi_v + '/maps');
+  return promise;
+}
+
+Germinate.prototype.linkagegroups = linkagegroups;
+/** Get the list of linkagegroups (e.g. chromosomes) of a map (i.e. dataset).
+ */
+function linkagegroups(mapDbId) {
+  /** refn :
+   * https://brapigenotyping21.docs.apiary.io/#/reference/genome-maps/get-maps-map-db-id-linkagegroups
+   * /maps/{mapDbId}/linkagegroups
+   */
+  const
+  promise = 
+    this.fetchEndpoint(brapi_v + '/maps/' + mapDbId + '/linkagegroups');
+  return promise;
+}
 
 Germinate.prototype.markers = markers;
 function markers() {
@@ -358,3 +413,5 @@ function callsetsCalls(dataset, start, end) {
 
   return callsP;
 }
+
+//------------------------------------------------------------------------------

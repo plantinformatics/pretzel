@@ -414,6 +414,12 @@ export default Model.extend({
    * .featureLimits until requested
    */
   ensureFeatureLimits() {
+    if (this.hasTag('Germinate')) {
+      this.set('featureLimits', [1, 700e6]);
+      this.set('featureValueCount', 0);
+      return;
+    }
+
     let limits = this.get('featureLimits');
     /** Reference blocks don't have .featureLimits so don't request it.
      * block.get('isDataCount') depends on featureCount, which won't be present for
@@ -454,6 +460,9 @@ export default Model.extend({
   getLimits: function () {
     let blockId = this.get('id');
     dLog("block getLimits", blockId);
+    if (this.hasTag('Germinate')) {
+      return {_id : blockId, min : 1, max: 700e6};
+    }
 
     let blockP =
       this.get('auth').getBlockFeatureLimits(blockId, /*options*/{});

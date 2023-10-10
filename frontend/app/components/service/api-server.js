@@ -46,7 +46,7 @@ function removePunctuation(text) {
  *  .token  after login on that host, this is the authorization token;
  *
  */
-export default EmberObject.extend({
+const ApiServerAttributes = {
   dataset: service('data/dataset'),
   block: service('data/block'),
   apiServers: service(),
@@ -265,6 +265,7 @@ export default EmberObject.extend({
     })
 
 
-});
+};
+export default EmberObject.extend(ApiServerAttributes);
 
-export { removePunctuation };
+export { removePunctuation, ApiServerAttributes };
