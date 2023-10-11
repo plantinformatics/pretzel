@@ -71,7 +71,7 @@ export default Component.extend({
           .then((server) => {
             server.serverType = serverType;
             if (this.typeIsGerminate) {
-              server.parentName = this.datasetSelected;
+              server.parentName = this.datasetSelected.id;
               dLog(fnName, server);
             }
             this.close();
@@ -120,8 +120,10 @@ export default Component.extend({
     }
     */
     this.set('typeSelected', selectedType);
+    if ((selectedType.id === 'Germinate') /*&& $('input[name=host]', this.element).val() === ''*/) {
+      $('input[name=host]', this.element).val('https://germinate.plantinformatics.io');
+    }
   },
-
 
   //----------------------------------------------------------------------------
 

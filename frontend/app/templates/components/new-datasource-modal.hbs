@@ -31,7 +31,7 @@
           selectedGroupChanged=(action this.selectedTypeChanged) }}
 
       <div class="input-label">Host : Port</div>
-      <input name="host" placeholder="e.g. http://localhost:5000"  autofocus="autofocus" autocomplete="url">
+      <input name="host" placeholder="e.g. http://localhost:5000"  autofocus="autofocus" autocomplete="url" disabled={{this.typeIsGerminate}}>
 
       <div class="input-label">User</div>
       <input name="user" placeholder="Email address" autocomplete="email">

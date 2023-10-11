@@ -74,6 +74,7 @@ export default EmberObject.extend(ApiServerAttributes, {
       blockAttributes = {
         name,
         id : germinateDataset.mapDbId + '_' + name,
+        scope : name + 'A',
         featureCount : linkageGroup.markerCount,
       },
       blockP = store.createRecord('Block', blockAttributes);
@@ -84,7 +85,8 @@ export default EmberObject.extend(ApiServerAttributes, {
       datasetAttributes = {
         name : germinateDataset.mapName,
         id : germinateDataset.mapDbId,
-        // type
+        parentName : this.parentName,
+        // type, meta.type ?
         tags : ['view', 'Genotype', 'Germinate'],
         meta : {paths : 'false', germinate : germinateDataset},
         // namespace
