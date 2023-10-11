@@ -228,7 +228,7 @@ AxisDraw.prototype.draw2 = function draw2(selections, axes, newRender, stacksAxe
   resultSelections.g = g;
 
   // could use axis1d.axisSelect = d3.select(this)
-  axisG.each(function(axis1d, i, g) { axis1d.axisSelectUpdate(); });
+  axisG.each(function(axis1d, i, g) { ! axis1d.isDestroying && axis1d.axisSelectUpdate(); });
 
   /** stackS / axisG / g / gt is the newly added stack & axis.
    * The X position of all stacks is affected by this addition, so

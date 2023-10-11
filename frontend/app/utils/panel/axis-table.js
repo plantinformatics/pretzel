@@ -61,6 +61,16 @@ function cellFeaturesWithDatasetTag(table, row, col, tag) {
 
 //------------------------------------------------------------------------------
 
+function rowDataGetFeature(rowData) {
+  const
+  featureEntry = Object.entries(rowData).find(
+    ([k,v]) => (typeof rowData[k] === 'object') && rowData[k][Symbol.for('feature')]),
+  feature = featureEntry[1][featureSymbol];
+  return feature;
+}
+
+//------------------------------------------------------------------------------
+
 /** Assign Feature reference to each row.
  * @param table HandsOnTable
  * @param data  array of data which correspond to rows, and is parallel.
@@ -108,7 +118,7 @@ function setRowAttributes(table, data, dataIsRows) {
        * the cell value has a Symbol reference to feature and that is used
        * in getRowAttribute() : valueFeature.
        */
-      feature = (feature.Block || feature.Ref) [Symbol.for('feature')];
+      feature = rowDataGetFeature(feature);
       featureColumnValues.forEach((value, physicalCol) => {
         const col = table.toVisualColumn(physicalCol);
         if (col !== null) {

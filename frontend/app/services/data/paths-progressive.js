@@ -589,8 +589,12 @@ export default Service.extend({
       let ba = {
         // type : typeName,
         id : axisBrushId,
-        block : block.id
       };
+      /* referencing a block in a different store will create a duplicate
+       * block with just .id in this store.  */
+      if (store === block.store) {
+        ba.block = block.id;
+      }
       let
       serializer = store.serializerFor(typeName),
       modelClass = store.modelFor(typeName),
@@ -762,9 +766,9 @@ export default Service.extend({
             added = isGerminate ?
               addFeaturesGerminate(block, requestFormat, replaceResults, selectedFeatures, callsData) :
               addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures, text);
-            if (added.createFeatures) {
+            if (added.createdFeatures) {
               // All the samples in the result were requested, so calculate MAF across all.
-              featuresSampleMAF(added.createFeatures, {requestSamplesAll : true, selectedSamples : undefined});
+              featuresSampleMAF(added.createdFeatures, {requestSamplesAll : true, selectedSamples : undefined});
             }
           }
         }

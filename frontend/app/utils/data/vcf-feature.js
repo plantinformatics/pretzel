@@ -138,7 +138,9 @@ function vcfGenotypeLookup(auth, samples, domainInteger, requestOptions, vcfData
   textP = auth.vcfGenotypeLookup(vcfDatasetId, scope, preArgs, rowLimit, {} )
     .then(
       (textObj) => {
-        const text = textObj.text;
+        /* Result from Pretzel API endpoint is vcfGenotypeLookup is {text};
+         * result from Germinate is an array, recognised by vcf-feature.js : resultIsGerminate(). */
+        const text = textObj.text || textObj;
         auth.apiStatsCount(fnName, -1);
         return text;
       });
@@ -499,9 +501,10 @@ function addFeaturesGerminate(block, requestFormat, replaceResults, selectedFeat
   selectionFeatures = [],
   createdFeatures = data.map((call, i) => {
     const f = {values : {}};
-    /* Will lookup f.value in block.features interval tree and createdFeatures
+    /* Will lookup f.value in block.features interval tree,
      * and if found, merge with existing feature - factor out use of
      * mergeFeatureValues() in addFeaturesJson().
+     * Using createdFeatures.push(feature) instead of =data.map()
      */
     // call.callSetDbId identifies sample name : callSetName
     // previously seeing in results : 'CnullT' - this is now fixed in java.
@@ -526,6 +529,7 @@ function addFeaturesGerminate(block, requestFormat, replaceResults, selectedFeat
       mergeFeatureValues(existingFeature, feature);
       feature = existingFeature;
       // this is included in createdFeatures, since it is a result from the current request.
+      // as noted in addFeaturesJson(), can rename to resultFeatures.
     } else {
       // addFeaturesJson() uses feature.blockId - not sure if that is applicable
       feature.blockId = block;
@@ -541,7 +545,6 @@ function addFeaturesGerminate(block, requestFormat, replaceResults, selectedFeat
     let mapChrName = block.get('brushName');
     let selectionFeature = {Chromosome : mapChrName, Feature : feature.name, Position : feature.value[0], feature};
 
-    createdFeatures.push(feature);
     selectionFeatures.push(selectionFeature);
     // block.features.addObject(feature);
   });
@@ -1371,10 +1374,11 @@ function featuresSampleMAF(features, options) {
 function featureSampleMAF(feature, options) {
   const
   fnName = 'featuresSampleMAF',
-  { selectedSamples,  requestSamplesAll } = options;
-  if (requestSamplesAll || selectedSamples) {
+  { selectedSamples,  requestSamplesAll } = options,
+  /** Germinate does not contain alt/ref; could determine by count. */
+  alt = feature.values.alt;
+  if ((requestSamplesAll || selectedSamples) && alt) {
     const
-    alt = feature.values.alt,
     counts = Object.entries(feature.values)
       .reduce((sum, [sampleName, value]) => {
         if (! valueNameIsNotSample(sampleName) &&

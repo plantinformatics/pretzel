@@ -167,7 +167,7 @@ function fetchEndpoint() {
  * This is used in all cases of fetchEndpoint().
  */
 function responseValueP(response) {
-  const value = response.ok ? response?.json() : Promise.resolve(response);
+  const value = response?.json ? response.json() : Promise.resolve(response);
   return value;
 }
 

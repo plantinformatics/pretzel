@@ -1576,9 +1576,12 @@ export default class PanelManageGenotypeComponent extends Component {
     /** viewedVCFBlocks() returns a axisBrush with just block.  It is used when
      * .brushedVCFBlocks is [], i.e. axisBrushService.brushedAxes is [], seen
      * when axis reference block (axisBrush.block) is from secondary server,
-     * likely ensureAxisBrush(block) is not effectively setting r.block
+     * likely ensureAxisBrush(block) is not effectively setting r.block,
+     * i.e. axisBrush.block can be null because axisBrush is in the default
+     * store, and the reference block is not.
      */
-    brushedDomain = axisBrush && (axisBrush.brushedDomain || axisBrush.block.brushedDomain);
+    brushedDomain = axisBrush && (axisBrush.brushedDomain || axisBrush.block?.brushedDomain) ||
+      this.axisBrushBlock?.block?.brushedDomain;
     return brushedDomain;
   }
   // Note comment in selectedSampleEffect() re. dependency axisBrush.brushedDomain 
@@ -1640,14 +1643,22 @@ export default class PanelManageGenotypeComponent extends Component {
         {} );
       textP.then(
         (text) => {
-          const t = text?.text;
-          dLog(fnName, t?.length || Object.keys(text), t?.slice(0, 60));
+          const t = text?.text || text;
+          /** Germinate result may be received by frontend or server. */
           const isGerminate = resultIsGerminate(t);
-          this.sampleCache.sampleNames[vcfDatasetId] = isGerminate ? t.join('\n') : t;
-          /* result from Germinate is currently an array of string sample names. */
-          /** trim off trailing newline; other non-sample column info could be
-           * removed; it is not a concern for the mapping. */
-          const sampleNames = isGerminate ? t : t.trim().split('\n');
+          dLog(fnName, t?.length || Object.keys(text), t?.slice(0, 60));
+          let sampleNamesText, sampleNames;
+          if (isGerminate) {
+            /* result from Germinate is currently an array of string sample names. */
+            sampleNamesText = t.join('\n');
+            sampleNames = t;
+          } else {
+            sampleNamesText = t;
+            /** trim off trailing newline; other non-sample column info could be
+             * removed; it is not a concern for the mapping. */
+            sampleNames = t.trim().split('\n');
+          }
+          this.sampleCache.sampleNames[vcfDatasetId] = sampleNamesText;
           this.datasetStoreSampleNames(vcfBlock, sampleNames);
           this.mapSamplesToBlock(sampleNames, vcfBlock);
           if ((vcfDatasetId === this.lookupDatasetId) &&

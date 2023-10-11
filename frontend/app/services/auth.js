@@ -422,11 +422,15 @@ export default Service.extend({
     // if (post) _server() won't be able to access data.datasetId, so pass apiServer
     const
     id2Server = this.get('apiServers.id2Server'),
-    apiServer = id2Server[data.datasetId];
+    apiServer = id2Server[data.datasetId],
+    /** No need to stringify here for Germinate apiServer - could be done in
+     * utils/data/germinate.js, but callsets are specified in URL so URL size is
+     * the limit. */
+    isGerminate = apiServer.serverType === 'Germinate';
     return this._ajax(
       'Blocks/vcfGenotypeLookup' + (post ? 'Post' : ''),
       post ? 'POST' : 'GET',
-      post ? JSON.stringify(data) : data,
+      post && ! isGerminate ? JSON.stringify(data) : data,
       true,
       /*onProgress*/ null, apiServer);
   },
@@ -548,7 +552,7 @@ export default Service.extend({
         const
         {datasetId, scope} = dataIn;
         vcfGenotypeP = germinateGenotypeSamplesP(datasetId, scope);
-      } else if (route === 'Blocks/vcfGenotypeLookup') {
+      } else if (route.startsWith('Blocks/vcfGenotypeLookup')) {  // also matches : 'Blocks/vcfGenotypeLookupPost'
         const
         {datasetId, scope, preArgs, nLines} = dataIn;
         /** copied from lb4app/lb3app/common/models/block.js : Block.vcfGenotypeLookup() : genotypeLookup() */
