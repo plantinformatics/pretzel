@@ -26,6 +26,7 @@ const noType = EmberObject.create({id : 'noType', name : ''});
 export default Component.extend({
   apiServers: service(),
   dataset : service('data/dataset'),
+  dataView : service('data/view'),
 
   didInsertElement: on('didInsertElement', function() {
     let confirmButton = $('button[name=confirm]', this.element);
@@ -72,6 +73,7 @@ export default Component.extend({
             server.serverType = serverType;
             if (this.typeIsGerminate) {
               server.parentName = this.datasetSelected.id;
+              this.dataView.axesForViewedBlocks();
               dLog(fnName, server);
             }
             this.close();

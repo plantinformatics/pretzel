@@ -74,6 +74,7 @@ export default Service.extend({
    * should do useTask: getBlocksSummary(), ensureFeatureLimits(),
    */
   viewRelatedBlocks(block) {
+    const fnName = 'viewRelatedBlocks';
     let toView = [];
     let related = [];
     if (! block.get('isViewed')) {
@@ -82,6 +83,12 @@ export default Service.extend({
       this.setViewed(block);
     }
     let referenceBlock = block.get('referenceBlock');
+    /** .referenceBlock is limited to viewed and SameServer,
+		 * whereas .referenceBlocks uses referenceBlocksAllServers() */
+    if (! referenceBlock && block.get('datasetId.parentName')) {
+      referenceBlock = block.referenceBlocks[0];
+      dLog(fnName, 'referenceBlocks', block.referenceBlocks)
+    }
     if (referenceBlock && (referenceBlock !== block)) {
       toView.push(referenceBlock);
       related.push(referenceBlock);
@@ -105,6 +112,57 @@ export default Service.extend({
     }
 
     return related;
+  },
+
+  //----------------------------------------------------------------------------
+
+  /** blocks in mapsToView may become viewable after connecting to their api-server.
+   * Check for blocks which are .isViewed but have no .axis1d, and view a
+   * suitable reference to create the axis1d and create a corresponding stack.
+   * related : stacks-view : newStacks(), newAxis1ds()
+   */
+  axesForViewedBlocks() {
+    const
+    fnName = 'axesForViewedBlocks';
+    let withoutAxis, newAxis1ds;
+    /** check for blocks which are identified in mapsToView but are shown in a
+     * axis and stack.  View their reference block.
+     */
+    later(() => {
+    withoutAxis = this.block.viewed.filter(block => {
+      const nonAxis = ! block.axis1d || ! block.axis1d.stack || (block.axis1d.stack.stackIndex() === -1);
+      if (nonAxis) {
+        const related = this.viewRelatedBlocks(block);
+      }
+      return nonAxis;
+    });
+    dLog(fnName, 'withoutAxis', withoutAxis, withoutAxis.mapBy('axis1d'));
+    }, 3000);
+    /** Above viewRelatedBlocks() should be sufficient; following is
+     * experimental (using later time instead of promises or dependencies is
+     * fragile) and can help identify a better solution - should be able to
+     * respond in axes-1d.js : axesP() to the referenceBlock being viewed.
+     */
+    later(() => {
+      const
+      block = this.block.viewed.find(block => block.axis1d?.stacksView),
+      stacksView = block.axis1d?.stacksView;
+      stacksView?.incrementProperty('axisChanges');
+      dLog(fnName, 'stacksView', stacksView);
+    }, 6000);
+
+    later(() => {
+    newAxis1ds = withoutAxis.reduce((result, block) => {
+      if (block.axis1d) {
+        result.push(block.axis1d);
+      }
+      return result;
+    }, []);
+    const
+    newStacks = newAxis1ds.map(axis1d => axis1d.createStackForAxis());
+    dLog(fnName, 'newAxis1ds', newAxis1ds, 'newStacks', newStacks);
+    }, 9000);
+
   },
 
   /*--------------------------------------------------------------------------*/
