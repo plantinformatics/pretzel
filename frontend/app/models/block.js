@@ -169,8 +169,12 @@ export default Model.extend({
       paths |= odd;
       dLog(id, odd);
     }
+    const 
+    /** Default to 5e4 in early high density data tests; increased for some chrs of 140e3 features. */
+    featureCountForPaths = this.get('urlOptions.featureCountForPaths') || 200e3;
+
     /* don't request paths for HighDensity SNPs until zoomed in to small scale.
-     * The comparison < 5e4 will be false until .featureCount or
+     * The comparison < featureCountForPaths will be false until .featureCount or
      * .featuresCountsResults are received, i.e. while
      * featuresCountIncludingZoom is undefined.
      *
@@ -181,13 +185,13 @@ export default Model.extend({
      * separate tag to indicate the lack of a feature name.
      * So disable paths if tagged HighDensity.
      *
-     * this expression uses the fact that (undefined < 5e4) is false.
+     * this expression uses the fact that (undefined < featureCountForPaths) is false.
      * .featureValueCount is approx 2 * .featuresCount because it sums feature.value.length which is often 2.
      */
       paths &&= ! this.get('isHighDensity') && (
-        (this.get('featuresCount') < 5e4) ||
-          (this.get('featureValueCount') < 5e4 * 2) ||
-          (this.get('featuresCountIncludingZoom') < 5e4));
+        (this.get('featuresCount') < featureCountForPaths) ||
+          (this.get('featureValueCount') < featureCountForPaths * 2) ||
+          (this.get('featuresCountIncludingZoom') < featureCountForPaths));
       // dLog('showPaths', dataset, paths);
     return paths;
   }),
