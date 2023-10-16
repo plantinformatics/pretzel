@@ -68,6 +68,11 @@ RUN wget https://github.com/samtools/bcftools/releases/download/${bcftoolsVer}/b
 
 # ------------------------------------------------------------------------------
 
+FROM stephenturner/bgzip as bgzip
+WORKDIR / 
+
+#-------------------------------------------------------------------------------
+
 # ${NODE_ALPINE_VERSION}
 FROM node:12-alpine as node-alpine-pretzel
 
@@ -119,6 +124,9 @@ ARG lB=/usr/local/bin
 COPY --from=node-alpine-build-samtools $lB/color-chrs.pl $lB/gff2gff.py $lB/guess-ploidy.py $lB/plot-vcfstats $lB/plot-roh.py $lB/run-roh.pl $lB/vcfutils.pl $lB/
 COPY --from=node-alpine-build-samtools /usr/local/share/man/man1/bcftools.1 /usr/local/share/man/man1/
 COPY --from=node-alpine-build-samtools /usr/local/libexec/bcftools/*.so /usr/local/libexec/bcftools/
+
+COPY --from=bgzip /usr/local/bin/bgzip /usr/local/bin/bgzip
+COPY --from=bgzip /usr/local/bin/tabix /usr/local/bin/tabix
 
 # ------------------------------------------------------------------------------
 
