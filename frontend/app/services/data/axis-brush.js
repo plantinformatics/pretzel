@@ -39,7 +39,7 @@ export default Service.extend(Evented, {
       if (trace_axisBrush)
         dLog(fnName, 'viewed Blocks', records);
       let blocks = records.filter(function (ab) {
-        return ab.get('block.isViewed') && ab.get('brushedDomain'); } );
+        return ab.get('block_.isViewed') && ab.get('brushedDomain'); } );
       blocks = blocks.toArray(); // Array.from(blocks);
 
       const
@@ -59,7 +59,7 @@ export default Service.extend(Evented, {
     }),
   brushesByBlock : computed('brushedAxes.[]', function () {
     let brushesByBlock = this.get('brushedAxes').reduce(function (result, ab) {
-      result[ab.get('block.id')] = ab;
+      result[ab.get('block_.id')] = ab;
       return result; }, {} );
     if (trace_axisBrush)
       dLog('brushesByBlock', brushesByBlock);
