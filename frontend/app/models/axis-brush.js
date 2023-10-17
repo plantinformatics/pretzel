@@ -9,6 +9,7 @@ const dLog = console.debug;
 export default Model.extend({
 
   pathsP : service('data/paths-progressive'),
+  blockService: service('data/block'),
 
   block: belongsTo('block', { inverse: null }),
   blockId: attr('string'),
@@ -16,6 +17,21 @@ export default Model.extend({
   // featuresResult : DS.attr(),
 
   zoomCounter : 0,
+
+  get block_() {
+    /** axis-brush and block-adj will change from model to Object so they can
+     * reference blocks from any store.  this.block and block-adj.block{0,1}
+     * can't reference any blocks because they are in default store, so
+     * ab.get('block.isViewed') or ab.get('block.id') cannot work;
+     * (this may only affect blocks from secondary servers?).
+     */
+    let block = this.block;
+    if (block?.id === undefined) {
+      const blockId = this.id || this.blockId;
+      block = this.blockService.viewedById[blockId];
+    }
+    return block;
+  },
 
   /**
    * Depending on zoomCounter is just a stand-in for depending on the domain of block,
