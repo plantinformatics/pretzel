@@ -144,11 +144,13 @@ export default Service.extend({
      * respond in axes-1d.js : axesP() to the referenceBlock being viewed.
      */
     later(() => {
-      const
-      block = this.block.viewed.find(block => block.axis1d?.stacksView),
-      stacksView = block.axis1d?.stacksView;
-      stacksView?.incrementProperty('axisChanges');
-      dLog(fnName, 'stacksView', stacksView);
+      if (withoutAxis.length) {
+        const
+        block = this.block.viewed.find(block => block.axis1d?.stacksView),
+        stacksView = block?.axis1d?.stacksView;
+        stacksView?.incrementProperty('axisChanges');
+        dLog(fnName, 'stacksView', stacksView);
+      }
     }, 6000);
 
     later(() => {

@@ -3,6 +3,8 @@ import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import EmberObject, { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
+import { bind, later, throttle } from '@ember/runloop';
+
 
 
 import $ from 'jquery';
@@ -20,6 +22,16 @@ const dLog = console.debug;
  */
 const noType = EmberObject.create({id : 'noType', name : ''});
 
+function chrMappingDefault() {
+  const
+  array =
+    [1, 2, 3, 4, 5, 6, 7].map((chrNum, ci) =>
+      ['A', 'B', 'D'].map((subGenome, sgi) =>
+        ([ci * 3 + sgi + 1, '' + chrNum + subGenome]))),
+  text = array.map(row => row.map(c => c.join(' ')).join('\n')).join('\n');
+  return text;
+}
+
 //------------------------------------------------------------------------------
 
 
@@ -35,6 +47,12 @@ export default Component.extend({
             confirmButton.click();
         }
     });
+
+    dLog('new-datasource-modal', 'didInsertElement', this);
+    // used in development only, in Web Inspector console.
+    if (window.PretzelFrontend) {
+      window.PretzelFrontend.newDatasourceModal = this;
+    }
   }),
 
   actions: {
@@ -73,6 +91,7 @@ export default Component.extend({
             server.serverType = serverType;
             if (this.typeIsGerminate) {
               server.parentName = this.datasetSelected.id;
+              server.chrMapping = this.chrMappingArray;
               this.dataView.axesForViewedBlocks();
               dLog(fnName, server);
             }
@@ -93,6 +112,67 @@ export default Component.extend({
     dLog('close');
     this.closeNewDatasourceModal();
   },
+
+  //----------------------------------------------------------------------------
+  // textarea is based on similar in sequence-search and feature-list.
+
+  chrMapping : chrMappingDefault(),
+  get chrMappingArray() {
+    const
+    array = (this.chrMapping || '')
+      .split('\n')
+      .map(line => line.split(' '));
+    return array;
+  },
+
+  chrMappingInput(event) {
+    dLog('chrMappingInput', event?.target);
+    let text = event?.target?.value;
+    if (text) {
+      this.chrMapping = text;
+    }
+  },
+  paste: function(event) {
+    /** text is "" at this time. */
+    /** this action function is called before jQuery val() is updated. */
+    later(() => {
+      const text = event && (event.target.value || event.originalEvent.target.value);
+      dLog('paste', event, text.length, text);
+      // maybe re-format the pasted text
+    }, 500);
+  },
+
+  chrMappingInputAction(text, event) {
+    dLog("chrMappingInput", text.length, event.keyCode, text);
+    this.chrMapping = text;
+    // throttle(this.get('chrMappingInputBound'), 2000);
+  },
+
+  /** throttle depends on constant function  */
+  chrMappingInputBound : computed(function() {
+    return bind(this, this.chrMappingInput);
+  }),
+
+
+  /** Clear chrMapping and copie it to the textarea.
+   * Not used.
+   */
+  clear() {
+    this.chrMapping = '';
+    this.text2Area();
+  },
+
+  text$ : computed(function () {
+    const selection = $('textarea#ndm_chrMapping', this.element);
+    dLog('text$', selection);
+    return selection;
+  }),
+
+  /** Copy .text to the textarea. */
+  text2Area() {
+    this.get('text$').val(this.chrMapping);
+  },
+
 
   //----------------------------------------------------------------------------
 

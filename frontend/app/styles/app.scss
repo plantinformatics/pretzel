@@ -2555,6 +2555,10 @@ table.htCore > tbody > tr > td.editDialog:hover {
 .new-datasource-modal input {
   width: 100%;
 }
+/* .new-datasource-modal */
+textarea#ndm_chrMapping {
+  min-height : 30ex;
+}
 /* Copied from the app's panel colours (bootstrap). */
 .modal-header {
   background-color: #337ab7;

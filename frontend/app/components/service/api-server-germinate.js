@@ -71,10 +71,12 @@ export default EmberObject.extend(ApiServerAttributes, {
     blocksP = linkageGroups.map(linkageGroup => {
       const
       name = linkageGroup.linkageGroupName,
+      chrMap = this.chrMapping?.findBy('0', name),
+      scope = chrMap?.[1] || name,
       blockAttributes = {
-        name,
+        name : scope,
         id : germinateDataset.mapDbId + '_' + name,
-        scope : name + 'A',
+        scope,
         featureCount : linkageGroup.markerCount,
       },
       blockP = store.createRecord('Block', blockAttributes);
@@ -82,13 +84,21 @@ export default EmberObject.extend(ApiServerAttributes, {
     }),
     datasetP = Promise.all(blocksP).then(blocks => {
       const
+      /** Use .mapName for .id as well as .name, because dataset.id (not
+       * .displayName) is used in gtDatasetTabs which doesn't have space for
+       * long displayName-s; .id is also displayed in :
+       * Datasets to filter, Variant Intervals, ..., datasetsClasses
+       */
+      name = germinateDataset.mapName,
       datasetAttributes = {
-        name : germinateDataset.mapName,
-        id : germinateDataset.mapDbId,
+        name,
+        id : name,
         parentName : this.parentName,
-        // type, meta.type ?
+        // type, _meta.type ?
         tags : ['view', 'Genotype', 'Germinate'],
-        meta : {paths : 'false', germinate : germinateDataset},
+        _meta : {
+          displayName : germinateDataset.mapName,
+          paths : false, germinate : germinateDataset},
         // namespace
         blocks
       };
