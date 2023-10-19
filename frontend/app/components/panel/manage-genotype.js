@@ -1631,7 +1631,7 @@ export default class PanelManageGenotypeComponent extends Component {
     /** implemented by common/models/block.js : Block.vcfGenotypeSamples().  */
     const
     fnName = 'vcfGenotypeSamples',
-    vcfDatasetId = vcfBlock?.get('datasetId.id'),
+    vcfDatasetId = vcfBlock?.get('datasetId.genotypeId'),
     /** as in .lookupScope */
     scope = vcfBlock.get('name');
     let textP;
@@ -1937,7 +1937,7 @@ export default class PanelManageGenotypeComponent extends Component {
       })
       .forEach((blockV, i) => {
       const
-      vcfDatasetId = blockV.get('datasetId.id'),
+      vcfDatasetId = blockV.get('datasetId.genotypeId'),
       /** use .name instead of .scope, because some VCF files use 'chr' prefix
        * on chromosome name e.g. chr1A, and .name reflects that;
        * as in lookupScope().
@@ -2047,8 +2047,10 @@ export default class PanelManageGenotypeComponent extends Component {
             const
             replaceResults = this.args.userSettings.replaceResults,
             selectedFeatures = this.args.selectedFeatures,
+            nSamples = this.controls.view.pathsDensityParams.nSamples,
+            germinateOptions = {nSamples},
             added = isGerminate ?
-              addFeaturesGerminate(blockV, requestFormat, replaceResults, selectedFeatures, callsData) :
+              addFeaturesGerminate(blockV, requestFormat, replaceResults, selectedFeatures, callsData, germinateOptions) :
               addFeaturesJson(blockV, requestFormat, replaceResults, selectedFeatures, text),
             options = {requestSamplesAll : userSettings.requestSamplesAll, selectedSamples : added.sampleNames /*this.selectedSamples*/};
             featuresSampleMAF(added.createdFeatures, options);
@@ -2328,7 +2330,8 @@ export default class PanelManageGenotypeComponent extends Component {
   get vcfExportFileName() {
     const
     scope = this.lookupScope,
-    vcfDatasetId = this.lookupDatasetId,
+    /** this is .lookupDatasetId if ! isGerminate */
+    vcfDatasetId = this.lookupBlock?.get('datasetId.genotypeId'),
     domainText = this.vcfGenotypeLookupDomain ? this.vcfGenotypeLookupDomain.join('-') : '',
     samplesLength = this.vcfGenotypeSamplesSelected ? this.vcfGenotypeSamplesSelected.length : '',
     fileName = vcfDatasetId +
@@ -2904,7 +2907,8 @@ export default class PanelManageGenotypeComponent extends Component {
     fnName = 'headerText',
     {samples, samplesOK} = this.samplesOK(false),
     domainInteger = [0, 1],
-    vcfDatasetId = this.lookupDatasetId,
+    /** this is .lookupDatasetId if ! isGerminate */
+    vcfDatasetId = this.lookupBlock?.get('datasetId.genotypeId'),
     scope = this.lookupScope;
     let textP;
     /** After a brush, this CP is re-evaluated, although the dependencies

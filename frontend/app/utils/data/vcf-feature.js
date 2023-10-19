@@ -486,17 +486,23 @@ function resultIsGerminate(data) {
  * @param replaceResults  true means remove previous results for this block from block.features[] and selectedFeatures.
  * @param selectedFeatures  same comment as per addFeaturesJson().
  * @param data result from Germinate callsets/<datasetDbId>/calls request
+ * @param options { nSamples }
  */
-function addFeaturesGerminate(block, requestFormat, replaceResults, selectedFeatures, data) {
+function addFeaturesGerminate(block, requestFormat, replaceResults, selectedFeatures, data, options) {
   const fnName = 'addFeaturesGerminate';
   dLog(fnName, block.id, block.mapName, data.length);
 
   if (replaceResults) {
     dLog(fnName, 'replaceResults not implemented');
   }
+  if ((options.nSamples !== undefined) && (data.length > options.nSamples)) {
+    dLog(fnName, 'truncate data', data.length, options.nSamples);
+    data = data.slice(0, options.nSamples);
+  }
+
   const
   store = block.get('store'),
-  columnNames = data.mapBy('callSetName'),
+  columnNames = data.mapBy('callSetName').uniq(),
   sampleNames = columnNames,
   selectionFeatures = [],
   createdFeatures = data.map((call, i) => {
@@ -539,6 +545,8 @@ function addFeaturesGerminate(block, requestFormat, replaceResults, selectedFeat
 
     return feature;
   });
+
+  dLog(fnName, data.length, columnNames.length);
 
   // copied from addFeaturesJson() - may be similar enough to factor.
   createdFeatures.forEach(feature => {

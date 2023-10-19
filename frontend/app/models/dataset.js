@@ -114,6 +114,12 @@ export default Record.extend({
     return this.get('_meta.displayName') || this.get('id');
   }),
 
+  /** if isGerminate then _meta.germinate.mapDbId, otherwise .id,  */
+  genotypeId : computed(function () {
+    return this.get('_meta.germinate.mapDbId') || this.get('id');
+  }),
+
+  
   /** @return shortName if defined, otherwise name
    */
   shortNameOrName : computed('_meta.shortName', function () {

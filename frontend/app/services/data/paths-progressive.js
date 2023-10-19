@@ -676,7 +676,9 @@ export default Service.extend({
       intervalParams = this.intervalParams(interval);
     }
     let drawMap = stacks.oa.eventBus;
-    let pathsViaStream = drawMap.get('controls').view.pathsViaStream;
+    const
+    controlsView = drawMap.get('controls').view,
+    pathsViaStream = controlsView.pathsViaStream;
     let axis = Stacked.getAxis(blockA),
     axisBrush = me.get('store').peekRecord('axis-brush', blockA),
     /** There may not be an axis brush, e.g. when triggered by
@@ -684,6 +686,10 @@ export default Service.extend({
      * paramAxis.domain. */
     brushedDomain = axisBrush && axisBrush.brushedDomain,
     paramAxis = intervalParams.axes[0];
+    const
+    nSamples = controlsView.pathsDensityParams.nSamples,
+    germinateOptions = {nSamples};
+
     if (trace_pathsP)
       dLog('domain', paramAxis.domain, '-> brushedDomain', brushedDomain);
     /* When the block is first viewed, if it does not have a reference which
@@ -764,7 +770,7 @@ export default Service.extend({
             selectedFeatures = [],
             /** similar in vcfGenotypeLookupDataset() */
             added = isGerminate ?
-              addFeaturesGerminate(block, requestFormat, replaceResults, selectedFeatures, callsData) :
+              addFeaturesGerminate(block, requestFormat, replaceResults, selectedFeatures, callsData, germinateOptions) :
               addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures, text);
             if (added.createdFeatures) {
               // All the samples in the result were requested, so calculate MAF across all.
@@ -815,7 +821,7 @@ export default Service.extend({
   vcfGenotypeLookup(block, paramAxis) {
     const
     /** params for  */
-    vcfDatasetId = block.get('datasetId.id'),
+    vcfDatasetId = block.get('datasetId.genotypeId'),
     domain = paramAxis.domain || block.get('axis1d.domain'),
     /** as in vcfGenotypeLookupDomain() */
     domainInteger = domain.map((d) => d.toFixed(0)),

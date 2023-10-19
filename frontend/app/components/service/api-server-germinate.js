@@ -92,7 +92,7 @@ export default EmberObject.extend(ApiServerAttributes, {
       name = germinateDataset.mapName,
       datasetAttributes = {
         name,
-        id : name,
+        id : germinateDataset.mapDbId + '_' + name,
         parentName : this.parentName,
         // type, _meta.type ?
         tags : ['view', 'Genotype', 'Germinate'],
@@ -111,6 +111,7 @@ export default EmberObject.extend(ApiServerAttributes, {
     });
     datasetP.then(dataset => {
       id2Server[dataset.get('id')] = this;
+      id2Server[dataset.get('genotypeId')] = this;
       if (! datasetsBlocks.findBy('name', dataset.name)) {
         datasetsBlocks.push(dataset);
         later(() => {
