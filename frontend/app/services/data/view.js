@@ -111,6 +111,7 @@ export default Service.extend({
       later(() => toView.forEach((block) => block.set('isViewed', true)));
     }
 
+    dLog(fnName, block.brushName, related, 'loadBlock');
     return related;
   },
 

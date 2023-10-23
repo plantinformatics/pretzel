@@ -950,7 +950,7 @@ export default class PanelManageGenotypeComponent extends Component {
   @computed('brushedOrViewedVCFBlocks')
   get brushedOrViewedVCFBlocksVisible () {
     const
-    fnName = 'brushedOrViewedVCFBlocks',
+    fnName = 'brushedOrViewedVCFBlocksVisible',
     blocks = this.brushedOrViewedVCFBlocks
       .map(abb => abb.block),
     visibleBlocks = blocks
@@ -1061,7 +1061,7 @@ export default class PanelManageGenotypeComponent extends Component {
   /**
    * @return model:axis-brush
    */
-  @computed('axisBrushBlock')
+  // @computed('axisBrushBlock')
   get axisBrush() {
     const abb = this.axisBrushBlock;
     return abb?.axisBrush;
@@ -1607,7 +1607,12 @@ export default class PanelManageGenotypeComponent extends Component {
     return domain;
   }
 
-  @computed('axisBrush.brushedDomain', 'intervalLimit')
+  /** 
+   * dependencies :
+   *  brushedDomain : .{0,1} is not required because array is replaced when it changes value.
+   *  brushCount : added because .axisBrush may not be updating.
+   */
+  @computed('axisBrush.brushedDomain', 'axisBrushService.brushCount', 'intervalLimit')
   get vcfGenotypeLookupDomain () {
     /** copied from sequenceLookupDomain() axis-brush.js
      * could be factored to a library - probably 2 1-line functions - not compelling.
@@ -2573,9 +2578,12 @@ export default class PanelManageGenotypeComponent extends Component {
   @computed(
     /** using axisBrush.brushedDomain as dependency works, but not
      * .brushedDomain, which is normally equivalent.
+     * As noted in vcfGenotypeLookupDomain(), .{0,1} is not required and
+     * .brushCount is effective.
     'brushedDomain.{0,1}',
      */
     'axisBrush.brushedDomain',
+    'axisBrushService.brushCount',
 
     // update : 0d6c0dd9 implements table column filtering by .selectedSamples.
     /* In vcfFeatures2MatrixViewRows() / gtMergeRows currently all samples
@@ -2674,6 +2682,7 @@ export default class PanelManageGenotypeComponent extends Component {
     gtDatasetColumns = this.gtDatasetColumns,
     sets = {};
 
+    if (this.displayDataRows)
     Object.entries(this.displayDataRows).forEach(([location, row]) => {
       /** Find all intervals containing query point */
       intervalTree.queryPoint(location, function(interval) {

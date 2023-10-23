@@ -1,8 +1,8 @@
 import { allSettled } from 'rsvp';
 import { throttle } from '@ember/runloop';
 import { alias } from '@ember/object/computed';
-
 import Service, { inject as service } from '@ember/service';
+import { getOwner, setOwner } from '@ember/application';
 
 import { task, didCancel } from 'ember-concurrency';
 
@@ -11,6 +11,7 @@ import { task, didCancel } from 'ember-concurrency';
 //------------------------------------------------------------------------------
 
 import { stacks, Stacked } from '../../utils/stacks';
+import AxisBrushObject from '../../utils/draw/axis-brush';
 import { storeFeature } from '../../utils/feature-lookup';
 import {
   vcfGenotypeLookup, addFeaturesJson,
@@ -577,33 +578,32 @@ export default Service.extend({
   /*--------------------------------------------------------------------------*/
   /* features */
 
+  /** array of AxisBrushObject : {block, id : axisBrushId, brushedDomain}
+   */
+  axisBrushObjects : [],
   /** set up an axis-brush object to hold results. */
   ensureAxisBrush(block) {
-    let store = this.get('store'),
-    typeName = 'axis-brush',
-    axisBrushId = block.id,
-    r = store.peekRecord(typeName, axisBrushId);
+    const
+    objs = this.axisBrushObjects,
+    axisBrushId = block.id;
+    let r = objs.findBy('block.id', block.id);
+    if (r) {
+      if (block.axis1d.axisBrushObj !== r) {
+        dLog('ensureAxisBrush', block.axis1d.axisBrushObj, r);
+        block.axis1d.axisBrushObj = r;
+      }
+    }
+    else {
+      const container = getOwner(this);
+      r = AxisBrushObject.create({block, id : axisBrushId /*,container*/});
+      setOwner(r, container);
+      r.filePath = 'utils/draw/axis-brush.js:AxisBrushObject',
+
+      objs.push(r);
+      block.axis1d.axisBrushObj = r;
+    }
     if (r && trace_pathsP)
       dLog('ensureAxisBrush', block.id, r._internalModel.__attributes, r._internalModel.__data);
-    if (! r) {
-      let ba = {
-        // type : typeName,
-        id : axisBrushId,
-      };
-      /* referencing a block in a different store will create a duplicate
-       * block with just .id in this store.  */
-      if (store === block.store) {
-        ba.block = block.id;
-      }
-      let
-      serializer = store.serializerFor(typeName),
-      modelClass = store.modelFor(typeName),
-      // ban1 = serializer.normalizeSingleResponse(store, modelClass, ba, axisBrushId, typeName),
-      // ban1 = {data: ban1};
-      // the above is equivalent long-hand for :
-      ban = store.normalize(typeName, ba);
-      r = store.push(ban);
-    }
     return r;
   },
 
@@ -680,7 +680,12 @@ export default Service.extend({
     controlsView = drawMap.get('controls').view,
     pathsViaStream = controlsView.pathsViaStream;
     let axis = Stacked.getAxis(blockA),
-    axisBrush = me.get('store').peekRecord('axis-brush', blockA),
+    block = this.blockService.id2Block(blockA),
+    /** also : referenceBlock === axis.axis and axisBrush === axis.axisBrushObj */
+    referenceBlock = block?.referenceBlock || block,
+    axisBrush = this.axisBrushObjects.findBy('block.id', blockA) ||
+        (referenceBlock && this.axisBrushObjects.findBy('block.id', referenceBlock.id)),
+
     /** There may not be an axis brush, e.g. when triggered by
      * featuresForAxis(); in this case : axisBrush is null; don't set
      * paramAxis.domain. */

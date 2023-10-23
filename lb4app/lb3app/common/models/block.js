@@ -25,6 +25,8 @@ const { vcfGenotypeLookup, vcfGenotypeFeaturesCounts } = require('../utilities/v
 const { germinateGenotypeSamples, germinateGenotypeLookup } = require('../utilities/germinate-genotype');
 const { parseBooleanFields } = require('../utilities/json-text');
 
+const germinateGenotypeSamplesP = util.promisify(germinateGenotypeSamples);
+
 var ObjectId = require('mongodb').ObjectID
 
 
@@ -1436,7 +1438,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       function ensureSamplesParam(preArgs) {
         let argsP;
         if (! preArgs?.samples?.length) {
-          argsP = util.promisify(germinateGenotypeSamples)(datasetId, scope)
+          argsP = germinateGenotypeSamplesP(datasetId, scope)
             .then(samples => {
               let sample;
               if (samples.length) {

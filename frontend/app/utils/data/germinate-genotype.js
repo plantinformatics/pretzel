@@ -71,6 +71,9 @@ function callSetCacheForBlock(datasetId, scope) {
   name2DbId = callSetName2DbId[blockName] || (callSetName2DbId[blockName] = {});
   return name2DbId;
 }
+
+const germinateGenotypeSamplesP = promisify(germinateGenotypeSamples);
+
 /** if sample name cache for datasetId:scope is not empty, yield it, otherwise
  * get samples then yield it.
  * @return promise
@@ -80,7 +83,7 @@ function callSetCacheForBlockP(datasetId, scope) {
   name2DbId = callSetCacheForBlock(datasetId, scope),
   /** if name2DbId is not empty, yield it, otherwise get samples then yield it. */
   p = name2DbId && Object.keys(name2DbId).length ? Promise.resolve(name2DbId) : 
-    promisify(germinateGenotypeSamples)(datasetId, scope)
+    germinateGenotypeSamplesP(datasetId, scope)
     .then(samples => callSetCacheForBlock(datasetId, scope));
   return p;
 }
@@ -150,7 +153,7 @@ export { ensureSamplesParam };
 function ensureSamplesParam(datasetId, scope, preArgs) {
   let argsP;
   if (! preArgs?.samples?.length) {
-    argsP = promisify(germinateGenotypeSamples)(datasetId, scope)
+    argsP = germinateGenotypeSamplesP(datasetId, scope)
       .then(samples => {
         let sample;
         if (samples.length) {

@@ -52,6 +52,8 @@ export default Component.extend(Evented, AxisEvents, {
   controls : service(),
   auth : service(),
 
+  filePath : 'components/draw/axis-brush.js',
+
 
   /*--------------------------------------------------------------------------*/
 
@@ -120,9 +122,9 @@ export default Component.extend(Evented, AxisEvents, {
     let
       block = this.get('block'),
     /** axis-brush object in store */
-    record = this.get('pathsP').ensureAxisBrush(block);
+    record = this.get('pathsP').ensureAxisBrush(block.block);
 
-    let axis1d = block.get('block.axis.axis1d');
+    let axis1d = block.get('block.axis');
     if (axis1d && ! axis1d.axisBrushComp) {
       axis1d.axisBrushComp = this;
     }

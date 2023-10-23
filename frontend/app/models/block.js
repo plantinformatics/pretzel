@@ -53,6 +53,10 @@ const moduleName = 'models/block';
 /** trace the (array) value or just the length depending on trace level. */
 function valueOrLength(value) { return (trace_block > 1) ? value : value.length; }
 
+function numberOk(x) {
+  return (typeof x === 'number') && ! isNaN(x);
+}
+
 /*----------------------------------------------------------------------------*/
 
 const trace = 1;
@@ -197,6 +201,19 @@ export default Model.extend({
   }),
 
   /*--------------------------------------------------------------------------*/
+
+  /** Enable this to monitor get/set of .featureCount
+  featureCount_ : undefined,
+  get featureCount() {
+    return this.featureCount_;
+  },
+  set featureCount(count) {
+    dLog('featureCount', count);
+    this.featureCount_ = count;
+  },
+  */
+
+  //----------------------------------------------------------------------------
 
   hasFeatures : computed('featureCount', 'featureValueCount', function () {
     /** featureValueCount > 0 implies featureCount > 0.
@@ -674,14 +691,14 @@ export default Model.extend({
          * direct attributes of block to indicate whether it is reference / data
          * block.
          * Also filter out self if this is a child block.
-         * Accept block as a reference if it doesn't have a range or features or a parent;
+         * Accept block as a reference if it has a range or doesn't have features or a dataset parent name;
          * the possibility of references having parents has been floated, this does not support it.
          */
         referenceBlock = blocks && blocks.filter(
           (b) => b &&
             (isQTL ? true :
-             (!!b.range || ! (b.featureValueCount || b.featureLimits) ||
-              ! b.get('datasetId.parent'))) &&
+             (!!b.range || ! (b.featureValueCount || b.featureCount || b.featureLimits) ||
+              ! b.get('datasetId.parentName'))) &&
             (! blockId || (b.get('id') !== blockId))
         );
       } else {
@@ -951,13 +968,38 @@ export default Model.extend({
       return brushedDomain;
     }),
 
+  //----------------------------------------------------------------------------
+
+  /** if .featureCount is defined, calculate the approximate proportion within
+   * zoom or brush if defined, otherwise return all.
+   */
+  featureCountProrata(count) {
+      const
+      limits = this.get('limits'),
+      subDomain = this.brushedDomain || this.zoomedDomain;
+      if (limits && subDomain) {
+        const
+        subDomainSize = intervalSize(subDomain),
+        domainSize = intervalSize(limits);
+        if (numberOk(subDomainSize) && numberOk(domainSize) && domainSize) {
+          count = count * subDomainSize / domainSize;
+        }
+      }
+      return count;
+  },
+
+  /** If the axis of this block is brushed, return .featureCountInBrush if
+   * .featuresCountsResults.length otherwise featureCountProrata(.featureCount).
+   * If not brushed, return .featureCount
+   */
   featuresCountIncludingBrush : computed(
     'featuresCountsResults.[]',
     'featureCountInBrush', 'brushedDomain.{0,1}' /* -Debounced */, 'limits',
     function () {
       let
       count = this.get('axis1d.brushed') ?
-        (this.featuresCountsResults.length ? this.get('featureCountInBrush') : undefined ) :
+        (this.featuresCountsResults.length ?
+         this.get('featureCountInBrush') : this.featureCountProrata(this.featureCount) ) :
         this.featureCount;
       if (trace_block > 1)
         dLog('featuresCountIncludingBrush', count);
@@ -1702,7 +1744,13 @@ export default Model.extend({
     const fnName = 'featuresForAxis';
     let blockId = this.get('id');
     let
-    count = this.get('featuresCountIncludingZoom'),
+    /** Count of loaded features in the current view.
+     * If count is not defined and this.hasTag('view') then get featuresCounts
+     * first, except for hasTag('Germinate') which does not yet support
+     * featuresCounts so use getFeatures().
+     */
+    count = this.get('featuresCountIncludingZoom') ||
+        (this.hasTag('Germinate') && this.featureCountProrata(this.get('features.length')??0)),
     isZoomedOut = this.get('isZoomedOut'),
     featuresCountsThreshold = this.get('featuresCountsThreshold');
     let features;

@@ -223,7 +223,7 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
 
     /** also load parent block */
     loadBlock : function loadBlock(block) {
-      dLog('loadBlock', block);
+      dLog('loadBlock', block.brushName || block);
       let related = this.get('view').viewRelatedBlocks(block);
       // load related[] before block.
       related.push(block);

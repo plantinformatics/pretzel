@@ -1,4 +1,4 @@
-import { computed } from '@ember/object';
+import EmberObject, { computed } from '@ember/object';
 import { inject as service } from '@ember/service';
 import Model, { attr, belongsTo } from '@ember-data/model';
 
@@ -6,13 +6,14 @@ const ObjName = 'axis-brush';
 
 const dLog = console.debug;
 
-export default Model.extend({
+export default EmberObject.extend({
 
   pathsP : service('data/paths-progressive'),
   blockService: service('data/block'),
 
-  block: belongsTo('block', { inverse: null }),
-  blockId: attr('string'),
+  block: undefined,
+  /** block.id */
+  blockId: undefined,
   // brushedDomain : DS.attr(),
   // featuresResult : DS.attr(),
 

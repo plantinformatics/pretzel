@@ -517,18 +517,27 @@ function addFeaturesGerminate(block, requestFormat, replaceResults, selectedFeat
     const genotypeValue = call.genotypeValue;
     f.values[call.callSetName] = genotypeValue;
     /* "variantName": "m2-23.0" 
-     * m2-23.0 => m2 is marker name and 23.0 is its position */
-    const
-    [markerName, positionText] = call.variantName.split('-'),
+     * m2-23.0 => m2 is marker name and 23.0 is its position
+     * Some of the marker names contain '-', e.g. 'scaffold77480-1_24233-24233.0'
+     * so instead of split('-'), use .match(/(.+) ... ) which is greedy.
+     */
+    let
+    [wholeString, markerName, positionText] = call.variantName.match(/(.+)-(.+)/),
     position = +positionText;
-    f.value_0 = position;
-    f.value = [position];
+    if (isNaN(position)) {
+      // handle Oct19 format :  dbid_mapid_ exome SNP name e.g. 6_20_6_scaffold77480, or?  scaffold72661_85293-85293.0
+      markerName = positionText;
+    } else {
+      f.value_0 = position;
+      f.value = [position];
+    }
 
     let feature = f;
     /** sampleID corresponds to callSetName, so exclude it from the feature name/id */
     const [datasetID, sampleID] = call.callSetDbId.split('-');
-    /* name is unique per row;  for 1 feature per cell, append : + '_' + call.callSetName */
-    feature._name = feature.id =
+    /* .id is unique per genotype table row;  for 1 feature per cell, append : + '_' + call.callSetName */
+    feature._name = markerName;
+    feature.id =
       block.id + '_' + datasetID + '_' + markerName;
     let existingFeature = store.peekRecord('Feature', feature.id);
     if (existingFeature) {
