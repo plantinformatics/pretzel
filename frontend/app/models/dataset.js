@@ -114,7 +114,10 @@ export default Record.extend({
     return this.get('_meta.displayName') || this.get('id');
   }),
 
-  /** if isGerminate then _meta.germinate.mapDbId, otherwise .id,  */
+  /** if isGerminate then _meta.germinate.mapDbId, otherwise .id,
+   * This is used in request params, but not used e.g. in
+   * sampleCache.sampleNames[], which is indexed by dataset.id
+   */
   genotypeId : computed(function () {
     return this.get('_meta.germinate.mapDbId') || this.get('id');
   }),

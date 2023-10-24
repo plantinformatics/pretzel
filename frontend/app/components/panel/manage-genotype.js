@@ -1636,15 +1636,16 @@ export default class PanelManageGenotypeComponent extends Component {
     /** implemented by common/models/block.js : Block.vcfGenotypeSamples().  */
     const
     fnName = 'vcfGenotypeSamples',
-    vcfDatasetId = vcfBlock?.get('datasetId.genotypeId'),
+    vcfDatasetId = vcfBlock?.get('datasetId.id'),
+    vcfDatasetIdAPI = vcfBlock?.get('datasetId.genotypeId'),
     /** as in .lookupScope */
     scope = vcfBlock.get('name');
     let textP;
-    if (scope && vcfDatasetId)   {
+    if (scope && vcfDatasetIdAPI)   {
       this.lookupMessage = null;
 
       textP = this.auth.genotypeSamples(
-        vcfBlock, vcfDatasetId, scope,
+        vcfBlock, vcfDatasetIdAPI, scope,
         {} );
       textP.then(
         (text) => {
@@ -1911,7 +1912,7 @@ export default class PanelManageGenotypeComponent extends Component {
     samplesLimitEnable = userSettings.samplesLimitEnable,
     {samples, samplesOK} = this.samplesOK(samplesLimitEnable),
     domainInteger = this.vcfGenotypeLookupDomain,
-    vcfDatasetId = this.lookupDatasetId;
+    vcfDatasetId = this.lookupBlock?.get('datasetId.genotypeId');
     /* Possibly filter out .lookupBlock if .datasetId positionFilter === false,
      * as is done in vcfGenotypeLookupAllDatasets().
      */
@@ -1942,7 +1943,8 @@ export default class PanelManageGenotypeComponent extends Component {
       })
       .forEach((blockV, i) => {
       const
-      vcfDatasetId = blockV.get('datasetId.genotypeId'),
+      vcfDatasetId = blockV.get('datasetId.id'),
+      vcfDatasetIdAPI = blockV.get('datasetId.genotypeId'),
       /** use .name instead of .scope, because some VCF files use 'chr' prefix
        * on chromosome name e.g. chr1A, and .name reflects that;
        * as in lookupScope().
@@ -1957,13 +1959,14 @@ export default class PanelManageGenotypeComponent extends Component {
        * may be valid, but for now skip this dataset if ! .length.
        */
       if (this.args.userSettings.requestSamplesAll || samples.length) {
-        this.vcfGenotypeLookupDataset(blockV, vcfDatasetId, scope, domainInteger, samples, samplesLimitEnable);
+        this.vcfGenotypeLookupDataset(blockV, vcfDatasetIdAPI, scope, domainInteger, samples, samplesLimitEnable);
       }
     });
   }
   /** Send API request for VCF genotype of the given vcfDatasetId.
    * @param blockV
    * @param vcfDatasetId one of the VCF genotype datasets on the brushed axis
+   * This is the API id, i.e. .genotypeId, not dataset .id
    * @param scope of the brushed axis
    * @param domainInteger brushed domain on the axis / parent
    * @param samples selected samples to request
@@ -1989,7 +1992,7 @@ export default class PanelManageGenotypeComponent extends Component {
       isecDatasetsNotSelf = this.gtDatasets
           .filter(dataset =>
             ('boolean' === typeof dataset.positionFilter) &&
-              (dataset.id !== vcfDatasetId));
+              (dataset.genotypeId !== vcfDatasetId));
       if (isecDatasetsNotSelf.length) {
         const
         /** filter out null and undefined; include vcfDatasetId i.e. the dataset
@@ -1997,7 +2000,7 @@ export default class PanelManageGenotypeComponent extends Component {
          * 
          * table value indicates if dataset should be included in isecDatasets.
          * |------------------------+-------------------------------+-------|
-         * |                        | (dataset.id === vcfDatasetId) |       |
+         * |                        | (dataset.genotypeId === vcfDatasetId) |
          * | dataset.positionFilter | true                          | false |
          * |------------------------+-------------------------------+-------|
          * | undefined              | true                          | false |
@@ -2010,11 +2013,11 @@ export default class PanelManageGenotypeComponent extends Component {
         isecDatasets = this.gtDatasets
           .filter(dataset =>
             ('boolean' === typeof dataset.positionFilter) ||
-              (dataset.id === vcfDatasetId)),
+              (dataset.genotypeId === vcfDatasetId)),
         isecDatasetIds = isecDatasets
-          .mapBy('id'),
+          .mapBy('genotypeId'),
         /** in isecDatasets[] dataset positionFilter is only nullish at this
-         * point if dataset.id is vcfDatasetId - use flag true in that case. */
+         * point if dataset.genotypeId is vcfDatasetId - use flag true in that case. */
         flags = isecDatasets.map(dataset => dataset.positionFilter ?? true),
         allTrue = flags.findIndex(flag => !flag) === -1,
         isecFlags = allTrue ? isecDatasetIds.length :
@@ -2335,8 +2338,7 @@ export default class PanelManageGenotypeComponent extends Component {
   get vcfExportFileName() {
     const
     scope = this.lookupScope,
-    /** this is .lookupDatasetId if ! isGerminate */
-    vcfDatasetId = this.lookupBlock?.get('datasetId.genotypeId'),
+    vcfDatasetId = this.lookupBlock?.get('datasetId.id'),
     domainText = this.vcfGenotypeLookupDomain ? this.vcfGenotypeLookupDomain.join('-') : '',
     samplesLength = this.vcfGenotypeSamplesSelected ? this.vcfGenotypeSamplesSelected.length : '',
     fileName = vcfDatasetId +
