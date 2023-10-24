@@ -1741,25 +1741,34 @@ export default Model.extend({
      * models/axis-brush.js is part of this, and can be renamed to suit;
      * this function is equivalent to axis-brush.js : features().
      */
-    const fnName = 'featuresForAxis';
-    let blockId = this.get('id');
-    let
+    const
+    fnName = 'featuresForAxis',
+    blockId = this.get('id'),
+    isGerminate = this.hasTag('Germinate'),
     /** Count of loaded features in the current view.
      * If count is not defined and this.hasTag('view') then get featuresCounts
      * first, except for hasTag('Germinate') which does not yet support
      * featuresCounts so use getFeatures().
      */
     count = this.get('featuresCountIncludingZoom') ||
-        (this.hasTag('Germinate') && this.featureCountProrata(this.get('features.length')??0)),
+        (isGerminate && this.featureCountProrata(this.get('features.length')??0)),
     isZoomedOut = this.get('isZoomedOut'),
     featuresCountsThreshold = this.get('featuresCountsThreshold');
     let features;
     dLog('featuresForAxis', isZoomedOut, count, featuresCountsThreshold, this.get('zoomedDomain'), this.get('zoomedDomainDebounced'));
 
-    /** if the block has chartable data, get features regardless; may also request featuresCounts. */
+    /** if the block has chartable data, get features regardless; may also request featuresCounts.
+     * Similarly for Germinate, start by getting all features (just 1 sample),
+     * to provide a zoomed-out view (can construct a histogram from this result).
+     */
+    const
+    all = isGerminate &&
+      ! this.loadingAllFeatures &&
+      (this.loadingAllFeatures = true);
     /** can use isZoomedOut here instead, e.g. (isZoomedOut === true)  */
-    if (this.get('isChartable') || ((count !== undefined) && (count <= featuresCountsThreshold))) {
-      this.getFeatures(blockId);
+    if (all || this.get('isChartable') ||
+        ((count !== undefined) && (count <= featuresCountsThreshold))) {
+      this.getFeatures(blockId, all);
     }
     const
       domain = this.getDomain();
@@ -1800,10 +1809,13 @@ export default Model.extend({
 
     return features;
   }),
-  getFeatures(blockId) {
+  /**
+   * @param all true means request all features of the block
+   */
+  getFeatures(blockId, all) {
     const fnName = 'getFeatures';
     let
-    features = this.get('pathsP').getBlockFeaturesInterval(blockId);
+    features = this.get('pathsP').getBlockFeaturesInterval(blockId, all);
 
     features.then(
       (result) => {
