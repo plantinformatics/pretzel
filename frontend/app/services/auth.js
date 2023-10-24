@@ -407,6 +407,8 @@ export default Service.extend({
    *  e.g. region : -r 'chr6A:607200000-607200000'
    *      samples : -s ...,...
    * This will likely be replaced by specific params region and samples.
+   * Additional :
+   * . linkageGroupName defined if isGerminate
    * @param nLines if defined, limit the output to nLines.
    * @param options not used yet, may be for streaming result
    */

@@ -78,6 +78,8 @@ export default EmberObject.extend(ApiServerAttributes, {
         id : germinateDataset.mapDbId + '_' + name,
         scope,
         featureCount : linkageGroup.markerCount,
+        /** linkageGroupName is used for /chromosome/ path param in API call. */
+        _meta : {linkageGroupName : linkageGroup.linkageGroupName},
       },
       blockP = store.createRecord('Block', blockAttributes);
       return blockP;

@@ -128,9 +128,10 @@ function germinateGenotypeLookup(datasetId, scope, preArgs, nLines, undefined, c
       // e.g. '1-593'
       const
       callSetDbId = name2Id[sampleName],
+      linkageGroupName = preArgs.linkageGroupName,
       dataP = ! callSetDbId ? 
         Promise.resolve([]) :
-        germinate.callsetsCalls(callSetDbId, start, end)
+        germinate.callsetsCalls(callSetDbId, linkageGroupName, start, end)
         .then(response => response.result.data);
       return dataP;
     });

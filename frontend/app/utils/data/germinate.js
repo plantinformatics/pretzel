@@ -383,15 +383,23 @@ function isDefined(x) {
 }
 
 Germinate.prototype.callsetsCalls = callsetsCalls;
-/* @param dataset, start, end
+/* filtering based on positions and chromosome:
+ * GET
+ * {domain}/api/brapi/v2/callsets/{callSetDbId}/calls/mapid/{mapid}/chromosome/{chromosome}/position/{positionStart}/{positionEnd}
+ * example: {domain}/api/brapi/v2/callsets/4-1036/calls/mapid/4/chromosome/10/position/1/300
+ *
+ * @param dataset, start, end
  * e.g. '1-593', '2932022', '2932028'
 */
-function callsetsCalls(dataset, start, end) {
+function callsetsCalls(dataset, linkageGroupName, start, end) {
   const fnName = 'callsetsCalls';
   /** Optional location / position / variantName interval to filter SNPs */
   let intervalParams = '';
+  if (isDefined(linkageGroupName)) {
+    intervalParams += '/chromosome/' + linkageGroupName;
+  } 
   if (isDefined(start)) {
-    intervalParams = '/position/' + start;
+    intervalParams += '/position/' + start;
     if (isDefined(end)) {
       intervalParams += '/' + end;
     }

@@ -90,6 +90,20 @@ function datasetId2Class(datasetId) {
 
 // -----------------------------------------------------------------------------
 
+/** If block is Germinate and block._meta.linkageGroupName is defined, insert
+ * linkageGroupName into requestOptions, for use with URL path parameter /chromosome/
+ * by utils/data/germinate.js : callsetsCalls(), via 
+ * germinate-genotype.js :  germinateGenotypeLookup()
+ */
+function addGerminateOptions(requestOptions, block) {
+  if (block?.hasTag('Germinate') && block._meta?.linkageGroupName) {
+    requestOptions.linkageGroupName = block._meta.linkageGroupName;
+  }
+  return requestOptions;
+}
+
+//------------------------------------------------------------------------------
+
 /** Lookup the genotype for the selected samples in the interval of the brushed block.
  * The server store to add the features to is derived from
  * vcfGenotypeLookupDataset() param blockV, from brushedOrViewedVCFBlocksVisible,
@@ -102,6 +116,7 @@ function datasetId2Class(datasetId) {
  * {requestFormat, requestSamplesAll, headerOnly},
  * . requestFormat 'CATG' (%TGT) or 'Numerical' (%GT for 01)
  * . headerOnly true means -h (--header-only), otherwise -H (--no-header)
+ * . linkageGroupName defined if isGerminate
  *
  * @param vcfDatasetId  id of VCF dataset to lookup
  * @param scope chromosome, e.g. 1A, or chr1A - match %CHROM chromosome in .vcf.gz file
@@ -1519,6 +1534,7 @@ export {
   valueNameIsNotSample,
   datasetId2Class,
   gtValueIsNumeric,
+  addGerminateOptions,
   vcfGenotypeLookup,
   addFeaturesJson,
   resultIsGerminate,

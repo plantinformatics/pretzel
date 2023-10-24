@@ -14,6 +14,7 @@ import { stacks, Stacked } from '../../utils/stacks';
 import AxisBrushObject from '../../utils/draw/axis-brush';
 import { storeFeature } from '../../utils/feature-lookup';
 import {
+  addGerminateOptions,
   vcfGenotypeLookup, addFeaturesJson,
   resultIsGerminate,
   addFeaturesGerminate,
@@ -834,7 +835,9 @@ export default Service.extend({
     rowLimit = vcParams.nSamples || vcParams.nFeatures || 400,
     /** not used because 0 samples. */
     requestFormat = 'CATG',
-
+    requestOptions = {requestFormat};
+    addGerminateOptions(requestOptions, block);
+    const
     /* generally block.name and .scope are the same.
      * To handle vcf files with e.g. %CHROM 'chr1A' instead of '1A',
      * .name can be chr1A, and .name is used here for the 'scope' param of
@@ -842,7 +845,7 @@ export default Service.extend({
      */
     textP = vcfGenotypeLookup(
       this.auth, /*samples*/[], domainInteger,
-      {requestFormat}, vcfDatasetId, block.name, rowLimit
+      requestOptions, vcfDatasetId, block.name, rowLimit
     );
 
     return textP;

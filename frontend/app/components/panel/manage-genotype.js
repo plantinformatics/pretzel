@@ -24,6 +24,7 @@ import {
   valueNameIsNotSample,
   datasetId2Class,
   gtValueIsNumeric,
+  addGerminateOptions,
   vcfGenotypeLookup,
   addFeaturesJson,
   resultIsGerminate,
@@ -2025,6 +2026,7 @@ export default class PanelManageGenotypeComponent extends Component {
         requestOptions.isecDatasetIds = isecDatasetIds;
         requestOptions.isecFlags = '-n' + isecFlags;
       }
+      addGerminateOptions(requestOptions, blockV);
       const
       textP = vcfGenotypeLookup(this.auth, samples, domainInteger,  requestOptions, vcfDatasetId, scope, this.rowLimit);
       // re-initialise file-anchor with the new @data
@@ -2937,7 +2939,9 @@ export default class PanelManageGenotypeComponent extends Component {
       requestSamplesFiltered = userSettings.requestSamplesFiltered,
       /** If filtered, then samples is a subset of All. */
       requestSamplesAll = userSettings.requestSamplesAll && ! requestSamplesFiltered,
+      /** requestOptions.linkageGroupName may not be required when getting headers. */
       requestOptions = {requestFormat, requestSamplesAll, headerOnly : true};
+      addGerminateOptions(requestOptions, this.lookupBlock);
       /** these params are not applicable when headerOnly : samples, domainInteger, rowLimit. */
       textP = vcfGenotypeLookup(
         this.auth, samples, domainInteger,
