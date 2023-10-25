@@ -127,7 +127,7 @@ function featureHasSamplesLoaded(feature) {
 /**
  * @param selectBlock action
  * @param selectedBlock selected data block
- * @param selectedFeatures
+ * @param selectedFeatures  replaced by .selectedService
  * @param updatedSelectedFeatures 'updateSelectedFeatures'
  * @param userSettings  userSettings.genotype
  * user-selected values are preserved in args.userSettings
@@ -190,6 +190,7 @@ export default class PanelManageGenotypeComponent extends Component {
   @service('data/vcf-genotype') sampleCache;
   @service('data/haplotype') haplotypeService;
   @service('query-params') queryParamsService;
+  @service('data/selected') selectedService;
 
 
   @alias('controls.apiServerSelectedOrPrimary') apiServerSelectedOrPrimary;
@@ -2062,12 +2063,11 @@ export default class PanelManageGenotypeComponent extends Component {
           if (text && blockV) {
             const
             replaceResults = this.args.userSettings.replaceResults,
-            selectedFeatures = this.args.selectedFeatures,
             nSamples = this.controls.view.pathsDensityParams.nSamples,
             germinateOptions = {nSamples},
             added = isGerminate ?
-              addFeaturesGerminate(blockV, requestFormat, replaceResults, selectedFeatures, callsData, germinateOptions) :
-              addFeaturesJson(blockV, requestFormat, replaceResults, selectedFeatures, text),
+              addFeaturesGerminate(blockV, requestFormat, replaceResults, this.selectedService, callsData, germinateOptions) :
+              addFeaturesJson(blockV, requestFormat, replaceResults, this.selectedService, text),
             options = {requestSamplesAll : userSettings.requestSamplesAll, selectedSamples : added.sampleNames /*this.selectedSamples*/};
             featuresSampleMAF(added.createdFeatures, options);
 

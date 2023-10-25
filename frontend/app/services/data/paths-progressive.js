@@ -79,6 +79,7 @@ export default Service.extend({
   blockService : service('data/block'),
   apiServers : service(),
   controls : service(),
+  selectedService : service('data/selected'),
 
   /** set up a block-adj object to hold results. */
   ensureBlockAdj(blockAdjId) {
@@ -776,12 +777,11 @@ export default Service.extend({
             isGerminate = resultIsGerminate(text),
             callsData = isGerminate && text,
             replaceResults = false,
-            /** pass [] for selectedFeatures - don't update selectedFeatures */
-            selectedFeatures = [],
+            /** pass null for selectedService - don't update selectedFeatures */
             /** similar in vcfGenotypeLookupDataset() */
             added = isGerminate ?
-              addFeaturesGerminate(block, requestFormat, replaceResults, selectedFeatures, callsData, germinateOptions) :
-              addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures, text);
+              addFeaturesGerminate(block, requestFormat, replaceResults, /*selectedService*/null, callsData, germinateOptions) :
+              addFeaturesJson(block, requestFormat, replaceResults, /*selectedService*/null, text);
             if (added.createdFeatures) {
               // All the samples in the result were requested, so calculate MAF across all.
               featuresSampleMAF(added.createdFeatures, {requestSamplesAll : true, selectedSamples : undefined});

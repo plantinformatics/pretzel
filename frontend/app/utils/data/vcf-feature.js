@@ -207,10 +207,10 @@ scaffold38755_709316	709316	0/0	0/1	0/0	0/0	0/0	./.	0/0	0/0	0/0	0/1	0/0	0/0	0/0	
  * @param block view dataset block for corresponding scope (chromosome)
  * @param requestFormat 'CATG', 'Numerical', ...
  * @param replaceResults  true means remove previous results for this block from block.features[] and selectedFeatures.
- * @param selectedFeatures  updated directly - can change to use updatedSelectedFeatures
+ * @param selectedService if defined then update selectedFeatures
  * @param text result from bcftools request
  */
-function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures, text) {
+function addFeaturesJson(block, requestFormat, replaceResults, selectedService, text) {
   const fnName = 'addFeaturesJson';
   dLog(fnName, block.id, block.mapName, text.length);
   /** optional : add fileformat, FILTER, phasing, INFO, FORMAT to block meta
@@ -219,8 +219,6 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
    */
   let
   createdFeatures = [],
-  /** The same features as createdFeatures[], in selectedFeatures format. */
-  selectionFeatures = [],
   /** if the output is truncated by rowLimit aka nLines, the last line will not
    * have a trailing \n, and is discarded.  If incomplete lines were not
    * discarded, values.length may be < 4, and feature.value may be undefined.
@@ -239,16 +237,20 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
   }
 
   if (replaceResults) {
-    // let mapChrName = Ember_get(block, 'brushName');
-    /* remove features of block from createdFeatures, i.e. matching Chromosome : mapChrName
-     * If the user has renewed the axis brush, then selectedFeatures will not
-     * contain any features from selectionFeature in previous result; in that
-     * case this has no effect and none is required.
-     * If the user send a new request with e.g. changed samples, then this would apply.
-     */
-    let blockSelectedFeatures = selectedFeatures.filter((f) => f.feature.get('blockId.id') === block.id);
-    if (blockSelectedFeatures.length) {
-      selectedFeatures.removeObjects(blockSelectedFeatures);
+    if (selectedService) {
+      const selectedFeatures = selectedService.selectedFeatures;
+      // let mapChrName = Ember_get(block, 'brushName');
+      /* remove features of block from createdFeatures, i.e. matching Chromosome : mapChrName
+       * If the user has renewed the axis brush, then selectedFeatures will not
+       * contain any features from selectionFeature in previous result; in that
+       * case this has no effect and none is required.
+       * If the user send a new request with e.g. changed samples, then this would apply.
+       * This can also be moved to selectedService.
+       */
+      let blockSelectedFeatures = selectedFeatures.filter((f) => f.feature.get('blockId.id') === block.id);
+      if (blockSelectedFeatures.length) {
+        selectedFeatures.removeObjects(blockSelectedFeatures);
+      }
     }
 
     if (block.get('features.length')) {
@@ -256,6 +258,10 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
       block.features.removeAt(0, block.get('features.length'));
     }
   }
+  if (selectedService) {
+    selectedService.selectedFeaturesUpdateIndex();
+  }
+
 
   lines.forEach((l, lineNum) => {
     if (l.startsWith('##')) {
@@ -419,7 +425,9 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
         nFeatures++;
 
         let mapChrName = Ember_get(feature, 'blockId.brushName');
-        let selectionFeature = {Chromosome : mapChrName, Feature : feature.name, Position : feature.value[0], feature};
+        if (selectedService) {
+          selectedService.selectedFeaturesMergeFeature(mapChrName, feature);
+        }
 
         /* vcfFeatures2MatrixView() uses createdFeatures to populate
          * displayData; it could be renamed to resultFeatures; the
@@ -427,7 +435,6 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
          * existingFeature.
          */
         createdFeatures.push(feature);
-        selectionFeatures.push(selectionFeature);
         // If existingFeature then addObject(feature) is a no-op.
         if (replaceResults || ! existingFeature) {
           block.features.addObject(feature);
@@ -436,7 +443,6 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
 
     }
   });
-  selectedFeatures.pushObjects(selectionFeatures);
   blockEnsureFeatureCount(block);
   block.addFeaturePositions(createdFeatures);
 
@@ -499,11 +505,11 @@ function resultIsGerminate(data) {
  * Unlike bcftools, Germinate probably sends results only in CATG (nucleotide)
  * format, which is the format it uses for upload and storage in HDF.
  * @param replaceResults  true means remove previous results for this block from block.features[] and selectedFeatures.
- * @param selectedFeatures  same comment as per addFeaturesJson().
+ * @param selectedService if defined then update selectedFeatures
  * @param data result from Germinate callsets/<datasetDbId>/calls request
  * @param options { nSamples }
  */
-function addFeaturesGerminate(block, requestFormat, replaceResults, selectedFeatures, data, options) {
+function addFeaturesGerminate(block, requestFormat, replaceResults, selectedService, data, options) {
   const fnName = 'addFeaturesGerminate';
   dLog(fnName, block.id, block.mapName, data.length);
 
@@ -520,7 +526,6 @@ function addFeaturesGerminate(block, requestFormat, replaceResults, selectedFeat
   store = block.get('store'),
   columnNames = data.mapBy('callSetName').uniq(),
   sampleNames = columnNames,
-  selectionFeatures = [],
   createdFeatures = data.map((call, i) => {
     const f = {values : {}};
     /* Will lookup f.value in block.features interval tree,
@@ -573,16 +578,19 @@ function addFeaturesGerminate(block, requestFormat, replaceResults, selectedFeat
 
   dLog(fnName, data.length, columnNames.length);
 
-  // copied from addFeaturesJson() - may be similar enough to factor.
-  createdFeatures.forEach(feature => {
-    let mapChrName = block.get('brushName');
-    let selectionFeature = {Chromosome : mapChrName, Feature : feature.name, Position : feature.value[0], feature};
-
-    selectionFeatures.push(selectionFeature);
+  if (selectedService) {
+    const
+    feature = createdFeatures[0],
+    mapChrName = feature?.get('blockId.brushName');
+    // selectedService = feature?.get('blockId.axis.selected');
+    selectedService.selectedFeaturesUpdateIndex();
+    createdFeatures.forEach(
+      feature => selectedService.selectedFeaturesMergeFeature(mapChrName, feature));
+  }
+  // createRecord() connects to block OK, so this is not required :
+  // createdFeatures.forEach(feature => {
     // block.features.addObject(feature);
-  });
 
-  selectedFeatures.pushObjects(selectionFeatures);
   blockEnsureFeatureCount(block);
   block.addFeaturePositions(createdFeatures);
 

@@ -252,8 +252,36 @@ export default Service.extend(Evented, {
     }
     // no-op because selectedFeatures reference has not changed.
     this.updateSelectedFeatures(selectedFeatures);
-  }
+  },
 
+  //----------------------------------------------------------------------------
+
+  selectedFeaturesIndex : {},
+  selectedFeatureKey(selectedFeature) {
+    const
+    sf = selectedFeature,
+    key = [sf.Chromosome, sf.Feature, sf.Position].join('_');
+    return key;
+  },
+  selectedFeaturesUpdateIndex() {
+    this.selectedFeaturesIndex = this.selectedFeatures.reduce((result, sf) => {
+      result[this.selectedFeatureKey(sf)] = sf;
+      return result;
+    }, {});
+  },
+  selectedFeaturesMergeFeature(mapChrName, feature)  {
+    const
+    key = [mapChrName, feature.name, feature.value[0]].join('_'),
+    existing = this.selectedFeaturesIndex[key],
+    selectionFeature = {Chromosome : mapChrName, Feature : feature.name, Position : feature.value[0], feature},
+    sf = existing || (this.selectedFeaturesIndex[key] = selectionFeature);
+    if (existing) {
+      Object.assign(existing, selectionFeature);
+    } else {
+      this.selectedFeatures.pushObject(selectionFeature);
+    }
+    // return sf;
+  }
 
   //----------------------------------------------------------------------------
 
