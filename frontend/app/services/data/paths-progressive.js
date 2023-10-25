@@ -611,6 +611,7 @@ export default Service.extend({
   /** Features returned from API, for the block,
    * are stored in ember data store, as an attribute of block.
    * @param all true means request all features of the block
+   * @return undefined if block not found, otherwise promise yielding features
    */
   getBlockFeaturesInterval(blockId, all) {
     const fnName = 'getBlockFeaturesInterval';
@@ -762,6 +763,9 @@ export default Service.extend({
       // this.get('auth').getPathsViaStream(blockA, blockB, intervalParams, /*options*/{dataEvent : receivedData}) :
       me.get('auth').getBlockFeaturesInterval(blockId, intervalParams, /*options*/{});
 
+        /**
+         * @param text  VCF, or isGerminate : array of features / callsets calls
+         * @return text */
         function receivedDataVCF(text) {
           if (text && block) {
             const
@@ -781,8 +785,12 @@ export default Service.extend({
             if (added.createdFeatures) {
               // All the samples in the result were requested, so calculate MAF across all.
               featuresSampleMAF(added.createdFeatures, {requestSamplesAll : true, selectedSamples : undefined});
+              /* Could return added.createdFeatures, but that may be limited at nSamples.
+               * Caller germinateCallsToCounts() will parse the json.
+               */
             }
           }
+          return text;
         }
 
         function receivedData(res){

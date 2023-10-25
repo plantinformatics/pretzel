@@ -492,6 +492,56 @@ fcrsShow = function (fcrs)  { fcrs.forEach((fcr) => console.log('featuresCountsR
 ;
 
 /*----------------------------------------------------------------------------*/
+/** Collate features received from Germinate into bins, format as a featuresCountsResult
+ * and push into block.featuresCountsResults
+ */
+
+/** For grains, average chromosome is 500 - 1000 Mbase; aim for 50-100 bins initially.
+ */
+const binSize = 1e7;
+
+/**
+ * @param sampleData from germinateGenotypeLookup() : callsets calls response
+ */
+function germinateCallsToCounts(sampleData) {
+  const
+  counts =
+  sampleData.reduce((result, call) => {
+    const
+    position = +call.variantName.match(/(.+)-(.+)/)[2],
+    bin = (position / binSize).toFixed();
+    if (! result[bin]) {
+      result[bin] = 1;
+    } else {
+      result[bin]++;
+    }
+    return result;
+  }, []);
+  return counts;
+}
+/**
+ * Used in models/block.js : featuresForAxis() : all
+ */
+function featuresCountsTransform(block, counts) {
+  const
+  keys = Object.keys(counts),
+  keyRange = [+keys[0], +keys.at(-1) + 1],
+  domain = keyRange.map(p => p * binSize),
+  nBins = keyRange[1] - keyRange[0],
+  result = counts.map((count, i) => ({
+    _id: +keys[i] * binSize,
+    count,
+    idWidth: [binSize],
+  })),
+  fcr = {binSize, nBins, domain, result};
+  // block.featuresCountsResults[0] = fcr;  // for repeated test in development.
+  block.featuresCountsResults.push(fcr);
+  // related : getSummary() : p.then()
+  const featuresCounts = result;
+  block.set('featuresCounts', featuresCounts);
+}
+
+//------------------------------------------------------------------------------
 
 export {
   featuresCountsResultsCheckOverlap,
@@ -500,4 +550,6 @@ export {
   featuresCountsResultsFilter,
   featuresCountsResultsTidy,
   featuresCountsResultsSansOverlap,
+  germinateCallsToCounts,
+  featuresCountsTransform,
 };

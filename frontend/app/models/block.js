@@ -29,6 +29,8 @@ import {
   featuresCountsResultsDomain,
   featuresCountsResultsFilter,
   featuresCountsResultsTidy,
+  germinateCallsToCounts,
+  featuresCountsTransform,
  } from '../utils/draw/featuresCountsResults';
 
 import { fcsProperties } from '../utils/data-types';
@@ -1768,7 +1770,25 @@ export default Model.extend({
     /** can use isZoomedOut here instead, e.g. (isZoomedOut === true)  */
     if (all || this.get('isChartable') ||
         ((count !== undefined) && (count <= featuresCountsThreshold))) {
-      this.getFeatures(blockId, all);
+      const featuresP = this.getFeatures(blockId, all);
+      if (all) {
+        featuresP.then(promiseResult => {
+          /** expect :
+              (promiseResult.length === 1) &&
+              ((features[0].state === 'fulfilled') ||
+              features[0].hasOwnProperty('value'))
+          */
+          dLog(fnName, promiseResult.length, promiseResult[0]?.state);
+          if (promiseResult[0]?.state !== 'fulfilled') {
+            dLog(fnName, blockId, 'getFeatures', promiseResult);
+          } else {
+            const
+            features = promiseResult[0].value,
+            counts = germinateCallsToCounts(features);
+            featuresCountsTransform(this, counts);
+          }
+        });
+      }
     }
     const
       domain = this.getDomain();
@@ -1811,6 +1831,7 @@ export default Model.extend({
   }),
   /**
    * @param all true means request all features of the block
+   * @return promise yielding received features
    */
   getFeatures(blockId, all) {
     const fnName = 'getFeatures';
@@ -1826,6 +1847,7 @@ export default Model.extend({
         dLog(moduleName, fnName, 'reject', err);
       }
     );
+    return features;
   },
 
   /** Search in current results for a result which meets the requirements of domain and nBins.
