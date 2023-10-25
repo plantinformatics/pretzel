@@ -1892,6 +1892,13 @@ export default class PanelManageGenotypeComponent extends Component {
   vcfGenotypeLookup() {
     const
     fnName = 'vcfGenotypeLookup';
+    /** Germinate data is in Nucleotide format (CATG) and Alt / Ref is not
+     * currently received from Germinate data / interface, so cannot determine
+     * Numerical format (number of copies of Alt).  So request and display CATG.
+     */
+    if (this.lookupBlock.hasTag('Germinate')) {
+      Ember_set(this, 'args.userSettings.requestFormat', 'CATG');
+    }
     if (this.args.userSettings.autoLookup) {
       this.vcfGenotypeLookupAllDatasets();
     } else {
