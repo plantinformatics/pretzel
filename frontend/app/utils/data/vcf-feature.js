@@ -510,6 +510,7 @@ function addFeaturesGerminate(block, requestFormat, replaceResults, selectedFeat
   if (replaceResults) {
     dLog(fnName, 'replaceResults not implemented');
   }
+  if (false)
   if ((options.nSamples !== undefined) && (data.length > options.nSamples)) {
     dLog(fnName, 'truncate data', data.length, options.nSamples);
     data = data.slice(0, options.nSamples);
