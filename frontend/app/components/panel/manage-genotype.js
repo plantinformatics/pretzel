@@ -132,13 +132,14 @@ function featureHasSamplesLoaded(feature) {
  * @param userSettings  userSettings.genotype
  * user-selected values are preserved in args.userSettings
  * (related : services/data/selected.js)
+ * Fields are implicitly @tracked because userSettings is in args.
  * Within userSettings (object) :
  *
  * Arrays of sample names selected by the user, per dataset. indexed by VCF datasetId
  * .vcfGenotypeSamplesSelected = {} (aliased as vcfGenotypeSamplesSelectedAll)
  *
  * .samplesIntersection default : false
- * .requestFormat 'Numerical' (default), 'CATG'
+ * .requestFormat : string : 'Numerical' (default), 'CATG'
  * .replaceResults default: false
 
  * .showResultText default: false
@@ -373,8 +374,10 @@ export default class PanelManageGenotypeComponent extends Component {
     }
 
     // possible values listed in comment before requestFormat
-    this.requestFormat =
-      userSettings.requestFormat || 'Numerical';  // alternate : CATG
+    if (userSettings.requestFormat === undefined) {
+      userSettings.requestFormat = 'Numerical'; // alternate : CATG
+    }
+
 
     /* most of the following flags are (mut) in checkboxes in .hbs, which
      * may require that they have a defined initial value.
@@ -834,18 +837,14 @@ export default class PanelManageGenotypeComponent extends Component {
 
   // ---------------------------------------------------------------------------
 
-
-  /** 
-   *    requestFormat : string : 'CATG', 'Numerical'
-   */
-
+  @alias('args.userSettings.requestFormat') requestFormat;
   /** The user can choose the format of information to request from bcftools,
-   * which is associated with a corresponding Renderer. */
-  @tracked
-  requestFormat = undefined;
+   * which is associated with a corresponding Renderer.
+   * @param requestFormat : string : 'CATG', 'Numerical'
+   */
   requestFormatChanged(value) {
     dLog('requestFormatChanged', value);
-    this.requestFormat = value;
+    this.args.userSettings.requestFormat = value;
   }
 
   //----------------------------------------------------------------------------
