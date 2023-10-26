@@ -502,22 +502,34 @@ const binSize = 1e7;
 
 /**
  * @param sampleData from germinateGenotypeLookup() : callsets calls response
+ * @return {counts, limits}
+ *   .counts [binCount, ...]
+ *   .limits is undefined if sampleData.length === 0 
  */
 function germinateCallsToCounts(sampleData) {
   const
-  counts =
+  result =
   sampleData.reduce((result, call) => {
     const
+    counts = result.counts,
     position = +call.variantName.match(/(.+)-(.+)/)[2],
     bin = (position / binSize).toFixed();
-    if (! result[bin]) {
-      result[bin] = 1;
+
+    if ((position !== 0) && ! position) {
+    } else if (! result.limits) {
+      result.limits = [position, position];
+    } else if (inInterval(result.limits, position)) {
+      result.limits = d3.extent([position, result.limits].flat());
+    }
+
+    if (! counts[bin]) {
+      counts[bin] = 1;
     } else {
-      result[bin]++;
+      counts[bin]++;
     }
     return result;
-  }, []);
-  return counts;
+  }, {counts : [], limits : undefined});
+  return result;
 }
 /**
  * Used in models/block.js : featuresForAxis() : all

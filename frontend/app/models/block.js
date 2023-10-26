@@ -3,7 +3,7 @@ import { inject as service } from '@ember/service';
 import Model, { attr, belongsTo, hasMany } from '@ember-data/model';
 // import { computed, set } from '@ember/object';
 import EmberObject from '@ember/object';
-import { observer } from '@ember/object';
+import { get as Ember_get, observer } from '@ember/object';
 import { A } from '@ember/array';
 import { and, alias } from '@ember/object/computed';
 import { debounce, throttle } from '@ember/runloop';
@@ -438,8 +438,19 @@ export default Model.extend({
    */
   ensureFeatureLimits() {
     if (this.hasTag('Germinate')) {
-      this.set('featureLimits', [1, 700e6]);
-      this.set('featureValueCount', 0);
+      /* limits of linkageGroup are not available, except via callsets calls -
+       * done in germinateCallsToCounts().
+       * this.set('featureLimits', [1, 700e6]);
+       */
+
+      /** approximate featureValueCount = markerCount / linkageGroupCount */
+      const
+      germinate = this.get('datasetId._meta.germinate'),
+      blockCount = Ember_get(germinate, 'linkageGroupCount') ||
+        this.get('datasetId.blocks.length'),
+      markerCountPerChr = blockCount && Ember_get(germinate, 'markerCount') / blockCount;
+      this.set('featureValueCount', markerCountPerChr || 0);
+
       return;
     }
 
@@ -1784,8 +1795,12 @@ export default Model.extend({
           } else {
             const
             features = promiseResult[0].value,
-            counts = germinateCallsToCounts(features);
+            summary = germinateCallsToCounts(features),
+            counts = summary.counts;
             featuresCountsTransform(this, counts);
+            if (summary.limits && ! this.featureLimits) {
+              this.featureLimits = summary.limits;
+            }
           }
         });
       }
