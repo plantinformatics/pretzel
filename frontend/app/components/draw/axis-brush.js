@@ -153,7 +153,10 @@ export default Component.extend(Evented, AxisEvents, {
 
   features : computed('axisBrush.features.[]', 'zoomCounter', function () {
     console.log('features', this.zoomCounter, this);
-    let featuresP = this.get('axisBrush.features');
+    const
+    axisBrush = this.get('axisBrush'),
+    featuresP = ! axisBrush ? Promise.resolve([]) :
+      this.get('axisBrush.features');
     featuresP.then((features) => {
       if (features) {
         this.receivedLengths(features);

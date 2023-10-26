@@ -1,6 +1,7 @@
 import { allSettled } from 'rsvp';
 import { throttle } from '@ember/runloop';
 import { alias } from '@ember/object/computed';
+import { get as Ember_get } from '@ember/object';
 import Service, { inject as service } from '@ember/service';
 import { getOwner, setOwner } from '@ember/application';
 
@@ -586,12 +587,19 @@ export default Service.extend({
   /** set up an axis-brush object to hold results. */
   ensureAxisBrush(block) {
     const
+    fnName = 'ensureAxisBrush',
     objs = this.axisBrushObjects,
     axisBrushId = block.id;
+    if (! block.isViewed) {
+      dLog(
+        fnName, block.id, block.brushName, block.axis1d, this.blockService.viewed,
+        Ember_get(this, 'flowsService.oa.eventBus.model.params.mapsToView'));
+      return;
+    }
     let r = objs.findBy('block.id', block.id);
     if (r) {
       if (block.axis1d.axisBrushObj !== r) {
-        dLog('ensureAxisBrush', block.axis1d.axisBrushObj, r);
+        dLog(fnName, block.axis1d.axisBrushObj, r);
         block.axis1d.axisBrushObj = r;
       }
     }
@@ -605,7 +613,7 @@ export default Service.extend({
       block.axis1d.axisBrushObj = r;
     }
     if (r && trace_pathsP)
-      dLog('ensureAxisBrush', block.id, r._internalModel.__attributes, r._internalModel.__data);
+      dLog(fnName, block.id, r._internalModel.__attributes, r._internalModel.__data);
     return r;
   },
 

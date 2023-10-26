@@ -770,9 +770,8 @@ export default Component.extend({
   },
   /** re-apply axisTransformO(), which uses the axis x scales oa.o */
   axesShowXOffsets() {
-    let 
-    t = this.oa.svgContainer;
-    t.selectAll(".axis-outer").attr("transform", Stack.prototype.axisTransformO);
+    const axisOuterS = this.axisDraw.selectAxisOuterCurrent(this.oa.svgContainer);
+    axisOuterS.attr("transform", Stack.prototype.axisTransformO);
   },
 
   //----------------------------------------------------------------------------

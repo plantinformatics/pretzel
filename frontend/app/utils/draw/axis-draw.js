@@ -233,9 +233,11 @@ AxisDraw.prototype.draw2 = function draw2(selections, axes, newRender, stacksAxe
   /** stackS / axisG / g / gt is the newly added stack & axis.
    * The X position of all stacks is affected by this addition, so
    * re-apply the X transform of all stacks / axes, not just the new axis.
+   * But stackX .transition() .remove() is likely still in progress, so
+   * filter out <g class='axis-outer'> whose axis-1d is isDestroying or block is ! isViewed.
    */
-  let ao =
-    svgContainer.selectAll('.axis-outer');  // equiv: 'g.stack > g'
+  // equiv: 'g.stack > g'
+  let ao = this.selectAxisOuterCurrent(svgContainer);
   /** apply the transform with a transition if changing an existing drawing. */
   let gt = newRender ? ao :
     ao.transition().duration(dragTransitionTime);
@@ -330,6 +332,23 @@ AxisDraw.prototype.draw2 = function draw2(selections, axes, newRender, stacksAxe
   axisTitle.axisTitleFamily(axisTitleS);
 
   return resultSelections;
+};
+
+//------------------------------------------------------------------------------
+
+/** Create a d3 selection of <g.axis-outer> whose axis-1d is current / active.
+   * filter out <g class='axis-outer'> whose axis-1d is isDestroying or block is ! isViewed.
+
+ * @param svgContainer  if undefined then oa.svgContainer is used.
+ */
+AxisDraw.prototype.selectAxisOuterCurrent = function selectAxisOuterCurrent(svgContainer) {
+  const
+  oa = this.oa || this.axis1d.drawMap.oa,
+  svgContainer_ = svgContainer || oa?.svgContainer,
+  axisOuterS = 
+    svgContainer_.selectAll('.axis-outer')
+    .filter(axis1d => ! (axis1d.isDestroying || axis1d.isDestroyed) && axis1d.axis.isViewed);
+  return axisOuterS;
 };
 
 //------------------------------------------------------------------------------
