@@ -540,11 +540,17 @@ function featuresCountsTransform(block, counts) {
   keyRange = [+keys[0], +keys.at(-1) + 1],
   domain = keyRange.map(p => p * binSize),
   nBins = keyRange[1] - keyRange[0],
-  result = counts.map((count, i) => ({
-    _id: +keys[i] * binSize,
-    count,
-    idWidth: [binSize],
-  })),
+  /** counts may be sparse, i.e. for some bins count is 0,
+   * so use counts.entries() to access the key of each bin,
+   * instead of : counts.map((count, i) ... +keys[i] ...
+   */
+  result = Array.from(counts.entries())
+    .filter(([key,count]) => count)
+    .map(([key, count]) => ({
+      _id: +key * binSize,
+      count,
+      idWidth: [binSize],
+    })),
   fcr = {binSize, nBins, domain, result};
   // block.featuresCountsResults[0] = fcr;  // for repeated test in development.
   block.featuresCountsResults.push(fcr);
