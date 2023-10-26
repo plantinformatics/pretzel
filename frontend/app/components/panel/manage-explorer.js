@@ -877,15 +877,18 @@ export default ManageBase.extend({
    */
   dataWithoutParent1: computed('withoutParent.[]', 'parentsSet', 'parents', function () {
     return this.get('withoutParent')
-      .filter((d,i,a) => this.datasetFilter(d,i,a));
+      .filter((d,i,a) => this.datasetFilterNotInParentsSet(d,i,a));
   }),
-  datasetFilter(dataset, index, array) {
+  /**
+   * @return true if dataset .displayName is not in .parentsSet
+   */
+  datasetFilterNotInParentsSet(dataset, index, array) {
     let parentsSet = this.get('parentsSet'),
     name = dataset.get('displayName'),
     found = parentsSet.has(name);
     if (index === 0)
     {
-      console.log('dataWithoutParent', array, parentsSet, dataset);
+      console.log('dataWithoutParent1', array, parentsSet, dataset);
     }
     console.log(dataset._internalModel.__data, index, name, found);
     return ! found;
