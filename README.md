@@ -95,6 +95,15 @@ NOTE: References for the genetic maps shown in the alignments on this page are a
 
 For a quick start without installing any of the dependencies you will need docker engine running on your system.
 
+## Environment variables passed to Docker 
+
+As noted below in [Enable Use Of HandsOnTable](#enable-use-of-handsontable),
+the License Key for HandsOnTable can be passed in to the server via this environment variable : $handsOnTableLicenseKey
+
+This can be passed via the docker run command via -e, e.g.
+for a non-commercial project, e.g. research, it is permitted to define :
+`docker run --name pretzel -e "handsOnTableLicenseKey=non-commercial-and-evaluation" ...`
+
 ## Docker on linux
 
 ```
