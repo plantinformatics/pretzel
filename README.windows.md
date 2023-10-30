@@ -109,14 +109,14 @@ npm install
 bower install
 ```
 
-Note that `npm install` in `backend/` and `frontend/` will install the Ember.js dependencies, including Ember.js, into those directories. If you did not
+Note that `npm install` in `lb4app/` and `frontend/` will install the Ember.js dependencies, including Ember.js, into those directories. If you did not
 install Ember.js globally previously, you will need to run the local binaries. For
 example, `ember` is in `frontend/node_modules/ember-cli/bin/`.
 
 ### Set-up configs
 
 Change the default configuration by editing the server and frontend configuration :
-#### `backend/server/config.local.js`
+#### `lb4app/lb3app/server/config.local.js`
 e.g. you may change the defaults :
 ```
   "restApiRoot": "/api",
