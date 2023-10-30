@@ -740,7 +740,17 @@ function featureMaf(feature, i) {
 }
 function featureMafValue(feature) {
   /** a number, domain [0,1]  */
-  const maf = feature.get('values.MAF');
+  const maf = normalizeMaf(feature.get('values.MAF'));
+  return maf;
+}
+
+/** MAF (Minor Allele Frequency) is conventionally expressed as a number in the
+ * range [0, 0.5]
+ */
+function normalizeMaf(maf) {
+  if ((maf !== undefined) && (maf > 0.5)) {
+    maf = 1 - maf;
+  }
   return maf;
 }
 
@@ -1436,7 +1446,7 @@ function featureSampleMAF(feature, options) {
     maf = counts.count ? counts.copies / counts.count : undefined;
     // dLog(fnName, maf, counts);
     if (maf !== undefined) {
-      feature.values.MAF = maf;
+      feature.values.MAF = normalizeMaf(maf);
     }
     /* possibly : else if (feature.values.MAF !== undefined) { delete feature.values.MAF ; }
      * tried setting undefined or null - "undefined" is shown in table,
@@ -1549,6 +1559,7 @@ export {
   resultIsGerminate,
   addFeaturesGerminate,
   featureBlockColourValue,
+  normalizeMaf,
   sampleIsFilteredOut,
   sampleName2ColumnName,
   columnNameAppendDatasetId,

@@ -29,6 +29,7 @@ import {
   addFeaturesJson,
   resultIsGerminate,
   addFeaturesGerminate,
+  normalizeMaf,
   sampleIsFilteredOut,
   columnName2SampleName,
   vcfFeatures2MatrixView, vcfFeatures2MatrixViewRows,
@@ -552,7 +553,7 @@ export default class PanelManageGenotypeComponent extends Component {
   //----------------------------------------------------------------------------
 
   mafThresholdMin = .001;
-  mafThresholdMax = 1;
+  mafThresholdMax = 0.5;
 
   /** @userSettings.mafUpper : true means use maf threshold as an upper limit. */
 
@@ -2217,7 +2218,7 @@ export default class PanelManageGenotypeComponent extends Component {
 
   featureFilter(feature) {
     const
-    MAF = feature.values.MAF,
+    MAF = normalizeMaf(feature.values.MAF),
     /** don't filter datasets which don't have MAF */
     ok = (MAF === undefined) || 
       ((+MAF < this.args.userSettings.mafThreshold) === this.args.userSettings.mafUpper);
