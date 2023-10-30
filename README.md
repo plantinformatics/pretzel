@@ -270,6 +270,16 @@ ln -s ../frontend/dist lb4app/client
 
 ## Running
 
+### Enable use of HandsOnTable
+
+HandsOnTable is a commercial library which is used in the Pretzel Feature Table and Genotype Table, and may optionally be used in the Paths Table.
+The License Key for HandsOnTable can be passed in to the server via this environment variable : $handsOnTableLicenseKey
+
+For a non-commercial project, e.g. research, it is permitted to define :
+`export handsOnTableLicenseKey=non-commercial-and-evaluation ;`
+
+Define and export handsOnTableLicenseKey before `node lb3app/server/server.js` in the following.
+
 ### Starting the app
 
 You should now be able to start the Loopback backend:
