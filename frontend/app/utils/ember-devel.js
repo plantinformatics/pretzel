@@ -7,9 +7,33 @@ const dLog = console.debug;
 
 // -----------------------------------------------------------------------------
 
-/** Find a parent with the nominated type. */
+/** Used only in elt0() */
 import $ from 'jquery';
 
+//------------------------------------------------------------------------------
+
+/** Use .addObject() or .removeObject() to toggle the presence of object in array.
+ * @param array instance of Ember.A() or equivalent, with methods :
+ * .includes(object) -> boolean, and with signature function (object) :
+ * .addObject() and .removeObject()
+ * @param object
+ * @return true iff object was added to array.
+ * i.e. array.includes(object)
+ */
+function toggleObject(array, object) {
+  const includes = array.includes(object);
+  if (includes) {
+    array.removeObject(object);
+  } else {
+    array.addObject(object);
+  }
+  return ! includes;
+}
+
+
+//------------------------------------------------------------------------------
+
+/** Find a parent with the nominated type. */
 function parentOfType(typeName) {
   let parent = this.parentView;
   while (parent && (parent._debugContainerKey !== typeName))
@@ -198,6 +222,7 @@ function blockInfo(block) { return block && [block.id, block.store.name, block.g
 
 
 export {
+  toggleObject,
   parentOfType, elt0, getAttrOrCP, _internalModel_data,
   pollTaskFn,
   nowOrLater,  promiseText, toPromiseProxy,

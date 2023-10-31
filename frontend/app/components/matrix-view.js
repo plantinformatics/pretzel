@@ -35,6 +35,7 @@ import { thenOrNow } from '../utils/common/promises';
 import { tableRowMerge } from '../utils/draw/progressive-table';
 import { eltWidthResizable, noKeyfilter } from '../utils/domElements';
 import { sparseArrayFirstIndex } from '../utils/common/arrays';
+import { toggleObject } from '../utils/ember-devel';
 
 // -----------------------------------------------------------------------------
 
@@ -250,6 +251,7 @@ export default Component.extend({
 
   selectedColumnName : null,
   selectedSampleColumn : false,
+  selectedColumnNames : alias('userSettings.selectedColumnNames'),
 
   /** current row data array which has been given to table.
    * This is updated progressively from .data by progressiveRowMerge().
@@ -904,6 +906,9 @@ export default Component.extend({
        */
         const datasetId = columnName;
         this.featureColumnDialogDataset(datasetId);
+    } else if (row === -1) {
+      dLog(fnName, 'selectedColumnNames', this.selectedColumnNames.length, columnName);
+      toggleObject(this.selectedColumnNames, columnName);
     }
   },
 

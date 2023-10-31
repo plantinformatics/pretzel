@@ -136,6 +136,10 @@ function featureHasSamplesLoaded(feature) {
  * Fields are implicitly @tracked because userSettings is in args.
  * Within userSettings (object) :
  *
+ * Array of sample names selected by the user, for distance reference at
+ * selected variantIntervals / SNPs / LD Blocks.
+ * . selectedColumnNames
+ *
  * Arrays of sample names selected by the user, per dataset. indexed by VCF datasetId
  * .vcfGenotypeSamplesSelected = {} (aliased as vcfGenotypeSamplesSelectedAll)
  *
@@ -367,6 +371,11 @@ export default class PanelManageGenotypeComponent extends Component {
    */
   userSettingsDefaults() {
     const userSettings = this.args.userSettings;
+
+    if (userSettings.selectedColumnNames === undefined) {
+      userSettings.selectedColumnNames = [];
+    }
+
     if (userSettings.vcfGenotypeSamplesSelected === undefined) {
       userSettings.vcfGenotypeSamplesSelected = {};
     }

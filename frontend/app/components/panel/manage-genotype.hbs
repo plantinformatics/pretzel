@@ -702,6 +702,18 @@
                   </li>
                 </ul>
 
+                {{!-------------------------------------------------------------}}
+
+                {{#if this.args.userSettings.selectedColumnNames.length}}
+                  <ul class="list-group borderless view-controls">
+                    {{#each this.args.userSettings.selectedColumnNames as |selectedColumnName|}}
+                    <li>
+                      {{selectedColumnName}}
+                    </li>
+                    {{/each}}
+                  </ul>
+                {{/if}}
+
                 {{!---------------------------------------------------------------------}}
 
                 <ul class="list-group borderless view-controls">
