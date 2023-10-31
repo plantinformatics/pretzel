@@ -2001,7 +2001,10 @@ export default class PanelManageGenotypeComponent extends Component {
       requestSamplesAll = userSettings.requestSamplesAll && ! requestSamplesFiltered && ! samplesLimitEnable,
       snpPolymorphismFilter = userSettings.snpPolymorphismFilter,
       mafThreshold = userSettings.mafThreshold,
-      requestOptions = {requestFormat, requestSamplesAll, snpPolymorphismFilter, mafThreshold},
+      mafUpper = userSettings.mafUpper,
+      requestOptions = {
+        requestFormat, requestSamplesAll, snpPolymorphismFilter,
+        mafThreshold, mafUpper},
       /** Datasets selected for intersection.
        * Used to indicate if any positionFilter are defined and hence isecFlags
        * and isecDatasets will be set.  If no datasets other than this one

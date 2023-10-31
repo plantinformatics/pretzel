@@ -117,8 +117,15 @@ function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
     }
     /** default is no MAF filter, i.e. >= 0, (MAF is >=0) */
     if (preArgs.mafThreshold) {
-      moreParams.push('--min-af');
-      moreParams.push('' + preArgs.mafThreshold);
+      const
+      /** --min-af and --max-af uses "INFO/AC and INFO/AN when
+       * available or FORMAT/GT" quoting BCFTOOLS(1), whereas
+       * --exclude MAF< / > will utilise INFO/MAF for example.
+       * Related : mafThresholdText(); inverted here because 'exclude'.
+       */
+      afOption = 'MAF' + (preArgs.mafUpper ? '>' : '<') + preArgs.mafThreshold;
+      moreParams.push('--exclude');
+      moreParams.push(afOption);
     }
   }
   const samples = preArgs.samples;

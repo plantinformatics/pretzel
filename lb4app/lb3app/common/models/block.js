@@ -1407,7 +1407,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     const
     fnName = 'vcfGenotypeLookup';
 
-    parseBooleanFields(preArgs, ['snpPolymorphismFilter', 'requestSamplesAll', 'requestInfo', 'headerOnly']);
+    parseBooleanFields(preArgs, ['snpPolymorphismFilter', 'requestSamplesAll', 'requestInfo', 'headerOnly', 'mafUpper']);
 
     /** Caching is generally not applicable to this request, because the region
      * / interval is always present - when zoomed out only the features counts
