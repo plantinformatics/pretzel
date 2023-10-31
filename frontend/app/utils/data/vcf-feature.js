@@ -1067,10 +1067,10 @@ function blockToMatrixColumn(singleBlock, block, sampleName, features) {
 }
 
 /**
- * @param features block.featuresInBrush
+ * @param features block.featuresInBrushOrZoom
  * (may call this function once with features of all blocks (brushedVCFBlocks) )
 
- * brushedVCFBlocks.reduce ( block.featuresInBrush.reduce() )
+ * brushedVCFBlocks.reduce ( block.featuresInBrushOrZoom.reduce() )
 
  * @param featureFilter filter applied to featuresArrays[*]
  * @param sampleFilters array of optional additional filters (selected sample, callRate filter)
@@ -1089,7 +1089,7 @@ function vcfFeatures2MatrixViewRows(
 }
 /** Similar to vcfFeatures2MatrixView(), but merge rows with identical position,
  * i.e. implement options.gtMergeRows
- * @param features block.featuresInBrush. one array, one block.
+ * @param features block.featuresInBrushOrZoom. one array, one block.
  * @param featureFilter filter applied to features
  * @param sampleFilters array of optional additional filters (selected sample, callRate filter)
  * @param sampleNamesCmp undefined, or a comparator function to sort sample columns

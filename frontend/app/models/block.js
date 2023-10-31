@@ -1242,10 +1242,11 @@ export default Model.extend({
   /** @return features of this block, filtered by brushedDomain if the axis of
    * this block is brushed.
    */
-  featuresInBrush : computed('brushedDomain.{0,1}', 'features.[]', function() {
+  featuresInBrushOrZoom : computed('brushedDomain.{0,1}', 'zoomedDomain.{0,1}', 'features.[]', function() {
+    /** zoomedDomain is replaced when it changes, so dependency .{0,1} is not required. */
     let
     features,
-    interval = this.brushedDomain;
+    interval = this.brushedDomain || this.zoomedDomain;
     if (interval) {
       const
       // based on similar in featureInRange().

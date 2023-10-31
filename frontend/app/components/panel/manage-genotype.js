@@ -268,7 +268,7 @@ export default class PanelManageGenotypeComponent extends Component {
   @tracked
   displayDataRows = null;
 
-  /** derived from brushedVCFBlocks .featuresInBrush  .values. sampleNames 
+  /** derived from brushedVCFBlocks .featuresInBrushOrZoom  .values. sampleNames 
    * in showSamplesWithinBrush()
    */
   @tracked
@@ -2418,7 +2418,7 @@ export default class PanelManageGenotypeComponent extends Component {
         /* featureFilterPre() is expected to filter out most features,
          * so apply it before rowLimit; */
           .map((b) => {
-            let features = b.featuresInBrush;
+            let features = b.featuresInBrushOrZoom;
             if (b.get('datasetId.enableFeatureFilters')) {
               features = this.featureFilterPre(b, features);
             }
