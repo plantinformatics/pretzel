@@ -19,11 +19,13 @@ export default Component.extend({
    *
    * This has the essentials from panel/manage-explorer.js : datasetsBlocks(),
    * and can probably replace it; left-panel can pass this value to manage-explorer.
+   * Exclude copies from secondary servers, as is done in manage-explorer : datasetsBlocks().
+   * Currently used by just sequence-search.
    */
   serverSelected_datasetsBlocks : computed(
     'apiServers.serverSelected.datasetsBlocks.[]',
     function () {
-      return this.get('apiServers.serverSelected.datasetsBlocks') || [];
+      return this.get('apiServers.serverSelected.datasetsBlocksOriginal') || [];
     }),
 
   actions: {

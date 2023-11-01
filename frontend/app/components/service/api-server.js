@@ -237,6 +237,15 @@ const ApiServerAttributes = {
 
   ,
 
+  /** From datasetsBlocks, filter out copies from a secondary server.
+   */
+  datasetsBlocksOriginal : computed('datasetsBlocks', function () {
+    const
+    dbOriginal = this.get('datasetsBlocks')
+      ?.filter((dataset) => !dataset.get('isCopy'));
+    return dbOriginal;
+  }),
+
   /** Request block.featuresCount for all blocks.
    */
   featuresCountAllTaskInstance : computed('name', function () {
