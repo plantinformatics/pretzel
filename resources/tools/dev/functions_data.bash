@@ -42,7 +42,7 @@ function datasetAndName2BlockId {
 }
 
 dockerExec="docker exec $DIM"
-DB_NAME=pretzel
+unused_var=${DB_NAME=pretzel}
 # or local :
 # dockerExec=
 # DB_NAME=admin
@@ -52,13 +52,13 @@ DB_NAME=pretzel
 # @param 2 splitArgs  args to mongo; these are split
 # @param 3* remaining args are wrapped in "", not split
 # Usage e.g. :
-#   mongoShell ''   '--quiet admin --eval' "$MON_JS"  | ... (as in @see blockExport)
+#   mongoShell ''   '--quiet '${DB_NAME-admin}' --eval' "$MON_JS"  | ... (as in @see blockExport)
 # or :
-#   mongoShell '-it'   --quiet admin
+#   mongoShell '-it'   --quiet ${DB_NAME-admin}
 
 if [ -n "$DIM" ] ;
 then
-  function mongoShell() { execArgs=$1; shift; splitArgs=$1; shift; docker exec $execArgs $DIM mongo ${splitArgs[@]} "$*"; }
+  function mongoShell() { execArgs=$1; shift; splitArgs=$1; shift; docker exec $execArgs -i $DIM mongo ${splitArgs[@]} "${@}"; }
 else
   function mongoShell() { execArgs=$1; shift; splitArgs=$1; shift; mongo ${splitArgs[@]} "$*"; }
 fi
@@ -174,8 +174,36 @@ db.Dataset.aggregate ( [
 EOF
   MON_JS=$(cat $tmpDir/blockExport.js)
   # uses $DIM if defined
-  mongoShell ''   '--quiet admin --eval' "$MON_JS"  | sed 's/"[_blockiI]*d" : ObjectId("[0-9a-f][0-9a-f]*"),//g'
+  mongoShell ''   '--quiet '${DB_NAME-admin}' --eval' "$MON_JS"  | sed 's/"[_blockiI]*d" : ObjectId("[0-9a-f][0-9a-f]*"),//g'
 }
 
+
+#-------------------------------------------------------------------------------
+
+# Collate Datasets + Blocks, with owner
+function datasetsBlocks() {
+cat <<\EOF | mongoShell '' '--quiet '${DB_NAME-admin}
+DBQuery.shellBatchSize=2000
+db.Block.aggregate( [
+{ $lookup: { from: "Dataset", localField: "datasetId", foreignField: "_id", as: "dataset" } },
+{ $lookup : { from: "Client", localField: "_id.dataset.0", foreignField: "_id", as: "datasetClient"}},
+{ $group : { _id : {dataset : "$dataset._id" }, blocks: { $push: "$name" }, owner: { $addToSet : "$dataset.clientId"} } },
+{ $lookup : { from: "Client", localField: "owner.0.0", foreignField: "_id", as: "datasetOwner"}},
+{ $unset : "owner"},
+{ $unset : ["datasetOwner._id", "datasetOwner.password", "datasetOwner.emailVerified", "datasetOwner.verificationToken"]},
+{ $sort : {owner : 1} }
+ ])
+EOF
+}
+
+# Collate Groups of Datasets, with owner
+function datasetsGroupsOwner() {
+cat <<\EOF | mongoShell '' '--quiet '${DB_NAME-admin}
+DBQuery.shellBatchSize=2000
+db.Dataset.aggregate({$group : { _id : "$clientId", groups: {$addToSet : "$_id"}}},
+  {$lookup : { from: "Client", localField: "_id", foreignField: "_id", as: "client"}},
+ {$unset : ["_id", "client._id", "client.password", "client.emailVerified", "client.verificationToken"] } )
+EOF
+}
 
 #-------------------------------------------------------------------------------
