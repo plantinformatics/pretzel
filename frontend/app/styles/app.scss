@@ -1916,6 +1916,12 @@ div#tab-explorer-parent > ul > li > ul > li > ul > li {
 
 
 /* -------------------------------------------------------------------------- */
+/* Use all of width provided by split-view. */
+div#left-panel
+{
+  width : 100%;
+}
+
 div#left-panel > ul
 {
   display : block;

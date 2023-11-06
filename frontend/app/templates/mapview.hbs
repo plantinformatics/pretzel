@@ -1,5 +1,11 @@
 {{!-- app/controllers/mapview.js --}}
-<div class="" style="height:100%; display:flex;">
+<div {{split-view direction=horizontal
+  sizes=this.leftSplitSizes
+  gutterSize=15
+  registerInstance=(action this.registerInstanceLeftSplit)
+  onDragEnd=(action this.leftSplit_onDragEnd) }}
+  class="left-split"
+  style="height:100%; display:flex;">
   
   {{panel/left-panel
     displayData=block.viewed

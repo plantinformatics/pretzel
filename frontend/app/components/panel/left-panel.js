@@ -29,10 +29,10 @@ export default Component.extend({
     }),
 
   actions: {
-    toggleLeftPanel() {
+    toggleLeftPanel(shown) {
       $(".left-panel-shown").toggle();
       $(".left-panel-hidden").toggle();
-      $(".left-panel-shown").trigger('toggled');
+      $(".left-panel-shown").trigger('toggled', [shown]);
     },
     loadBlock(block) {
       this.sendAction('loadBlock', block);

@@ -1,10 +1,11 @@
 import { registerDeprecationHandler } from '@ember/debug';
 import { later } from '@ember/runloop';
 import EmberObject, { computed, observer } from '@ember/object';
-import Evented from '@ember/object/evented';
+import Evented, { on } from '@ember/object/evented';
 import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { readOnly, alias, reads, or } from '@ember/object/computed';
+import { A as Ember_A } from '@ember/array';
 import DS from 'ember-data';
 
 import QueryParams from 'ember-parachute';
@@ -356,12 +357,47 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
     },
     matrixView : {tableYDimensions : null},
   }),
+
+  leftSplitSizes : Ember_A([21, 79]),
+  leftSplitListen(event) {
+    $('.left-panel-shown')
+      .on('toggled', (event, shown) => {
+        dLog(this.leftSplitSizes, '.left-panel-shown', 'toggled', event, shown);
+        if (shown) {
+          this.set('leftSplitSizes', this.leftSplitSizesPrev);
+        } else {
+          this.leftSplitSizesPrev = this.leftSplitSizes;
+          this.set('leftSplitSizes', [0, 100]);
+        }
+        this.leftSplitInstance?.setSizes(this.leftSplitSizes);
+      });
+  },
+
+  leftSplitListenSetup : on('init', function () {
+    later(() => {
+      this.leftSplitListen();
+    });
+  }),
+  registerInstanceLeftSplit(splitInstance) {
+    dLog('registerInstanceLeftSplit', splitInstance, this.leftSplitInstance);
+    this.leftSplitInstance = splitInstance;
+  },
+
+  leftSplit_onDragEnd(sizes) {
+    // dLog('leftSplit_onDragEnd', sizes);
+    this.leftSplitSizes = sizes;
+  },
+
+  //----------------------------------------------------------------------------
+
   splitViewDirection : computed('tablesPanelRight', function () {
     let direction = this.tablesPanelRight ? 'horizontal' : 'vertical';
     dLog('splitViewDirection', direction, this.tablesPanelRight);
     return direction;
   }),
-  /** attributes  : .sizesPrev, .sizes, .tablesPanelRight.  */
+  /** attributes  : .sizesPrev, .sizes, .tablesPanelRight.
+   * Records the sizes for 2 possible values of tablesPanelRight : true / false.
+   */
   componentGeometry : EmberObject.create({sizesPrev : EmberObject.create({
     true :  [65, 35],
     false : [70, 30],
