@@ -46,8 +46,9 @@ const trace = 1;
 const datasetSymbol = Symbol.for('dataset');
 const featureSymbol = Symbol.for('feature');
 
-/** comment in components/panel/manage-genotype.js */
+/** Copied from components/panel/manage-genotype.js; comments are there */
 const sampleFiltersSymbol = Symbol.for('sampleFilters');
+const referenceSamplesSymbol = Symbol.for('referenceSamples');
 
 // -----------------------------------------------------------------------------
 
@@ -919,7 +920,7 @@ export default Component.extend({
       sampleName = columnName2SampleName(columnName),
       feature = tableCoordsToFeature(this.table, {row:0, col}),
       block = feature.get('blockId.content'),
-      referenceSamples = block[Symbol.for('referenceSamples')] || (block[Symbol.for('referenceSamples')] = []);
+      referenceSamples = block[referenceSamplesSymbol] || (block[referenceSamplesSymbol] = []);
       /** sampleName instanceof string, so toggleObject() works.  */
       toggleObject(referenceSamples, sampleName);
       this.filterSamplesBySelectedHaplotypes();

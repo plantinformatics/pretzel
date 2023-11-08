@@ -88,6 +88,10 @@ const haplotypeFeaturesSymbol = Symbol.for('haplotypeFeatures');
  * also used in sampleIsFilteredOut{,Blocks}()
  */
 const sampleMatchesSymbol = Symbol.for('sampleMatches');
+/** Sample names of a block which are selected by the user as references for
+ * comparison of genotype values against the displayed samples.
+ */
+const referenceSamplesSymbol = Symbol.for('referenceSamples');
 /** Distances per sampleName, per referenceSample, per block
  * i.e. block[referenceSampleMatchesSymbol][referenceSampleName] [sampleName] is a
  * distance across the variantSets of selected variantIntervals.
@@ -710,7 +714,7 @@ export default class PanelManageGenotypeComponent extends Component {
       if (selected.length) {
         selected.removeAt(0, selected.length);
       }
-      const referenceSamples = block[Symbol.for('referenceSamples')];
+      const referenceSamples = block[referenceSamplesSymbol];
       if (referenceSamples) {
         arrayClear(referenceSamples);
       }
@@ -2891,7 +2895,7 @@ export default class PanelManageGenotypeComponent extends Component {
       /** later may apply referenceSamples to filterTypeName other than
        * variantInterval; the 3 filterTypeNames are equivalent in that they
        * are means for the user to select features. */
-      referenceSamples = block[Symbol.for('referenceSamples')] || [],
+      referenceSamples = block[referenceSamplesSymbol] || [],
       filterArray = this.blockSampleFilters(block, filterTypeName);
       switch (filterTypeName) {
       case 'haplotype': {
@@ -2965,6 +2969,10 @@ export default class PanelManageGenotypeComponent extends Component {
         });
       }
 
+      /** this does not clear the other value, e.g. when the only
+       * referenceSample is de-selected, block[referenceSampleMatchesSymbol]
+       * is not cleared.
+       */
       block[referenceSamples.length ? referenceSampleMatchesSymbol : sampleMatchesSymbol] = blockMatches;
       if (showHideSampleFn && this.args.userSettings.haplotypeFiltersEnable) {
         /* 
@@ -2978,7 +2986,9 @@ export default class PanelManageGenotypeComponent extends Component {
         });
       }
     });
-    // will have to coordinate with sampleNamesCmp(), sampleMatchesSum()
+    /** .matchesSummary is initialised by sampleNamesCmp() if ! .referenceSamplesCount,
+     * and sampleMatchesSum() adds sampleNames to it as required, e.g. when distancesTo1d() returns {}
+     */
     this.matchesSummary = this.distancesTo1d(ablocks.mapBy('block'));
     if (matrixView) {
       // to enable trialling of action to filter after Clear : haplotypeFiltersApply() : filterSamplesBySelectedHaplotypes()
@@ -2991,26 +3001,40 @@ export default class PanelManageGenotypeComponent extends Component {
   /** collate distances by sampleName
    */
   distancesTo1d(blocks) {
-    const
-    fnName = 'distancesTo1d',
-    sampleDistanceVectors = blocks.reduce((d, block) => {
+    const fnName = 'distancesTo1d';
+    let distanceOrder;
+    if ( ! this.referenceSamplesCount) {
+      distanceOrder = {};
+    } else
+    if ((blocks.length === 1) && (blocks[0][referenceSamplesSymbol]?.length === 1)) {
       const
-      filterTypeName = this.args.userSettings.sampleFilterTypeName,
-      referenceSamples = this.blockSampleFilters(block, 'referenceSample'),
-      referenceSampleMatches = block[referenceSampleMatchesSymbol] || {};
-      // objectSymbolNameArray(block, sampleFiltersSymbol, filterTypeName);
-      // this.blockSampleFilters(block, 'referenceSampleMatches')
+      block = blocks[0],
+      referenceSamples = block[referenceSamplesSymbol],
+      referenceSampleName = referenceSamples[0];
+      distanceOrder = block[referenceSampleMatchesSymbol][referenceSampleName];
+    } else {
+      const
+      sampleDistanceVectors = blocks.reduce((d, block) => {
+        const
+        filterTypeName = this.args.userSettings.sampleFilterTypeName,
+        referenceSamples = block[referenceSamplesSymbol] || [],
+        /** if referenceSampleMatches is empty, i.e. {}, then
+         * sampleDistanceVectors and distanceOrder are both {}. */
+        referenceSampleMatches = block[referenceSampleMatchesSymbol] || {};
+        // objectSymbolNameArray(block, sampleFiltersSymbol, filterTypeName);
+        // this.blockSampleFilters(block, 'referenceSampleMatches')
 
-      Object.entries(referenceSampleMatches).forEach(([referenceSampleName, sampleDistances]) => {
-        Object.entries(sampleDistances).forEach(([sampleName, sampleDistance]) => {
-          const
-          sampleVector = d[sampleName] || (d[sampleName] = []);
-          sampleVector.push(sampleDistance);
+        Object.entries(referenceSampleMatches).forEach(([referenceSampleName, sampleDistances]) => {
+          Object.entries(sampleDistances).forEach(([sampleName, sampleDistance]) => {
+            const
+            sampleVector = d[sampleName] || (d[sampleName] = []);
+            sampleVector.push(sampleDistance);
+          });
         });
-      });
-      return d;
-    }, {}),
-    distanceOrder = tsneOrder(sampleDistanceVectors);
+        return d;
+      }, {});
+      distanceOrder = tsneOrder(sampleDistanceVectors);
+    }
     return distanceOrder;
   }
 
