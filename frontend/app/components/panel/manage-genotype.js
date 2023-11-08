@@ -13,7 +13,7 @@ import { uniq, intersection } from 'lodash/array';
 import createIntervalTree from 'interval-tree-1d';
 
 import NamesFilters from '../../utils/data/names-filters';
-import { toPromiseProxy, toArrayPromiseProxy, addObjectArrays } from '../../utils/ember-devel';
+import { toPromiseProxy, toArrayPromiseProxy, addObjectArrays, arrayClear } from '../../utils/ember-devel';
 import { thenOrNow, contentOf } from '../../utils/common/promises';
 import { clipboard_writeText } from '../../utils/common/html';
 import { intervalSize } from '../../utils/interval-calcs';
@@ -40,6 +40,8 @@ import {
   featureSampleNames,
   featuresSampleMAF,
   objectSymbolNameArray,
+  MatchRefSample,
+  tsneOrder,
  } from '../../utils/data/vcf-feature';
 import { stringCountString, toTitleCase } from '../../utils/string';
 
@@ -86,6 +88,11 @@ const haplotypeFeaturesSymbol = Symbol.for('haplotypeFeatures');
  * also used in sampleIsFilteredOut{,Blocks}()
  */
 const sampleMatchesSymbol = Symbol.for('sampleMatches');
+/** Distances per sampleName, per referenceSample, per block
+ * i.e. block[referenceSampleMatchesSymbol][referenceSampleName] [sampleName] is a
+ * distance across the variantSets of selected variantIntervals.
+ */
+const referenceSampleMatchesSymbol = Symbol.for('referenceSampleMatches');
 /** Counts for calculating Call Rate of a sample.
  * sampleCount = block[callRateSymbol][sampleName] : {calls:0, misses:0}  */
 const callRateSymbol = Symbol.for('callRate');
@@ -478,6 +485,10 @@ export default class PanelManageGenotypeComponent extends Component {
 
   }
 
+  //----------------------------------------------------------------------------
+
+  @alias('args.userSettings.selectedColumnNames.length') referenceSamplesCount;
+
   // ---------------------------------------------------------------------------
 
   /** Called by user selecting a dataset from <select>,
@@ -699,7 +710,14 @@ export default class PanelManageGenotypeComponent extends Component {
       if (selected.length) {
         selected.removeAt(0, selected.length);
       }
+      const referenceSamples = block[Symbol.for('referenceSamples')];
+      if (referenceSamples) {
+        arrayClear(referenceSamples);
+      }
+      block[referenceSampleMatchesSymbol] = {};
     });
+    arrayClear(this.args.userSettings.selectedColumnNames);
+
     // Refresh display.
     this.sampleFiltersSet(filterTypeName);
     // done in hbs via action pipe
@@ -897,6 +915,10 @@ export default class PanelManageGenotypeComponent extends Component {
     blocksF = this.blocksSampleFilters('haplotype');
     return blocksF;
   }
+  /** Collate sample filters across axisBrushes[].block
+   * @return [ {block, [filterTypeName] : sample filters of block for filterTypeName }, ... ]
+   * - parallel to axisBrushes.
+   */
   blocksSampleFilters(filterTypeName) {
     const
     fnName = 'blocksSampleFilters',
@@ -2280,8 +2302,11 @@ export default class PanelManageGenotypeComponent extends Component {
     'sampleFiltersCountSelected',
   )
   get sampleNamesCmp() {
+    /** if there are referenceSamples, then filterSamples() will set .matchesSummary = distancesTo1d() */
+    if (! this.referenceSamplesCount) {
     /* clear the cached results of sampleMatchesSum() */
-    this.matchesSummary = {};
+      this.matchesSummary = {};
+    }
     const
     filtersCount = this.sampleFiltersCountSelected,
     fn = ! filtersCount ? undefined : (...sampleNames) => {
@@ -2315,9 +2340,18 @@ export default class PanelManageGenotypeComponent extends Component {
    * [sampleName] -> distance (previously {matches, mismatches})
    */
   matchesSummary = {};
-  /** Sum the matches of this sample with Alt or Ref value at the selected SNPs.
-   * Often samples will only be present in one block; this function sums the
-   * matches across the viewed blocks.
+  /** Map sampleName to a numeric value which can be compared with other
+   * sampleNames, used by sampleNamesCmp() for sorting sampleNames.
+   * Distances have been collated by featuresCountMatches() :
+   * in the case of referenceSamples, each sampleName has a distance to each
+   * referenceSample, these have been converted to 1d in distancesTo1d();
+   * otherwise, each sampleName has a single distance, to the Alt or Ref values.
+   *
+   * If ! referenceSamples the distance is a count of differences relative to the
+   * Alt or Ref value at the selected SNPs.
+   *
+   * Often samples will only be present in one block; this function averages the
+   * distances of sampleName across the viewed blocks.
    */
   sampleMatchesSum(sampleName) {
     let ratio = this.matchesSummary[sampleName];
@@ -2641,6 +2675,7 @@ export default class PanelManageGenotypeComponent extends Component {
     'args.userSettings.sampleFilterTypeName',
     'args.userSettings.haplotypeFilterRef',
     'sampleFiltersCountSelected',
+    'referenceSamplesCount',
   )
   get selectedSampleEffect () {
     const fnName = 'selectedSampleEffect';
@@ -2685,10 +2720,13 @@ export default class PanelManageGenotypeComponent extends Component {
 
   //----------------------------------------------------------------------------
 
-/* variantInterval feature + viewed VCF datasets -> variantSet SNPs
- * @return [variantInterval name] -> [feature, ...]
- * Overlapping features of all VCF / genotype blocks are included in the 1 array.
- */
+  /** Collate variant sets for the selected variantIntervals, i.e.
+   * features within the intervals.
+   * variantInterval feature + viewed VCF datasets -> variantSet SNPs
+   * @return [variantInterval name] -> [feature, ...]
+   * Overlapping features of all VCF / genotype blocks are included in the 1 array
+   * for each variantInterval.
+   */
   @computed('brushedOrViewedVCFBlocksVisible', 'sampleFiltersCountSelected')
   get variantSets() {
     // dependency could be : 'sampleFiltersCount.variantInterval'
@@ -2712,7 +2750,7 @@ export default class PanelManageGenotypeComponent extends Component {
         const
         /** this is the variantInterval feature - want the row feature. */
         viFeature = interval[featureSymbol],
-        /** filter out undefined from blocks without features overlapping this row. */
+        /** filter out undefined, which is from blocks without features overlapping this row. */
         rowFeatures = gtDatasetColumns
           .map(datasetId => row[datasetId]?.[featureSymbol])
           .filter(f => f),
@@ -2841,7 +2879,7 @@ export default class PanelManageGenotypeComponent extends Component {
 
     const
     userSettings = this.args.userSettings,
-    matchRef = new MatchRef(userSettings.haplotypeFilterRef),
+    matchRefFn = feature => [new MatchRef(userSettings.haplotypeFilterRef)],
     ablocks = this.brushedOrViewedVCFBlocks;
     const
     filterTypeName = this.args.userSettings.sampleFilterTypeName;
@@ -2850,6 +2888,10 @@ export default class PanelManageGenotypeComponent extends Component {
       let blockMatches = {};
       const
       block = abBlock.block,
+      /** later may apply referenceSamples to filterTypeName other than
+       * variantInterval; the 3 filterTypeNames are equivalent in that they
+       * are means for the user to select features. */
+      referenceSamples = block[Symbol.for('referenceSamples')] || [],
       filterArray = this.blockSampleFilters(block, filterTypeName);
       switch (filterTypeName) {
       case 'haplotype': {
@@ -2857,7 +2899,7 @@ export default class PanelManageGenotypeComponent extends Component {
         selected = filterArray,
         matchesR = selected.reduce((matches, tSNP) => {
           const features = block[haplotypeFeaturesSymbol][tSNP];
-          featuresCountMatches(features, matches, matchRef);
+          featuresCountMatches(features, matches, matchRefFn);
           return matches;
         }, {});
         blockMatches = matchesR;
@@ -2867,7 +2909,19 @@ export default class PanelManageGenotypeComponent extends Component {
         const
         sets = this.variantSets,  //  - getVariantSets() or get variantSets()
         features = addObjectArrays([], Object.values(sets));
-        featuresCountMatches(features, blockMatches, matchRef);
+        // -	filter variant set by referenceSamples : filter out SNP feature if no variation in feature.values. [referenceSamples]
+
+        let matchRefFn2;
+        if (referenceSamples.length	/*this.referenceSamplesCount*/) {
+          matchRefFn2 = feature => referenceSamples.map(
+            sampleName => new MatchRefSample(sampleName));
+            // or feature.values[sampleName]);
+          // features are the elements of variantSet
+        } else {
+          matchRefFn2 = matchRefFn;
+        }
+
+        featuresCountMatches(features, blockMatches, matchRefFn2);
       }
         break;
       case 'feature' : {
@@ -2882,25 +2936,36 @@ export default class PanelManageGenotypeComponent extends Component {
 
       /**
        * @param matches[sampleName] is now distance, replacing {matches,mismatches}.
-       * @param matchRefIn MatchRef.  if not defined then construct it for each feature from feature[matchRefSymbol].
+       * @param matchRefFn undefined or function returning [MatchRef, ...].
+       * if not defined then construct it for each feature from feature[matchRefSymbol].
        */
-      function featuresCountMatches(features, matches, matchRefIn) {
+      function featuresCountMatches(features, matches, matchRefFn) {
         features.forEach((feature) => {
           const
-          matchRef = matchRefIn || new MatchRef(feature[matchRefSymbol]),
-          matchValue = feature.values[matchRef.matchKey];
+          matchRefs = matchRefFn ? matchRefFn(feature) : [new MatchRef(feature[matchRefSymbol])];
+          matchRefs.forEach((matchRef, i) => {
+          const matchValue = feature.values[matchRef.matchKey];
           Object.entries(feature.values).forEach(([key, value]) => {
-            if (! valueNameIsNotSample(key) && matchValue /*&& ! valueIsMissing(value)*/) {
+            if (! valueNameIsNotSample(key) /*&& matchValue*/ /*&& ! valueIsMissing(value)*/) {
+              const sampleName = key;
               const distance = matchRef.distanceFn(value, matchValue);
               if (distance !== undefined) {
-                matches[key] = (matches[key] ?? 0) + distance;
+                const
+                referenceSampleName = matchRef.matchKey,
+                /** use [referenceSampleName] if referenceSamples.length,
+                 * e.g. matches[referenceSampleName][sampleName] */
+                matchesR = referenceSamples.length ?
+                  matches[referenceSampleName] || (matches[referenceSampleName] = {}) :
+                  matches;
+                matchesR[sampleName] = (matchesR[sampleName] ?? 0) + distance;
               }
             }
+          });
           });
         });
       }
 
-      block[sampleMatchesSymbol] = blockMatches;
+      block[referenceSamples.length ? referenceSampleMatchesSymbol : sampleMatchesSymbol] = blockMatches;
       if (showHideSampleFn && this.args.userSettings.haplotypeFiltersEnable) {
         /* 
          * block *
@@ -2913,10 +2978,40 @@ export default class PanelManageGenotypeComponent extends Component {
         });
       }
     });
+    // will have to coordinate with sampleNamesCmp(), sampleMatchesSum()
+    this.matchesSummary = this.distancesTo1d(ablocks.mapBy('block'));
     if (matrixView) {
-      // to enable trialling of action to filer after Clear
+      // to enable trialling of action to filter after Clear : haplotypeFiltersApply() : filterSamplesBySelectedHaplotypes()
       this.matrixView = matrixView;
     }
+  }
+
+  //----------------------------------------------------------------------------
+
+  /** collate distances by sampleName
+   */
+  distancesTo1d(blocks) {
+    const
+    fnName = 'distancesTo1d',
+    sampleDistanceVectors = blocks.reduce((d, block) => {
+      const
+      filterTypeName = this.args.userSettings.sampleFilterTypeName,
+      referenceSamples = this.blockSampleFilters(block, 'referenceSample'),
+      referenceSampleMatches = block[referenceSampleMatchesSymbol] || {};
+      // objectSymbolNameArray(block, sampleFiltersSymbol, filterTypeName);
+      // this.blockSampleFilters(block, 'referenceSampleMatches')
+
+      Object.entries(referenceSampleMatches).forEach(([referenceSampleName, sampleDistances]) => {
+        Object.entries(sampleDistances).forEach(([sampleName, sampleDistance]) => {
+          const
+          sampleVector = d[sampleName] || (d[sampleName] = []);
+          sampleVector.push(sampleDistance);
+        });
+      });
+      return d;
+    }, {}),
+    distanceOrder = tsneOrder(sampleDistanceVectors);
+    return distanceOrder;
   }
 
   //----------------------------------------------------------------------------

@@ -13,12 +13,20 @@ import $ from 'jquery';
 //------------------------------------------------------------------------------
 
 /** Use .addObject() or .removeObject() to toggle the presence of object in array.
+ *
+ * Also see toggleString() in utils/common/arrays.js, which matches String
+ * values, which this function does not do.  If object is a String, and array
+ * contains a String or string with the same string value, this function will
+ * not match, and will add another object instead of removing the matching value.
+ * toggleMember() in utils/common/sets.js also matches String values, by
+ * converting to string.
+ *
  * @param array instance of Ember.A() or equivalent, with methods :
  * .includes(object) -> boolean, and with signature function (object) :
  * .addObject() and .removeObject()
  * @param object
  * @return true iff object was added to array.
- * i.e. array.includes(object)
+ * i.e. array now includes object
  */
 function toggleObject(array, object) {
   const includes = array.includes(object);
@@ -158,6 +166,18 @@ function addObjectArrays(array, arrays) {
   return result;
 }
 
+//------------------------------------------------------------------------------
+
+/** Remove all elements from the array, without replacing the array.
+ * @param array
+ */
+function arrayClear(array) {
+  // or array.length = 0;
+  if (array.length) {
+    array.removeAt(0, array.length);
+  }
+}
+
 // -----------------------------------------------------------------------------
 
 let objectDependenciesCache = new WeakMap();
@@ -227,6 +247,7 @@ export {
   pollTaskFn,
   nowOrLater,  promiseText, toPromiseProxy,
   toArrayPromiseProxy,
+  arrayClear,
   addObjectArrays,
   compareDependencies,
   findParent,

@@ -34,7 +34,8 @@ import { toTitleCase } from '../utils/string';
 import { thenOrNow } from '../utils/common/promises';
 import { tableRowMerge } from '../utils/draw/progressive-table';
 import { eltWidthResizable, noKeyfilter } from '../utils/domElements';
-import { sparseArrayFirstIndex } from '../utils/common/arrays';
+import { toggleString, sparseArrayFirstIndex } from '../utils/common/arrays';
+import { toggleMember } from '../utils/common/sets';
 import { toggleObject } from '../utils/ember-devel';
 
 // -----------------------------------------------------------------------------
@@ -907,8 +908,21 @@ export default Component.extend({
         const datasetId = columnName;
         this.featureColumnDialogDataset(datasetId);
     } else if (row === -1) {
+      /* toggle selection of this column / sample.  columnName is not
+       * in datasetColumns, Alt or Ref, 'LD Block', or have tag
+       * variantInterval. */
       dLog(fnName, 'selectedColumnNames', this.selectedColumnNames.length, columnName);
-      toggleObject(this.selectedColumnNames, columnName);
+      /* columnName includes datasetId; possibly use sampleName here,
+       * or calculate selectedColumnNames from block referenceSamples. */
+      toggleString(this.selectedColumnNames, columnName);
+      const
+      sampleName = columnName2SampleName(columnName),
+      feature = tableCoordsToFeature(this.table, {row:0, col}),
+      block = feature.get('blockId.content'),
+      referenceSamples = block[Symbol.for('referenceSamples')] || (block[Symbol.for('referenceSamples')] = []);
+      /** sampleName instanceof string, so toggleObject() works.  */
+      toggleObject(referenceSamples, sampleName);
+      this.filterSamplesBySelectedHaplotypes();
     }
   },
 
@@ -1388,7 +1402,7 @@ export default Component.extend({
     dLog('columnNames', columnNames, this.colSample0);
     return columnNames;
   }),
-  colHeaders : computed('columnNames', 'datasetPositionFilterChangeCount', function() {
+  colHeaders : computed('columnNames', 'datasetPositionFilterChangeCount', 'selectedColumnNames.length', function() {
     const colHeaders = this.get('columnNames').map((columnName) => {
       const
       dataset = columnName[datasetSymbol],
@@ -1401,7 +1415,8 @@ export default Component.extend({
       positionFilterIcon = positionFilterClass ?
         '<i class="glyphicon glyphicon-' + positionFilterClass + '"></i>' : '',
       extraClassName = this.columnNameToClasses(fieldName),
-      colHeader = '<div class="head' + extraClassName + datasetClass  + '">'
+      selectedClassName = this.selectedColumnNames.find(name => columnName.startsWith(name)) ? ' col-selectedSample' : '',
+      colHeader = '<div class="head' + extraClassName + datasetClass + selectedClassName + '">'
         + positionFilterIcon
         + fieldName + '</div>';
       return colHeader;
@@ -1474,6 +1489,7 @@ export default Component.extend({
    * Some classNames are used by CSS selectors only in colHeaders, some are only used in cells.
    */
   columnNameToClasses(columnName) {
+      const fnName = 'columnNameToClasses';
       let extraClassName;
       /** dataset columns : gtDatasetColumns datasetColumns :
        * . column header displays Dataset .displayName;
@@ -1904,6 +1920,7 @@ export default Component.extend({
         const startTime = Date.now();
         console.time(fnName + ':updateSettings');
         table.updateSettings(settings);
+        // dLog(fnName,  d3.selectAll('.col-sample, .col-selectedSample').nodes());
         /* try setting meta references to features in batchRender().
          * In previous attempts it seemed to cause O(n2) rendering of cells.
          */

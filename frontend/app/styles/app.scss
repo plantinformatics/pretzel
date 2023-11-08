@@ -1744,6 +1744,11 @@ div#goto-feature > div
 .col-Dataset-Name > i.glyphicon-minus {
   color: red;
 }
+/* .head */
+.col-selectedSample {
+  border-right: 5px solid green;
+  padding-right: 10px;
+}
 
 /* genotype table : wrap text of datasetId and scope in top-left corner   */
 /* div.ht_clone_top_left_corner > div.wtHolder > div.wtHider > div.wtSpreader > table.htCore > thead > tr > th > div > span.colHeader.cornerHeader */

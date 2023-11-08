@@ -1,3 +1,27 @@
+
+export { toggleString };
+
+/** Equivalent to toggleObject() but for String.
+ * Use .find ( ... object.startsWith( ) ) instead of .includes() which matches
+ * string but not String.   toggleObject() uses .includes().
+ * This enables an array of Strings / strings to be used in the same way as a
+ * Set; using a Set is more succinct, but Set().size seems not be be effective
+ * as a ComputedProperty dependency, whereas array.length is.
+ * @param array [String, ... ]
+ * @param name
+ * (name instanceof String)
+ */
+function toggleString(array, name) {
+  const
+  index = array.findIndex(name_ => name.startsWith(name_));
+  if (index !== -1) {
+    array.removeAt(index, 1);
+  } else {
+    array.pushObject(name);
+  }
+}
+  
+
 /*----------------------------------------------------------------------------*/
 
 /** @return array resulting from concatenating the given arrays a,b
