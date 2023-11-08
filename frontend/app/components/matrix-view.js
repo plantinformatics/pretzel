@@ -30,6 +30,9 @@ import {
   datasetId2Class,
   featureBlockColourValue, columnNameAppendDatasetId, columnName2SampleName, valueIsCopies,
 } from '../utils/data/vcf-feature';
+import {
+  referenceSamplesSymbol,
+} from '../utils/data/genotype-order';
 import { toTitleCase } from '../utils/string';
 import { thenOrNow } from '../utils/common/promises';
 import { tableRowMerge } from '../utils/draw/progressive-table';
@@ -48,7 +51,6 @@ const featureSymbol = Symbol.for('feature');
 
 /** Copied from components/panel/manage-genotype.js; comments are there */
 const sampleFiltersSymbol = Symbol.for('sampleFilters');
-const referenceSamplesSymbol = Symbol.for('referenceSamples');
 
 // -----------------------------------------------------------------------------
 

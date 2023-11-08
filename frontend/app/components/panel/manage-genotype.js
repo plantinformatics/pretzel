@@ -40,9 +40,14 @@ import {
   featureSampleNames,
   featuresSampleMAF,
   objectSymbolNameArray,
+ } from '../../utils/data/vcf-feature';
+import {
+  referenceSamplesSymbol,
+  referenceSampleMatchesSymbol,
+  distancesTo1d,
   MatchRefSample,
   tsneOrder,
- } from '../../utils/data/vcf-feature';
+} from '../../utils/data/genotype-order';
 import { stringCountString, toTitleCase } from '../../utils/string';
 
 import { text2EltId } from '../../utils/explorer-tabId';
@@ -88,15 +93,6 @@ const haplotypeFeaturesSymbol = Symbol.for('haplotypeFeatures');
  * also used in sampleIsFilteredOut{,Blocks}()
  */
 const sampleMatchesSymbol = Symbol.for('sampleMatches');
-/** Sample names of a block which are selected by the user as references for
- * comparison of genotype values against the displayed samples.
- */
-const referenceSamplesSymbol = Symbol.for('referenceSamples');
-/** Distances per sampleName, per referenceSample, per block
- * i.e. block[referenceSampleMatchesSymbol][referenceSampleName] [sampleName] is a
- * distance across the variantSets of selected variantIntervals.
- */
-const referenceSampleMatchesSymbol = Symbol.for('referenceSampleMatches');
 /** Counts for calculating Call Rate of a sample.
  * sampleCount = block[callRateSymbol][sampleName] : {calls:0, misses:0}  */
 const callRateSymbol = Symbol.for('callRate');
@@ -2989,54 +2985,16 @@ export default class PanelManageGenotypeComponent extends Component {
     /** .matchesSummary is initialised by sampleNamesCmp() if ! .referenceSamplesCount,
      * and sampleMatchesSum() adds sampleNames to it as required, e.g. when distancesTo1d() returns {}
      */
-    this.matchesSummary = this.distancesTo1d(ablocks.mapBy('block'));
+    this.matchesSummary = distancesTo1d(
+      ablocks.mapBy('block'),
+      this.referenceSamplesCount,
+      this.args.userSettings.sampleFilterTypeName);
     if (matrixView) {
       // to enable trialling of action to filter after Clear : haplotypeFiltersApply() : filterSamplesBySelectedHaplotypes()
       this.matrixView = matrixView;
     }
   }
 
-  //----------------------------------------------------------------------------
-
-  /** collate distances by sampleName
-   */
-  distancesTo1d(blocks) {
-    const fnName = 'distancesTo1d';
-    let distanceOrder;
-    if ( ! this.referenceSamplesCount) {
-      distanceOrder = {};
-    } else
-    if ((blocks.length === 1) && (blocks[0][referenceSamplesSymbol]?.length === 1)) {
-      const
-      block = blocks[0],
-      referenceSamples = block[referenceSamplesSymbol],
-      referenceSampleName = referenceSamples[0];
-      distanceOrder = block[referenceSampleMatchesSymbol][referenceSampleName];
-    } else {
-      const
-      sampleDistanceVectors = blocks.reduce((d, block) => {
-        const
-        filterTypeName = this.args.userSettings.sampleFilterTypeName,
-        referenceSamples = block[referenceSamplesSymbol] || [],
-        /** if referenceSampleMatches is empty, i.e. {}, then
-         * sampleDistanceVectors and distanceOrder are both {}. */
-        referenceSampleMatches = block[referenceSampleMatchesSymbol] || {};
-        // objectSymbolNameArray(block, sampleFiltersSymbol, filterTypeName);
-        // this.blockSampleFilters(block, 'referenceSampleMatches')
-
-        Object.entries(referenceSampleMatches).forEach(([referenceSampleName, sampleDistances]) => {
-          Object.entries(sampleDistances).forEach(([sampleName, sampleDistance]) => {
-            const
-            sampleVector = d[sampleName] || (d[sampleName] = []);
-            sampleVector.push(sampleDistance);
-          });
-        });
-        return d;
-      }, {});
-      distanceOrder = tsneOrder(sampleDistanceVectors);
-    }
-    return distanceOrder;
-  }
 
   //----------------------------------------------------------------------------
 

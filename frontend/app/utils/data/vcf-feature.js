@@ -1545,74 +1545,6 @@ function getVariantSet(variantInterval, block) {
  */
 const variantSetSymbol = Symbol.for('variantSet');
 
-//------------------------------------------------------------------------------
-
-/** match a (sample genotype call) value against the alleles genotype values
- * of the reference sample at the feature / SNP.
- * Used in filterSamples(), and based on the Alt/Ref equivalent `MatchRef` there.
- */
-class MatchRefSample {
-  constructor(referenceSampleName) {
-    this.matchKey = referenceSampleName;
-  }
-
-  /**
-   * @return undefined if value is missing data, i.e. './.'
-   */
-  distanceFn(value, matchValue) {
-    const fnName = 'distanceFn';
-    /** number of copies of values alternate to allele values. */
-    let distance;
-    // const values = [value, matchValue];
-    if (gtValueIsNumeric(value) && gtValueIsNumeric(matchValue)) {
-      distance = matchValue - value; // value[1] - value[0];
-    }
-    return distance;
-  }
-}
-
-
-//------------------------------------------------------------------------------
-
-import TSNE from 'tsne-js';
-
-/** Map distance vectors of samples to 1D.
- * param samples {sampleName : [distance, ...], ... }
- */
-function tsneOrder(samples) {
-  const
-  distanceVectors = Object.values(samples);
-  // samples.entries.map(([sampleName, distances]) => 
-
-  let sampleOrder;
-  if (! distanceVectors.length) {
-    sampleOrder = {};
-  } else {
-    const model = new TSNE({
-      dim: 1,
-      perplexity: 30.0,
-      earlyExaggeration: 4.0,
-      learningRate: 100.0,
-      nIter: 150/*1000*/,
-      metric: 'euclidean'
-    });
-
-    model.init({
-      data: distanceVectors,
-      type: 'dense'
-    });
-
-    const [error, iter] = model.run();
-
-    // `outputScaled` is `output` scaled to a range of [-1, 1]
-    const outputScaled = model.getOutputScaled();
-    const
-    sampleEntries = Object.keys(samples).map((sampleName, i) => ([sampleName, outputScaled[i][0]]));
-    sampleOrder = Object.fromEntries(sampleEntries);
-  }
-
-  return sampleOrder;
-}
 
 //------------------------------------------------------------------------------
 
@@ -1643,6 +1575,4 @@ export {
   featuresSampleMAF,
   featureSampleMAF,
   objectSymbolNameArray,
-  MatchRefSample,
-  tsneOrder,
 };
