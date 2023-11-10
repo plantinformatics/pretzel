@@ -44,10 +44,13 @@ import {
 import {
   referenceSamplesSymbol,
   referenceSampleMatchesSymbol,
+  Distance,
+  Counts,
   distancesTo1d,
   MatchRefSample,
   tsneOrder,
 } from '../../utils/data/genotype-order';
+const Measure = Counts; // Distance;
 import { stringCountString, toTitleCase } from '../../utils/string';
 
 import { text2EltId } from '../../utils/explorer-tabId';
@@ -89,7 +92,7 @@ const sampleFiltersSymbol = Symbol.for('sampleFilters');
  */
 const haplotypeFeaturesSymbol = Symbol.for('haplotypeFeatures');
 /** Counts for filtering by LD Block (Haplotype) values
- * block[sampleMatchesSymbol] : distance (previously {matches: 0, mismatches : 0})
+ * block[sampleMatchesSymbol] : Measure, (previously distance, {matches: 0, mismatches : 0})
  * also used in sampleIsFilteredOut{,Blocks}()
  */
 const sampleMatchesSymbol = Symbol.for('sampleMatches');
@@ -2313,9 +2316,7 @@ export default class PanelManageGenotypeComponent extends Component {
       const
       /** distance averages for the samples.  */
       matchRates = sampleNames.map(this.sampleMatchesSum.bind(this)),
-      /** if missing data is given undefined distance, then columns stop sorting at the missing data. */
-      containsUndefined = matchRates.indexOf(undefined) !== -1,
-      cmp = containsUndefined ? 0 : matchRates[0] - matchRates[1];
+      cmp = Measure.cmp(matchRates[0], matchRates[1]);
       return cmp;
     };
     return fn;
@@ -2337,7 +2338,10 @@ export default class PanelManageGenotypeComponent extends Component {
 
 
   /** result of sampleMatchesSum()
-   * [sampleName] -> distance (previously {matches, mismatches})
+   * [sampleName] -> Measure, where Measure is :
+   *   Counts
+   *   Distance in 557d1c30 .. c530668d
+   *   MatchesCounts {matches, mismatches} (original) in 1123e41a,3792a330 .. 557d1c30
    */
   matchesSummary = {};
   /** Map sampleName to a numeric value which can be compared with other
@@ -2359,18 +2363,18 @@ export default class PanelManageGenotypeComponent extends Component {
       let distanceCount = 0;
       const
       blocks = this.sampleName2Blocks(sampleName),
-      /** sum of {,mis}match counts for blocks containing sampleName.  */
+      /** sum of Measure (e.g. {,mis}match counts) for blocks containing sampleName.  */
       ms = blocks
         .reduce((sum, block) => {
           const
-          /** m is now distance, replacing {matches,mismatches}. */
+          /** m is now Measure, replacing : distance,  {matches,mismatches}. */
           m = block?.[sampleMatchesSymbol]?.[sampleName];
           if (m !== undefined) {
             distanceCount++;
             if (! sum) {
               sum = m;
             } else {
-              sum += m;
+              sum = Measure.add(sum, m);
             }
           }
           return sum;
@@ -2378,7 +2382,7 @@ export default class PanelManageGenotypeComponent extends Component {
       /* ! distanceCount implies ms is null.
        * missing data is not sorted
        */
-      ratio = ! distanceCount ? undefined : ms / distanceCount;
+      ratio = Measure.average(ms, distanceCount);
       this.matchesSummary[sampleName] = ratio;
     }
     return ratio;
@@ -2846,14 +2850,16 @@ export default class PanelManageGenotypeComponent extends Component {
       matchFn(value, matchValue) { return (value === this.matchNumber) || (value === '1') || value.includes(matchValue); }
       /**
        * Param comments of matchFn() apply here also.
-       * @return undefined if value is missing data, i.e. './.'
+       * @return undefined if value is invalid
+       * missing data, i.e. './.', is counted in .missing if using Counts
        */
       distanceFn(value, matchValue) {
         const fnName = 'distanceFn';
         /** number of copies of Alt / Ref, for matchRef true / false. */
-        let distance;
+        let distance, missing = 0;
         const numeric = gtValueIsNumeric(value);
         if (value === './.') {
+          missing++;
           distance = this.matchRef ? 0 : 2;
         } else {
         switch (value.length) {
@@ -2871,6 +2877,16 @@ export default class PanelManageGenotypeComponent extends Component {
         default : dLog(fnName, 'invalid genotype value', value);
           break;
         }
+        }
+        if (Measure === Counts) {
+          const counts = Measure.create();
+          // similar to Counts.count(), except that increments by only 1.
+          if (missing) {
+            counts.missing = missing;
+          } else {
+            counts.distance = distance;
+          }
+          distance = counts;
         }
 
         return distance;
@@ -2935,7 +2951,7 @@ export default class PanelManageGenotypeComponent extends Component {
       }
 
       /**
-       * @param matches[sampleName] is now distance, replacing {matches,mismatches}.
+       * @param matches[sampleName] is now Measure, replacing : distance, {matches,mismatches}.
        * @param matchRefFn undefined or function returning [MatchRef, ...].
        * if not defined then construct it for each feature from feature[matchRefSymbol].
        */
@@ -2957,7 +2973,7 @@ export default class PanelManageGenotypeComponent extends Component {
                 matchesR = referenceSamples.length ?
                   matches[referenceSampleName] || (matches[referenceSampleName] = {}) :
                   matches;
-                matchesR[sampleName] = (matchesR[sampleName] ?? 0) + distance;
+                matchesR[sampleName] = Measure.add(matchesR[sampleName], distance);
               }
             }
           });
@@ -2975,7 +2991,7 @@ export default class PanelManageGenotypeComponent extends Component {
          * block *
          *   sample*
          *     show/hide according to count
-         * counts is now distance, replacing {matches,mismatches}.
+         * counts is now Measure, replacing : distance, {matches,mismatches}.
          */
         Object.entries(blockMatches).forEach(([sampleName, counts]) => {
           showHideSampleFn(sampleName, counts);

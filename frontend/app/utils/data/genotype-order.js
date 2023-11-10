@@ -12,6 +12,133 @@ import {
 } from './vcf-feature';
 
 //----------------------------------------------------------------------------
+
+/** The following classes implement a common API, which is referred to as Measure :
+ *    MatchesCounts, Distance, Counts
+ *
+ * The methods are static because one of them, Distance, is a number not an object.
+ *
+ * These are formed from code factored out of manage-genotype.js,
+ * matrix-view.js, and some of the param / variable names reflect that source
+ * code, and the evolution from {matches,mismatches} (MatchesCounts) to Distance
+ * to Counts.
+ */
+
+//----------------------------------------------------------------------------
+
+/**  {matches,mismatches} */
+class MatchesCounts {
+  add(sum, distance) {
+    const m = distance;
+    sum.matches += m.matches;
+    sum.mismatches += m.mismatches;
+    return sum;
+  }
+  create() { return {matches: 0, mismatches : 0}; }
+  haveData(counts) { return (counts.matches || counts.mismatches);  }
+  hide(counts) { return counts.mismatches; }
+  order(ms) {
+    const
+    ratio = ! ms || ! (ms.matches + ms.mismatches) ? 0 :
+        ms.matches / (ms.matches + ms.mismatches);
+    return ratio;
+ }
+  cmp(distance1, distance2) { return this.order(distance1) - this.order(distance2); }
+  count(sampleMatch, match) {
+    sampleMatch[match ? 'matches' : 'mismatches']++;
+    return sampleMatch;
+  }
+  /** Used to average counts for a sampleName across blocks.
+   * @param ms sum of Measure for blocks containing sampleName.
+   * @param distanceCount count of blocks which added to ms, i.e. have counts
+   * for sampleName.
+   */
+  average(ms, distanceCount) {
+    const
+    ratio = ! ms || ! (ms.matches + ms.mismatches) ? 0 :
+      ms.matches / (ms.matches + ms.mismatches);
+    return ratio;
+  }
+}
+
+/** typeof distance === 'number' */
+export class Distance {}
+Distance.add = function(sum, distance) {
+  sum = sum ?? Distance.create();
+  return sum += distance;
+};
+Distance.create = function() { return 0; };
+Distance.haveData = function(distance) { const counts = distance; return counts !== undefined; };
+Distance.hide = function(distance) { return distance; };
+Distance.order = function(distance) { return distance; };
+Distance.cmp = function(distance1, distance2) {
+  const
+  matchRates = [distance1, distance2],
+  /** if missing data is given undefined distance, then columns stop sorting at the missing data. */
+  /* Could instead : isUndefined = matchRates.map(m => m === undefined),
+   * cmp = isUndefined[0] && isUndefined[1] ? 0 : isUndefined[0] ? 1 : isUndefined[1] ? -1 : ...
+   */
+  containsUndefined = matchRates.indexOf(undefined) !== -1,
+  cmp = containsUndefined ? 0 : matchRates[0] - matchRates[1];
+  return cmp;
+};
+
+Distance.count = function(sum, distance) {
+  if (distance !== undefined) {
+    sum = sum ?? Distance.create();
+    sum += distance;
+  }
+  return sum;
+};
+Distance.average = function(ms, distanceCount) {
+  /* ! distanceCount implies ms is null.
+   * missing data is not sorted
+   */
+  const ratio = ! distanceCount ? undefined : ms / distanceCount;
+  return ratio;
+};
+
+
+/** {distance, missing}
+ * Counts of Hamming distance and missing data.
+ */
+export class Counts { }
+Counts.add = function(sum, counts) {
+  sum = sum ?? Counts.create();
+  const m = counts;
+  sum.distance += m.distance;
+  sum.missing += m.missing;
+  return sum;
+};
+Counts.create = function() { return {distance: 0, missing : 0}; };
+Counts.haveData = function(counts) { return counts && (counts.distance || counts.missing);  };
+Counts.hide = function(counts)  { return counts && (counts.distance < counts.missing);  };
+Counts.cmp = function(counts1, counts2) {
+  const
+  /** the sign of the result orders larger missing to the right, and smaller distances to the left.  */
+  cmp = ! counts1 || ! counts2 ? 0 :
+    counts1.missing || counts2.missing ? counts1.missing - counts2.missing :
+    counts1.distance || counts2.distance ? counts1.distance - counts2.distance :
+    0;
+  return cmp;
+};
+Counts.count = function(sampleMatch, match) {
+  sampleMatch[match ? 'missing' : 'distance']++;
+  return sampleMatch;
+};
+Counts.average = function(ms, distanceCount) {
+  /* ! distanceCount implies ms is null.
+   * missing data is not sorted
+   */
+  const
+  ratio = ! distanceCount ? undefined :
+    Object.fromEntries(Object.entries(ms).map(
+      ([key, value]) => [key, value / distanceCount]));
+  return ratio;
+};
+
+
+//----------------------------------------------------------------------------
 /** Sample names of a block which are selected by the user as references for
  * comparison of genotype values against the displayed samples.
  */

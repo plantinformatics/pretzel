@@ -32,6 +32,8 @@ import {
 } from '../utils/data/vcf-feature';
 import {
   referenceSamplesSymbol,
+  Measure,
+  Counts,
 } from '../utils/data/genotype-order';
 import { toTitleCase } from '../utils/string';
 import { thenOrNow } from '../utils/common/promises';
@@ -2118,10 +2120,10 @@ export default Component.extend({
     this.filterSamples(this.showHideSampleFn.bind(this), this);
   },
   showHideSampleFn(sampleName, counts) {  
-    // counts is now distance, replacing {matches,mismatches}.
-    if (counts !== undefined) {
+    // counts is now Measure, replacing : distance, {matches,mismatches}.
+    if (Measure.haveData(counts)) {
       const
-      hide = counts,
+      hide = Measure.hide(counts),
       columnIndex = this.columnNames.indexOf(sampleName),
       table = this.table,
       hiddenColumnsPlugin = table.getPlugin('hiddenColumns');

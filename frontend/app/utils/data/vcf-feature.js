@@ -8,6 +8,8 @@ import { stringGetFeature, stringSetSymbol, stringSetFeature } from '../panel/ax
 import { contentOf } from '../common/promises';
 import { featuresIntervalsForTree } from './features';
 import { intervalsIntersect } from '../interval-calcs';
+import { Distance, Counts } from './genotype-order';
+const Measure = Counts; // Distance;
 
 
 /* global performance */
@@ -770,11 +772,11 @@ function sampleIsFilteredOut(block, sampleName) {
   let hide;
   // matches may be empty
   if (matches) {
-    // counts is now distance, replacing {matches,mismatches}.
+    // counts is now Measure, replacing : distance, {matches,mismatches}.
     /** matches may not contain all samples of block, because of samplesLimit. */
     const counts = matches[sampleName];
     /** also done in matrix-view.js : showHideSampleFn() */
-    hide = counts;
+    hide = Measure.hide(counts);
   }
   return hide;
 }
