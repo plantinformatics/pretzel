@@ -44,13 +44,13 @@ import {
 import {
   referenceSamplesSymbol,
   referenceSampleMatchesSymbol,
-  Distance,
   Counts,
+  Measure,
   distancesTo1d,
   MatchRefSample,
   tsneOrder,
 } from '../../utils/data/genotype-order';
-const Measure = Counts; // Distance;
+
 import { stringCountString, toTitleCase } from '../../utils/string';
 
 import { text2EltId } from '../../utils/explorer-tabId';

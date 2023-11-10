@@ -8,8 +8,7 @@ import { stringGetFeature, stringSetSymbol, stringSetFeature } from '../panel/ax
 import { contentOf } from '../common/promises';
 import { featuresIntervalsForTree } from './features';
 import { intervalsIntersect } from '../interval-calcs';
-import { Distance, Counts } from './genotype-order';
-const Measure = Counts; // Distance;
+import { Measure } from './genotype-order';
 
 
 /* global performance */

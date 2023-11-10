@@ -137,8 +137,16 @@ Counts.average = function(ms, distanceCount) {
   return ratio;
 };
 
+//------------------------------------------------------------------------------
+
+/** previous value : Distance; */
+export const Measure = Counts;
 
 //----------------------------------------------------------------------------
+
+const sampleFiltersSymbol = Symbol.for('sampleFilters');
+const sampleMatchesSymbol = Symbol.for('sampleMatches');
+
 /** Sample names of a block which are selected by the user as references for
  * comparison of genotype values against the displayed samples.
  */
@@ -164,7 +172,9 @@ function distancesTo1d(blocks, referenceSamplesCount, sampleFilterTypeName) {
   const fnName = 'distancesTo1d';
   let distanceOrder;
   if ( ! referenceSamplesCount) {
-    distanceOrder = {};
+    const
+    block = blocks[0];
+    distanceOrder = block[sampleMatchesSymbol];
   } else
   if ((blocks.length === 1) && (blocks[0][referenceSamplesSymbol]?.length === 1)) {
     const
@@ -188,7 +198,12 @@ function distancesTo1d(blocks, referenceSamplesCount, sampleFilterTypeName) {
         Object.entries(sampleDistances).forEach(([sampleName, sampleDistance]) => {
           const
           sampleVector = d[sampleName] || (d[sampleName] = []);
-          sampleVector.push(sampleDistance);
+          /** Distance is the only Measure which is not an Object. */
+          if (Measure === Distance) {
+            sampleVector.push(sampleDistance);
+          } else {
+            sampleVector.pushObjects(Object.values(sampleDistance));
+          }
         });
       });
       return d;
@@ -212,17 +227,23 @@ class MatchRefSample {
   }
 
   /**
-   * @return undefined if value is missing data, i.e. './.'
+   * @return Measure, i.e. Counts {distance, missing}
+   * .missing is 2 if value is missing data, i.e. './.'
    */
   distanceFn(value, matchValue) {
     const fnName = 'distanceFn';
-    /** number of copies of values alternate to allele values. */
-    let distance;
+    /** number of copies of values alternate to allele values.
+     * if missing then distance should be undefined, but sample column sort
+     * order will depend on .distance then on .missing.
+     */
+    let distance = 0, missing = 0;
     // const values = [value, matchValue];
     if (gtValueIsNumeric(value) && gtValueIsNumeric(matchValue)) {
       distance = matchValue - value; // value[1] - value[0];
+    } else {
+      missing = 2;
     }
-    return distance;
+    return {distance, missing};
   }
 }
 
