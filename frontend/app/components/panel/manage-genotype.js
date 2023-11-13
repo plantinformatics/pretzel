@@ -2859,7 +2859,7 @@ export default class PanelManageGenotypeComponent extends Component {
         let distance, missing = 0;
         const numeric = gtValueIsNumeric(value);
         if (value === './.') {
-          missing++;
+          missing += 2;
           distance = this.matchRef ? 0 : 2;
         } else {
         switch (value.length) {
@@ -2884,7 +2884,9 @@ export default class PanelManageGenotypeComponent extends Component {
           if (missing) {
             counts.missing = missing;
           } else {
+            counts.notMissing = 2;
             counts.distance = distance;
+            counts.differences = distance ? 1 : 0;
           }
           distance = counts;
         }

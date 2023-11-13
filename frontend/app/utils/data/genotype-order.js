@@ -13,6 +13,10 @@ import {
 
 //----------------------------------------------------------------------------
 
+const dLog = console.debug;
+
+//----------------------------------------------------------------------------
+
 /** The following classes implement a common API, which is referred to as Measure :
  *    MatchesCounts, Distance, Counts
  *
@@ -99,8 +103,12 @@ Distance.average = function(ms, distanceCount) {
 };
 
 
-/** {distance, missing}
- * Counts of Hamming distance and missing data.
+/** {distance, missing, notMissing, differences}
+ * Counts of Hamming distance and missing / notMissing data.
+ *
+ * distance, missing, and notMissing are counted in alleles (currently assumed
+ * diploid, i.e. count each SNP as 2), whereas differences counts the SNPs which
+ * are different.
  */
 export class Counts { }
 Counts.add = function(sum, counts) {
@@ -108,27 +116,53 @@ Counts.add = function(sum, counts) {
   const m = counts;
   sum.distance += m.distance;
   sum.missing += m.missing;
+  sum.notMissing += m.notMissing;
+  sum.differences += m.differences;
   return sum;
 };
-Counts.create = function() { return {distance: 0, missing : 0}; };
-Counts.haveData = function(counts) { return counts && (counts.distance || counts.missing);  };
+Counts.create = function() {
+ return {
+   distance: 0, missing : 0, notMissing : 0, differences : 0};
+};
+Counts.haveData = function(counts) {
+ return counts &&
+    (counts.distance || counts.missing || counts.notMissing || counts.differences);
+};
 Counts.hide = function(counts)  { return counts && (counts.distance < counts.missing);  };
+Counts.order = function(counts) {
+  const
+  /** adjust the distance + differences measure by its significance,
+   * proportional to notMissing / missing data
+   */
+  nSNPs = counts.missing + counts.notMissing,
+  d = (((counts.distance << 8) | counts.differences) * nSNPs) << 8,
+  p = counts.notMissing ? d / counts.notMissing : d,
+  value = p | counts.missing;
+  return value;
+};
 Counts.cmp = function(counts1, counts2) {
   const
-  /** the sign of the result orders larger missing to the right, and smaller distances to the left.  */
+  /** the sign of the result sorts in ascending order by : distance, differences, missing;
+   * i.e. larger missing to the right, and smaller distances to the left.
+   * This does not handle undefined or null field values.
+   */
   cmp = ! counts1 || ! counts2 ? 0 :
-    counts1.missing || counts2.missing ? counts1.missing - counts2.missing :
-    counts1.distance || counts2.distance ? counts1.distance - counts2.distance :
-    0;
+    Counts.order(counts1) - Counts.order(counts2);
+/*
+    (counts1.distance - counts2.distance) ||
+    (counts1.differences - counts2.differences) ||
+    (counts1.missing - counts2.missing);
+*/
+  dLog('cmp', cmp, counts1, counts2);
   return cmp;
 };
 Counts.count = function(sampleMatch, match) {
   sampleMatch[match ? 'missing' : 'distance']++;
+  sampleMatch.differences++;
   return sampleMatch;
 };
 Counts.average = function(ms, distanceCount) {
   /* ! distanceCount implies ms is null.
-   * missing data is not sorted
    */
   const
   ratio = ! distanceCount ? undefined :
@@ -236,14 +270,16 @@ class MatchRefSample {
      * if missing then distance should be undefined, but sample column sort
      * order will depend on .distance then on .missing.
      */
-    let distance = 0, missing = 0;
+    let distance = 0, missing = 0, differences = 0;
     // const values = [value, matchValue];
     if (gtValueIsNumeric(value) && gtValueIsNumeric(matchValue)) {
       distance = matchValue - value; // value[1] - value[0];
+      differences = distance ? 1 : 0;
     } else {
       missing = 2;
     }
-    return {distance, missing};
+    const notMissing = 2 - missing;
+    return {distance, missing, notMissing, differences};
   }
 }
 

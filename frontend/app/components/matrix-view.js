@@ -917,17 +917,26 @@ export default Component.extend({
        * in datasetColumns, Alt or Ref, 'LD Block', or have tag
        * variantInterval. */
       dLog(fnName, 'selectedColumnNames', this.selectedColumnNames.length, columnName);
-      /* columnName includes datasetId; possibly use sampleName here,
-       * or calculate selectedColumnNames from block referenceSamples. */
-      toggleString(this.selectedColumnNames, columnName);
+      // this may move to a hover action so it doesn't preclude the sample toggle.
+      const showMeasure = this.urlOptions.showMeasure;
+      if (! showMeasure) {
+        /* columnName includes datasetId; possibly use sampleName here,
+         * or calculate selectedColumnNames from block referenceSamples. */
+        toggleString(this.selectedColumnNames, columnName);
+      }
       const
       sampleName = columnName2SampleName(columnName),
       feature = tableCoordsToFeature(this.table, {row:0, col}),
       block = feature.get('blockId.content'),
       referenceSamples = block[referenceSamplesSymbol] || (block[referenceSamplesSymbol] = []);
-      /** sampleName instanceof string, so toggleObject() works.  */
-      toggleObject(referenceSamples, sampleName);
-      this.filterSamplesBySelectedHaplotypes();
+      if (! showMeasure) {
+        /** sampleName instanceof string, so toggleObject() works.  */
+        toggleObject(referenceSamples, sampleName);
+        this.filterSamplesBySelectedHaplotypes();
+      } else {
+        const sampleMatches = block[Symbol.for('sampleMatches')];
+        console.log(fnName, sampleMatches[sampleName], sampleName);
+      }
     }
   },
 
