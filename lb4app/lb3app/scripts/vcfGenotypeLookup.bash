@@ -21,6 +21,7 @@
 # i.e. 1 or more datasetId, joined with !; 
 # where datasetId is a datablock not a reference / parent.
 # This is split into the array isecDatasetIdsArray.
+# When isecDatasetIds is given, -R is used, so -r should not be given.
 # @param preArgs	remaining args : $*
 # preArgs may contain -queryStart paramsForQuery -queryEnd
 # paramsForQuery : Params passed to query if view|query is used, otherwise to command.

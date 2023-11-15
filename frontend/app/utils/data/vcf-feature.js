@@ -134,6 +134,9 @@ function vcfGenotypeLookup(auth, samples, domainInteger, requestOptions, vcfData
   preArgs = Object.assign({
     region, samples, requestInfo
   }, requestOptions);
+  /** Noted in vcfGenotypeLookup.bash : When requestOptions.isecDatasetIds is given,
+   * -R is used, so -r is not given, i.e. preArgs.region is not used.
+   */
   // parent is .referenceDatasetName
 
 
