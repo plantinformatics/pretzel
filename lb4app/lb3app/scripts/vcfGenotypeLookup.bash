@@ -275,6 +275,8 @@ function dbName2Vcf() {
   return $status
 }
 
+commonSNPsDir=region_common_SNPs
+(cd $serverDir/"$vcfDir"; [ -d $commonSNPsDir ] || mkdir $commonSNPsDir )
 
 # Use bcftools isec to prepare a list of common SNPs between $isecDatasetIds ($vcfGzs).
 # Uses $vcfGzs, $isecFlags, $chr.
@@ -287,8 +289,10 @@ function prepareCommonSNPs() {
   # -R overrides -r instead of intersect, so don't retain the intersection files /
   # common SNPs; overwrite the previous file, and intersect just the required region,
   # instead of the whole chromosome.
-  commonSNPs=region_common_SNPs.vcf
-  # commonSNPs="isec.$isecFlags.$chr.$isecDatasetIds.vcf"
+  # Including parameters in the file name to handle multiple concurrent calls,
+  # e.g. triggered by a single client action (autoLookup)
+  # $commonSNPsDir/
+  commonSNPs="isec.$isecFlags.$chr.$isecDatasetIds.$$.vcf"
   if [ ${#vcfGzs[@]} -gt 0 ]
   then
     if true # [ ! -f "$commonSNPs" ]
@@ -307,8 +311,9 @@ function prepareCommonSNPs() {
       #   https://github.com/samtools/bcftools/issues/334#issuecomment-147310754
       # don't prevent the message; also tried without -o and -r.
       # The note does not cause a non-zero return status.
-      2>&$F_ERR time "$bcftools" isec $isecFlags -c all -o "$commonSNPs" "${regionParams[@]}" "${vcfGzs[@]}"  |& \
+      2>&$F_ERR "$bcftools" isec $isecFlags -c all -o "$commonSNPs" "${regionParams[@]}" "${vcfGzs[@]}"  |& \
         fgrep -v "Note: -w option not given, printing list of sites..."
+      return ${PIPESTATUS[0]}
     else
       true
     fi
@@ -333,6 +338,7 @@ function bcftoolsCommand() {
   then
     # uses $vcfGzs.  $@ is preArgs, starting with "${regionParams[@]}"
     regionParams=($1 $2); shift 2;
+    preArgs=("${preArgs[@]:2}")
     # Use absolute path for logFile because this is within cd ... "$vcfDir"
     >> $serverDir/$logFile echo regionParams="${regionParams[@]}", "${@}"
     if prepareCommonSNPs "${regionParams[@]}"
@@ -350,7 +356,7 @@ function bcftoolsCommand() {
     fi
     fi
   else
-    >> $serverDir/$logFile echo ${#vcfGz}
+    >> $serverDir/$logFile echo \#vcfGz ${#vcfGz}
     # Perhaps this check should be on ${#vcfGzs[@]}, but that is equal - seems it must be 0 at this point ?
     if [ ${#isecDatasetIdsArray[@]} -gt 1 ]
     then
@@ -470,9 +476,9 @@ else
 
 fi
 
+status_0=$?
+[ -n "$commonSNPs" ] && ls -gG "$commonSNPs"	# rm
 
-
-
-# exit $status
+exit $status_0
 
 #-------------------------------------------------------------------------------

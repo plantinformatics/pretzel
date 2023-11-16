@@ -2674,6 +2674,7 @@ export default class PanelManageGenotypeComponent extends Component {
     /** callRateThreshold -> sampleFilter, passed to vcfFeatures2MatrixView{,Rows{,Result}} -> sampleIsFilteredOut{,Blocks} */
     'args.userSettings.callRateThreshold',
     'datasetPositionFilterChangeCount',
+    'sampleCache.datasetEnableFeatureFiltersCount',
 
     'args.userSettings.haplotypeFiltersEnable',
     'args.userSettings.sampleFilterTypeName',

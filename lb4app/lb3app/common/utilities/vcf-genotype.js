@@ -63,16 +63,11 @@ function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
    * to ChildProcess.spawn (node:internal/child_process) which calls
    * spawn(options) which converts non-strings to strings, e.g. arrays are
    * joined with ',' into a single string.  undefined -> 'undefined'.
-   *
-   * Parameters to vcfGenotypeLookup.bash are positional, so pass '' for if
-   * region params not required.
    */
-  const regionParams = (preArgs.region && ! isecDatasetIds?.length) ?
-        ['-r', preArgs.region] : ['', ''];
   let moreParams = [
     command, datasetDir, scope,
     isecFlags || '', isecDatasetIdsText || '',
-    regionParams[0], regionParams[1] ];
+    '-r', preArgs.region ];
   /** from BCFTOOLS(1) :
    bcftools view [OPTIONS] file.vcf.gz [REGION [...]]
       -h, --header-only

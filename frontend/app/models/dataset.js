@@ -23,6 +23,8 @@ export default Record.extend({
   apiServers : service(),
   blockService : service('data/block'),
   view : service('data/view'),
+  dataGenotype : service('data/vcf-genotype'),
+
 
   name: attr('string'),
 
@@ -200,10 +202,17 @@ export default Record.extend({
    * in the genotype table for this dataset
    */
   get enableFeatureFilters() {
-    return this[enableFeatureFiltersSymbol];
+    let enabled = this[enableFeatureFiltersSymbol];
+    if (enabled === undefined) {
+      enabled = this[enableFeatureFiltersSymbol] = true;
+    }
+    return enabled;
   },
   set enableFeatureFilters(value) {
     this[enableFeatureFiltersSymbol] = value;
+    // Count the change.  Used as dependency in selectedSampleEffect().
+    const increment = value ? 1 : -1;
+    this.dataGenotype.incrementProperty('datasetEnableFeatureFiltersCount', increment);
     return value;
   },
 
