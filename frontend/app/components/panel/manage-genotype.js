@@ -3007,7 +3007,7 @@ export default class PanelManageGenotypeComponent extends Component {
     this.matchesSummary = distancesTo1d(
       ablocks.mapBy('block'),
       this.referenceSamplesCount,
-      this.args.userSettings.sampleFilterTypeName);
+      this.args.userSettings);
     if (matrixView) {
       // to enable trialling of action to filter after Clear : haplotypeFiltersApply() : filterSamplesBySelectedHaplotypes()
       this.matrixView = matrixView;

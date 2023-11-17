@@ -202,8 +202,9 @@ export { distancesTo1d };
 
 /** collate distances by sampleName
  */
-function distancesTo1d(blocks, referenceSamplesCount, sampleFilterTypeName) {
+function distancesTo1d(blocks, referenceSamplesCount, userSettings) {
   const fnName = 'distancesTo1d';
+  const sampleFilterTypeName = userSettings.sampleFilterTypeName;
   let distanceOrder;
   if ( ! referenceSamplesCount) {
     const
@@ -216,6 +217,27 @@ function distancesTo1d(blocks, referenceSamplesCount, sampleFilterTypeName) {
     referenceSamples = block[referenceSamplesSymbol],
     referenceSampleName = referenceSamples[0];
     distanceOrder = block[referenceSampleMatchesSymbol][referenceSampleName];
+  } else if (
+    /* if just <= 1 referenceSamples selected, merge the measures of the blocks
+     * instead of using dimension reduction to combine them.  This is
+     * experimental - some possible issues :
+     * .  sample names may overlap between the blocks, in which case .average()
+     *    would be better;
+     * .  sampleFilters may not be present in all blocks, affecting the distance
+     *    (may be OK because .order() calculates relative to counts.notMissing).
+     * .  if a referenceSample is selected, it is in 1 block - this will similarly
+     *    affect the distance.
+     *    This is not a problem when 0 referenceSamples, i.e. using alt/ref of
+     *    the parent.
+     */
+    blocks.map(b => b[referenceSamplesSymbol]?.length)
+      .filter(s => typeof s === 'number')
+      .reduce((sum, s) => {return sum +=s;}, 0)
+      <= 1) {
+    const
+    sampleName = userSettings.haplotypeFilterRef ? 'ref' : 'alt',
+    orders = blocks.map(b => b[referenceSampleMatchesSymbol]?.[sampleName]);
+    distanceOrder = Object.assign.apply({}, orders);
   } else {
     const
     sampleDistanceVectors = blocks.reduce((d, block) => {

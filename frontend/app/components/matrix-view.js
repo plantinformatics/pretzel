@@ -912,9 +912,12 @@ export default Component.extend({
        */
         const datasetId = columnName;
         this.featureColumnDialogDataset(datasetId);
-    } else if (row === -1) {
+    } else if (
+      (row === -1) &&
+        ! this.gtDatasetColumns.includes(columnName) &&
+        columnNameIsNotSample(columnName) ) {
       /* toggle selection of this column / sample.  columnName is not
-       * in datasetColumns, Alt or Ref, 'LD Block', or have tag
+       * in gtDatasetColumns, Alt or Ref, 'LD Block', or have tag
        * variantInterval. */
       dLog(fnName, 'selectedColumnNames', this.selectedColumnNames.length, columnName);
       // this may move to a hover action so it doesn't preclude the sample toggle.
