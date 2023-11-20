@@ -1,3 +1,4 @@
+//------------------------------------------------------------------------------
 
 export { toggleString };
 
@@ -20,7 +21,23 @@ function toggleString(array, name) {
     array.pushObject(name);
   }
 }
-  
+
+//------------------------------------------------------------------------------
+
+export {arrayChoose};
+/** Choose all possible sets of k elements from array.
+ * @return array of arrays
+ * @desc
+ * From : https://stackoverflow.com/a/64414875 by Bergi
+ */
+function arrayChoose(array, k, prefix=[]) {
+  if (k == 0) return [prefix];
+  return array.flatMap((v, i) =>
+    arrayChoose(array.slice(i+1), k-1, [...prefix, v])
+  );
+}
+
+
 
 /*----------------------------------------------------------------------------*/
 

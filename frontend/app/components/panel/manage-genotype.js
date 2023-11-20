@@ -16,6 +16,7 @@ import NamesFilters from '../../utils/data/names-filters';
 import { toPromiseProxy, toArrayPromiseProxy, addObjectArrays, arrayClear } from '../../utils/ember-devel';
 import { thenOrNow, contentOf } from '../../utils/common/promises';
 import { clipboard_writeText } from '../../utils/common/html';
+import { arrayChoose } from  '../../utils/common/arrays';
 import { intervalSize } from '../../utils/interval-calcs';
 import { overlapInterval } from '../../utils/draw/zoomPanCalcs';
 import { featuresIntervalsForTree } from '../../utils/data/features';
@@ -1965,8 +1966,9 @@ export default class PanelManageGenotypeComponent extends Component {
       scope = this.lookupScope;
       /** .lookupDatasetId is derived from .lookupBlock so .lookupBlock must be defined here. */
       let blockV = this.lookupBlock;
+      const intersection = this.intersectionParamsSimple(vcfDatasetId);
 
-      this.vcfGenotypeLookupDataset(blockV, vcfDatasetId, scope, domainInteger, samples, samplesLimitEnable);
+      this.vcfGenotypeLookupDataset(blockV, vcfDatasetId, intersection, scope, domainInteger, samples, samplesLimitEnable);
     }
   }
   /** Request VCF genotype for brushed datasets which are visible
@@ -1974,7 +1976,8 @@ export default class PanelManageGenotypeComponent extends Component {
   vcfGenotypeLookupAllDatasets() {
     // related : notes in showSamplesWithinBrush() re. isZoomedOut(), .rowLimit.
     const
-    visibleBlocks = this.brushedOrViewedVCFBlocksVisible;
+    visibleBlocks = this.brushedOrViewedVCFBlocksVisible,
+    blocks =
     visibleBlocks
     /** filter out blocks which are `minus` in the positionFilter - if requested
      * the result should be empty.
@@ -1983,7 +1986,41 @@ export default class PanelManageGenotypeComponent extends Component {
       .filter(block => {
         const dataset = block.get('datasetId.content');
         return dataset.positionFilter !== false;
-      })
+      });
+    let flags;
+    const
+    // Potentially filter out .positionFilter === false
+    requiredBlock = blocks.find(b => b.get('datasetId.positionFilter') === true),
+    choose = !!requiredBlock;
+    if (choose) {
+      /** Requirement : request calls data for SNPs at which requiredBlock and k
+       * other blocks have data.
+       * Design : from visibleBlocks - requiredBlock, choose groups of k
+       */
+      const
+      /** visibleBlocks, excluding requiredBlock */
+      notSelf = visibleBlocks.filter(b => b !== requiredBlock),
+      /** chooseK will be input via GUI */
+      k = 1, // Math.min(notSelf.length, chooseK),
+      flags = '' + (k+1), /*-n*/
+      /** (visibleBlocks - requiredBlock) C k */
+      groups = arrayChoose(notSelf, k);
+      groups.forEach(group => {
+        /** group combined with requiredBlock */
+        const selfAnd = group.concat([requiredBlock]);
+        this.vcfGenotypeLookupGroup(selfAnd, flags);
+      });
+    } else {
+      this.vcfGenotypeLookupGroup(blocks, /*flags*/undefined);
+    }
+  }
+  /** Request genotype calls for blocks.
+   * @param blocks
+   * @param flags for intersection, bcftools isec.
+   * Defined if choose, otherwise intersectionParamsSimple() is used.
+   */
+  vcfGenotypeLookupGroup(blocks, flags) {
+    blocks
       .forEach((blockV, i) => {
       const
       vcfDatasetId = blockV.get('datasetId.id'),
@@ -2002,20 +2039,31 @@ export default class PanelManageGenotypeComponent extends Component {
        * may be valid, but for now skip this dataset if ! .length.
        */
       if (this.args.userSettings.requestSamplesAll || samples.length) {
-        this.vcfGenotypeLookupDataset(blockV, vcfDatasetIdAPI, scope, domainInteger, samples, samplesLimitEnable);
+        const
+        intersection = flags ?
+          {datasetIds : blocks.mapBy('datasetId.genotypeId'), flags} :
+        this.intersectionParamsSimple(vcfDatasetId);
+
+        this.vcfGenotypeLookupDataset(blockV, vcfDatasetIdAPI, intersection, scope, domainInteger, samples, samplesLimitEnable);
       }
     });
   }
   /** Send API request for VCF genotype of the given vcfDatasetId.
-   * @param blockV
+   * @param blockV  brushed / Viewed visible VCF / Genotype Block
+   *   (from .lookupBlock or .brushedOrViewedVCFBlocksVisible)
    * @param vcfDatasetId one of the VCF genotype datasets on the brushed axis
    * This is the API id, i.e. .genotypeId, not dataset .id
+   * i.e. this is blockV.datasetId.genotypeId
+   * @param intersection return calls for SNPs which have positions in these datasets.
+   * {datasetIds, flags} or undefined.  
+   *   .datasetIds includes this one (vcfDatasetId).
+   *   .flags : for bcftools isec, without the -n.
    * @param scope of the brushed axis
    * @param domainInteger brushed domain on the axis / parent
    * @param samples selected samples to request
    * @param samplesLimitEnable  .args.userSettings.samplesLimitEnable
    */
-  vcfGenotypeLookupDataset(blockV, vcfDatasetId, scope, domainInteger, samples, samplesLimitEnable) {
+  vcfGenotypeLookupDataset(blockV, vcfDatasetId, intersection, scope, domainInteger, samples, samplesLimitEnable) {
     const fnName = 'vcfGenotypeLookupDataset';
     if (scope) {
       const
@@ -2030,6 +2078,40 @@ export default class PanelManageGenotypeComponent extends Component {
       requestOptions = {
         requestFormat, requestSamplesAll, snpPolymorphismFilter,
         mafThreshold, mafUpper},
+      x=0;
+
+      if (intersection) {
+        requestOptions.isecDatasetIds = intersection.datasetIds;
+        requestOptions.isecFlags = '-n' + intersection.flags;
+      }
+
+      addGerminateOptions(requestOptions, blockV);
+      const
+      textP = vcfGenotypeLookup(this.auth, samples, domainInteger,  requestOptions, vcfDatasetId, scope, this.rowLimit);
+      // re-initialise file-anchor with the new @data
+      this.vcfExportText = null;
+      textP.then(
+        this.vcfGenotypeReceiveResult.bind(this, blockV, requestFormat, userSettings))
+      .catch(this.showError.bind(this, fnName));
+
+    }
+  }
+  /** Construct isec params for a lookup of vcfDatasetId, if required.
+   * If datasets other than this one (vcfDatasetId) have positionFilter,
+   * result datasetIds is those datasets, and this one (vcfDatasetId).
+   * Result .flags is '1' for vcfDatasetId and datasets with .positionFilter true,
+   * and '0' for those with .positionFilter false.
+   *
+   * This is simple intersection : the positionFilter for each dataset is
+   * independent, i.e. just true/false/undefined.  This was implemented first.
+   * In the more complex case, implemented via arrayChoose(), one dataset is
+   * required, with groups of k other datasets.
+   *
+   * @return intersection { datasetIds, flags }
+   */
+    intersectionParamsSimple(vcfDatasetId) {
+      let intersection;
+      const
       /** Datasets selected for intersection.
        * Used to indicate if any positionFilter are defined and hence isecFlags
        * and isecDatasets will be set.  If no datasets other than this one
@@ -2068,17 +2150,16 @@ export default class PanelManageGenotypeComponent extends Component {
         allTrue = flags.findIndex(flag => !flag) === -1,
         isecFlags = allTrue ? isecDatasetIds.length :
           '~' + flags.map(flag => flag ? '1' : '0').join('');
-        requestOptions.isecDatasetIds = isecDatasetIds;
-        requestOptions.isecFlags = '-n' + isecFlags;
+        intersection = {
+          datasetIds : isecDatasetIds,
+          flags : /*'-n' +*/ isecFlags};
       }
-      addGerminateOptions(requestOptions, blockV);
-      const
-      textP = vcfGenotypeLookup(this.auth, samples, domainInteger,  requestOptions, vcfDatasetId, scope, this.rowLimit);
-      // re-initialise file-anchor with the new @data
-      this.vcfExportText = null;
-      textP.then(
-        (text) => {
+      return intersection;
+    }
+
+        vcfGenotypeReceiveResult(blockV, requestFormat, userSettings, text) {
           const
+          fnName = 'vcfGenotypeReceiveResult',
           isGerminate = resultIsGerminate(text),
           callsData = isGerminate && text;
           if (isGerminate) {
@@ -2145,10 +2226,7 @@ export default class PanelManageGenotypeComponent extends Component {
             }
           }
 
-      })
-      .catch(this.showError.bind(this, fnName));
-    }
-  }
+      }
 
   //----------------------------------------------------------------------------
 
