@@ -56,10 +56,20 @@ const cellMultiFeatures = false;
 
 //------------------------------------------------------------------------------
 
+/** Identify those columns which are not sample names.
+ * Match both the raw Feature.values key and the Capitalised name which is
+ * displayed in the column header (without the trailing "\t" + datasetId).
+ * Related : columnNameIsNotSample() (for current usage, these 2 could
+ * potentially be merged).
+ */
+const nonSampleNames = [
+  'ref', 'alt', 'tSNP', 'MAF',
+  'Ref', 'Alt', 'LD Block',
+];
 /** Given a key within Feature.values, classify it as sample (genotype data) or other field.
  */
 function valueNameIsNotSample(valueName) {
-  return ['ref', 'alt', 'tSNP', 'MAF'].includes(valueName);
+  return nonSampleNames.includes(valueName);
 }
 
 //------------------------------------------------------------------------------

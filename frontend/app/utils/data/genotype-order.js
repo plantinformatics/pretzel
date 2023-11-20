@@ -201,22 +201,30 @@ export {
 export { distancesTo1d };
 
 /** collate distances by sampleName
+ *
+ * @param blocks
+ * @param referenceSamplesCount number of selected referenceSamples
+ * @param  userSettings { sampleFilterTypeName, haplotypeFilterRef}
+ * @return {} if no dimension reduction is required, i.e. there is <= 1
+ * selected referenceSample.  These cases are handled by sampleMatchesSum(),
+ * which is equivalent.
  */
 function distancesTo1d(blocks, referenceSamplesCount, userSettings) {
   const fnName = 'distancesTo1d';
   const sampleFilterTypeName = userSettings.sampleFilterTypeName;
-  let distanceOrder;
+  let distanceOrder = {};
   if ( ! referenceSamplesCount) {
     const
     block = blocks[0];
-    distanceOrder = block[sampleMatchesSymbol];
+    // distanceOrder = block[sampleMatchesSymbol];
   } else
   if ((blocks.length === 1) && (blocks[0][referenceSamplesSymbol]?.length === 1)) {
     const
     block = blocks[0],
     referenceSamples = block[referenceSamplesSymbol],
     referenceSampleName = referenceSamples[0];
-    distanceOrder = block[referenceSampleMatchesSymbol][referenceSampleName];
+    dLog(fnName, distanceOrder, referenceSamplesCount, block.brushName, referenceSamples, referenceSampleName);
+    // distanceOrder = block[referenceSampleMatchesSymbol][referenceSampleName];
   } else if (
     /* if just <= 1 referenceSamples selected, merge the measures of the blocks
      * instead of using dimension reduction to combine them.  This is
@@ -237,7 +245,8 @@ function distancesTo1d(blocks, referenceSamplesCount, userSettings) {
     const
     sampleName = userSettings.haplotypeFilterRef ? 'ref' : 'alt',
     orders = blocks.map(b => b[referenceSampleMatchesSymbol]?.[sampleName]);
-    distanceOrder = Object.assign.apply({}, orders);
+    dLog(fnName, distanceOrder, referenceSamplesCount, sampleName, orders);
+    // distanceOrder = Object.assign.apply({}, orders);
   } else {
     const
     sampleDistanceVectors = blocks.reduce((d, block) => {

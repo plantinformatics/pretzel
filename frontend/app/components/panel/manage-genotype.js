@@ -2303,10 +2303,11 @@ export default class PanelManageGenotypeComponent extends Component {
    */
   @computed(
     'sampleFiltersCountSelected',
+    'matchesSummary',
   )
   get sampleNamesCmp() {
     /** if there are referenceSamples, then filterSamples() will set .matchesSummary = distancesTo1d() */
-    if (! this.referenceSamplesCount) {
+    if (false && ! this.referenceSamplesCount) {
     /* clear the cached results of sampleMatchesSum() */
       this.matchesSummary = {};
     }
@@ -2328,11 +2329,13 @@ export default class PanelManageGenotypeComponent extends Component {
    */
   columnNamesCmp(sampleNamesCmp, ...columnNames) {
     const
+    // this can be done in the caller
+    sampleNames = columnNames.map(columnName2SampleName),
     /** these non-sample columns are prioritised to the left : Alt Ref, .. */
-    ns = columnNames.map(columnName => valueNameIsNotSample(columnName.toLowerCase())),
+    ns = sampleNames.map(columnName => valueNameIsNotSample(columnName)),
     /** if columnNames[0] is Alt/Ref then cmp is -1;   if ... [1] then ... +1  */
     cmp = ns[0] && ns[1] ? 0 : ns[0] ? -1 : ns[1] ? 1 :
-      sampleNamesCmp.apply(undefined, columnNames.map(columnName2SampleName));
+      sampleNamesCmp.apply(undefined, sampleNames);
     return cmp;
   }
 
@@ -2358,6 +2361,7 @@ export default class PanelManageGenotypeComponent extends Component {
    * distances of sampleName across the viewed blocks.
    */
   sampleMatchesSum(sampleName) {
+    const fnName = 'sampleMatchesSum';
     let ratio = this.matchesSummary[sampleName];
     if (ratio === undefined) {
       let distanceCount = 0;
@@ -2383,6 +2387,7 @@ export default class PanelManageGenotypeComponent extends Component {
        * missing data is not sorted
        */
       ratio = Measure.average(ms, distanceCount);
+      dLog(fnName, sampleName, ratio, distanceCount, blocks.length);
       this.matchesSummary[sampleName] = ratio;
     }
     return ratio;
@@ -3001,13 +3006,16 @@ export default class PanelManageGenotypeComponent extends Component {
         });
       }
     });
-    /** .matchesSummary is initialised by sampleNamesCmp() if ! .referenceSamplesCount,
-     * and sampleMatchesSum() adds sampleNames to it as required, e.g. when distancesTo1d() returns {}
+    /** .matchesSummary was initialised by sampleNamesCmp() if ! .referenceSamplesCount, until 0cd9e673.
+     * Now 'matchesSummary' is a dependency of sampleNamesCmp() so setting it here enables
+     * sampleMatchesSum() to add sampleNames to it as required, e.g. when distancesTo1d() returns {}
      */
-    this.matchesSummary = distancesTo1d(
+    const distanceOrder = distancesTo1d(
       ablocks.mapBy('block'),
       this.referenceSamplesCount,
       this.args.userSettings);
+    Ember_set(this, 'matchesSummary', distanceOrder);
+
     if (matrixView) {
       // to enable trialling of action to filter after Clear : haplotypeFiltersApply() : filterSamplesBySelectedHaplotypes()
       this.matrixView = matrixView;

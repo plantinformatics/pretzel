@@ -915,7 +915,7 @@ export default Component.extend({
     } else if (
       (row === -1) &&
         ! this.gtDatasetColumns.includes(columnName) &&
-        columnNameIsNotSample(columnName) ) {
+        ! columnNameIsNotSample(columnName) ) {
       /* toggle selection of this column / sample.  columnName is not
        * in gtDatasetColumns, Alt or Ref, 'LD Block', or have tag
        * variantInterval. */
