@@ -2446,6 +2446,20 @@ div.genotype label
    */
 }
 
+/*----------------------------------------------------------------------------*/
+
+/** panel/dataset-intersection-dialog.hbs input .chooseK */
+.ember-modal-dialog div.genotype > div > input.ember-text-field
+{
+  width : 2em;
+}
+
+div.genotype .ember-tooltip-inner
+{
+  min-width : 30em;
+}
+
+
 /* -------------------------------------------------------------------------- */
 
 .h-100 {

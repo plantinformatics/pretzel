@@ -966,6 +966,9 @@ export default Component.extend({
       if (dataset) {
         /* null -> true -> false */
         let pf = dataset.positionFilter;
+        if (typeof pf === 'number') {
+          pf = true;
+        }
         switch (pf) {
         default    :
         case null  : pf = true; break;
@@ -1566,7 +1569,7 @@ export default Component.extend({
     dataset = this.colToDataset(col);
     let pf;
     if (dataset &&
-        (typeof (pf = dataset.positionFilter) === "boolean")) {
+        (['boolean', 'number'].includes(typeof (pf = dataset.positionFilter)))) {
       // possibly : 'col-positionFilter-' + pf
       className = pf ? 'plus' : 'minus';
     }

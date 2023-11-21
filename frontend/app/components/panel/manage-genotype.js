@@ -1989,8 +1989,7 @@ export default class PanelManageGenotypeComponent extends Component {
       });
     let flags;
     const
-    // Potentially filter out .positionFilter === false
-    requiredBlock = blocks.find(b => b.get('datasetId.positionFilter') === true),
+    requiredBlock = blocks.find(b => typeof b.get('datasetId.positionFilter') === 'number'),
     choose = !!requiredBlock;
     if (choose) {
       /** Requirement : request calls data for SNPs at which requiredBlock and k
@@ -2000,8 +1999,9 @@ export default class PanelManageGenotypeComponent extends Component {
       const
       /** visibleBlocks, excluding requiredBlock */
       notSelf = visibleBlocks.filter(b => b !== requiredBlock),
-      /** chooseK will be input via GUI */
-      k = 1, // Math.min(notSelf.length, chooseK),
+      /** chooseK is input via GUI : panel/dataset-intersection-dialog : input chooseK */
+      chooseK = requiredBlock.get('datasetId.positionFilter') || 1,
+      k = Math.min(notSelf.length, chooseK),
       flags = '' + (k+1), /*-n*/
       /** (visibleBlocks - requiredBlock) C k */
       groups = arrayChoose(notSelf, k);
@@ -2097,7 +2097,7 @@ export default class PanelManageGenotypeComponent extends Component {
     }
   }
   /** Construct isec params for a lookup of vcfDatasetId, if required.
-   * If datasets other than this one (vcfDatasetId) have positionFilter,
+   * If datasets other than this one (vcfDatasetId) have defined positionFilter,
    * result datasetIds is those datasets, and this one (vcfDatasetId).
    * Result .flags is '1' for vcfDatasetId and datasets with .positionFilter true,
    * and '0' for those with .positionFilter false.
@@ -2116,6 +2116,9 @@ export default class PanelManageGenotypeComponent extends Component {
      * Used to indicate if any positionFilter are defined and hence isecFlags
      * and isecDatasets will be set.  If no datasets other than this one
      * (vcfDatasetId) have positionFilter, then isec is not required.
+     * If any datasets have numeric positionFilter, then requiredBlock is
+     * defined and this function intersectionParamsSimple() is not used -
+     * instead arrayChoose() is used.
      */
     isecDatasetsNotSelf = this.gtDatasets
       .filter(dataset =>
@@ -2277,7 +2280,7 @@ export default class PanelManageGenotypeComponent extends Component {
         blocks.find((block, blockIndex) => {
           const
           positionIsInBlock = featurePositions[blockIndex].has(feature.get('value.0')),
-          out = positionIsInBlock !== block.positionFilter;
+          out = positionIsInBlock !== !!block.positionFilter;
           return out;
         }) === undefined);
       /** If all are filtered out, the headers are not displayed, so retain 1 feature. */

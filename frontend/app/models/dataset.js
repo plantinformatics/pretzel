@@ -164,6 +164,18 @@ export default Record.extend({
 
   //----------------------------------------------------------------------------
 
+  /** positionFilter is applicable to VCF / genotype datasets, and indicates if
+   * the genotype requests for the dataset should be filtered by position
+   * intersection : i.e. whether Features/ SNPs are included in the result, by
+   * the dataset having data at a position.
+
+   * Values :
+   *   undefined / null	no filter
+   *   false	Feature / SNP is filtered out if dataset has a Feature at this position.
+   *   true	Feature / SNP is filtered in if dataset has a Feature at this position.
+   *   number 1 .. manageGenotype.gtDatasets.length - 1
+   */
+
   /** Access the dataset positionFilter attribute as a field,
    * to factor the lookup, and to enable it to be used in dependencies.
    */
@@ -177,7 +189,7 @@ export default Record.extend({
   get positionFilterTextFn () {
     const
     pf = this.positionFilter,
-    text = (typeof pf === 'boolean') ? (pf ? '+' : '-') : '';
+    text = ['boolean', 'number'].includes(typeof pf) ? (pf ? '+' : '-') : '';
     return text;
   },
   // Could use a Computed Propery for positionFilterText - maybe when changing to Tracked Properties in Ember4.
