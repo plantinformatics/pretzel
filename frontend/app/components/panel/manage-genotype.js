@@ -1978,7 +1978,7 @@ export default class PanelManageGenotypeComponent extends Component {
     const
     visibleBlocks = this.brushedOrViewedVCFBlocksVisible,
     blocks =
-    visibleBlocks
+      visibleBlocks
     /** filter out blocks which are `minus` in the positionFilter - if requested
      * the result should be empty.
      * See table in vcfGenotypeLookupDataset().
@@ -2022,31 +2022,31 @@ export default class PanelManageGenotypeComponent extends Component {
   vcfGenotypeLookupGroup(blocks, flags) {
     blocks
       .forEach((blockV, i) => {
-      const
-      vcfDatasetId = blockV.get('datasetId.id'),
-      vcfDatasetIdAPI = blockV.get('datasetId.genotypeId'),
-      /** use .name instead of .scope, because some VCF files use 'chr' prefix
-       * on chromosome name e.g. chr1A, and .name reflects that;
-       * as in lookupScope().
-       */
-      scope = blockV.name,
-      userSettings = this.args.userSettings,
-      samplesLimitEnable = userSettings.samplesLimitEnable,
-      {samples, samplesOK} = this.samplesOK(samplesLimitEnable, vcfDatasetId),
-      domainInteger = this.vcfGenotypeLookupDomain;
-      /* samplesOK() returns .samples '' if none are selected; passing
-       * vcfGenotypeLookupDataset( samples==='' ) will get all samples, which
-       * may be valid, but for now skip this dataset if ! .length.
-       */
-      if (this.args.userSettings.requestSamplesAll || samples.length) {
         const
-        intersection = flags ?
-          {datasetIds : blocks.mapBy('datasetId.genotypeId'), flags} :
-        this.intersectionParamsSimple(vcfDatasetId);
+        vcfDatasetId = blockV.get('datasetId.id'),
+        vcfDatasetIdAPI = blockV.get('datasetId.genotypeId'),
+        /** use .name instead of .scope, because some VCF files use 'chr' prefix
+         * on chromosome name e.g. chr1A, and .name reflects that;
+         * as in lookupScope().
+         */
+        scope = blockV.name,
+        userSettings = this.args.userSettings,
+        samplesLimitEnable = userSettings.samplesLimitEnable,
+        {samples, samplesOK} = this.samplesOK(samplesLimitEnable, vcfDatasetId),
+        domainInteger = this.vcfGenotypeLookupDomain;
+        /* samplesOK() returns .samples '' if none are selected; passing
+         * vcfGenotypeLookupDataset( samples==='' ) will get all samples, which
+         * may be valid, but for now skip this dataset if ! .length.
+         */
+        if (this.args.userSettings.requestSamplesAll || samples.length) {
+          const
+          intersection = flags ?
+            {datasetIds : blocks.mapBy('datasetId.genotypeId'), flags} :
+          this.intersectionParamsSimple(vcfDatasetId);
 
-        this.vcfGenotypeLookupDataset(blockV, vcfDatasetIdAPI, intersection, scope, domainInteger, samples, samplesLimitEnable);
-      }
-    });
+          this.vcfGenotypeLookupDataset(blockV, vcfDatasetIdAPI, intersection, scope, domainInteger, samples, samplesLimitEnable);
+        }
+      });
   }
   /** Send API request for VCF genotype of the given vcfDatasetId.
    * @param blockV  brushed / Viewed visible VCF / Genotype Block
@@ -2092,7 +2092,7 @@ export default class PanelManageGenotypeComponent extends Component {
       this.vcfExportText = null;
       textP.then(
         this.vcfGenotypeReceiveResult.bind(this, blockV, requestFormat, userSettings))
-      .catch(this.showError.bind(this, fnName));
+        .catch(this.showError.bind(this, fnName));
 
     }
   }
@@ -2109,124 +2109,124 @@ export default class PanelManageGenotypeComponent extends Component {
    *
    * @return intersection { datasetIds, flags }
    */
-    intersectionParamsSimple(vcfDatasetId) {
-      let intersection;
+  intersectionParamsSimple(vcfDatasetId) {
+    let intersection;
+    const
+    /** Datasets selected for intersection.
+     * Used to indicate if any positionFilter are defined and hence isecFlags
+     * and isecDatasets will be set.  If no datasets other than this one
+     * (vcfDatasetId) have positionFilter, then isec is not required.
+     */
+    isecDatasetsNotSelf = this.gtDatasets
+      .filter(dataset =>
+        ('boolean' === typeof dataset.positionFilter) &&
+          (dataset.genotypeId !== vcfDatasetId));
+    if (isecDatasetsNotSelf.length) {
       const
-      /** Datasets selected for intersection.
-       * Used to indicate if any positionFilter are defined and hence isecFlags
-       * and isecDatasets will be set.  If no datasets other than this one
-       * (vcfDatasetId) have positionFilter, then isec is not required.
+      /** filter out null and undefined; include vcfDatasetId i.e. the dataset
+       * which is being requested.
+       * 
+       * table value indicates if dataset should be included in isecDatasets.
+       * |------------------------+-------------------------------+-------|
+       * |                        | (dataset.genotypeId === vcfDatasetId) |
+       * | dataset.positionFilter | true                          | false |
+       * |------------------------+-------------------------------+-------|
+       * | undefined              | true                          | false |
+       * | true                   | true                          | true  |
+       * | false                  | (true) N/A                    | true  |
+       * |------------------------+-------------------------------+-------|
+       *
+       * N/A : this case is filtered out in vcfGenotypeLookupAllDatasets().
        */
-      isecDatasetsNotSelf = this.gtDatasets
-          .filter(dataset =>
-            ('boolean' === typeof dataset.positionFilter) &&
-              (dataset.genotypeId !== vcfDatasetId));
-      if (isecDatasetsNotSelf.length) {
-        const
-        /** filter out null and undefined; include vcfDatasetId i.e. the dataset
-         * which is being requested.
-         * 
-         * table value indicates if dataset should be included in isecDatasets.
-         * |------------------------+-------------------------------+-------|
-         * |                        | (dataset.genotypeId === vcfDatasetId) |
-         * | dataset.positionFilter | true                          | false |
-         * |------------------------+-------------------------------+-------|
-         * | undefined              | true                          | false |
-         * | true                   | true                          | true  |
-         * | false                  | (true) N/A                    | true  |
-         * |------------------------+-------------------------------+-------|
-         *
-         * N/A : this case is filtered out in vcfGenotypeLookupAllDatasets().
+      isecDatasets = this.gtDatasets
+        .filter(dataset =>
+          ('boolean' === typeof dataset.positionFilter) ||
+            (dataset.genotypeId === vcfDatasetId)),
+      isecDatasetIds = isecDatasets
+        .mapBy('genotypeId'),
+      /** in isecDatasets[] dataset positionFilter is only nullish at this
+       * point if dataset.genotypeId is vcfDatasetId - use flag true in that case. */
+      flags = isecDatasets.map(dataset => dataset.positionFilter ?? true),
+      allTrue = flags.findIndex(flag => !flag) === -1,
+      isecFlags = allTrue ? isecDatasetIds.length :
+        '~' + flags.map(flag => flag ? '1' : '0').join('');
+      intersection = {
+        datasetIds : isecDatasetIds,
+        flags : /*'-n' +*/ isecFlags};
+    }
+    return intersection;
+  }
+
+  vcfGenotypeReceiveResult(blockV, requestFormat, userSettings, text) {
+    const
+    fnName = 'vcfGenotypeReceiveResult',
+    isGerminate = resultIsGerminate(text),
+    callsData = isGerminate && text;
+    if (isGerminate) {
+      text = callsData.map(snp => Object.entries(snp).join('\t')).join('\n');
+      dLog(fnName, text.length, callsData.length);
+    }
+    // displays vcfGenotypeText in textarea, which triggers this.vcfGenotypeTextSetWidth();
+    this.vcfGenotypeText = text;
+    this.headerTextP.then((headerText) => {
+      const combined = this.combineHeader(headerText, this.vcfGenotypeText)
+      /** ember-csv:file-anchor.js is designed for spreadsheets, and hence
+       * expects each row to be an array of cells.
+       */
+            .map((row) => [row]);
+      // re-initialise file-anchor with the new @data
+      later(() => this.vcfExportText = combined, 1000);
+    });
+
+    dLog(fnName, text.length, text && text.slice(0,200), blockV.get('id'));
+    if (text && blockV) {
+      const
+      replaceResults = this.args.userSettings.replaceResults,
+      nSamples = this.controls.view.pathsDensityParams.nSamples,
+      germinateOptions = {nSamples},
+      added = isGerminate ?
+        addFeaturesGerminate(blockV, requestFormat, replaceResults, this.selectedService, callsData, germinateOptions) :
+        addFeaturesJson(blockV, requestFormat, replaceResults, this.selectedService, text),
+      options = {requestSamplesAll : userSettings.requestSamplesAll, selectedSamples : added.sampleNames /*this.selectedSamples*/};
+      featuresSampleMAF(added.createdFeatures, options);
+
+      if (added.createdFeatures && added.sampleNames) {
+        /* Update the filtered-out samples, including the received data,
+         * for the selected haplotypeFilters.
+         * The received data (createdFeatures) is in lookupBlock, so could
+         * limit this update to lookupBlock.
+         * showHideSampleFn is passed undefined - this is just updating
+         * the sample status, and table display is done by
+         * showSamplesWithinBrush().
          */
-        isecDatasets = this.gtDatasets
-          .filter(dataset =>
-            ('boolean' === typeof dataset.positionFilter) ||
-              (dataset.genotypeId === vcfDatasetId)),
-        isecDatasetIds = isecDatasets
-          .mapBy('genotypeId'),
-        /** in isecDatasets[] dataset positionFilter is only nullish at this
-         * point if dataset.genotypeId is vcfDatasetId - use flag true in that case. */
-        flags = isecDatasets.map(dataset => dataset.positionFilter ?? true),
-        allTrue = flags.findIndex(flag => !flag) === -1,
-        isecFlags = allTrue ? isecDatasetIds.length :
-          '~' + flags.map(flag => flag ? '1' : '0').join('');
-        intersection = {
-          datasetIds : isecDatasetIds,
-          flags : /*'-n' +*/ isecFlags};
+        this.filterSamples(/*showHideSampleFn*/undefined, /*matrixView*/undefined);
+        const showOtherBlocks = true;
+        if (showOtherBlocks) {
+          this.showSamplesWithinBrush();
+        } else {
+          /* use this to show just the result of this request in the table,
+           * not showing other blocks; the other rows are not cleaned out
+           * correctly by progressiveRowMerge(), leaving rows with no rowHeader
+           * and/or Block/Position/Alt/Ref, and added.createdFeatures[] is shorter
+           * than table data causing undefined / mis-aligned associated
+           * features.
+           */
+          const displayData = vcfFeatures2MatrixView
+            (this.requestFormat, added, this.featureFilter.bind(this), this.sampleFilter,
+             this.sampleNamesCmp, /*options*/ {userSettings});
+          this.displayData.addObjects(displayData);
+        }
+        // equivalent : displayData[0].features.length
+        if (added.createdFeatures.length) {
+          this.showInputDialog = false;
+        }
+        /** added.sampleNames is from the column names of the result,
+         * which should match the requested samples (.vcfGenotypeSamplesSelected).
+         */
       }
-      return intersection;
     }
 
-        vcfGenotypeReceiveResult(blockV, requestFormat, userSettings, text) {
-          const
-          fnName = 'vcfGenotypeReceiveResult',
-          isGerminate = resultIsGerminate(text),
-          callsData = isGerminate && text;
-          if (isGerminate) {
-            text = callsData.map(snp => Object.entries(snp).join('\t')).join('\n');
-            dLog(fnName, text.length, callsData.length);
-          }
-          // displays vcfGenotypeText in textarea, which triggers this.vcfGenotypeTextSetWidth();
-          this.vcfGenotypeText = text;
-          this.headerTextP.then((headerText) => {
-            const combined = this.combineHeader(headerText, this.vcfGenotypeText)
-            /** ember-csv:file-anchor.js is designed for spreadsheets, and hence
-             * expects each row to be an array of cells.
-             */
-                  .map((row) => [row]);
-            // re-initialise file-anchor with the new @data
-            later(() => this.vcfExportText = combined, 1000);
-          });
-
-          dLog(fnName, text.length, text && text.slice(0,200), blockV.get('id'));
-          if (text && blockV) {
-            const
-            replaceResults = this.args.userSettings.replaceResults,
-            nSamples = this.controls.view.pathsDensityParams.nSamples,
-            germinateOptions = {nSamples},
-            added = isGerminate ?
-              addFeaturesGerminate(blockV, requestFormat, replaceResults, this.selectedService, callsData, germinateOptions) :
-              addFeaturesJson(blockV, requestFormat, replaceResults, this.selectedService, text),
-            options = {requestSamplesAll : userSettings.requestSamplesAll, selectedSamples : added.sampleNames /*this.selectedSamples*/};
-            featuresSampleMAF(added.createdFeatures, options);
-
-            if (added.createdFeatures && added.sampleNames) {
-              /* Update the filtered-out samples, including the received data,
-               * for the selected haplotypeFilters.
-               * The received data (createdFeatures) is in lookupBlock, so could
-               * limit this update to lookupBlock.
-               * showHideSampleFn is passed undefined - this is just updating
-               * the sample status, and table display is done by
-               * showSamplesWithinBrush().
-               */
-              this.filterSamples(/*showHideSampleFn*/undefined, /*matrixView*/undefined);
-              const showOtherBlocks = true;
-              if (showOtherBlocks) {
-                this.showSamplesWithinBrush();
-              } else {
-              /* use this to show just the result of this request in the table,
-               * not showing other blocks; the other rows are not cleaned out
-               * correctly by progressiveRowMerge(), leaving rows with no rowHeader
-               * and/or Block/Position/Alt/Ref, and added.createdFeatures[] is shorter
-               * than table data causing undefined / mis-aligned associated
-               * features.
-               */
-              const displayData = vcfFeatures2MatrixView
-                (this.requestFormat, added, this.featureFilter.bind(this), this.sampleFilter,
-                 this.sampleNamesCmp, /*options*/ {userSettings});
-              this.displayData.addObjects(displayData);
-              }
-              // equivalent : displayData[0].features.length
-              if (added.createdFeatures.length) {
-                this.showInputDialog = false;
-              }
-              /** added.sampleNames is from the column names of the result,
-               * which should match the requested samples (.vcfGenotypeSamplesSelected).
-               */
-            }
-          }
-
-      }
+  }
 
   //----------------------------------------------------------------------------
 
