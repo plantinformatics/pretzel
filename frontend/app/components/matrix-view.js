@@ -978,6 +978,7 @@ export default Component.extend({
         dLog(fnName, dataset.positionFilter, '->', pf, dataset.id);
         dataset.positionFilter = pf;
         // currently just signals the change and updates the colHeader; could also make the change.
+        // related : positionFilterChanged()
         this.changeDatasetPositionFilter(dataset, pf);
       }
     }

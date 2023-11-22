@@ -97,6 +97,7 @@ const haplotypeFeaturesSymbol = Symbol.for('haplotypeFeatures');
  * also used in sampleIsFilteredOut{,Blocks}()
  */
 const sampleMatchesSymbol = Symbol.for('sampleMatches');
+const featurePositionsSymbol = Symbol.for('featurePositions');
 /** Counts for calculating Call Rate of a sample.
  * sampleCount = block[callRateSymbol][sampleName] : {calls:0, misses:0}  */
 const callRateSymbol = Symbol.for('callRate');
@@ -1989,19 +1990,14 @@ export default class PanelManageGenotypeComponent extends Component {
       });
     let flags;
     const
-    requiredBlock = blocks.find(b => typeof b.get('datasetId.positionFilter') === 'number'),
-    choose = !!requiredBlock;
+    choose = this.positionFiltersChoose(visibleBlocks, blocks);
     if (choose) {
+      const {requiredBlock, notSelf, k} = choose;
       /** Requirement : request calls data for SNPs at which requiredBlock and k
        * other blocks have data.
        * Design : from visibleBlocks - requiredBlock, choose groups of k
        */
       const
-      /** visibleBlocks, excluding requiredBlock */
-      notSelf = visibleBlocks.filter(b => b !== requiredBlock),
-      /** chooseK is input via GUI : panel/dataset-intersection-dialog : input chooseK */
-      chooseK = requiredBlock.get('datasetId.positionFilter') || 1,
-      k = Math.min(notSelf.length, chooseK),
       flags = '' + (k+1), /*-n*/
       /** (visibleBlocks - requiredBlock) C k */
       groups = arrayChoose(notSelf, k);
@@ -2252,37 +2248,114 @@ export default class PanelManageGenotypeComponent extends Component {
     head$.text(prefix + head$.text());
   }
 
+  /** If the user has selected a positionFilter and given it a numeric value 'chooseK',
+   * collated and return values used in implementing the filter, used in
+   * featureFilterPre() and vcfGenotypeLookupAllDatasets().
+   * @return {requiredBlock, notSelf, k}
+   * 
+   * The meaning of the filter is : Features / SNPs at which requiredBlock and k
+   * other blocks have data.
+   *
+   * @param visibleBlocks VCF / genotype blocks displayed in the table
+   * @param blocks  blocks with positionFilter.
+   * This is a subset of visibleBlocks, and can be equal; it is used for
+   * searching for requiredBlock, and using visibleBlocks would be equivalent.
+   */
+  positionFiltersChoose(visibleBlocks, blocks) {
+    let choose;
+    const
+    fnName = 'positionFiltersChoose',
+    requiredBlock = blocks.find(b => typeof b.get('datasetId.positionFilter') === 'number');
+    if (requiredBlock) {
+      const
+      /** visibleBlocks, excluding requiredBlock */
+      notSelf = visibleBlocks.filter(b => b !== requiredBlock),
+      /** chooseK is input via GUI : panel/dataset-intersection-dialog : input chooseK */
+      chooseK = requiredBlock.get('datasetId.positionFilter') || 1,
+      k = Math.min(notSelf.length, chooseK);
+      choose = {requiredBlock, notSelf, k};
+      dLog(fnName, requiredBlock.brushName, notSelf.mapBy('brushName'), k, visibleBlocks.mapBy('brushName'), blocks.mapBy('brushName'));
+    }
+    return choose;
+  }
+
   /** @return those blocks which have positionFilter and featurePositions
+   * @desc
+   * block.positionFilter is aliased to datasetId.positionFilter
+   * block featurePositions is described in comment in related addFeaturePositions().
    */
   get blockIntersections() {
     const
     blocks = this.brushedOrViewedVCFBlocksVisible
-      .filter(block => block[Symbol.for('featurePositions')] && 
+      .filter(block => block[featurePositionsSymbol] && 
               ((block.positionFilter ?? null) !== null));
     return blocks;
   }
 
   /** If blocks ("datasets") are selected for intersection filtering,
    * filter an array of features.
+   * @param block VCF/genotype block
+   * @param features  from block.featuresInBrushOrZoom
    * @return features, or a filtered copy of it.
    */
   featureFilterPre(block, features) {
     const
     fnName = 'featureFilterPre',
+    /** blocks which are defining the filter */
     blocks = this.blockIntersections;
+    let logCount = 4;
     if (blocks.length) {
       const
+      visibleBlocks = this.brushedOrViewedVCFBlocksVisible,
+      /** unlike vcfGenotypeLookupAllDatasets(), .positionFilter === false is
+       * not filtered out, since it may filter features out.
+       */
+      choose = this.positionFiltersChoose(visibleBlocks, blocks),
+      filterFn = choose ? filterFnChoose : filterFnSimple;
+      /** @return true if feature position is in requiredBlock, and in k (chooseK) of
+       * the other blocks */
+      function filterFnChoose(feature) {
+        let overlaps = 0;
+        if (logCount-- > 0) {
+          dLog(fnName, feature.get('value.0'));
+        }
+        const
+        ok =
+          /** extract from positionIsInBlock(); can factor requiredBlock count into the loop */
+          choose.requiredBlock[featurePositionsSymbol].has(feature.get('value.0')) &&
+          visibleBlocks.some((block, blockIndex) => {
+            // could test > k instead of excluding requiredBlock from the count.
+            if ((block !== choose.requiredBlock) && positionIsInBlock(block, feature)) {
+              overlaps++;
+              if (logCount > 0) {
+                dLog(fnName, overlaps, );
+              }
+            }
+          return overlaps >= choose.k;
+        });
+        return ok;
+      }
+      function filterFnSimple(feature) {
+        const
+        blockOut = 
+          blocks.find((block, blockIndex) => 
+            positionIsInBlock(block, feature) !== !!block.positionFilter );
+        return blockOut === undefined;
+      }
+      // const
       /** refer : models/block.js : addFeaturePositions()  */
-      featurePositions = blocks.map(block => block[Symbol.for('featurePositions')]);
+      // featurePositions = blocks.map(block => block[featurePositionsSymbol]);
+      function positionIsInBlock(block, feature) {
+        return block[featurePositionsSymbol].has(feature.get('value.0'));
+      }
+
       const feature0 = features[0];
 
-      features = features.filter(feature => 
-        blocks.find((block, blockIndex) => {
-          const
-          positionIsInBlock = featurePositions[blockIndex].has(feature.get('value.0')),
-          out = positionIsInBlock !== !!block.positionFilter;
-          return out;
-        }) === undefined);
+      /** features are filtered out if, for any of the filtering blocks, the
+       * presence / absence of feature position in block does not match the
+       * block .positionFilter
+       */
+      features = features.filter(filterFn);
       /** If all are filtered out, the headers are not displayed, so retain 1 feature. */
       if (! features.length && feature0) {
         features = [feature0];

@@ -44,8 +44,53 @@ export default class PanelDatasetIntersectionDialogComponent extends Component {
 
   //----------------------------------------------------------------------------
 
+  /** in .hbs, value=this.chooseK establishes a 2-way binding, which calls {get,set} chooseK(),
+   * These 2 functions convert to/from the GUI view of .positionFilter,
+   * i.e. converting to/from text.
+   */
+  get chooseK() {
+    const
+    dataset = this.args.dataset,
+    positionFilter = dataset.positionFilter,
+    kText = this.positionFilter2Text(positionFilter);
+    return kText;
+  }
+  /**
+   * input component calls set() then chooseKChanged() ; the constraint on
+   * accepted values is implemented by text2PositionFilter(), called here;
+   * may need chooseKChanged() to then show the limited value.
+   */
+  set chooseK(value) {
+    const fnName = 'set chooseK';
+    const
+    dataset = this.args.dataset,
+    positionFilter = dataset.positionFilter;
+    const newValue = this.text2PositionFilter(value);
+    dLog(fnName, newValue, value, positionFilter);
+    dataset.positionFilter = newValue;
+  }
+
+  positionFilter2Text(positionFilter) {
+    const text = typeof positionFilter === 'number' ? '' + positionFilter : '';
+    return text;
+  }
+  text2PositionFilter(value) {
+    const fnName = 'text2PositionFilter';
+    let newValue;
+    if ((value == '') || isNaN(value)) {
+      newValue = true;
+    } else {
+      /** limit to the range [1, gtDatasetsLength - 1] */
+      newValue = Math.min(this.args.gtDatasetsLength - 1, Math.max(1, +value));
+      dLog(fnName, value, newValue, this.args.gtDatasetsLength);
+    }
+    return newValue;
+  }
+
   @action
   chooseKChanged(value) {
+    const fnName = 'chooseKChanged';
+    dLog('fnName', value, value.target?.value, value.target);
     let target;
     /** as in elem/input-range-text.js : valueTextChanged() */
     if (value.target) {
@@ -54,22 +99,17 @@ export default class PanelDatasetIntersectionDialogComponent extends Component {
       value = target.value;
     }
     const
-    fnName = 'chooseKChanged',
     dataset = this.args.dataset;
-    let newValue;
-    if ((value == '') || isNaN(value)) {
-      newValue = true;
-    } else {
-      const
-      limited = Math.min(this.args.gtDatasetsLength - 1, Math.max(1, +value));
-      dLog(fnName, value, limited, this.args.gtDatasetsLength, dataset.positionFilter);
-      newValue = limited;
-    }
+    /*
+    const newValue = this.text2PositionFilter(value);
     dataset.set('positionFilter', newValue);
+    */
     /** show empty string or an acceptable input. */
-    if (target && (target.value != newValue)) {
-      later(() => target.value = newValue);
+    const newValueText = this.positionFilter2Text(dataset.positionFilter);
+    if (target && (target.value != newValueText)) {
+      later(() => target.value = newValueText);
     }
+    this.args.positionFilterChanged(dataset.positionFilter);
   }
 
   //----------------------------------------------------------------------------
