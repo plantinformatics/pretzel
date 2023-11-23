@@ -93,6 +93,16 @@ const featureValuesWidths = {
 let tableHeight = '100%';
 /** Enable use of tableHeightFromParent().  */
 const calculateTableHeight = true;
+/** The tabs within showSampleFilters
+ * (tab-view-SampleFilter-{haplotype,variantInterval,feature} ) which sets
+ * .sampleFilterTypeName can be used to limit the available user actions :
+ * selecting and using blockSampleFilters(block, sampleFilterTypeName), i.e. :
+ * - haplotype : block.sampleFilters.haplotype
+ * - feature : block.sampleFilters.feature (selecting SNPs Alt/Ref in afterSelectionHaplotype())
+ * - variantInterval : select block.sampleFilters.variantInterval
+  */
+const sampleFilterTypeNameModal = false;
+
 
 /** <div> which contains HandsOnTable elements. */
 const tableContainerSelector = '#observational-table';
@@ -878,7 +888,8 @@ export default Component.extend({
     if (col === -1) {
       /** Ctrl-A Select-All causes row===-1 and col===-1 */
     } else if (
-      (row >= 0) && (sampleFilterTypeName === 'feature') && 
+      (row >= 0) &&
+        (! sampleFilterTypeNameModal || (sampleFilterTypeName === 'feature')) && 
         (columnName.startsWith('Ref') || columnName.startsWith('Alt'))) {
       const feature = this.featureToggleRC(row, col, columnName);
       if (feature) {
@@ -1085,7 +1096,8 @@ export default Component.extend({
         td.textContent = value;
       }
       this.valueDiagonal(td, value, valueToColourClass);
-      const selectFeatures = this.userSettings.sampleFilterTypeName === 'feature';
+      const selectFeatures = ! sampleFilterTypeNameModal ||
+            this.userSettings.sampleFilterTypeName === 'feature';
       /** Use this for 'LD Block' */
       const matchRefAlt = this.userSettings.haplotypeFilterRef ? 'Ref' : 'Alt';
       if (selectFeatures && refAltHeadings.includes(prop_string))
@@ -1105,7 +1117,7 @@ export default Component.extend({
   featureIsFilter(feature, prop) {
     const
     block = feature.get('blockId.content'),
-    featureFilters = block?.[sampleFiltersSymbol].feature,
+    featureFilters = block?.[sampleFiltersSymbol]?.feature,
     matchRef = feature[Symbol.for('matchRef')],
     featureIsFilter = featureFilters?.includes(feature),
     isFilter = featureIsFilter && (matchRef === (prop === 'Ref'));
@@ -1300,7 +1312,7 @@ export default Component.extend({
       $(td).text(cellText);
     }
     const sampleFilterTypeName = this.userSettings.sampleFilterTypeName;
-    if (sampleFilterTypeName === 'variantInterval') {
+    if (! sampleFilterTypeNameModal || (sampleFilterTypeName === 'variantInterval')) {
       /* or  features?.filter(
         feature => feature.get('blockId.datasetId.tags')?.includes('variantInterval')); */
       const
