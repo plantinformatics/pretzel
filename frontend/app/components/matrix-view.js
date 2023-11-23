@@ -1322,7 +1322,7 @@ export default Component.extend({
           rowFeature = this.getRowAttribute(instance, /*visualRowIndex*/ row),
           block = rowFeature?.get('blockId'),
           sampleFilters = block?.content[sampleFiltersSymbol],
-          isSelected = sampleFilters?.variantInterval.includes(viFeatures[0]);
+          isSelected = sampleFilters?.variantInterval?.includes(viFeatures[0]);
           if (isSelected) {
             td.classList.add('featureIsFilter');
           }

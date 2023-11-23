@@ -120,6 +120,8 @@ class SampleFiltersCount extends EmberObject {
   @tracked
   variantInterval = null;
 };
+/** copied from matrix-view.js to enable build-time code deletion;  see comment there. */
+const sampleFilterTypeNameModal = false;
 
 //------------------------------------------------------------------------------
 
@@ -644,6 +646,7 @@ export default class PanelManageGenotypeComponent extends Component {
   @computed('args.userSettings.sampleFilterTypeName')
   get selectedFilters() {
     // not used yet.
+    // also take account of added : sampleFilterTypeNameModal and .sampleFiltersCountNonEmpty
     const
     filterTypeName = this.args.userSettings.sampleFilterTypeName,
     cpName = 'blocks' + toTitleCase(filterTypeName) + 'Filters',
@@ -764,19 +767,39 @@ export default class PanelManageGenotypeComponent extends Component {
   @alias('sampleFiltersCount.haplotype') haplotypeFiltersCount;
   @alias('sampleFiltersCount.feature') featureFiltersCount;
 
-  /** @return the count of filters for the currently selected 'Sample Filters' tab.
+  @computed('sampleFiltersCount.{haplotype,feature,variantInterval}')
+  get sampleFiltersCountNonEmpty() {
+    const
+    filterTypeName = ['variantInterval', 'haplotype', 'feature'].find(
+      name => this.sampleFiltersCount[name]);
+    return filterTypeName;
+  }
+  /** @return the type name of the currently selected 'Sample Filters' tab.
+   * or the currently selected filters (Variant Intervals / LD Blocks / Features).
    */
   @computed(
-    'sampleFiltersCount.{haplotype,feature,variantInterval}',
+    'sampleFiltersCountNonEmpty',
     'args.userSettings.sampleFilterTypeName',
   )
+  get sampleFilterTypeName() {
+    const
+    filterTypeName = sampleFilterTypeNameModal ?
+      this.args.userSettings.sampleFilterTypeName :
+      this.sampleFiltersCountNonEmpty || 'variantInterval';
+    return filterTypeName;
+  }
+  /** @return the count of filters for the currently selected 'Sample Filters' tab
+   * or the currently selected filters (Variant Intervals / LD Blocks / Features).
+   */
+  @computed('sampleFilterTypeName')
   get sampleFiltersCountSelected() {
     const
-    filterTypeName = this.args.userSettings.sampleFilterTypeName,
+    filterTypeName = this.sampleFilterTypeName,
     filtersCount = this.sampleFiltersCount[filterTypeName];
     return filtersCount;
   }
 
+  //----------------------------------------------------------------------------
 
   /** Map haplotype / tSNP to a colour
    * @param tSNP  string represention of a number
@@ -2251,7 +2274,9 @@ export default class PanelManageGenotypeComponent extends Component {
   /** If the user has selected a positionFilter and given it a numeric value 'chooseK',
    * collated and return values used in implementing the filter, used in
    * featureFilterPre() and vcfGenotypeLookupAllDatasets().
-   * @return {requiredBlock, notSelf, k}
+   * @return {requiredBlock, notSelf, k} 
+   * or undefined if the user has not selected a positionFilter and given it a
+   * numeric value 'chooseK'.
    * 
    * The meaning of the filter is : Features / SNPs at which requiredBlock and k
    * other blocks have data.
@@ -3060,7 +3085,7 @@ export default class PanelManageGenotypeComponent extends Component {
     matchRefFn = feature => [new MatchRef(userSettings.haplotypeFilterRef)],
     ablocks = this.brushedOrViewedVCFBlocks;
     const
-    filterTypeName = this.args.userSettings.sampleFilterTypeName;
+    filterTypeName = this.sampleFilterTypeName;
 
     ablocks.forEach((abBlock) => {
       let blockMatches = {};
