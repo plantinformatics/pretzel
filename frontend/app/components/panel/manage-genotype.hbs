@@ -755,7 +755,7 @@
 
                 {{!---------------------------------------------------------------------}}
 
-                <ul class="list-group borderless view-controls">
+                <ul class="list-group borderless view-controls threshold-sliders">
                   <li>
 
                     <div style="display : inline-block;">
@@ -789,6 +789,18 @@
                         @valueMin=0.001
                         @valueMax=1
                         @valueChanged={{action (fn this.callRateThresholdChanged)}} >
+                      </Elem::InputRangeText>
+                    </div>
+
+
+                    <div style="display : inline-block;">
+                      <Elem::InputRangeText
+                        @labelText="SNP Call Rate : "
+                        @allowZero=true
+                        @valueInitial={{this.args.userSettings.featureCallRateThreshold}}
+                        @valueMin=0.001
+                        @valueMax=1
+                        @valueChanged={{action (fn this.featureCallRateThresholdChanged)}} >
                       </Elem::InputRangeText>
                     </div>
 

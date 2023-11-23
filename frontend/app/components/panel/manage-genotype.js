@@ -177,6 +177,7 @@ function featureHasSamplesLoaded(feature) {
  * true means filter out monomorphic SNPs
  *
  * .callRateThreshold default 0
+ * .featureCallRateThreshold default 0
  * .samplesLimit default 10
  * .samplesLimitEnable default false
  * .sampleFilterTypeName default 'variantInterval'
@@ -438,6 +439,9 @@ export default class PanelManageGenotypeComponent extends Component {
     if (userSettings.callRateThreshold === undefined) {
       userSettings.callRateThreshold = 0;
     }
+    if (userSettings.featureCallRateThreshold === undefined) {
+      userSettings.featureCallRateThreshold = 0;
+    }
 
     if (userSettings.samplesLimit === undefined) {
       userSettings.samplesLimit = 10;
@@ -615,6 +619,16 @@ export default class PanelManageGenotypeComponent extends Component {
     /* if (trace) { */
     dLog('callRateThresholdChanged', value, inputType);
     Ember_set(this, 'args.userSettings.callRateThreshold', value);
+  }
+
+  /**
+   * @param inputType "text" or "range"
+   */
+  @action
+  featureCallRateThresholdChanged(value, inputType) {
+    /* if (trace) { */
+    dLog('featureCallRateThresholdChanged', value, inputType);
+    Ember_set(this, 'args.userSettings.featureCallRateThreshold', value);
   }
 
   //----------------------------------------------------------------------------
@@ -2389,6 +2403,11 @@ export default class PanelManageGenotypeComponent extends Component {
     if (features && this.args.userSettings.snpPolymorphismFilter) {
       features = this.snpPolymorphismFilter(block, features);
     }
+    if (features && this.args.userSettings.featureCallRateThreshold) {
+      dLog('featureCallRateFilter', this.args.userSettings.featureCallRateThreshold, features.length);
+      features = features.filter(this.featureCallRateFilter.bind(this));
+      dLog('featureCallRateFilter', features.length);
+    }
 
     return features;
   }
@@ -2461,6 +2480,29 @@ export default class PanelManageGenotypeComponent extends Component {
     };
     return fn;
   }
+
+  /** Optional filter by call rate of a Feature / SNP.
+   * @return undefined if featureCallRateThreshold is 0, otherwise a filter function with signature
+   * featureCallRateFilter(feature) -> boolean, false means filter out
+   */
+  @computed('args.userSettings.featureCallRateThreshold')
+  get featureCallRateFilter() {
+    /** based on .sampleFilter() - may factor if the calculation remains similar. */
+    const
+    callRateThreshold = this.args.userSettings.featureCallRateThreshold,
+    fn = ! callRateThreshold ? undefined : (feature) => {
+      const
+      sampleCount = feature[callRateSymbol],
+      /** OK (filter in) if callRate is undefined because of lack of counts. */
+      callRate = sampleCount && (sampleCount.calls + sampleCount.misses) ?
+        sampleCount.calls / (sampleCount.calls + sampleCount.misses) :
+        undefined,
+      ok = ! callRate || (callRate >= callRateThreshold);
+      return ok;
+    };
+    return fn;
+  }
+
   /**
    * @return true if sampleName is selected in dataset of block,
    * or valueNameIsNotSample(sampleName), i.e. sampleName is ref/alt/etc.
@@ -2857,6 +2899,7 @@ export default class PanelManageGenotypeComponent extends Component {
     'args.userSettings.mafThreshold',
     /** callRateThreshold -> sampleFilter, passed to vcfFeatures2MatrixView{,Rows{,Result}} -> sampleIsFilteredOut{,Blocks} */
     'args.userSettings.callRateThreshold',
+    'args.userSettings.featureCallRateThreshold',
     'datasetPositionFilterChangeCount',
     'sampleCache.datasetEnableFeatureFiltersCount',
 
@@ -2958,6 +3001,9 @@ export default class PanelManageGenotypeComponent extends Component {
    * Call rate is defined as the genotype calls divided by the total number of
    * Features / SNPs in the brushed interval.
    * Genotype calls are e.g. 0, 1, 2; misses are './.'
+   *
+   * Also collate SNP / Feature call rate of the loaded sample calls of each feature.
+   * This could be done by vcfGenotypeReceiveResult() as for featuresSampleMAF().
    * @param featuresArrays  array of arrays of features, 1 array per block
    */
   collateBlockSamplesCallRate(featuresArrays) {
@@ -2974,6 +3020,7 @@ export default class PanelManageGenotypeComponent extends Component {
           features
           .reduce(
             (map, feature) => {
+              const featureSamplesCount = {calls:0, misses:0};
               // could do map=, but the 3 levels have the same value for map.
               Object.entries(feature.values).reduce((map, [key, value], columnIndex) => {
                 if (! valueNameIsNotSample(key)) {
@@ -2985,9 +3032,11 @@ export default class PanelManageGenotypeComponent extends Component {
                   call = value !== './.',
                   sampleCount = map[key] || (map[key] = {calls:0, misses:0});
                   sampleCount[callKey[+call]]++;
+                  featureSamplesCount[callKey[+call]]++;
                 }
                 return map;
               }, map);
+              feature[callRateSymbol] = featureSamplesCount;
 
               return map;
             },

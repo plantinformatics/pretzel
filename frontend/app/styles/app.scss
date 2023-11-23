@@ -2137,7 +2137,7 @@ body:not(.tablesPanelRight) .metaeditor-panel {
   width : 100%;
 }
 .input-range-text input[type=text] {
-  width : 5em;
+  width : 2.9em;
 }
 
 .haplotypeFilters,
@@ -2305,6 +2305,11 @@ div.genotype ul.list-group
 {
   width:40em;
 }
+div.genotype ul.list-group.threshold-sliders
+{
+  width : 47em;
+}
+
 .panel-parent > .panel-primary
 {
   width: fit-content;

@@ -1435,6 +1435,7 @@ function featuresSampleMAF(features, options) {
 /** Calculate sample MAF for feature, for the loaded samples, either selected or
  * all samples.
  * Update feature.values.MAF, replacing any value read from the API request.
+ * Related : collateBlockSamplesCallRate(), featureCallRateFilter().
  */
 function featureSampleMAF(feature, options) {
   const
