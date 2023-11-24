@@ -1,5 +1,18 @@
 #!/usr/bin/env bash
 
+# ------------------------------------------------------------------------------
+
+# from pretzel/README.md :  [Docker on linux](#docker-on-linux)
+
+mkdir -p ~/mongodata \
+ && docker run --name mongo --detach --volume ~/mongodata:/data/db --net=host mongo:5.0 \
+ && until $(curl --silent --output /dev/null localhost:27017 || \
+    [ $(docker inspect -f '{{.State.Running}}' mongo) = "false" ]); do printf '.'; sleep 1; done \
+ && docker run --name pretzel --detach --net=host plantinformaticscollaboration/pretzel:stable  \
+ && until $(curl --silent --output /dev/null localhost:3000 || \
+    [ $(docker inspect -f '{{.State.Running}}' pretzel) = "false" ] ); do printf '.'; sleep 1; done \
+ && docker logs pretzel
+
 
 # ------------------------------------------------------------------------------
 
@@ -11,6 +24,7 @@
 # The following actions are not performed if it is sourced;  this enables this script to be used to define the function in an interactive bash shell
 if (return 0 2>/dev/null); then : ; else
 # --------------------------------------
+
 
 # --------------------------------------
 fi
