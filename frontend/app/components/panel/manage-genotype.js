@@ -2108,9 +2108,10 @@ export default class PanelManageGenotypeComponent extends Component {
       snpPolymorphismFilter = userSettings.snpPolymorphismFilter,
       mafThreshold = userSettings.mafThreshold,
       mafUpper = userSettings.mafUpper,
+      featureCallRateThreshold = userSettings.featureCallRateThreshold,
       requestOptions = {
         requestFormat, requestSamplesAll, snpPolymorphismFilter,
-        mafThreshold, mafUpper},
+        mafThreshold, mafUpper, featureCallRateThreshold},
       x=0;
 
       if (intersection) {

@@ -128,6 +128,13 @@ function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
       moreParams.push('--exclude');
       moreParams.push(afOption);
     }
+    if (preArgs.featureCallRateThreshold) {
+      const
+      /** equivalent : N_PASS(GT!="./.")/N_SAMPLES */
+      fcrOption = 'F_PASS(GT!="./.") >= ' + preArgs.featureCallRateThreshold;
+      moreParams.push('-i');
+      moreParams.push(fcrOption);
+    }
   }
   const samples = preArgs.samples;
   if (samples?.length) {
