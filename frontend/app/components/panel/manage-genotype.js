@@ -2397,7 +2397,7 @@ export default class PanelManageGenotypeComponent extends Component {
        */
       features = features.filter(filterFn);
       /** If all are filtered out, the headers are not displayed, so retain 1 feature. */
-      if (! features.length && feature0) {
+      if (false && ! features.length && feature0) {
         features = [feature0];
       }
     }
