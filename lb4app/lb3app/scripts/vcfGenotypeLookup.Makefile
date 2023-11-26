@@ -1,9 +1,12 @@
 # if VCF does not have MAF or (AC and AN) in INFO column, add it;
 # Use ln -s if the input .vcf.gz file has INFO/MAF or (INFO/ AC and AN).
+# Tested : 'MAF=|AN=.*;AC=|AC=.*;AN=' : bcftools query ... %INFO/MAF got :
+#  Error: Error: no such tag defined in the VCF header: INFO/MAF. FORMAT fields must be in square brackets, e.g. "[ MAF]"
+#
 # Also create %.MAF.vcf.gz.csi, by ln -s or bcftools index (possibly : bgzip  -i --index-name)
 # stdout will contain filename, read by the caller of dbName2Vcf(),  so don't echo command.
 %.MAF.vcf.gz : %.vcf.gz
-	@if gzip -d < "$<"  | grep -C1 '^#CHROM'  | grep -v '^#' | egrep 'MAF=|AN=.*;AC=|AC=.*;AN=' >/dev/null;	\
+	@if gzip -d < "$<" | head -1000 | grep -C1 '^#CHROM'  | grep -v '^#' | egrep 'MAF=' >/dev/null;	\
 	then	\
 	  ln -s "$<" "$@";	\
 	  if [ -e "$<.csi" ];	\
