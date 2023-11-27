@@ -195,43 +195,40 @@ sudo npm install bower -g
 ### Mac iOS install of Node and Mongodb
 
 Prerequisites :
-XCode :  https://itunes.apple.com/us/app/xcode/id497799835
-Homebrew : https://brew.sh
+- XCode :  https://itunes.apple.com/us/app/xcode/id497799835
+- Homebrew : https://brew.sh
+
+Relevant tools:
+- Node version manager: https://github.com/nvm-sh/nvm
+- Bower: https://www.npmjs.com/package/bower
 
 ```
 brew install node
 brew install mongodb
 npm install bower -g
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
+nvm install 12 (will require restart of terminal)
+nvm install 16
 ```
 
-The default location of the mongo database is /data/db;  to place the data in e.g. your home directory :
-```
-cd ~/Applications/
-mkdir Pretzel
-export MONGO_DATA_DB=$HOME/Applications/Pretzel/data_db
-mkdir $MONGO_DATA_DB
-mongod --dbpath $MONGO_DATA_DB
-```
+## Project set-up
 
-
-## Cloning repository and set-up
-
-Clone the Github repository:
+### Clone the Github repository
 
 ```
 git clone https://github.com/plantinformatics/pretzel.git
 ```
 
-### Default build
+### Default automated build (currently deprecated) 
 
-To setup and build the frontend and backend, and run the backend :
+To setup and build the frontend and backend, and run the backend:
 
 ```
 cd pretzel
 npm run go
 ```
 
-### Step-by-step build procedure
+### Step-by-step build procedure (preferred method)
 
 This sections describes steps of default build individually, as an alternative to `npm run go`.
 
@@ -261,24 +258,42 @@ example, `ember` is in `frontend/node_modules/ember-cli/bin/`.
 
 #### Compile Ember app <!-- omit in toc -->
 
-The app is served by the Loopback backend and needs to be pre-compiled:
+The app is served by the Loopback backend and needs to be pre-compiled.
 
 ```
 cd ../frontend
+nvm use 12
+npm rebuild node-sass
 node_modules/ember-cli/bin/ember build --environment production
 cd ..
 ```
 
 #### Set up soft links <!-- omit in toc -->
 
-The Loopback backend expects the compiled client in its client/ sub-directory. You can simply create a soft link:
+The Loopback backend expects the compiled client in its client/ sub-directory. You can simply create a soft link (shortcut):
 
 ```
 ln -s ../frontend/dist lb4app/client
 ```
 
+#### Setup of DB
+
+The default location of the mongo database is /data/db;  to place the data in e.g. your home directory :
+```
+cd ~/Applications/
+mkdir Pretzel
+export MONGO_DATA_DB=$HOME/Applications/Pretzel/data_db
+mkdir $MONGO_DATA_DB
+```
+
 ## Running
 
+### Starting DB
+
+```
+export MONGO_DATA_DB=$HOME/Applications/Pretzel/data_db
+mongod --dbpath $MONGO_DATA_DB
+```
 ### Enable use of HandsOnTable
 
 HandsOnTable is a commercial library which is used in the Pretzel Feature Table and Genotype Table, and may optionally be used in the Paths Table.
@@ -295,8 +310,12 @@ You should now be able to start the Loopback backend:
 
 ```
 cd lb4app
+nvm use 16
 EMAIL_VERIFY=NONE AUTH=ALL node lb3app/server/server.js
 ```
+
+_If port 5000 is in use, change the default port to 5001 in lb4app/lb3app/.env_
+
 Note that this runs the app without any authentication or security and is only suitable for local installs or internal networks. See below for details on setting up user accounts and authentication.
 
 ### Checking things are running
