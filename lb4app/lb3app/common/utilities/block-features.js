@@ -511,7 +511,8 @@ function cacheblocksFeaturesCounts(db, models, datasetId, isZoomed, options) {
           countsP = blockFeaturesCountsP.apply(
             models.Block,
             [blockId, interval, /*nBins*/100, isZoomed,
-             /*useBucketAuto*/undefined, options, /*res*/undefined /*,cb*/])
+             /*useBucketAuto*/undefined, /*userOptions*/undefined,
+             options, /*res*/undefined /*,cb*/])
             .then(counts => counts.reduce((blockSum, bin) => blockSum += bin.count, 0))
             .then(blockSum => datasetSum += blockSum);
           return countsP; });
