@@ -248,6 +248,26 @@ cd ../lb4app
 # Install dependencies
 npm install
 ```
+##### Known Mac Issues and work arounds
+
+> Error: listen EADDRINUSE: address already in use 0.0.0.0:5000
+
+This is because port 5000 is already used by macOS monterey
+Change the API_PORT_EXT value to anything else (5001) in
+```lb4app/lb3app/.env```
+
+> Error: Cannot find module 'node-bin-darwin-arm64/package.json'
+
+This seem to be specific to the M1 architechture.
+```
+arch -x86_64 zsh
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+nvm install 14
+nvm use 14
+npm install
+```
 
 As part of the process of updating the backend server from Loopback version 3 to 4, backend/ has been renamed to lb4app/lb3app/.
 (the current plan is to rename lb4app/ to backend/).
@@ -314,7 +334,7 @@ nvm use 16
 EMAIL_VERIFY=NONE AUTH=ALL node lb3app/server/server.js
 ```
 
-_If port 5000 is in use, change the default port to 5001 in lb4app/lb3app/.env_
+> If port 5000 is in use, change the default port to 5001 in lb4app/lb3app/.env
 
 Note that this runs the app without any authentication or security and is only suitable for local installs or internal networks. See below for details on setting up user accounts and authentication.
 
