@@ -32,6 +32,20 @@ function chrMappingDefault() {
   return text;
 }
 
+let optionWidth = 50;
+console.log('optionWidth', optionWidth);
+/** <select> <option> is provided by the operating system and so its width
+ * cannot be constrained using CSS.
+ * As a fall-back, the text to be displayed is truncated as necessary and
+ * ellipsis is appended.
+ */
+function truncateOptionText(text) {
+  const
+  truncated = (text.length <= optionWidth) ? text :
+    text.substring(0, optionWidth - 3) + '...';
+  return truncated;
+}
+
 //------------------------------------------------------------------------------
 
 
@@ -226,7 +240,8 @@ export default Component.extend({
     const 
     selected = this.genomeDatasets.findBy('dataset.id', selectedDataset.id),
     dataset = selected.dataset,
-    chrMapping = dataset.blocks.map((B,i) => i.toString() + ' ' + B.scope).join('\n');
+    /** linkagegroup id starts at 1 for each dataset */
+    chrMapping = dataset.blocks.map((B,i) => (i+1).toString() + ' ' + B.scope).join('\n');
     return chrMapping;
   },
   /** Set this.chrMapping, and also display it in the <textarea>, because
@@ -253,7 +268,7 @@ export default Component.extend({
     const
     datasets = this.genomeDatasets
       /** @param dsn  { dataset, serverName } */
-      .map(dsn => { const name = dsn.dataset.name; return {id : name, name}; });
+      .map(dsn => { const name = dsn.dataset.name; return {id : name, name : truncateOptionText(name)}; });
 
     /** .datasetsForSelect is displayed in {{select-group / datasetSelected /
      * datasetsForSelect}}, and when it updates .datasetsForSelect will be
