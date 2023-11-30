@@ -116,7 +116,7 @@ export default Component.extend({
   //----------------------------------------------------------------------------
   // textarea is based on similar in sequence-search and feature-list.
 
-  chrMapping : chrMappingDefault(),
+  chrMapping : '',  // chrMappingDefault(),
   get chrMappingArray() {
     const
     array = (this.chrMapping || '')
@@ -209,16 +209,68 @@ export default Component.extend({
 
   //----------------------------------------------------------------------------
 
+  /** @return the list of datasets which are of type Genome,
+   * i.e. are parents / references.
+   * @desc
+   * This is calculated once.
+   */
+  genomeDatasets : computed(function () {
+    const datasets = this.get('dataset').datasetsForType('Genome', false);
+    return datasets;
+  }),
+
+  /** Calculate chrMapping from chromosomes (blocks scopes) of selectedDataset.
+   * @param selectedDataset {id, name}
+   */
+  chrMappingFor(selectedDataset) {
+    const 
+    selected = this.genomeDatasets.findBy('dataset.id', selectedDataset.id),
+    dataset = selected.dataset,
+    chrMapping = dataset.blocks.map((B,i) => i.toString() + ' ' + B.scope).join('\n');
+    return chrMapping;
+  },
+  /** Set this.chrMapping, and also display it in the <textarea>, because
+   * {{textarea value=this.chrMapping }} only reads .chrMapping when it is
+   * created.
+   */
+  setChrMapping(chrMapping) {
+    /** This could be "set chrMapping() {", although it is not needed if chrMapping
+     * is defined before the {{textarea}} is created.
+     */
+    const
+    textarea = $('textarea#ndm_chrMapping')?.[0];
+    if (textarea) {
+      textarea.value = chrMapping;
+    }
+    this.chrMapping = chrMapping;
+  },
+
+  //----------------------------------------------------------------------------
+
   /** parentDataset */
   datasetSelected : undefined,
   datasetsForSelect : computed('dataset.datasetsForType', function () {
     const
-    datasets = this.get('dataset').datasetsForType('Genome', false)
+    datasets = this.genomeDatasets
       /** @param dsn  { dataset, serverName } */
       .map(dsn => { const name = dsn.dataset.name; return {id : name, name}; });
+
+    /** .datasetsForSelect is displayed in {{select-group / datasetSelected /
+     * datasetsForSelect}}, and when it updates .datasetsForSelect will be
+     * selected if it is defined and in the list (it is initially undefined).
+     * So if .datasetsForSelect is not defined, set it to the first value.
+     * This could be split out as an Effect. */
+    if (datasets.length && ! this.selectedDataset) {
+      const selectedDataset = datasets[0];
+      this.setSelectedDataset(selectedDataset);
+    }
+
     return datasets;
   }),
-
+  setSelectedDataset(selectedDataset) {
+    this.set('datasetSelected', selectedDataset);
+    this.setChrMapping(this.chrMappingFor(selectedDataset));
+  },
   selectedDatasetChanged(selectedDataset) {
     /* selectedDataset (parent) is required to have a defined value,
      * so this won't be needed.
@@ -226,8 +278,9 @@ export default Component.extend({
       selectedDataset = null;
     }
     */
-    this.set('datasetSelected', selectedDataset);
+    this.setSelectedDataset(selectedDataset);
   },
+
 
   //----------------------------------------------------------------------------
 
