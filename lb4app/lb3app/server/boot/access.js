@@ -217,6 +217,7 @@ module.exports = function(app) {
       context.property == 'blockFeaturesAdd' ||
       context.property == 'blockFeaturesCount' ||
 //      context.property == 'blockFeaturesCounts' ||
+      context.property == 'blocksFeaturesCountsStatus' ||
       context.property == 'blockFeatureLimits' ||
       context.property == 'blockValues' ||
 //      context.property == 'blockFeaturesInterval' ||

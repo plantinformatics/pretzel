@@ -204,6 +204,20 @@ export default Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** @return truthy if server has featuresCounts result for block
+   * @desc
+   * value is currently sum of counts for bins, i.e. total feature count of block.
+   */
+  get fcStatus() {
+    const status = this[Symbol.for('featuresCountsStatus')];
+    if (status) {
+      dLog('fcStatus', status, this.brushName);
+    }
+    return status;
+  },
+
+  //----------------------------------------------------------------------------
+
   /** Enable this to monitor get/set of .featureCount
   featureCount_ : undefined,
   get featureCount() {

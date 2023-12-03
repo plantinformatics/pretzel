@@ -395,6 +395,34 @@ export default ManageBase.extend({
 
   ontologyId2NodeFor : alias('blockValues.ontologyId2NodeFor'),
 
+  //----------------------------------------------------------------------------
+
+  /** @return an object mapping from blockId to status of featuresCounts
+   */
+  blocksFeaturesCountsStatus : computed(function () {
+    const
+    fnName = 'blocksFeaturesCountsStatus',
+    /** [[blockId, status], ...] */
+    blocksStatusP = this.get('blocksService').getBlocksFeaturesCountsStatus(/*blockIds*/undefined),
+    byBlockIdP = blocksStatusP.then(blocksStatus => blocksStatus.reduce((result, bs) => {
+      result[bs[0]] = bs[1];
+      return result;
+    }, {}));
+    return byBlockIdP;
+  }),
+
+  blocksAnnotateWithFCStatus() {
+    const
+    fnName = 'blocksAnnotateWithFCStatus',
+    byBlockIdP = this.blocksFeaturesCountsStatus;
+    dLog(fnName);
+    byBlockIdP.then(byBlockId => {
+      this.datasetsBlocks.forEach(dataset => dataset.blocks.forEach(block => {
+        block[Symbol.for('featuresCountsStatus')] = byBlockId[block.id];
+      }));
+    });
+  },
+
   /*--------------------------------------------------------------------------*/
 
   primaryServerStore : computed(function () {
@@ -408,6 +436,7 @@ export default ManageBase.extend({
   /** Triggers a rerun of the availableMaps fetching task */
   refreshAvailable: function(){
     this.get('refreshDatasets')();
+    this.blocksAnnotateWithFCStatus();
   },
 
   /** used by dataEmpty. */

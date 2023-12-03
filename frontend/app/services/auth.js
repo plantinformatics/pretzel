@@ -331,6 +331,18 @@ export default Service.extend({
     return this._ajax('Blocks/blockFeaturesCounts', 'GET', {id : block, block, interval, nBins, isZoomed, useBucketAuto, userOptions, options}, true);
   },
 
+  /** Get status of cached histogram of features counts for given block or all blocks
+   * @param id  blockId
+   * @param nBins number of bins to partition the block's features into
+   * @param useBucketAuto default false
+   * @param options loopback options for find etc, also .server which is used and not sent.
+   */
+  getBlocksFeaturesCountsStatus(id, nBins, useBucketAuto, options) {
+    if (trace_paths)
+      dLog('services/auth getBlocksFeaturesCountsStatus', id, nBins, useBucketAuto, options);
+    return this._ajax('Blocks/blocksFeaturesCountsStatus', 'GET', {id, nBins, useBucketAuto, options}, true);
+  },
+
   getBlockFeaturesCount(blocks, options) {
     if (trace_paths)
       dLog('services/auth getBlockFeaturesCount', blocks, options);

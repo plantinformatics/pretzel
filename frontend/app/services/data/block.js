@@ -653,6 +653,17 @@ export default Service.extend(Evented, {
     return blockP;
   },
 
+  getBlocksFeaturesCountsStatus: function (blockIds) {
+    const
+    fnName = 'getBlocksFeaturesCountsStatus',
+    nBins = this.get('featuresCountsNBins'),
+    useBucketAuto = this.get('parsedOptions.useBucketAuto'),
+    statusP =
+      this.get('auth').getBlocksFeaturesCountsStatus(blockIds, nBins, useBucketAuto, /*options*/{});
+
+    return statusP;
+  },
+
   /*--------------------------------------------------------------------------*/
 
   /** @return the block record handle if the block is loaded into the store from the backend.
