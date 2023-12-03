@@ -1,0 +1,5 @@
+limitations of this commit :
+.blocksAnnotateWithFCStatus() is called in refresh, and not otherwise
+status doesn't update if refresh again, requires tab refresh.
+entry-block* don't update when fcsStatus changes (could use CP and a counter)
+counts of .vcf.gz{,.csi} files : separate commit
