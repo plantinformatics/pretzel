@@ -5,9 +5,9 @@ import EmberObject, { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import { bind, later, throttle } from '@ember/runloop';
 
-
-
 import $ from 'jquery';
+
+import { nameSort } from '../utils/common/arrays';
 
 //------------------------------------------------------------------------------
 
@@ -32,7 +32,7 @@ function chrMappingDefault() {
   return text;
 }
 
-let optionWidth = 50;
+let optionWidth = 47;
 console.log('optionWidth', optionWidth);
 /** <select> <option> is provided by the operating system and so its width
  * cannot be constrained using CSS.
@@ -135,7 +135,7 @@ export default Component.extend({
     const
     array = (this.chrMapping || '')
       .split('\n')
-      .map(line => line.split(' '));
+      .map(line => line.split(' '))
     return array;
   },
 
@@ -241,7 +241,14 @@ export default Component.extend({
     selected = this.genomeDatasets.findBy('dataset.id', selectedDataset.id),
     dataset = selected.dataset,
     /** linkagegroup id starts at 1 for each dataset */
-    chrMapping = dataset.blocks.map((B,i) => (i+1).toString() + ' ' + B.scope).join('\n');
+    blockScopes = dataset.blocks
+      .mapBy('scope'),
+    /* this sort handles <number><text>; instead use nameSort which handles
+     * <text><number><text>
+     * .sort((a, b) => (+a === +b) ? (+a - b) : a > b)
+     */
+    chrMapping = nameSort(blockScopes)
+      .map((scope, i) => (i+1).toString() + ' ' + scope).join('\n');
     return chrMapping;
   },
   /** Set this.chrMapping, and also display it in the <textarea>, because

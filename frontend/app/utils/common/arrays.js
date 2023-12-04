@@ -82,3 +82,39 @@ function sparseArrayFirstIndex(array) {
 }
 
 export { arraysConcat, sparseArrayFirstIndex };
+
+//------------------------------------------------------------------------------
+
+function cmp(a, b) { return a === b ? 0 : a < b ? -1 : 1; }
+export { nameSort };
+/** Sort the given array of names.
+ * Currently used for chromosome names, which are typically
+ * {[Cc]chr}?<number><remainder>, where number may contain '.'
+ *
+ * The sort order is :
+ * - lexicographic for the text prefix,
+ * - numeric order for the number part, then
+ * - lexicographic for the remainder.
+ *
+ * This could be used for sorting marker and gene names also.
+ */
+function nameSort(array) {
+  /** indexes into the result of regexp match. */
+  const iText = 1, iNumber = 2, iRest = 3;
+  const
+  sorted = array
+    .map(c => {const m = c.match(/^([^0-9]*)([0-9.]*)(.*)/); return [c, m]; })
+    .sort((A, B) => {
+      const
+      /** the regexp match results */
+      a = A[1], b = B[1],
+      order = ! a || ! b ? cmp(A[0], B[0]) :
+        (a[iText] !== b[iText]) ? cmp(a[iText], b[iText]) :
+        a[iNumber] === b[iNumber] ? cmp(a[iRest], b[iRest]) : (a[iNumber] - b[iNumber]);
+      return order;
+    })
+    .mapBy('0');
+  return sorted;
+}
+
+//------------------------------------------------------------------------------
