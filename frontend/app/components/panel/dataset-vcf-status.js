@@ -10,7 +10,7 @@ const dLog = console.debug;
 export default class PanelDatasetVCFStatusComponent extends Component {
   @service() auth;
 
-  @tracked() vcfStatus;
+  @tracked vcfStatus;
   @action
   getVcfStatus() {
     const id = this.args.dataset.id;
