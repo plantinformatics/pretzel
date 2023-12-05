@@ -165,8 +165,8 @@ exports.childProcess = (scriptName, postData, useFile, fileName, moreParams, dat
     if (! progressive && outputs.length) {
       let combined = Buffer.concat(outputs);
       dataOutCb(combined, cb);
-    }
-    if (code) {
+    }	// perhaps if (code) before the above case.
+    else if (code) {
       const error = Error("Failed processing file '" + fileName + "'.");
       cb(error);
     } else if (

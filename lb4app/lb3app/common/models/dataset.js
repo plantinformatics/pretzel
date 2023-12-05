@@ -25,10 +25,13 @@ const { GffParse } = require('../utilities/gff_read');
 const { loadAliases } = require('../utilities/load-aliases');
 const { cacheClearBlocks } = require('../utilities/localise-blocks');
 const { cacheblocksFeaturesCounts } = require('../utilities/block-features');
+const { vcfGenotypeFeaturesCountsStatus } = require('../utilities/vcf-genotype');
 const { ErrorStatus } = require('../utilities/errorStatus.js');
+const { objectLookup } = require('../utilities/mongoDB-driver-lib');
 const { ensureItem, query, datasetIdGetVector } = require('../utilities/vectra-search.js');
 const { flattenJSON } = require('../utilities/json-text.js');
 const { text2Commands } = require('../utilities/openai-query.js');
+
 
 const cacheLibraryName = '../utilities/results-cache'; // 'memory-cache';
 const cache = require(cacheLibraryName);
@@ -657,7 +660,36 @@ module.exports = function(Dataset) {
     req.setTimeout(0);
     var models = this.app.models;
     upload.uploadDataset(data, models, options, cb);
-  }
+  };
+
+  //----------------------------------------------------------------------------
+
+  /** Get the status of .vcf.gz files for this dataset.
+   * @param datasetId  name of VCF / Genotype / view dataset, or vcf directory name
+   */
+  Dataset.vcfGenotypeFeaturesCountsStatus = function(datasetId, options, cb) {
+    const
+    fnName = 'vcfGenotypeLookup';
+    objectLookup(Dataset, 'Dataset', fnName, datasetId, options)
+      .then(genotypeStatus.bind(this));
+
+    function genotypeStatus(dataset) {
+      if (dataset.tags?.includes('VCF')) {
+        vcfGenotypeFeaturesCountsStatus(datasetId, cb);
+      }
+    }
+  };
+  Dataset.remoteMethod('vcfGenotypeFeaturesCountsStatus', {
+    accepts: [
+      {arg: 'id', type: 'string', required: true},
+      {arg: 'options', type: 'object', http: 'optionsFromRequest'},
+    ],
+    http: {verb: 'get'},
+    returns: {arg: 'text', type: 'string'},
+    description: "Get the status of .vcf.gz files for this dataset."
+  });
+
+  //----------------------------------------------------------------------------
 
   Dataset.observe('before delete', function(ctx, next) {
     var Block = ctx.Model.app.models.Block

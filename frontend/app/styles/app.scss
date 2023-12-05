@@ -273,7 +273,9 @@ div.app-logo {
 overflow-x: scroll;
 }
 
-table.contextual-data-table td {
+table.contextual-data-table th,
+table.contextual-data-table td
+{
   padding-right: 1em;
 }
 

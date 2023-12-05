@@ -348,3 +348,40 @@ function snpPolymorphismFilter(line) {
 }
 
 //------------------------------------------------------------------------------
+
+/** Get the status of .vcf.gz files for this dataset.
+ * Related : vcfGenotypeFeaturesCounts().
+ */
+function vcfGenotypeFeaturesCountsStatus(datasetDir, cb) {
+  const
+  fnName = 'vcfGenotypeFeaturesCountsStatus',
+  command = 'status',
+  moreParams = [
+    command, datasetDir, /*scope*/'',
+    /*isecFlags*/'', /*isecDatasetIds*/''];
+
+  /** Receive the combined result (progressive===false).
+   * For non-progressive (expect that the result is in a single chunk) could use
+   * dataReduceClosure() to catenate chunks.
+   * @param combined	Buffer
+   */
+  function dataOutCb(combined, cb) {
+    // console.log(fnName, 'dataOutCb', combined);
+    const text = combined.toString();
+    cb(null, text);
+  }
+
+  childProcess(
+    'vcfGenotypeLookup.bash',
+    /* postData */ '', 
+    /* useFile */ false,
+    /* fileName */ undefined,
+    moreParams,
+    dataOutCb, cb, /*progressive*/ false);
+};
+exports.vcfGenotypeFeaturesCountsStatus = vcfGenotypeFeaturesCountsStatus;
+
+
+
+
+//------------------------------------------------------------------------------

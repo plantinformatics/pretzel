@@ -1,0 +1,16 @@
+
+{{#if this.dataset.isVCF}}
+  <div class="margin-top">
+    <button type="button" onclick={{this.getVcfStatus}} class="btn btn-info btn-xs margin-1em">Get VCF Status</button>
+    <div class="margin-top">
+      {{#data-table data=this.vcfStatus.rows as |t| }}
+        {{#each this.vcfStatus.columnNames as |columnName| }}
+          {{t.column propertyName=columnName name=columnName}}
+        {{/each}}
+      {{/data-table}}
+    </div>
+
+  </div>
+{{/if}}
+
+{{yield}}

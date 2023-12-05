@@ -201,6 +201,7 @@ module.exports = function(app) {
       context.property == 'upload' ||
       context.property == 'tableUpload' ||
       context.property == 'createComplete' ||
+      context.property == 'vcfGenotypeFeaturesCountsStatus' ||
         // Feature
       context.property == 'search' ||
       context.property == 'searchPost' ||

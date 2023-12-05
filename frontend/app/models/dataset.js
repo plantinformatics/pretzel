@@ -162,6 +162,10 @@ export default Record.extend({
     return has;
   },
 
+  get isVCF() {
+    return this.hasTag('VCF');
+  },
+
   //----------------------------------------------------------------------------
 
   /** positionFilter is applicable to VCF / genotype datasets, and indicates if

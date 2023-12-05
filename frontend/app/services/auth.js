@@ -343,6 +343,17 @@ export default Service.extend({
     return this._ajax('Blocks/blocksFeaturesCountsStatus', 'GET', {id, nBins, useBucketAuto, options}, true);
   },
 
+  /** Get status of .vcf.gz files for this dataset.
+   * @param id  datasetId
+   * @param options loopback options for find etc, also .server which is used and not sent.
+   */
+  getFeaturesCountsStatus(id, options) {
+    if (trace_paths) {
+      dLog('services/auth vcfGenotypeFeaturesCountsStatus', id, options);
+    }
+    return this._ajax('Datasets/vcfGenotypeFeaturesCountsStatus', 'GET', {id, options}, true);
+  },
+
   getBlockFeaturesCount(blocks, options) {
     if (trace_paths)
       dLog('services/auth getBlockFeaturesCount', blocks, options);

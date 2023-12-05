@@ -429,7 +429,16 @@ then
   # sleep 10
   dev_result "$region"
   status=$?
-else 
+elif [ "$command" = status ]
+then
+  # cwd is $serverDir/
+  if ! cd "$vcfDir"/"$datasetIdParam"
+  then
+    echo 1>&$F_ERR 'Error:' $? "VCF dataset dir is not configured", "$datasetIdParam", PWD=$PWD
+  else
+    ls -gGLd *.vcf.gz* | cut -c13-
+  fi
+else
   vcfGz=$(dbName2Vcf "$datasetIdParam")
 
   # This string is joined with datasetIdsSeparator in vcf-genotype.js : vcfGenotypeLookup().
