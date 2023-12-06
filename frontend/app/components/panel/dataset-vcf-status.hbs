@@ -4,7 +4,9 @@
     <button type="button" onclick={{this.getVcfStatus}} class="btn btn-info btn-xs margin-1em">Get VCF Status</button>
     <div class="margin-top status-icon">
       {{#data-table data=this.vcfStatus.rows as |t| }}
-        {{t.column propertyName='Name' name='Chr'}}
+        {{#t.column propertyName='Name' name='Chr' defaultHeader=true as |col|}}
+          <span class={{call (fn this.chrNotInDataset col.row.Name ) }}>{{col.row.Name}}</span>
+        {{/t.column}}
         {{#each this.vcfStatus.columnNames as |columnName| }}
         {{#if this.showDetail}}
           {{t.column propertyName=columnName name=columnName}}

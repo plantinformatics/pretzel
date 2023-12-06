@@ -26,8 +26,17 @@ export default class PanelDatasetVCFStatusComponent extends Component {
     fnName = 'cellIcon',
     value = row[columnName],
     icon = value ? 'ok' : '';
-    dLog(fnName, icon, value, row, columnName);
+    // dLog(fnName, icon, value, row, columnName);
     return icon;
   }
-
+  
+  /** @return 'chrNotInDataset' if the chromosome (block) scope (name) is not in @dataset.
+   */
+  @action
+  chrNotInDataset(chrName) {
+    const
+    scopes = this.args.dataset.blocks.mapBy('scope'),
+    className = scopes.includes(chrName) ? '' : 'chrNotInDataset';
+    return className;
+  }
 }

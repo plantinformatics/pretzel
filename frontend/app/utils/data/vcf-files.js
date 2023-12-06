@@ -69,6 +69,8 @@ function statusToMatrix(vcfStatus) {
  * @see lb4app/lb3app/scripts/vcfGenotypeLookup.Makefile
  */
 const vcfPipeline = [
+  "",
+  "·csi",
   "·MAF",
   "·MAF·csi",
   "·MAF·SNPList",
@@ -79,10 +81,15 @@ const vcfPipeline = [
 export { vcfFileCmp };
 function vcfFileCmp(a, b) {
   const
-  // subtract([a,b].map(indexOf)) if both defined, else compare: unicodeDot instead of .
+  /* subtract([a,b].map(indexOf)) if both defined, else if one is defined, sort it left,
+   * else compare: unicodeDot (which stands in for .) and if that is equal
+   * fall back to defaultCmp().
+   */
   order = [a, b].map(suffix => { return vcfPipeline.indexOf(suffix); }),
-  cmp = (order[0] >= 0) && (order[1] >= 0) ?
+  isPipeline = order.map(o => o >= 0),
+  cmp = (isPipeline[0] && isPipeline[1]) ?
     (order[0] - order[1]) :
+    isPipeline[0] || isPipeline[1] ? isPipeline[1] - isPipeline[0] :
     repeatsCmp(a, b) ||
     defaultCmp(order[0], order[1]);
   return cmp;
