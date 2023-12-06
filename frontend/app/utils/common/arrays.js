@@ -85,8 +85,8 @@ export { arraysConcat, sparseArrayFirstIndex };
 
 //------------------------------------------------------------------------------
 
-function cmp(a, b) { return a === b ? 0 : a < b ? -1 : 1; }
-export { nameSort };
+function defaultCmp(a, b) { return a === b ? 0 : a < b ? -1 : 1; }
+export { defaultCmp, nameSort };
 /** Sort the given array of names.
  * Currently used for chromosome names, which are typically
  * {[Cc]chr}?<number><remainder>, where number may contain '.'
@@ -108,9 +108,9 @@ function nameSort(array) {
       const
       /** the regexp match results */
       a = A[1], b = B[1],
-      order = ! a || ! b ? cmp(A[0], B[0]) :
-        (a[iText] !== b[iText]) ? cmp(a[iText], b[iText]) :
-        a[iNumber] === b[iNumber] ? cmp(a[iRest], b[iRest]) : (a[iNumber] - b[iNumber]);
+      order = ! a || ! b ? defaultCmp(A[0], B[0]) :
+        (a[iText] !== b[iText]) ? defaultCmp(a[iText], b[iText]) :
+        a[iNumber] === b[iNumber] ? defaultCmp(a[iRest], b[iRest]) : (a[iNumber] - b[iNumber]);
       return order;
     })
     .mapBy('0');

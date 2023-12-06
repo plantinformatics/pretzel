@@ -10,6 +10,8 @@ const dLog = console.debug;
 export default class PanelDatasetVCFStatusComponent extends Component {
   @service() auth;
 
+  @tracked showDetail = false;
+
   @tracked vcfStatus;
   @action
   getVcfStatus() {
@@ -18,5 +20,14 @@ export default class PanelDatasetVCFStatusComponent extends Component {
       .then(vcfStatus => this.vcfStatus = statusToMatrix(vcfStatus?.text));
   }
 
+  @action
+  cellIcon(row, columnName) {
+    const
+    fnName = 'cellIcon',
+    value = row[columnName],
+    icon = value ? 'ok' : '';
+    dLog(fnName, icon, value, row, columnName);
+    return icon;
+  }
 
 }

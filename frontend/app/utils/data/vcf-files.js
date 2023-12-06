@@ -1,8 +1,11 @@
 import { stringCountString } from '../../utils/string';
+import { defaultCmp } from '../../utils/common/arrays';
 
 //------------------------------------------------------------------------------
 
 const dLog = console.debug;
+
+const unicodeDot = '·';
 
 //------------------------------------------------------------------------------
 
@@ -35,8 +38,7 @@ function statusToMatrix(vcfStatus) {
     if (m) {
       const
       [whole, sizeTime, chrName, suffix, csi] = m,
-      colName = (suffix + csi).replaceAll('.', '_'),
-      // s[m[2]][m[3]] = m[1]
+      colName = (suffix + csi).replaceAll('.', unicodeDot),
       chr = s[chrName] || (s[chrName] = {});
       s[chrName][colName] = sizeTime;
       if (! ma.has(colName)) {
@@ -49,17 +51,45 @@ function statusToMatrix(vcfStatus) {
     }
     return ma;
   }, new Map()),
-  // map = new Map([[cols[0],1]])
-  colSort = function(a, b) { return stringCountString(a, '.') - stringCountString(b, '.'); },
-  colsSorted = cols.sort(colSort),
+  colsSorted = cols.sort(vcfFileCmp),
   chrNames = Object.keys(s),
   body = colsSorted.map(colName => chrNames.map(chrName => s[chrName][colName])),
   // or body.unshift(chrNames)
   table = [chrNames].concat(body),
   rows = Object.entries(s).map(([chrName, chr]) => { chr.Name = chrName; return chr; }),
-  columnNames = ['Name'].concat(colsSorted);
+  /** Name column is prepended in hbs instead of here, so it can be shown without icon. */
+  columnNames = colsSorted; // ['Name'].concat();
   dLog(fnName, table);
   return {rows, table, columnNames};
 }
+
+/** Show the vcf files in columns sorted according to the sequence in which they
+ * are constructed, so that the derived files are to the right of the files they
+ * are based on.
+ * @see lb4app/lb3app/scripts/vcfGenotypeLookup.Makefile
+ */
+const vcfPipeline = [
+  "·MAF",
+  "·MAF·csi",
+  "·MAF·SNPList",
+  "·MAF·SNPList·csi",
+  "·SNPList",
+  "·SNPList·csi",
+];
+export { vcfFileCmp };
+function vcfFileCmp(a, b) {
+  const
+  // subtract([a,b].map(indexOf)) if both defined, else compare: unicodeDot instead of .
+  order = [a, b].map(suffix => { return vcfPipeline.indexOf(suffix); }),
+  cmp = (order[0] >= 0) && (order[1] >= 0) ?
+    (order[0] - order[1]) :
+    repeatsCmp(a, b) ||
+    defaultCmp(order[0], order[1]);
+  return cmp;
+}
+/** Count occurences of unicodeDot '·',
+ * which is what '.' is mapped to (to avoid being interpreted as a sub-field).
+ */
+function repeatsCmp(a, b) { return stringCountString(a, unicodeDot) - stringCountString(b, unicodeDot); }
 
 //------------------------------------------------------------------------------
