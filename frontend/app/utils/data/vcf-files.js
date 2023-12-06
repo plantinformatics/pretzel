@@ -63,9 +63,11 @@ function statusToMatrix(vcfStatus) {
   return {rows, table, columnNames};
 }
 
+export { vcfPipeline };
 /** Show the vcf files in columns sorted according to the sequence in which they
  * are constructed, so that the derived files are to the right of the files they
  * are based on.
+ * Usage : vcfPipeline.indexOf(suffix)  -1 if suffix is not used in the pipeline
  * @see lb4app/lb3app/scripts/vcfGenotypeLookup.Makefile
  */
 const vcfPipeline = [

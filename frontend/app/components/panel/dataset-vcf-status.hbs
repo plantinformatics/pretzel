@@ -9,10 +9,23 @@
         {{/t.column}}
         {{#each this.vcfStatus.columnNames as |columnName| }}
         {{#if this.showDetail}}
-          {{t.column propertyName=columnName name=columnName}}
+          {{#t.column propertyName=columnName name=columnName as |col| }}
+            {{#if col.header}}
+              <span class={{call (fn this.suffixNotInPipeline columnName ) }}>{{columnName}}</span>
+            {{/if}}
+            {{#if col.body}}
+              {{get col.row columnName}}
+            {{/if}}
+          {{/t.column}}
+
         {{else}}
-          {{#t.column propertyName=columnName name=columnName defaultHeader=true as |col|}}
-            {{elem/icon-base name=(call (fn this.cellIcon col.row columnName) ) }}
+          {{#t.column propertyName=columnName name=columnName as |col|}}
+            {{#if col.header}}
+              <span class={{call (fn this.suffixNotInPipeline columnName ) }}>{{columnName}}</span>
+            {{/if}}
+            {{#if col.body}}
+              {{elem/icon-base name=(call (fn this.cellIcon col.row columnName) ) }}
+            {{/if}}
           {{/t.column}}
         {{/if}}
         {{/each}}

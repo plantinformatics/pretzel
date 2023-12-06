@@ -1,9 +1,9 @@
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
-import { action } from '@ember/object';
+import { computed, action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 
-import { statusToMatrix } from '../../utils/data/vcf-files';
+import { statusToMatrix, vcfPipeline } from '../../utils/data/vcf-files';
 
 const dLog = console.debug;
 
@@ -20,6 +20,11 @@ export default class PanelDatasetVCFStatusComponent extends Component {
       .then(vcfStatus => this.vcfStatus = statusToMatrix(vcfStatus?.text));
   }
 
+  @computed
+  get blockScopes() {
+    return this.args.dataset.blocks.mapBy('scope');
+  }
+
   @action
   cellIcon(row, columnName) {
     const
@@ -30,13 +35,20 @@ export default class PanelDatasetVCFStatusComponent extends Component {
     return icon;
   }
   
-  /** @return 'chrNotInDataset' if the chromosome (block) scope (name) is not in @dataset.
+  /** @return 'chrNotInDataset' if the given chromosome name is not in @dataset block scopes.
+   * @param chrName chromosome name from .vcf.gz file name.
    */
   @action
   chrNotInDataset(chrName) {
     const
-    scopes = this.args.dataset.blocks.mapBy('scope'),
+    scopes = this.blockScopes,
     className = scopes.includes(chrName) ? '' : 'chrNotInDataset';
+    return className;
+  }
+  @action
+  suffixNotInPipeline(suffix) {
+    const
+    className = vcfPipeline.indexOf(suffix) === -1 ? 'notInPipeline' : '';
     return className;
   }
 }

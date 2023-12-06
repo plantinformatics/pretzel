@@ -284,7 +284,8 @@ table.contextual-data-table td
 {
   color : green;
 }
-.chrNotInDataset
+.chrNotInDataset,
+.notInPipeline
 {
   color : red;
 }
