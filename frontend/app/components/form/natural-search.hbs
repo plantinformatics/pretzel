@@ -21,6 +21,12 @@
       </Textarea>
     </div>
 
+    <div>
+      {{#each this.naturalQueryResult as |commandText|}}
+        <div>{{commandText}}</div>
+      {{/each}}
+    </div>
+
     <BsButton @type="info" class="margin-top" @onClick={{@close}}>Close</BsButton>
 
     <span>&nbsp; &nbsp; ? 
@@ -37,6 +43,5 @@
 
     {{yield}}
 
-    <div>{{this.naturalQueryResult}}</div>
 
 {{/ember-modal-dialog}}

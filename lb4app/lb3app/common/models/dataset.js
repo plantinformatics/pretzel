@@ -1,5 +1,8 @@
 'use strict';
 
+const YAML = require('yaml');
+
+
 /* global module */
 /* global require */
 /* global Buffer */
@@ -18,14 +21,20 @@ var { clientIsInGroup, clientOwnsGroup, groupIsWritable } = require('../utilitie
 var upload = require('../utilities/upload');
 var load = require('../utilities/load');
 const { spreadsheetDataToJsObj } = require('../utilities/spreadsheet-read');
-const { gffDataToJsObj } = require('../utilities/gff_read');
+const { GffParse } = require('../utilities/gff_read');
 const { loadAliases } = require('../utilities/load-aliases');
 const { cacheClearBlocks } = require('../utilities/localise-blocks');
 const { cacheblocksFeaturesCounts } = require('../utilities/block-features');
+const { vcfGenotypeFeaturesCountsStatus } = require('../utilities/vcf-genotype');
 const { ErrorStatus } = require('../utilities/errorStatus.js');
+const { objectLookup } = require('../utilities/mongoDB-driver-lib');
 const { ensureItem, query, datasetIdGetVector } = require('../utilities/vectra-search.js');
 const { flattenJSON } = require('../utilities/json-text.js');
 const { text2Commands } = require('../utilities/openai-query.js');
+
+
+const cacheLibraryName = '../utilities/results-cache'; // 'memory-cache';
+const cache = require(cacheLibraryName);
 
 
 //------------------------------------------------------------------------------
@@ -62,9 +71,19 @@ module.exports = function(Dataset) {
       datasetId = q.fileName || ('gff3_dataset_' + req.readableLength),
       replaceDataset = typeof q.replaceDataset === 'string' ?
         JSON.parse(q.replaceDataset.toLowerCase()) : true,
+/*
       uint8Array = req.read(req.readableLength),
       bodyData = uint8Array.asciiSlice();
-      this.gffUploadData(bodyData, datasetId, replaceDataset, options, models, cb);
+*/
+      parser = new GffParse(),
+      // gffUploadData() also sets dataset.name = datasetId
+      dataset = parser.startDataset({name : datasetId});
+      parser.dataset = dataset;
+      parser.bodyPipe(req)
+        .then(dataObj =>
+      // gffDataToJsObj(bodyData);
+          this.gffUploadData(dataObj, datasetId, replaceDataset, options, models, cb)
+        );
     } else
     // Parse as either .json or .gz
     // factored as handleJson()
@@ -491,25 +510,26 @@ module.exports = function(Dataset) {
     console.log(fnName, msg.fileName, msg.data.length);
     const
     datasetId = msg.fileName.replace(/\.gff3?/, ''),
-    replaceDataset = !!msg.replaceDataset;
-    this.gffUploadData(msg.data, datasetId, replaceDataset, options, models, cb);
+    replaceDataset = !!msg.replaceDataset,
+    parser = new GffParse(),
+    dataObj = parser.gffDataToJsObj(msg.data, {name : datasetId});
+    this.gffUploadData(dataObj, datasetId, replaceDataset, options, models, cb);
   };
   /** Parse and insert the given GFF data string into the database.
-   * @param data
+   * @param dataObj
    * @param dataset
    * @param replaceDataset
    * @param options
    * @param models
    * @param cb
    */
-  Dataset.gffUploadData = function(data, datasetId, replaceDataset, options, models, cb) {
+  Dataset.gffUploadData = function(dataObj, datasetId, replaceDataset, options, models, cb) {
     // based on .spreadsheetUploadInternal
     const fnName = 'gffUploadData';
 
     cb = this.spreadsheetUploadCbWrap(cb);
 
 
-    const dataObj = gffDataToJsObj(data);
     let dataset = dataObj.dataset;
     dataset.name = datasetId;
     let status = pick(dataObj, ['warnings', 'errors']);
@@ -584,26 +604,32 @@ module.exports = function(Dataset) {
   };
 
 
-  Dataset.cacheblocksFeaturesCounts = function(id, options, cb) {
+  /**
+   * @param isZoomed	true causes blockFeaturesCounts() : useCache to be false
+   */
+  Dataset.cacheblocksFeaturesCounts = function(id, isZoomed, options, cb) {
     const
     fnName = 'cacheblocksFeaturesCounts',
     db = this.dataSource.connector,
     models = this.app.models;
-    cacheblocksFeaturesCounts(db, models, id, options)
+    cacheblocksFeaturesCounts(db, models, id, isZoomed, options)
       .then((result) => cb(null, result))
       .catch((err) => {
-        console.log(fnName, err.statusCode, err);
+        console.log(fnName, id, isZoomed, err.statusCode, err);
         cb(err);});
   };
 
   //----------------------------------------------------------------------------
 
   Dataset.naturalSearch = function naturalSearch(search_text, options, cb) {
-    embedDatasets(Dataset, options);
     console.log('naturalSearch', search_text);
+    /** embedDatasets() -> datasetForEmbed() -> ensureItem(), adding to index
+     * which is used by query() */
+    embedDatasets(Dataset, options).then(() => {
     query(search_text)
       .then((results) => cb(null, results))
       .catch((err) => cb(err));
+    });
   };
 
   Dataset.text2Commands = function text2CommandsEndpoint(commands_text, options, cb) {
@@ -634,7 +660,36 @@ module.exports = function(Dataset) {
     req.setTimeout(0);
     var models = this.app.models;
     upload.uploadDataset(data, models, options, cb);
-  }
+  };
+
+  //----------------------------------------------------------------------------
+
+  /** Get the status of .vcf.gz files for this dataset.
+   * @param datasetId  name of VCF / Genotype / view dataset, or vcf directory name
+   */
+  Dataset.vcfGenotypeFeaturesCountsStatus = function(datasetId, options, cb) {
+    const
+    fnName = 'vcfGenotypeLookup';
+    objectLookup(Dataset, 'Dataset', fnName, datasetId, options)
+      .then(genotypeStatus.bind(this));
+
+    function genotypeStatus(dataset) {
+      if (dataset.tags?.includes('VCF')) {
+        vcfGenotypeFeaturesCountsStatus(datasetId, cb);
+      }
+    }
+  };
+  Dataset.remoteMethod('vcfGenotypeFeaturesCountsStatus', {
+    accepts: [
+      {arg: 'id', type: 'string', required: true},
+      {arg: 'options', type: 'object', http: 'optionsFromRequest'},
+    ],
+    http: {verb: 'get'},
+    returns: {arg: 'text', type: 'string'},
+    description: "Get the status of .vcf.gz files for this dataset."
+  });
+
+  //----------------------------------------------------------------------------
 
   Dataset.observe('before delete', function(ctx, next) {
     var Block = ctx.Model.app.models.Block
@@ -674,7 +729,11 @@ module.exports = function(Dataset) {
     if (! data) {
       console.log(fnName, ''+dataset?.id, dataset, ctx);
     } else
-    if (data.groupId) {
+      /** If dataset is a copy from another server (it has ._origin), then the
+       * group is an object of the remote server, which does any required group
+       * permission check.
+       */
+    if (data.groupId && ! data.meta?._origin) {
       let
       /** similar : models/group.js : sessionClientId(context),
        * utilities/identity.js : gatherClientId() */
@@ -761,6 +820,7 @@ module.exports = function(Dataset) {
   Dataset.remoteMethod('cacheblocksFeaturesCounts', {
     accepts: [
       {arg: 'id', type: 'string', required: true},
+      {arg: 'isZoomed', type: 'boolean', required: false, default : 'false'},
       {arg: "options", type: "object", http: "optionsFromRequest"}
     ],
     http: {verb: 'get'},
@@ -815,25 +875,83 @@ let embeddingP;
  * @param options including session accessToken
  */
 function embedDatasets(Dataset, options) {
-  const fnName = 'embedDatasets';
-  if (! embeddingP) {
-    console.log(fnName);
-    embeddingP = Dataset.find({}, options)
-      .then(
-        datasets => {
-          console.log(fnName, datasets.length);
-          datasets
-            .filter(d => ! d.meta?._origin)
-            // .slice(0, 30)
-            .forEach(dataset => datasetForEmbed(dataset));
+  const
+  fnName = 'embedDatasets',
+  cacheId = fnName,
+  useCache = true;
+  let cached;
+  if (embeddingP) {
+    // no action required
+  } else if (useCache && (cached = cache.get(cacheId))) {
+    console.log(fnName, 'cache.get', cacheId, cached.length);
+    embeddingP = Promise.resolve(cached);
+  } else {
+    embeddingP = embedDatasetsNoCache(Dataset, options);
+    if (useCache) {
+      /* result is array of undefined; it simply signifies that the item is
+       * stored in vectra. */
+      embeddingP
+        .then(vectors => {
+          console.log(fnName, 'cache.put', cacheId, vectors.length);
+          cache.put(cacheId, vectors);
         });
+    }
+
   }
+  return embeddingP;
+}
+
+/** Call ensureItem() for each dataset, if this has not already been done.
+ * @param Dataset model
+ * @param options including session accessToken
+ * @return promise which resolves with no value for each dataset when
+ * datasetForEmbed() has resolved for each dataset
+ */
+function embedDatasetsNoCache(Dataset, options) {
+  const fnName = 'embedDatasetsNoCache';
+  console.log(fnName);
+  embeddingP = Dataset.find({}, options)
+    .then(
+      datasets => {
+        console.log(fnName, datasets.length);
+        const
+        datasetsP =
+        datasets
+          .filter(d => ! d.meta?._origin)
+          // .slice(0, 30)
+          .map(dataset => datasetForEmbed(dataset)),
+        allP = Promise.all(datasetsP);
+        return allP;
+      });
+
   return embeddingP;
 }
 
 function getEmbeddings(Dataset, options) {
   const
   fnName = 'getEmbeddings',
+  cacheId = fnName,
+  useCache = true;
+  let cached, embeddingsP;
+  if (useCache && (cached = cache.get(cacheId))) {
+    console.log(fnName, 'cache.get', cacheId, cached.length);
+    embeddingsP = Promise.resolve(cached);
+  } else {
+    embeddingsP = getEmbeddingsNoCache(Dataset, options);
+    embeddingsP
+      .then(datasetsVectors => {
+        if (useCache)
+          console.log(fnName, 'cache.put', cacheId, datasetsVectors.length);
+          cache.put(cacheId, datasetsVectors);
+      });
+  }
+  return embeddingsP;
+}
+
+function getEmbeddingsNoCache(Dataset, options) {
+  const
+  fnName = 'getEmbeddingsNoCache',
+  // or just embedDatasets(Dataset, options)
   embedP = ! embeddingP ?
     embedDatasets(Dataset, options) :
     Promise.resolve(),
@@ -862,11 +980,21 @@ function getEmbeddings(Dataset, options) {
   return resultP;
 }
 
+/**
+ * @return promise yielding undefined
+ */
 function datasetForEmbed(dataset) {
   const
-  /** _id is not present in dataset.__data */
+  fnName = 'datasetForEmbed',
+  /** _id is not present in dataset.__data
+   * .__data does contain .name, which is equal.
+   */
   id = dataset.getId(),
-  {tags, ...datasetSansTags} = dataset.__data,
+  /** Reformat the tags array into a text list.
+   * Omit clientId, groupId because they are hexadecimal DB ids and not
+   * semantically informative.
+   */
+  {tags, clientId, groupId, ...datasetSansTags} = dataset.__data,
   tagsText = Array.isArray(tags) ? ' ' + tags.join(' ') : '',
 
   /** Initially used selected fields to minimise context size, but now
@@ -876,11 +1004,25 @@ function datasetForEmbed(dataset) {
    * description.id = id;
    */
   description = Object.assign({/*id*/}, datasetSansTags),
-  prefix = 'The attributes of the dataset named ' + id + ' are :\n',
+  prefix = 'The YAML form of the dataset named ' + id + ' is :\n',
   // JSON.stringify(description)
-  readable = prefix + flattenJSON(description).join(', ') + tagsText;
-  console.log('embedDatasets', readable);
-  ensureItem(id, readable);
+  // datasetToText(description)
+  readable = prefix + datasetToYaml(description) + 'tags: ' + tagsText;
+  function datasetToText(description) {
+    return flattenJSON(description).join(', ');
+  }
+
+  console.log(fnName, readable);
+  const embedP = ensureItem(id, readable);
+  return embedP;
+}
+
+/**
+ * @return string with a trailing newline
+ */
+function datasetToYaml(dataset) {
+  const text = YAML.stringify(dataset, /*options*/ undefined);
+  return text;
 }
 
 //------------------------------------------------------------------------------

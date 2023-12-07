@@ -19,8 +19,11 @@ var trace_filter = 1;
 
 /** Determine if the point v is in the interval domain.
  * The result is analogous to the comparator function (cmp) result.
- * Assume i[0] < i[1].
+ * Assume i[0] <= i[1].
  * @return 0 if v is in i, -1 if v < i, +1 if v > i
+ * This result can be used as a boolean, but in that case the meaning is
+ * 'value is outside interval', so probably add an alias to reflect that,
+ *  e.g. export notInInterval = inInterval, or outsideInterval = inInterval.
  * @desc
  * The comparison is <=, i.e. the interval domain is a closed [] interval;
  * equivalent to intervalOverlapOrAbut().

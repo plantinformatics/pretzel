@@ -1,0 +1,49 @@
+
+{{#if this.args.dataset.isVCF}}
+  <div class="margin-top">
+    <button type="button" onclick={{this.getVcfStatus}} class="btn btn-info btn-xs margin-1em">Get VCF Status</button>
+    <div class="margin-top status-icon">
+      {{#data-table data=this.vcfStatus.rows as |t| }}
+        {{#t.column propertyName='Name' name='Chr' defaultHeader=true as |col|}}
+          <span class={{call (fn this.chrNotInDataset col.row.Name ) }}>{{col.row.Name}}</span>
+        {{/t.column}}
+        {{#each this.vcfStatus.columnNames as |columnName| }}
+        {{#if this.showDetail}}
+          {{#t.column propertyName=columnName name=columnName as |col| }}
+            {{#if col.header}}
+              <span class={{call (fn this.suffixNotInPipeline columnName ) }}>{{columnName}}</span>
+            {{/if}}
+            {{#if col.body}}
+              {{get col.row columnName}}
+            {{/if}}
+          {{/t.column}}
+
+        {{else}}
+          {{#t.column propertyName=columnName name=columnName as |col|}}
+            {{#if col.header}}
+              <span class={{call (fn this.suffixNotInPipeline columnName ) }}>{{columnName}}</span>
+            {{/if}}
+            {{#if col.body}}
+              {{elem/icon-base name=(call (fn this.cellIcon col.row columnName) ) }}
+            {{/if}}
+          {{/t.column}}
+        {{/if}}
+        {{/each}}
+      {{/data-table}}
+    </div>
+
+    <span class="filter-group-col">
+      <input type="checkbox" checked={{this.showDetail}}
+        oninput={{action (mut this.showDetail) value="target.checked"}} 
+      >
+      <EmberTooltip side="right" delay=500>
+        <span>Show size and time-stamp of VCF files</span>
+      </EmberTooltip>
+    </span>
+    <label>Show detail</label>
+
+    
+  </div>
+{{/if}}
+
+{{yield}}

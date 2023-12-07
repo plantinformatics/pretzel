@@ -15,6 +15,8 @@ import { task, didCancel } from 'ember-concurrency';
 import config from '../config/environment';
 
 import {
+  getCellFeatures,
+  cellFeaturesWithDatasetTag,
   setRowAttributes,
   getRowAttribute,
   getRowAttributeFromData,
@@ -28,11 +30,18 @@ import {
   datasetId2Class,
   featureBlockColourValue, columnNameAppendDatasetId, columnName2SampleName, valueIsCopies,
 } from '../utils/data/vcf-feature';
+import {
+  referenceSamplesSymbol,
+  Measure,
+  Counts,
+} from '../utils/data/genotype-order';
 import { toTitleCase } from '../utils/string';
 import { thenOrNow } from '../utils/common/promises';
 import { tableRowMerge } from '../utils/draw/progressive-table';
 import { eltWidthResizable, noKeyfilter } from '../utils/domElements';
-import { sparseArrayFirstIndex } from '../utils/common/arrays';
+import { toggleString, sparseArrayFirstIndex } from '../utils/common/arrays';
+import { toggleMember } from '../utils/common/sets';
+import { toggleObject } from '../utils/ember-devel';
 
 // -----------------------------------------------------------------------------
 
@@ -41,6 +50,9 @@ const trace = 1;
 
 const datasetSymbol = Symbol.for('dataset');
 const featureSymbol = Symbol.for('feature');
+
+/** Copied from components/panel/manage-genotype.js; comments are there */
+const sampleFiltersSymbol = Symbol.for('sampleFilters');
 
 // -----------------------------------------------------------------------------
 
@@ -81,6 +93,16 @@ const featureValuesWidths = {
 let tableHeight = '100%';
 /** Enable use of tableHeightFromParent().  */
 const calculateTableHeight = true;
+/** The tabs within showSampleFilters
+ * (tab-view-SampleFilter-{haplotype,variantInterval,feature} ) which sets
+ * .sampleFilterTypeName can be used to limit the available user actions :
+ * selecting and using blockSampleFilters(block, sampleFilterTypeName), i.e. :
+ * - haplotype : block.sampleFilters.haplotype
+ * - feature : block.sampleFilters.feature (selecting SNPs Alt/Ref in afterSelectionHaplotype())
+ * - variantInterval : select block.sampleFilters.variantInterval
+  */
+const sampleFilterTypeNameModal = false;
+
 
 /** <div> which contains HandsOnTable elements. */
 const tableContainerSelector = '#observational-table';
@@ -245,6 +267,7 @@ export default Component.extend({
 
   selectedColumnName : null,
   selectedSampleColumn : false,
+  selectedColumnNames : alias('userSettings.selectedColumnNames'),
 
   /** current row data array which has been given to table.
    * This is updated progressively from .data by progressiveRowMerge().
@@ -858,13 +881,15 @@ export default Component.extend({
     const
     fnName = 'afterSelectionHaplotype',
     columnName = this.columnNames[col];
-    /// add this as a checkbox in Controls tab, default false
-    const selectFeaturesByLDBlock = this.userSettings.selectFeaturesByLDBlock;
+    let value, feature, features, tags;
+    /** .sampleFilterTypeName is set via tab change in Controls tab. */
+    const sampleFilterTypeName = this.userSettings.sampleFilterTypeName;
     dLog(fnName, row, col);
     if (col === -1) {
       /** Ctrl-A Select-All causes row===-1 and col===-1 */
     } else if (
-      (row >= 0) && ! selectFeaturesByLDBlock && 
+      (row >= 0) &&
+        (! sampleFilterTypeNameModal || (sampleFilterTypeName === 'feature')) && 
         (columnName.startsWith('Ref') || columnName.startsWith('Alt'))) {
       const feature = this.featureToggleRC(row, col, columnName);
       if (feature) {
@@ -876,6 +901,16 @@ export default Component.extend({
     if (ldBlock) {
       later(() => this.table.render(), 1000);
     }
+    } else if (
+      this.datasetColumns.includes(columnName) &&
+        (features = cellFeaturesWithDatasetTag(this.table, row, col, 'variantInterval'))
+    ) {
+      /* features[0] here is the variantInterval dataset feature, whereas
+       * tableCoordsToFeature(t, {row, col}) returns the SNP feature.
+       */
+      const rowSNPFeature = tableCoordsToFeature(this.table, {row, col});
+      this.variantIntervalToggle(rowSNPFeature, features[0]);
+      this.filterSamplesBySelectedHaplotypes();
     } else if ((row === -1) && this.datasetColumns?.includes(columnName)) {
       /* plan to use columnNameIsDatasetColumn(columnName, false), but currently 
        * overlap with intersectionDialogDataset, which should be enabled also. */
@@ -888,6 +923,34 @@ export default Component.extend({
        */
         const datasetId = columnName;
         this.featureColumnDialogDataset(datasetId);
+    } else if (
+      (row === -1) &&
+        ! this.gtDatasetColumns.includes(columnName) &&
+        ! columnNameIsNotSample(columnName) ) {
+      /* toggle selection of this column / sample.  columnName is not
+       * in gtDatasetColumns, Alt or Ref, 'LD Block', or have tag
+       * variantInterval. */
+      dLog(fnName, 'selectedColumnNames', this.selectedColumnNames.length, columnName);
+      // this may move to a hover action so it doesn't preclude the sample toggle.
+      const showMeasure = this.urlOptions.showMeasure;
+      if (! showMeasure) {
+        /* columnName includes datasetId; possibly use sampleName here,
+         * or calculate selectedColumnNames from block referenceSamples. */
+        toggleString(this.selectedColumnNames, columnName);
+      }
+      const
+      sampleName = columnName2SampleName(columnName),
+      feature = tableCoordsToFeature(this.table, {row:0, col}),
+      block = feature.get('blockId.content'),
+      referenceSamples = block[referenceSamplesSymbol] || (block[referenceSamplesSymbol] = []);
+      if (! showMeasure) {
+        /** sampleName instanceof string, so toggleObject() works.  */
+        toggleObject(referenceSamples, sampleName);
+        this.filterSamplesBySelectedHaplotypes();
+      } else {
+        const sampleMatches = block[Symbol.for('sampleMatches')];
+        console.log(fnName, sampleMatches[sampleName], sampleName);
+      }
     }
   },
 
@@ -914,6 +977,9 @@ export default Component.extend({
       if (dataset) {
         /* null -> true -> false */
         let pf = dataset.positionFilter;
+        if (typeof pf === 'number') {
+          pf = true;
+        }
         switch (pf) {
         default    :
         case null  : pf = true; break;
@@ -923,6 +989,7 @@ export default Component.extend({
         dLog(fnName, dataset.positionFilter, '->', pf, dataset.id);
         dataset.positionFilter = pf;
         // currently just signals the change and updates the colHeader; could also make the change.
+        // related : positionFilterChanged()
         this.changeDatasetPositionFilter(dataset, pf);
       }
     }
@@ -1029,9 +1096,11 @@ export default Component.extend({
         td.textContent = value;
       }
       this.valueDiagonal(td, value, valueToColourClass);
+      const selectFeatures = ! sampleFilterTypeNameModal ||
+            this.userSettings.sampleFilterTypeName === 'feature';
       /** Use this for 'LD Block' */
       const matchRefAlt = this.userSettings.haplotypeFilterRef ? 'Ref' : 'Alt';
-      if (refAltHeadings.includes(prop_string))
+      if (selectFeatures && refAltHeadings.includes(prop_string))
       {
         const
         dataset = prop[Symbol.for('dataset')],
@@ -1048,8 +1117,7 @@ export default Component.extend({
   featureIsFilter(feature, prop) {
     const
     block = feature.get('blockId.content'),
-    featureFiltersSymbol = Symbol.for('featureFilters'),
-    featureFilters = block?.[featureFiltersSymbol],
+    featureFilters = block?.[sampleFiltersSymbol]?.feature,
     matchRef = feature[Symbol.for('matchRef')],
     featureIsFilter = featureFilters?.includes(feature),
     isFilter = featureIsFilter && (matchRef === (prop === 'Ref'));
@@ -1243,6 +1311,24 @@ export default Component.extend({
       td.title = hoverText;
       $(td).text(cellText);
     }
+    const sampleFilterTypeName = this.userSettings.sampleFilterTypeName;
+    if (! sampleFilterTypeNameModal || (sampleFilterTypeName === 'variantInterval')) {
+      /* or  features?.filter(
+        feature => feature.get('blockId.datasetId.tags')?.includes('variantInterval')); */
+      const
+      viFeatures = cellFeaturesWithDatasetTag(this.table, row, col, 'variantInterval');
+      if (viFeatures?.length) {
+          const
+          rowFeature = this.getRowAttribute(instance, /*visualRowIndex*/ row),
+          block = rowFeature?.get('blockId'),
+          sampleFilters = block?.content[sampleFiltersSymbol],
+          isSelected = sampleFilters?.variantInterval?.includes(viFeatures[0]);
+          if (isSelected) {
+            td.classList.add('featureIsFilter');
+          }
+        }
+      }
+
   },
 
   featureNameHoverText(feature) {
@@ -1349,7 +1435,7 @@ export default Component.extend({
     dLog('columnNames', columnNames, this.colSample0);
     return columnNames;
   }),
-  colHeaders : computed('columnNames', 'datasetPositionFilterChangeCount', function() {
+  colHeaders : computed('columnNames', 'datasetPositionFilterChangeCount', 'selectedColumnNames.length', function() {
     const colHeaders = this.get('columnNames').map((columnName) => {
       const
       dataset = columnName[datasetSymbol],
@@ -1362,7 +1448,8 @@ export default Component.extend({
       positionFilterIcon = positionFilterClass ?
         '<i class="glyphicon glyphicon-' + positionFilterClass + '"></i>' : '',
       extraClassName = this.columnNameToClasses(fieldName),
-      colHeader = '<div class="head' + extraClassName + datasetClass  + '">'
+      selectedClassName = this.selectedColumnNames.find(name => columnName.startsWith(name)) ? ' col-selectedSample' : '',
+      colHeader = '<div class="head' + extraClassName + datasetClass + selectedClassName + '">'
         + positionFilterIcon
         + fieldName + '</div>';
       return colHeader;
@@ -1435,6 +1522,7 @@ export default Component.extend({
    * Some classNames are used by CSS selectors only in colHeaders, some are only used in cells.
    */
   columnNameToClasses(columnName) {
+      const fnName = 'columnNameToClasses';
       let extraClassName;
       /** dataset columns : gtDatasetColumns datasetColumns :
        * . column header displays Dataset .displayName;
@@ -1494,7 +1582,7 @@ export default Component.extend({
     dataset = this.colToDataset(col);
     let pf;
     if (dataset &&
-        (typeof (pf = dataset.positionFilter) === "boolean")) {
+        (['boolean', 'number'].includes(typeof (pf = dataset.positionFilter)))) {
       // possibly : 'col-positionFilter-' + pf
       className = pf ? 'plus' : 'minus';
     }
@@ -1865,6 +1953,7 @@ export default Component.extend({
         const startTime = Date.now();
         console.time(fnName + ':updateSettings');
         table.updateSettings(settings);
+        // dLog(fnName,  d3.selectAll('.col-sample, .col-selectedSample').nodes());
         /* try setting meta references to features in batchRender().
          * In previous attempts it seemed to cause O(n2) rendering of cells.
          */
@@ -2056,12 +2145,13 @@ export default Component.extend({
   //----------------------------------------------------------------------------
 
   filterSamplesBySelectedHaplotypes() {
-    this.haplotypeFilterSamples(this.showHideSampleFn.bind(this), this);
+    this.filterSamples(this.showHideSampleFn.bind(this), this);
   },
   showHideSampleFn(sampleName, counts) {  
-    if (counts.matches || counts.mismatches) {
+    // counts is now Measure, replacing : distance, {matches,mismatches}.
+    if (Measure.haveData(counts)) {
       const
-      hide = counts.mismatches,
+      hide = Measure.hide(counts),
       columnIndex = this.columnNames.indexOf(sampleName),
       table = this.table,
       hiddenColumnsPlugin = table.getPlugin('hiddenColumns');

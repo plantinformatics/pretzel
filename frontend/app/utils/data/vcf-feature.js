@@ -3,10 +3,13 @@ import { A as Ember_A } from '@ember/array';
 
 import createIntervalTree from 'interval-tree-1d';
 
-import { intervalOrdered } from '../interval-calcs';
-import { toTitleCase } from '../string';
+import { stringCountString, toTitleCase } from '../string';
 import { stringGetFeature, stringSetSymbol, stringSetFeature } from '../panel/axis-table';
 import { contentOf } from '../common/promises';
+import { featuresIntervalsForTree } from './features';
+import { intervalsIntersect } from '../interval-calcs';
+import { Measure } from './genotype-order';
+
 
 /* global performance */
 
@@ -53,6 +56,36 @@ const cellMultiFeatures = false;
 
 //------------------------------------------------------------------------------
 
+/** Identify those columns which are not sample names.
+ * Match both the raw Feature.values key and the Capitalised name which is
+ * displayed in the column header (without the trailing "\t" + datasetId).
+ * Related : columnNameIsNotSample() (for current usage, these 2 could
+ * potentially be merged).
+ */
+const nonSampleNames = [
+  'ref', 'alt', 'tSNP', 'MAF',
+  'Ref', 'Alt', 'LD Block',
+];
+/** Given a key within Feature.values, classify it as sample (genotype data) or other field.
+ */
+function valueNameIsNotSample(valueName) {
+  return nonSampleNames.includes(valueName);
+}
+
+//------------------------------------------------------------------------------
+
+/**
+ * @return true if value is 0, 1, 2, or 0/0, 0/1, 1/0, 1/1,
+ * @param value is defined, and is a string
+ * It is assumed to be well-formed - only the first char is checked.
+ */
+function gtValueIsNumeric(value) {
+  const char = value[0];
+  return ['0', '1', '2'].includes(char);
+}
+
+//------------------------------------------------------------------------------
+
 /** Convert punctuation in datasetId to underscore, to sanitize it and enable
  * use of the result as a CSS class name.
  *
@@ -68,6 +101,20 @@ function datasetId2Class(datasetId) {
 
 // -----------------------------------------------------------------------------
 
+/** If block is Germinate and block._meta.linkageGroupName is defined, insert
+ * linkageGroupName into requestOptions, for use with URL path parameter /chromosome/
+ * by utils/data/germinate.js : callsetsCalls(), via 
+ * germinate-genotype.js :  germinateGenotypeLookup()
+ */
+function addGerminateOptions(requestOptions, block) {
+  if (block?.hasTag('Germinate') && block._meta?.linkageGroupName) {
+    requestOptions.linkageGroupName = block._meta.linkageGroupName;
+  }
+  return requestOptions;
+}
+
+//------------------------------------------------------------------------------
+
 /** Lookup the genotype for the selected samples in the interval of the brushed block.
  * The server store to add the features to is derived from
  * vcfGenotypeLookupDataset() param blockV, from brushedOrViewedVCFBlocksVisible,
@@ -80,6 +127,7 @@ function datasetId2Class(datasetId) {
  * {requestFormat, requestSamplesAll, headerOnly},
  * . requestFormat 'CATG' (%TGT) or 'Numerical' (%GT for 01)
  * . headerOnly true means -h (--header-only), otherwise -H (--no-header)
+ * . linkageGroupName defined if isGerminate
  *
  * @param vcfDatasetId  id of VCF dataset to lookup
  * @param scope chromosome, e.g. 1A, or chr1A - match %CHROM chromosome in .vcf.gz file
@@ -96,6 +144,9 @@ function vcfGenotypeLookup(auth, samples, domainInteger, requestOptions, vcfData
   preArgs = Object.assign({
     region, samples, requestInfo
   }, requestOptions);
+  /** Noted in vcfGenotypeLookup.bash : When requestOptions.isecDatasetIds is given,
+   * -R is used, so -r is not given, i.e. preArgs.region is not used.
+   */
   // parent is .referenceDatasetName
 
 
@@ -116,7 +167,9 @@ function vcfGenotypeLookup(auth, samples, domainInteger, requestOptions, vcfData
   textP = auth.vcfGenotypeLookup(vcfDatasetId, scope, preArgs, rowLimit, {} )
     .then(
       (textObj) => {
-        const text = textObj.text;
+        /* Result from Pretzel API endpoint is vcfGenotypeLookup is {text};
+         * result from Germinate is an array, recognised by vcf-feature.js : resultIsGerminate(). */
+        const text = textObj.text || textObj;
         auth.apiStatsCount(fnName, -1);
         return text;
       });
@@ -168,10 +221,10 @@ scaffold38755_709316	709316	0/0	0/1	0/0	0/0	0/0	./.	0/0	0/0	0/0	0/1	0/0	0/0	0/0	
  * @param block view dataset block for corresponding scope (chromosome)
  * @param requestFormat 'CATG', 'Numerical', ...
  * @param replaceResults  true means remove previous results for this block from block.features[] and selectedFeatures.
- * @param selectedFeatures  updated directly - can change to use updatedSelectedFeatures
+ * @param selectedService if defined then update selectedFeatures
  * @param text result from bcftools request
  */
-function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures, text) {
+function addFeaturesJson(block, requestFormat, replaceResults, selectedService, text) {
   const fnName = 'addFeaturesJson';
   dLog(fnName, block.id, block.mapName, text.length);
   /** optional : add fileformat, FILTER, phasing, INFO, FORMAT to block meta
@@ -180,8 +233,6 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
    */
   let
   createdFeatures = [],
-  /** The same features as createdFeatures[], in selectedFeatures format. */
-  selectionFeatures = [],
   /** if the output is truncated by rowLimit aka nLines, the last line will not
    * have a trailing \n, and is discarded.  If incomplete lines were not
    * discarded, values.length may be < 4, and feature.value may be undefined.
@@ -200,16 +251,20 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
   }
 
   if (replaceResults) {
-    // let mapChrName = Ember_get(block, 'brushName');
-    /* remove features of block from createdFeatures, i.e. matching Chromosome : mapChrName
-     * If the user has renewed the axis brush, then selectedFeatures will not
-     * contain any features from selectionFeature in previous result; in that
-     * case this has no effect and none is required.
-     * If the user send a new request with e.g. changed samples, then this would apply.
-     */
-    let blockSelectedFeatures = selectedFeatures.filter((f) => f.feature.get('blockId.id') === block.id);
-    if (blockSelectedFeatures.length) {
-      selectedFeatures.removeObjects(blockSelectedFeatures);
+    if (selectedService) {
+      const selectedFeatures = selectedService.selectedFeatures;
+      // let mapChrName = Ember_get(block, 'brushName');
+      /* remove features of block from createdFeatures, i.e. matching Chromosome : mapChrName
+       * If the user has renewed the axis brush, then selectedFeatures will not
+       * contain any features from selectionFeature in previous result; in that
+       * case this has no effect and none is required.
+       * If the user send a new request with e.g. changed samples, then this would apply.
+       * This can also be moved to selectedService.
+       */
+      let blockSelectedFeatures = selectedFeatures.filter((f) => f.feature.get('blockId.id') === block.id);
+      if (blockSelectedFeatures.length) {
+        selectedFeatures.removeObjects(blockSelectedFeatures);
+      }
     }
 
     if (block.get('features.length')) {
@@ -217,6 +272,10 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
       block.features.removeAt(0, block.get('features.length'));
     }
   }
+  if (selectedService) {
+    selectedService.selectedFeaturesUpdateIndex();
+  }
+
 
   lines.forEach((l, lineNum) => {
     if (l.startsWith('##')) {
@@ -380,7 +439,9 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
         nFeatures++;
 
         let mapChrName = Ember_get(feature, 'blockId.brushName');
-        let selectionFeature = {Chromosome : mapChrName, Feature : feature.name, Position : feature.value[0], feature};
+        if (selectedService) {
+          selectedService.selectedFeaturesMergeFeature(mapChrName, feature);
+        }
 
         /* vcfFeatures2MatrixView() uses createdFeatures to populate
          * displayData; it could be renamed to resultFeatures; the
@@ -388,7 +449,6 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
          * existingFeature.
          */
         createdFeatures.push(feature);
-        selectionFeatures.push(selectionFeature);
         // If existingFeature then addObject(feature) is a no-op.
         if (replaceResults || ! existingFeature) {
           block.features.addObject(feature);
@@ -397,7 +457,6 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures,
 
     }
   });
-  selectedFeatures.pushObjects(selectionFeatures);
   blockEnsureFeatureCount(block);
   block.addFeaturePositions(createdFeatures);
 
@@ -460,50 +519,67 @@ function resultIsGerminate(data) {
  * Unlike bcftools, Germinate probably sends results only in CATG (nucleotide)
  * format, which is the format it uses for upload and storage in HDF.
  * @param replaceResults  true means remove previous results for this block from block.features[] and selectedFeatures.
- * @param selectedFeatures  same comment as per addFeaturesJson().
+ * @param selectedService if defined then update selectedFeatures
  * @param data result from Germinate callsets/<datasetDbId>/calls request
+ * @param options { nSamples }
  */
-function addFeaturesGerminate(block, requestFormat, replaceResults, selectedFeatures, data) {
+function addFeaturesGerminate(block, requestFormat, replaceResults, selectedService, data, options) {
   const fnName = 'addFeaturesGerminate';
   dLog(fnName, block.id, block.mapName, data.length);
 
   if (replaceResults) {
     dLog(fnName, 'replaceResults not implemented');
   }
+  if (false)
+  if ((options.nSamples !== undefined) && (data.length > options.nSamples)) {
+    dLog(fnName, 'truncate data', data.length, options.nSamples);
+    data = data.slice(0, options.nSamples);
+  }
+
   const
   store = block.get('store'),
-  columnNames = data.mapBy('callSetName'),
+  columnNames = data.mapBy('callSetName').uniq(),
   sampleNames = columnNames,
-  selectionFeatures = [],
   createdFeatures = data.map((call, i) => {
     const f = {values : {}};
-    /* Will lookup f.value in block.features interval tree and createdFeatures
+    /* Will lookup f.value in block.features interval tree,
      * and if found, merge with existing feature - factor out use of
      * mergeFeatureValues() in addFeaturesJson().
+     * Using createdFeatures.push(feature) instead of =data.map()
      */
     // call.callSetDbId identifies sample name : callSetName
     // previously seeing in results : 'CnullT' - this is now fixed in java.
     const genotypeValue = call.genotypeValue;
     f.values[call.callSetName] = genotypeValue;
     /* "variantName": "m2-23.0" 
-     * m2-23.0 => m2 is marker name and 23.0 is its position */
-    const
-    [markerName, positionText] = call.variantName.split('-'),
+     * m2-23.0 => m2 is marker name and 23.0 is its position
+     * Some of the marker names contain '-', e.g. 'scaffold77480-1_24233-24233.0'
+     * so instead of split('-'), use .match(/(.+) ... ) which is greedy.
+     */
+    let
+    [wholeString, markerName, positionText] = call.variantName.match(/(.+)-(.+)/),
     position = +positionText;
-    f.value_0 = position;
-    f.value = [position];
+    if (isNaN(position)) {
+      // handle Oct19 format :  dbid_mapid_ exome SNP name e.g. 6_20_6_scaffold77480, or?  scaffold72661_85293-85293.0
+      markerName = positionText;
+    } else {
+      f.value_0 = position;
+      f.value = [position];
+    }
 
     let feature = f;
     /** sampleID corresponds to callSetName, so exclude it from the feature name/id */
     const [datasetID, sampleID] = call.callSetDbId.split('-');
-    /* name is unique per row;  for 1 feature per cell, append : + '_' + call.callSetName */
-    feature._name = feature.id =
+    /* .id is unique per genotype table row;  for 1 feature per cell, append : + '_' + call.callSetName */
+    feature._name = markerName;
+    feature.id =
       block.id + '_' + datasetID + '_' + markerName;
     let existingFeature = store.peekRecord('Feature', feature.id);
     if (existingFeature) {
       mergeFeatureValues(existingFeature, feature);
       feature = existingFeature;
       // this is included in createdFeatures, since it is a result from the current request.
+      // as noted in addFeaturesJson(), can rename to resultFeatures.
     } else {
       // addFeaturesJson() uses feature.blockId - not sure if that is applicable
       feature.blockId = block;
@@ -514,17 +590,21 @@ function addFeaturesGerminate(block, requestFormat, replaceResults, selectedFeat
     return feature;
   });
 
-  // copied from addFeaturesJson() - may be similar enough to factor.
-  createdFeatures.forEach(feature => {
-    let mapChrName = block.get('brushName');
-    let selectionFeature = {Chromosome : mapChrName, Feature : feature.name, Position : feature.value[0], feature};
+  dLog(fnName, data.length, columnNames.length);
 
-    createdFeatures.push(feature);
-    selectionFeatures.push(selectionFeature);
+  if (selectedService) {
+    const
+    feature = createdFeatures[0],
+    mapChrName = feature?.get('blockId.brushName');
+    // selectedService = feature?.get('blockId.axis.selected');
+    selectedService.selectedFeaturesUpdateIndex();
+    createdFeatures.forEach(
+      feature => selectedService.selectedFeaturesMergeFeature(mapChrName, feature));
+  }
+  // createRecord() connects to block OK, so this is not required :
+  // createdFeatures.forEach(feature => {
     // block.features.addObject(feature);
-  });
 
-  selectedFeatures.pushObjects(selectionFeatures);
   blockEnsureFeatureCount(block);
   block.addFeaturePositions(createdFeatures);
 
@@ -674,7 +754,17 @@ function featureMaf(feature, i) {
 }
 function featureMafValue(feature) {
   /** a number, domain [0,1]  */
-  const maf = feature.get('values.MAF');
+  const maf = normalizeMaf(feature.get('values.MAF'));
+  return maf;
+}
+
+/** MAF (Minor Allele Frequency) is conventionally expressed as a number in the
+ * range [0, 0.5]
+ */
+function normalizeMaf(maf) {
+  if ((maf !== undefined) && (maf > 0.5)) {
+    maf = 1 - maf;
+  }
   return maf;
 }
 
@@ -694,10 +784,11 @@ function sampleIsFilteredOut(block, sampleName) {
   let hide;
   // matches may be empty
   if (matches) {
+    // counts is now Measure, replacing : distance, {matches,mismatches}.
     /** matches may not contain all samples of block, because of samplesLimit. */
     const counts = matches[sampleName];
     /** also done in matrix-view.js : showHideSampleFn() */
-    hide = counts?.mismatches;
+    hide = Measure.hide(counts);
   }
   return hide;
 }
@@ -990,10 +1081,10 @@ function blockToMatrixColumn(singleBlock, block, sampleName, features) {
 }
 
 /**
- * @param features block.featuresInBrush
+ * @param features block.featuresInBrushOrZoom
  * (may call this function once with features of all blocks (brushedVCFBlocks) )
 
- * brushedVCFBlocks.reduce ( block.featuresInBrush.reduce() )
+ * brushedVCFBlocks.reduce ( block.featuresInBrushOrZoom.reduce() )
 
  * @param featureFilter filter applied to featuresArrays[*]
  * @param sampleFilters array of optional additional filters (selected sample, callRate filter)
@@ -1012,7 +1103,7 @@ function vcfFeatures2MatrixViewRows(
 }
 /** Similar to vcfFeatures2MatrixView(), but merge rows with identical position,
  * i.e. implement options.gtMergeRows
- * @param features block.featuresInBrush. one array, one block.
+ * @param features block.featuresInBrushOrZoom. one array, one block.
  * @param featureFilter filter applied to features
  * @param sampleFilters array of optional additional filters (selected sample, callRate filter)
  * @param sampleNamesCmp undefined, or a comparator function to sort sample columns
@@ -1024,18 +1115,25 @@ function vcfFeatures2MatrixViewRowsResult(
   result, requestFormat, features, featureFilter, sampleFilters,
   sampleNamesCmp, options, datasetIndex) {
   const fnName = 'vcfFeatures2MatrixViewRowsResult';
+  const
+  userSettings = options.userSettings,
+  optionsMAF = {
+    requestSamplesAll : userSettings.requestSamplesAll,
+    selectedSamples : options.selectedSamples};
   const showHaplotypeColumn = features.length && features[0].values.tSNP;
   const block = features.length && contentOf(features[0].blockId);
   const
   dataset = block?.get('datasetId'),
-  datasetId = dataset?.get('id');
+  datasetId = dataset?.get('id'),
+  enableFeatureFilters = dataset.get('enableFeatureFilters');
 
   let sampleNamesSet = new Set();
 
   // result =
   features.reduce(
     (res, feature) => {
-      if (featureFilter(feature)) {
+      if (! enableFeatureFilters || featureFilter(feature)) {
+        featureSampleMAF(feature, optionsMAF);
         const
         row = rowsAddFeature(res.rows, feature, 'Name', 0);
         if (showHaplotypeColumn) {
@@ -1207,14 +1305,7 @@ function annotateRowsFromFeatures(rows, features, selectedFeaturesValuesFields) 
   const
   fnName = 'annotateRowsFromFeatures',
   p1 = performance.mark('p1'),
-  /** f.value.length may be 1.  intervals[*].length must be 2.
-   * createIntervalTree() gets infinite recursion if intervals are not ordered.
-   */
-  intervals = features.map(f => {
-    const i = f.value.length > 1 ? intervalOrdered(f.value) : [f.value[0], f.value[0]+1];
-    i[featureSymbol] = f;
-    return i;
-  }),
+  intervals = featuresIntervalsForTree(features),
   p2 = performance.mark('p2'),
   /** Build tree */
   intervalTree = createIntervalTree(intervals);
@@ -1336,15 +1427,155 @@ function featureSampleNames(sampleNamesSet, feature, filterFn) {
 
 //------------------------------------------------------------------------------
 
+/** Calculate sample MAF for features.
+ */
+function featuresSampleMAF(features, options) {
+  features.forEach(feature => featureSampleMAF(feature, options));
+}
+/** Calculate sample MAF for feature, for the loaded samples, either selected or
+ * all samples.
+ * Update feature.values.MAF, replacing any value read from the API request.
+ * Related : collateBlockSamplesCallRate(), featureCallRateFilter().
+ */
+function featureSampleMAF(feature, options) {
+  const
+  fnName = 'featuresSampleMAF',
+  { selectedSamples,  requestSamplesAll } = options,
+  /** Germinate does not contain alt/ref; could determine by count. */
+  alt = feature.values.alt;
+  if ((requestSamplesAll || selectedSamples) && alt) {
+    const
+    counts = Object.entries(feature.values)
+      .reduce((sum, [sampleName, value]) => {
+        if (! valueNameIsNotSample(sampleName) &&
+            (requestSamplesAll || selectedSamples.includes(sampleName))) {
+          // skip missing data : './.' or '.|.'
+          if (value[0] !== '.' ) {
+            // assumes diploid values
+            sum.count += 2;
+            sum.copies += copiesOfAlt(value, alt);
+          }
+        }
+        return sum;
+      }, {count : 0, copies : 0}),
+    maf = counts.count ? counts.copies / counts.count : undefined;
+    // dLog(fnName, maf, counts);
+    if (maf !== undefined) {
+      feature.values.MAF = normalizeMaf(maf);
+    }
+    /* possibly : else if (feature.values.MAF !== undefined) { delete feature.values.MAF ; }
+     * tried setting undefined or null - "undefined" is shown in table,
+     * and null breaks stringSetFeature() -> stringSetSymbol().
+     */
+  }
+}
+
+/** Count the copies of Alt in the given genotype value.
+ * @param value string  genotype value.
+ * Either numeric or nucleotide representation.
+ * Either 1 or 2 values; 2 values are separated by | or /.
+ * @param alt string. 1 char. Nucleotide representation of the Alternate allele.
+ */
+function copiesOfAlt(value, alt) {
+  const fnName = 'copiesOfAlt';
+  let copies;
+  if ((typeof value !== 'string') ||
+      ! (value.length == 1 || value.length == 3)) {
+    dLog('fnName', value, alt);
+  } else {
+    if (/^[012]/.test(value)) {
+      // numeric
+      if (value.length === 1) {
+        copies = +value;
+      } else {
+        copies = +value[0] + value[2];
+      }
+    } else {
+      // nucleotide
+      copies = stringCountString(value, alt);
+      if (value.length === 1) {
+        copies *= 2;
+      }
+    }
+  }
+  return copies;
+}
+
+//------------------------------------------------------------------------------
+
+/** Support a repeated storage pattern : object[symbol][fieldName] is an array.
+ */
+function objectSymbolNameArray(object, symbol, fieldName) {
+  // equivalent : object = contentOf(object);
+  if (object.content) {
+    object = object.content;
+  }
+  const
+  arrays = object[symbol] || (object[symbol] = {}),
+  array = arrays[fieldName] || (arrays[fieldName] = Ember_A());
+  return array;
+}
+function objectSymbol(object, symbol) {
+  if (object.content) {
+    object = object.content;
+  }
+  const
+  arrays = object[symbol] || (object[symbol] = {});
+  return arrays;
+}
+
+/** possible alternative to CP get variantSets().
+ * usage :
+ * for viewed VCF blocks
+ *  for selected variantIntervals
+ *    getVariantSet(variantInterval, block)
+ *
+ * @param variantInterval feature of dataset with tag 'variantInterval'
+ * @param block VCF block
+ * @return array of features : SNPs in block which are within variantInterval.value
+ */
+function getVariantSet(variantInterval, block) {
+  /* filter block features; store result in block[symbol][vi-name]   */
+  const
+  fnName = 'getVariantSet',
+  features = block.get('features').toArray()
+    .filter(feature => intervalsIntersect(feature.value, variantInterval.value)),
+  variantIntervalName = variantInterval.value.join('-'),
+  sets = objectSymbol(block, variantSetSymbol);
+  // i.e. block[variantSetSymbol][variantIntervalName] = features;
+  sets[variantIntervalName] = features;
+  return features;
+}
+/**
+ * block  VCF / genotype block
+ * @return [] of SNP feature in
+ */
+ function blockVariantSets(block) {
+   return; // draft, may be not required
+  }
+
+/** Variant Sets.
+ * The result of intersecting a Variant Interval with a VCF block.
+ * block[variantSetSymbol][variantIntervalName] is an array of features of block which overlap the named variantInterval.
+ */
+const variantSetSymbol = Symbol.for('variantSet');
+
+
+//------------------------------------------------------------------------------
+
 
 export {
   refAlt,
+  valueNameIsNotSample,
   datasetId2Class,
+  gtValueIsNumeric,
+  addGerminateOptions,
   vcfGenotypeLookup,
   addFeaturesJson,
   resultIsGerminate,
   addFeaturesGerminate,
   featureBlockColourValue,
+  normalizeMaf,
   sampleIsFilteredOut,
   sampleName2ColumnName,
   columnNameAppendDatasetId,
@@ -1356,4 +1587,7 @@ export {
   annotateRowsFromFeatures,
   featuresValuesFields,
   featureSampleNames,
+  featuresSampleMAF,
+  featureSampleMAF,
+  objectSymbolNameArray,
 };

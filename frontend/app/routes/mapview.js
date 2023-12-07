@@ -17,6 +17,7 @@ let config = {
   dataset: service('data/dataset'),
   block: service('data/block'),
   queryParamsService: service('query-params'),
+  controlsService : service('controls'),
   auth: service('auth'),
   apiServers: service(),
 
@@ -144,6 +145,8 @@ let config = {
     /** Includes user settings such as .tablesPanelRight; that is also present
      * in .componentGeometry - may include that for the .sizes */
     controls = controller.controls;
+    // can move userSettings into services/controls
+    this.controlsService.userSettings = userSettings;
 
     result = EmberObject.create(
       {

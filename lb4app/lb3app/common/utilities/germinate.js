@@ -45,8 +45,10 @@ const fetchEndpoint = isNodeJs ? fetchEndpoint_bent : fetchEndpoint_fetch;
 const testServerURL = 'https://test-server.brapi.org/brapi/v2';
 const yambase = 'https://www.yambase.org/brapi/v1';
 const
-/** scheme + userinfo + host + port */
-germinateServerDomain = 'https://germinate.germinate.plantinformatics.io',
+/** scheme + userinfo + host + port
+ * using env.germinate_ to match the other 2 variables.
+ */
+germinateServerDomain = env.germinate_serverDomain ?? 'https://germinate.plantinformatics.io',
 germinateServerURL = germinateServerDomain + '/api';
 const serverURL = germinateServerURL; // testServerURL;
 const brapi_v = 'brapi/v2';

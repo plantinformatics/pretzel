@@ -3,7 +3,7 @@ import { inject as service } from '@ember/service';
 import Model, { attr, belongsTo, hasMany } from '@ember-data/model';
 // import { computed, set } from '@ember/object';
 import EmberObject from '@ember/object';
-import { observer } from '@ember/object';
+import { get as Ember_get, observer } from '@ember/object';
 import { A } from '@ember/array';
 import { and, alias } from '@ember/object/computed';
 import { debounce, throttle } from '@ember/runloop';
@@ -29,6 +29,8 @@ import {
   featuresCountsResultsDomain,
   featuresCountsResultsFilter,
   featuresCountsResultsTidy,
+  germinateCallsToCounts,
+  featuresCountsTransform,
  } from '../utils/draw/featuresCountsResults';
 
 import { fcsProperties } from '../utils/data-types';
@@ -52,6 +54,10 @@ const moduleName = 'models/block';
 
 /** trace the (array) value or just the length depending on trace level. */
 function valueOrLength(value) { return (trace_block > 1) ? value : value.length; }
+
+function numberOk(x) {
+  return (typeof x === 'number') && ! isNaN(x);
+}
 
 /*----------------------------------------------------------------------------*/
 
@@ -169,8 +175,12 @@ export default Model.extend({
       paths |= odd;
       dLog(id, odd);
     }
+    const 
+    /** Default to 5e4 in early high density data tests; increased for some chrs of 140e3 features. */
+    featureCountForPaths = this.get('urlOptions.featureCountForPaths') || 200e3;
+
     /* don't request paths for HighDensity SNPs until zoomed in to small scale.
-     * The comparison < 5e4 will be false until .featureCount or
+     * The comparison < featureCountForPaths will be false until .featureCount or
      * .featuresCountsResults are received, i.e. while
      * featuresCountIncludingZoom is undefined.
      *
@@ -181,18 +191,45 @@ export default Model.extend({
      * separate tag to indicate the lack of a feature name.
      * So disable paths if tagged HighDensity.
      *
-     * this expression uses the fact that (undefined < 5e4) is false.
+     * this expression uses the fact that (undefined < featureCountForPaths) is false.
      * .featureValueCount is approx 2 * .featuresCount because it sums feature.value.length which is often 2.
      */
       paths &&= ! this.get('isHighDensity') && (
-        (this.get('featuresCount') < 5e4) ||
-          (this.get('featureValueCount') < 5e4 * 2) ||
-          (this.get('featuresCountIncludingZoom') < 5e4));
+        (this.get('featuresCount') < featureCountForPaths) ||
+          (this.get('featureValueCount') < featureCountForPaths * 2) ||
+          (this.get('featuresCountIncludingZoom') < featureCountForPaths));
       // dLog('showPaths', dataset, paths);
     return paths;
   }),
 
   /*--------------------------------------------------------------------------*/
+
+  /** @return truthy if server has featuresCounts result for block
+   * @desc
+   * value is currently sum of counts for bins, i.e. total feature count of block.
+   */
+  get fcStatus() {
+    const status = this[Symbol.for('featuresCountsStatus')];
+    if (status) {
+      dLog('fcStatus', status, this.brushName);
+    }
+    return status;
+  },
+
+  //----------------------------------------------------------------------------
+
+  /** Enable this to monitor get/set of .featureCount
+  featureCount_ : undefined,
+  get featureCount() {
+    return this.featureCount_;
+  },
+  set featureCount(count) {
+    dLog('featureCount', count);
+    this.featureCount_ = count;
+  },
+  */
+
+  //----------------------------------------------------------------------------
 
   hasFeatures : computed('featureCount', 'featureValueCount', function () {
     /** featureValueCount > 0 implies featureCount > 0.
@@ -414,6 +451,23 @@ export default Model.extend({
    * .featureLimits until requested
    */
   ensureFeatureLimits() {
+    if (this.hasTag('Germinate')) {
+      /* limits of linkageGroup are not available, except via callsets calls -
+       * done in germinateCallsToCounts().
+       * this.set('featureLimits', [1, 700e6]);
+       */
+
+      /** approximate featureValueCount = markerCount / linkageGroupCount */
+      const
+      germinate = this.get('datasetId._meta.germinate'),
+      blockCount = Ember_get(germinate, 'linkageGroupCount') ||
+        this.get('datasetId.blocks.length'),
+      markerCountPerChr = blockCount && Ember_get(germinate, 'markerCount') / blockCount;
+      this.set('featureValueCount', markerCountPerChr || 0);
+
+      return;
+    }
+
     let limits = this.get('featureLimits');
     /** Reference blocks don't have .featureLimits so don't request it.
      * block.get('isDataCount') depends on featureCount, which won't be present for
@@ -442,7 +496,7 @@ export default Model.extend({
         dLog('taskGetLimits', bfc._id);
       else {
         dLog('taskGetLimits', bfc, this);
-        this.set('featureLimits', [bfc.min, bfc.max]);
+        this.set('featureLimits', [+bfc.min, +bfc.max]);
         if (! this.get('featureValueCount'))
           this.set('featureValueCount', bfc.featureCount);
       }
@@ -454,6 +508,9 @@ export default Model.extend({
   getLimits: function () {
     let blockId = this.get('id');
     dLog("block getLimits", blockId);
+    if (this.hasTag('Germinate')) {
+      return {_id : blockId, min : 1, max: 700e6};
+    }
 
     let blockP =
       this.get('auth').getBlockFeatureLimits(blockId, /*options*/{});
@@ -661,14 +718,14 @@ export default Model.extend({
          * direct attributes of block to indicate whether it is reference / data
          * block.
          * Also filter out self if this is a child block.
-         * Accept block as a reference if it doesn't have a range or features or a parent;
+         * Accept block as a reference if it has a range or doesn't have features or a dataset parent name;
          * the possibility of references having parents has been floated, this does not support it.
          */
         referenceBlock = blocks && blocks.filter(
           (b) => b &&
             (isQTL ? true :
-             (!!b.range || ! (b.featureValueCount || b.featureLimits) ||
-              ! b.get('datasetId.parent'))) &&
+             (!!b.range || ! (b.featureValueCount || b.featureCount || b.featureLimits) ||
+              ! b.get('datasetId.parentName'))) &&
             (! blockId || (b.get('id') !== blockId))
         );
       } else {
@@ -938,13 +995,38 @@ export default Model.extend({
       return brushedDomain;
     }),
 
+  //----------------------------------------------------------------------------
+
+  /** if .featureCount is defined, calculate the approximate proportion within
+   * zoom or brush if defined, otherwise return all.
+   */
+  featureCountProrata(count) {
+      const
+      limits = this.get('limits'),
+      subDomain = this.brushedDomain || this.zoomedDomain;
+      if (limits && subDomain) {
+        const
+        subDomainSize = intervalSize(subDomain),
+        domainSize = intervalSize(limits);
+        if (numberOk(subDomainSize) && numberOk(domainSize) && domainSize) {
+          count = count * subDomainSize / domainSize;
+        }
+      }
+      return count;
+  },
+
+  /** If the axis of this block is brushed, return .featureCountInBrush if
+   * .featuresCountsResults.length otherwise featureCountProrata(.featureCount).
+   * If not brushed, return .featureCount
+   */
   featuresCountIncludingBrush : computed(
     'featuresCountsResults.[]',
     'featureCountInBrush', 'brushedDomain.{0,1}' /* -Debounced */, 'limits',
     function () {
       let
       count = this.get('axis1d.brushed') ?
-        (this.featuresCountsResults.length ? this.get('featureCountInBrush') : undefined ) :
+        (this.featuresCountsResults.length ?
+         this.get('featureCountInBrush') : this.featureCountProrata(this.featureCount) ) :
         this.featureCount;
       if (trace_block > 1)
         dLog('featuresCountIncludingBrush', count);
@@ -1174,10 +1256,11 @@ export default Model.extend({
   /** @return features of this block, filtered by brushedDomain if the axis of
    * this block is brushed.
    */
-  featuresInBrush : computed('brushedDomain.{0,1}', 'features.[]', function() {
+  featuresInBrushOrZoom : computed('brushedDomain.{0,1}', 'zoomedDomain.{0,1}', 'features.[]', function() {
+    /** zoomedDomain is replaced when it changes, so dependency .{0,1} is not required. */
     let
     features,
-    interval = this.brushedDomain;
+    interval = this.brushedDomain || this.zoomedDomain;
     if (interval) {
       const
       // based on similar in featureInRange().
@@ -1686,19 +1769,56 @@ export default Model.extend({
      * models/axis-brush.js is part of this, and can be renamed to suit;
      * this function is equivalent to axis-brush.js : features().
      */
-    const fnName = 'featuresForAxis';
-    let blockId = this.get('id');
-    let
-    count = this.get('featuresCountIncludingZoom'),
+    const
+    fnName = 'featuresForAxis',
+    blockId = this.get('id'),
+    isGerminate = this.hasTag('Germinate'),
+    /** Count of loaded features in the current view.
+     * If count is not defined and this.hasTag('view') then get featuresCounts
+     * first, except for hasTag('Germinate') which does not yet support
+     * featuresCounts so use getFeatures().
+     */
+    count = this.get('featuresCountIncludingZoom') ||
+        (isGerminate && this.featureCountProrata(this.get('features.length')??0)),
     isZoomedOut = this.get('isZoomedOut'),
     featuresCountsThreshold = this.get('featuresCountsThreshold');
     let features;
     dLog('featuresForAxis', isZoomedOut, count, featuresCountsThreshold, this.get('zoomedDomain'), this.get('zoomedDomainDebounced'));
 
-    /** if the block has chartable data, get features regardless; may also request featuresCounts. */
+    /** if the block has chartable data, get features regardless; may also request featuresCounts.
+     * Similarly for Germinate, start by getting all features (just 1 sample),
+     * to provide a zoomed-out view (can construct a histogram from this result).
+     */
+    const
+    all = isGerminate &&
+      ! this.loadingAllFeatures &&
+      (this.loadingAllFeatures = true);
     /** can use isZoomedOut here instead, e.g. (isZoomedOut === true)  */
-    if (this.get('isChartable') || ((count !== undefined) && (count <= featuresCountsThreshold))) {
-      this.getFeatures(blockId);
+    if (all || this.get('isChartable') ||
+        ((count !== undefined) && (count <= featuresCountsThreshold))) {
+      const featuresP = this.getFeatures(blockId, all);
+      if (all) {
+        featuresP.then(promiseResult => {
+          /** expect :
+              (promiseResult.length === 1) &&
+              ((features[0].state === 'fulfilled') ||
+              features[0].hasOwnProperty('value'))
+          */
+          dLog(fnName, promiseResult.length, promiseResult[0]?.state);
+          if (promiseResult[0]?.state !== 'fulfilled') {
+            dLog(fnName, blockId, 'getFeatures', promiseResult);
+          } else {
+            const
+            features = promiseResult[0].value,
+            summary = germinateCallsToCounts(features),
+            counts = summary.counts;
+            featuresCountsTransform(this, counts);
+            if (summary.limits && ! this.featureLimits) {
+              this.featureLimits = summary.limits;
+            }
+          }
+        });
+      }
     }
     const
       domain = this.getDomain();
@@ -1739,10 +1859,14 @@ export default Model.extend({
 
     return features;
   }),
-  getFeatures(blockId) {
+  /**
+   * @param all true means request all features of the block
+   * @return promise yielding received features
+   */
+  getFeatures(blockId, all) {
     const fnName = 'getFeatures';
     let
-    features = this.get('pathsP').getBlockFeaturesInterval(blockId);
+    features = this.get('pathsP').getBlockFeaturesInterval(blockId, all);
 
     features.then(
       (result) => {
@@ -1753,6 +1877,7 @@ export default Model.extend({
         dLog(moduleName, fnName, 'reject', err);
       }
     );
+    return features;
   },
 
   /** Search in current results for a result which meets the requirements of domain and nBins.

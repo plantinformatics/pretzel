@@ -320,13 +320,6 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     return blocks;
   },
 
-  /*--------------------------------------------------------------------------*/
-
-  get axisBrushObj() {
-    const axisBrushZoom = AxisBrushZoom(stacks.oa);
-    return axisBrushZoom.axisBrushRefn.call(this, 'axisName');
-  },
-
   //----------------------------------------------------------------------------
 
   /** @return true if there is a brush on this axis.

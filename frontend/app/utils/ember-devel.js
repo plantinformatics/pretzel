@@ -7,9 +7,41 @@ const dLog = console.debug;
 
 // -----------------------------------------------------------------------------
 
-/** Find a parent with the nominated type. */
+/** Used only in elt0() */
 import $ from 'jquery';
 
+//------------------------------------------------------------------------------
+
+/** Use .addObject() or .removeObject() to toggle the presence of object in array.
+ *
+ * Also see toggleString() in utils/common/arrays.js, which matches String
+ * values, which this function does not do.  If object is a String, and array
+ * contains a String or string with the same string value, this function will
+ * not match, and will add another object instead of removing the matching value.
+ * toggleMember() in utils/common/sets.js also matches String values, by
+ * converting to string.
+ *
+ * @param array instance of Ember.A() or equivalent, with methods :
+ * .includes(object) -> boolean, and with signature function (object) :
+ * .addObject() and .removeObject()
+ * @param object
+ * @return true iff object was added to array.
+ * i.e. array now includes object
+ */
+function toggleObject(array, object) {
+  const includes = array.includes(object);
+  if (includes) {
+    array.removeObject(object);
+  } else {
+    array.addObject(object);
+  }
+  return ! includes;
+}
+
+
+//------------------------------------------------------------------------------
+
+/** Find a parent with the nominated type. */
 function parentOfType(typeName) {
   let parent = this.parentView;
   while (parent && (parent._debugContainerKey !== typeName))
@@ -123,6 +155,29 @@ function toArrayPromiseProxy(valueP) {
   return proxy;
 }
 
+//------------------------------------------------------------------------------
+
+/** Apply addObjects() to array for each of the given arrays.
+ * @return array
+ */
+function addObjectArrays(array, arrays) {
+  /** result === array */
+  const result = arrays.reduce((union, add) => union.addObjects(add), array);
+  return result;
+}
+
+//------------------------------------------------------------------------------
+
+/** Remove all elements from the array, without replacing the array.
+ * @param array
+ */
+function arrayClear(array) {
+  // or array.length = 0;
+  if (array.length) {
+    array.removeAt(0, array.length);
+  }
+}
+
 // -----------------------------------------------------------------------------
 
 let objectDependenciesCache = new WeakMap();
@@ -187,10 +242,13 @@ function blockInfo(block) { return block && [block.id, block.store.name, block.g
 
 
 export {
+  toggleObject,
   parentOfType, elt0, getAttrOrCP, _internalModel_data,
   pollTaskFn,
   nowOrLater,  promiseText, toPromiseProxy,
   toArrayPromiseProxy,
+  arrayClear,
+  addObjectArrays,
   compareDependencies,
   findParent,
   blockInfo,

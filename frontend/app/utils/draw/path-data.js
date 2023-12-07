@@ -899,7 +899,7 @@ function PathDataUtils(oa) {
         flow_g.selectAll("g > path")
       );
     }
-    const pathClasses = pathClasses(oa);
+    const pathClasses = PathClasses(oa);
     pathClasses.pathColourUpdate(pa, flow);
   }
   const eventBus = oa.eventBus;
@@ -921,7 +921,7 @@ function PathDataUtils(oa) {
   {
     const controlsView = this.controlsView;
     const flows = oa.flows;
-    if (controlsView?.get('pathJoinClient'))
+    if (controlsView?.get?.('pathJoinClient'))
     d3.keys(flows).forEach(function(flowName) {
       let flow = flows[flowName];
       if (flow.enabled)

@@ -43,5 +43,14 @@ export default class DataHaplotypeService extends Service {
     return scale;
   }
 
+  /** 
+   * The values passed to this scale are string representation of Variant Interval,
+   * e.g. "1159971-1161884"
+   */
+  @computed()
+  get variantIntervalColourScale () { 
+    const scale = d3.scaleOrdinal().range(d3.schemeCategory20);
+    return scale;
+  }
 
 }

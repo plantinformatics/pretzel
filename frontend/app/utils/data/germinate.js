@@ -26,16 +26,24 @@ function BrAPI() { console.log('BrAPI not imported'); }
 const isNodeJs = typeof process !== 'undefined';
 
 var bent;
+//var omit;
 let env;
 if (isNodeJs) {
   bent = require('bent');
+  // omit = require('lodash/object');
   env = process.env;
 }
 // else
 import fetch from 'fetch';
 import ENV from '../../config/environment';  env = ENV.germinate;
+// import { omit } from 'lodash/object';
 
-const fetchEndpoint = isNodeJs ? fetchEndpoint_bent : fetchEndpoint_fetch;
+/**
+ * signature : (endpoint, method = 'GET', body = undefined) -> promise
+ * @param this  Germinate
+ * @see fetchEndpoint()
+ */
+const fetchEndpointFn = isNodeJs ? fetchEndpoint_bent : fetchEndpoint_fetch;
 
 //------------------------------------------------------------------------------
 
@@ -47,7 +55,7 @@ const testServerURL = 'https://test-server.brapi.org/brapi/v2';
 const yambase = 'https://www.yambase.org/brapi/v1';
 const
 /** scheme + userinfo + host + port */
-germinateServerDomain = 'https://germinate.germinate.plantinformatics.io',
+germinateServerDomain = 'https://germinate.plantinformatics.io',
 germinateServerURL = germinateServerDomain + '/api';
 const serverURL = germinateServerURL; // testServerURL;
 const brapi_v = 'brapi/v2';
@@ -60,6 +68,17 @@ const germinateToken = isNodeJs && env.germinateToken;
 const dLog = console.debug;
 
 const trace = 0;
+
+/** If obj is defined and contains fieldName, copy it and replace fieldName value with value.length.
+ * Similar : lodash omit(obj, [fieldName]));
+ */
+function obscureField(obj, fieldName) {
+  if (obj && obj[fieldName]) {
+    obj = Object.assign({}, obj);
+    obj[fieldName] = obj[fieldName].length;
+  }
+  return obj;
+}
 
 //------------------------------------------------------------------------------
 
@@ -87,19 +106,26 @@ function setToken(token) {
   this.token = token;
   this.initBrAPIRoot(token);
 }
+Germinate.prototype.setCredentials = setCredentials;
+function setCredentials(username, password) {
+  this.username = username;
+  this.password = password;
+}
 Germinate.prototype.connect = connect;
 /** Use Germinate login 'api/token'
  * @return a promise which yields undefined
  */
 function connect() {
   const fnName = 'connect';
-  console.log('Germinate', serverURL, '$germinateToken', 'this', this);
+  console.log('Germinate', serverURL, '$germinateToken', 'this', obscureField(this, 'password'));
   const
   p =
     this.login()
     .then(token => {
       console.log(fnName, token);
-      token && this.setToken(token); });
+      token && this.setToken(token);
+      if (! token) { throw 'login failed'; }
+    });
   return p;
 }
 Germinate.prototype.connectedP = connectedP;
@@ -116,7 +142,7 @@ function connectedP() {
 }
 Germinate.prototype.initBrAPIRoot = initBrAPIRoot;
 function initBrAPIRoot(token) {
-  console.log('Germinate', serverURL, token, 'this', this);
+  console.log('Germinate', serverURL, token, 'this', obscureField(this, 'password'));
   this.brapi_root = BrAPI(serverURLBrAPI, "v2.0", token);
   /** it is possible to change token by creating a child BrAPINode, via 
    * this.brapi_root.server(address, version, auth_token),
@@ -133,8 +159,46 @@ function serverinfo() {
     });
 }
 
+//------------------------------------------------------------------------------
+
 Germinate.prototype.fetchEndpoint = fetchEndpoint;
+/** Call bent() or fetch() for Node.js or browser respectively.
+ * @param this  Germinate
+ * @param endpoint
+ * @param method = 'GET'
+ * @param body = undefined
+ * @return promise yielding body of API response
+ */
+function fetchEndpoint() {
+  const
+  fetchEndpointP = fetchEndpointFn.apply(this, arguments)
+    .then(response => responseValueP(response));
+  return fetchEndpointP;
+}
+
+/** Access the value from fetchEndpoint().
+ * fetch() response has .ok and .json() returns a promise.
+ * bent()() response is the parsed data.
+ *
+ * This is used in all cases of fetchEndpoint().
+ */
+function responseValueP(response) {
+  const fnName = 'responseValueP';
+  if (! response.ok || response.status !== 200) {
+    dLog(fnName, response.ok, response.status);
+  }
+  const
+  value =
+    ! response.ok ? Promise.reject(response.status, fnName) :
+    response?.json ? response.json() : Promise.resolve(response);
+  return value;
+}
+
+//--------------------------------------
+
+
 /** Use fetch() for an endpoint which is not BrAPI, i.e. is not in serverURLBrAPI.
+ * @param this  Germinate
  * @param endpoint e.g. 'marker/table'
  * @return result of fetch() - promise yielding response or error
  */
@@ -170,7 +234,7 @@ function fetchEndpoint_fetch(endpoint, method = 'GET', body = undefined) {
      */
     options.body = JSON.stringify(body);
   }
-  console.log(fnName, headerObj, body);
+  console.log(fnName, headerObj, obscureField(body, 'password'));
   const
   resultP =
     fetch(serverURL + '/' + endpoint, options);
@@ -178,7 +242,7 @@ function fetchEndpoint_fetch(endpoint, method = 'GET', body = undefined) {
 }
 function fetchEndpoint_fetch_login(endpoint, method = 'GET', body = undefined) {
   const
-  fnName = 'fetchEndpoint_fetch',
+  fnName = 'fetchEndpoint_fetch_login',
   /** for login, .token is undefined.  `this` is not defined. */
   token = /*this.token ||*/ 'null',
 
@@ -205,6 +269,7 @@ function fetchEndpoint_fetch_login(endpoint, method = 'GET', body = undefined) {
 }
 
 /**
+ * @param this  Germinate
  * @param body bent() does not require body to be string - it will JSON.stringify().
  */
 function fetchEndpoint_bent(endpoint, method = 'GET', body = undefined) {
@@ -236,13 +301,15 @@ function fetchEndpoint_bent(endpoint, method = 'GET', body = undefined) {
   return promise;
 }
 
+//------------------------------------------------------------------------------
+
 Germinate.prototype.login = login;
-function login() {
+function login(username_, password_) {
   let tokenP;
   const
   fnName = 'login',
-  username = isNodeJs ? env.germinate_username : env.username,
-  password = isNodeJs ? env.germinate_password : env.password;
+  username = username_ || this.username || (isNodeJs ? env.germinate_username : env.username),
+  password = password_ || this.password || (isNodeJs ? env.germinate_password : env.password);
   if (username && password) {
     const
     body = {username, password},
@@ -256,14 +323,6 @@ function login() {
     tokenP =
       // fetchEndpoint_fetch_login(endpoint, method, body)
     this.fetchEndpoint(endpoint, method, body)
-      .then(response => {
-        dLog(fnName, response);
-        /** fetch() response has .ok and .json() returns a promise.
-         * bent()() response is the parsed data.
-         */
-        const objP = response.ok ? response?.json() : Promise.resolve(response);
-        return objP;
-      })
       .then(obj => {
         console.log(fnName, obj);
         return obj.token;
@@ -278,7 +337,31 @@ function login() {
   return tokenP;
 }
 
+//------------------------------------------------------------------------------
 
+
+Germinate.prototype.maps = maps;
+/** Get the list of genotype datasets.
+ */
+function maps() {
+  const
+  promise = this.fetchEndpoint(brapi_v + '/maps');
+  return promise;
+}
+
+Germinate.prototype.linkagegroups = linkagegroups;
+/** Get the list of linkagegroups (e.g. chromosomes) of a map (i.e. dataset).
+ */
+function linkagegroups(mapDbId) {
+  /** refn :
+   * https://brapigenotyping21.docs.apiary.io/#/reference/genome-maps/get-maps-map-db-id-linkagegroups
+   * /maps/{mapDbId}/linkagegroups
+   */
+  const
+  promise = 
+    this.fetchEndpoint(brapi_v + '/maps/' + mapDbId + '/linkagegroups');
+  return promise;
+}
 
 Germinate.prototype.markers = markers;
 function markers() {
@@ -323,15 +406,23 @@ function isDefined(x) {
 }
 
 Germinate.prototype.callsetsCalls = callsetsCalls;
-/* @param dataset, start, end
+/* filtering based on positions and chromosome:
+ * GET
+ * {domain}/api/brapi/v2/callsets/{callSetDbId}/calls/mapid/{mapid}/chromosome/{chromosome}/position/{positionStart}/{positionEnd}
+ * example: {domain}/api/brapi/v2/callsets/4-1036/calls/mapid/4/chromosome/10/position/1/300
+ *
+ * @param dataset, start, end
  * e.g. '1-593', '2932022', '2932028'
 */
-function callsetsCalls(dataset, start, end) {
+function callsetsCalls(dataset, linkageGroupName, start, end) {
   const fnName = 'callsetsCalls';
   /** Optional location / position / variantName interval to filter SNPs */
   let intervalParams = '';
+  if (isDefined(linkageGroupName)) {
+    intervalParams += '/chromosome/' + linkageGroupName;
+  } 
   if (isDefined(start)) {
-    intervalParams = '/position/' + start;
+    intervalParams += '/position/' + start;
     if (isDefined(end)) {
       intervalParams += '/' + end;
     }
@@ -353,3 +444,5 @@ function callsetsCalls(dataset, start, end) {
 
   return callsP;
 }
+
+//------------------------------------------------------------------------------

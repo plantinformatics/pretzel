@@ -165,11 +165,18 @@ exports.childProcess = (scriptName, postData, useFile, fileName, moreParams, dat
     if (! progressive && outputs.length) {
       let combined = Buffer.concat(outputs);
       dataOutCb(combined, cb);
-    }
-    if (code) {
+    }	// perhaps if (code) before the above case.
+    else if (code) {
       const error = Error("Failed processing file '" + fileName + "'.");
       cb(error);
-    } else if (errors.length || warnings.length) {
+    } else if (
+      /** vcfGenotypeLookup.bash : bcftools may output on stderr :
+       * 'Warn: subsetting has removed all samples\n'
+       * In this case, ignore the warning, i.e. the result is OK and empty.
+       * Possibly this will be treated the same : "|| warnings.length".
+       */
+      ! (errors.length === 1 && errors[0].startsWith('Warn: ')) &&
+         (errors.length || warnings.length)) {
       let
       errors_warnings = errors.concat(warnings).join("\n");
       errors = []; warnings = [];

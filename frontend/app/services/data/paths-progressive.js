@@ -1,8 +1,9 @@
 import { allSettled } from 'rsvp';
 import { throttle } from '@ember/runloop';
 import { alias } from '@ember/object/computed';
-
+import { get as Ember_get } from '@ember/object';
 import Service, { inject as service } from '@ember/service';
+import { getOwner, setOwner } from '@ember/application';
 
 import { task, didCancel } from 'ember-concurrency';
 
@@ -11,11 +12,14 @@ import { task, didCancel } from 'ember-concurrency';
 //------------------------------------------------------------------------------
 
 import { stacks, Stacked } from '../../utils/stacks';
+import AxisBrushObject from '../../utils/draw/axis-brush';
 import { storeFeature } from '../../utils/feature-lookup';
 import {
+  addGerminateOptions,
   vcfGenotypeLookup, addFeaturesJson,
   resultIsGerminate,
   addFeaturesGerminate,
+  featuresSampleMAF,
 } from '../../utils/data/vcf-feature';
 import { updateDomain } from '../../utils/stacksLayout';
 
@@ -76,6 +80,7 @@ export default Service.extend({
   blockService : service('data/block'),
   apiServers : service(),
   controls : service(),
+  selectedService : service('data/selected'),
 
   /** set up a block-adj object to hold results. */
   ensureBlockAdj(blockAdjId) {
@@ -576,35 +581,46 @@ export default Service.extend({
   /*--------------------------------------------------------------------------*/
   /* features */
 
+  /** array of AxisBrushObject : {block, id : axisBrushId, brushedDomain}
+   */
+  axisBrushObjects : [],
   /** set up an axis-brush object to hold results. */
   ensureAxisBrush(block) {
-    let store = this.get('store'),
-    typeName = 'axis-brush',
-    axisBrushId = block.id,
-    r = store.peekRecord(typeName, axisBrushId);
-    if (r && trace_pathsP)
-      dLog('ensureAxisBrush', block.id, r._internalModel.__attributes, r._internalModel.__data);
-    if (! r) {
-      let ba = {
-        // type : typeName,
-        id : axisBrushId,
-        block : block.id
-      };
-      let
-      serializer = store.serializerFor(typeName),
-      modelClass = store.modelFor(typeName),
-      // ban1 = serializer.normalizeSingleResponse(store, modelClass, ba, axisBrushId, typeName),
-      // ban1 = {data: ban1};
-      // the above is equivalent long-hand for :
-      ban = store.normalize(typeName, ba);
-      r = store.push(ban);
+    const
+    fnName = 'ensureAxisBrush',
+    objs = this.axisBrushObjects,
+    axisBrushId = block.id;
+    if (! block.isViewed) {
+      dLog(
+        fnName, block.id, block.brushName, block.axis1d, this.blockService.viewed,
+        Ember_get(this, 'flowsService.oa.eventBus.model.params.mapsToView'));
+      return;
     }
+    let r = objs.findBy('block.id', block.id);
+    if (r) {
+      if (block.axis1d.axisBrushObj !== r) {
+        dLog(fnName, block.axis1d.axisBrushObj, r);
+        block.axis1d.axisBrushObj = r;
+      }
+    }
+    else {
+      const container = getOwner(this);
+      r = AxisBrushObject.create({block, id : axisBrushId /*,container*/});
+      setOwner(r, container);
+      r.filePath = 'utils/draw/axis-brush.js:AxisBrushObject',
+
+      objs.push(r);
+      block.axis1d.axisBrushObj = r;
+    }
+    if (r && trace_pathsP)
+      dLog(fnName, block.id, r._internalModel.__attributes, r._internalModel.__data);
     return r;
   },
 
   /** Features returned from API, for the block,
    * are stored in ember data store, as an attribute of block.
    * @param all true means request all features of the block
+   * @return undefined if block not found, otherwise promise yielding features
    */
   getBlockFeaturesInterval(blockId, all) {
     const fnName = 'getBlockFeaturesInterval';
@@ -671,14 +687,25 @@ export default Service.extend({
       intervalParams = this.intervalParams(interval);
     }
     let drawMap = stacks.oa.eventBus;
-    let pathsViaStream = drawMap.get('controls').view.pathsViaStream;
+    const
+    controlsView = drawMap.get('controls').view,
+    pathsViaStream = controlsView.pathsViaStream;
     let axis = Stacked.getAxis(blockA),
-    axisBrush = me.get('store').peekRecord('axis-brush', blockA),
+    block = this.blockService.id2Block(blockA),
+    /** also : referenceBlock === axis.axis and axisBrush === axis.axisBrushObj */
+    referenceBlock = block?.referenceBlock || block,
+    axisBrush = this.axisBrushObjects.findBy('block.id', blockA) ||
+        (referenceBlock && this.axisBrushObjects.findBy('block.id', referenceBlock.id)),
+
     /** There may not be an axis brush, e.g. when triggered by
      * featuresForAxis(); in this case : axisBrush is null; don't set
      * paramAxis.domain. */
     brushedDomain = axisBrush && axisBrush.brushedDomain,
     paramAxis = intervalParams.axes[0];
+    const
+    nSamples = controlsView.pathsDensityParams.nSamples,
+    germinateOptions = {nSamples};
+
     if (trace_pathsP)
       dLog('domain', paramAxis.domain, '-> brushedDomain', brushedDomain);
     /* When the block is first viewed, if it does not have a reference which
@@ -745,6 +772,9 @@ export default Service.extend({
       // this.get('auth').getPathsViaStream(blockA, blockB, intervalParams, /*options*/{dataEvent : receivedData}) :
       me.get('auth').getBlockFeaturesInterval(blockId, intervalParams, /*options*/{});
 
+        /**
+         * @param text  VCF, or isGerminate : array of features / callsets calls
+         * @return text */
         function receivedDataVCF(text) {
           if (text && block) {
             const
@@ -755,13 +785,20 @@ export default Service.extend({
             isGerminate = resultIsGerminate(text),
             callsData = isGerminate && text,
             replaceResults = false,
-            /** pass [] for selectedFeatures - don't update selectedFeatures */
-            selectedFeatures = [],
+            /** pass null for selectedService - don't update selectedFeatures */
             /** similar in vcfGenotypeLookupDataset() */
             added = isGerminate ?
-              addFeaturesGerminate(block, requestFormat, replaceResults, selectedFeatures, callsData) :
-              addFeaturesJson(block, requestFormat, replaceResults, selectedFeatures, text);
+              addFeaturesGerminate(block, requestFormat, replaceResults, /*selectedService*/null, callsData, germinateOptions) :
+              addFeaturesJson(block, requestFormat, replaceResults, /*selectedService*/null, text);
+            if (added.createdFeatures) {
+              // All the samples in the result were requested, so calculate MAF across all.
+              featuresSampleMAF(added.createdFeatures, {requestSamplesAll : true, selectedSamples : undefined});
+              /* Could return added.createdFeatures, but that may be limited at nSamples.
+               * Caller germinateCallsToCounts() will parse the json.
+               */
+            }
           }
+          return text;
         }
 
         function receivedData(res){
@@ -794,7 +831,7 @@ export default Service.extend({
           // if (pathsViaStream)
           //  dLog(apiName, ' request', 'pathsViaStream', blockA, me, err, status);
           // else
-            dLog(apiName, ' request', blockA, me, err?.responseJSON[status] /* .error.message*/, status);
+            dLog(apiName, ' request', blockA, me, err?.responseJSON?.[status] ?? err /* .error.message*/, status);
         });
       return promise;
     });
@@ -806,7 +843,7 @@ export default Service.extend({
   vcfGenotypeLookup(block, paramAxis) {
     const
     /** params for  */
-    vcfDatasetId = block.get('datasetId.id'),
+    vcfDatasetId = block.get('datasetId.genotypeId'),
     domain = paramAxis.domain || block.get('axis1d.domain'),
     /** as in vcfGenotypeLookupDomain() */
     domainInteger = domain.map((d) => d.toFixed(0)),
@@ -814,7 +851,9 @@ export default Service.extend({
     rowLimit = vcParams.nSamples || vcParams.nFeatures || 400,
     /** not used because 0 samples. */
     requestFormat = 'CATG',
-
+    requestOptions = {requestFormat};
+    addGerminateOptions(requestOptions, block);
+    const
     /* generally block.name and .scope are the same.
      * To handle vcf files with e.g. %CHROM 'chr1A' instead of '1A',
      * .name can be chr1A, and .name is used here for the 'scope' param of
@@ -822,7 +861,7 @@ export default Service.extend({
      */
     textP = vcfGenotypeLookup(
       this.auth, /*samples*/[], domainInteger,
-      {requestFormat}, vcfDatasetId, block.name, rowLimit
+      requestOptions, vcfDatasetId, block.name, rowLimit
     );
 
     return textP;

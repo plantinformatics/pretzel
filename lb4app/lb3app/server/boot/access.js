@@ -3,7 +3,7 @@
 /* global require */
 
 var clientGroups = require('../../common/utilities/client-groups');
-var { clientIsInGroup } = require('../../common/utilities/identity');
+var { clientIsInGroup, clientOwnsGroup } = require('../../common/utilities/identity');
 var { ObjectId_equals } = require('../../common/utilities/mongoDB-driver-lib');
 var ObjectId = require('mongodb').ObjectID;
 
@@ -43,10 +43,24 @@ module.exports = function(app) {
       console.log(fnName, clientIdString, JSON.stringify(data));
     } else {
       groupId = '' + groupId;
+      // similar in dataset.js : Dataset.observe('before save' )
       ok = clientIsInGroup(clientId, groupId);
     }
     return ok;
   }
+
+  /**
+   * @param data.groupId and clientId are BSON
+   */
+  function ownsGroup(data, clientId) {
+    const groupId = (typeof data.groupId === 'function') ? data.groupId() : data.groupId;
+    const ok = groupId && clientOwnsGroup(clientId, groupId);
+    if (! ok) {
+      cirquePush('ownsGroup ' + JSON.stringify(data) + ', ' + clientId);
+    }
+    return ok;
+  }
+
 
   function isPublic(data) {
     return data.public
@@ -57,7 +71,8 @@ module.exports = function(app) {
   }
 
   function canRead(data, userId) {
-    let ok = isOwner(data, userId) || isInGroup(data, userId) || isPublic(data);
+    let ok = isOwner(data, userId) || isInGroup(data, userId) ||
+        ownsGroup(data, userId) || isPublic(data);
     if (! ok) {
       cirquePush('canRead ' + JSON.stringify(data) + ', ' + userId);
     }
@@ -186,6 +201,7 @@ module.exports = function(app) {
       context.property == 'upload' ||
       context.property == 'tableUpload' ||
       context.property == 'createComplete' ||
+      context.property == 'vcfGenotypeFeaturesCountsStatus' ||
         // Feature
       context.property == 'search' ||
       context.property == 'searchPost' ||
@@ -202,6 +218,7 @@ module.exports = function(app) {
       context.property == 'blockFeaturesAdd' ||
       context.property == 'blockFeaturesCount' ||
 //      context.property == 'blockFeaturesCounts' ||
+      context.property == 'blocksFeaturesCountsStatus' ||
       context.property == 'blockFeatureLimits' ||
       context.property == 'blockValues' ||
 //      context.property == 'blockFeaturesInterval' ||

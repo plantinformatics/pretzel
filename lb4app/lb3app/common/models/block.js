@@ -23,6 +23,9 @@ const { ArgsDebounce } = require('../utilities/debounce-args');
 const { ErrorStatus } = require('../utilities/errorStatus.js');
 const { vcfGenotypeLookup, vcfGenotypeFeaturesCounts } = require('../utilities/vcf-genotype');
 const { germinateGenotypeSamples, germinateGenotypeLookup } = require('../utilities/germinate-genotype');
+const { parseBooleanFields } = require('../utilities/json-text');
+
+const germinateGenotypeSamplesP = util.promisify(germinateGenotypeSamples);
 
 var ObjectId = require('mongodb').ObjectID
 
@@ -790,8 +793,14 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
    * @param useBucketAuto default false, which means $bucket with
    * boundaries calculated from interval and nBins; otherwise use
    * $bucketAuto.
+   * @param userOptions user settings : {mafThreshold, snpPolymorphismFilter}
+   * @param options loopback options
    */
-  Block.blockFeaturesCounts = function(id, interval, nBins, isZoomed, useBucketAuto, options, res, cb) {
+  Block.blockFeaturesCounts = function(id, interval, nBins, isZoomed, useBucketAuto, userOptions, options, res, cb) {
+
+    if (userOptions) {
+      parseBooleanFields(userOptions, ['snpPolymorphismFilter', 'mafThreshold']);
+    }
 
   let
     fnName = 'blockFeaturesCounts',
@@ -804,7 +813,15 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
      * i.e. just the new part would be queried.
      */
     useCache = ! isZoomed || ! interval,
-    cacheId = fnName + '_' + blockId + '_' + nBins +  '_' + useBucketAuto,
+    cacheIdOptions = ! userOptions ? '' : Object.entries(userOptions)
+      .reduce((result, [name, value]) => {
+        if (['mafThreshold', 'snpPolymorphismFilter'].includes(name)
+            && (value !== undefined) && (value !== null) && (value !== '')) {
+          result += '_' + value;
+        }
+        return result;
+      }, ''),
+    cacheId = fnName + '_' + blockId + '_' + nBins +  '_' + useBucketAuto + cacheIdOptions,
     /** set this false to test without reading existing cache */
     readCache = true,
     result = readCache && useCache && cache.get(cacheId);
@@ -827,7 +844,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
             }
             cb(error, result2);
           }
-          vcfGenotypeFeaturesCounts(block, interval, nBins, isZoomed, cacheCb);
+          vcfGenotypeFeaturesCounts(block, interval, nBins, isZoomed, userOptions, cacheCb);
         } else if (dataset.tags?.includes('Germinate')) {
           console.log(fnName, 'not yet implemented for', dataset.tags);
         } else {
@@ -856,6 +873,55 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     }
 
   };
+
+  //------------------------------------------------------------------------------
+
+
+  /** Report on the status of collated feature counts for the given
+   * block, or all blocks if id is undefined.
+   *
+   * The Pretzel client passes useBucketAuto===undefined; the user may
+   * vary nBins in which case they can repeat this request.
+   *
+   * @param id  optional blockId string
+   * @param nBins number of bins to partition the block's features into
+   * @param useBucketAuto default false. @see blockFeaturesCounts()
+   * @param options loopback options
+   */
+  Block.blocksFeaturesCountsStatus = function(id, nBins, useBucketAuto, options, res, cb) {
+    const
+    fnName = 'blocksFeaturesCountsStatus',
+    blockIdsP = id ? Promise.resolve([id]) :
+      Block.find().then(blocks => blocks.map(block => block.id)),
+    result = blockIdsP.then(blockIds => blockIds.map(
+      id => this.blockFeaturesCountsStatus(id, nBins, useBucketAuto)));
+    result.then(blocksStatus => cb(null, blocksStatus));
+  };
+  /**
+   * 
+   * @param id  blockId string
+   * @param nBins see description in blocksFeaturesCountsStatus()
+   * @param useBucketAuto   see description in blocksFeaturesCountsStatus()
+   * @return [id, status] status is currently the sum of counts, i.e. total features in block.
+   */
+  Block.blockFeaturesCountsStatus = function(id, nBins, useBucketAuto) {
+    const
+    fnName = 'blockFeaturesCountsStatus',
+    blockId = id,
+    /** @see Block.blockFeaturesCounts()
+     * @desc
+     * which constructs cacheIdOptions; in this case mafThreshold and
+     * snpPolymorphismFilter are undefined.
+     */
+    cacheIdOptions = '',
+    cacheFnName = 'blockFeaturesCounts',
+    cacheId = cacheFnName + '_' + blockId + '_' + nBins +  '_' + useBucketAuto + cacheIdOptions,
+    counts = cache.get(cacheId),
+    countSum = counts?.reduce((sum, c) => sum += c.count, 0);
+    return [blockId, countSum];
+  };
+
+
 
   /*--------------------------------------------------------------------------*/
 
@@ -1124,6 +1190,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       {arg: 'nBins', type: 'number', required: false},
       {arg: 'isZoomed', type: 'boolean', required: false, default : 'false'},
       {arg: 'useBucketAuto', type: 'boolean', required: false, default : 'false'},
+      {arg: 'userOptions', type: 'object', required: false},
       {arg: "options", type: "object", http: "optionsFromRequest"},
       {arg: 'res', type: 'object', 'http': {source: 'res'}},
     ],
@@ -1133,6 +1200,19 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     http: {verb: 'get'},
     returns: {type: 'array', root: true},
     description: "Returns an array of N bins of counts of the Features in the block"
+  });
+
+  Block.remoteMethod('blocksFeaturesCountsStatus', {
+    accepts: [
+      {arg: 'id', type: 'string', required: false},  // block reference, optional
+      {arg: 'nBins', type: 'number', required: false},
+      {arg: 'useBucketAuto', type: 'boolean', required: false, default : 'false'},
+      {arg: "options", type: "object", http: "optionsFromRequest"},
+      {arg: 'res', type: 'object', 'http': {source: 'res'}},
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'array', root: true},
+    description: "Returns an array of blocks with the status of their cached featuresCounts."
   });
 
   Block.remoteMethod('blockFeatureLimits', {
@@ -1170,6 +1250,8 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     returns: {type: 'array', root: true},
     description: "Returns Features of the block, within the interval optionally given in parameters, and filtering also for range / resolution"
   });
+
+  //----------------------------------------------------------------------------
 
   Block.remoteMethod('paths', {
     accepts: [
@@ -1389,6 +1471,8 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     const
     fnName = 'vcfGenotypeLookup';
 
+    parseBooleanFields(preArgs, ['snpPolymorphismFilter', 'requestSamplesAll', 'requestInfo', 'headerOnly', 'mafUpper']);
+
     /** Caching is generally not applicable to this request, because the region
      * / interval is always present - when zoomed out only the features counts
      * will be used.
@@ -1418,7 +1502,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       function ensureSamplesParam(preArgs) {
         let argsP;
         if (! preArgs?.samples?.length) {
-          argsP = util.promisify(germinateGenotypeSamples)(datasetId, scope)
+          argsP = germinateGenotypeSamplesP(datasetId, scope)
             .then(samples => {
               let sample;
               if (samples.length) {

@@ -1,4 +1,4 @@
-<div id="left-panel" class="left-panel-shown" style="height:100%; width: 400px; border-right:1px solid #ddd; display: flex; flex-direction: column">
+<div id="left-panel" class="left-panel-shown" style="height:100%; border-right:1px solid #ddd; display: flex; flex-direction: column">
 
   <BsTab @customTabs={{true}} @activeId="left-panel-explorer" as |tab|>
     <BsNav @type="tabs" class="nav-pills" style="margin-left:10px" as |nav|>
@@ -86,10 +86,10 @@
     </div>
   </BsTab>
 
-    <button type="button" class="btn btn-default panel-collapse-button" {{action 'toggleLeftPanel'}} style="top:0; left:374px; position: absolute;">
+    <button type="button" class="btn btn-default panel-collapse-button" {{action 'toggleLeftPanel' false}} style="top:0; left:374px; position: absolute;">
       {{elem/icon-base name="chevron-left"}}
     </button>
 </div>
-<button type="button" class="left-panel-hidden btn btn-default panel-collapse-button" style="display:none" {{action 'toggleLeftPanel'}}>
+<button type="button" class="left-panel-hidden btn btn-default panel-collapse-button" style="display:none" {{action 'toggleLeftPanel' true}}>
     {{elem/icon-base name="chevron-right"}}
 </button>

@@ -41,6 +41,36 @@ function stringSetFeature(sampleValue, feature) {
 
 /*----------------------------------------------------------------------------*/
 
+function getCellFeatures(table, row, col) {
+  const
+  value = table.getDataAtCell(row, col) ?? [],
+  values = Array.isArray(value) ? value : [value],
+  features = values.map(featureString => featureString?.[featureSymbol]);
+  return features;
+}
+
+/**
+ * @return undefined if cell has no features or none with a dataset with the given tag.
+ */
+function cellFeaturesWithDatasetTag(table, row, col, tag) {
+  const
+  features = getCellFeatures(table, row, col)
+    ?.filter(feature => feature.get('blockId.datasetId.tags')?.includes(tag));
+  return features?.length ? features : undefined;
+}
+
+//------------------------------------------------------------------------------
+
+function rowDataGetFeature(rowData) {
+  const
+  featureEntry = Object.entries(rowData).find(
+    ([k,v]) => (typeof rowData[k] === 'object') && rowData[k][Symbol.for('feature')]),
+  feature = featureEntry[1][featureSymbol];
+  return feature;
+}
+
+//------------------------------------------------------------------------------
+
 /** Assign Feature reference to each row.
  * @param table HandsOnTable
  * @param data  array of data which correspond to rows, and is parallel.
@@ -88,7 +118,7 @@ function setRowAttributes(table, data, dataIsRows) {
        * the cell value has a Symbol reference to feature and that is used
        * in getRowAttribute() : valueFeature.
        */
-      feature = (feature.Block || feature.Ref) [Symbol.for('feature')];
+      feature = rowDataGetFeature(feature);
       featureColumnValues.forEach((value, physicalCol) => {
         const col = table.toVisualColumn(physicalCol);
         if (col !== null) {
@@ -143,7 +173,7 @@ function getRowAttribute(table, row, col) {
   }
   const
   value = table.getDataAtCell(row, col),
-  valueFeature = (typeof value === 'object') && value[Symbol.for('feature')];
+  valueFeature = value && (typeof value === 'object') && value[Symbol.for('feature')];
   /** Use valueFeature in preference to the cell meta .PretzelFeature,
    * because setRowAttributes() writes just a single feature to all
    * columns in the row : data[physicalRow].Ref[Symbol.for('feature')].
@@ -302,6 +332,8 @@ export {
   stringGetFeature,
   stringSetSymbol,
   stringSetFeature,
+  getCellFeatures,
+  cellFeaturesWithDatasetTag,
   setRowAttributes,
   setRowAttribute,
   getRowAttribute,

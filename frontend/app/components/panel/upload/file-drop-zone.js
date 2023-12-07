@@ -1,8 +1,16 @@
 import { inject as service } from '@ember/service';
+import { alias } from '@ember/object/computed';
+
+import { statusToMatrix } from '../../../utils/data/vcf-files';
 
 const dLog = console.debug;
 
 import UploadBase from './data-base';
+
+//------------------------------------------------------------------------------
+
+/** used as a truthy filter */
+function I(value) { return value; }
 
 /*----------------------------------------------------------------------------*/
 
@@ -49,6 +57,9 @@ function arrayBufferToString(buffer){
 export default UploadBase.extend({
   apiServers : service(),
   blockService : service('data/block'),
+  controls : service(),
+
+  apiServerSelectedOrPrimary : alias('controls.apiServerSelectedOrPrimary'),
 
   replaceDataset : true,
 
@@ -112,6 +123,8 @@ export default UploadBase.extend({
         this.set('warnings', warnings);
         this.set('errors', status?.errors || []);
         this.get('blockService').featureSaved();
+
+        this.vcfWarnings(datasetNames);
       });
     });
 
@@ -120,8 +133,8 @@ export default UploadBase.extend({
   /** Unview the blocks of the dataset which has been replaced by successful upload.
    */
   unviewDataset(datasetName) {
-    let
-    store = this.get('apiServers').get('primaryServer').get('store'),
+    const
+    store = this.get('apiServerSelectedOrPrimary').get('store'),
     replacedDataset = store.peekRecord('dataset', datasetName);
     if (replacedDataset) {
       let
@@ -131,6 +144,42 @@ export default UploadBase.extend({
       dLog('unviewDataset', datasetName, blockIds);
       blockService.setViewed(blockIds, false);
     }
-  }
+  },
+
+  vcfWarnings(datasetNames) {
+    const
+    store = this.get('apiServerSelectedOrPrimary').get('store'),
+    warningsAP = datasetNames
+      .map(datasetName => {
+        const dataset = store.peekRecord('dataset', datasetName);
+        return dataset?.isVCF && dataset;
+      })
+      .filter(I)
+      .map(dataset => {
+        const
+        warningP =
+          this.get('auth').getFeaturesCountsStatus(dataset.id, /*options*/undefined)
+          .then(vcfStatus => {
+            const
+            status = statusToMatrix(vcfStatus?.text),
+            /** warnings for this dataset : chromosomes which don't have .MAF.SNPList.vcf.gz */
+            scopes = dataset.blocks.mapBy('scope'),
+            dwc = scopes.filter(scope => {
+              const chr = status.rows.findBy('Name', scope);
+              return ! chr?._MAF_SNPList;
+            });
+            return dwc.length && (dataset.id + ' : ' + dwc.join(' '));
+          });
+        return warningP;
+      });
+
+    Promise.all(warningsAP).then(warnings => {
+      warnings = warnings.filter(I);
+      if (warnings.length) {
+        const intro = "Chromosomes of these datasets don't have .MAF.SNPList.vcf.gz :";
+        this.warnings.pushObjects([intro].concat(warnings));
+      }
+    });
+  },
 
 });

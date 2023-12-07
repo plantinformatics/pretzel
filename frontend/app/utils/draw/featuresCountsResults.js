@@ -492,6 +492,74 @@ fcrsShow = function (fcrs)  { fcrs.forEach((fcr) => console.log('featuresCountsR
 ;
 
 /*----------------------------------------------------------------------------*/
+/** Collate features received from Germinate into bins, format as a featuresCountsResult
+ * and push into block.featuresCountsResults
+ */
+
+/** For grains, average chromosome is 500 - 1000 Mbase; aim for 50-100 bins initially.
+ */
+const binSize = 1e7;
+
+/**
+ * @param sampleData from germinateGenotypeLookup() : callsets calls response
+ * @return {counts, limits}
+ *   .counts [binCount, ...]
+ *   .limits is undefined if sampleData.length === 0 
+ */
+function germinateCallsToCounts(sampleData) {
+  const
+  result =
+  sampleData.reduce((result, call) => {
+    const
+    counts = result.counts,
+    position = +call.variantName.match(/(.+)-(.+)/)[2],
+    bin = (position / binSize).toFixed();
+
+    if ((position !== 0) && ! position) {
+    } else if (! result.limits) {
+      result.limits = [position, position];
+    } else if (inInterval(result.limits, position)) {
+      result.limits = d3.extent([position, result.limits].flat());
+    }
+
+    if (! counts[bin]) {
+      counts[bin] = 1;
+    } else {
+      counts[bin]++;
+    }
+    return result;
+  }, {counts : [], limits : undefined});
+  return result;
+}
+/**
+ * Used in models/block.js : featuresForAxis() : all
+ */
+function featuresCountsTransform(block, counts) {
+  const
+  keys = Object.keys(counts),
+  keyRange = [+keys[0], +keys.at(-1) + 1],
+  domain = keyRange.map(p => p * binSize),
+  nBins = keyRange[1] - keyRange[0],
+  /** counts may be sparse, i.e. for some bins count is 0,
+   * so use counts.entries() to access the key of each bin,
+   * instead of : counts.map((count, i) ... +keys[i] ...
+   */
+  result = Array.from(counts.entries())
+    .filter(([key,count]) => count)
+    .map(([key, count]) => ({
+      _id: +key * binSize,
+      count,
+      idWidth: [binSize],
+    })),
+  fcr = {binSize, nBins, domain, result};
+  // block.featuresCountsResults[0] = fcr;  // for repeated test in development.
+  block.featuresCountsResults.push(fcr);
+  // related : getSummary() : p.then()
+  const featuresCounts = result;
+  block.set('featuresCounts', featuresCounts);
+}
+
+//------------------------------------------------------------------------------
 
 export {
   featuresCountsResultsCheckOverlap,
@@ -500,4 +568,6 @@ export {
   featuresCountsResultsFilter,
   featuresCountsResultsTidy,
   featuresCountsResultsSansOverlap,
+  germinateCallsToCounts,
+  featuresCountsTransform,
 };

@@ -36,16 +36,28 @@ function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
   const
   fnName = 'vcfGenotypeLookup',
   headerOnly = preArgs.headerOnly,
-  command = headerOnly ? 'view' : preArgs.SNPList ? 'counts' :
-    preArgs.requestFormat ? 'query' : 'view';
+  /** snpPolymorphismFilter is not applicable if SNPList because if the
+   * number of samples requested is <=1 then every row appears homozygous.
+   */
+  snpPolymorphismFilter = ! preArgs.SNPList && preArgs.snpPolymorphismFilter,
+  /** These parameters are supported by view only, not query, so if
+   * present then view | query will be used.
+   * In that case moreParams will be passed to view, and paramsForQuery
+   * will be passed to query.
+   */
+  viewRequired = snpPolymorphismFilter || preArgs.mafThreshold,
+  command = headerOnly ? 'view' : preArgs.SNPList ?
+    (viewRequired ? 'counts_view' : 'counts_query') :
+    preArgs.requestFormat ? (viewRequired ? 'view_query' : 'query') : 'view';
   /* isec is only meaningful with >1 datasets. The caller
    * vcfGenotypeLookupDataset() only passes isecDatasetIds when
    * isecDatasetIds.length > 1
    */
+  let isecDatasetIdsText = isecDatasetIds;
   if (Array.isArray(isecDatasetIds) /*&& (isecDatasetIds.length > 1)*/) {
     /** this is split in vcfGenotypeLookup.bash with tr '!' ' '  */
     const datasetIdsSeparator = '!';
-    isecDatasetIds = isecDatasetIds.join(datasetIdsSeparator);
+    isecDatasetIdsText = isecDatasetIds.join(datasetIdsSeparator);
   }
   /** The params passed to spawn (node:child_process) are passed as options.args
    * to ChildProcess.spawn (node:internal/child_process) which calls
@@ -54,16 +66,28 @@ function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
    */
   let moreParams = [
     command, datasetDir, scope,
-    isecFlags || '', isecDatasetIds || '',
+    isecFlags || '', isecDatasetIdsText || '',
     '-r', preArgs.region ];
   /** from BCFTOOLS(1) :
+   bcftools view [OPTIONS] file.vcf.gz [REGION [...]]
       -h, --header-only
           output the VCF header only
 
       -H, --no-header
           suppress the header in VCF output
+
+   bcftools query [OPTIONS] file.vcf.gz [file.vcf.gz [...]]
+       -H, --print-header
+           print header
+
+  * headerOnly implies command==='view' i.e. -h
+  * When ! headerOnly, the header is required;
+  * *  for view : --with-header is default
+  * *  for query : use -H
   */
-  const headerOption = headerOnly ? '-h' : '-H';
+  const
+  headerOption = headerOnly ? /*command===view*/'-h' :
+    (command === 'view') ? '' : '-H';
 
   if (preArgs.requestFormat) {
     const
@@ -72,13 +96,44 @@ function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
      *        %TGT            Translated genotype (e.g. C/A)
      */
     formatGT = (preArgs.requestFormat === 'CATG') ? '%TGT' : '%GT',
-    requestInfo = preArgs.requestInfo && JSON.parse(preArgs.requestInfo),
+    /** now INFO/MAF is added if not present, by
+     * vcfGenotypeLookup.{bash,Makefile} : dbName2Vcf() / %.MAF.vcf.gz
+     * So requestInfo means just 'request INFO/tSNP'.
+     */
+    requestInfo = preArgs.requestInfo,
     format = '%ID\t%POS' + '\t%REF\t%ALT' +
-      (requestInfo ? '\t%INFO/tSNP\t%INFO/MAF' : '') +
+      (requestInfo ? '\t%INFO/tSNP' : '') +
+      '\t%INFO/MAF' +
       '[\t' + formatGT + ']\n';
-    moreParams = moreParams.concat(headerOption, '-f', format);
+    /** Params passed to query if view|query is used, otherwise to command. */
+    const paramsForQuery = ['-queryStart', headerOption, '-f', format, '-queryEnd'];
+    moreParams = moreParams.concat(paramsForQuery);
     if (headerOnly) {
       moreParams.push('--force-samples');
+    }
+    /** default is no het filter, i.e. false */
+    if (snpPolymorphismFilter) {
+      moreParams.push('--genotype');
+      moreParams.push('het');
+    }
+    /** default is no MAF filter, i.e. >= 0, (MAF is >=0) */
+    if (preArgs.mafThreshold) {
+      const
+      /** --min-af and --max-af uses "INFO/AC and INFO/AN when
+       * available or FORMAT/GT" quoting BCFTOOLS(1), whereas
+       * --exclude MAF< / > will utilise INFO/MAF for example.
+       * Related : mafThresholdText(); inverted here because 'exclude'.
+       */
+      afOption = 'MAF' + (preArgs.mafUpper ? '>' : '<') + preArgs.mafThreshold;
+      moreParams.push('--exclude');
+      moreParams.push(afOption);
+    }
+    if (preArgs.featureCallRateThreshold) {
+      const
+      /** equivalent : N_PASS(GT!="./.")/N_SAMPLES */
+      fcrOption = 'F_PASS(GT!="./.") >= ' + preArgs.featureCallRateThreshold;
+      moreParams.push('-i');
+      moreParams.push(fcrOption);
     }
   }
   const samples = preArgs.samples;
@@ -95,9 +150,9 @@ function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
     moreParams = moreParams.concat('-S', '/dev/null');
   }
   /** avoid tracing samples, and moreParams[9] which is the samples. */
-  console.log(fnName, datasetDir, preArgs.region, preArgs.requestFormat, samples?.length, moreParams.slice(0, 9));
+  console.log(fnName, datasetDir, preArgs.region, preArgs.requestFormat, samples?.length, moreParams.slice(0, 9+3));
   if (! dataOutCb) {
-    const lineFilter = preArgs.snpPolymorphismFilter ? snpPolymorphismFilter : null;
+    const lineFilter = false && preArgs.snpPolymorphismFilter ? snpPolymorphismFilter : null;
     dataOutCb = dataOutReplyClosureLimit(cb, lineFilter, nLines);
   }
 
@@ -119,6 +174,8 @@ exports.vcfGenotypeLookup = vcfGenotypeLookup;
  * @param block  object instance of Block model
  * @param interval  bin boundaries within this range
  * @param nBins number of bins to group block's features into
+ * @param isZoomed
+ * @param userOptions optional. user settings : {mafThreshold, snpPolymorphismFilter}
  *
  * @return Promise yielding : Array	: binned feature counts
  * in the same format as block-features.js :
@@ -127,7 +184,8 @@ exports.vcfGenotypeLookup = vcfGenotypeLookup;
  * { "_id" : 33000000, "count" : 38201, "idWidth" : [ 1000000 ] }
  * { "_id" : 34000000, "count" : 47323, "idWidth" : [ 1000000 ] }
  */
-exports.vcfGenotypeFeaturesCounts = function(block, interval, nBins = 10, isZoomed, cb) {
+exports.vcfGenotypeFeaturesCounts = function(
+  block, interval, nBins = 10, isZoomed, userOptions, cb) {
   // header comment copied from block-features.js : blockFeaturesCounts()
   const fnName = 'vcfGenotypeFeaturesCounts';
   let result;
@@ -153,7 +211,12 @@ exports.vcfGenotypeFeaturesCounts = function(block, interval, nBins = 10, isZoom
     domainInteger = interval.map((d) => d.toFixed(0)),
     region = scope + ':' + domainInteger.join('-'),
     preArgs = {region, samples : null, requestFormat : 'CATG', SNPList : true},
+    // arguments 1-3 are used : block, interval, nBins
     summary = new vcfToSummary(...arguments);
+    if (userOptions) {
+      Object.entries(userOptions).forEach(([key, value]) =>
+        { if (value !== undefined) { preArgs[key] = value; } });
+    }
     function sumCb(error, text) {
       let result;
       if (error) {
@@ -283,5 +346,42 @@ function snpPolymorphismFilter(line) {
   monomorphic = ! counts[0] || ! counts[2];
   return ! monomorphic && line;
 }
+
+//------------------------------------------------------------------------------
+
+/** Get the status of .vcf.gz files for this dataset.
+ * Related : vcfGenotypeFeaturesCounts().
+ */
+function vcfGenotypeFeaturesCountsStatus(datasetDir, cb) {
+  const
+  fnName = 'vcfGenotypeFeaturesCountsStatus',
+  command = 'status',
+  moreParams = [
+    command, datasetDir, /*scope*/'',
+    /*isecFlags*/'', /*isecDatasetIds*/''];
+
+  /** Receive the combined result (progressive===false).
+   * For non-progressive (expect that the result is in a single chunk) could use
+   * dataReduceClosure() to catenate chunks.
+   * @param combined	Buffer
+   */
+  function dataOutCb(combined, cb) {
+    // console.log(fnName, 'dataOutCb', combined);
+    const text = combined.toString();
+    cb(null, text);
+  }
+
+  childProcess(
+    'vcfGenotypeLookup.bash',
+    /* postData */ '', 
+    /* useFile */ false,
+    /* fileName */ undefined,
+    moreParams,
+    dataOutCb, cb, /*progressive*/ false);
+};
+exports.vcfGenotypeFeaturesCountsStatus = vcfGenotypeFeaturesCountsStatus;
+
+
+
 
 //------------------------------------------------------------------------------

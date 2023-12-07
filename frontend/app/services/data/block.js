@@ -9,6 +9,7 @@ import Service, { inject as service } from '@ember/service';
 import { task, didCancel } from 'ember-concurrency';
 
 import { keyBy } from 'lodash/collection';
+import { pick } from 'lodash/object';
 
 //------------------------------------------------------------------------------
 
@@ -534,7 +535,8 @@ export default Service.extend(Evented, {
         blockIds.map((blockId) => [blockId, this.peekBlock(blockId)])
         /** URL mapsToView may contain blockId of another server which is not
          * currently connected, and hence blockAndId[1] is undefined. */
-        .filter((blockAndId) => blockAndId[1] && blockAndId[1].get('isData'))
+        .filter((blockAndId) => blockAndId[1] && blockAndId[1].get('isData')
+                && ! blockAndId[1].hasTag('Germinate'))
         .map(
           (blockAndId) => {
           let [blockId, block] = blockAndId;
@@ -583,8 +585,11 @@ export default Service.extend(Evented, {
                   dLog('getCountsForInterval', interval);
                   countsP = Promise.resolve([]);
                 } else {
+                  const
+                  /** userOptions is optional, and the fields are optional. */
+                  userOptions = pick(this.controls.userSettings.genotype, ['mafThreshold', 'snpPolymorphismFilter']);
                   countsP =
-                  this.get('auth').getBlockFeaturesCounts(blockId, interval, nBins, !!zoomedDomain, useBucketAuto, /*options*/{});
+                  this.get('auth').getBlockFeaturesCounts(blockId, interval, nBins, !!zoomedDomain, useBucketAuto, userOptions, /*options*/{});
                 }
                 return countsP;
               };
@@ -646,6 +651,17 @@ export default Service.extend(Evented, {
     }
 
     return blockP;
+  },
+
+  getBlocksFeaturesCountsStatus: function (blockIds) {
+    const
+    fnName = 'getBlocksFeaturesCountsStatus',
+    nBins = this.get('featuresCountsNBins'),
+    useBucketAuto = this.get('parsedOptions.useBucketAuto'),
+    statusP =
+      this.get('auth').getBlocksFeaturesCountsStatus(blockIds, nBins, useBucketAuto, /*options*/{});
+
+    return statusP;
   },
 
   /*--------------------------------------------------------------------------*/

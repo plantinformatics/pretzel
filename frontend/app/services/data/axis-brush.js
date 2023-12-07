@@ -1,4 +1,5 @@
 import { computed } from '@ember/object';
+import { alias } from '@ember/object/computed';
 import Evented from '@ember/object/evented';
 import Service, { inject as service } from '@ember/service';
 
@@ -9,17 +10,17 @@ const typeName = 'axis-brush';
 
 export default Service.extend(Evented, {
   blockService: service('data/block'),
-  store: service(),
+  pathsProgressive : service('data/paths-progressive'),
 
-  /** look up axis-brush object instances in the store.
+  filePath : 'services/data/axis-brush.js',
+
+  /** count of brushHelper() calls. */
+  brushCount : 0,
+
+  /** look up axis-brush object instances.
    * @return all instances.
    */
-  all: computed(function() {
-    let records = this.get('store').peekAll(typeName);
-    if (trace_axisBrush)
-      dLog('all', records);
-    return records;
-  }),
+  all: alias('pathsProgressive.axisBrushObjects'),
 
   /** Collate a list of the axes which are brushed.
    * @return reference blocks of the brushed axes.
@@ -28,6 +29,11 @@ export default Service.extend(Evented, {
     'blockService.viewed',
     'all.[]',
     'all.@each.brushedDomain',
+    /* literal form of alias all, which is not effective perhaps because brushedDomain array ref doesn't change.
+     * .@each.brushedDomain.{0,1} is not supported [deprecation id: ember-metal.computed-deep-each]
+    'pathsProgressive.axisBrushObjects.@each.brushedDomain.{0,1}',
+    */
+    'brushCount',
     // 'all.@each.block.isViewed',
     function() {
       const fnName = 'brushedAxes';
@@ -39,7 +45,7 @@ export default Service.extend(Evented, {
       if (trace_axisBrush)
         dLog(fnName, 'viewed Blocks', records);
       let blocks = records.filter(function (ab) {
-        return ab.get('block.isViewed') && ab.get('brushedDomain'); } );
+        return ab.get('block_.isViewed') && ab.get('brushedDomain'); } );
       blocks = blocks.toArray(); // Array.from(blocks);
 
       const
@@ -59,7 +65,7 @@ export default Service.extend(Evented, {
     }),
   brushesByBlock : computed('brushedAxes.[]', function () {
     let brushesByBlock = this.get('brushedAxes').reduce(function (result, ab) {
-      result[ab.get('block.id')] = ab;
+      result[ab.get('block_.id')] = ab;
       return result; }, {} );
     if (trace_axisBrush)
       dLog('brushesByBlock', brushesByBlock);

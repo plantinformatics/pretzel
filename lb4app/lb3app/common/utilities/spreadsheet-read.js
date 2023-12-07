@@ -25,6 +25,15 @@ const trace = 1;
  */
 const I = (x) => x;
 
+const blockRangeSymbol = Symbol.for('blockRange');
+
+//------------------------------------------------------------------------------
+
+function rowIsBlock(sheetType) {
+  const result = ['Genome', 'VCF'].includes(sheetType);
+  return result;
+}
+
 //------------------------------------------------------------------------------
 
 
@@ -228,12 +237,13 @@ function sheetToDataset(
   sheetType, datasetName, sheet, metadata,
   chromosomeRenaming, chromosomesToOmit) {
 
-  /** meta includes /commonName|platform|shortName/ etc
+  /** meta includes /commonName|platform|shortName|tags/ etc
+   * These are placed in dataset, others go in dataset.meta.
    * partially based on sub setupMeta().
    */
-  let parentName, namespace, meta;
+  let parentName, namespace, tags, meta;
   if (metadata) {
-    ({parentName, namespace, ...meta} = metadata);
+    ({parentName, namespace, tags, ...meta} = metadata);
   } else {
     meta = {};
   }
@@ -243,10 +253,18 @@ function sheetToDataset(
   const metaType = (sheetType === 'Map') ? 'Genetic Map' : sheetType;
   meta.type ||= metaType;
   // -	$extraTags
-  let tags = [];
-  if (sheetType === 'QTL') {
-    // QTL tag is required.
+  if (tags) {
+    tags = tags.split(' ');
+  } else {
+    tags = [];
+  }
+  if (['QTL', 'VCF'].includes(sheetType)) {
+    // QTL tag is required. ditto VCF.
     tags.push(sheetType);
+    if (sheetType === 'VCF') {
+      tags.push('view');
+      tags.push('Genotype');
+    }
   }
 
   /*
@@ -336,7 +354,20 @@ function sheetToDataset(
       blocks = (dataset.blocks ||= {});
       /** array of features */
       let block = (blocks[chr] ||= []);
-      block.push(feature);
+      if (rowIsBlock(sheetType)) {
+        // expect just 1 "feature" per chr for Genome and VCF
+        if (block[blockRangeSymbol]) {
+          const
+          warningText =
+            sheetType + ' worksheet contains multiple rows for chromosome ' + chr + ', ' +
+            JSON.stringify(feature.value);
+          dataset.warnings.push(warningText);
+        } else {
+          block[blockRangeSymbol] = feature.value;
+        }
+      } else {
+        block.push(feature);
+      }
       return datasets;
     }, datasets);
 
@@ -413,7 +444,14 @@ function blocksObjToArray(blocks) {
   //  * . attribute names : .Chromosome -> block .name and .scope (latter with .* trimmed)
   const
   blocksArray = Object.entries(blocks)
-    .map(([name, features]) => ({name, scope: name, features}));
+    .map(([name, features]) => {
+      const block = {name, scope: name, features};
+      /** Genome block has .range;  may also add .meta */
+      if (features[blockRangeSymbol]) {
+        block.range = features[blockRangeSymbol];
+      }
+      return block;
+    });
   return blocksArray;
 }
 
@@ -1019,10 +1057,10 @@ function requiredFields(feature, sheetType, warnings) {
 */
 
   /** .name and .Chromosome required (warning if values for other fields but no .Chromosome) */
-  const ok = f.name && f.Chromosome;
+  const ok = (rowIsBlock(sheetType) || f.name) && f.Chromosome;
   if (! ok && Object.keys(f).length) {
     const
-    warning = 'Row ' + f.__rowNum__  +
+    warning = sheetType + ' : ' + 'Row ' + f.__rowNum__  +
       ' is missing Marker name or Chromosome values but has other values : ' + 
       JSON.stringify(f); 
     warnings.push(warning);

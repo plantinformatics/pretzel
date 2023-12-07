@@ -54,7 +54,9 @@ export default class FormNaturalSearchComponent extends Component {
       this.auth.text2Commands(commands_text, options).then(results => {
         dLog(fnName, results);
         if (results?.length) {
-          this.naturalQueryResult = results;
+          // split at space after "),", and keep the "),"
+          this.naturalQueryResult = results
+            .split(/(?<=\),) /);
           this.interpretCommands(results);
         } else {
           this.naturalQueryResult = null;

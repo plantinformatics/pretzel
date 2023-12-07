@@ -255,6 +255,17 @@ var config = {
     return path;
   },
 
+  _ajax(options) {
+    let result;
+    const server = this._server || this.server;
+    if (server?.serverType !== 'Germinate') {
+      result = this._super(...arguments);
+    } else {
+      dLog('_ajax', options, this, server);
+    }
+    return result;
+  }
+
 }
 
 var args = [/*PartialModelAdapter,*/ config]

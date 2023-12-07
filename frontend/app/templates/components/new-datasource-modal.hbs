@@ -24,14 +24,43 @@
   <modal.body>
   <div class="table labelled-inputs">
 
+      <div class="input-label">Server Type</div>
+       {{form/select-group
+          selectedValue=this.typeSelected
+          values=(to-array-promise-proxy this.typesForSelect)
+          selectedGroupChanged=(action this.selectedTypeChanged) }}
+
       <div class="input-label">Host : Port</div>
-      <input name="host" placeholder="e.g. http://localhost:5000"  autofocus="autofocus" autocomplete="url">
+      <input name="host" placeholder="e.g. http://localhost:5000"  autofocus="autofocus" autocomplete="url" disabled={{this.typeIsGerminate}}>
 
       <div class="input-label">User</div>
       <input name="user" placeholder="Email address" autocomplete="email">
 
       <div class="input-label">Password</div>
       <input name="password" type="password" autocomplete="current-password">
+
+      {{#if this.typeIsGerminate}}
+      <div class="input-label">Parent for genotype datasets</div>
+       {{form/select-group
+          selectedValue=this.datasetSelected
+          values=(to-array-promise-proxy this.datasetsForSelect)
+          selectedGroupChanged=(action this.selectedDatasetChanged) }}
+
+      <div class="input-label">Chromosome name mapping</div>
+      {{!--         rows=21 --}}
+      {{textarea
+        id='ndm_chrMapping'
+        class='form-control'
+        maxlength=1000
+        value=this.chrMapping
+        input=(action this.chrMappingInput)
+        enter=(action this.chrMappingInputAction)
+        insert-newline=(action this.chrMappingInputAction)
+        escape-press=(action this.chrMappingInputAction)
+        paste=(action this.paste)
+        placeholder='e.g. 1 1A\n2 1B ...' }}
+
+      {{/if}}
 
   </div>
 

@@ -230,7 +230,7 @@ function AxisBrushZoom(oa) {
   const result = {
     setupBrushZoom,
     brushClipSize,
-    getBrushedRegions, axisRange2DomainFn, axisRange2Domain, axisBrushRefn, axisBrushShowSelection,
+    getBrushedRegions, axisRange2DomainFn, axisRange2Domain, axisBrushShowSelection,
     brushHelper, resetZooms, resetBrushes, removeBrushExtent, resetZoom,
     axisFeatureCircles_selectAll, handleFeatureCircleMouseOver, handleFeatureCircleMouseOut, brushEnableFeatureHover, zoom, axisScaleChangedRaf, axisScaleChanged, brushended, 
     draw_flipRegion, /* containing : features2Limits, flipRegionInLimits, */
@@ -362,20 +362,6 @@ function AxisBrushZoom(oa) {
     if (trace_scale_y)
       dLog('axisRange2Domain', axis1d.axisName, range, brushedDomain);
     return brushedDomain;
-  }
-
-  /**
-   * @param axisBrushIdField name of field in this which provides axisBrushId to
-   * identify the axis-brush.
-   * @param this is the object on which .axisBrushMemo is stored, and is the source of axisBrushId, 
-   * set via .call(), e.g. axisBrushZoom.axisBrushRefn.call(this, 'axisName');
-   */
-  function axisBrushRefn(axisBrushIdField) {
-    const
-    store = me.get('store'),
-    axisBrush = this.axisBrushMemo ||
-      (this.axisBrushMemo = store.peekRecord('axis-brush', this[axisBrushIdField]));
-    return axisBrush;
   }
 
   /** update brush selection position for window / element height resize.
@@ -538,6 +524,9 @@ function AxisBrushZoom(oa) {
       bind(axis1d, axis1d.showZoomResetButtonState)();
     }
 
+    const abs = axis1d.axisBrush;
+    abs.incrementProperty('brushCount');
+
     /* me.attrs.selectBlock is currently 'selectBlock'; when changed to a
      * closure action it can be called directly.
      * selectChromById() (selectBlockById) is no longer used here because
@@ -562,7 +551,8 @@ function AxisBrushZoom(oa) {
         intervalIntersect(axisBrush.brushedDomain, previousDomain)
       ) :
       true;
-    dLog(fnName, changed, domain, previousDomain);
+    // evaluate axis1d.brushedDomain
+    dLog(fnName, changed, domain, previousDomain, brushedDomain, axisBrush.brushedDomain, block.axis1d.brushedDomain, block.brushedDomain);
     if (changed) {
       block[Symbol.for('previousDomain')] = domain;
     }

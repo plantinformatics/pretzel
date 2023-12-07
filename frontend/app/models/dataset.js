@@ -5,14 +5,26 @@ import { attr, hasMany, belongsTo } from '@ember-data/model';
 
 import Record from './record';
 
+//------------------------------------------------------------------------------
 
 const dLog = console.debug;
 const trace = 1;
+
+//------------------------------------------------------------------------------
+
+/** dataset[enableFeatureFiltersSymbol] true/false enables feature filters
+ * in the genotype table for this dataset
+ */
+const enableFeatureFiltersSymbol = Symbol.for('enableFeatureFilters');
+
+//------------------------------------------------------------------------------
 
 export default Record.extend({
   apiServers : service(),
   blockService : service('data/block'),
   view : service('data/view'),
+  dataGenotype : service('data/vcf-genotype'),
+
 
   name: attr('string'),
 
@@ -104,6 +116,15 @@ export default Record.extend({
     return this.get('_meta.displayName') || this.get('id');
   }),
 
+  /** if isGerminate then _meta.germinate.mapDbId, otherwise .id,
+   * This is used in request params, but not used e.g. in
+   * sampleCache.sampleNames[], which is indexed by dataset.id
+   */
+  genotypeId : computed(function () {
+    return this.get('_meta.germinate.mapDbId') || this.get('id');
+  }),
+
+  
   /** @return shortName if defined, otherwise name
    */
   shortNameOrName : computed('_meta.shortName', function () {
@@ -141,7 +162,23 @@ export default Record.extend({
     return has;
   },
 
+  get isVCF() {
+    return this.hasTag('VCF');
+  },
+
   //----------------------------------------------------------------------------
+
+  /** positionFilter is applicable to VCF / genotype datasets, and indicates if
+   * the genotype requests for the dataset should be filtered by position
+   * intersection : i.e. whether Features/ SNPs are included in the result, by
+   * the dataset having data at a position.
+
+   * Values :
+   *   undefined / null	no filter
+   *   false	Feature / SNP is filtered out if dataset has a Feature at this position.
+   *   true	Feature / SNP is filtered in if dataset has a Feature at this position.
+   *   number 1 .. manageGenotype.gtDatasets.length - 1
+   */
 
   /** Access the dataset positionFilter attribute as a field,
    * to factor the lookup, and to enable it to be used in dependencies.
@@ -156,7 +193,7 @@ export default Record.extend({
   get positionFilterTextFn () {
     const
     pf = this.positionFilter,
-    text = (typeof pf === 'boolean') ? (pf ? '+' : '-') : '';
+    text = ['boolean', 'number'].includes(typeof pf) ? (pf ? '+' : '-') : '';
     return text;
   },
   // Could use a Computed Propery for positionFilterText - maybe when changing to Tracked Properties in Ember4.
@@ -172,6 +209,27 @@ export default Record.extend({
   },
   set sampleNames(names) {
     this[Symbol.for('sampleNames')] = names;
+    return names;
+  },
+
+  //------------------------------------------------------------------------------
+
+  /** dataset[enableFeatureFiltersSymbol] true/false enables feature filters
+   * in the genotype table for this dataset
+   */
+  get enableFeatureFilters() {
+    let enabled = this[enableFeatureFiltersSymbol];
+    if (enabled === undefined) {
+      enabled = this[enableFeatureFiltersSymbol] = true;
+    }
+    return enabled;
+  },
+  set enableFeatureFilters(value) {
+    this[enableFeatureFiltersSymbol] = value;
+    // Count the change.  Used as dependency in selectedSampleEffect().
+    const increment = value ? 1 : -1;
+    this.dataGenotype.incrementProperty('datasetEnableFeatureFiltersCount', increment);
+    return value;
   },
 
   /*--------------------------------------------------------------------------*/
@@ -199,12 +257,14 @@ export default Record.extend({
       let
       groups = this.get('server.groups'),
       /** if ! inGroup, then lookup of .groupId.* will cause 401. */
-      inGroup = groups.inGroup(groupId);
+      inGroup = groups.inGroup(groupId),
+      /** owner of group can see datasets in group, even if not a member. */
+      ownGroup = this.get('groupId.owner');
 
       /** .groupId is likely a Proxy, with .content which may be null.
        * That case is handled by the above check on groupId.id.
        */
-      visible = inGroup; //  && this.get('groupId.isVisible');
+      visible = inGroup || ownGroup; //  && this.get('groupId.isVisible');
     }
     return visible;
     }),

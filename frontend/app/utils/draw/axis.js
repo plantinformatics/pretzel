@@ -122,7 +122,11 @@ function axisConfig(yAxis, yScale)
   if (domain && (domain.length === 2)) {
     let
     domainLength = Math.abs(domain[1] - domain[0]),
-    domainMax = Math.max.apply(undefined, domain),
+    /** handle -ve endpoint of domain, seen with blast match in gff.
+     * ensure that ratio > 1 and digits > 0, required for valid formatString.
+     */
+    endMagnitudes = domain.map(Math.abs),
+    domainMax = Math.max.apply(undefined, endMagnitudes),
     /** draw-map has axisTicks = 10;  the number of ticks drawn varies 7 - 12. */
     axisTicks = oa.drawOptions?.controls?.view?.axisTicks || 10,
     ratio = domainLength && (domainMax / domainLength * axisTicks);

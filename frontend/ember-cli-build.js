@@ -62,6 +62,12 @@ module.exports = function(defaults) {
   app.import('node_modules/bootstrap/js/tab.js');
   app.import('node_modules/bootstrap/js/dropdown.js');
   app.import('node_modules/numeric/lib/numeric.latest.js');
+  app.import('node_modules/tsne-js/build/tsne.min.js', {
+    outputFile : 'assets/web-workers/tsne.min.js'
+  });
+  app.import('node_modules/vector-cosine-similarity/lib/cosineSimilarity.js', {
+    outputFile : 'assets/web-workers/cosineSimilarity.js'
+  });
 
   return app.toTree();
 };

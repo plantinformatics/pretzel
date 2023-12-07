@@ -395,6 +395,34 @@ export default ManageBase.extend({
 
   ontologyId2NodeFor : alias('blockValues.ontologyId2NodeFor'),
 
+  //----------------------------------------------------------------------------
+
+  /** @return an object mapping from blockId to status of featuresCounts
+   */
+  blocksFeaturesCountsStatus : computed(function () {
+    const
+    fnName = 'blocksFeaturesCountsStatus',
+    /** [[blockId, status], ...] */
+    blocksStatusP = this.get('blocksService').getBlocksFeaturesCountsStatus(/*blockIds*/undefined),
+    byBlockIdP = blocksStatusP.then(blocksStatus => blocksStatus.reduce((result, bs) => {
+      result[bs[0]] = bs[1];
+      return result;
+    }, {}));
+    return byBlockIdP;
+  }),
+
+  blocksAnnotateWithFCStatus() {
+    const
+    fnName = 'blocksAnnotateWithFCStatus',
+    byBlockIdP = this.blocksFeaturesCountsStatus;
+    dLog(fnName);
+    byBlockIdP.then(byBlockId => {
+      this.datasetsBlocks.forEach(dataset => dataset.blocks.forEach(block => {
+        block[Symbol.for('featuresCountsStatus')] = byBlockId[block.id];
+      }));
+    });
+  },
+
   /*--------------------------------------------------------------------------*/
 
   primaryServerStore : computed(function () {
@@ -408,6 +436,7 @@ export default ManageBase.extend({
   /** Triggers a rerun of the availableMaps fetching task */
   refreshAvailable: function(){
     this.get('refreshDatasets')();
+    this.blocksAnnotateWithFCStatus();
   },
 
   /** used by dataEmpty. */
@@ -475,6 +504,9 @@ export default ManageBase.extend({
     return groupsP;
   }),
 
+  /**
+   * @param selectedGroup  null or { id, name, ... } Ember Object
+   */
   selectedGroupChanged(selectedGroup) {
     if (selectedGroup === noGroup) {
       selectedGroup = null;
@@ -874,15 +906,18 @@ export default ManageBase.extend({
    */
   dataWithoutParent1: computed('withoutParent.[]', 'parentsSet', 'parents', function () {
     return this.get('withoutParent')
-      .filter((d,i,a) => this.datasetFilter(d,i,a));
+      .filter((d,i,a) => this.datasetFilterNotInParentsSet(d,i,a));
   }),
-  datasetFilter(dataset, index, array) {
+  /**
+   * @return true if dataset .displayName is not in .parentsSet
+   */
+  datasetFilterNotInParentsSet(dataset, index, array) {
     let parentsSet = this.get('parentsSet'),
     name = dataset.get('displayName'),
     found = parentsSet.has(name);
     if (index === 0)
     {
-      console.log('dataWithoutParent', array, parentsSet, dataset);
+      console.log('dataWithoutParent1', array, parentsSet, dataset);
     }
     console.log(dataset._internalModel.__data, index, name, found);
     return ! found;

@@ -2,6 +2,7 @@ import EntryBase from './entry-base';
 
 export default EntryBase.extend({
 
+  attributeBindings: ['title'],
   tagName: 'span',
   // attributes
   // classes

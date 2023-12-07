@@ -28,6 +28,16 @@
     </div>
     {{!-- prevent the following button from flowing onto the above 2 inline-block --}}
     <div></div>
+    <div>
+      {{#if (and @dataset.positionFilter (gt @gtDatasetsLength 1))}}
+        {{input
+          type="text"
+          value=this.chooseK
+          input=(action this.chooseKChanged value=target.value)
+        }}
+        Overlapping datasets
+      {{/if}}
+    </div>
 
 
     {{yield}}
@@ -37,6 +47,7 @@
         {{#ember-tooltip side="right" delay=500}}
         Toggle whether to filter by SNPs of this dataset.
         Each dataset may be either required / excluded / not a filter.
+        Or select one intersecting dataset and require N datasets overlapping it.
         {{/ember-tooltip}}
     </span>
 

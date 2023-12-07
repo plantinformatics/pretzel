@@ -330,8 +330,13 @@ export default Component.extend({
 
     dLog("components/table-brushed.js: didRender");
     let table = this.get('table');
-    if (table === undefined)
-      this.get('createTable').apply(this);
+    if (table === undefined) {
+      // flag that createTable() has started.
+      this.set('table', null);
+      later(() => {
+        this.createTable(this);
+      });
+    }
   },
 
   /** @return true if any of the features in data have an end position : .value[1]
@@ -650,9 +655,9 @@ export default Component.extend({
     /** cell will be null if column 0 is not rendered, in which case use getRowTrElement(). */
     if (cell) {
       tr = cell.parentElement;
-    } else {
+    } /* else {
       tr = this.getRowTrElement(table, row);
-    }
+    }*/
     if (tr) {
       tr.__dataPretzelFeature__ = feature.feature;
     }

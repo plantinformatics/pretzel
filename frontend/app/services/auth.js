@@ -13,6 +13,12 @@ import {
 import { omitBy, extendWith } from 'lodash/object';
 import { after } from 'lodash/function';
 
+import bluebird from 'bluebird';
+const promisify = bluebird/*Promise*/.promisify;
+
+import {
+  germinateGenotypeSamples, germinateGenotypeLookup, ensureSamplesParam,
+} from '../utils/data/germinate-genotype';
 
 /* global EventSource */
 
@@ -31,6 +37,10 @@ const SSE_EventID_EOF = '-1';
 function omitUndefined(value) {
   return JSON.parse(JSON.stringify(value));
 }
+
+const
+germinateGenotypeSamplesP = promisify(germinateGenotypeSamples),
+germinateGenotypeLookupP = promisify(germinateGenotypeLookup);
 
 /*----------------------------------------------------------------------------*/
 
@@ -304,10 +314,44 @@ export default Service.extend({
     return this._ajax('Blocks/pathsByReference', 'GET', {id : [blockA, blockB], blockA, blockB, reference, max_distance, options : options}, true);
   },
 
-  getBlockFeaturesCounts(block, interval, nBins, isZoomed, useBucketAuto, options) {
+  /** Get histogram of features counts for block in interval.
+   * @param block  blockId, named id in API endpoint for access check supported by loopback
+   * @param nBins number of bins to partition the block's features into
+   * @param interval  undefined or range of locations of features to count
+   * @param isZoomed  true means interval should be used to constrain the location of counted features.
+   * @param useBucketAuto default false, which means $bucket with
+   * boundaries calculated from interval and nBins; otherwise use
+   * $bucketAuto.
+   * @param userOptions user settings : {mafThreshold, snpPolymorphismFilter}
+   * @param options loopback options for find etc, also .server which is used and not sent.
+   */
+  getBlockFeaturesCounts(block, interval, nBins, isZoomed, useBucketAuto, userOptions, options) {
     if (trace_paths)
       dLog('services/auth getBlockFeaturesCounts', block, interval, nBins, isZoomed, useBucketAuto, options);
-    return this._ajax('Blocks/blockFeaturesCounts', 'GET', {id : block, block, interval, nBins, isZoomed, useBucketAuto, options}, true);
+    return this._ajax('Blocks/blockFeaturesCounts', 'GET', {id : block, block, interval, nBins, isZoomed, useBucketAuto, userOptions, options}, true);
+  },
+
+  /** Get status of cached histogram of features counts for given block or all blocks
+   * @param id  blockId
+   * @param nBins number of bins to partition the block's features into
+   * @param useBucketAuto default false
+   * @param options loopback options for find etc, also .server which is used and not sent.
+   */
+  getBlocksFeaturesCountsStatus(id, nBins, useBucketAuto, options) {
+    if (trace_paths)
+      dLog('services/auth getBlocksFeaturesCountsStatus', id, nBins, useBucketAuto, options);
+    return this._ajax('Blocks/blocksFeaturesCountsStatus', 'GET', {id, nBins, useBucketAuto, options}, true);
+  },
+
+  /** Get status of .vcf.gz files for this dataset.
+   * @param id  datasetId
+   * @param options loopback options for find etc, also .server which is used and not sent.
+   */
+  getFeaturesCountsStatus(id, options) {
+    if (trace_paths) {
+      dLog('services/auth vcfGenotypeFeaturesCountsStatus', id, options);
+    }
+    return this._ajax('Datasets/vcfGenotypeFeaturesCountsStatus', 'GET', {id, options}, true);
   },
 
   getBlockFeaturesCount(blocks, options) {
@@ -386,6 +430,8 @@ export default Service.extend({
    *  e.g. region : -r 'chr6A:607200000-607200000'
    *      samples : -s ...,...
    * This will likely be replaced by specific params region and samples.
+   * Additional :
+   * . linkageGroupName defined if isGerminate
    * @param nLines if defined, limit the output to nLines.
    * @param options not used yet, may be for streaming result
    */
@@ -401,11 +447,15 @@ export default Service.extend({
     // if (post) _server() won't be able to access data.datasetId, so pass apiServer
     const
     id2Server = this.get('apiServers.id2Server'),
-    apiServer = id2Server[data.datasetId];
+    apiServer = id2Server[data.datasetId],
+    /** No need to stringify here for Germinate apiServer - could be done in
+     * utils/data/germinate.js, but callsets are specified in URL so URL size is
+     * the limit. */
+    isGerminate = apiServer.serverType === 'Germinate';
     return this._ajax(
       'Blocks/vcfGenotypeLookup' + (post ? 'Post' : ''),
       post ? 'POST' : 'GET',
-      post ? JSON.stringify(data) : data,
+      post && ! isGerminate ? JSON.stringify(data) : data,
       true,
       /*onProgress*/ null, apiServer);
   },
@@ -511,6 +561,34 @@ export default Service.extend({
         {server : apiServer, data : dataIn} :
         this._server(route, dataIn),
      url = this._endpoint(server, route);
+
+    const featuresCountEndpoints = [
+      'Blocks/blockFeaturesCount',
+      'Blocks/blockFeatureLimits'];
+    const vcfGenotypeEndpoints = [
+      'Blocks/genotypeSamples',
+      'Blocks/vcfGenotypeLookup',
+    ];
+    if ((server.serverType === 'Germinate')) {
+      dLog(route, featuresCountEndpoints.includes(route));
+      let vcfGenotypeP;
+      if (route === 'Blocks/genotypeSamples') {
+        /** could handle this in genotypeSamples(), if block.hasTag('Germinate') */
+        const
+        {datasetId, scope} = dataIn;
+        vcfGenotypeP = germinateGenotypeSamplesP(datasetId, scope);
+      } else if (route.startsWith('Blocks/vcfGenotypeLookup')) {  // also matches : 'Blocks/vcfGenotypeLookupPost'
+        const
+        {datasetId, scope, preArgs, nLines} = dataIn;
+        /** copied from lb4app/lb3app/common/models/block.js : Block.vcfGenotypeLookup() : genotypeLookup() */
+        vcfGenotypeP =
+          ensureSamplesParam(datasetId, scope, preArgs).then(
+            preArgs => germinateGenotypeLookupP(datasetId, scope, preArgs, nLines, undefined));
+      } else  {
+        vcfGenotypeP = Promise.resolve([]);
+      }
+      return vcfGenotypeP;
+    }
 
     let config = {
       url,

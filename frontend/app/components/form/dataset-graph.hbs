@@ -1,5 +1,6 @@
 
 {{#ember-modal-dialog
+  containerClassNames="dataset-graph"
   onClose=@close
   translucentOverlay=true
   clickOutsideToClose=false
@@ -10,14 +11,23 @@
 
   <div class="dataset-graph">
 
-    <canvas id="dataset-graph-canvas" width="1400" height="850"></canvas>
+    <canvas id="dataset-graph-canvas" ></canvas>
+    <svg id="dataset-graph-svg" ></svg>
 
     <div>
     {{this.datasetEmbeddings.length}}
 
-    <BsButton @type="info" class="margin-top" @onClick={{this.start}}>Start</BsButton>
+    <BsButton @type="info" class="margin-top" @onClick={{this.initialise}}>Init</BsButton>
+    <BsButton @type="info" class="margin-top" @onClick={{this.step}}>Step</BsButton>
 
     <BsButton @type="info" class="margin-top" @onClick={{@close}}>Close</BsButton>
+
+    {{input type="search" value=naturalQuery
+      enter=(action this.naturalQueryChanged)
+      placeholder="Natural language search" }}
+
+      <span id='popoverTargetDg'>{{this.datasetIdSelected}}</span>
+
     </div>
 
     {{yield}}

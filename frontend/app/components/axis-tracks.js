@@ -743,8 +743,14 @@ export default InAxis.extend({
     let haveQtl = this.axis1d.dataBlocks.any((b) => b.isQTL);
     return haveQtl;
   }),
+  /** @return true if any of dataBlocks are geneElements. */
+  haveSubElementsBlocks : computed('axis1d.dataBlocks.[]', function haveSubElementsBlocks() {
+    let haveSubElements = this.axis1d.dataBlocks.any((b) => b.hasTag('geneElements'));
+    return haveSubElements;
+  }),
   /** @return dataBlocks which contain QTLs */
   qtlBlocks : filterBy('axis1d.dataBlocks', 'isQTL'),
+
 
   /*--------------------------------------------------------------------------*/
 
@@ -1299,6 +1305,9 @@ export default InAxis.extend({
     bbox.y = clip[i_top];
     /** + trackWidth for spacing. */
     bbox.width = this.get('combinedWidth') + trackWidth;
+    if (thisAt.haveSubElementsBlocks) {
+      bbox.width += 1000;
+    }
     bbox.height = clip[i_bottom] - clip[i_top];
     clipRect
       .attr("x", 0 /*bbox.x*/);
@@ -1791,6 +1800,7 @@ export default InAxis.extend({
 
           default :
             this.tagName = 'path';
+            this.useLine = true;
             dLog('ShapeDescription', typeName);
             break;
           }
@@ -2439,10 +2449,9 @@ export default InAxis.extend({
      * without this layoutWidth does update and the rightEdge path position of axis-2d does not update.
      */
     let
-    axisID = this.get('axisID'),
+    axis1d = this.get('axis1d'),
     width = this.get('combinedWidth');
-
-    setClipWidth(axisID, width);
+    setClipWidth(axis1d, width);
     return width;
   }),
   slowDependenciesChanged : 0,

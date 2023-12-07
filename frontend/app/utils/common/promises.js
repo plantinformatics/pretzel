@@ -23,7 +23,7 @@ function thenOrNow(value, fn) {
 /** @return	p.content if p is a promise, otherwise p.
  */
 function contentOf(p) {
-  return p?.content || p;
+  return p?.content ?? p;
 }
 
 export { thenOrNow, contentOf };

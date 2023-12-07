@@ -46,7 +46,7 @@ function removePunctuation(text) {
  *  .token  after login on that host, this is the authorization token;
  *
  */
-export default EmberObject.extend({
+const ApiServerAttributes = {
   dataset: service('data/dataset'),
   block: service('data/block'),
   apiServers: service(),
@@ -237,6 +237,15 @@ export default EmberObject.extend({
 
   ,
 
+  /** From datasetsBlocks, filter out copies from a secondary server.
+   */
+  datasetsBlocksOriginal : computed('datasetsBlocks', function () {
+    const
+    dbOriginal = this.get('datasetsBlocks')
+      ?.filter((dataset) => !dataset.get('isCopy'));
+    return dbOriginal;
+  }),
+
   /** Request block.featuresCount for all blocks.
    */
   featuresCountAllTaskInstance : computed('name', function () {
@@ -265,6 +274,7 @@ export default EmberObject.extend({
     })
 
 
-});
+};
+export default EmberObject.extend(ApiServerAttributes);
 
-export { removePunctuation };
+export { removePunctuation, ApiServerAttributes };
