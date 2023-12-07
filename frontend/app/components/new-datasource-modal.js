@@ -53,6 +53,9 @@ export default Component.extend({
   apiServers: service(),
   dataset : service('data/dataset'),
   dataView : service('data/view'),
+  queryParams: service('query-params'),
+
+  urlOptions : alias('queryParams.urlOptions'),
 
   didInsertElement: on('didInsertElement', function() {
     let confirmButton = $('button[name=confirm]', this.element);
@@ -198,8 +201,14 @@ export default Component.extend({
   typesForSelect : computed(function () {
     const
     fnName = 'typesForSelect',
-    types = ['Pretzel', 'Germinate' /*, 'noType'*/]
-      .map(name => ({id : name, name}));
+    typeNames = ['Pretzel' /*, 'noType'*/];
+    if (this.urlOptions.Germinate) {
+      typeNames.push('Germinate');
+    }
+    const
+    types = typeNames
+      .map(name => ({id : name, name}))
+    
     // types[2].name = '';
     // types.findBy('id', 'noType').name = '';
     this.set('typeSelected', types.findBy('id', 'Pretzel'));
