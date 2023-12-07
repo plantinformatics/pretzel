@@ -45,17 +45,17 @@ export default EmberObject.extend(ApiServerAttributes, {
    */
   getDatasets : function () {
     const
+    fnName = 'getDatasets',
     germinate = this.germinateInstance,
     datasetsP = germinate.maps()
-      .then(datasets => {
-        const p =
-        datasets.result.data.map(dataset =>
+      .then(datasets => datasets.result.data.map(dataset =>
           germinate.linkagegroups(dataset.mapDbId)
             .then(linkageGroups =>
               this.viewDatasetP(this.store, dataset, linkageGroups.result.data))
+            .catch(error => dLog(fnName, error))
         )
-        ; return p; }
-      );
+      )
+      .catch(error => dLog(fnName, error));
     return datasetsP;
   },
   /** Create view datasets in store which reference the Germinate datasets

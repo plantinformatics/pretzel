@@ -410,7 +410,7 @@ export default Service.extend(Evented, {
       reTexts = re && 
         ['statusCode', 'name', 'message'].reduce((texts, fN) => (texts[fN] = re[fN]) && texts, {});
       dLog('ServerLogin', url, user, error, error.statusText, reTexts);
-      throw reTexts || error.statusText;
+      throw reTexts || error.statusText || error.message;
     });
     return promise;
   }

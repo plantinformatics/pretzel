@@ -113,10 +113,10 @@ export default Component.extend({
           })
           .catch((error) => {
             let
-            errorText = error ?
+            errorText = ! error ? ' ' :
               (typeof error === "object") && 
               (Object.entries(error).map((kv) => kv.join(' : ')).join(', '))
-              || '' + error : '' + error;
+              || '' + error;
             this.set('errorText', '' + errorText); });
       }
     }

@@ -26,14 +26,17 @@ function BrAPI() { console.log('BrAPI not imported'); }
 const isNodeJs = typeof process !== 'undefined';
 
 var bent;
+//var omit;
 let env;
 if (isNodeJs) {
   bent = require('bent');
+  // omit = require('lodash/object');
   env = process.env;
 }
 // else
 import fetch from 'fetch';
 import ENV from '../../config/environment';  env = ENV.germinate;
+// import { omit } from 'lodash/object';
 
 /**
  * signature : (endpoint, method = 'GET', body = undefined) -> promise
@@ -65,6 +68,17 @@ const germinateToken = isNodeJs && env.germinateToken;
 const dLog = console.debug;
 
 const trace = 0;
+
+/** If obj is defined and contains fieldName, copy it and replace fieldName value with value.length.
+ * Similar : lodash omit(obj, [fieldName]));
+ */
+function obscureField(obj, fieldName) {
+  if (obj && obj[fieldName]) {
+    obj = Object.assign({}, obj);
+    obj[fieldName] = obj[fieldName].length;
+  }
+  return obj;
+}
 
 //------------------------------------------------------------------------------
 
@@ -103,13 +117,15 @@ Germinate.prototype.connect = connect;
  */
 function connect() {
   const fnName = 'connect';
-  console.log('Germinate', serverURL, '$germinateToken', 'this', this);
+  console.log('Germinate', serverURL, '$germinateToken', 'this', obscureField(this, 'password'));
   const
   p =
     this.login()
     .then(token => {
       console.log(fnName, token);
-      token && this.setToken(token); });
+      token && this.setToken(token);
+      if (! token) { throw 'login failed'; }
+    });
   return p;
 }
 Germinate.prototype.connectedP = connectedP;
@@ -126,7 +142,7 @@ function connectedP() {
 }
 Germinate.prototype.initBrAPIRoot = initBrAPIRoot;
 function initBrAPIRoot(token) {
-  console.log('Germinate', serverURL, token, 'this', this);
+  console.log('Germinate', serverURL, token, 'this', obscureField(this, 'password'));
   this.brapi_root = BrAPI(serverURLBrAPI, "v2.0", token);
   /** it is possible to change token by creating a child BrAPINode, via 
    * this.brapi_root.server(address, version, auth_token),
@@ -167,7 +183,14 @@ function fetchEndpoint() {
  * This is used in all cases of fetchEndpoint().
  */
 function responseValueP(response) {
-  const value = response?.json ? response.json() : Promise.resolve(response);
+  const fnName = 'responseValueP';
+  if (! response.ok || response.status !== 200) {
+    dLog(fnName, response.ok, response.status);
+  }
+  const
+  value =
+    ! response.ok ? Promise.reject(response.status, fnName) :
+    response?.json ? response.json() : Promise.resolve(response);
   return value;
 }
 
@@ -211,7 +234,7 @@ function fetchEndpoint_fetch(endpoint, method = 'GET', body = undefined) {
      */
     options.body = JSON.stringify(body);
   }
-  console.log(fnName, headerObj, body);
+  console.log(fnName, headerObj, obscureField(body, 'password'));
   const
   resultP =
     fetch(serverURL + '/' + endpoint, options);
@@ -219,7 +242,7 @@ function fetchEndpoint_fetch(endpoint, method = 'GET', body = undefined) {
 }
 function fetchEndpoint_fetch_login(endpoint, method = 'GET', body = undefined) {
   const
-  fnName = 'fetchEndpoint_fetch',
+  fnName = 'fetchEndpoint_fetch_login',
   /** for login, .token is undefined.  `this` is not defined. */
   token = /*this.token ||*/ 'null',
 
