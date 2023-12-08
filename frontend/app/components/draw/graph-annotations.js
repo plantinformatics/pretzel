@@ -12,6 +12,8 @@ import { eltIdFn } from '../../utils/draw/axis';
 
 //------------------------------------------------------------------------------
 
+const moduleName = 'draw-graph-annotations';
+
 const trace = 1;
 
 const dLog = console.debug;
@@ -264,8 +266,9 @@ export default class DrawGraphAnnotationsComponent extends Component {
    */
   initResizeListener() {
     const elt = window; // '.draw-map-container > div#holder';
+    /** use moduleName to namespace the resize event, as it is also used by draw/graph-frame  */
     d3.select(elt)
-      .on('resize', () => { dLog('resize renderAnnotations'); ! this.isDestroying &&
+      .on('resize.' + moduleName, () => { dLog('resize renderAnnotations'); ! this.isDestroying &&
                             debounce(this, this.renderAnnotations, 300); });
   }
 
