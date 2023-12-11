@@ -549,7 +549,8 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
    */
   viewDataset(datasetName, view, blockNames) {
     let
-    store = this.get('apiServers').get('primaryServer').get('store'),
+    server = this.get('apiServers').get('serverSelected'),
+    store = server.get('store'),
     dataset = store.peekRecord('dataset', datasetName);
     /** If not found on primary then check the server selected in dataset
      * explorer.  Could do just this instad of checking primary - probably
@@ -557,7 +558,7 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
      * blast-results-view.js : resultParentBlocks() does the same.
      */
     if (! dataset) {
-      let db = this.get('apiServers.serverSelected.datasetsBlocks');
+      let db = server.get('datasetsBlocks');
       dataset = db.findBy('name', datasetName);
     }
     if (dataset) {

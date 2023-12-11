@@ -25,7 +25,7 @@ export default Component.extend({
   /** Similar comment to data-csv.js applies re. store (user could select server via GUI).
    * store is used by upload-table.js : getDatasetId() and submitFile()
    */
-  store : alias('apiServers.primaryServer.store'),
+  store : alias('apiServers.serverSelected.store'),
   auth: service('auth'),  // used by upload-table.js : submitFile()
 
   /*--------------------------------------------------------------------------*/
