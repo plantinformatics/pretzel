@@ -1,5 +1,6 @@
 import { computed } from '@ember/object';
 import Service, { inject as service } from '@ember/service';
+import { alias } from '@ember/object/computed';
 
 import { _internalModel_data } from '../../utils/ember-devel';
 
@@ -26,10 +27,11 @@ const trace = 1;
  *  - display table rows as Feature triangles
  */
 export default Service.extend({
-  // push to local store for now; could use primaryServer.store.
-  store: service(),
   pathsPro : service('data/paths-progressive'),
   selected : service('data/selected'),
+  apiServers: service(),
+
+  store : alias('apiServers.serverSelected.store'),
 
   /*--------------------------------------------------------------------------*/
 

@@ -247,6 +247,7 @@ export default Component.extend(AxisEvents, {
    *  }
    */
   transientFeaturesLookup(block, listName) {
+    const fnName = 'transientFeaturesLookup';
     let transientFeatures;
     /** not yet clear whether blast-results transient blocks should be
      * viewed - that would introduce complications requiring API
@@ -256,6 +257,26 @@ export default Component.extend(AxisEvents, {
     if (! block.get('isData')) {
       let featuresByAxis = this.get('selected.' + listName + 'ByAxis'),
           axisFeatures = featuresByAxis && featuresByAxis.get(block);
+      /** If block is not a key of featuresByAxis, find a key block
+       * which matches by scope and dataset.  This may be required if
+       * parent / reference block .name and .scope are different. It
+       * can also handle transient results being loaded in the default
+       * store, although this commit changes to load them in the same
+       * store as the searched parent.
+       */
+      if (featuresByAxis && ! axisFeatures?.length) {
+        const
+        resultBlock = Array.from(featuresByAxis.keys()).find(
+          b => ((b.scope || b.name) === block.scope) &&
+            (b.get('datasetId.parent.id') === block.get('datasetId.id')));
+        axisFeatures = featuresByAxis.get(resultBlock);
+        if (! axisFeatures?.length) {
+          const keys = Array.from(featuresByAxis.keys()).map(b => ([
+            (b.scope || b.name), block.scope,
+            b.get('datasetId.parent.id'), block.get('datasetId.id')]));
+          dLog(fnName, keys, featuresByAxis);
+        }
+      }
       transientFeatures = axisFeatures && axisFeatures
         .filter(featureIsTransient);
       if (transientFeatures && ! transientFeatures.length) {

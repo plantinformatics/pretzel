@@ -60,6 +60,8 @@ import { compareFields } from '../../utils/Object_filter';
 
 //------------------------------------------------------------------------------
 
+const moduleName = 'draw-graph-frame';
+
 const dLog = console.debug;
 
 const trace = 0;
@@ -255,7 +257,7 @@ export default Component.extend({
       // This detects window resize, caused by min-/max-imise/full-screen.
       if (true)
         d3.select(window)
-        .on('resize', resizeThisWithTransition);
+        .on('resize.' + moduleName, resizeThisWithTransition);
       else  // also works, can drop if further testing doesn't indicate one is better.
         $( window )
         .resize(function(e) {

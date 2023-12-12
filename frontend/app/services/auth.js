@@ -569,7 +569,7 @@ export default Service.extend({
       'Blocks/genotypeSamples',
       'Blocks/vcfGenotypeLookup',
     ];
-    if ((server.serverType === 'Germinate')) {
+    if ((server?.serverType === 'Germinate')) {
       dLog(route, featuresCountEndpoints.includes(route));
       let vcfGenotypeP;
       if (route === 'Blocks/genotypeSamples') {
