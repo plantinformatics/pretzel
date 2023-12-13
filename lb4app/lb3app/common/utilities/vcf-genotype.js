@@ -381,7 +381,79 @@ function vcfGenotypeFeaturesCountsStatus(datasetDir, cb) {
 };
 exports.vcfGenotypeFeaturesCountsStatus = vcfGenotypeFeaturesCountsStatus;
 
+const vcfGenotypeFeaturesCountsStatusP = util.promisify(vcfGenotypeFeaturesCountsStatus);
 
 
+//------------------------------------------------------------------------------
+
+exports.checkVCFsAreInstalled = checkVCFsAreInstalled;
+/** Check if base VCF and SNPLists are installed for any VCF datasets in datasets.
+ * The requirement for SNPLists is only applied if the base VCF is large.
+ * vcfGenotypeLookup.{bash,Makefile} will automatically generate
+ * .MAF.SNPList.vcf.gz if it is not present.
+ * If the size of the base .vcf.gz is such that this will take > ~5mins then
+ * require the user to install this .MAF.SNPList.vcf.gz before uploading the VCF
+ * worksheet.
+ * @return a promise yielding datasets status, with VCF datasets which are not
+ * installed having status falsey
+ */
+function checkVCFsAreInstalled(datasets, status) {
+  const
+  fnName = 'checkVCFsAreInstalled',
+  checkPs = datasets.map(dataset => {
+    console.log(fnName, dataset.name, dataset.tags);
+    const
+    isVCF = dataset.tags.includes('VCF'),
+    checkP = ! isVCF ? Promise.resolve(true) :
+      vcfGenotypeFeaturesCountsStatusP(dataset.name)
+      .then(vcfStatus => {
+        const
+        status = statusToObj(vcfStatus),
+        notInstalled = dataset.blocks.filter(block => {
+          const
+          chrName = block.name,
+          s = status[chrName],
+          /** size and time of chr base .vcf.gz e.g. ' 354566 Sep 12 16:20' */
+          sizeTime = s?.[''] ,
+          sizeMatch = sizeTime?.match(/^ *([0-9]+)/),
+          small = ! sizeMatch || (+sizeMatch[1] < 100e6),
+          ok = small || s['.MAF.SNPList'];
+          return ! ok;
+        });
+        console.log(dataset.name, notInstalled, status, vcfStatus);
+        return ! notInstalled.length;
+      });
+    return checkP;
+  });
+  return checkPs;
+}
+//------------------------------------------------------------------------------
+
+/** Construct a mapping from chr name to a list of suffixes of available .vcf.gz
+ * files for that chromosome.
+ */
+function statusToObj(vcfStatus) {
+  const
+  fnName = 'statusToObj',
+  /** extract from frontend/app/utils/data/vcf-files.js : statusToMatrix() */
+  a = vcfStatus.split('\n'),
+  /** collated into a summary object[chrName][colName] -> sizeTime
+   * This has the same information as map; combined with cols[] this enables
+   * producing a matrix with sorted column names.
+   */
+  summary = a.reduce((s, line) => {
+    const
+    m = line.match(/(.*) ([^.]+)(.*).vcf.gz(.*)/);
+    if (m) {
+      const
+      [whole, sizeTime, chrName, suffix, csi] = m,
+      colName = (suffix + csi), // .replaceAll('.', unicodeDot),
+      chr = s[chrName] || (s[chrName] = {});
+      s[chrName][colName] = sizeTime;
+      }
+    return s;
+  }, {});
+  return summary;
+}
 
 //------------------------------------------------------------------------------
