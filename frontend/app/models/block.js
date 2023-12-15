@@ -437,6 +437,19 @@ export default Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** status of cached histogram of features counts for this block.
+   * This indicates that the histogram will be displayed immediately if the
+   * block is viewed.
+   * Value is currently the sum of the binned features counts, i.e. total
+   * features count for the block.
+   */
+  get featuresCountsStatus() {
+    return this[Symbol.for('featuresCountsStatus')];
+  },
+  set featuresCountsStatus(status) {
+    this[Symbol.for('featuresCountsStatus')] = status;
+  },
+
   /*--------------------------------------------------------------------------*/
 
   /** these 3 functions ensureFeatureLimits(), taskGetLimits(), getLimits() (and

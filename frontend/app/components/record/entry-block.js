@@ -13,6 +13,21 @@ export default EntryBase.extend({
         record.save()
       }
     }
-  }
+  },
+
+  blockFeaturesCountsStatus() {
+    const status = this.entry?.[Symbol.for('featuresCountsStatus')];
+    return status;
+  },
+  get classColour() {
+    let btnStatus = 'success';
+    const block = this.entry;
+    if (block.hasTag('VCF')) {
+      const
+      status = this.blockFeaturesCountsStatus();
+      btnStatus = status ? 'success' : 'info';
+    }
+    return btnStatus;
+  },
   
 });

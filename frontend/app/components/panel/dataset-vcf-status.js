@@ -20,9 +20,18 @@ export default class PanelDatasetVCFStatusComponent extends Component {
       .then(vcfStatus => this.vcfStatus = statusToMatrix(vcfStatus?.text));
   }
 
-  @computed
+  @computed('args.dataset')
   get blockScopes() {
     return this.args.dataset.blocks.mapBy('scope');
+  }
+  @computed('args.dataset')
+  get blocksByScope() {
+    const
+    byScope = this.args.dataset.blocks.reduce((map, block) => {
+      map[block.scope] = block;
+      return map;
+    }, {});
+    return byScope;
   }
 
   @action
@@ -51,4 +60,33 @@ export default class PanelDatasetVCFStatusComponent extends Component {
     className = vcfPipeline.indexOf(suffix) === -1 ? 'notInPipeline' : '';
     return className;
   }
+
+  @action
+  chrStatus(chrName) {
+    const
+    block = this.blocksByScope[chrName],
+    status = block ? block.featuresCountsStatus : '';
+    return status;
+  }
+  @action
+  chrStatusClass(chrName) {
+    let classNames = '';
+    if (! this.showDetail) {
+      const
+      status = this.chrStatus(chrName),
+      ok = !!status;
+      classNames = ok ? this.iconClass('ok') : '';
+    }
+    return classNames;
+  }
+
+  @action
+  /** Construct class names to select glyphicon glyphs.
+   * @return undefined if name is undefined.
+   * @desc Based on components/elem/icon-base.js : iconClass()
+   */
+  iconClass(name) {
+    return name && 'glyphicon glyphicon-' + name;
+  }
+
 }

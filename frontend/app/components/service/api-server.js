@@ -271,7 +271,33 @@ const ApiServerAttributes = {
       blocks = this.datasetsBlocks && this.datasetsBlocks.flatMap((d) => d.blocksOriginal.map((b) => b)),
       map = this.get('block').mapBlocksByReferenceAndScope(blocks);
       return map;
-    })
+    }),
+
+  /** @return an object mapping from blockId to status of featuresCounts
+   */
+  blocksFeaturesCountsStatus : computed('datasetsBlocks', function () {
+    const
+    fnName = 'blocksFeaturesCountsStatus',
+    /** [[blockId, status], ...] */
+    blocksStatusP = this.get('block').getBlocksFeaturesCountsStatus(/*blockIds*/undefined),
+    byBlockIdP = blocksStatusP.then(blocksStatus => blocksStatus.reduce((result, bs) => {
+      result[bs[0]] = bs[1];
+      return result;
+    }, {}));
+    // also attach result to block
+    byBlockIdP.then(byBlockId => {
+      this.blocksAnnotateWithFCStatus(byBlockId);
+    });
+    return byBlockIdP;
+  }),
+  blocksAnnotateWithFCStatus(byBlockId) {
+    const
+    fnName = 'blocksAnnotateWithFCStatus';
+    dLog(fnName);
+    this.datasetsBlocks.forEach(dataset => dataset.blocks.forEach(block => {
+      block[Symbol.for('featuresCountsStatus')] = byBlockId[block.id];
+    }));
+  },
 
 
 };
