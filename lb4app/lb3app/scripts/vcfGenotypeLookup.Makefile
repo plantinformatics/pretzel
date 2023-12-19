@@ -25,12 +25,14 @@
 #
 # So the .csi generation might be split into a separate rule e.g.
 %.vcf.gz.csi : %.vcf.gz
-	  bcftools index "$@";
+	  bcftools index "$<";
 # (although the (fgrep MAF= ... ln -s ... ) ties them together).
 
 #-------------------------------------------------------------------------------
 
 # These could be used to replace part of ensureSNPList()
+%.vcf.gz.MAFName : %.vcf.gz
+	echo $*.MAF.vcf.gz
 %.vcf.gz.SNPListName : %.vcf.gz
 	echo $*.SNPList.vcf.gz
 %.SNPList.vcf.gz : %.vcf.gz
