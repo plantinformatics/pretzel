@@ -116,24 +116,32 @@ function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
       moreParams.push('--genotype');
       moreParams.push('het');
     }
-    /** default is no MAF filter, i.e. >= 0, (MAF is >=0) */
-    if (preArgs.mafThreshold) {
+    /** Just 1 --include or --exclude is permitted, so combine these
+     * mafThreshold and featureCallRateThreshold into 1 condition. */
+    const includeConditions = [];
+    const mafThresholdMax = 0.5;
+    /** default is no MAF filter, i.e. >= 0, (0 <= MAF <= 0.5)
+     * Also omit when condition is <= 0.5 (i.e. .mafUpper && .mafThreshold === mafThresholdMax).
+     */
+    if (preArgs.mafThreshold !== (preArgs.mafUpper ? mafThresholdMax : 0)) {
       const
       /** --min-af and --max-af uses "INFO/AC and INFO/AN when
        * available or FORMAT/GT" quoting BCFTOOLS(1), whereas
-       * --exclude MAF< / > will utilise INFO/MAF for example.
-       * Related : mafThresholdText(); inverted here because 'exclude'.
+       * --include MAF< / > will utilise INFO/MAF for example.
+       * Related : mafThresholdText() (components/panel/manage-genotype.js)
        */
-      afOption = 'MAF' + (preArgs.mafUpper ? '>' : '<') + preArgs.mafThreshold;
-      moreParams.push('--exclude');
-      moreParams.push(afOption);
+      afOption = 'MAF' + (preArgs.mafUpper ? '<=' : '>=') + preArgs.mafThreshold;
+      includeConditions.push(afOption);
     }
     if (preArgs.featureCallRateThreshold) {
       const
       /** equivalent : N_PASS(GT!="./.")/N_SAMPLES */
       fcrOption = 'F_PASS(GT!="./.") >= ' + preArgs.featureCallRateThreshold;
-      moreParams.push('-i');
-      moreParams.push(fcrOption);
+      includeConditions.push(fcrOption);
+    }
+    if (includeConditions.length) {
+      moreParams.push('--include');	// aka. -i
+      moreParams.push(includeConditions.join(' && '));
     }
   }
   const samples = preArgs.samples;
