@@ -123,7 +123,8 @@ function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
     /** default is no MAF filter, i.e. >= 0, (0 <= MAF <= 0.5)
      * Also omit when condition is <= 0.5 (i.e. .mafUpper && .mafThreshold === mafThresholdMax).
      */
-    if (preArgs.mafThreshold !== (preArgs.mafUpper ? mafThresholdMax : 0)) {
+    if ((preArgs.mafThreshold !== undefined) &&
+        (preArgs.mafThreshold !== (preArgs.mafUpper ? mafThresholdMax : 0))) {
       const
       /** --min-af and --max-af uses "INFO/AC and INFO/AN when
        * available or FORMAT/GT" quoting BCFTOOLS(1), whereas
