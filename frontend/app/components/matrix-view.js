@@ -245,6 +245,7 @@ function nRows2HeightEx(nRows) {
 export default Component.extend({
   haplotypeService : service('data/haplotype'),
   queryParamsService : service('query-params'),
+  dom : service(),
 
   urlOptions : alias('queryParamsService.urlOptions'),
 
@@ -924,6 +925,7 @@ export default Component.extend({
         const datasetId = columnName;
         this.featureColumnDialogDataset(datasetId);
     } else if (
+      this.dom.states['Shift'] &&
       (row === -1) &&
         ! this.gtDatasetColumns.includes(columnName) &&
         ! columnNameIsNotSample(columnName) ) {
