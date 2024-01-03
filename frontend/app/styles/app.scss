@@ -2185,7 +2185,7 @@ li.list-group-item.horiz-2 > div.samplesLimit
 
 body.tablesPanelRight #right-panel-content.right-panel-dataset > div
 {
-  height:650px;
+  min-height: 650px;
 }
 #right-panel-content > .right-panel-paths {
     display : none;
