@@ -554,6 +554,8 @@ export default Component.extend({
     this.dragResizeListen();
     this.afterScrollVertically_tablePosition();
     this.table.batchRender(bind(this, this.setRowAttributes));
+    // initialise services/dom
+    this.dom || dLog(fnName, 'services/dom');
   },
 
   highlightFeature,
@@ -925,7 +927,7 @@ export default Component.extend({
         const datasetId = columnName;
         this.featureColumnDialogDataset(datasetId);
     } else if (
-      this.dom.states['Shift'] &&
+      this.dom.states.Control &&
       (row === -1) &&
         ! this.gtDatasetColumns.includes(columnName) &&
         ! columnNameIsNotSample(columnName) ) {
@@ -953,6 +955,7 @@ export default Component.extend({
         const sampleMatches = block[Symbol.for('sampleMatches')];
         console.log(fnName, sampleMatches[sampleName], sampleName);
       }
+      this.table.deselectCell();
     }
   },
 
