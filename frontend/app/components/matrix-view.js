@@ -1915,7 +1915,9 @@ export default Component.extend({
       this.hideColumns();
     }
 
-    if (data.length > 0) {
+    /** always redisplay, even if data is empty. */
+    const showEmptyInput = true;
+    if (showEmptyInput || data.length > 0) {
       t.show();
       const
       columns = this.columnNamesToColumnOptions(this.columnNames);

@@ -2253,8 +2253,11 @@ export default class PanelManageGenotypeComponent extends Component {
              this.sampleNamesCmp, /*options*/ {userSettings});
           this.displayData.addObjects(displayData);
         }
+        /* The request was successful, so close the controls dialog.
+         * Originally (until 8e2d8ff1) the dialog remained open if no features were received.
+         */
         // equivalent : displayData[0].features.length
-        if (added.createdFeatures.length) {
+        /*if (added.createdFeatures.length)*/ {
           this.showInputDialog = false;
         }
         /** added.sampleNames is from the column names of the result,
