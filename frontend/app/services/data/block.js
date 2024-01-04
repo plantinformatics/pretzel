@@ -1071,6 +1071,25 @@ export default Service.extend(Evented, {
       return filtered;
     }),
 
+  //----------------------------------------------------------------------------
+
+  /** Return viewed (loaded) VCF blocks
+   *
+   * This is based on and related to the (synonymous) viewedVCFBlocks() in
+   * components/panel/manage-genotype.js, except that function returns
+   * [{axisBrush, vcfBlock}, ...] instead of [block, ...]
+   *
+   * @return [block, ...]
+   */
+  viewedVCFBlocks : computed('viewed.[]', function() {
+    const
+    fnName = 'viewedVCFBlocks',
+    vcfBlocks = this.viewed.filter(
+      (b) => b.get('isVCF'));
+    dLog(fnName, vcfBlocks, this.viewed.length, this.params.mapsToView);
+    return vcfBlocks;
+  }),
+
   /*----------------------------------------------------------------------------*/
 
   /** collate the blocks by the parent they refer to.
