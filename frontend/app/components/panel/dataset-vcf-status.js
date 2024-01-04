@@ -44,6 +44,33 @@ export default class PanelDatasetVCFStatusComponent extends Component {
     }, {});
     return byScope;
   }
+  /** Augment .vcfStatus.rows with .blockScopes, so that the result contains
+   * firstly a row for each of the .blockScopes, and then the remainder of
+   * .vcfStatus.rows, i.e. the rows whose .Name is not in .blockScopes.
+   *
+   * This is displayed in the table; it ensures that there is a row for each
+   * block of .dataset, and then rows for other VCFs which do not correspond to
+   * scopes of blocks of .dataset
+   */
+  @computed('blockScopes', 'vcfStatus')
+  get rowsCombined() {
+    let combined;
+    if (this.vcfStatus) {
+      const
+      rowsByName = this.vcfStatus.rows.reduce((byName, row) => {
+	byName[row.Name] = row;
+	return byName;
+      }, {}),
+      blockRows = this.blockScopes.map(scope => {
+	const r = rowsByName[scope] || {Name : scope};
+	return r;
+      }),
+      nonBlockRows = this.vcfStatus.rows.filter(row => ! this.blockScopes.includes(row.Name));
+      combined = blockRows.concat(nonBlockRows);
+    }
+    return combined;
+  }
+
 
   @action
   cellIcon(row, columnName) {
