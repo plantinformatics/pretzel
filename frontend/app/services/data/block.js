@@ -587,7 +587,7 @@ export default Service.extend(Evented, {
                 } else {
                   const
                   /** userOptions is optional, and the fields are optional. */
-                  userOptions = pick(this.controls.userSettings.genotype, ['mafThreshold', 'snpPolymorphismFilter']);
+                  userOptions = pick(this.controls.userSettings.genotype, ['mafThreshold', 'snpPolymorphismFilter', 'featureCallRateThreshold']);
                   countsP =
                   this.get('auth').getBlockFeaturesCounts(blockId, interval, nBins, !!zoomedDomain, useBucketAuto, userOptions, /*options*/{});
                 }

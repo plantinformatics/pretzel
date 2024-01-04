@@ -128,10 +128,10 @@ function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
       const
       /** --min-af and --max-af uses "INFO/AC and INFO/AN when
        * available or FORMAT/GT" quoting BCFTOOLS(1), whereas
-       * --include MAF< / > will utilise INFO/MAF for example.
+       * --include MAF< / > may utilise INFO/MAF for example ? not clear so using INFO/MAF.
        * Related : mafThresholdText() (components/panel/manage-genotype.js)
        */
-      afOption = 'MAF' + (preArgs.mafUpper ? '<=' : '>=') + preArgs.mafThreshold;
+      afOption = 'INFO/MAF' + (preArgs.mafUpper ? '<=' : '>=') + preArgs.mafThreshold;
       includeConditions.push(afOption);
     }
     if (preArgs.featureCallRateThreshold) {

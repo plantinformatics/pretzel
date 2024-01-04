@@ -74,6 +74,9 @@ exports.parseBooleanFields = parseBooleanFields;
 function parseBooleanFields(object, fieldNames) {
   fieldNames.forEach(fieldName => {
     if (typeof object[fieldName] === 'string') {
+      /** trace confirmed this is used for : snpPolymorphismFilter,
+       * mafThreshold, featureCallRateThreshold in blockFeaturesCounts. */
+      // console.log('parseBooleanFields', fieldName, object[fieldName]);
       object[fieldName] = JSON.parse(object[fieldName]);
     }
   });
