@@ -12,12 +12,23 @@ export default class PanelDatasetVCFStatusComponent extends Component {
 
   @tracked showDetail = false;
 
-  @tracked vcfStatus;
+  /** [datasetId] -> status matrix : [chr] -> cols */
+  vcfStatuses = {};
+  @tracked
+  vcfStatusesUpdateCount = 0;
+  @computed('vcfStatuses', 'vcfStatusesUpdateCount', 'args.dataset.id')
+  get vcfStatus() {
+    const status = this.vcfStatuses[this.args.dataset.id];
+    return status;
+  }
   @action
   getVcfStatus() {
     const id = this.args.dataset.id;
     this.auth.getFeaturesCountsStatus(id, /*options*/undefined)
-      .then(vcfStatus => this.vcfStatus = statusToMatrix(vcfStatus?.text));
+      .then(vcfStatus => {
+        this.vcfStatuses[id] = statusToMatrix(vcfStatus?.text);
+        this.vcfStatusesUpdateCount++;
+      });
   }
 
   @computed('args.dataset')
