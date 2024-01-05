@@ -1010,6 +1010,35 @@ export default Model.extend({
 
   //----------------------------------------------------------------------------
 
+  /** If .isVCF filter .featuresCountsResults by SNP filters defined by user in
+   * genotype table controls.
+   *
+   * Added after 339ab17b, this provides a view of .featuresCountsResults which
+   * is narrowed to match the current user controls, and is substituted for
+   * .featuresCountsResults in all the downstream functions which read
+   * featuresCountsResults :
+   *  featuresCountIncluding{Brush,Zoom}
+   *  featuresCounts{InBrush,InZoom,OverlappingInterval,ResultsSearch,ResultsMergeOrAppend} .
+   * featuresCountsResultsMergeOrAppend() writes to the source value : .featuresCountsResults
+   */
+  featuresCountsResultsFiltered : computed('featuresCountsResults.[]', 'controls.genotypeSNPFilters', function () {
+    const fnName = 'featuresCountsResultsFiltered';
+    let fcrs = this.featuresCountsResults;
+    if (this.isVCF) {
+      /** Currently only genotype SNP Filters are used; the field name
+       * userOptions is generic because featuresCountsResults of other
+       * dataset types may have other, different, filters.
+       */
+      const userOptions = this.controls.genotypeSNPFilters;
+      const unfilteredLength = fcrs.length;
+      fcrs = fcrs.filter(fcr => isEqual(userOptions, fcr.userOptions));
+      dLog(fnName, fcrs.length, unfilteredLength);
+    }
+    return fcrs;
+  }),
+
+  //----------------------------------------------------------------------------
+
   /** if .featureCount is defined, calculate the approximate proportion within
    * zoom or brush if defined, otherwise return all.
    */
@@ -1029,16 +1058,16 @@ export default Model.extend({
   },
 
   /** If the axis of this block is brushed, return .featureCountInBrush if
-   * .featuresCountsResults.length otherwise featureCountProrata(.featureCount).
+   * .featuresCountsResultsFiltered.length otherwise featureCountProrata(.featureCount).
    * If not brushed, return .featureCount
    */
   featuresCountIncludingBrush : computed(
-    'featuresCountsResults.[]',
+    'featuresCountsResultsFiltered.[]',
     'featureCountInBrush', 'brushedDomain.{0,1}' /* -Debounced */, 'limits',
     function () {
       let
       count = this.get('axis1d.brushed') ?
-        (this.featuresCountsResults.length ?
+        (this.featuresCountsResultsFiltered.length ?
          this.get('featureCountInBrush') : this.featureCountProrata(this.featureCount) ) :
         this.featureCount;
       if (trace_block > 1)
@@ -1050,14 +1079,14 @@ export default Model.extend({
    * i.e. zoomedDomain is undefined, then simply return .featureCount
    */
   featuresCountIncludingZoom : computed(
-    'featuresCountsResults.[]',
+    'featuresCountsResultsFiltered.[]',
     'featureCountInZoom',
     '{zoomedDomainDebounced,zoomedDomainThrottled}.{0,1}',
     'limits',
     function () {
       let
       count = this.get('zoomedDomain') ?
-        (this.featuresCountsResults.length ? this.get('featureCountInZoom') : undefined ) :
+        (this.featuresCountsResultsFiltered.length ? this.get('featureCountInZoom') : undefined ) :
         this.featureCount;
       if (trace_block > 1)
         dLog('featuresCountIncludingZoom', count);
@@ -1067,13 +1096,13 @@ export default Model.extend({
   /** Same as featuresCountsInZoom(), but for the brushedDomain instead of the zoomedDomain
    */
   featuresCountsInBrush : computed(
-    'featuresCountsResults.[]', 'brushedDomain.{0,1}' /* -Debounced */, 'limits',
+    'featuresCountsResultsFiltered.[]', 'brushedDomain.{0,1}' /* -Debounced */, 'limits',
     function () {
       let
       domain = this.get('brushedDomain'),
       overlaps;
       if (! domain) {
-        overlaps = this.get('featuresCountsResults');
+        overlaps = this.get('featuresCountsResultsFiltered');
       }
       else {
         overlaps = this.featuresCountsOverlappingInterval(domain);
@@ -1084,13 +1113,13 @@ export default Model.extend({
     }),
   /** From the featuresCounts results received, filter to return the bins
    * overlapping zoomedDomain.
-   * If not zoomed (no zoomedDomain), return featuresCountsResults.
+   * If not zoomed (no zoomedDomain), return featuresCountsResultsFiltered.
    * @return undefined if no results or no overlaps
-   * Result form is the same as featuresCountsResults, i.e.
+   * Result form is the same as featuresCountsResultsFiltered, i.e.
    * [ {binSize, nBins, domain: Array(2), result: Array}, ... ]
    */
   featuresCountsInZoom : computed(
-    'featuresCountsResults.[]',
+    'featuresCountsResultsFiltered.[]',
     '{zoomedDomainDebounced,zoomedDomainThrottled}.{0,1}',
     'limits',
     function () {
@@ -1099,7 +1128,7 @@ export default Model.extend({
       limits = this.get('limits'),
      overlaps;
      if (! domain) {
-       overlaps = this.get('featuresCountsResults');
+       overlaps = this.get('featuresCountsResultsFiltered');
      }
      else {
        overlaps = this.featuresCountsOverlappingInterval(domain);
@@ -1237,7 +1266,7 @@ export default Model.extend({
     let
     fcLevels = this.get('urlOptions.fcLevels'),
     overlapFn = fcLevels ? overlapInterval : this.almostSubInterval,
-    featuresCounts = this.get('featuresCountsResults') || [],
+    featuresCounts = this.get('featuresCountsResultsFiltered') || [],
     overlaps = featuresCounts.reduce(
       (result, fcs) => {
         if (fcs.domain && overlapFn(interval, fcs.domain)) {
@@ -1392,7 +1421,7 @@ export default Model.extend({
     'featuresCountIncludingZoom',
     'zoomedDomainDebounced.{0,1}',
     'featuresCounts.[]',
-    'featuresCountsResults.[]',
+    'featuresCountsResultsFiltered.[]',
     'featuresCountsThreshold',
     function () {
     let
@@ -1769,7 +1798,8 @@ export default Model.extend({
     'featuresCountsThreshold',
     'featuresCountsInZoomSmallestBinSize',
     'limits',
-    'featuresCountsResults.[]',
+    // featuresCountsResultsSearch() uses .featuresCountsResultsFiltered
+    'featuresCountsResultsFiltered.[]',
     'isZoomedOut',
     // used in data/block.js:getSummary()
     'blockService.featuresCountsNBins',
@@ -1808,7 +1838,7 @@ export default Model.extend({
       (this.loadingAllFeatures = true);
     /** can use isZoomedOut here instead, e.g. (isZoomedOut === true)  */
     if (all || this.get('isChartable') ||
-        ((count !== undefined) && (count <= featuresCountsThreshold))) {
+        ((count !== false) && (count !== undefined) && (count <= featuresCountsThreshold))) {
       const featuresP = this.getFeatures(blockId, all);
       if (all) {
         featuresP.then(promiseResult => {
@@ -1839,9 +1869,9 @@ export default Model.extend({
       dLog(fnName, 'no domain yet', this.zoomedDomain, this.limits);
     } else
     /** if featuresCounts not yet requested then count is undefined
-     * Equivalent to check if .featuresCountsResults.length === 0.
+     * Equivalent to check if .featuresCountsResultsFiltered.length === 0.
      */
-    if ((this.featuresCounts === undefined) || ((count === undefined) || (count > featuresCountsThreshold))) {
+    if ((this.featuresCounts === undefined) || ((count === false) || (count === undefined) || (count > featuresCountsThreshold))) {
       let
       minSize = this.get('featuresCountsInZoomSmallestBinSize'),
       yRange = this.getRange(),
@@ -1904,7 +1934,7 @@ export default Model.extend({
   featuresCountsResultsSearch(domain, nBins) {
     let 
     lengthRounded = binEvenLengthRound(domain, nBins),
-    result = this.get('featuresCountsResults')
+    result = this.get('featuresCountsResultsFiltered')
     // based on similar block-view.js:selectFeaturesCountsResults(): betterResults
       .find(
         (fc) => {
@@ -1929,8 +1959,10 @@ export default Model.extend({
     featuresCountsResultsTidy(fcResult);
     // based on featuresCountsResultsSearch()
     let 
+    /** Search in .featuresCountsResultsFiltered, i.e. .userOptions
+     * should match if defined, and update .featuresCountsResults */
     featuresCountsResults = this.get('featuresCountsResults'),
-    combined = featuresCountsResults
+    combined = this.featuresCountsResultsFiltered
       .find(
         (fcr) => {
           let found =

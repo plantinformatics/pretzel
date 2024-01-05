@@ -4,6 +4,8 @@ import Evented from '@ember/object/evented';
 import Service from '@ember/service';
 import { inject as service } from '@ember/service';
 
+import { pick } from 'lodash/object';
+
 import { stacks } from '../utils/stacks';
 
 const dLog = console.debug;
@@ -58,5 +60,18 @@ export default Service.extend(Evented, {
   }),
 
   /*--------------------------------------------------------------------------*/
+
+  /** @return the current values of the user genotype controls which filter SNPs
+   */
+  genotypeSNPFilters : computed(
+    'userSettings.genotype.mafThreshold',
+    'userSettings.genotype.snpPolymorphismFilter',
+    'userSettings.genotype.featureCallRateThreshold',
+    function () {
+      const userOptions = pick(this.userSettings.genotype, ['mafThreshold', 'snpPolymorphismFilter', 'featureCallRateThreshold']);
+      return userOptions;
+    }),
+
+  //----------------------------------------------------------------------------
 
 });

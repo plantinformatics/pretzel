@@ -9,7 +9,6 @@ import Service, { inject as service } from '@ember/service';
 import { task, didCancel } from 'ember-concurrency';
 
 import { keyBy } from 'lodash/collection';
-import { pick } from 'lodash/object';
 
 //------------------------------------------------------------------------------
 
@@ -579,15 +578,19 @@ export default Service.extend(Evented, {
               if (! zoomedDomain) {
                 interval = intervalFromLimits(blockId);
               }
+              /** User controls which filter genotype SNPs.
+               */
+              let userOptions;
               let getCountsForInterval = (interval) => {
                 let countsP;
                 if (interval && (interval[0] === interval[1])) {
                   dLog('getCountsForInterval', interval);
                   countsP = Promise.resolve([]);
                 } else {
-                  const
                   /** userOptions is optional, and the fields are optional. */
-                  userOptions = pick(this.controls.userSettings.genotype, ['mafThreshold', 'snpPolymorphismFilter', 'featureCallRateThreshold']);
+                  if (block.isVCF) {
+                    userOptions = this.controls.genotypeSNPFilters;
+                  }
                   countsP =
                   this.get('auth').getBlockFeaturesCounts(blockId, interval, nBins, !!zoomedDomain, useBucketAuto, userOptions, /*options*/{});
                 }
@@ -634,7 +637,7 @@ export default Service.extend(Evented, {
                 binSize = f0 ?
                   (f0.idWidth ? f0.idWidth[0] : ((f0.max - f0.min) || 1)) :
                   (interval ? (0, intervalSize)(interval) / nBins : 1),
-                result = {binSize, nBins, domain : interval, result : featuresCounts};
+                result = {userOptions, binSize, nBins, domain : interval, result : featuresCounts};
                 block.featuresCountsResultsMergeOrAppend(result);
                 block.set('featuresCounts', featuresCounts);
                 if ((block.featureCount === undefined) && block.hasTag('view') ) {

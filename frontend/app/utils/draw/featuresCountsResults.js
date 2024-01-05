@@ -500,7 +500,7 @@ fcrsShow = function (fcrs)  { fcrs.forEach((fcr) => console.log('featuresCountsR
  */
 const binSize = 1e7;
 
-/**
+/** Collate whole-chromosome calls / features list received from Germinate into bins.
  * @param sampleData from germinateGenotypeLookup() : callsets calls response
  * @return {counts, limits}
  *   .counts [binCount, ...]
@@ -531,7 +531,9 @@ function germinateCallsToCounts(sampleData) {
   }, {counts : [], limits : undefined});
   return result;
 }
-/**
+/** Transform binned feature counts from Germinate into featuresCounts for
+ * histogram : format as a featuresCountsResult and push into
+ * block.featuresCountsResults.
  * Used in models/block.js : featuresForAxis() : all
  */
 function featuresCountsTransform(block, counts) {
