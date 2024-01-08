@@ -45,7 +45,10 @@ function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
    * In that case moreParams will be passed to view, and paramsForQuery
    * will be passed to query.
    */
-  viewRequired = snpPolymorphismFilter || preArgs.mafThreshold,
+  viewRequired = snpPolymorphismFilter || preArgs.mafThreshold ||
+    preArgs.featureCallRateThreshold ||
+    preArgs.minAlleles !== undefined || preArgs.maxAlleles !== undefined ||
+    preArgs.typeSNP !== undefined,
   command = headerOnly ? 'view' : preArgs.SNPList ?
     (viewRequired ? 'counts_view' : 'counts_query') :
     preArgs.requestFormat ? (viewRequired ? 'view_query' : 'query') : 'view';
@@ -144,6 +147,20 @@ function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
       moreParams.push('--include');	// aka. -i
       moreParams.push(includeConditions.join(' && '));
     }
+
+    if (preArgs.minAlleles !== undefined) {
+      moreParams.push('--min-alleles');
+      moreParams.push(preArgs.minAlleles);
+    }
+    if (preArgs.maxAlleles !== undefined) {
+      moreParams.push('--max-alleles');
+      moreParams.push(preArgs.maxAlleles);
+    }
+    if (preArgs.typeSNP) {
+      moreParams.push("-v");
+      moreParams.push("snps");
+    }
+
   }
   const samples = preArgs.samples;
   if (samples?.length) {

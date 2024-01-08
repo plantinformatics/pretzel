@@ -148,6 +148,8 @@ function featureHasSamplesLoaded(feature) {
  * user-selected values are preserved in args.userSettings
  * (related : services/data/selected.js)
  * Fields are implicitly @tracked because userSettings is in args.
+ *
+ *------------------------------------------------------------------------------
  * Within userSettings (object) :
  *
  * Array of sample names selected by the user, for distance reference at
@@ -178,6 +180,10 @@ function featureHasSamplesLoaded(feature) {
  *
  * .callRateThreshold default 0
  * .featureCallRateThreshold default 0
+ * .minAlleles default ''
+ * .maxAlleles default ''
+ * .typeSNP default false
+ *
  * .samplesLimit default 10
  * .samplesLimitEnable default false
  * .sampleFilterTypeName default 'variantInterval'
@@ -200,6 +206,7 @@ function featureHasSamplesLoaded(feature) {
  *   The samples indicated by requestSamplesAll can be optionally filtered before request.
  *
  * @see userSettingsDefaults()
+ *------------------------------------------------------------------------------
  */
 export default class PanelManageGenotypeComponent extends Component {
   @service() controls;
@@ -441,6 +448,15 @@ export default class PanelManageGenotypeComponent extends Component {
     }
     if (userSettings.featureCallRateThreshold === undefined) {
       userSettings.featureCallRateThreshold = 0;
+    }
+    if (userSettings.minAlleles === undefined) {
+      userSettings.minAlleles = '';
+    }
+    if (userSettings.maxAlleles === undefined) {
+      userSettings.maxAlleles = '';
+    }
+    if (userSettings.typeSNP === undefined) {
+      userSettings.typeSNP = '';
     }
 
     if (userSettings.samplesLimit === undefined) {
@@ -2111,12 +2127,22 @@ export default class PanelManageGenotypeComponent extends Component {
       featureCallRateThreshold = userSettings.featureCallRateThreshold,
       requestOptions = {
         requestFormat, requestSamplesAll, snpPolymorphismFilter,
-        mafThreshold, mafUpper, featureCallRateThreshold},
+        mafThreshold, mafUpper, featureCallRateThreshold,
+      },
       x=0;
 
       if (intersection) {
         requestOptions.isecDatasetIds = intersection.datasetIds;
         requestOptions.isecFlags = '-n' + intersection.flags;
+      }
+      if (userSettings.minAlleles !== '') {
+        requestOptions.minAlleles = userSettings.minAlleles;
+      }
+      if (userSettings.maxAlleles !== '') {
+        requestOptions.maxAlleles = userSettings.maxAlleles;
+      }
+      if (userSettings.typeSNP !== '') {
+        requestOptions.typeSNP = userSettings.typeSNP;
       }
 
       addGerminateOptions(requestOptions, blockV);

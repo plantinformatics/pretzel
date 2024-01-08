@@ -793,14 +793,21 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
    * @param useBucketAuto default false, which means $bucket with
    * boundaries calculated from interval and nBins; otherwise use
    * $bucketAuto.
-   * @param userOptions user settings : {mafThreshold, snpPolymorphismFilter, featureCallRateThreshold}
+   * @param userOptions user settings : {
+   *   mafThreshold, snpPolymorphismFilter, featureCallRateThreshold,
+   *   minAlleles, maxAlleles, typeSNP}
    * @param options loopback options
    */
   Block.blockFeaturesCounts = function(id, interval, nBins, isZoomed, useBucketAuto, userOptions, options, res, cb) {
 
+    const snpFilterfieldNames = [
+      'snpPolymorphismFilter', 'mafThreshold', 'featureCallRateThreshold',
+      'minAlleles', 'maxAlleles', 'typeSNP',
+    ];
     if (userOptions) {
-      /* parseBooleanFields() parses values which are represented as strings, including Boolean and numeric values */
-      parseBooleanFields(userOptions, ['snpPolymorphismFilter', 'mafThreshold', 'featureCallRateThreshold']);
+      /** parseBooleanFields() parses values which are represented as strings,
+       * including Boolean and numeric values */
+      parseBooleanFields(userOptions, snpFilterfieldNames);
     }
 
   let
@@ -816,14 +823,11 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     useCache = ! isZoomed || ! interval,
     cacheIdOptions = ! userOptions ? '' : Object.entries(userOptions)
       .reduce((result, [name, value]) => {
-	/** The two Threshold fields could be ambiguous, because all 3 fields
-	 * are optional; snpPolymorphismFilter is always present and is a
-	 * different type, which resolves the ambiguity. e.g. _0.1_false_0.1
-	 * Representing undefined values as '_' + '' would be a more definite solution.
-	 */
-        if (['mafThreshold', 'snpPolymorphismFilter', 'featureCallRateThreshold'].includes(name)
-            && (value !== undefined) && (value !== null) && (value !== '')) {
-          result += '_' + value;
+        /** The SNP filter fields (snpFilterfieldNames) are optional; map
+         * undefined or null to '', to avoid the cacheId being ambiguous.
+         */
+        if (snpFilterfieldNames.includes(name)) {
+          result += '_' + (value ?? '');
         }
         return result;
       }, ''),

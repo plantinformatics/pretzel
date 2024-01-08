@@ -2149,6 +2149,8 @@ body:not(.tablesPanelRight) .metaeditor-panel {
 .input-range-text input[type=range] {
   width : 100%;
 }
+/** .small-number is used in manage-genotype near InputRangeText so these are preferably the same width.  */
+.small-number,
 .input-range-text input[type=text] {
   width : 2.9em;
 }
@@ -2476,6 +2478,11 @@ div.genotype .ember-tooltip-inner
 {
   min-width : 30em;
 }
+div.genotype .ember-tooltip
+{
+  max-width: 30em;
+}
+
 
 
 /* -------------------------------------------------------------------------- */

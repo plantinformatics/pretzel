@@ -807,6 +807,39 @@
 
                   </li>
 
+                  <li>
+                    <div style="display : inline-block;">
+                      <label class="inline-margin">Alleles</label>
+                      <label class="inline-margin">Min</label>
+                      {{input
+                        type="text"
+                        class="small-number"
+                        value=this.args.userSettings.minAlleles
+                      }}
+                      <label class="inline-margin">Max</label>
+                      {{input
+                        type="text"
+                        class="small-number"
+                        value=this.args.userSettings.maxAlleles
+                      }}
+                      <EmberTooltip side="right" delay=500>
+                        <span>Filter SNPs by number of alleles. For bi-allelic SNPs, set Min and Max to 2.
+(--min-alleles and --max-alleles)</span>
+                      </EmberTooltip>
+                    </div>
+
+                    <span class="filter-group-col">
+                      <label class="inline-margin">Type : SNP</label>
+                      <input type="checkbox" name="typeSNP" checked={{@userSettings.typeSNP}}
+                        oninput={{action (mut @userSettings.typeSNP) value="target.checked"}} 
+                      >
+                      <EmberTooltip side="right" delay=500>
+                        <span>Select sites with Alt which is of type SNP. (-v snps)</span>
+                      </EmberTooltip>
+                    </span>
+
+                  </li>
+
 
                 </ul>
 

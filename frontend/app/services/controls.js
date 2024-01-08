@@ -67,8 +67,16 @@ export default Service.extend(Evented, {
     'userSettings.genotype.mafThreshold',
     'userSettings.genotype.snpPolymorphismFilter',
     'userSettings.genotype.featureCallRateThreshold',
+    'userSettings.genotype.minAlleles',
+    'userSettings.genotype.maxAlleles',
+    'userSettings.genotype.typeSNP',
     function () {
-      const userOptions = pick(this.userSettings.genotype, ['mafThreshold', 'snpPolymorphismFilter', 'featureCallRateThreshold']);
+      const
+      genotypeSNPFilterNames =  [
+        'mafThreshold', 'snpPolymorphismFilter', 'featureCallRateThreshold',
+        'minAlleles', 'maxAlleles', 'typeSNP',
+      ],
+      userOptions = pick(this.userSettings.genotype, genotypeSNPFilterNames);
       return userOptions;
     }),
 
