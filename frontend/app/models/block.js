@@ -1885,8 +1885,19 @@ export default Model.extend({
       let nBins = this.get('blockService.featuresCountsNBins'),
       requestedSize = yRange / nBins,
       threshold = Math.min(binPxThreshold, requestedSize);
-      /** minSize === 0 indicate no featuresCounts overlapping this zoomedDomain. */
-      if ((minSizePx === 0) || (minSizePx > threshold))  /* px */ {
+      let fc, coverage;
+      /** Conditions for requesting featuresCounts via getBlocksSummary() :
+       * _ minSize === 0 indicates no featuresCounts overlapping this zoomedDomain.
+       * _ or if .featuresCounts does not cover .axis1d.domain well (70%).
+       */
+      if (((minSizePx === 0) || (minSizePx > threshold))  /* px */ ||
+          ((fc = this.featuresCounts) &&
+           ((coverage = intervalOverlapCoverage([fc[0]._id, fc.at(-1)._id], this.axis1d.domain)) < 0.7)) ) {
+
+        if (fc && coverage) {
+          dLog(fnName, 'coverage', coverage, fc[0]._id, fc.at(-1)._id, this.axis1d.domain);
+        }
+
         /* request summary / featuresCounts if there are none for block,
          * or if their bins are too big */
         /** Don't request if there is already a result matching these params. */

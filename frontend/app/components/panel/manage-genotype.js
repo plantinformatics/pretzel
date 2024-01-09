@@ -456,7 +456,7 @@ export default class PanelManageGenotypeComponent extends Component {
       userSettings.maxAlleles = '';
     }
     if (userSettings.typeSNP === undefined) {
-      userSettings.typeSNP = '';
+      userSettings.typeSNP = false;
     }
 
     if (userSettings.samplesLimit === undefined) {
@@ -2141,7 +2141,7 @@ export default class PanelManageGenotypeComponent extends Component {
       if (userSettings.maxAlleles !== '') {
         requestOptions.maxAlleles = userSettings.maxAlleles;
       }
-      if (userSettings.typeSNP !== '') {
+      if (userSettings.typeSNP) {
         requestOptions.typeSNP = userSettings.typeSNP;
       }
 

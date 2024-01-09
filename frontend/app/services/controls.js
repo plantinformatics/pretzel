@@ -76,10 +76,25 @@ export default Service.extend(Evented, {
         'mafThreshold', 'snpPolymorphismFilter', 'featureCallRateThreshold',
         'minAlleles', 'maxAlleles', 'typeSNP',
       ],
-      userOptions = pick(this.userSettings.genotype, genotypeSNPFilterNames);
+      userSettings = this.userSettings.genotype,
+      /** Don't pass values which are default, so they are not used in cacheIdOptions. */
+      userOptions = {}; // pick(this.userSettings.genotype, genotypeSNPFilterNames);
+      pickNonDefault(userOptions, userSettings, ['snpPolymorphismFilter', 'typeSNP'], false);
+      pickNonDefault(userOptions, userSettings, ['mafThreshold', 'featureCallRateThreshold'], 0);
+      pickNonDefault(userOptions, userSettings, ['minAlleles', 'maxAlleles'], '');
+
       return userOptions;
     }),
 
   //----------------------------------------------------------------------------
 
 });
+
+/** Like lodash.pick(), but pick only values which have a non-default value.
+ */
+function pickNonDefault(target, source, fieldNames, defaultValue) {
+  fieldNames.forEach(name => {
+    if (source[name]) {
+      target[name] = source[name];
+    } } );
+}
