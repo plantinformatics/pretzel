@@ -291,8 +291,7 @@ function prepareCommonSNPs() {
   # instead of the whole chromosome.
   # Including parameters in the file name to handle multiple concurrent calls,
   # e.g. triggered by a single client action (autoLookup)
-  # $commonSNPsDir/
-  commonSNPs="isec.$isecFlags.$chr.$isecDatasetIds.$$.vcf"
+  commonSNPs="$commonSNPsDir/isec.$isecFlags.$chr.$isecDatasetIds.$$.vcf"
   if [ ${#vcfGzs[@]} -gt 0 ]
   then
     if true # [ ! -f "$commonSNPs" ]

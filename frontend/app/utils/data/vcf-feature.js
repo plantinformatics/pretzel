@@ -287,9 +287,14 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedService, 
         meta[nameVal[1]] = nameVal[2];
       }
     } else if (l.startsWith('#CHROM')) {
+      // Column header row output by bcftools view
       columnNames = l.slice(1).split('\t');
       sampleNames = columnNames.slice(nColumnsBeforeSamples);
+      // from columnNames.slice(0,9), appended tSNP.
+      const nonSampleFields = ['CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT', 'tSNP'];
+      columnIsGT = columnNames.map(c => nonSampleFields.includes(c));
     } else if (l.startsWith('# [1]ID')) {
+      // Column header row output by bcftools query
       // # [1]ID	[2]POS	[3]ExomeCapture-DAS5-002978:GT	[4]ExomeCapture-DAS5-003024:GT	[5]ExomeCapture-DAS5-003047:GT	[6]ExomeC
       columnIsGT = l
         .split(/\t\[[0-9]+\]/)
