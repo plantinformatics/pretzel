@@ -6,7 +6,7 @@
 # Also create %.MAF.vcf.gz.csi, by ln -s or bcftools index (possibly : bgzip  -i --index-name)
 # stdout will contain filename, read by the caller of dbName2Vcf(),  so don't echo command.
 %.MAF.vcf.gz : %.vcf.gz
-	@if gzip -d < "$<" | head -1000 | grep -C1 '^#CHROM'  | grep -v '^#' | egrep 'MAF=' >/dev/null;	\
+	@if gzip -d < "$<" | head -1000 | grep -C1 '^#CHROM'  | grep -v '^#' | egrep 'MAF=' | egrep 'AC=' | egrep 'AC_Het=' >/dev/null;	\
 	then	\
 	  ln -s "$<" "$@";	\
 	  if [ -e "$<.csi" ];	\
@@ -16,7 +16,7 @@
 	      bcftools index "$@";	\
 	  fi;	\
 	else	\
-	  bcftools +fill-tags "$<"  -- -t MAF,AN,AC | bgzip  > "$@";	\
+	  bcftools +fill-tags "$<"  -- -t MAF,AN,AC,AC_Het | bgzip  > "$@";	\
 	  bcftools index "$@";	\
 	fi
 

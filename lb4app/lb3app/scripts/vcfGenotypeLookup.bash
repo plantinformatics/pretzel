@@ -436,7 +436,7 @@ then
   then
     echo 1>&$F_ERR 'Error:' $? "VCF dataset dir is not configured", "$datasetIdParam", PWD=$PWD
   else
-    ls -gGLd *.vcf.gz* | cut -c13-
+    ls -gGL | fgrep  .vcf.gz | cut -c13-
   fi
 else
   vcfGz=$(dbName2Vcf "$datasetIdParam")

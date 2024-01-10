@@ -157,7 +157,7 @@ function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
       moreParams.push(preArgs.maxAlleles);
     }
     if (preArgs.typeSNP) {
-      moreParams.push("-v");
+      moreParams.push("--types");
       moreParams.push("snps");
     }
 
