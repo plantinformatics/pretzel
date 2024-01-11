@@ -54,6 +54,11 @@ const t_view = 0;
  * In the Pretzel database the 'chr' is omitted.
  * This function strips the leading chr / Chr off, so that the chr
  * name can be matched with the block name / scope.
+ * This is no longer used - instead the Pretzel scope and blast database
+ * (chromosome) scope are configured to be the same.  See related comment in
+ * dataFeatures() re. using Block .name instead of .scope; may need a reference
+ * dataset.meta configuration for the chromosome prefix of each external
+ * database.
  */
 function chrName2Pretzel(chrName) {
   return chrName.replace(/^chr/i, '');

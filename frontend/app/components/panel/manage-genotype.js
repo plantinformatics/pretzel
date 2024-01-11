@@ -1185,12 +1185,18 @@ export default class PanelManageGenotypeComponent extends Component {
     const b = this.lookupBlock;
     return b?.get('datasetId.id');
   }
+  /** Scope of lookupBlock, which used to identify the (reference) chromosome in
+   * request to genotype database, e.g. bcftools
+   */
   @computed('lookupBlock')
   get lookupScope() {
     const b = this.lookupBlock;
-    /** Using .name instead of .scope to handle some test datasets which have
-     * 'chr' prefixing the chr name, e.g. chr1A
-     * Will probably revert this to 'scope'.
+    /** Using .name instead of .scope : .scope is the Pretzel scope and is used
+     * to align datasets on axes (i. match dataset block and parent block);
+     * originally the Pretzel convention was 1A but that has shifted to Chr1A to
+     * align with other databases; external databases such as blast ndb, VCF
+     * files and Dawn may have a different chromosome name, typically VCF files
+     * use 'chr' as the prefix; this is recorded in block .name.
      */
     return b?.get('name');
   }
