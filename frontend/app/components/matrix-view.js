@@ -955,7 +955,7 @@ export default Component.extend({
         const sampleMatches = block[Symbol.for('sampleMatches')];
         console.log(fnName, sampleMatches[sampleName], sampleName);
       }
-      this.table.deselectCell();
+      later(() => this.table.deselectCell());
     }
   },
 
