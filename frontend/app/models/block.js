@@ -29,6 +29,7 @@ import {
   featuresCountsResultsDomain,
   featuresCountsResultsFilter,
   featuresCountsResultsTidy,
+  featuresCountsDomain,
   germinateCallsToCounts,
   featuresCountsTransform,
  } from '../utils/draw/featuresCountsResults';
@@ -1885,17 +1886,17 @@ export default Model.extend({
       let nBins = this.get('blockService.featuresCountsNBins'),
       requestedSize = yRange / nBins,
       threshold = Math.min(binPxThreshold, requestedSize);
-      let fc, coverage;
+      let fcDomain, coverage;
       /** Conditions for requesting featuresCounts via getBlocksSummary() :
        * _ minSize === 0 indicates no featuresCounts overlapping this zoomedDomain.
        * _ or if .featuresCounts does not cover .axis1d.domain well (70%).
        */
       if (((minSizePx === 0) || (minSizePx > threshold))  /* px */ ||
-          ((fc = this.featuresCounts) &&
-           ((coverage = intervalOverlapCoverage([fc[0]._id, fc.at(-1)._id], this.axis1d.domain)) < 0.7)) ) {
+          ((fcDomain = featuresCountsDomain(this.featuresCounts)) &&
+           ((coverage = intervalOverlapCoverage(fcDomain, this.axis1d.domain)) < 0.7)) ) {
 
-        if (fc && coverage) {
-          dLog(fnName, 'coverage', coverage, fc[0]._id, fc.at(-1)._id, this.axis1d.domain);
+        if (fcDomain && coverage) {
+          dLog(fnName, 'coverage', coverage, fcDomain, this.axis1d.domain);
         }
 
         /* request summary / featuresCounts if there are none for block,

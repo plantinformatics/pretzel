@@ -492,6 +492,20 @@ fcrsShow = function (fcrs)  { fcrs.forEach((fcr) => console.log('featuresCountsR
 ;
 
 /*----------------------------------------------------------------------------*/
+
+/** Calculate the domain of an array of featuresCounts, i.e. the _id of the
+ * array ends.
+ * @param featuresCounts	array of counts, from genotype, not database query (see featuresCountsResultsDomain)
+ */
+function featuresCountsDomain(featuresCounts) {
+  const
+  domain = (featuresCounts?.length > 1) &&
+    [featuresCounts[0]._id, featuresCounts.at(-1)._id];
+  return domain;
+}
+
+//------------------------------------------------------------------------------
+
 /** Collate features received from Germinate into bins, format as a featuresCountsResult
  * and push into block.featuresCountsResults
  */
@@ -570,6 +584,7 @@ export {
   featuresCountsResultsFilter,
   featuresCountsResultsTidy,
   featuresCountsResultsSansOverlap,
+  featuresCountsDomain,
   germinateCallsToCounts,
   featuresCountsTransform,
 };
