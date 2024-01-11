@@ -11,6 +11,12 @@
 unused=${SERVER_NAME=main}
 # Using pretzel in place of admin in new instances.
 unused=${DB_NAME=admin}
+# For mongo shell either by running a binary direcly, or via docker exec.
+# copied from pretzel/resources/tools/dev/functions_data.bash
+# related : mongoShell()
+unused=${dockerExec="docker exec $DIM"}
+# DIM is the ID of the docker mongo container,
+# defined by pretzel/resources/tools/functions_prod.bash : DIM=$(dockerContainer mongo)
 
 #-------------------------------------------------------------------------------
 
@@ -80,5 +86,28 @@ function signupReport()
   signupList | jq -r 'map(.)  | @tsv'
 }
 
+
+#-------------------------------------------------------------------------------
+
+function getIndexes()
+{
+  for ma_collection in Feature Alias
+  do
+    echo $ma_collection
+    mongoShell '' --quiet ${DB_NAME-admin} --eval "db.$ma_collection.getIndexes()"
+  done
+}
+
+
+function createIndexes()
+{
+  mongoShell '' --quiet ${DB_NAME-admin} --eval \
+"db.Alias.createIndex ( {namespace1:1, namespace2:1, string1:1, string2:1} );
+db.Feature.createIndex({blockId:1, value_0:1});
+db.Feature.createIndex({name:1} );"
+}
+# localise-aliases.js : remoteNamespacesGetAliases() : getAliases() could use this index :
+#   db.Alias.createIndex ( {namespace1:1, namespace2:1} )
+# That is covered by the index ( {namespace1:1, namespace2:1, string1:1, string2:1} )
 
 #-------------------------------------------------------------------------------
