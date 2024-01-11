@@ -151,11 +151,11 @@
                       <span>
                         <input type="checkbox"
                           style="margin-left: 3em;"
-                          checked={{@userSettings.requestSamplesAll}}
+                          checked={{this.requestSamplesSelected}}
                           oninput={{pipe
-                            (action (mut @userSettings.requestSamplesAll) value="target.checked")
+                            (action (mut this.requestSamplesSelected) value="target.checked")
                             this.ensureSamples }}  >
-                        <label>All</label>
+                        <label>Selected Samples</label>
                         {{#ember-tooltip side="right" delay=500}}
                           Request genotype of All samples or select samples in list
                         {{/ember-tooltip}}

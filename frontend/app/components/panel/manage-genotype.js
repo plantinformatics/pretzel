@@ -170,7 +170,8 @@ function featureHasSamplesLoaded(feature) {
  * .filterBySelectedSamples default : true
  * true means filter the data within scope (brush or zoomed domain) by samples
  * selected in corresponding dataset tab of block
- * Requests are narrowed to selected samples when ! requestSamplesAll.
+ * Requests are narrowed to selected samples when ! requestSamplesAll,
+ * i.e. requestSamplesSelected.
  *
  * .mafUpper default : true
  * .mafThreshold default 0
@@ -515,6 +516,18 @@ export default class PanelManageGenotypeComponent extends Component {
   //----------------------------------------------------------------------------
 
   @alias('args.userSettings.selectedColumnNames.length') referenceSamplesCount;
+
+  //----------------------------------------------------------------------------
+
+  /** Provide a wrapper around this.args.userSettings.requestSamplesAll for the
+   * input checkbox, which has inverse sense.
+   */
+  get requestSamplesSelected() {
+    return ! this.args.userSettings.requestSamplesAll;
+  }
+  set requestSamplesSelected(value) {
+    this.args.userSettings.requestSamplesAll = ! value;
+  }
 
   // ---------------------------------------------------------------------------
 
