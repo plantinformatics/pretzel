@@ -40,6 +40,7 @@ import {
   featuresValuesFields,
   featureSampleNames,
   featuresSampleMAF,
+  featuresFilterNalleles,
   objectSymbolNameArray,
  } from '../../utils/data/vcf-feature';
 import {
@@ -2456,6 +2457,13 @@ export default class PanelManageGenotypeComponent extends Component {
       dLog('featureCallRateFilter', this.args.userSettings.featureCallRateThreshold, features.length);
       features = features.filter(this.featureCallRateFilter.bind(this));
       dLog('featureCallRateFilter', features.length);
+    }
+    if (features) {
+      const userSettings = this.args.userSettings;
+      if (userSettings.minAlleles !== '' || userSettings.maxAlleles !== '') {
+        features = featuresFilterNalleles(
+          features, userSettings.minAlleles, userSettings.maxAlleles);
+      }
     }
 
     return features;

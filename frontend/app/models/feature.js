@@ -135,7 +135,25 @@ export default Model.extend({
   },
 
 
+  //----------------------------------------------------------------------------
 
+  /** Count the number of alleles in Ref and Alt of this feature
+   */
+  nAlleles : computed(function () {
+    let count = 0;
+    if (this.values.ref && this.values.alt) {
+      const
+      refAlt = this.values.ref + this.values.alt,
+      alleles = new Set();
+      for (const allele of refAlt) {
+        if ((allele !== ',') && ! alleles.has(allele)) {
+          alleles.add(allele);
+          count++;
+        }
+      }
+    }
+    return count;
+  }),
 
   //----------------------------------------------------------------------------
 

@@ -1508,6 +1508,23 @@ function copiesOfAlt(value, alt) {
 
 //------------------------------------------------------------------------------
 
+export {featuresFilterNalleles};
+/** Filter features by the number of alleles in .values Ref and Alt.
+ * @param minAlleles, maxAlleles string from text input, in which the user is
+ * expected to enter a number.  ' ' is equivalent to 0
+ */
+function featuresFilterNalleles(features, minAlleles, maxAlleles) {
+  const fnName = 'featuresFilterNalleles';
+  dLog(fnName, minAlleles, maxAlleles, features.length);
+  features = features.filter(feature => 
+    ((minAlleles === '') || (minAlleles <= feature.nAlleles)) &&
+      ((maxAlleles === '') || (feature.nAlleles <= maxAlleles)) );
+  dLog(fnName, features.length);
+  return features;
+}
+
+//------------------------------------------------------------------------------
+
 /** Support a repeated storage pattern : object[symbol][fieldName] is an array.
  */
 function objectSymbolNameArray(object, symbol, fieldName) {
