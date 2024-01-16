@@ -31,7 +31,7 @@ const { objectLookup } = require('../utilities/mongoDB-driver-lib');
 const { ensureItem, query, datasetIdGetVector } = require('../utilities/vectra-search.js');
 const { flattenJSON } = require('../utilities/json-text.js');
 const { text2Commands } = require('../utilities/openai-query.js');
-
+const { noCacheResult } = require('../utilities/remote-method.js');
 
 const cacheLibraryName = '../utilities/results-cache'; // 'memory-cache';
 const cache = require(cacheLibraryName);
@@ -735,6 +735,7 @@ module.exports = function(Dataset) {
     returns: {arg: 'text', type: 'string'},
     description: "Get the status of .vcf.gz files for this dataset."
   });
+  Dataset.afterRemote('vcfGenotypeFeaturesCountsStatus', noCacheResult);
 
   //----------------------------------------------------------------------------
 
@@ -866,11 +867,11 @@ module.exports = function(Dataset) {
 
   Dataset.remoteMethod('cacheblocksFeaturesCounts', {
     accepts: [
-      {arg: 'id', type: 'string', required: true},
-      {arg: 'userOptions', type: 'object'},
+      {arg: 'id', type: 'string', required: true, http: {source: 'query'}},
+      {arg: 'userOptions', type: 'object', required: false, http: {source: 'body'}},
       {arg: "options", type: "object", http: "optionsFromRequest"}
     ],
-    http: {verb: 'get'},
+    http: {verb: 'post'},
     returns: {type: 'number', root: true},
    description: "Pre-warm the cache of blockFeaturesCounts for each block of this dataset."
   });

@@ -24,6 +24,8 @@ const { ErrorStatus } = require('../utilities/errorStatus.js');
 const { vcfGenotypeLookup, vcfGenotypeFeaturesCounts } = require('../utilities/vcf-genotype');
 const { germinateGenotypeSamples, germinateGenotypeLookup } = require('../utilities/germinate-genotype');
 const { parseBooleanFields } = require('../utilities/json-text');
+const { noCacheResult } = require('../utilities/remote-method.js');
+
 
 const germinateGenotypeSamplesP = util.promisify(germinateGenotypeSamples);
 
@@ -1224,6 +1226,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     returns: {type: 'array', root: true},
     description: "Returns an array of blocks with the status of their cached featuresCounts."
   });
+  Block.afterRemote('blocksFeaturesCountsStatus', noCacheResult);
 
   Block.remoteMethod('blockFeatureLimits', {
     accepts: [

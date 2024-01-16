@@ -35,7 +35,7 @@
         {{/if}}
         {{/each}}
 
-        {{#t.column propertyName='histogramStatus' name='Histogram' defaultHeader=true as |col|}}
+        {{#t.column reRenderSignal=this.histogramStatusChangeCount propertyName='histogramStatus' name='Histogram' defaultHeader=true as |col|}}
           <span class={{call (fn this.chrStatusClass col.row.Name ) }}>
             {{#if this.showDetail}}
               {{call (fn this.chrStatus col.row.Name ) }}

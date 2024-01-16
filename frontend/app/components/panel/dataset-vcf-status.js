@@ -18,6 +18,8 @@ export default class PanelDatasetVCFStatusComponent extends Component {
   vcfStatuses = {};
   @tracked
   vcfStatusesUpdateCount = 0;
+  @tracked
+  histogramStatusChangeCount = 0;
   @computed('vcfStatuses', 'vcfStatusesUpdateCount', 'args.dataset.id')
   get vcfStatus() {
     const status = this.vcfStatuses[this.args.dataset.id];
@@ -42,10 +44,10 @@ export default class PanelDatasetVCFStatusComponent extends Component {
     statusP
       .then(status => {
         dLog(fnName, status);
-        /*
-        const byBlockIdP = this.apiServerSelectedOrPrimary.blocksFeaturesCountsStatus;
-        // this.getVcfStatus() : .then(vcfStatus ... )
-        */
+        const byBlockIdP = this.controls.apiServerSelectedOrPrimary.blocksFeaturesCountsStatus;
+        byBlockIdP.then(x => {
+          this.histogramStatusChangeCount++;
+        });
       });
   }
 
