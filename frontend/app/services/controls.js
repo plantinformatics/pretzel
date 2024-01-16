@@ -64,6 +64,7 @@ export default Service.extend(Evented, {
   /** @return the current values of the user genotype controls which filter SNPs
    */
   genotypeSNPFilters : computed(
+    'userSettings.genotype.mafUpper',
     'userSettings.genotype.mafThreshold',
     'userSettings.genotype.snpPolymorphismFilter',
     'userSettings.genotype.featureCallRateThreshold',
@@ -72,15 +73,11 @@ export default Service.extend(Evented, {
     'userSettings.genotype.typeSNP',
     function () {
       const
-      genotypeSNPFilterNames =  [
-        'mafThreshold', 'snpPolymorphismFilter', 'featureCallRateThreshold',
-        'minAlleles', 'maxAlleles', 'typeSNP',
-      ],
       userSettings = this.userSettings.genotype,
       /** Don't pass values which are default, so they are not used in cacheIdOptions. */
-      userOptions = {}; // pick(this.userSettings.genotype, genotypeSNPFilterNames);
+      userOptions = {};
       pickNonDefault(userOptions, userSettings, ['snpPolymorphismFilter', 'typeSNP'], false);
-      pickNonDefault(userOptions, userSettings, ['mafThreshold', 'featureCallRateThreshold'], 0);
+      pickNonDefault(userOptions, userSettings, ['mafUpper', 'mafThreshold', 'featureCallRateThreshold'], 0);
       pickNonDefault(userOptions, userSettings, ['minAlleles', 'maxAlleles'], '');
 
       return userOptions;

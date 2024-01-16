@@ -650,17 +650,19 @@ module.exports = function(Dataset) {
 
 
   /**
-   * @param isZoomed	true causes blockFeaturesCounts() : useCache to be false
+   * @param userOptions user settings : {
+   *   mafThreshold, snpPolymorphismFilter, featureCallRateThreshold,
+   *   minAlleles, maxAlleles, typeSNP}
    */
-  Dataset.cacheblocksFeaturesCounts = function(id, isZoomed, options, cb) {
+  Dataset.cacheblocksFeaturesCounts = function(id, userOptions, options, cb) {
     const
     fnName = 'cacheblocksFeaturesCounts',
     db = this.dataSource.connector,
     models = this.app.models;
-    cacheblocksFeaturesCounts(db, models, id, isZoomed, options)
+    cacheblocksFeaturesCounts(db, models, id, userOptions, options)
       .then((result) => cb(null, result))
       .catch((err) => {
-        console.log(fnName, id, isZoomed, err.statusCode, err);
+        console.log(fnName, id, err.statusCode, err);
         cb(err);});
   };
 
@@ -865,7 +867,7 @@ module.exports = function(Dataset) {
   Dataset.remoteMethod('cacheblocksFeaturesCounts', {
     accepts: [
       {arg: 'id', type: 'string', required: true},
-      {arg: 'isZoomed', type: 'boolean', required: false, default : 'false'},
+      {arg: 'userOptions', type: 'object'},
       {arg: "options", type: "object", http: "optionsFromRequest"}
     ],
     http: {verb: 'get'},

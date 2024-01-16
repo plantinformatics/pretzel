@@ -382,7 +382,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
    * only considers the fully-zoomed out case, which means that the
    * total .featureCount for each block can be used instead of
    * calculating .featuresCountIncludingZoom.
-   * i.e. if all .dataBlocks[] have block.featureCount < featuresCountsThreshold
+   * i.e. if all .dataBlocks[] have block.featureCount > featuresCountsThreshold
    */
   isZoomedRightOut() {
     let out = ! this.zoomed;

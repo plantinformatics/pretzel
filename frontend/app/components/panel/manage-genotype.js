@@ -2145,6 +2145,7 @@ export default class PanelManageGenotypeComponent extends Component {
       mafThreshold = userSettings.mafThreshold,
       mafUpper = userSettings.mafUpper,
       featureCallRateThreshold = userSettings.featureCallRateThreshold,
+      /** related : genotypeSNPFilters() */
       requestOptions = {
         requestFormat, requestSamplesAll, snpPolymorphismFilter,
         mafThreshold, mafUpper, featureCallRateThreshold,

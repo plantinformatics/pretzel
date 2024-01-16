@@ -115,6 +115,20 @@ function addGerminateOptions(requestOptions, block) {
 
 //------------------------------------------------------------------------------
 
+/** Request featuresCounts (histograms) for all blocks (chromosomes) of the
+ * given dataset.
+ * @param auth  service for sending API requests
+ * @param datasetId
+ * @param genotypeSNPFilters  current user-controlled thresholds for SNP filters
+ * controls.genotypeSNPFilters
+ */
+function getDatasetFeaturesCounts(auth, datasetId, genotypeSNPFilters) {
+  const promise = auth.getDatasetFeaturesCounts(datasetId, genotypeSNPFilters);
+  return promise;
+}
+
+//------------------------------------------------------------------------------
+
 /** Lookup the genotype for the selected samples in the interval of the brushed block.
  * The server store to add the features to is derived from
  * vcfGenotypeLookupDataset() param blockV, from brushedOrViewedVCFBlocksVisible,
@@ -1592,6 +1606,7 @@ export {
   datasetId2Class,
   gtValueIsNumeric,
   addGerminateOptions,
+  getDatasetFeaturesCounts,
   vcfGenotypeLookup,
   addFeaturesJson,
   resultIsGerminate,

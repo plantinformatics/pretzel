@@ -4,11 +4,13 @@ import { computed, action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 
 import { statusToMatrix, vcfPipeline } from '../../utils/data/vcf-files';
+import { getDatasetFeaturesCounts } from '../../utils/data/vcf-feature';
 
 const dLog = console.debug;
 
 export default class PanelDatasetVCFStatusComponent extends Component {
   @service() auth;
+  @service() controls;
 
   @tracked showDetail = false;
 
@@ -26,8 +28,24 @@ export default class PanelDatasetVCFStatusComponent extends Component {
     const id = this.args.dataset.id;
     this.auth.getFeaturesCountsStatus(id, /*options*/undefined)
       .then(vcfStatus => {
+
         this.vcfStatuses[id] = statusToMatrix(vcfStatus?.text);
         this.vcfStatusesUpdateCount++;
+      });
+  }
+  @action
+  getDatasetFeaturesCounts() {
+    const
+    fnName = 'getDatasetFeaturesCounts',
+    datasetId = this.args.dataset.id,
+    statusP = getDatasetFeaturesCounts(this.auth, datasetId, this.controls.genotypeSNPFilters);
+    statusP
+      .then(status => {
+        dLog(fnName, status);
+        /*
+        const byBlockIdP = this.apiServerSelectedOrPrimary.blocksFeaturesCountsStatus;
+        // this.getVcfStatus() : .then(vcfStatus ... )
+        */
       });
   }
 
