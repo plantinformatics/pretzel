@@ -659,11 +659,15 @@ module.exports = function(Dataset) {
     fnName = 'cacheblocksFeaturesCounts',
     db = this.dataSource.connector,
     models = this.app.models;
+    if (! id) {
+      cb(ErrorStatus(400, 'dataset id is a required parameter of ' + fnName));
+    } else {
     cacheblocksFeaturesCounts(db, models, id, userOptions, options)
       .then((result) => cb(null, result))
       .catch((err) => {
         console.log(fnName, id, err.statusCode, err);
         cb(err);});
+    }
   };
 
   //----------------------------------------------------------------------------

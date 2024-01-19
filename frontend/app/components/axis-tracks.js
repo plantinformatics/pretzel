@@ -2111,6 +2111,7 @@ export default InAxis.extend({
   tracksTree : computed(
     'trackBlocksR.@each.visible',
     'trackBlocksR.@each.featuresLength', 'trait.traits.@each.visible',
+    'trackBlocksR.@each.featuresCountsResultsFiltered',
     'ontology.ontologyIsVisibleChangeCount',
     'controlsViewed.visibleByTrait',
     'controlsViewed.visibleByOntology',
@@ -2468,6 +2469,7 @@ export default InAxis.extend({
   slowDependenciesEffect : computed(
     'tracksTree',
     'axis1d.featureLength',
+    'controls.genotypeSNPFilters',
     function() {
       const axisTransitionTime = 750;
       later(() => (

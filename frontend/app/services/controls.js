@@ -8,6 +8,8 @@ import { pick } from 'lodash/object';
 
 import { stacks } from '../utils/stacks';
 
+import { genotypeSNPFiltersDefined } from '../utils/data/vcf-feature';
+
 const dLog = console.debug;
 
 /** Registry for user controls which are global in their effect.
@@ -74,7 +76,11 @@ export default Service.extend(Evented, {
     function () {
       const
       userSettings = this.userSettings.genotype,
-      /** Don't pass values which are default, so they are not used in cacheIdOptions. */
+      /** Don't pass values which don't define a filter, so they are not used in
+       * cacheIdOptions.
+       * The default values used in the GUI will define an active filter :
+       * minAlleles=2, maxAlleles=2, typeSNP=true
+       */
       userOptions = {};
       pickNonDefault(userOptions, userSettings, ['snpPolymorphismFilter', 'typeSNP'], false);
       pickNonDefault(userOptions, userSettings, ['mafUpper', 'mafThreshold', 'featureCallRateThreshold'], 0);
@@ -83,11 +89,18 @@ export default Service.extend(Evented, {
       return userOptions;
     }),
 
+  genotypeSNPFiltersDefined : computed('genotypeSNPFilters', function () {
+    const active = genotypeSNPFiltersDefined(this.genotypeSNPFilters);
+    return active;
+  }),
+
   //----------------------------------------------------------------------------
 
 });
 
 /** Like lodash.pick(), but pick only values which have a non-default value.
+ * Can rename this to pickActive, as some of the GUI default values will be
+ * active filters - see comment in genotypeSNPFilters.
  */
 function pickNonDefault(target, source, fieldNames, defaultValue) {
   fieldNames.forEach(name => {

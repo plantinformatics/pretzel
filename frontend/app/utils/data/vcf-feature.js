@@ -499,8 +499,9 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedService, 
  * blocks are viewed from URL)
  */
 function blockEnsureFeatureCount(block) {
-  if (block.get('featureCount') === undefined) {
-    block.set('featureCount', block.get('features.length'));
+  const featuresLength = block.get('features.length');
+  if ((block.get('featureCount') ?? 0) < featuresLength) {
+    block.set('featureCount', featuresLength);
   }
 }
 
@@ -1598,6 +1599,26 @@ const variantSetSymbol = Symbol.for('variantSet');
 
 
 //------------------------------------------------------------------------------
+/** Determine if any of the genotype SNP Filters in the given userOptions define
+ * filters, i.e. are active.
+ * @return true if any of the filters in userOptions have a value.
+ * @param userOptions may be from fcResult.userOptions or
+ * controls.genotypeSNPFilters which are extracted from userSettings.genotype
+ */
+function genotypeSNPFiltersDefined(userOptions) {
+  const
+  /** a filter is active if its value satisfies :
+   *   (v !== undefined) && (v !== false) && (v !== 0) && (v !== '')
+   * which is effectively implemented by !!v
+   * minAlleles and maxAlleles have string values, and '0' is active, and !!'0' is true.
+   * whereas the other numeric values (mafUpper, mafThreshold, featureCallRateThreshold)
+   * are in-active when 0, and !!0 is false.
+   */
+  active = Object.values(userOptions).find(v => !!v);
+  return active;
+}
+
+//------------------------------------------------------------------------------
 
 
 export {
@@ -1627,4 +1648,5 @@ export {
   featuresSampleMAF,
   featureSampleMAF,
   objectSymbolNameArray,
+  genotypeSNPFiltersDefined,
 };

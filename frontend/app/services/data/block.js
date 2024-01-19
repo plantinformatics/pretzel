@@ -542,7 +542,7 @@ export default Service.extend(Evented, {
           /** densityFactor requires axis yRange, so for that case this will (in future) lookup axis from blockId. */
           const nBins = this.get('featuresCountsNBins'); // this.nBinsFromPathParams(blockId);
           let
-            zoomedDomain = block && block.get('zoomedDomain'),
+            zoomedDomain = block && block.get('axis1d.zoomed') && block.get('zoomedDomain'),
             zoomedDomainText;
           if (zoomedDomain) {
             let
@@ -555,7 +555,8 @@ export default Service.extend(Evented, {
             '_' + truncateMantissa(relativeDomain[0]) +
             '_' + truncateMantissa(relativeDomain[1]);
           }
-            let taskId = blockId + '_' + nBins + (zoomedDomainText || '');
+            const filtersText = Object.entries(this.controls.genotypeSNPFilters).map(kv => kv.join('_')).join('_');
+            let taskId = blockId + '_' + nBins + (zoomedDomainText || '') + filtersText;
           let summaryTask = this.get('summaryTask');
           let p;
             if ((p = summaryTask[blockId]) && (! p.state || p.state() === "pending")) {
@@ -639,12 +640,8 @@ export default Service.extend(Evented, {
                   (interval ? (0, intervalSize)(interval) / nBins : 1),
                 result = {userOptions, binSize, nBins, domain : interval, result : featuresCounts};
                 block.featuresCountsResultsMergeOrAppend(result);
+                // after MergeOrAppend, .featuresCountsResultsFiltered seems preferable to featuresCounts
                 block.set('featuresCounts', featuresCounts);
-                if ((block.featureCount === undefined) && block.hasTag('view') ) {
-                  const featureCount = featuresCounts.reduce((sum,x) => sum += x.count, 0);
-                  dLog(fnName, blockId, featureCount);
-                  block.set('featureCount', featureCount);
-              }
               }
             });
             }

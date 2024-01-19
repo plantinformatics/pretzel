@@ -493,7 +493,12 @@ function cacheblocksFeaturesCounts(db, models, datasetId, userOptions, options) 
     ));
 
   function ensureCounts(blocks, parentBlocks) {
+    const fnName = 'ensureCounts';
     console.log(fnName, datasetId, blocks.length);
+    /** blocks.reduce() result is a chain of promises.  This enables the
+     * blockFeaturesCountsP() requests to be done serially, whereas blocks.map()
+     * would do them in parallel.
+     */
     const blockCountsP = blocks.reduce((result, block, i) => {
       console.log(fnName, block.id);
       /** select use of blockRecordValue() : blockGet() in blockRecordLookup(). */
@@ -508,6 +513,7 @@ function cacheblocksFeaturesCounts(db, models, datasetId, userOptions, options) 
       } else {
         // maybe : sum counts to check # features in dataset.
         result = result.then((datasetSum) => {
+          // console.log(fnName, datasetSum, blockId);
           const
           /** frontend passes useBucketAuto=undefined, and useBucketAuto is
            * included in cacheId, so match that.  interval is required when

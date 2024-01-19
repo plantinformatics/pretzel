@@ -42,8 +42,8 @@ export default class PanelDatasetVCFStatusComponent extends Component {
     datasetId = this.args.dataset.id,
     statusP = getDatasetFeaturesCounts(this.auth, datasetId, this.controls.genotypeSNPFilters);
     statusP
-      .then(status => {
-        dLog(fnName, status);
+      .then(datasetSum => {
+        dLog(fnName, 'datasetSum', datasetSum);
         const byBlockIdP = this.controls.apiServerSelectedOrPrimary.blocksFeaturesCountsStatus;
         byBlockIdP.then(x => {
           this.histogramStatusChangeCount++;

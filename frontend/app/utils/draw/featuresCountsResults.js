@@ -168,6 +168,7 @@ function featuresCountsResultsTidy(fcResult) {
   });
 }
 /*----------------------------------------------------------------------------*/
+/* fcLevels */
 
 /** The given featuresCountsResults selectedResults have been selected
  * by their coverage of a given interval (e.g. zoomedDomain), and by
@@ -504,6 +505,14 @@ function featuresCountsDomain(featuresCounts) {
   return domain;
 }
 
+/** Sum the counts in given bins.
+ * @param featuresCounts  fcResult.result
+ */
+function featuresCountsResultSum(featuresCounts) {
+  const countSum = featuresCounts.reduce((sum, bin) => sum += bin.count, 0);
+  return countSum;
+}
+
 //------------------------------------------------------------------------------
 
 /** Collate features received from Germinate into bins, format as a featuresCountsResult
@@ -585,6 +594,7 @@ export {
   featuresCountsResultsTidy,
   featuresCountsResultsSansOverlap,
   featuresCountsDomain,
+  featuresCountsResultSum,
   germinateCallsToCounts,
   featuresCountsTransform,
 };
