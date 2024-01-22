@@ -139,8 +139,13 @@ function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
     }
     if (preArgs.featureCallRateThreshold) {
       const
-      /** equivalent : N_PASS(GT!="./.")/N_SAMPLES */
-      fcrOption = 'F_PASS(GT!="./.") >= ' + preArgs.featureCallRateThreshold;
+      /** equivalent to INFO/CR :
+       *   N_PASS(GT!="./.")/N_SAMPLES
+       *   F_PASS(GT!="./.")
+       * INFO/F_MISSING is converse of INFO/CR, so the following expression is 
+       * equivalent to : INFO/CR >= .featureCallRateThreshold
+       */
+      fcrOption = 'INFO/F_MISSING < ' + (1 - preArgs.featureCallRateThreshold);
       includeConditions.push(fcrOption);
     }
     if (includeConditions.length) {

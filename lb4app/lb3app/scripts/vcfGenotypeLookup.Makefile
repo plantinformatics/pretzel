@@ -3,10 +3,13 @@
 # Tested : 'MAF=|AN=.*;AC=|AC=.*;AN=' : bcftools query ... %INFO/MAF got :
 #  Error: Error: no such tag defined in the VCF header: INFO/MAF. FORMAT fields must be in square brackets, e.g. "[ MAF]"
 #
+# +fill-tags -t F_MISSING was added to bcftools after version 1.9. it is in version 1.19.
+# INFO/CR can be added in a separate process, after NS is added : +fill-tags -t CR:1=NS/N_SAMPLES
+#
 # Also create %.MAF.vcf.gz.csi, by ln -s or bcftools index (possibly : bgzip  -i --index-name)
 # stdout will contain filename, read by the caller of dbName2Vcf(),  so don't echo command.
 %.MAF.vcf.gz : %.vcf.gz
-	@if gzip -d < "$<" | head -1000 | grep -C1 '^#CHROM'  | grep -v '^#' | egrep 'MAF=' | egrep 'AC=' | egrep 'AC_Het=' >/dev/null;	\
+	@if gzip -d < "$<" | head -1000 | grep -C1 '^#CHROM'  | grep -v '^#' | egrep 'MAF=' | egrep 'AC=' | egrep 'AC_Het=' | egrep 'F_MISSING=' >/dev/null;	\
 	then	\
 	  ln -s "$<" "$@";	\
 	  if [ -e "$<.csi" ];	\
@@ -16,7 +19,7 @@
 	      bcftools index "$@";	\
 	  fi;	\
 	else	\
-	  bcftools +fill-tags "$<"  -- -t MAF,AN,AC,AC_Het | bgzip  > "$@";	\
+	  bcftools +fill-tags "$<"  -- -t MAF,AN,AC,AC_Het,NS,F_MISSING | bgzip  > "$@";	\
 	  bcftools index "$@";	\
 	fi
 
