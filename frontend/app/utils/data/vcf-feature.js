@@ -307,9 +307,12 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedService, 
       // from columnNames.slice(0,9), appended tSNP.
       const nonSampleFields = ['CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT', 'tSNP'];
       columnIsGT = columnNames.map(c => nonSampleFields.includes(c));
-    } else if (l.startsWith('# [1]ID')) {
+    } else if (l.startsWith('# [1]ID') || l.startsWith('#[1]ID')) {
       // Column header row output by bcftools query
       // # [1]ID	[2]POS	[3]ExomeCapture-DAS5-002978:GT	[4]ExomeCapture-DAS5-003024:GT	[5]ExomeCapture-DAS5-003047:GT	[6]ExomeC
+      /* between versions 1.9 and 1.19 of bcftools, this changed '# [1]ID' to '#[1]ID'
+       * 1.9 is current on centos (2024Jan).
+       */
       columnIsGT = l
         .split(/\t\[[0-9]+\]/)
         .map((name) => name.endsWith(':GT'));
@@ -317,7 +320,7 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedService, 
       columnNames = l
         .replaceAll(':GT', '')
         .split(/\t\[[0-9]+\]/);
-      columnNames[0] = columnNames[0].replace(/^# \[1\]/, '');
+      columnNames[0] = columnNames[0].replace(/^# ?\[1\]/, '');
       // nColumnsBeforeSamples is 2 in this case : skip ID, POS.
       sampleNames = columnNames.slice(2);
     } else if (columnNames && l.length) {

@@ -339,7 +339,7 @@ export default Service.extend({
     dLog('services/auth getDatasetFeaturesCounts', id, userOptions, options);
     /** Put id in the query params to get the benefit of loopback id support,
      * and userOptions params in the body */
-    const statusP = this._ajax('Datasets/cacheblocksFeaturesCounts?' + $.param({id}), 'POST', userOptions, true);
+    const statusP = this._ajax('Datasets/cacheblocksFeaturesCounts?' + $.param({id}), 'POST', JSON.stringify(userOptions), true);
     return statusP;
   },
 
