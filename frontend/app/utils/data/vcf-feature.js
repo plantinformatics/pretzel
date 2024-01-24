@@ -72,6 +72,17 @@ function valueNameIsNotSample(valueName) {
   return nonSampleNames.includes(valueName);
 }
 
+/** Map the column name '(null)' to 'INFO'
+ *
+ * Using --format %INFO outputs the whole of the INFO value; with the column
+ * header name '(null)'
+ * (when using e.g. %INFO/MAF, the column header name is the sub-field name, i.e. 'MAF')
+ */
+function columnNameINFOFix(columnNames) {
+  columnNames = columnNames.map(name => name == '(null)' ? 'INFO' : name);
+  return columnNames;
+}
+
 //------------------------------------------------------------------------------
 
 /**
@@ -303,6 +314,7 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedService, 
     } else if (l.startsWith('#CHROM')) {
       // Column header row output by bcftools view
       columnNames = l.slice(1).split('\t');
+      columnNames = columnNameINFOFix(columnNames);
       sampleNames = columnNames.slice(nColumnsBeforeSamples);
       // from columnNames.slice(0,9), appended tSNP.
       const nonSampleFields = ['CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT', 'tSNP'];
@@ -321,8 +333,11 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedService, 
         .replaceAll(':GT', '')
         .split(/\t\[[0-9]+\]/);
       columnNames[0] = columnNames[0].replace(/^# ?\[1\]/, '');
+      columnNames = columnNameINFOFix(columnNames);
       // nColumnsBeforeSamples is 2 in this case : skip ID, POS.
       sampleNames = columnNames.slice(2);
+      // skip the (null) / INFO column name
+      sampleNames.splice(2, 1);
     } else if (columnNames && l.length) {
       const values = l.split('\t');
 
@@ -360,6 +375,22 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedService, 
         case 'ALT' :
           break;
 
+        case 'INFO' : // (null)
+          fieldNameF = 'values.' + fieldName;
+          const infoEntries = value.split(';').map(kv => kv.split('='));
+          value = Object.fromEntries(infoEntries);
+
+          // Convert numeric values from string to number.
+          // equivalent : parseBooleanFields(f.values, ['MAF', 'tSNP']);
+          if (value.MAF) {
+            value.MAF = +value.MAF;
+          }
+          if (value.tSNP) {
+            value.tSNP = +value.tSNP;  // maybe accept any string.
+          }
+
+          break;
+
         default :
           fieldNameF = 'values.' + fieldName;
         }
@@ -392,6 +423,17 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedService, 
               /* could also use Ember_set() when ! prefix. */
               Ember_set(f, fieldNameF, value);
             }
+
+            /* These will not be needed after changing references to e.g.
+             * feature.values.MAF to feature.values.INFO.MAF, which is
+             * equivalent and replaces it. */
+            if (value.MAF) {
+              f.values.MAF = value.MAF;
+            }
+            if (value.tSNP) {
+              f.values.tSNP = value.tSNP;
+            }
+
           } else {
             f[fieldNameF] = value;
           }
@@ -1156,7 +1198,9 @@ function vcfFeatures2MatrixViewRowsResult(
   features.reduce(
     (res, feature) => {
       if (! enableFeatureFilters || featureFilter(feature)) {
-        featureSampleMAF(feature, optionsMAF);
+        if (feature.values.MAF === undefined) {
+          featureSampleMAF(feature, optionsMAF);
+        }
         const
         row = rowsAddFeature(res.rows, feature, 'Name', 0);
         if (showHaplotypeColumn) {
@@ -1180,6 +1224,7 @@ function vcfFeatures2MatrixViewRowsResult(
         let filterFn =
             (sampleName) => 
             sampleFilters.every(fn => fn(block, sampleName)) &&
+            (sampleName !== 'INFO') &&
             caseRefAlt(sampleName);
 
         // can instead collate columnNames in following .reduce(), plus caseRefAlt().
@@ -1198,6 +1243,7 @@ function vcfFeatures2MatrixViewRowsResult(
               sampleFilters.every(fn => fn(block, sampleName))
           )
           // .filter(([sampleName, sampleValue]) => ! ['tSNP', 'MAF'].includes(sampleName))
+          .filter(([sampleName, sampleValue]) => sampleName !== 'INFO')
           .reduce(
           (res2, [sampleName, sampleValue]) => {
             let columnName;
@@ -1207,14 +1253,16 @@ function vcfFeatures2MatrixViewRowsResult(
               // the capital field name is used in : row[sampleName]
               sampleName = toTitleCase(sampleName);
             } else {
-              columnName = sampleName = sampleName2ColumnName(sampleName);
               /** Convert sample values to requestFormat; don't convert
-               * non-sample values such as tSNP, MAF.
+               * non-sample values such as tSNP, MAF, INFO.
                * May move sample values to form Feature.values.samples{}, which
-               * will make it simpler to apply distinct treatments to these. */
-              if (! ['tSNP', 'MAF'].includes(sampleName)) {
+               * will make it simpler to apply distinct treatments to these.
+               * sampleName2ColumnName() renames sampleName tSNP to 'LD Block'
+               */
+              if (! ['tSNP', 'MAF', 'INFO'].includes(sampleName)) {
                 sampleValue = valueToFormat(requestFormat, refAltValues, sampleValue);
               }
+              columnName = sampleName = sampleName2ColumnName(sampleName);
             }
             const 
             // featureNameValue(feature, sampleValue),
@@ -1451,9 +1499,13 @@ function featureSampleNames(sampleNamesSet, feature, filterFn) {
 //------------------------------------------------------------------------------
 
 /** Calculate sample MAF for features.
+ * Any existing value of feature.values.MAF is preserved, i.e.
+ * featureSampleMAF() is not called if (feature.values.MAF === undefined)
+ * That is also true in vcfFeatures2MatrixViewRowsResult().
  */
 function featuresSampleMAF(features, options) {
-  features.forEach(feature => featureSampleMAF(feature, options));
+  features.forEach(feature =>
+    (feature.values.MAF === undefined) && featureSampleMAF(feature, options));
 }
 /** Calculate sample MAF for feature, for the loaded samples, either selected or
  * all samples.

@@ -101,12 +101,15 @@ function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
     formatGT = (preArgs.requestFormat === 'CATG') ? '%TGT' : '%GT',
     /** now INFO/MAF is added if not present, by
      * vcfGenotypeLookup.{bash,Makefile} : dbName2Vcf() / %.MAF.vcf.gz
-     * So requestInfo means just 'request INFO/tSNP'.
+     * So requestInfo means just 'request INFO/tSNP' - no longer needed because
+     * to enable SNP filters to be applied in frontend also, request all of INFO/
+     * (until eb969a33 just INFO/MAF and INFO/tSNP were requested)
+     * Note that %INFO produces a column header '(null)' instead of 'INFO';
+     * this is handled in addFeaturesJson() in frontend/app/utils/data/vcf-feature.js.
      */
     requestInfo = preArgs.requestInfo,
     format = '%ID\t%POS' + '\t%REF\t%ALT' +
-      (requestInfo ? '\t%INFO/tSNP' : '') +
-      '\t%INFO/MAF' +
+      '\t%INFO' +
       '[\t' + formatGT + ']\n';
     /** Params passed to query if view|query is used, otherwise to command. */
     const paramsForQuery = ['-queryStart', headerOption, '-f', format, '-queryEnd'];

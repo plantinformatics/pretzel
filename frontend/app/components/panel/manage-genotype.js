@@ -2549,13 +2549,19 @@ export default class PanelManageGenotypeComponent extends Component {
     const
     callRateThreshold = this.args.userSettings.featureCallRateThreshold,
     fn = ! callRateThreshold ? undefined : (feature) => {
-      const
-      sampleCount = feature[callRateSymbol],
-      /** OK (filter in) if callRate is undefined because of lack of counts. */
-      callRate = sampleCount && (sampleCount.calls + sampleCount.misses) ?
-        sampleCount.calls / (sampleCount.calls + sampleCount.misses) :
-        undefined,
-      ok = ! callRate || (callRate >= callRateThreshold);
+      let callRate;
+      const INFO = feature.values?.INFO;
+      if (INFO && ((INFO.F_MISSING !== undefined) || (INFO.CR !== undefined))) {
+        callRate = (INFO.CR !== undefined) ? INFO.CR : 1 - INFO.F_MISSING;
+      } else {
+        const
+        sampleCount = feature[callRateSymbol];
+        /** OK (filter in) if callRate is undefined because of lack of counts. */
+        callRate = sampleCount && (sampleCount.calls + sampleCount.misses) ?
+          sampleCount.calls / (sampleCount.calls + sampleCount.misses) :
+          undefined;
+      }
+      const ok = ! callRate || (callRate >= callRateThreshold);
       return ok;
     };
     return fn;
