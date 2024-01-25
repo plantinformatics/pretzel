@@ -382,7 +382,7 @@ export default Service.extend(Evented, {
     const
     typeIsGerminate = (typeName === 'Germinate'),
     loginP = typeIsGerminate ?
-        useGerminate(user, password) :
+      useGerminate(url, user, password) :
     $.ajax({
       url: url + '/api/Clients/login',
       type: 'POST',

@@ -18,15 +18,16 @@ let germinateInstance;
 export { useGerminate };
 /** Used by API requests to ensure Germinate session is connected and
  * authenticated, so they can use it to fulfill requests.
+ * @param url	domain URL - base path of endpoint URLs, e.g. germinate.plantinformatics.io
  * @param username, password  optional. Used in frontend not in backend.
  * @return a promise which resolves with germinateInstance or
  * rejects with ErrorStatus(), which the caller can pass to response cb.
  */
-function useGerminate(username, password) {
+function useGerminate(url, username, password) {
   const fnName = 'useGerminate';
   let connectedP;
   if (! germinateInstance) {
-      germinateInstance = new Germinate();
+      germinateInstance = new Germinate(url);
   }
   // if pre-existing germinateInstance and it has these fields, they are overridden.
   if (username && password) {

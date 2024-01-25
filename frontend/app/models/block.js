@@ -1861,11 +1861,12 @@ export default Model.extend({
               features[0].hasOwnProperty('value'))
           */
           dLog(fnName, promiseResult.length, promiseResult[0]?.state);
-          if (promiseResult[0]?.state !== 'fulfilled') {
-            dLog(fnName, blockId, 'getFeatures', promiseResult);
+          let features;
+          if ((promiseResult[0]?.state !== 'fulfilled') ||
+              ! (features = promiseResult[0].value)) {
+            dLog(fnName, blockId, 'getFeatures', promiseResult, promiseResult?.[0]);
           } else {
             const
-            features = promiseResult[0].value,
             summary = germinateCallsToCounts(features),
             counts = summary.counts;
             featuresCountsTransform(this, counts);

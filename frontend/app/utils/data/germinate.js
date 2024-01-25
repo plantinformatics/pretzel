@@ -53,13 +53,13 @@ const fetchEndpointFn = isNodeJs ? fetchEndpoint_bent : fetchEndpoint_fetch;
  */
 const testServerURL = 'https://test-server.brapi.org/brapi/v2';
 const yambase = 'https://www.yambase.org/brapi/v1';
-const
+let
 /** scheme + userinfo + host + port */
 germinateServerDomain = 'https://germinate.plantinformatics.io',
 germinateServerURL = germinateServerDomain + '/api';
-const serverURL = germinateServerURL; // testServerURL;
+let serverURL = germinateServerURL; // testServerURL;
 const brapi_v = 'brapi/v2';
-const serverURLBrAPI = germinateServerURL + '/' + brapi_v;
+let serverURLBrAPI = germinateServerURL + '/' + brapi_v;
 
 const germinateToken = isNodeJs && env.germinateToken;
 
@@ -85,8 +85,13 @@ function obscureField(obj, fieldName) {
 // let germinate = new Germinate(serverURL);
 
 class Germinate {
-  constructor(/*serverURL*/) {
+  constructor(germinateServerDomain_) {
     this.init();
+
+    germinateServerDomain = germinateServerDomain_;
+    germinateServerURL = germinateServerDomain + '/api';
+    serverURL = germinateServerURL;
+    serverURLBrAPI = germinateServerURL + '/' + brapi_v;
   }
 }
 export {Germinate};

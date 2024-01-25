@@ -84,10 +84,10 @@ export default Service.extend({
     }
     let referenceBlock = block.get('referenceBlock');
     /** .referenceBlock is limited to viewed and SameServer,
-		 * whereas .referenceBlocks uses referenceBlocksAllServers() */
+     * whereas .referenceBlocks uses referenceBlocksAllServers() */
     if (! referenceBlock && block.get('datasetId.parentName')) {
       referenceBlock = block.referenceBlocks[0];
-      dLog(fnName, 'referenceBlocks', block.referenceBlocks)
+      dLog(fnName, 'referenceBlocks', block.referenceBlocks);
     }
     if (referenceBlock && (referenceBlock !== block)) {
       toView.push(referenceBlock);
