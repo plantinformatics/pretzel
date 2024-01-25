@@ -790,6 +790,27 @@ export default Model.extend({
     }
     return referenceBlock;
   },
+
+  /** Choose the reference block which will be used by default.
+   * Choose, in this order :
+   * . a viewed reference block
+   * . a reference block on the same server as this
+   * . .referenceBlocks[0] if there is only 1, otherwise the user can select from .referenceBlocks
+   *   in {{panel/select-parent block=blockWithoutParentOnPrimary }}
+   *
+   * Used in manage-explorer.js : loadBlock()
+   * This overlaps with the choice of referenceBlock in viewRelatedBlocks() in
+   * services/data/view.js
+   */
+  chooseReferenceBlock() {
+    let referenceBlocks;
+    const
+    referenceBlock = this.viewedReferenceBlock() || 
+      this.referenceBlockSameServer() || 
+      ((referenceBlocks = this.referenceBlocks) && (referenceBlocks.length === 1) && referenceBlocks[0]);
+    return referenceBlock;
+  },
+
   /** Collate the viewed reference blocks which match the .scope
    * and .datasetId or .parentName of this block.
    * This function may be called when !this.isViewed - see referenceBlock().

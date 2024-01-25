@@ -1695,7 +1695,8 @@ export default ManageBase.extend({
       }
       else if (! block.get('datasetId.parentName') || 
           block.get('referenceBlock') ||
-          block.referenceBlockSameServer()) {
+          block.referenceBlockSameServer() ||
+          block.chooseReferenceBlock() ) {
         // mapview : loadBlock() will view the reference if it is not viewed.
         this.sendAction('loadBlock', block);
       } else
