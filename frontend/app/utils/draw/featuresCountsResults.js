@@ -528,6 +528,9 @@ const binSize = 1e7;
  * @return {counts, limits}
  *   .counts [binCount, ...]
  *   .limits is undefined if sampleData.length === 0 
+ *
+ * Unlike featuresCountsResults from vcfGenotypeLookup, this result does not
+ * currently have .userOptions (genotypeSNPFilters)
  */
 function germinateCallsToCounts(sampleData) {
   const

@@ -1053,15 +1053,21 @@ export default Model.extend({
   featuresCountsResultsFiltered : computed('featuresCountsResults.[]', 'controls.genotypeSNPFilters', function () {
     const fnName = 'featuresCountsResultsFiltered';
     let fcrs = this.featuresCountsResults;
-    if (this.isVCF) {
+    /* germinateCallsToCounts() does not currently set .userOptions in
+     * featuresCountsResults. */
+    if (this.isVCF && ! this.hasTag('Germinate')) {
       /** Currently only genotype SNP Filters are used; the field name
        * userOptions is generic because featuresCountsResults of other
        * dataset types may have other, different, filters.
        */
       const userOptions = this.controls.genotypeSNPFilters;
       const unfilteredLength = fcrs.length;
-      fcrs = fcrs.filter(fcr => isEqual(userOptions, fcr.userOptions));
-      dLog(fnName, fcrs.length, unfilteredLength);
+      /* No filtering is done if .genotypeSNPFilters is empty or fcr.userOptions
+       * is not defined.   */
+      if (Object.keys(userOptions).length) {
+        fcrs = fcrs.filter(fcr => ! fcr.userOptions || isEqual(userOptions, fcr.userOptions));
+        dLog(fnName, fcrs.length, unfilteredLength);
+      }
     }
     return fcrs;
   }),
