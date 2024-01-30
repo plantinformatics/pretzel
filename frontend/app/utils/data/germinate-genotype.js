@@ -128,11 +128,22 @@ function germinateGenotypeLookup(datasetId, scope, preArgs, nLines, undefined, c
     samplesDataP = sampleNames.map(sampleName => {
       // e.g. '1-593'
       const
-      callSetDbId = name2Id[sampleName],
+      callSetDbId = name2Id[sampleName];
+      let mapid, sampleId;
+      /* may change - perhaps implement the Germinate callSetDbId format in Spark server.  */
+      if (callSetDbId.match(/^[0-9]+-[0-9]+$/)) {
+        // Germinate
+        [mapid, sampleId] = callSetDbId.split('-');
+      } else {
+        // Spark server
+        mapid = datasetId;
+        // sampleId is callSetDbId
+      }
+      const
       linkageGroupName = preArgs.linkageGroupName,
       dataP = ! callSetDbId ? 
         Promise.resolve([]) :
-        germinate.callsetsCalls(callSetDbId, linkageGroupName, start, end, nLines)
+        germinate.callsetsCalls(mapid, callSetDbId, linkageGroupName, start, end, nLines)
         .then(response => response.result.data);
       return dataP;
     });

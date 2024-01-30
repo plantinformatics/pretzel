@@ -416,11 +416,11 @@ Germinate.prototype.callsetsCalls = callsetsCalls;
  * {domain}/api/brapi/v2/callsets/{callSetDbId}/calls/mapid/{mapid}/chromosome/{chromosome}/position/{positionStart}/{positionEnd}
  * example: {domain}/api/brapi/v2/callsets/4-1036/calls/mapid/4/chromosome/10/position/1/300
  *
- * @param dataset, start, end
- * e.g. '1-593', '2932022', '2932028'
+ * @param mapid, callSetDbId, start, end
+ * e.g. '1', '1-593', '2932022', '2932028'
  * @param limit_result	optional rowLimit / nLines (spark server may 404 without this)
  */
-function callsetsCalls(dataset, linkageGroupName, start, end, limit_result) {
+function callsetsCalls(mapid, callSetDbId, linkageGroupName, start, end, limit_result) {
   const fnName = 'callsetsCalls';
   /** Optional location / position / variantName interval to filter SNPs */
   let intervalParams = '';
@@ -437,8 +437,7 @@ function callsetsCalls(dataset, linkageGroupName, start, end, limit_result) {
     intervalParams += '/' + limit_result;
   }
   const
-  [mapid, sampleId] = dataset.split('-'),
-  endpoint = brapi_v + '/' + 'callsets'  + '/' + dataset + '/calls'
+  endpoint = brapi_v + '/' + 'callsets'  + '/' + callSetDbId + '/calls'
     + '/mapid/' + mapid + intervalParams,
   callsP = this.fetchEndpoint(endpoint);
   if (trace) {

@@ -616,13 +616,8 @@ function addFeaturesGerminate(block, requestFormat, replaceResults, selectedServ
     // previously seeing in results : 'CnullT' - this is now fixed in java.
     const genotypeValue = call.genotypeValue;
     f.values[call.callSetName] = genotypeValue;
-    /* "variantName": "m2-23.0" 
-     * m2-23.0 => m2 is marker name and 23.0 is its position
-     * Some of the marker names contain '-', e.g. 'scaffold77480-1_24233-24233.0'
-     * so instead of split('-'), use .match(/(.+) ... ) which is greedy.
-     */
     let
-    [wholeString, markerName, positionText] = call.variantName.match(/(.+)-(.+)/),
+    {markerName, positionText} = variantNameSplit(call.variantName, i < 5),
     position = +positionText;
     if (isNaN(position)) {
       // handle Oct19 format :  dbid_mapid_ exome SNP name e.g. 6_20_6_scaffold77480, or?  scaffold72661_85293-85293.0
@@ -677,6 +672,36 @@ function addFeaturesGerminate(block, requestFormat, replaceResults, selectedServ
   return result;
 }
 
+/** Split the variantName from either Germinate or Spark server into component elements.
+ * @param variantName
+ * @param traceUnmatched  enable tracing of failure to parse variantName
+ * @return {markerName, positionText}
+ */
+function variantNameSplit(variantName, traceUnmatched) {
+  const fnName = 'variantNameSplit';
+  /** Germinate :
+   * "variantName": "m2-23.0" 
+   * m2-23.0 => m2 is marker name and 23.0 is its position
+   * Some of the marker names contain '-', e.g. 'scaffold77480-1_24233-24233.0'
+   * so instead of split('-'), use .match(/(.+) ... ) which is greedy.
+   *
+   * Spark server : e.g. "variantName":"Chr1A_4188418"
+   */
+  let match, wholeString, markerName, positionText;
+  if ((match = variantName.match(/(.+)-(.+)/))) {
+    // Germinate
+    [wholeString, markerName, positionText] = match;
+  } else if ((match = variantName.match(/(.+)_(.+)/))) {
+    // Spark server
+    let chrName;
+    [wholeString, chrName, positionText] = match;
+    // markerName is used to make feature .id and ._name unique
+    markerName = positionText;
+  } else if (traceUnmatched) {
+    dLog(fnName, variantName, 'not matched');
+  }
+  return {markerName, positionText};
+}
 
 // -----------------------------------------------------------------------------
 
@@ -1687,6 +1712,7 @@ export {
   addFeaturesJson,
   resultIsGerminate,
   addFeaturesGerminate,
+  variantNameSplit,
   featureBlockColourValue,
   normalizeMaf,
   sampleIsFilteredOut,

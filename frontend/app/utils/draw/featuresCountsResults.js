@@ -13,6 +13,7 @@ import {
 import { inInterval } from './interval-overlap';
 import { inRange, subInterval, overlapInterval, intervalSign } from './zoomPanCalcs';
 import { featureCountDataProperties } from '../data-types';
+import { variantNameSplit } from '../data/vcf-feature';
 
 const dLog = console.debug;
 
@@ -535,10 +536,11 @@ const binSize = 1e7;
 function germinateCallsToCounts(sampleData) {
   const
   result =
-  sampleData.reduce((result, call) => {
+  sampleData.reduce((result, call, i) => {
     const
     counts = result.counts,
-    position = +call.variantName.match(/(.+)-(.+)/)[2],
+    {markerName, positionText} = variantNameSplit(call.variantName, i < 5),
+    position = +positionText,
     bin = (position / binSize).toFixed();
 
     if ((position !== 0) && ! position) {
