@@ -8,7 +8,7 @@ import { tracked } from '@glimmer/tracking';
 import { later } from '@ember/runloop';
 import { A as Ember_A } from '@ember/array';
 
-import { uniq, intersection } from 'lodash/array';
+import { uniq, uniqWith, intersection } from 'lodash/array';
 
 import createIntervalTree from 'interval-tree-1d';
 
@@ -2841,7 +2841,9 @@ export default class PanelManageGenotypeComponent extends Component {
               sampleNamesPreSort
               .sort(this.columnNamesCmp.bind(this, this.sampleNamesCmp)) :
               sampleNamesPreSort,
-            sampleNames = columnNamesFixed.concat(sampleNamesPostSort),
+            sameString = (a, b) => a.toString() == b.toString(),
+            sampleNamesPostSortUniq = uniqWith(sampleNamesPostSort, sameString),
+            sampleNames = columnNamesFixed.concat(sampleNamesPostSortUniq),
 
             /* Position value is returned by matrix-view : rowHeaders().
              * for gtMergeRows the Position column is hidden.
