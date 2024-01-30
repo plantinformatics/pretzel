@@ -255,7 +255,7 @@ function dbName2Vcf() {
     # This file will have INFO/MAF.
     vcfGz=$(echo "$vcfInputGz" | sed 's/.vcf/.MAF.vcf/')
     # Use -e instead of -f, as $vcfInputGz could be a file or symbolic link.
-    [ -e "$vcfGz" ] || make -f $serverDir/$scriptsDir/vcfGenotypeLookup.Makefile "$vcfGz"
+    [ -e "$vcfGz" ] || make -rR -f $serverDir/$scriptsDir/vcfGenotypeLookup.Makefile "$vcfGz"
 
     # If file does not have an index (.csi), create it.
     # Use -e instead of -f, as csi file could be a file or symbolic link.

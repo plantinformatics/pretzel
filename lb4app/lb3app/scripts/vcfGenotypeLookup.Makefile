@@ -1,5 +1,8 @@
 #-------------------------------------------------------------------------------
 
+# Using make options -rR (-r, --no-builtin-rules; -R, --no-builtin-variables)
+# is preferable because all the standard suffixes and rules are not applicable.
+
 .SUFFIXES:            # Delete the default suffixes
 .SUFFIXES: .vcf.gz .csi      # Define a new suffix list
 
