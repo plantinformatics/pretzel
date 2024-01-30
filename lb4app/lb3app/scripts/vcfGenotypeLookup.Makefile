@@ -1,3 +1,15 @@
+#-------------------------------------------------------------------------------
+
+.SUFFIXES:            # Delete the default suffixes
+.SUFFIXES: .vcf.gz .csi      # Define a new suffix list
+
+#.NOTINTERMEDIATE
+#.SECONDARY
+# .PRECIOUS prevents .csi from being removed as an intermediate file.
+.PRECIOUS: %.vcf.gz.csi
+
+#-------------------------------------------------------------------------------
+
 # if VCF does not have MAF or (AC and AN) in INFO column, add it;
 # Use ln -s if the input .vcf.gz file has INFO/MAF or (INFO/ AC and AN).
 # Tested : 'MAF=|AN=.*;AC=|AC=.*;AN=' : bcftools query ... %INFO/MAF got :
@@ -5,10 +17,11 @@
 #
 # +fill-tags -t F_MISSING was added to bcftools after version 1.9. it is in version 1.19.
 # INFO/CR can be added in a separate process, after NS is added : +fill-tags -t CR:1=NS/N_SAMPLES
+# %.vcf.gz.csi is required by +fill-tags.
 #
 # Also create %.MAF.vcf.gz.csi, by ln -s or bcftools index (possibly : bgzip  -i --index-name)
 # stdout will contain filename, read by the caller of dbName2Vcf(),  so don't echo command.
-%.MAF.vcf.gz : %.vcf.gz
+%.MAF.vcf.gz : %.vcf.gz %.vcf.gz.csi
 	@if gzip -d < "$<" | head -1000 | grep -C1 '^#CHROM'  | grep -v '^#' | egrep 'MAF=' | egrep 'AC=' | egrep 'AC_Het=' | egrep 'F_MISSING=' >/dev/null;	\
 	then	\
 	  ln -s "$<" "$@";	\
@@ -23,13 +36,19 @@
 	  bcftools index "$@";	\
 	fi
 
+# 	$(MAKE) -d $<.csi;
+
+
 # use bcftools index instead of : bcftools ... -i --index-name "$@.csi"
 # because bcftools -i seems to generate incomplete / truncated .csi files.
 #
-# So the .csi generation might be split into a separate rule e.g.
+# This rule is used by the above dependency %.MAF.vcf.gz : ... %.vcf.gz.csi
+# That rule also does 2 'bcftools index' on the result; not simple to
+# separate that out because (fgrep MAF= ... ln -s ... ) ties them together.
 %.vcf.gz.csi : %.vcf.gz
-	  bcftools index "$<";
-# (although the (fgrep MAF= ... ln -s ... ) ties them together).
+	@bcftools index "$<";
+# pgrep -lf bcftools | fgrep 'bcftools index' > /tmp/$USER/pgrep_bcftools_index; 
+
 
 #-------------------------------------------------------------------------------
 
