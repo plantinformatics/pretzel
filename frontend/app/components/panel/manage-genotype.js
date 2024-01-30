@@ -1076,7 +1076,8 @@ export default class PanelManageGenotypeComponent extends Component {
      * which is true of both its sources : .viewedVCFBlocks and .brushedVCFBlocks.
      * so use .content
      */
-    gtDatasets = this.brushedOrViewedVCFBlocksVisible.mapBy('datasetId.content');
+    gtDatasets = this.brushedOrViewedVCFBlocksVisible.mapBy('datasetId.content')
+      .uniq();
     dLog(fnName, gtDatasets);
     return gtDatasets;
   }
@@ -1536,6 +1537,7 @@ export default class PanelManageGenotypeComponent extends Component {
   }
 
   /** @return the CSS class names for the datasets which are displayed in the table.
+   * Result is [{id : datasetId, colour }, ... ]
    */
   @computed('brushedOrViewedVCFDatasets', 'gtDatasetColumns')
   get datasetsClasses() {
@@ -2740,7 +2742,7 @@ export default class PanelManageGenotypeComponent extends Component {
       dLog(fnName, visibleBlocks.mapBy('id'));
       if (visibleBlocks.length) {
         const
-        // this.gtDatasets is equivalent to visibleBlocks.mapBy('datasetId.content'),
+        // this.gtDatasets is equivalent to visibleBlocks.mapBy('datasetId.content').uniq(),
         gtDatasetIds = this.gtDatasetIds,
         featuresArrays = visibleBlocks
         /* featureFilterPre() is expected to filter out most features,
