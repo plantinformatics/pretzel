@@ -132,7 +132,7 @@ function germinateGenotypeLookup(datasetId, scope, preArgs, nLines, undefined, c
       linkageGroupName = preArgs.linkageGroupName,
       dataP = ! callSetDbId ? 
         Promise.resolve([]) :
-        germinate.callsetsCalls(callSetDbId, linkageGroupName, start, end)
+        germinate.callsetsCalls(callSetDbId, linkageGroupName, start, end, nLines)
         .then(response => response.result.data);
       return dataP;
     });
