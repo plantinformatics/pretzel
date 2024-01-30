@@ -418,8 +418,9 @@ Germinate.prototype.callsetsCalls = callsetsCalls;
  *
  * @param dataset, start, end
  * e.g. '1-593', '2932022', '2932028'
-*/
-function callsetsCalls(dataset, linkageGroupName, start, end) {
+ * @param limit_result	optional rowLimit / nLines (spark server may 404 without this)
+ */
+function callsetsCalls(dataset, linkageGroupName, start, end, limit_result) {
   const fnName = 'callsetsCalls';
   /** Optional location / position / variantName interval to filter SNPs */
   let intervalParams = '';
@@ -431,6 +432,9 @@ function callsetsCalls(dataset, linkageGroupName, start, end) {
     if (isDefined(end)) {
       intervalParams += '/' + end;
     }
+  } 
+  if (isDefined(limit_result)) {
+    intervalParams += '/' + limit_result;
   }
   const
   [mapid, sampleId] = dataset.split('-'),
