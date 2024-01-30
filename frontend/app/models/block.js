@@ -162,9 +162,17 @@ export default Model.extend({
     paths = dataset.get('_meta.paths');
     // if no _meta.paths, then default to paths : true.
     /** if paths === false, this value is returned.  This is the usual case,
-     * i.e. value in db is Boolean not string. */
-    if (paths === undefined)
-      paths = true;
+     * i.e. value in db is Boolean not string.
+     * Allow paths===true to override the default value for dataset.tags
+     */
+    if (paths === undefined) {
+      /* These cases can be allowed when zoomed in : this.isGenotype || this.isSNP.
+       * For views the features are received from a remote server, so
+       * the paths API endpoints are not applicable (client join may
+       * be usable).  Germinate is a view.
+       */
+      paths = ! (this.hasTag('view') || this.hasTag('Germinate'));
+    }
     else if (paths == "false")
       paths = false;
     /** for testing, without setting up datasets with _meta.paths : true, check

@@ -1060,7 +1060,10 @@ export default Service.extend(Evented, {
   /** @return blocks which are viewed and are configured for display
    * of paths, i.e.  are data blocks not reference, have
    * datasetId._meta.paths === true, and datasetId.tags[] does not
-   * contain 'SNP'
+   * contain 'SNP' - implemented in showPaths.
+   * @desc
+   * Used by flows-collate : blockAdjIds(), which determines the
+   * blocks for which paths requests are sent.
    */
   viewedForPaths: computed(
     'viewed.@each.{isData,showPaths}',
