@@ -1067,6 +1067,8 @@ export default class PanelManageGenotypeComponent extends Component {
   @alias('brushedOrViewedVCFBlocksVisible') gtBlocks;
 
   /** genotype datasets on the brushed / viewed axes
+   * The result datasets are unique, i.e. a dataset will be appear once in the
+   * result although it may contain multiple blocks which are brushed or viewed.
    */
   @computed('brushedOrViewedVCFBlocks')
   get gtDatasets () {
@@ -2104,7 +2106,10 @@ export default class PanelManageGenotypeComponent extends Component {
         userSettings = this.args.userSettings,
         samplesLimitEnable = userSettings.samplesLimitEnable,
         {samples, samplesOK} = this.samplesOK(samplesLimitEnable, vcfDatasetId),
-        domainInteger = this.vcfGenotypeLookupDomain;
+        /** related : .vcfGenotypeLookupDomain */
+        domain = blockV.get('brushedDomain'),
+        /** as in vcfGenotypeLookupDomain() and brushedDomainRounded() */
+        domainInteger = domain.map((d) => d.toFixed(0));
         /* samplesOK() returns .samples '' if none are selected; passing
          * vcfGenotypeLookupDataset( samples==='' ) will get all samples, which
          * may be valid, but for now skip this dataset if ! .length.
