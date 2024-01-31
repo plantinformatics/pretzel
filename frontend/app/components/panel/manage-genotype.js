@@ -2857,7 +2857,8 @@ export default class PanelManageGenotypeComponent extends Component {
              * .sampleNames contains : [ 'Ref', 'Alt', 'tSNP', 'MAF' ]; 'tSNP' is mapped to 'LD Block'
              * \t<datasetId> is appended to 'MAF' and 'LD Block'.
              */
-            columnNames = gtDatasetIds
+            columnNames = ['Chr']
+              .concat(gtDatasetIds)
               .concat(nonVCF.columnNames)
               .concat(['Position', 'Name'])
               .concat(extraDatasetColumns)

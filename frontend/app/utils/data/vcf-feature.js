@@ -1228,6 +1228,11 @@ function vcfFeatures2MatrixViewRowsResult(
         }
         const
         row = rowsAddFeature(res.rows, feature, 'Name', 0);
+        /* Chr column could be optional, e.g. if ! .brushedOrViewedScope.length
+         * .name relates to the genotype database (e.g. VCF), so it may be what
+         * users expect to see rather than .scope here.
+         */
+        row['Chr'] = feature.get('blockId.name');
         if (showHaplotypeColumn) {
           // column name is 'LD Block', originally  'Haplotype'.
           row['LD Block'] = stringSetFeature(featureHaplotypeValue(feature), feature);
