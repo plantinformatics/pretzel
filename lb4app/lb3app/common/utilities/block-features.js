@@ -498,6 +498,7 @@ function cacheblocksFeaturesCounts(db, models, datasetId, userOptions, options) 
     /** blocks.reduce() result is a chain of promises.  This enables the
      * blockFeaturesCountsP() requests to be done serially, whereas blocks.map()
      * would do them in parallel.
+     * Related : reduceInSeries() in utils/common/promises.js
      */
     const blockCountsP = blocks.reduce((result, block, i) => {
       console.log(fnName, block.id);

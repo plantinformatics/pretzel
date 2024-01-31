@@ -128,6 +128,10 @@ function connect() {
     this.login()
     .then(token => {
       console.log(fnName, token);
+      if (serverURL.endsWith('/spark/api')) {
+        // signify that login is OK, but credentials should not be sent
+        token = 'null';
+      }
       token && this.setToken(token);
       if (! token) { throw 'login failed'; }
     });
@@ -210,6 +214,7 @@ function responseValueP(response) {
 function fetchEndpoint_fetch(endpoint, method = 'GET', body = undefined) {
   const
   fnName = 'fetchEndpoint_fetch',
+  tokenNull = ! this.token || (this.token === 'null'),
   token = this.token || 'null',
   headerObj = {
         // 'User-Agent': ...,
@@ -227,7 +232,7 @@ function fetchEndpoint_fetch(endpoint, method = 'GET', body = undefined) {
   /** referrer sets the referer header. refn https://en.wikipedia.org/wiki/HTTP_referer
    * https://developer.mozilla.org/en-US/docs/Web/API/fetch  */
   options = {
-      credentials : "include",
+      credentials : tokenNull ? 'omit' : 'include',
       headers : /*new Headers(*/headerObj/*)*/,
       referrer : germinateServerDomain + '/', // 'http://localhost:4200/',
       method,
@@ -245,6 +250,10 @@ function fetchEndpoint_fetch(endpoint, method = 'GET', body = undefined) {
     fetch(serverURL + '/' + endpoint, options);
   return resultP;
 }
+/** Mostly the same as fetchEndpoint_fetch(); the differences have been absorbed
+ * into fetchEndpoint_fetch() with the condition ! this.token, and
+ * fetchEndpoint_fetch() is used by .login() instead of this function.
+ */
 function fetchEndpoint_fetch_login(endpoint, method = 'GET', body = undefined) {
   const
   fnName = 'fetchEndpoint_fetch_login',
