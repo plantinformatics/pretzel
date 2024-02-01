@@ -1071,7 +1071,8 @@ export default Model.extend({
       const userOptions = this.controls.genotypeSNPFilters;
       const unfilteredLength = fcrs.length;
       /* No filtering is done if .genotypeSNPFilters is empty or fcr.userOptions
-       * is not defined.   */
+       * is not defined.  Could use : genotypeSNPFiltersDefined()
+       */
       if (Object.keys(userOptions).length) {
         fcrs = fcrs.filter(fcr => ! fcr.userOptions || isEqual(userOptions, fcr.userOptions));
         dLog(fnName, fcrs.length, unfilteredLength);

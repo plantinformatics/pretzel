@@ -1608,19 +1608,74 @@ function copiesOfAlt(value, alt) {
 
 //------------------------------------------------------------------------------
 
+export { featureMafFilter };
+/** @return truthy iff feature.values.MAF satisfies {mafThreshold, mafUpper}
+ * @param mafThreshold, mafUpper are from userSettings.
+ * mafUpper may be undefined, default is false.
+ */
+function featureMafFilter(feature, mafThreshold, mafUpper) {
+  const
+  MAF = normalizeMaf(feature.values.MAF),
+  /** don't filter datasets which don't have MAF */
+  ok = (MAF === undefined) || 
+    ((+MAF < mafThreshold) === !!mafUpper);
+  return ok;
+}
+
+//------------------------------------------------------------------------------
+
+export { featureCallRateFilter };
+/** Filter feature by callRateThreshold.
+ * Call Rate of feature is read from INFO.CR or 1 - INFO.F_MISSING if defined,
+ * otherwise feature[callRateSymbol], which is calculated in
+ * collateBlockSamplesCallRate() from sample genotype values in feature.values.
+ * @return truthy if Call Rate of feature is >= callRateThreshold
+ * @param callRateThreshold is defined
+ * @param feature
+ */
+function featureCallRateFilter(callRateThreshold, feature) {
+  let callRate;
+  const INFO = feature.values?.INFO;
+  if (INFO && ((INFO.F_MISSING !== undefined) || (INFO.CR !== undefined))) {
+    callRate = (INFO.CR !== undefined) ? INFO.CR : 1 - INFO.F_MISSING;
+  } else {
+    const
+    sampleCount = feature[callRateSymbol];
+    /** OK (filter in) if callRate is undefined because of lack of counts. */
+    callRate = sampleCount && (sampleCount.calls + sampleCount.misses) ?
+      sampleCount.calls / (sampleCount.calls + sampleCount.misses) :
+      undefined;
+  }
+  const ok = ! callRate || (callRate >= callRateThreshold);
+  return ok;
+}
+
+//------------------------------------------------------------------------------
+
 export {featuresFilterNalleles};
 /** Filter features by the number of alleles in .values Ref and Alt.
  * @param minAlleles, maxAlleles string from text input, in which the user is
- * expected to enter a number.  ' ' is equivalent to 0
+ * expected to enter a number.  ' ' is equivalent to 0.
+ * As in featureSatisfiesNalleles() : {min,max}Alleles may be undefined or ''
+ * indicating no constraint.
  */
 function featuresFilterNalleles(features, minAlleles, maxAlleles) {
   const fnName = 'featuresFilterNalleles';
   dLog(fnName, minAlleles, maxAlleles, features.length);
-  features = features.filter(feature => 
-    ((minAlleles === '') || (minAlleles <= feature.nAlleles)) &&
-      ((maxAlleles === '') || (feature.nAlleles <= maxAlleles)) );
+  features = features.filter(f => featureSatisfiesNalleles(f, minAlleles, maxAlleles));
   dLog(fnName, features.length);
   return features;
+}
+
+/** @return true if feature satisfies any constraints defined by minAlleles and maxAlleles.
+ * @param minAlleles, maxAlleles  non-negative integer in string format.
+ * may be undefined or '' indicating no constraint.
+ */
+function featureSatisfiesNalleles(feature, minAlleles, maxAlleles) {
+  const ok =
+    ((minAlleles === undefined) || (minAlleles === '') || (minAlleles <= feature.nAlleles)) &&
+      ((maxAlleles === undefined) || (maxAlleles === '') || (feature.nAlleles <= maxAlleles));
+  return ok;
 }
 
 //------------------------------------------------------------------------------
@@ -1701,6 +1756,43 @@ function genotypeSNPFiltersDefined(userOptions) {
    */
   active = Object.values(userOptions).find(v => !!v);
   return active;
+}
+
+export { genotypeSNPFiltersApply };
+/** Apply any filters defined in userOptions to feature.
+ * - snpPolymorphismFilter, mafUpper, mafThreshold, mafUpper, featureCallRateThreshold,
+ * - isecDatasetIds, isecFlags
+ * - minAlleles, maxAlleles
+ * @return truthy iff the feature is filtered in, i.e. satisfies the filter thresholds
+ */
+function genotypeSNPFiltersApply(userOptions, feature) {
+  let ok = true;
+  // these filters are passed in request : vcfGenotypeLookupDataset()
+
+  /* to implement snpPolymorphismFilter : factor from manage-genotype.js :
+   * snpPolymorphismFilter().
+   * can store counts in feature[Symbol.for('countsRefAlt')];  related : copiesOfAlt()
+   */
+
+  ok &&= featureMafFilter(feature, userOptions.mafThreshold, userOptions.mafUpper);
+  if (userOptions.featureCallRateThreshold) {
+    ok &&= featureCallRateFilter(userOptions.featureCallRateThreshold, feature);
+  }
+
+  /* perhaps implement some equivalent of this :
+      if (intersection) {
+        requestOptions.isecDatasetIds = intersection.datasetIds;
+        requestOptions.isecFlags = '-n' + intersection.flags;
+      }
+  */
+
+  if (userOptions.minAlleles || userOptions.maxAlleles) {
+    ok &&= featureSatisfiesNalleles(feature, userOptions.minAlleles, userOptions.maxAlleles);
+  }
+
+  // not yet implemented :  typeSNP
+
+  return ok;
 }
 
 //------------------------------------------------------------------------------

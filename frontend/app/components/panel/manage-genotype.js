@@ -40,6 +40,8 @@ import {
   featuresValuesFields,
   featureSampleNames,
   featuresSampleMAF,
+  featureMafFilter,
+  featureCallRateFilter,
   featuresFilterNalleles,
   objectSymbolNameArray,
  } from '../../utils/data/vcf-feature';
@@ -2518,10 +2520,8 @@ export default class PanelManageGenotypeComponent extends Component {
 
   featureFilter(feature) {
     const
-    MAF = normalizeMaf(feature.values.MAF),
-    /** don't filter datasets which don't have MAF */
-    ok = (MAF === undefined) || 
-      ((+MAF < this.args.userSettings.mafThreshold) === this.args.userSettings.mafUpper);
+    userSettings = this.args.userSettings,
+    ok = featureMafFilter(feature, userSettings.mafThreshold, userSettings.mafUpper);
     return ok;
   }
 
@@ -2555,22 +2555,8 @@ export default class PanelManageGenotypeComponent extends Component {
     /** based on .sampleFilter() - may factor if the calculation remains similar. */
     const
     callRateThreshold = this.args.userSettings.featureCallRateThreshold,
-    fn = ! callRateThreshold ? undefined : (feature) => {
-      let callRate;
-      const INFO = feature.values?.INFO;
-      if (INFO && ((INFO.F_MISSING !== undefined) || (INFO.CR !== undefined))) {
-        callRate = (INFO.CR !== undefined) ? INFO.CR : 1 - INFO.F_MISSING;
-      } else {
-        const
-        sampleCount = feature[callRateSymbol];
-        /** OK (filter in) if callRate is undefined because of lack of counts. */
-        callRate = sampleCount && (sampleCount.calls + sampleCount.misses) ?
-          sampleCount.calls / (sampleCount.calls + sampleCount.misses) :
-          undefined;
-      }
-      const ok = ! callRate || (callRate >= callRateThreshold);
-      return ok;
-    };
+    fn = ! callRateThreshold ? undefined :
+      (feature) => featureCallRateFilter(callRateThreshold, feature);
     return fn;
   }
 
