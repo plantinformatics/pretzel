@@ -427,7 +427,8 @@ Germinate.prototype.callsetsCalls = callsetsCalls;
  *
  * @param mapid, callSetDbId, start, end
  * e.g. '1', '1-593', '2932022', '2932028'
- * @param limit_result	optional rowLimit / nLines (spark server may 404 without this)
+ * @param limit_result	optional rowLimit / nLines (Spark server may 404 without this,
+ * and Pretzel Germinate does 404 if it is included)
  */
 function callsetsCalls(mapid, callSetDbId, linkageGroupName, start, end, limit_result) {
   const fnName = 'callsetsCalls';
@@ -441,8 +442,9 @@ function callsetsCalls(mapid, callSetDbId, linkageGroupName, start, end, limit_r
     if (isDefined(end)) {
       intervalParams += '/' + end;
     }
-  } 
-  if (isDefined(limit_result)) {
+  }
+  const serverTypeIsSpark = serverURL.endsWith('/spark/api');
+  if (serverTypeIsSpark && isDefined(limit_result)) {
     intervalParams += '/' + limit_result;
   }
   const
