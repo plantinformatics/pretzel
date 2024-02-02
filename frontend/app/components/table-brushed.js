@@ -482,6 +482,10 @@ export default Component.extend({
           values = feature.values;
       if (values) {
         Object.keys(values).forEach((valueName) => rest[valueName] = values[valueName]);
+        /** convert object from vcf INFO column value back to a string representation. */
+        if (typeof rest.INFO === 'object') {
+          rest.INFO = Object.entries(rest.INFO).map(kv => kv.join('=')).join(' ');
+        }
         let o = rest.Ontology, name;
         if (o && (name = this.get('ontology').getNameViaPretzelServer(o))) {
           if (name && ! name.then) {
