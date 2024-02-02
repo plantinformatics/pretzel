@@ -33,6 +33,17 @@ function removePunctuation(text) {
   return text && text.replace(/[^A-Za-z0-9]/g, '_');
 }
 
+//------------------------------------------------------------------------------
+
+export { serverTypeIsGerminateAPI };
+/** Map serverTypeName to a flag indicating if the server API is like Germinate / BrAPI;
+ * i.e. this includes the Spark server.
+ * @param serverTypeName 'Pretzel', 'Germinate', 'Spark'
+ */
+function serverTypeIsGerminateAPI(serverTypeName) {
+  return ['Germinate', 'Spark'].includes(serverTypeName);
+}
+
 /*----------------------------------------------------------------------------*/
 
 /** ApiServer (components/service/api-server)
