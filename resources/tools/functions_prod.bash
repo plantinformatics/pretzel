@@ -26,16 +26,22 @@ export URL_D=$APIHOST/api/$API_D
 
 export URL=$URL_D
 
-
+# Get column values from docker ps matching given image name
+# @param image	e.g. mongo
+# @param idField e.g. ID, Names, Status, Ports. default is ID.
+# Usage examples :
+#   dockerContainer mongo
+#   dockerContainer mongo Names
 function dockerContainer() {
   image=$1;
+  idField=${2-ID}
   if pgrep docker > /dev/null
   then
-    docker ps --format "{{.ID}}\t{{.Image}}" | sed -n "s/	$image.*//p"
+    docker ps --format "{{.$idField}}\t{{.Image}}" | sed -n "s/	$image.*//p"
   fi
 }
 DIM=$(dockerContainer mongo)
-
+# or DIM=$(dockerContainer mongo Names)
 
 #-------------------------------------------------------------------------------
 # These will move to pretzel/resources/functions.bash

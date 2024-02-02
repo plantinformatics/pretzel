@@ -468,16 +468,21 @@ exports.cacheblocksFeaturesCounts = cacheblocksFeaturesCounts;
  * @param db
  * @param models
  * @param datasetId
- * @param isZoomed	true causes blockFeaturesCounts() : useCache to be false
- * This enables creating .MAF.vcf.gz{,.csi} etc without recalculating the zoomed-out histogram.
+ * @param userOptions user settings : {
+ *   mafThreshold, snpPolymorphismFilter, featureCallRateThreshold,
+ *   minAlleles, maxAlleles, typeSNP}
  * @param options
  */
-function cacheblocksFeaturesCounts(db, models, datasetId, isZoomed, options) {
+function cacheblocksFeaturesCounts(db, models, datasetId, userOptions, options) {
   const fnName = 'cacheblocksFeaturesCounts';
 
   const blockFeaturesCountsP = util.promisify(models.Block.blockFeaturesCounts);
 
   const
+  /** This endpoint requests the zoomed-out features counts, for each block.
+   * There is no provision to specify a zoomedDomain for each block.
+   */
+  isZoomed = false,
   /// datasetId -> dataset -> parent -> parent blocks
   blocksP = datasetBlocks(models, datasetId),
   parentBlocksP = models.Block.datasetLookup(datasetId, options)
@@ -488,7 +493,13 @@ function cacheblocksFeaturesCounts(db, models, datasetId, isZoomed, options) {
     ));
 
   function ensureCounts(blocks, parentBlocks) {
+    const fnName = 'ensureCounts';
     console.log(fnName, datasetId, blocks.length);
+    /** blocks.reduce() result is a chain of promises.  This enables the
+     * blockFeaturesCountsP() requests to be done serially, whereas blocks.map()
+     * would do them in parallel.
+     * Related : reduceInSeries() in utils/common/promises.js
+     */
     const blockCountsP = blocks.reduce((result, block, i) => {
       console.log(fnName, block.id);
       /** select use of blockRecordValue() : blockGet() in blockRecordLookup(). */
@@ -503,6 +514,7 @@ function cacheblocksFeaturesCounts(db, models, datasetId, isZoomed, options) {
       } else {
         // maybe : sum counts to check # features in dataset.
         result = result.then((datasetSum) => {
+          // console.log(fnName, datasetSum, blockId);
           const
           /** frontend passes useBucketAuto=undefined, and useBucketAuto is
            * included in cacheId, so match that.  interval is required when
@@ -511,7 +523,7 @@ function cacheblocksFeaturesCounts(db, models, datasetId, isZoomed, options) {
           countsP = blockFeaturesCountsP.apply(
             models.Block,
             [blockId, interval, /*nBins*/100, isZoomed,
-             /*useBucketAuto*/undefined, /*userOptions*/undefined,
+             /*useBucketAuto*/undefined, userOptions,
              options, /*res*/undefined /*,cb*/])
             .then(counts => counts.reduce((blockSum, bin) => blockSum += bin.count, 0))
             .then(blockSum => datasetSum += blockSum);

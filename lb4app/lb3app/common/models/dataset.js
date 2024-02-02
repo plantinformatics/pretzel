@@ -25,13 +25,13 @@ const { GffParse } = require('../utilities/gff_read');
 const { loadAliases } = require('../utilities/load-aliases');
 const { cacheClearBlocks } = require('../utilities/localise-blocks');
 const { cacheblocksFeaturesCounts } = require('../utilities/block-features');
-const { vcfGenotypeFeaturesCountsStatus } = require('../utilities/vcf-genotype');
+const { vcfGenotypeFeaturesCountsStatus, checkVCFsAreInstalled } = require('../utilities/vcf-genotype');
 const { ErrorStatus } = require('../utilities/errorStatus.js');
 const { objectLookup } = require('../utilities/mongoDB-driver-lib');
 const { ensureItem, query, datasetIdGetVector } = require('../utilities/vectra-search.js');
 const { flattenJSON } = require('../utilities/json-text.js');
 const { text2Commands } = require('../utilities/openai-query.js');
-
+const { noCacheResult } = require('../utilities/remote-method.js');
 
 const cacheLibraryName = '../utilities/results-cache'; // 'memory-cache';
 const cache = require(cacheLibraryName);
@@ -310,6 +310,48 @@ module.exports = function(Dataset) {
       datasets.filter((d) => d.warnings?.length || d.errors?.length)
       .map((dataset) => pick(dataset, ['name', 'errors', 'warnings']));
 
+    const
+    checkP = Promise.all(checkVCFsAreInstalled(datasets, status));
+    /** filter out VCF datasets which are not installed */
+    checkP.then(statuses => {
+      const
+      datasetsOk = statuses.map((datasetStatus, i) => {
+        const
+        dataset = datasets[i],
+        datasetOk = datasetStatus ? dataset : undefined;
+        if (! datasetStatus) {
+          const
+          datasetError = pick(dataset, ['name', 'errors', 'warnings']),
+          errors = datasetError.errors || (datasetError.errors = []);
+          errors.push('VCF and SNPList are not installed for VCF dataset');
+          status.datasetsWithErrorsOrWarnings.push(datasetError);
+        }
+        return datasetOk;
+      })
+        .filter(d => d);
+      if (datasetsOk.length) {
+        // in this case status is not reported
+
+        /** share values which are used by both parts,
+         * i.e. spreadsheetUploadInternal{,Database}()
+         */
+        const shared = {status, datasets : datasetsOk, fileName, };
+        Dataset.spreadsheetUploadInternalDatabase(msg, options, models, shared, cb);
+      } else {
+        cb(null, status);
+      }
+    });
+  };
+  /** Continuation of spreadsheetUploadInternal() - originally these 2 were a
+   * single function, but split to enable additional (asynchronous)
+   * error-checking before proceeding with database changes.
+   * Params are the same as spreadsheetUploadInternal(), plus the shared local values :
+   * @param shared
+   */
+  Dataset.spreadsheetUploadInternalDatabase = function(msg, options, models, shared, cb) {
+    const {status, datasets, fileName} = shared;
+    const fnName = 'spreadsheetUploadInternalDatabase';
+
     // if ! datasets.length then cbCountDone() is not called, so send warnings here.
     if (status.errors?.length || (status.warnings?.length && ! datasets.length)) {
       status.fileName = fileName;
@@ -321,7 +363,10 @@ module.exports = function(Dataset) {
     } else {
       /* aliases don't have much overlap with datasets - handle separately. */
       let aliasesP = [];
-      datasets = datasets
+      const
+      /** dataset .aliases and .datasetMetadata are handled here, and the
+       * remainder pass into the upload. process */
+      datasetsRemainder = datasets
         .filter((dataset) => {
           /** true means filter out of datasets */
           let out;
@@ -329,13 +374,13 @@ module.exports = function(Dataset) {
             aliasesP.push(loadAliases(dataset, models));
           } else if ((out = dataset.datasetMetadata)) {
             aliasesP.push(upload.datasetSetMeta(dataset.datasetMetadata, models, options));
-          } else 
+          }
           return ! out;
         });
 
       let datasetsDone = 0;
       let datasetRemovedPs =
-      datasets.map((dataset) => {
+      datasetsRemainder.map((dataset) => {
         const
         datasetName = dataset.name,
         replaceDataset = !!msg.replaceDataset;
@@ -605,18 +650,24 @@ module.exports = function(Dataset) {
 
 
   /**
-   * @param isZoomed	true causes blockFeaturesCounts() : useCache to be false
+   * @param userOptions user settings : {
+   *   mafThreshold, snpPolymorphismFilter, featureCallRateThreshold,
+   *   minAlleles, maxAlleles, typeSNP}
    */
-  Dataset.cacheblocksFeaturesCounts = function(id, isZoomed, options, cb) {
+  Dataset.cacheblocksFeaturesCounts = function(id, userOptions, options, cb) {
     const
     fnName = 'cacheblocksFeaturesCounts',
     db = this.dataSource.connector,
     models = this.app.models;
-    cacheblocksFeaturesCounts(db, models, id, isZoomed, options)
+    if (! id) {
+      cb(ErrorStatus(400, 'dataset id is a required parameter of ' + fnName));
+    } else {
+    cacheblocksFeaturesCounts(db, models, id, userOptions, options)
       .then((result) => cb(null, result))
       .catch((err) => {
-        console.log(fnName, id, isZoomed, err.statusCode, err);
+        console.log(fnName, id, err.statusCode, err);
         cb(err);});
+    }
   };
 
   //----------------------------------------------------------------------------
@@ -688,6 +739,7 @@ module.exports = function(Dataset) {
     returns: {arg: 'text', type: 'string'},
     description: "Get the status of .vcf.gz files for this dataset."
   });
+  Dataset.afterRemote('vcfGenotypeFeaturesCountsStatus', noCacheResult);
 
   //----------------------------------------------------------------------------
 
@@ -819,11 +871,11 @@ module.exports = function(Dataset) {
 
   Dataset.remoteMethod('cacheblocksFeaturesCounts', {
     accepts: [
-      {arg: 'id', type: 'string', required: true},
-      {arg: 'isZoomed', type: 'boolean', required: false, default : 'false'},
+      {arg: 'id', type: 'string', required: true, http: {source: 'query'}},
+      {arg: 'userOptions', type: 'object', required: false, http: {source: 'body'}},
       {arg: "options", type: "object", http: "optionsFromRequest"}
     ],
-    http: {verb: 'get'},
+    http: {verb: 'post'},
     returns: {type: 'number', root: true},
    description: "Pre-warm the cache of blockFeaturesCounts for each block of this dataset."
   });

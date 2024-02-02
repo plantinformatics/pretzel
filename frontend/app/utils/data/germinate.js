@@ -53,13 +53,13 @@ const fetchEndpointFn = isNodeJs ? fetchEndpoint_bent : fetchEndpoint_fetch;
  */
 const testServerURL = 'https://test-server.brapi.org/brapi/v2';
 const yambase = 'https://www.yambase.org/brapi/v1';
-const
+let
 /** scheme + userinfo + host + port */
 germinateServerDomain = 'https://germinate.plantinformatics.io',
 germinateServerURL = germinateServerDomain + '/api';
-const serverURL = germinateServerURL; // testServerURL;
+let serverURL = germinateServerURL; // testServerURL;
 const brapi_v = 'brapi/v2';
-const serverURLBrAPI = germinateServerURL + '/' + brapi_v;
+let serverURLBrAPI = germinateServerURL + '/' + brapi_v;
 
 const germinateToken = isNodeJs && env.germinateToken;
 
@@ -85,8 +85,13 @@ function obscureField(obj, fieldName) {
 // let germinate = new Germinate(serverURL);
 
 class Germinate {
-  constructor(/*serverURL*/) {
+  constructor(germinateServerDomain_) {
     this.init();
+
+    germinateServerDomain = germinateServerDomain_;
+    germinateServerURL = germinateServerDomain + '/api';
+    serverURL = germinateServerURL;
+    serverURLBrAPI = germinateServerURL + '/' + brapi_v;
   }
 }
 export {Germinate};
@@ -123,6 +128,10 @@ function connect() {
     this.login()
     .then(token => {
       console.log(fnName, token);
+      if (serverURL.endsWith('/spark/api')) {
+        // signify that login is OK, but credentials should not be sent
+        token = 'null';
+      }
       token && this.setToken(token);
       if (! token) { throw 'login failed'; }
     });
@@ -205,6 +214,7 @@ function responseValueP(response) {
 function fetchEndpoint_fetch(endpoint, method = 'GET', body = undefined) {
   const
   fnName = 'fetchEndpoint_fetch',
+  tokenNull = ! this.token || (this.token === 'null'),
   token = this.token || 'null',
   headerObj = {
         // 'User-Agent': ...,
@@ -222,7 +232,7 @@ function fetchEndpoint_fetch(endpoint, method = 'GET', body = undefined) {
   /** referrer sets the referer header. refn https://en.wikipedia.org/wiki/HTTP_referer
    * https://developer.mozilla.org/en-US/docs/Web/API/fetch  */
   options = {
-      credentials : "include",
+      credentials : tokenNull ? 'omit' : 'include',
       headers : /*new Headers(*/headerObj/*)*/,
       referrer : germinateServerDomain + '/', // 'http://localhost:4200/',
       method,
@@ -240,6 +250,10 @@ function fetchEndpoint_fetch(endpoint, method = 'GET', body = undefined) {
     fetch(serverURL + '/' + endpoint, options);
   return resultP;
 }
+/** Mostly the same as fetchEndpoint_fetch(); the differences have been absorbed
+ * into fetchEndpoint_fetch() with the condition ! this.token, and
+ * fetchEndpoint_fetch() is used by .login() instead of this function.
+ */
 function fetchEndpoint_fetch_login(endpoint, method = 'GET', body = undefined) {
   const
   fnName = 'fetchEndpoint_fetch_login',
@@ -411,10 +425,12 @@ Germinate.prototype.callsetsCalls = callsetsCalls;
  * {domain}/api/brapi/v2/callsets/{callSetDbId}/calls/mapid/{mapid}/chromosome/{chromosome}/position/{positionStart}/{positionEnd}
  * example: {domain}/api/brapi/v2/callsets/4-1036/calls/mapid/4/chromosome/10/position/1/300
  *
- * @param dataset, start, end
- * e.g. '1-593', '2932022', '2932028'
-*/
-function callsetsCalls(dataset, linkageGroupName, start, end) {
+ * @param mapid, callSetDbId, start, end
+ * e.g. '1', '1-593', '2932022', '2932028'
+ * @param limit_result	optional rowLimit / nLines (Spark server may 404 without this,
+ * and Pretzel Germinate does 404 if it is included)
+ */
+function callsetsCalls(mapid, callSetDbId, linkageGroupName, start, end, limit_result) {
   const fnName = 'callsetsCalls';
   /** Optional location / position / variantName interval to filter SNPs */
   let intervalParams = '';
@@ -427,9 +443,12 @@ function callsetsCalls(dataset, linkageGroupName, start, end) {
       intervalParams += '/' + end;
     }
   }
+  const serverTypeIsSpark = serverURL.endsWith('/spark/api');
+  if (serverTypeIsSpark && isDefined(limit_result)) {
+    intervalParams += '/' + limit_result;
+  }
   const
-  [mapid, sampleId] = dataset.split('-'),
-  endpoint = brapi_v + '/' + 'callsets'  + '/' + dataset + '/calls'
+  endpoint = brapi_v + '/' + 'callsets'  + '/' + callSetDbId + '/calls'
     + '/mapid/' + mapid + intervalParams,
   callsP = this.fetchEndpoint(endpoint);
   if (trace) {

@@ -77,6 +77,7 @@ const refAltHeadings = refAlt.map(toTitleCase);
  * Based on similar in table-brushed.js
  */
 const featureValuesWidths = {
+  Chr : 35,
   Name : 180,
   Position : 80,
   End : 80,
@@ -120,7 +121,7 @@ function columnNameIsNotSample(column_name) {
    * like the sample columns, and they are formatted like the sample columns, so
    * assign the class col-sample.
    */
-  return ['Name', 'Position', 'End', 'LD Block', 'MAF'].includes(column_name);
+  return ['Chr', 'Name', 'Position', 'End', 'LD Block', 'MAF'].includes(column_name);
 }
 
 function copiesColourClass(alleleValue) {
@@ -232,10 +233,15 @@ function nRows2HeightEx(nRows) {
  *   blockColourRenderer
  *   haplotypeColourRenderer
  *
+ *  Summary / extract from cells() :
  *   renderer =
  *     (prop === 'Block') ? blockColourRenderer :
  *     (prop === 'LD Block') ? haplotypeColourRenderer :
- *     numericalData ? numericalDataRenderer :
+ *     (sampleName === 'MAF') || numericalData ? numericalDataRenderer :
+ *     (prop === 'Chr') || (prop === 'Name') ? TextRenderer : 
+ *     gtDatasetColumns.includes(prop) ? blockFeaturesRenderer :
+ *     datasetColumns.includes(prop) ? blockFeaturesRenderer :
+ *     extraDatasetColumns.includes(prop) ? blockFeaturesRenderer :
  *        selectedBlock ? ABRenderer : CATGRenderer
  *   type =  (prop.endsWith 'Position' or 'End') ? 'numeric'
  *
@@ -245,6 +251,7 @@ function nRows2HeightEx(nRows) {
 export default Component.extend({
   haplotypeService : service('data/haplotype'),
   queryParamsService : service('query-params'),
+  dom : service(),
 
   urlOptions : alias('queryParamsService.urlOptions'),
 
@@ -553,6 +560,8 @@ export default Component.extend({
     this.dragResizeListen();
     this.afterScrollVertically_tablePosition();
     this.table.batchRender(bind(this, this.setRowAttributes));
+    // initialise services/dom
+    this.dom || dLog(fnName, 'services/dom');
   },
 
   highlightFeature,
@@ -802,7 +811,7 @@ export default Component.extend({
     } else if (sampleName === 'MAF') {
       cellProperties.type = 'numeric';
       cellProperties.renderer = 'numericalDataRenderer';
-    } else if (prop === 'Name') {
+    } else if ((prop === 'Chr') || (prop === 'Name')) {
       cellProperties.renderer = Handsontable.renderers.TextRenderer;
     } else if (this.gtDatasetColumns?.includes(prop)) {
       cellProperties.renderer = 'blockFeaturesRenderer';
@@ -811,6 +820,7 @@ export default Component.extend({
     } else if (this.extraDatasetColumns?.includes(prop)) {
       cellProperties.renderer = 'blockFeaturesRenderer';
     } else if (numericalData) {
+      cellProperties.type = 'numeric';
       cellProperties.renderer = 'numericalDataRenderer';
     } else if ((selectedBlock == null) || (this.selectedColumnName == null)) {
       cellProperties.renderer = 'CATGRenderer';
@@ -924,6 +934,7 @@ export default Component.extend({
         const datasetId = columnName;
         this.featureColumnDialogDataset(datasetId);
     } else if (
+      this.dom.states.Control &&
       (row === -1) &&
         ! this.gtDatasetColumns.includes(columnName) &&
         ! columnNameIsNotSample(columnName) ) {
@@ -951,6 +962,7 @@ export default Component.extend({
         const sampleMatches = block[Symbol.for('sampleMatches')];
         console.log(fnName, sampleMatches[sampleName], sampleName);
       }
+      later(() => this.table.deselectCell());
     }
   },
 
@@ -1915,7 +1927,9 @@ export default Component.extend({
       this.hideColumns();
     }
 
-    if (data.length > 0) {
+    /** always redisplay, even if data is empty. */
+    const showEmptyInput = true;
+    if (showEmptyInput || data.length > 0) {
       t.show();
       const
       columns = this.columnNamesToColumnOptions(this.columnNames);

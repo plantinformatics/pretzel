@@ -370,6 +370,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     if (zoomed) {
       if (! zoomedDomain) {
         // dLog('zoomed2', 'zoomed but not zoomedDomain');
+        /* actually .zoomedDomain is always defined because it is aliased to
+         * currentPosition.yDomain; when ! .zoomed it is block .limits */
       } else {
         zoomed &= (domain[0] !== zoomedDomain[0]) ||
           (domain[1] !== zoomedDomain[1]);
@@ -382,14 +384,14 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
    * only considers the fully-zoomed out case, which means that the
    * total .featureCount for each block can be used instead of
    * calculating .featuresCountIncludingZoom.
-   * i.e. if all .dataBlocks[] have block.featureCount < featuresCountsThreshold
+   * i.e. if all .dataBlocks[] have block.featureCount > featuresCountsThreshold
    */
   isZoomedRightOut() {
     let out = ! this.zoomed;
     if (out) {
       let
       featuresCountsThreshold = this.get('featuresCountsThreshold');
-      out = ! this.dataBlocks.any((b) => b.featureCount <= featuresCountsThreshold);
+      out = ! this.dataBlocks.any((b) => b.featureCountCurrent <= featuresCountsThreshold);
       dLog('isZoomedRightOut', out, featuresCountsThreshold, this.dataBlocks);
     }
     return out;

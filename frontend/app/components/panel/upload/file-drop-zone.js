@@ -12,6 +12,10 @@ import UploadBase from './data-base';
 /** used as a truthy filter */
 function I(value) { return value; }
 
+/** utils/data/vcf-files.js :  statusToMatrix() maps '.' to unicodeDot */
+const unicodeDot = '·';
+
+
 /*----------------------------------------------------------------------------*/
 
 /** Convert ArrayBuffer to String, using single-char operations.
@@ -118,8 +122,8 @@ export default UploadBase.extend({
         }
         const
         datasetWarnings  = status.datasetsWithErrorsOrWarnings?.map(
-          (d) => [d.name].concat(d.warnings)) || [],
-        warnings = status?.warnings.concat(datasetWarnings);
+          (d) => [d.name].concat(d.errors || []).concat(d.warnings || [])) || [],
+        warnings = status?.warnings.concat(datasetWarnings.flat());
         this.set('warnings', warnings);
         this.set('errors', status?.errors || []);
         this.get('blockService').featureSaved();
@@ -166,7 +170,8 @@ export default UploadBase.extend({
             scopes = dataset.blocks.mapBy('scope'),
             dwc = scopes.filter(scope => {
               const chr = status.rows.findBy('Name', scope);
-              return ! chr?._MAF_SNPList;
+              // note : . is unicodeDot here.  see statusToMatrix().
+              return ! chr?.['·MAF·SNPList'];
             });
             return dwc.length && (dataset.id + ' : ' + dwc.join(' '));
           });

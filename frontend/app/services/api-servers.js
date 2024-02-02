@@ -10,7 +10,8 @@ import { find as collection_find } from 'lodash/collection';
 
 import {
   default as ApiServer,
-  removePunctuation
+  removePunctuation,
+  serverTypeIsGerminateAPI,
 } from '../components/service/api-server';
 import {
   default as ApiServerGerminate
@@ -117,15 +118,20 @@ export default Service.extend(Evented, {
    * @return server (Ember Object) ApiServer
    */
   addServer : function (typeName = 'Pretzel', url, user, token, clientId) {
+    const typeIsGerminateAPI = serverTypeIsGerminateAPI(typeName);
     // const MyComponent = Ember.getOwner(this).factoryFor('component:service/api-server');
     let serverBase = 
       {
+        /* Perhaps set .serverType here; currently it is set in
+         * new-datasource-modal.js : onConfirm() : ServerLogin().then() */
+        // serverType : typeName,
+        typeIsGerminateAPI,
         host : url,
         user : user,
         token : token,
         clientId
       },
-    typeIsGerminate = (typeName === 'Germinate'),
+    typeIsGerminate = typeIsGerminateAPI,
     ownerInjection = getOwner(this).ownerInjection(),
     apiServerClass = typeIsGerminate ? ApiServerGerminate : ApiServer,
     server = apiServerClass.create(
@@ -380,9 +386,9 @@ export default Service.extend(Evented, {
       url = 'http://' + url;
     }
     const
-    typeIsGerminate = (typeName === 'Germinate'),
+    typeIsGerminate = serverTypeIsGerminateAPI(typeName),
     loginP = typeIsGerminate ?
-        useGerminate(user, password) :
+      useGerminate(url, user, password) :
     $.ajax({
       url: url + '/api/Clients/login',
       type: 'POST',

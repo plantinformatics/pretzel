@@ -851,7 +851,8 @@ export default Service.extend({
     rowLimit = vcParams.nSamples || vcParams.nFeatures || 400,
     /** not used because 0 samples. */
     requestFormat = 'CATG',
-    requestOptions = {requestFormat};
+    genotypeSNPFilters = this.controls.genotypeSNPFilters,
+    requestOptions = Object.assign({requestFormat}, genotypeSNPFilters);
     addGerminateOptions(requestOptions, block);
     const
     /* generally block.name and .scope are the same.

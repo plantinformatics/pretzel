@@ -4,7 +4,11 @@ import Evented from '@ember/object/evented';
 import Service from '@ember/service';
 import { inject as service } from '@ember/service';
 
+import { pick } from 'lodash/object';
+
 import { stacks } from '../utils/stacks';
+
+import { genotypeSNPFiltersDefined } from '../utils/data/vcf-feature';
 
 const dLog = console.debug;
 
@@ -59,4 +63,48 @@ export default Service.extend(Evented, {
 
   /*--------------------------------------------------------------------------*/
 
+  /** @return the current values of the user genotype controls which filter SNPs
+   */
+  genotypeSNPFilters : computed(
+    'userSettings.genotype.mafUpper',
+    'userSettings.genotype.mafThreshold',
+    'userSettings.genotype.snpPolymorphismFilter',
+    'userSettings.genotype.featureCallRateThreshold',
+    'userSettings.genotype.minAlleles',
+    'userSettings.genotype.maxAlleles',
+    'userSettings.genotype.typeSNP',
+    function () {
+      const
+      userSettings = this.userSettings.genotype,
+      /** Don't pass values which don't define a filter, so they are not used in
+       * cacheIdOptions.
+       * The default values used in the GUI will define an active filter :
+       * minAlleles=2, maxAlleles=2, typeSNP=true
+       */
+      userOptions = {};
+      pickNonDefault(userOptions, userSettings, ['snpPolymorphismFilter', 'typeSNP'], false);
+      pickNonDefault(userOptions, userSettings, ['mafUpper', 'mafThreshold', 'featureCallRateThreshold'], 0);
+      pickNonDefault(userOptions, userSettings, ['minAlleles', 'maxAlleles'], '');
+
+      return userOptions;
+    }),
+
+  genotypeSNPFiltersDefined : computed('genotypeSNPFilters', function () {
+    const active = genotypeSNPFiltersDefined(this.genotypeSNPFilters);
+    return active;
+  }),
+
+  //----------------------------------------------------------------------------
+
 });
+
+/** Like lodash.pick(), but pick only values which have a non-default value.
+ * Can rename this to pickActive, as some of the GUI default values will be
+ * active filters - see comment in genotypeSNPFilters.
+ */
+function pickNonDefault(target, source, fieldNames, defaultValue) {
+  fieldNames.forEach(name => {
+    if (source[name]) {
+      target[name] = source[name];
+    } } );
+}

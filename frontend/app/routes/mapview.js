@@ -135,8 +135,14 @@ let config = {
     }
     let allInitially = params.parsedOptions && params.parsedOptions.allInitially;
     let getBlocks = blockService.get('getBlocks' + (allInitially ? '' : 'Summary'));
-    let viewedBlocksTasks = (params.mapsToView && params.mapsToView.length) ?
-        thenOrNow(this.blocksLimitsTask, () => getBlocks.apply(blockService, [params.mapsToView])) :
+    /** filter out blocks generated as local-only views for Germinate, such as
+     * e.g. 1_1, table1_Chr1A (see viewDatasetP(): blockAttributes.id); these
+     * are not persisted, and a Blocks/blockFeaturesCount request will get 500
+     * because they are not valid db ids, i.e. 24 hex characters
+     */
+    const dbBlocksToView = params.mapsToView?.filter(blockId => ! blockId.includes('_'));
+    let viewedBlocksTasks = dbBlocksToView.length ?
+        thenOrNow(this.blocksLimitsTask, () => getBlocks.apply(blockService, [dbBlocksToView])) :
         RSVP.cast([]);
     const
     controller = this.controllerFor(this.fullRouteName),

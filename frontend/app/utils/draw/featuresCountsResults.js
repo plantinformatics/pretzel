@@ -13,6 +13,7 @@ import {
 import { inInterval } from './interval-overlap';
 import { inRange, subInterval, overlapInterval, intervalSign } from './zoomPanCalcs';
 import { featureCountDataProperties } from '../data-types';
+import { variantNameSplit } from '../data/vcf-feature';
 
 const dLog = console.debug;
 
@@ -168,6 +169,7 @@ function featuresCountsResultsTidy(fcResult) {
   });
 }
 /*----------------------------------------------------------------------------*/
+/* fcLevels */
 
 /** The given featuresCountsResults selectedResults have been selected
  * by their coverage of a given interval (e.g. zoomedDomain), and by
@@ -492,6 +494,28 @@ fcrsShow = function (fcrs)  { fcrs.forEach((fcr) => console.log('featuresCountsR
 ;
 
 /*----------------------------------------------------------------------------*/
+
+/** Calculate the domain of an array of featuresCounts, i.e. the _id of the
+ * array ends.
+ * @param featuresCounts	array of counts, from genotype, not database query (see featuresCountsResultsDomain)
+ */
+function featuresCountsDomain(featuresCounts) {
+  const
+  domain = (featuresCounts?.length > 1) &&
+    [featuresCounts[0]._id, featuresCounts.at(-1)._id];
+  return domain;
+}
+
+/** Sum the counts in given bins.
+ * @param featuresCounts  fcResult.result
+ */
+function featuresCountsResultSum(featuresCounts) {
+  const countSum = featuresCounts.reduce((sum, bin) => sum += bin.count, 0);
+  return countSum;
+}
+
+//------------------------------------------------------------------------------
+
 /** Collate features received from Germinate into bins, format as a featuresCountsResult
  * and push into block.featuresCountsResults
  */
@@ -500,19 +524,23 @@ fcrsShow = function (fcrs)  { fcrs.forEach((fcr) => console.log('featuresCountsR
  */
 const binSize = 1e7;
 
-/**
+/** Collate whole-chromosome calls / features list received from Germinate into bins.
  * @param sampleData from germinateGenotypeLookup() : callsets calls response
  * @return {counts, limits}
  *   .counts [binCount, ...]
  *   .limits is undefined if sampleData.length === 0 
+ *
+ * Unlike featuresCountsResults from vcfGenotypeLookup, this result does not
+ * currently have .userOptions (genotypeSNPFilters)
  */
 function germinateCallsToCounts(sampleData) {
   const
   result =
-  sampleData.reduce((result, call) => {
+  sampleData.reduce((result, call, i) => {
     const
     counts = result.counts,
-    position = +call.variantName.match(/(.+)-(.+)/)[2],
+    {markerName, positionText} = variantNameSplit(call.variantName, i < 5),
+    position = +positionText,
     bin = (position / binSize).toFixed();
 
     if ((position !== 0) && ! position) {
@@ -531,7 +559,9 @@ function germinateCallsToCounts(sampleData) {
   }, {counts : [], limits : undefined});
   return result;
 }
-/**
+/** Transform binned feature counts from Germinate into featuresCounts for
+ * histogram : format as a featuresCountsResult and push into
+ * block.featuresCountsResults.
  * Used in models/block.js : featuresForAxis() : all
  */
 function featuresCountsTransform(block, counts) {
@@ -568,6 +598,8 @@ export {
   featuresCountsResultsFilter,
   featuresCountsResultsTidy,
   featuresCountsResultsSansOverlap,
+  featuresCountsDomain,
+  featuresCountsResultSum,
   germinateCallsToCounts,
   featuresCountsTransform,
 };

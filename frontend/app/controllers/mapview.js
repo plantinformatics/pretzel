@@ -639,4 +639,6 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
       return classNames;
     }),
 
+  enableGenotypeControlsDialog : alias('block.viewedVCFBlocks.length'),
+
 });

@@ -28,6 +28,7 @@ import {
 } from '../utils/draw/axis';
 import { ensureSvgDefs } from '../utils/draw/d3-svg';
 import { intervalDirection } from '../utils/draw/zoomPanCalcs';
+import { genotypeSNPFiltersDefined, genotypeSNPFiltersApply } from '../utils/data/vcf-feature';
 
 import { axisRegionNames } from './axis-2d';
 
@@ -2111,6 +2112,7 @@ export default InAxis.extend({
   tracksTree : computed(
     'trackBlocksR.@each.visible',
     'trackBlocksR.@each.featuresLength', 'trait.traits.@each.visible',
+    'trackBlocksR.@each.featuresCountsResultsFiltered',
     'ontology.ontologyIsVisibleChangeCount',
     'controlsViewed.visibleByTrait',
     'controlsViewed.visibleByOntology',
@@ -2128,13 +2130,14 @@ export default InAxis.extend({
     /** similar to : axis-1d.js : showTickLocations(), which also does .filter(inRange)
      */
     intervals = trackBlocksR.reduce(
-      function (blockFeatures, blockR) {
+      (blockFeatures, blockR) => {
         let
         blockId = blockR.get('id'),
         isQtl = blockR.get('isQTL'),
-        features = ! blockR.get('visible') ? [] :
-          blockR.get('features')
-          .toArray()  //  or ...
+        filters = [],
+        featuresToFilter = ! blockR.get('visible') ? [] :
+          blockR.get('features');
+        if (isQtl) {
           /** if feature does not have values.{Trait,Ontology}, the defaults of
            * trait.featureFilter() and ontology.featureFilter() are
            * ! visibleBy{Trait,Ontology}
@@ -2143,12 +2146,22 @@ export default InAxis.extend({
            * Also, this will compound the 2 filters - the requirement can be
            * decided as the Ontology Visibility feature is trialled.
            */
-          .filter((feature) => ! isQtl || trait.featureFilter('traits', feature))
-          .filter((feature) => ! isQtl || ontology.featureFilter(feature))
+          filters.push(feature => trait.featureFilter('traits', feature));
+          filters.push(feature => ontology.featureFilter(feature));
+        }
           /* filter out QTL .value which is [] and not yet computed from .values.flankingMarkers.
            * This assumes feature.value.length is defined; now there shouldn't be any Feature.range or non-array .value
            */
-          .filter((f) => f.get('value.length'))
+        filters.push(f => f.get('value.length'));
+        const userOptions = this.controls.genotypeSNPFilters;
+        if (genotypeSNPFiltersDefined(userOptions)) {
+          filters.push(feature => genotypeSNPFiltersApply(userOptions, feature));
+        }
+        let
+        features = featuresToFilter
+          .toArray()  //  or ...
+          // filter out if ! filter(feature) for any of filters[]
+          .filter(f => ! filters.find(filter => ! filter(f)))
           .map(function (feature) {
             let interval = feature.get('range') || feature.get('value');
             /* extra attributes will be added to interval : .description,
@@ -2468,6 +2481,7 @@ export default InAxis.extend({
   slowDependenciesEffect : computed(
     'tracksTree',
     'axis1d.featureLength',
+    'controls.genotypeSNPFilters',
     function() {
       const axisTransitionTime = 750;
       later(() => (

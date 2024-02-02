@@ -8,7 +8,7 @@ import { tracked } from '@glimmer/tracking';
 import { later } from '@ember/runloop';
 import { A as Ember_A } from '@ember/array';
 
-import { uniq, intersection } from 'lodash/array';
+import { uniq, uniqWith, intersection } from 'lodash/array';
 
 import createIntervalTree from 'interval-tree-1d';
 
@@ -40,6 +40,9 @@ import {
   featuresValuesFields,
   featureSampleNames,
   featuresSampleMAF,
+  featureMafFilter,
+  featureCallRateFilter,
+  featuresFilterNalleles,
   objectSymbolNameArray,
  } from '../../utils/data/vcf-feature';
 import {
@@ -148,6 +151,8 @@ function featureHasSamplesLoaded(feature) {
  * user-selected values are preserved in args.userSettings
  * (related : services/data/selected.js)
  * Fields are implicitly @tracked because userSettings is in args.
+ *
+ *------------------------------------------------------------------------------
  * Within userSettings (object) :
  *
  * Array of sample names selected by the user, for distance reference at
@@ -168,7 +173,8 @@ function featureHasSamplesLoaded(feature) {
  * .filterBySelectedSamples default : true
  * true means filter the data within scope (brush or zoomed domain) by samples
  * selected in corresponding dataset tab of block
- * Requests are narrowed to selected samples when ! requestSamplesAll.
+ * Requests are narrowed to selected samples when ! requestSamplesAll,
+ * i.e. requestSamplesSelected.
  *
  * .mafUpper default : true
  * .mafThreshold default 0
@@ -178,6 +184,10 @@ function featureHasSamplesLoaded(feature) {
  *
  * .callRateThreshold default 0
  * .featureCallRateThreshold default 0
+ * .minAlleles default ''
+ * .maxAlleles default ''
+ * .typeSNP default false
+ *
  * .samplesLimit default 10
  * .samplesLimitEnable default false
  * .sampleFilterTypeName default 'variantInterval'
@@ -200,6 +210,7 @@ function featureHasSamplesLoaded(feature) {
  *   The samples indicated by requestSamplesAll can be optionally filtered before request.
  *
  * @see userSettingsDefaults()
+ *------------------------------------------------------------------------------
  */
 export default class PanelManageGenotypeComponent extends Component {
   @service() controls;
@@ -442,6 +453,15 @@ export default class PanelManageGenotypeComponent extends Component {
     if (userSettings.featureCallRateThreshold === undefined) {
       userSettings.featureCallRateThreshold = 0;
     }
+    if (userSettings.minAlleles === undefined) {
+      userSettings.minAlleles = '';
+    }
+    if (userSettings.maxAlleles === undefined) {
+      userSettings.maxAlleles = '';
+    }
+    if (userSettings.typeSNP === undefined) {
+      userSettings.typeSNP = false;
+    }
 
     if (userSettings.samplesLimit === undefined) {
       userSettings.samplesLimit = 10;
@@ -499,6 +519,18 @@ export default class PanelManageGenotypeComponent extends Component {
   //----------------------------------------------------------------------------
 
   @alias('args.userSettings.selectedColumnNames.length') referenceSamplesCount;
+
+  //----------------------------------------------------------------------------
+
+  /** Provide a wrapper around this.args.userSettings.requestSamplesAll for the
+   * input checkbox, which has inverse sense.
+   */
+  get requestSamplesSelected() {
+    return ! this.args.userSettings.requestSamplesAll;
+  }
+  set requestSamplesSelected(value) {
+    this.args.userSettings.requestSamplesAll = ! value;
+  }
 
   // ---------------------------------------------------------------------------
 
@@ -1037,6 +1069,8 @@ export default class PanelManageGenotypeComponent extends Component {
   @alias('brushedOrViewedVCFBlocksVisible') gtBlocks;
 
   /** genotype datasets on the brushed / viewed axes
+   * The result datasets are unique, i.e. a dataset will be appear once in the
+   * result although it may contain multiple blocks which are brushed or viewed.
    */
   @computed('brushedOrViewedVCFBlocks')
   get gtDatasets () {
@@ -1046,7 +1080,8 @@ export default class PanelManageGenotypeComponent extends Component {
      * which is true of both its sources : .viewedVCFBlocks and .brushedVCFBlocks.
      * so use .content
      */
-    gtDatasets = this.brushedOrViewedVCFBlocksVisible.mapBy('datasetId.content');
+    gtDatasets = this.brushedOrViewedVCFBlocksVisible.mapBy('datasetId.content')
+      .uniq();
     dLog(fnName, gtDatasets);
     return gtDatasets;
   }
@@ -1156,12 +1191,18 @@ export default class PanelManageGenotypeComponent extends Component {
     const b = this.lookupBlock;
     return b?.get('datasetId.id');
   }
+  /** Scope of lookupBlock, which used to identify the (reference) chromosome in
+   * request to genotype database, e.g. bcftools
+   */
   @computed('lookupBlock')
   get lookupScope() {
     const b = this.lookupBlock;
-    /** Using .name instead of .scope to handle some test datasets which have
-     * 'chr' prefixing the chr name, e.g. chr1A
-     * Will probably revert this to 'scope'.
+    /** Using .name instead of .scope : .scope is the Pretzel scope and is used
+     * to align datasets on axes (i. match dataset block and parent block);
+     * originally the Pretzel convention was 1A but that has shifted to Chr1A to
+     * align with other databases; external databases such as blast ndb, VCF
+     * files and Dawn may have a different chromosome name, typically VCF files
+     * use 'chr' as the prefix; this is recorded in block .name.
      */
     return b?.get('name');
   }
@@ -1500,6 +1541,7 @@ export default class PanelManageGenotypeComponent extends Component {
   }
 
   /** @return the CSS class names for the datasets which are displayed in the table.
+   * Result is [{id : datasetId, colour }, ... ]
    */
   @computed('brushedOrViewedVCFDatasets', 'gtDatasetColumns')
   get datasetsClasses() {
@@ -2066,7 +2108,10 @@ export default class PanelManageGenotypeComponent extends Component {
         userSettings = this.args.userSettings,
         samplesLimitEnable = userSettings.samplesLimitEnable,
         {samples, samplesOK} = this.samplesOK(samplesLimitEnable, vcfDatasetId),
-        domainInteger = this.vcfGenotypeLookupDomain;
+        /** related : .vcfGenotypeLookupDomain */
+        domain = blockV.get('brushedDomain'),
+        /** as in vcfGenotypeLookupDomain() and brushedDomainRounded() */
+        domainInteger = domain.map((d) => d.toFixed(0));
         /* samplesOK() returns .samples '' if none are selected; passing
          * vcfGenotypeLookupDataset( samples==='' ) will get all samples, which
          * may be valid, but for now skip this dataset if ! .length.
@@ -2109,14 +2154,25 @@ export default class PanelManageGenotypeComponent extends Component {
       mafThreshold = userSettings.mafThreshold,
       mafUpper = userSettings.mafUpper,
       featureCallRateThreshold = userSettings.featureCallRateThreshold,
+      /** related : genotypeSNPFilters() */
       requestOptions = {
         requestFormat, requestSamplesAll, snpPolymorphismFilter,
-        mafThreshold, mafUpper, featureCallRateThreshold},
+        mafThreshold, mafUpper, featureCallRateThreshold,
+      },
       x=0;
 
       if (intersection) {
         requestOptions.isecDatasetIds = intersection.datasetIds;
         requestOptions.isecFlags = '-n' + intersection.flags;
+      }
+      if (userSettings.minAlleles !== '') {
+        requestOptions.minAlleles = userSettings.minAlleles;
+      }
+      if (userSettings.maxAlleles !== '') {
+        requestOptions.maxAlleles = userSettings.maxAlleles;
+      }
+      if (userSettings.typeSNP) {
+        requestOptions.typeSNP = userSettings.typeSNP;
       }
 
       addGerminateOptions(requestOptions, blockV);
@@ -2253,8 +2309,11 @@ export default class PanelManageGenotypeComponent extends Component {
              this.sampleNamesCmp, /*options*/ {userSettings});
           this.displayData.addObjects(displayData);
         }
+        /* The request was successful, so close the controls dialog.
+         * Originally (until 8e2d8ff1) the dialog remained open if no features were received.
+         */
         // equivalent : displayData[0].features.length
-        if (added.createdFeatures.length) {
+        /*if (added.createdFeatures.length)*/ {
           this.showInputDialog = false;
         }
         /** added.sampleNames is from the column names of the result,
@@ -2409,6 +2468,13 @@ export default class PanelManageGenotypeComponent extends Component {
       features = features.filter(this.featureCallRateFilter.bind(this));
       dLog('featureCallRateFilter', features.length);
     }
+    if (features) {
+      const userSettings = this.args.userSettings;
+      if (userSettings.minAlleles !== '' || userSettings.maxAlleles !== '') {
+        features = featuresFilterNalleles(
+          features, userSettings.minAlleles, userSettings.maxAlleles);
+      }
+    }
 
     return features;
   }
@@ -2454,10 +2520,8 @@ export default class PanelManageGenotypeComponent extends Component {
 
   featureFilter(feature) {
     const
-    MAF = normalizeMaf(feature.values.MAF),
-    /** don't filter datasets which don't have MAF */
-    ok = (MAF === undefined) || 
-      ((+MAF < this.args.userSettings.mafThreshold) === this.args.userSettings.mafUpper);
+    userSettings = this.args.userSettings,
+    ok = featureMafFilter(feature, userSettings.mafThreshold, userSettings.mafUpper);
     return ok;
   }
 
@@ -2491,16 +2555,8 @@ export default class PanelManageGenotypeComponent extends Component {
     /** based on .sampleFilter() - may factor if the calculation remains similar. */
     const
     callRateThreshold = this.args.userSettings.featureCallRateThreshold,
-    fn = ! callRateThreshold ? undefined : (feature) => {
-      const
-      sampleCount = feature[callRateSymbol],
-      /** OK (filter in) if callRate is undefined because of lack of counts. */
-      callRate = sampleCount && (sampleCount.calls + sampleCount.misses) ?
-        sampleCount.calls / (sampleCount.calls + sampleCount.misses) :
-        undefined,
-      ok = ! callRate || (callRate >= callRateThreshold);
-      return ok;
-    };
+    fn = ! callRateThreshold ? undefined :
+      (feature) => featureCallRateFilter(callRateThreshold, feature);
     return fn;
   }
 
@@ -2677,7 +2733,7 @@ export default class PanelManageGenotypeComponent extends Component {
       dLog(fnName, visibleBlocks.mapBy('id'));
       if (visibleBlocks.length) {
         const
-        // this.gtDatasets is equivalent to visibleBlocks.mapBy('datasetId.content'),
+        // this.gtDatasets is equivalent to visibleBlocks.mapBy('datasetId.content').uniq(),
         gtDatasetIds = this.gtDatasetIds,
         featuresArrays = visibleBlocks
         /* featureFilterPre() is expected to filter out most features,
@@ -2778,14 +2834,17 @@ export default class PanelManageGenotypeComponent extends Component {
               sampleNamesPreSort
               .sort(this.columnNamesCmp.bind(this, this.sampleNamesCmp)) :
               sampleNamesPreSort,
-            sampleNames = columnNamesFixed.concat(sampleNamesPostSort),
+            sameString = (a, b) => a.toString() == b.toString(),
+            sampleNamesPostSortUniq = uniqWith(sampleNamesPostSort, sameString),
+            sampleNames = columnNamesFixed.concat(sampleNamesPostSortUniq),
 
             /* Position value is returned by matrix-view : rowHeaders().
              * for gtMergeRows the Position column is hidden.
              * .sampleNames contains : [ 'Ref', 'Alt', 'tSNP', 'MAF' ]; 'tSNP' is mapped to 'LD Block'
              * \t<datasetId> is appended to 'MAF' and 'LD Block'.
              */
-            columnNames = gtDatasetIds
+            columnNames = ['Chr']
+              .concat(gtDatasetIds)
               .concat(nonVCF.columnNames)
               .concat(['Position', 'Name'])
               .concat(extraDatasetColumns)

@@ -19,7 +19,7 @@ const dLog = console.debug;
 const closeAfterAction = false;
 
 /**
- * @param blockS	reference block of axis, from axes1d.menuAxis
+ * @param blockS	BlockAxisView (block-axis-view) of reference block of axis, from axes1d.menuAxis
  * @param axisApi	axisApi.menuActions defines the actions for the axis menu buttons
  */
 export default Ember.Component.extend({
@@ -192,14 +192,25 @@ export default Ember.Component.extend({
     return style;
   },
   /**
+   * @param blockS	block-axis-view of a data block of this axis
    * based on : utils/stacks.js : Block:titleText(), without the leading ' : ' + 
    */
   dataBlockFeatureCountsText(blockS) {
-    let
-    block = blockS.block,
-    featureCount = block && block.get('featureCount'),
-    featureCountLoaded = block.get('featuresLength'),
-    featureCountText = (featureCount || featureCountLoaded) ? featureCountLoaded + ' / ' + featureCount : '';
+    const block = blockS.block;
+    let featureCountText = '';
+    if (block) {
+      let
+      featureCount = block && block.get('featureCount'),
+      featureCountFiltered = block && block.get('featureCountFiltered'),
+      featureCountLoaded = block.get('featuresLength');
+      if (featureCount || featureCountLoaded) {
+        featureCountText = featureCountLoaded + ' / ';
+        if (this.controls.genotypeSNPFiltersDefined && (featureCountFiltered !== undefined)) {
+          featureCountText += featureCountFiltered + ' / ';
+        }
+        featureCountText += featureCount;
+      }
+    }
     return featureCountText;
   },
 
