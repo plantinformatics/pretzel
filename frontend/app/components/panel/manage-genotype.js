@@ -2709,6 +2709,9 @@ export default class PanelManageGenotypeComponent extends Component {
    */
   showSamplesWithinBrush() {
     const fnName = 'showSamplesWithinBrush';
+    if (! this.gtBlocks.length) {
+      this.emptyTable();
+    } else
     if (! this.axisBrush /* || ! this.lookupBlock*/) {
       // perhaps clear table
     } else {
@@ -2898,6 +2901,20 @@ export default class PanelManageGenotypeComponent extends Component {
         }
       }
     }
+  }
+  /** Set the data content of the table to empty. */
+  emptyTable() {
+    const gtMergeRows = this.urlOptions.gtMergeRows;
+    setProperties(this, {
+      displayData : gtMergeRows ? null : [],
+      displayDataRows : gtMergeRows ? [] : null,
+      gtDatasetColumns : [],
+      datasetColumns : [],
+      extraDatasetColumns : [],
+      currentFeaturesValuesFields : [],
+      columnNames : [],
+    });
+
   }
   /** A filterFn for featureSampleNames() : omit Ref & Alt.
    * Used in showSamplesWithinBrush() to omit Ref & Alt
