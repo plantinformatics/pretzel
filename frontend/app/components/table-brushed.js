@@ -350,12 +350,22 @@ export default Component.extend({
   extraColumnsNames : computed('data.[]', function () {
     let
     data = this.get('data'),
+    subFieldNames = {},
     nameSet = data.reduce(
       (result, datum) => {
         let feature = datum.feature;
-        if (feature.values) {
-          Object.keys(feature.values).forEach((n) => result.add(n));
-        }
+        ['values', 'values.INFO'].forEach(fieldName => {
+          const values = feature.get(fieldName);
+          if (values) {
+            Object.keys(values).forEach(n => {
+              if (! ((fieldName === 'values') && (n === 'INFO'))) {
+                result.add(n);
+                const names = subFieldNames[fieldName] || (subFieldNames[fieldName] = new Set());
+                names.add(n);
+              }
+            });
+          }
+        });
         if (feature.get('blockId.isQTL')) {
           result.add('Ontology');
         }
@@ -363,6 +373,7 @@ export default Component.extend({
       },
       new Set()),
     names = Array.from(nameSet.values());
+    this.set('subFieldNames', subFieldNames);
     dLog('extraColumnsNames', names, data);
     return names;
   }),
@@ -482,9 +493,14 @@ export default Component.extend({
           values = feature.values;
       if (values) {
         Object.keys(values).forEach((valueName) => rest[valueName] = values[valueName]);
-        /** convert object from vcf INFO column value back to a string representation. */
+        /** Show fields from vcf INFO column as columns. */
         if (typeof rest.INFO === 'object') {
-          rest.INFO = Object.entries(rest.INFO).map(kv => kv.join('=')).join(' ');
+          const INFO = rest.INFO;
+          delete rest.INFO;
+          /* Merge rest.INFO into rest (without .INFO), giving fields of
+           * .values.INFO lower precedence than fields in .values which have the
+           * same name. */
+          rest = Object.assign(INFO, rest);
         }
         let o = rest.Ontology, name;
         if (o && (name = this.get('ontology').getNameViaPretzelServer(o))) {
@@ -720,7 +736,12 @@ export default Component.extend({
     dLog(fnName, data, coords);
 
     return this.editable;
-
+  },
+  /** If required, this would be called from beforePaste as :
+   *   this.editable && this.disallowPasteIntoChromosomeColumn(data, coords);
+   */
+  disallowPasteIntoChromosomeColumn(data, coords) {
+    const fnName = 'disallowPasteIntoChromosomeColumn';
     /** To allow creation of new Features via paste, paste into 'Chromosome'
      * column is required, so the following check is not required.
      */
@@ -782,8 +803,11 @@ export default Component.extend({
             const
             meta = table.getCellMeta(row, col),
             prop = meta.prop,
-            inValues = ! baseFields[prop],
-            fieldPrefix = inValues ? 'values.' : '';
+            inBase = baseFields[prop],
+            inValues = this.subFieldNames['values'].has(prop),
+            /** the non-Base fields are from .values and .values.INFO */
+            valuesFieldName = inValues ? 'values' : 'values.INFO',
+            fieldPrefix = inBase ? valuesFieldName + '.' : '';
             let
             fieldName = prop;
             let d = data[dataRowIndex][dataColIndex];
@@ -794,21 +818,28 @@ export default Component.extend({
               feature.set('blockId', block);
             }
             else {
-            /* if column is a base field, i.e. ! inValues, then map .prop to the
-             * actual Feature field name.
-             * Writing to columns other than Ontology is not yet required, so
-             * this is draft only.
-             */
-            if (! inValues) {
-              fieldName = fieldNames[prop];
-            }
-            if (inValues && ! feature.values) {
-              feature.set('values', {});
-            }
-            if (meta.type === 'numeric') {
-              d = +d;
-            }
-            feature.set(fieldPrefix + fieldName, d);
+              /* if column is a base field, i.e. inBase, then map .prop to the
+               * actual Feature field name.
+               * Writing to columns other than Ontology is not yet required, so
+               * this is draft only.
+               */
+              if (inBase) {
+                fieldName = fieldNames[prop];
+              }
+              if (! inBase) {
+                if (! feature.values) {
+                  feature.set('values', {});
+                }
+                if (! inValues && ! feature.get(valuesFieldName)) {
+                  // valuesFieldName is values.INFO
+                  // equivalent : feature.values.INFO = {}
+                  feature.set(valuesFieldName, {});
+                }
+              }
+              if (meta.type === 'numeric') {
+                d = +d;
+              }
+              feature.set(fieldPrefix + fieldName, d);
             }
             colsEdited++;
           }

@@ -365,7 +365,7 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedService, 
           break;
 
         case 'POS' :
-          value = +value;
+          value = parseNumber(value);
           f['value_0'] = value;
           value = [ value ];
           break;
@@ -380,19 +380,23 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedService, 
           const infoEntries = value.split(';').map(kv => kv.split('='));
           value = Object.fromEntries(infoEntries);
 
-          // Convert numeric values from string to number.
-          // equivalent : parseBooleanFields(f.values, ['MAF', 'tSNP']);
           if (value.MAF) {
-            value.MAF = +value.MAF;
+            value.MAF = parseNumber(value.MAF);
           }
           if (value.tSNP) {
-            value.tSNP = +value.tSNP;  // maybe accept any string.
+            if ((value.tSNP === '.') || (value.tSNP === '')) {
+              delete value.tSNP;
+            } else {
+              value.tSNP = parseNumber(value.tSNP);
+            }
           }
+          parseNumberFields(value);
 
           break;
 
         default :
           fieldNameF = 'values.' + fieldName;
+          value = parseNumber(value);
         }
         if (! fieldNameF) {
           dLog(fnName, fieldName, value, i);
@@ -704,6 +708,31 @@ function variantNameSplit(variantName, traceUnmatched) {
 }
 
 // -----------------------------------------------------------------------------
+
+/** Convert numeric value from string to number.
+ * If given value is not numeric, return the param.
+ * Related : parseNumberFields(), parseBooleanFields();
+ * @param text
+ * @return text unchanged if it is not numeric
+ */
+function parseNumber(text) {
+  const
+  number = Number(text),
+  result = isNaN(number) ? text : number;
+  return result;
+}
+/** Convert numeric string values in object to number.
+ */
+function parseNumberFields(obj) {
+  /** Convert numeric strings to numbers. */
+  Object.entries(obj).forEach(([k, v]) => {
+    const number = Number(v);
+    if (! isNaN(number)) {
+      obj[k] = number;
+    }
+  });
+}
+
 
 /** if string.match(regexp), return match[valueIndex], otherwise undefined. 
  */
@@ -1810,6 +1839,8 @@ export {
   resultIsGerminate,
   addFeaturesGerminate,
   variantNameSplit,
+  parseNumber,
+  parseNumberFields,
   featureBlockColourValue,
   normalizeMaf,
   sampleIsFilteredOut,
