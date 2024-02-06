@@ -152,7 +152,9 @@ export default class DrawGraphAnnotationsComponent extends Component {
       pM = pE.merge(pS);
       pM
         .transition().duration(100)
-        .attr('d', axis1d => this.annotationPath(axis1d, tableX, tableRowInterval));
+        .attr('d', axis1d =>
+          axis1d && ! axis1d.isDestroying &&
+            this.annotationPath(axis1d, tableX, tableRowInterval));
       pS.exit().remove();
       if (trace) {
         dLog(fname, axes, viewportWidth, tableX, stackLocation, pS.nodes(), pE.nodes(), pM.node(), pM.nodes());

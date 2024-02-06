@@ -696,16 +696,18 @@ export default Component.extend({
    */
   getLimitFeatures() {
     let features = [];
-    /** displayDataRows is undefined if empty. In that case (gtMergeRows) may be
-     * defined, with .length 0, so the result is undefined, as required.
+    /** displayDataRows is [] if empty (in gtMergeRows case);
+     * in that case the result is [], as required.
      */
     if (this.displayDataRows) {
       const d = this.displayDataRows;
-      features[0] = d[sparseArrayFirstIndex(d)];
-      features[1] = d.at(-1);
+      if (d.length) {
+        features[0] = d[sparseArrayFirstIndex(d)];
+        features[1] = d.at(-1);
+      }
     } else if (this.displayData) {
       const f = this.displayData.find(d => d.features)?.features;
-      if (f) {
+      if (f?.length) {
         features[0] = f[0];
         features[1] = f.at(-1);
       }

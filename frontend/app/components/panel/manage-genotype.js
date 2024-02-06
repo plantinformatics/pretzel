@@ -1529,7 +1529,7 @@ export default class PanelManageGenotypeComponent extends Component {
       block = abBlock.block,
       dataset = block.get('datasetId.content'),
       axis1d = block.get('axis1d'),
-      colour = axis1d.blockColourValue(block);
+      colour = axis1d ? axis1d.blockColourValue(block) : 'black';
       datasetsSet.add(dataset);
       map.set(dataset, colour);
       return map;
@@ -1572,7 +1572,8 @@ export default class PanelManageGenotypeComponent extends Component {
   get brushedOrViewedVCFAxes() {
     const
     vcfBlocks = this.brushedVCFBlocks.map((abb) => abb.block),
-    axes = vcfBlocks.mapBy('axis1d').uniq();
+    /** filter out undefined block.axis1d which may occur during block view / unview. */
+    axes = vcfBlocks.mapBy('axis1d').filter(a1 => a1).uniq();
     return axes;
   }
   @computed('brushedOrViewedVCFAxes', 'brushedOrViewedVCFAxes.0.zoomCounter')
@@ -3662,7 +3663,7 @@ export default class PanelManageGenotypeComponent extends Component {
       const
       values = features.mapBy('value').flat(),
       valueExtent = d3.extent(values),
-      axes = features.mapBy('blockId.axis1d'),
+      axes = features.mapBy('blockId.axis1d').filter(a1 => a1),
       /** Features could be of multiple axes; can pass all features and collate
        * extents for each axis separately.  */
       axis1d = axes[0];
