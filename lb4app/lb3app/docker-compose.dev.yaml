@@ -16,7 +16,7 @@ services:
       context: .
       dockerfile: ./scripts/Dockerfile
     image: dav_127_api # specifying name for built container
-    command: node /app/server/server.js
+    command: node /server/server.js
     environment:
       - "API_HOST=${API_HOST}"
       - "API_PORT_EXT=${API_PORT_EXT}"
