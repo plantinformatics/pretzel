@@ -20,7 +20,7 @@ services:
       - "API_HOST=${API_HOST}"
       - "API_PORT_EXT=${API_PORT_EXT}"
       - DB_HOST=database
-      - "DB_PORT=27017"
+      - "DB_PORT=${DB_PORT_EXT}"
       - "DB_NAME=${DB_NAME}"
       - "DB_USER=${DB_USER}"
       - "DB_PASS=${DB_PASS}"
