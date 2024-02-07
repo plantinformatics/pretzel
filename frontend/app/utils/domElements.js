@@ -39,6 +39,12 @@ function eltWidthResizable(eltSelector, filter, resized, vertical = false)
 
     let resizer = resizable.select('.resizer');
 
+  if (resizer.empty() && ! resizable.empty()) {
+    const r = $(eltSelector),
+    s = r.append('<div><span class="resizer vertical"></span></div>');
+    dLog('eltWidthResizable', s[0]);
+    resizer = resizable.select('.resizer');
+  }
   if ((resizable.node() === null) || (resizer.node() === null))
     {
     dLog("eltWidthResizable() resizer=", resizer, eltSelector, resizable.node(), resizer.node());

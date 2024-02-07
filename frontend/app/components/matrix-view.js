@@ -108,6 +108,8 @@ const sampleFilterTypeNameModal = false;
 /** <div> which contains HandsOnTable elements. */
 const tableContainerSelector = '#observational-table';
 
+const gtResizeHeaderHtml = '<div class="gtResizeHeader"><div><span class="resizer vertical"></span></div></div>';
+
 // -----------------------------------------------------------------------------
 
 /** Considering the columns as 2 groups :
@@ -557,7 +559,6 @@ export default Component.extend({
       table.addHook('afterRender', this.afterRender.bind(this));
     }
 
-    this.dragResizeListen();
     this.afterScrollVertically_tablePosition();
     this.table.batchRender(bind(this, this.setRowAttributes));
     // initialise services/dom
@@ -578,6 +579,9 @@ export default Component.extend({
     } else {
       this.topLeftDialogUpdate();
     }
+    /* unsuccessful attempt to dodge re-writing of span.colHeader.cornerHeader by HandsOnTable. */
+    later(() => this.dragResizeListen(), 1000);
+
 
     this.set('model.layout.matrixView.tableYDimensions', tableYDimensions());
   },
@@ -1453,7 +1457,7 @@ export default Component.extend({
     return columnNames;
   }),
   colHeaders : computed('columnNames', 'datasetPositionFilterChangeCount', 'selectedColumnNames.length', function() {
-    const colHeaders = this.get('columnNames').map((columnName) => {
+    const colHeaders = this.get('columnNames').map((columnName, colIndex) => {
       const
       dataset = columnName[datasetSymbol],
       /** fieldName may be sampleName, or other fields name, Ref/Alt, MAF, LD Block */
@@ -1464,10 +1468,13 @@ export default Component.extend({
       positionFilterClass = this.positionFilterClass(columnName),
       positionFilterIcon = positionFilterClass ?
         '<i class="glyphicon glyphicon-' + positionFilterClass + '"></i>' : '',
+      gtResizeHeader = (colIndex === 0) ? '<div><span class="resizer vertical"></span></div>' /*gtResizeHeaderHtml*/ : '',
+      gtResizeHeaderClass = (colIndex === 0) ? ' gtResizeHeader' : '',
       extraClassName = this.columnNameToClasses(fieldName),
       selectedClassName = this.selectedColumnNames.find(name => columnName.startsWith(name)) ? ' col-selectedSample' : '',
-      colHeader = '<div class="head' + extraClassName + datasetClass + selectedClassName + '">'
+      colHeader = '<div class="head' + extraClassName + datasetClass + selectedClassName + gtResizeHeaderClass + '">'
         + positionFilterIcon
+        + gtResizeHeader
         + fieldName + '</div>';
       return colHeader;
     });
@@ -2259,13 +2266,14 @@ export default Component.extend({
     this.defaultColumnHeaderHeight();
     const
     fnName = 'dragResizeListen',
-    /** .gtResizeHeader is outside of tableContainerSelector */
-    resizeSel = '.gtResizeHeader > div';
+    /** .gtResizeHeader is in column header , which is duplicated in .ht_clone_top */
+    resizeSel = tableContainerSelector + ' .ht_master .colHeader.cornerHeader'; // .gtResizeHeader > div';
     $(resizeSel).height(this.get('colHeaderHeight'));
     /** as well as passing vertical=true, also : class="resizer vertical" */
     let dragResize = eltWidthResizable(resizeSel, undefined, bind(this, this.resizedByDrag), /* vertical*/ true);
-    dragResize.filter(noKeyfilter/*filter*/);
-    if (! dragResize) {
+    if (dragResize) {
+      dragResize.filter(noKeyfilter/*filter*/);
+    } else {
       dLog(fnName, resizeSel);
     }
     /** axis-2d also does dragResize.on('{start,end}' ), resize{Start,End}ed,  */
