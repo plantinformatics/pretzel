@@ -595,6 +595,9 @@ export default Component.extend({
     }
     this.addComponentClass();
   },
+  /** Update the class list of the component element. Classes :
+   * . gtMergeRows
+   */
   addComponentClass() {
     /** gtMergeRows : datasetId is not displayed, so width is not set  */
     let ot = d3.select('#observational-table');
@@ -611,7 +614,7 @@ export default Component.extend({
     fnName = 'topLeftDialogUpdate',
     /** related : cornerClones */
     topLeftDialog = $('#observational-table .ht_clone_top_left_corner .colHeader.cornerHeader')[0];
-    dLog(fnName, topLeftDialog);
+    // dLog(fnName, topLeftDialog);
     Ember_set(this, 'tableApi.topLeftDialog', topLeftDialog);
     this.addComponentClass();
   },

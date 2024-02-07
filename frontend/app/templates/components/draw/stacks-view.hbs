@@ -12,9 +12,11 @@
   stacksView=this
   featuresInBlocks=featuresInBlocks
 }}
+{{#if @model.userSettings.genotype.showTablePositionAlignment}}
 {{draw/graph-annotations
   model=model
   stacksView=this
   rightAxes=this.rightStack.axes
 }}
+{{/if}}
 {{yield}}
