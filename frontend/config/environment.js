@@ -9,14 +9,14 @@
 
 module.exports = function (environment) {
   const env = process.env;
-  let ENV = {
+  const ENV = {
     modulePrefix: 'pretzel-frontend',
-    environment: environment,
+    environment,
     apiHost: process.env.API_URL || 'http://localhost:5000',
     // apiHost: 'http://sc-15-cdc.it.csiro.au:7000',
     apiNamespace: 'api', // adding to the host for API calls
     rootURL: '/', // used with Ember local routing
-    locationType: 'auto',
+    locationType: 'auto',	// template has 'history'
     handsOnTableLicenseKey: null,
 
     'ember-local-storage': {
