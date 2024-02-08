@@ -4,8 +4,13 @@ var nodeSass = require('node-sass');
 
 const EmberApp = require('ember-cli/lib/broccoli/ember-app');
 
+<<<<<<< HEAD
 module.exports = function(defaults) {
   var app = new EmberApp(defaults, {
+=======
+module.exports = function (defaults) {
+  let app = new EmberApp(defaults, {
+>>>>>>> 7af446f8 (v3.22.0...v3.28.6)
     // Add options here
     browserify: {
       transform: [
