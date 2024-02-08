@@ -8,6 +8,7 @@
 'use strict';
 
 module.exports = function (environment) {
+  const env = process.env;
   let ENV = {
     modulePrefix: 'pretzel-frontend',
     environment: environment,
