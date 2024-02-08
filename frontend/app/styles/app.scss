@@ -183,7 +183,9 @@ div.app-logo {
 .resizer
 {
   font-weight: 900;
-  font-size: larger;
+  // changed from larger for .gtResizeHeader, probably OK for other uses.
+  font-size: x-large;
+  cursor: ns-resize;
   float: right;
   /* align the icon above the border it moves */
   margin-right: -6px  !important;
@@ -209,14 +211,14 @@ div.app-logo {
   content: "\21F9";
   right: -20px;
   position: relative;
-  left: 4px;
+  left: 19px;
   /* require a minimum of 121 to be above the HandsOnTable elements near this element. */
   z-index: 181;
 }
 .resizer.vertical:not(.inFO):not(.no-resizer-icon)::after
 {
   right : inherit;
-  bottom: calc(0px - var(--matrixViewColumnHeaderHeight));
+  bottom: calc(50px - var(--matrixViewColumnHeaderHeight));
   /** ↧ Downwards Arrow from Bar.   https://symbl.cc/en/21A7/ */
   content: "\21A7";
 }
@@ -231,7 +233,7 @@ div.app-logo {
  */
 .resizer:hover
 {
-  opacity : 0.7;
+  // opacity : 0.7;	// seems to cause jitter
   color: hsl(208, 95%, 52%);	// #337ab7 with increased saturation and luminosity
 }
 /* The resizer icon is wrapped in div.menuHead : width: 100%, so that it remains
