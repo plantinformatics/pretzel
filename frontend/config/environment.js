@@ -7,14 +7,8 @@
 
 'use strict';
 
-<<<<<<< HEAD
-module.exports = function(environment) {
-  const env = process.env;
-  var ENV = {
-=======
 module.exports = function (environment) {
   let ENV = {
->>>>>>> 7af446f8 (v3.22.0...v3.28.6)
     modulePrefix: 'pretzel-frontend',
     environment: environment,
     apiHost: process.env.API_URL || 'http://localhost:5000',
@@ -37,19 +31,8 @@ module.exports = function (environment) {
       },
       EXTEND_PROTOTYPES: {
         // Prevent Ember Data from overriding Date.parse.
-<<<<<<< HEAD
-        Date: false
-      }, 
-    },
-    'ember-simple-auth': {
-      /* these configuration values are moved to the routes :
-       *  authenticationRoute, routeAfterAuthentication, routeIfAlreadyAuthenticated
-       * as per : https://github.com/simplabs/ember-simple-auth/blob/master/guides/upgrade-to-v3.md
-       */
-=======
         Date: false,
       },
->>>>>>> 7af446f8 (v3.22.0...v3.28.6)
     },
 
     APP: {

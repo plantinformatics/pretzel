@@ -6,7 +6,6 @@ export default class Router extends EmberRouter {
   rootURL = config.rootURL;
 }
 
-<<<<<<< HEAD
 Router.map(function() {
   // auth routes
   this.route('auth-error');
@@ -37,6 +36,3 @@ Router.map(function() {
   this.route('404', { path: '/*wildcard' });
 
 });
-=======
-Router.map(function () {});
->>>>>>> 7af446f8 (v3.22.0...v3.28.6)

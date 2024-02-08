@@ -1,22 +1,10 @@
 'use strict';
 
 module.exports = {
-<<<<<<< HEAD
-  "framework": "qunit",
-  "test_page": "tests/index.html?hidepassed",
-  "disable_watching": true,
-  "launch_in_ci": [
-    "PhantomJS"
-  ],
-  launch_in_dev: [
-    'Chrome'
-  ],
-=======
   test_page: 'tests/index.html?hidepassed',
   disable_watching: true,
   launch_in_ci: ['Chrome'],
   launch_in_dev: ['Chrome'],
->>>>>>> 7af446f8 (v3.22.0...v3.28.6)
   browser_start_timeout: 120,
   browser_args: {
     Chrome: {
