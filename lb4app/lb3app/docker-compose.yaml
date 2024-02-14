@@ -2,15 +2,26 @@ version: "2"
 # NOTE refer to the accompanying '.env' file in this folder to access
 # environment variables which are passed through to docker-compose.yaml
 # at run time
+
+networks:
+  devpretzel:
+    driver: bridge
+
 services:
-  database: # mongo database
+  service_database: # mongo database
     image: library/mongo # base image off dockerhub
     environment:
       - "MONGO_INITDB_ROOT_USERNAME=${DB_USER}"
       - "MONGO_INITDB_ROOT_PASSWORD=${DB_PASS}"
     volumes:
       - ${DATA_DIR}:/data/db
-  api: # node environment
+    hostname: database
+    container_name: database1
+    ports:
+      - ${DB_PORT_EXT}:27017
+    networks:
+      - devpretzel
+  service_api: # node environment
     build:
       context: .
       dockerfile: ./scripts/Dockerfile
@@ -19,7 +30,7 @@ services:
     environment:
       - "API_HOST=${API_HOST}"
       - "API_PORT_EXT=${API_PORT_EXT}"
-      - DB_HOST=database
+      - "DB_HOST=service_api"
       - "DB_PORT=${DB_PORT_EXT}"
       - "DB_NAME=${DB_NAME}"
       - "DB_USER=${DB_USER}"
@@ -32,5 +43,14 @@ services:
     ports:
       # match ext / int ports for loopback
       - "${API_PORT_EXT}:${API_PORT_EXT}"
-    links:
-     - database
+    networks:
+      - devpretzel
+    depends_on:
+      - service_database
+ 
+  service_test:
+    image: bash:devel-alpine3.19
+    networks:
+      - devpretzel
+    depends_on:
+      - service_database
