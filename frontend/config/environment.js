@@ -16,7 +16,8 @@ module.exports = function (environment) {
     // apiHost: 'http://sc-15-cdc.it.csiro.au:7000',
     apiNamespace: 'api', // adding to the host for API calls
     rootURL: '/', // used with Ember local routing
-    locationType: 'auto',	// template has 'history'
+    // : Router location 'auto' is deprecated. Most users will want to set `locationType` to 'history' in config/environment.js for no change in behavior. See deprecation docs for details. [deprecation id: deprecate-auto-location]
+    locationType: 'history',	// was auto. template has 'history'
     handsOnTableLicenseKey: null,
 
     'ember-local-storage': {

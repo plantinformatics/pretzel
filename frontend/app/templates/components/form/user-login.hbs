@@ -4,7 +4,7 @@
 <a {{action 'authenticateWithGoogleImplicitGrant'}} class="btn btn-default" style="cursor: pointer;">Login with Google (Implicit Grant)</a>
 <hr/>--}}
 {{!--<p>or login with OAuth 2.0 <em>Resource Owner Password Credentials</em>:</p>--}}
-{{#form/auth-base title="Log In" errorMessage=errorMessage}}
+{{#form/auth-base title="Log In" errorMessage=this.errorMessage}}
   <form {{action 'submitForm' on='submit'}}>
     {{auth-input
       type='text'

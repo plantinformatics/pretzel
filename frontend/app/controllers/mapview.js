@@ -8,7 +8,7 @@ import { readOnly, alias, reads, or } from '@ember/object/computed';
 import { A as Ember_A } from '@ember/array';
 import DS from 'ember-data';
 
-import QueryParams from 'ember-parachute';
+import QueryParams from '@voll/ember-parachute';
 
 //------------------------------------------------------------------------------
 
@@ -458,7 +458,12 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
     let deprecationIds = [
       'ember-component.send-action',
       /** ember-bootstrap/utils/cp/listen-to.js uses Ember.getWithDefault() */
-      'ember-metal.get-with-default'];
+      'ember-metal.get-with-default',
+      // "... will be removed in ember-data 6.0."
+      'ember-data:deprecate-legacy-imports',
+      // "... will be removed in ember-source 5.0.0. See https://deprecations.emberjs.com/v4.x/#toc_ember-polyfills-deprecate-assign for more details."
+      'ember-polyfills.deprecate-assign',
+    ];
     registerDeprecationHandler((message, options, next) => {
       if (! deprecationIds.includes(options.id)) {
         next(message, options);

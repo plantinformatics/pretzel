@@ -103,8 +103,8 @@ export default Record.extend({
     return c;
   }),
 
-  groupId: belongsTo('group'),
-  blocks: hasMany('block', { async: false }),
+  groupId: belongsTo('group', { async: false, inverse : null }),
+  blocks: hasMany('block', { async: false, inverse : null }),
   type: attr('string'),
   namespace: attr('string'),
   tags: attr('array'),

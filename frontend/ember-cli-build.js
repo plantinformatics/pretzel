@@ -31,10 +31,15 @@ module.exports = function (defaults) {
     },
 
     'ember-bootstrap': {
-      'bootstrapVersion': 3,
+      'bootstrapVersion': 4,
       'importBootstrapFont': false,
-      'importBootstrapCSS': false
-    }
+      'importBootstrapCSS': true
+    },
+    webpack: {
+      stats: {
+        errorDetails: true,	// equivalent to --stats-error-details
+      }
+    },
   });
 
   // Use `app.import` to add additional libraries to the generated
@@ -50,17 +55,14 @@ module.exports = function (defaults) {
   // please specify an object with the list of modules as keys
   // along with the exports of each module as its value.
   //
-  app.import('bower_components/d3/d3.js');
-  app.import('bower_components/d3-tip/d3-tip.js');
-  app.import('bower_components/handsontable/dist/handsontable.full.min.js');
-  app.import('bower_components/handsontable/dist/handsontable.full.min.css');
   app.import('vendor/js/divgrid/divgrid.js');
   app.import('node_modules/colresizable/colResizable-1.6.min.js');
-  app.import('node_modules/bootstrap/js/tooltip.js');
-  app.import('node_modules/bootstrap/js/popover.js');
-  app.import('node_modules/bootstrap/js/button.js');
-  app.import('node_modules/bootstrap/js/tab.js');
-  app.import('node_modules/bootstrap/js/dropdown.js');
+  const bootstrapJs = 'node_modules/bootstrap/js/dist/'; // or src/
+  app.import(bootstrapJs + 'tooltip.js');
+  app.import(bootstrapJs + 'popover.js');
+  app.import(bootstrapJs + 'button.js');
+  app.import(bootstrapJs + 'tab.js');
+  app.import(bootstrapJs + 'dropdown.js');
   app.import('node_modules/numeric/lib/numeric.latest.js');
   app.import('node_modules/tsne-js/build/tsne.min.js', {
     outputFile : 'assets/web-workers/tsne.min.js'

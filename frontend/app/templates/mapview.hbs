@@ -1,5 +1,5 @@
 {{!-- app/controllers/mapview.js --}}
-<div {{split-view direction=horizontal
+<div {{split-view direction='horizontal'
   sizes=this.leftSplitSizes
   gutterSize=15
   registerInstance=(action this.registerInstanceLeftSplit)
@@ -8,27 +8,27 @@
   style="height:100%; display:flex;">
   
   {{panel/left-panel
-    displayData=block.viewed
+    displayData=this.block.viewed
     loadBlock="loadBlock"
     removeBlock="removeBlock"
     selectBlock="selectBlock"
     selectDataset="selectDataset"
-    selectedDataset=selectedDataset
+    selectedDataset=this.selectedDataset
 
-    model=model
-    queryParamsState=queryParamsState
-    datasets=datasets
+    model=this.model
+    queryParamsState=this.queryParamsState
+    datasets=this.datasets
     refreshDatasets=(action "updateModel")
     viewDataset=(action this.viewDataset)
-    selectedBlock=selectedBlock
-    controls=controls
-    isShowUnique=isShowUnique
-    pathColourScale=pathColourScale
-    scaffolds=scaffolds
-    scaffoldMarkers=scaffoldMarkers
-    showScaffoldFeatures=showScaffoldFeatures
-    showAsymmetricAliases=showAsymmetricAliases
-    selectedFeatures=selectedFeatures
+    selectedBlock=this.selectedBlock
+    controls=this.controls
+    isShowUnique=this.isShowUnique
+    pathColourScale=this.pathColourScale
+    scaffolds=this.scaffolds
+    scaffoldMarkers=this.scaffoldMarkers
+    showScaffoldFeatures=this.showScaffoldFeatures
+    showAsymmetricAliases=this.showAsymmetricAliases
+    selectedFeatures=this.selectedFeatures
     updateFeaturesInBlocks="updateFeaturesInBlocks"
   }}
   
@@ -45,40 +45,40 @@
   <div>
 
     <p class="devel-visible">
-      hasData {{hasData}},
-      mapsToView {{model.params.mapsToView}},
-      datasets task value {{model.availableMapsTask.value.length}},
-      availableMaps {{ dataset.values.length }}
-      available blockValues {{block.blockValues.length}},
-      selected blocks {{block.selected.length}},
-      viewed blocks {{block.viewed.length}},
-      queryParamsValue {{ queryParamsValue }},
-      viewedIds {{ block.viewedIds.length }},
+      hasData {{this.hasData}},
+      mapsToView {{this.model.params.mapsToView}},
+      datasets task value {{this.model.availableMapsTask.value.length}},
+      availableMaps {{ this.dataset.values.length }}
+      available blockValues {{this.block.blockValues.length}},
+      selected blocks {{this.block.selected.length}},
+      viewed blocks {{this.block.viewed.length}},
+      queryParamsValue {{ this.queryParamsValue }},
+      viewedIds {{ this.block.viewedIds.length }},
     </p>
     {{!-- {{#if hasData}} --}}
     {{!-- Ember.Component.layout is reserved, so pass mapview .layout as panelLayout --}}
       {{draw-map
-        data=block.viewed
+        data=this.block.viewed
         drawActions=this
-        oa=oa
-        model=model
-        panelLayout=layout
-        controls=controls
-        componentGeometry=componentGeometry
-        isShowUnique=isShowUnique
-        pathColourScale=pathColourScale
-        scaffolds=scaffolds
-        scaffoldMarkers=scaffoldMarkers
-        showScaffoldFeatures=showScaffoldFeatures
-        showAsymmetricAliases=showAsymmetricAliases
-        highlightFeature=model.params.highlightFeature
-        params=model.params
-        selectedBlock=selectedBlock
+        oa=this.oa
+        model=this.model
+        panelLayout=this.layout
+        controls=this.controls
+        componentGeometry=this.componentGeometry
+        isShowUnique=this.isShowUnique
+        pathColourScale=this.pathColourScale
+        scaffolds=this.scaffolds
+        scaffoldMarkers=this.scaffoldMarkers
+        showScaffoldFeatures=this.showScaffoldFeatures
+        showAsymmetricAliases=this.showAsymmetricAliases
+        highlightFeature=this.model.params.highlightFeature
+        params=this.model.params
+        selectedBlock=this.selectedBlock
         addMap='addMap'
         selectBlock="selectBlock"
         removeBlock=(action 'removeBlock')
         updatedSelectedFeatures='updateSelectedFeatures'
-        featuresInBlocks=featuresInBlocks
+        featuresInBlocks=this.featuresInBlocks
         selectChromById=(action 'selectBlockById')}}
     {{!-- {{/if}} --}}
 
@@ -86,15 +86,15 @@
 
     <div>
 
-  {{#if layout.right.visible}}
+  {{#if this.layout.right.visible}}
     <div id="right-panel" class="h-100">
 
       <ul class="nav nav-tabs">
-        {{#if model.params.parsedOptions.blockTab}}
+        {{#if this.model.params.parsedOptions.blockTab}}
           {{#elem/button-tab
              side="right"
              key="block"
-             state=layout.right.tab onClick="setTab"}}
+             state=this.layout.right.tab onClick="setTab"}}
             {{elem/icon-base name="globe"}}&nbsp; Block
           {{/elem/button-tab}}
         {{/if}}
@@ -102,33 +102,33 @@
         {{#elem/button-tab
            side="right"
            key="dataset"
-           state=layout.right.tab onClick="setTab"}}
+           state=this.layout.right.tab onClick="setTab"}}
           {{elem/icon-base name="globe"}}&nbsp; Dataset
         {{/elem/button-tab}}
 
         {{#elem/button-tab
            side="right"
            key="selection"
-           state=layout.right.tab onClick="setTab"}}
-          {{elem/icon-base name="asterisk"}}&nbsp; Features <span class="badge">{{selectedFeatures.length}}</span>
+           state=this.layout.right.tab onClick="setTab"}}
+          {{elem/icon-base name="asterisk"}}&nbsp; Features <span class="badge">{{this.selectedFeatures.length}}</span>
         {{/elem/button-tab}}
 
         {{#elem/button-tab
            side="right"
            key="paths"
-           state=layout.right.tab onClick="setTab"}}
-          {{elem/icon-base name="globe"}}&nbsp; Paths <span class="badge">{{pathsTableSummary.count}}</span>
+           state=this.layout.right.tab onClick="setTab"}}
+          {{elem/icon-base name="globe"}}&nbsp; Paths <span class="badge">{{this.pathsTableSummary.count}}</span>
         {{/elem/button-tab}}
 
         {{#elem/button-tab
            side="right"
            key="genotype"
-           state=layout.right.tab onClick="setTab"}}
+           state=this.layout.right.tab onClick="setTab"}}
           {{elem/icon-base name="barcode"}}&nbsp; Genotypes <span class="badge"></span>
 
           {{#if this.enableGenotypeControlsDialog}}
             <span style="margin:1em; width: 20%;">
-              {{#elem/icon-toggle state=userSettings.genotype.hideControls iconTrue='collapse-down' iconFalse='expand' }}
+              {{#elem/icon-toggle state=this.userSettings.genotype.hideControls iconTrue='collapse-down' iconFalse='expand' }}
               {{#ember-tooltip side="right" delay=500}}
               Toggle display of Genotype Table controls and filters.
               {{/ember-tooltip}}
@@ -138,11 +138,11 @@
 
         {{/elem/button-tab}}
 
-        {{#if model.params.parsedOptions.advSettings}}
+        {{#if this.model.params.parsedOptions.advSettings}}
           {{#elem/button-tab
              side="right"
              key="settings"
-             state=layout.right.tab onClick="setTab"}}
+             state=this.layout.right.tab onClick="setTab"}}
             {{elem/icon-base name="cog"}}&nbsp; Adv.
           {{/elem/button-tab}}
         {{/if}}
@@ -161,46 +161,46 @@
       </ul>
 
       <div id="right-panel-content"  class={{rightPanelClass}}>
-        {{#if (compare layout.right.tab '===' 'selection')}}
+        {{#if (compare this.layout.right.tab '===' 'selection')}}
           {{panel/manage-features
-            selectedFeatures=selectedFeatures
-            selectedBlock=selectedBlock}}
-        {{else if (compare layout.right.tab '===' 'block')}}
+            selectedFeatures=this.selectedFeatures
+            selectedBlock=this.selectedBlock}}
+        {{else if (compare this.layout.right.tab '===' 'block')}}
           {{panel/manage-block
-            selectedFeatures=selectedFeatures
+            selectedFeatures=this.selectedFeatures
             loadBlock="loadBlock"
-            block=selectedBlock}}
-        {{else if (compare layout.right.tab '===' 'dataset')}}
+            block=this.selectedBlock}}
+        {{else if (compare this.layout.right.tab '===' 'dataset')}}
           {{panel/manage-dataset
-            dataset=selectedDataset}}
+            dataset=this.selectedDataset}}
           {{panel/axis-brushes}}
-        {{else if (compare layout.right.tab '===' 'genotype')}}
+        {{else if (compare this.layout.right.tab '===' 'genotype')}}
           {{panel/manage-genotype
             model=this.model
             selectBlock=(action this.actions.selectBlock)
-            selectedBlock=selectedBlock
-            selectedFeatures=selectedFeatures
+            selectedBlock=this.selectedBlock
+            selectedFeatures=this.selectedFeatures
             updatedSelectedFeatures='updateSelectedFeatures'
             userSettings=userSettings.genotype
             }}
 
-        {{else if (and (compare layout.right.tab '===' 'settings') model.params.parsedOptions.advSettings)}}
+        {{else if (and (compare this.layout.right.tab '===' 'settings') this.model.params.parsedOptions.advSettings)}}
           {{panel/manage-settings
-            selectedFeatures=selectedFeatures
-            selectedBlock=selectedBlock}}
+            selectedFeatures=this.selectedFeatures
+            selectedBlock=this.selectedBlock}}
 
           {{selected-markers
-            data=selectedFeatures
-            scaffolds=scaffolds
-            scaffoldMarkers=scaffoldMarkers
-            showScaffoldFeatures=showScaffoldFeatures}}
+            data=this.selectedFeatures
+            scaffolds=this.scaffolds
+            scaffoldMarkers=this.scaffoldMarkers
+            showScaffoldFeatures=this.showScaffoldFeatures}}
 
         {{/if}}
 
         {{panel/paths-table
-          visible=(compare layout.right.tab '===' 'paths')
-          selectedFeatures=selectedFeatures
-          selectedBlock=selectedBlock
+          visible=(compare this.layout.right.tab '===' 'paths')
+          selectedFeatures=this.selectedFeatures
+          selectedBlock=this.selectedBlock
           updatePathsCount=(action 'updatePathsCount')}}
 
       </div>
@@ -210,7 +210,7 @@
     <button type="button" class="btn btn-default" {{action "setVisibility" "right" on='click'}}>
       <a href="#" >{{elem/icon-base name="chevron-left"}}</a>
     </button> 
-  {{/if}}	{{!-- if layout.right.visible --}}
+  {{/if}}	{{!-- if this.layout.right.visible --}}
     </div>
 
   </div>

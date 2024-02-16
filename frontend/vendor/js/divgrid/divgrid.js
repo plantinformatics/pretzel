@@ -1,4 +1,7 @@
-d3.divgrid = function(config) {
+// import { d3Packages } from './utils/draw/d3-initialise-global';
+window.d3 = {};
+
+window.d3_divgrid = function(config) {
   var columns = [];
 
   var dg = function(selection) {
@@ -56,3 +59,9 @@ d3.divgrid = function(config) {
 
   return dg;
 };
+
+const d3 = window.d3;
+if (! d3.divgrid && window.d3_divgrid) {
+  d3.divgrid = window.d3_divgrid;
+  console.log('d3_divgrid', window.d3_divgrid);
+}

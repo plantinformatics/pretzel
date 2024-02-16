@@ -79,9 +79,9 @@ export default Model.extend({
   urlOptions : alias('queryParams.urlOptions'),
 
 
-  datasetId: belongsTo('dataset'),
-  annotations: hasMany('annotation', { async: false }),
-  intervals: hasMany('interval', { async: false }),
+  datasetId: belongsTo('dataset', { async: false, inverse : null }),
+  annotations: hasMany('annotation', { async: false, inverse : null }),
+  intervals: hasMany('interval', { async: false, inverse : null }),
   // possibly async:true when !allInitially, if needed.
   features: hasMany('feature', { async: false }),
   range: attr('array'),

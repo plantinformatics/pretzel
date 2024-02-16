@@ -2,7 +2,7 @@ import $ from 'jquery';
 import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
 import RSVP, { Promise } from 'rsvp';
-import AuthenticatedRouteMixin from 'ember-simple-auth/mixins/authenticated-route-mixin';
+import AuthenticatedRouteMixin from '../utils/ember-simple-auth-mixin-replacements/authenticated-route-mixin';	// ember-simple-auth/mixins/
 
 import { task } from 'ember-concurrency';
 import EmberObject from '@ember/object';

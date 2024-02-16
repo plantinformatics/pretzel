@@ -5,17 +5,13 @@
 
     Setting `disableAnalytics` to true will prevent any data from being sent.
   */
-<<<<<<< HEAD
   "liveReload": true,
   "watcher": "polling",
-  "disableAnalytics": true
-=======
-  "disableAnalytics": false,
+  "disableAnalytics": true,
 
   /**
     Setting `isTypeScriptProject` to true will force the blueprint generators to generate TypeScript
     rather than JavaScript by default, when a TypeScript version of a given blueprint is available.
   */
   "isTypeScriptProject": false
->>>>>>> fcf82b95 (v3.28.6...v4.12.2)
 }

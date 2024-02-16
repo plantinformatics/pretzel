@@ -10,27 +10,27 @@
     <div class="tab-content">
       <tab.pane @id="left-panel-feature-search" @title="Search">
             {{panel/manage-search
-                view=view
-                queryParamsState=queryParamsState
-                loadBlock=(action loadBlock)
-                selectedBlock=selectedBlock
-                selectedFeatures=selectedFeatures
+                view=this.view
+                queryParamsState=this.queryParamsState
+                loadBlock=(action this.loadBlock)
+                selectedBlock=this.selectedBlock
+                selectedFeatures=this.selectedFeatures
                 updateFeaturesInBlocks="updateFeaturesInBlocks"
             }}
 
             <Panel::SelectedServer/>
 
             {{panel/sequence-search
-                datasets=serverSelected_datasetsBlocks
-                view=view
-                selectedFeatures=selectedFeatures
-                refreshDatasets=refreshDatasets
-                viewDataset=viewDataset
+                datasets=this.serverSelected_datasetsBlocks
+                view=this.view
+                selectedFeatures=this.selectedFeatures
+                refreshDatasets=this.refreshDatasets
+                viewDataset=this.viewDataset
             }}
 
             {{panel/search-lookup
-                selectedFeatures=selectedFeatures
-                selectedBlock=selectedBlock
+                selectedFeatures=this.selectedFeatures
+                selectedBlock=this.selectedBlock
             }}
 
       </tab.pane>
@@ -38,15 +38,15 @@
 
       <tab.pane @id="left-panel-explorer" @title="Explorer">
             {{panel/manage-explorer
-                view=view
-                model=model
+                view=this.view
+                model=this.model
                 primaryDatasets=@model.availableMapsTask._result
-                mapviewDatasets=datasets
-                refreshDatasets=refreshDatasets
+                mapviewDatasets=this.datasets
+                refreshDatasets=this.refreshDatasets
                 loadBlock="loadBlock"
                 selectBlock="selectBlock"
-                selectedBlock=selectedBlock
-                selectedDataset=selectedDataset
+                selectedBlock=this.selectedBlock
+                selectedDataset=this.selectedDataset
                 selectDataset="selectDataset"
                 changeTab=(action 'changeTab' tab.select )
             }}
@@ -54,32 +54,32 @@
 
       <tab.pane @id="left-panel-view" @title="View">
             {{panel/manage-view
-                displayData=displayData
-                selectedBlock=selectedBlock
-                view=view
+                displayData=this.displayData
+                selectedBlock=this.selectedBlock
+                view=this.view
                 changeTab=(action 'changeTab' tab.select )
                 loadBlock="loadBlock"
                 removeBlock="removeBlock"
                 selectBlock="selectBlock"
 
-                model=model
-                controls=controls
-                isShowUnique=isShowUnique
-                pathColourScale=pathColourScale
-                scaffolds=scaffolds
-                scaffoldMarkers=scaffoldMarkers
-                showScaffoldFeatures=showScaffoldFeatures
-                showAsymmetricAliases=showAsymmetricAliases
-                selectedFeatures=selectedFeatures
+                model=this.model
+                controls=this.controls
+                isShowUnique=this.isShowUnique
+                pathColourScale=this.pathColourScale
+                scaffolds=this.scaffolds
+                scaffoldMarkers=this.scaffoldMarkers
+                showScaffoldFeatures=this.showScaffoldFeatures
+                showAsymmetricAliases=this.showAsymmetricAliases
+                selectedFeatures=this.selectedFeatures
                 updateFeaturesInBlocks="updateFeaturesInBlocks"
             }}
       </tab.pane>
 
       <tab.pane @id="left-panel-upload" @title="Upload">
             {{panel/upload-data
-                datasets=datasets
-                refreshDatasets=refreshDatasets
-                viewDataset=viewDataset
+                datasets=this.datasets
+                refreshDatasets=this.refreshDatasets
+                viewDataset=this.viewDataset
                 active=(bs-eq tab.activeId "left-panel-upload")
             }}
       </tab.pane>

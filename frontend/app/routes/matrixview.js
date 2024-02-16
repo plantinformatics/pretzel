@@ -1,6 +1,6 @@
 import Route from '@ember/routing/route';
-import AuthenticatedRouteMixin from 'ember-simple-auth/mixins/authenticated-route-mixin';
-import UnauthenticatedRouteMixin from 'ember-simple-auth/mixins/unauthenticated-route-mixin';
+import AuthenticatedRouteMixin from '../utils/ember-simple-auth-mixin-replacements/authenticated-route-mixin';	// ember-simple-auth/mixins/
+import UnauthenticatedRouteMixin from '../utils/ember-simple-auth-mixin-replacements/unauthenticated-route-mixin';	// ember-simple-auth/mixins/
 
 // see also ./mapview.js e.g. :
 // if (window['AUTH'] !== 'NONE') {
