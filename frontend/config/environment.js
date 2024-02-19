@@ -16,7 +16,7 @@ module.exports = function(environment) {
     // apiHost: 'http://sc-15-cdc.it.csiro.au:7000',
     apiNamespace: 'api', // adding to the host for API calls
     /** use '' for relative assets/, for sub-directory routing e.g. example.com/pretzelDev/ */
-    rootURL: process.env.ROOT_URL || '/', // used with Ember local routing
+    rootURL: process.env.ROOT_URL ?? '/', // used with Ember local routing
     locationType: 'auto',
     handsOnTableLicenseKey: null,
 
