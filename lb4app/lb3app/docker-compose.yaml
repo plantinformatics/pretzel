@@ -8,20 +8,21 @@ networks:
     driver: bridge
 
 services:
-  service_database: # mongo database
+  database: # mongo database
     image: library/mongo # base image off dockerhub
     environment:
       - "MONGO_INITDB_ROOT_USERNAME=${DB_USER}"
       - "MONGO_INITDB_ROOT_PASSWORD=${DB_PASS}"
     volumes:
       - ${DATA_DIR}:/data/db
-    hostname: database
-    container_name: database1
-    ports:
-      - ${DB_PORT_EXT}:27017
+    expose:
+      - "${MONGO_DEFAULT_PORT}"
     networks:
       - devpretzel
-  service_api: # node environment
+
+  pretzel: # node environment
+    depends_on:
+      - database
     build:
       context: .
       dockerfile: ./scripts/Dockerfile
@@ -30,8 +31,8 @@ services:
     environment:
       - "API_HOST=${API_HOST}"
       - "API_PORT_EXT=${API_PORT_EXT}"
-      - "DB_HOST=service_api"
-      - "DB_PORT=${DB_PORT_EXT}"
+      - "DB_HOST=database"
+      - "DB_PORT=${MONGO_DEFAULT_PORT}"
       - "DB_NAME=${DB_NAME}"
       - "DB_USER=${DB_USER}"
       - "DB_PASS=${DB_PASS}"
@@ -45,11 +46,12 @@ services:
       - "${API_PORT_EXT}:${API_PORT_EXT}"
     networks:
       - devpretzel
-    depends_on:
-      - service_database
- 
+
+  # only used for testing
   service_test:
     image: bash:devel-alpine3.19
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
     networks:
       - devpretzel
     depends_on:
