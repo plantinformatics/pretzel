@@ -255,7 +255,7 @@ function dbName2Vcf() {
     # This file will have INFO/MAF.
     vcfGz=$(echo "$vcfInputGz" | sed 's/.vcf/.MAF.vcf/')
     # Use -e instead of -f, as $vcfInputGz could be a file or symbolic link.
-    [ -e "$vcfGz" ] || make -f $serverDir/$scriptsDir/vcfGenotypeLookup.Makefile "$vcfGz"
+    [ -e "$vcfGz" ] || make -rR -f $serverDir/$scriptsDir/vcfGenotypeLookup.Makefile "$vcfGz"
 
     # If file does not have an index (.csi), create it.
     # Use -e instead of -f, as csi file could be a file or symbolic link.
@@ -289,10 +289,14 @@ function prepareCommonSNPs() {
   # -R overrides -r instead of intersect, so don't retain the intersection files /
   # common SNPs; overwrite the previous file, and intersect just the required region,
   # instead of the whole chromosome.
-  # Including parameters in the file name to handle multiple concurrent calls,
-  # e.g. triggered by a single client action (autoLookup)
-  # $commonSNPsDir/
-  commonSNPs="isec.$isecFlags.$chr.$isecDatasetIds.$$.vcf"
+  #
+  # When zoomed-out it may be worthwhile caching the intersection file, because
+  # the region is the whole chr, i.e. constant.
+  # When zooned-in the region varies, so cached values would be unlikely to be read.
+  #
+  # Including parameters in the file name, and in particular PID $$, to handle
+  # multiple concurrent calls, e.g. triggered by a single client action (autoLookup).
+  commonSNPs="$commonSNPsDir/isec.$isecFlags.$chr.$isecDatasetIds.$$.vcf"
   if [ ${#vcfGzs[@]} -gt 0 ]
   then
     if true # [ ! -f "$commonSNPs" ]
@@ -436,7 +440,7 @@ then
   then
     echo 1>&$F_ERR 'Error:' $? "VCF dataset dir is not configured", "$datasetIdParam", PWD=$PWD
   else
-    ls -gGLd *.vcf.gz* | cut -c13-
+    ll -L | fgrep  .vcf.gz | cut -c13-
   fi
 else
   vcfGz=$(dbName2Vcf "$datasetIdParam")
@@ -478,7 +482,7 @@ else
         echo 1>&$F_ERR 'Error:' "Unable to run bcftools $command $datasetIdParam $scope $isecFlags $isecDatasetIds $commonSNPs $vcfGz ${preArgs[@]}"
         # Possibly transient failure because 1 request is doing isec
         # and another tries to read empty isec output.
-        [ -n "$isecDatasetIds" ] && 1>&$F_ERR ls -gGd "$commonSNPs"
+        [ -n "$isecDatasetIds" ] && 1>&$F_ERR ll -d "$commonSNPs"
       fi
       set -x
     fi
@@ -486,7 +490,8 @@ else
 fi
 
 status_0=$?
-[ -n "$commonSNPs" ] && ls -gG "$commonSNPs"	# rm
+
+[ -n "$commonSNPs" ] && rm "$commonSNPs"
 
 exit $status_0
 

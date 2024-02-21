@@ -315,8 +315,8 @@ export default Component.extend(Evented, AxisEvents, {
     domainInteger = this.get('sequenceLookupDomain');
     if (domainInteger) {
       let
-    scope = this.get('block.block.scope'),
-    region = 'chr' + scope + ':' + domainInteger.join('-'),
+    refBlockName = this.get('block.block.name'),
+    region = refBlockName + ':' + domainInteger.join('-'),
     parent = this.get('datasetName');
 
     let sequenceTextP = this.get('auth').dnaSequenceLookup(

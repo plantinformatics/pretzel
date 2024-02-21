@@ -78,6 +78,7 @@ export default Component.extend({
    */
   featuresCounts : computed(
     'block', 'block.featuresCountsInZoom.[]',
+    'block.featuresCounts',
     // 'axis.axis1d.domainChanged',
     'axis.axis1d.blocksDomain',
     'axis.axis1d.{zoomedDomainThrottled,zoomedDomainDebounced}.{0,1}',

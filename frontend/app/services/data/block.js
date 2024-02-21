@@ -9,7 +9,6 @@ import Service, { inject as service } from '@ember/service';
 import { task, didCancel } from 'ember-concurrency';
 
 import { keyBy } from 'lodash/collection';
-import { pick } from 'lodash/object';
 
 //------------------------------------------------------------------------------
 
@@ -543,7 +542,7 @@ export default Service.extend(Evented, {
           /** densityFactor requires axis yRange, so for that case this will (in future) lookup axis from blockId. */
           const nBins = this.get('featuresCountsNBins'); // this.nBinsFromPathParams(blockId);
           let
-            zoomedDomain = block && block.get('zoomedDomain'),
+            zoomedDomain = block && block.get('axis1d.zoomed') && block.get('zoomedDomain'),
             zoomedDomainText;
           if (zoomedDomain) {
             let
@@ -556,7 +555,8 @@ export default Service.extend(Evented, {
             '_' + truncateMantissa(relativeDomain[0]) +
             '_' + truncateMantissa(relativeDomain[1]);
           }
-            let taskId = blockId + '_' + nBins + (zoomedDomainText || '');
+            const filtersText = Object.entries(this.controls.genotypeSNPFilters).map(kv => kv.join('_')).join('_');
+            let taskId = blockId + '_' + nBins + (zoomedDomainText || '') + filtersText;
           let summaryTask = this.get('summaryTask');
           let p;
             if ((p = summaryTask[blockId]) && (! p.state || p.state() === "pending")) {
@@ -579,15 +579,19 @@ export default Service.extend(Evented, {
               if (! zoomedDomain) {
                 interval = intervalFromLimits(blockId);
               }
+              /** User controls which filter genotype SNPs.
+               */
+              let userOptions;
               let getCountsForInterval = (interval) => {
                 let countsP;
                 if (interval && (interval[0] === interval[1])) {
                   dLog('getCountsForInterval', interval);
                   countsP = Promise.resolve([]);
                 } else {
-                  const
                   /** userOptions is optional, and the fields are optional. */
-                  userOptions = pick(this.controls.userSettings.genotype, ['mafThreshold', 'snpPolymorphismFilter']);
+                  if (block.isVCF) {
+                    userOptions = this.controls.genotypeSNPFilters;
+                  }
                   countsP =
                   this.get('auth').getBlockFeaturesCounts(blockId, interval, nBins, !!zoomedDomain, useBucketAuto, userOptions, /*options*/{});
                 }
@@ -634,14 +638,10 @@ export default Service.extend(Evented, {
                 binSize = f0 ?
                   (f0.idWidth ? f0.idWidth[0] : ((f0.max - f0.min) || 1)) :
                   (interval ? (0, intervalSize)(interval) / nBins : 1),
-                result = {binSize, nBins, domain : interval, result : featuresCounts};
+                result = {userOptions, binSize, nBins, domain : interval, result : featuresCounts};
                 block.featuresCountsResultsMergeOrAppend(result);
+                // after MergeOrAppend, .featuresCountsResultsFiltered seems preferable to featuresCounts
                 block.set('featuresCounts', featuresCounts);
-                if ((block.featureCount === undefined) && block.hasTag('view') ) {
-                  const featureCount = featuresCounts.reduce((sum,x) => sum += x.count, 0);
-                  dLog(fnName, blockId, featureCount);
-                  block.set('featureCount', featureCount);
-              }
               }
             });
             }
@@ -1060,7 +1060,10 @@ export default Service.extend(Evented, {
   /** @return blocks which are viewed and are configured for display
    * of paths, i.e.  are data blocks not reference, have
    * datasetId._meta.paths === true, and datasetId.tags[] does not
-   * contain 'SNP'
+   * contain 'SNP' - implemented in showPaths.
+   * @desc
+   * Used by flows-collate : blockAdjIds(), which determines the
+   * blocks for which paths requests are sent.
    */
   viewedForPaths: computed(
     'viewed.@each.{isData,showPaths}',
@@ -1070,6 +1073,25 @@ export default Service.extend(Evented, {
       dLog('viewedForPaths', blocks.length, filtered);
       return filtered;
     }),
+
+  //----------------------------------------------------------------------------
+
+  /** Return viewed (loaded) VCF blocks
+   *
+   * This is based on and related to the (synonymous) viewedVCFBlocks() in
+   * components/panel/manage-genotype.js, except that function returns
+   * [{axisBrush, vcfBlock}, ...] instead of [block, ...]
+   *
+   * @return [block, ...]
+   */
+  viewedVCFBlocks : computed('viewed.[]', function() {
+    const
+    fnName = 'viewedVCFBlocks',
+    vcfBlocks = this.viewed.filter(
+      (b) => b.get('isVCF'));
+    dLog(fnName, vcfBlocks, this.viewed.length, this.params.mapsToView);
+    return vcfBlocks;
+  }),
 
   /*----------------------------------------------------------------------------*/
 

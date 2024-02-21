@@ -397,30 +397,11 @@ export default ManageBase.extend({
 
   //----------------------------------------------------------------------------
 
-  /** @return an object mapping from blockId to status of featuresCounts
-   */
-  blocksFeaturesCountsStatus : computed(function () {
-    const
-    fnName = 'blocksFeaturesCountsStatus',
-    /** [[blockId, status], ...] */
-    blocksStatusP = this.get('blocksService').getBlocksFeaturesCountsStatus(/*blockIds*/undefined),
-    byBlockIdP = blocksStatusP.then(blocksStatus => blocksStatus.reduce((result, bs) => {
-      result[bs[0]] = bs[1];
-      return result;
-    }, {}));
-    return byBlockIdP;
-  }),
-
   blocksAnnotateWithFCStatus() {
     const
     fnName = 'blocksAnnotateWithFCStatus',
-    byBlockIdP = this.blocksFeaturesCountsStatus;
+    byBlockIdP = this.apiServerSelectedOrPrimary.blocksFeaturesCountsStatus;
     dLog(fnName);
-    byBlockIdP.then(byBlockId => {
-      this.datasetsBlocks.forEach(dataset => dataset.blocks.forEach(block => {
-        block[Symbol.for('featuresCountsStatus')] = byBlockId[block.id];
-      }));
-    });
   },
 
   /*--------------------------------------------------------------------------*/
@@ -1714,7 +1695,8 @@ export default ManageBase.extend({
       }
       else if (! block.get('datasetId.parentName') || 
           block.get('referenceBlock') ||
-          block.referenceBlockSameServer()) {
+          block.referenceBlockSameServer() ||
+          block.chooseReferenceBlock() ) {
         // mapview : loadBlock() will view the reference if it is not viewed.
         this.sendAction('loadBlock', block);
       } else

@@ -188,4 +188,6 @@ export default ManageBase.extend({
     }
   },
 
+  datasetFeatureCount : alias('dataset.featureCount'),
+
 });

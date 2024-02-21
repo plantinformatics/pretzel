@@ -18,15 +18,16 @@ let germinateInstance;
 export { useGerminate };
 /** Used by API requests to ensure Germinate session is connected and
  * authenticated, so they can use it to fulfill requests.
+ * @param url	domain URL - base path of endpoint URLs, e.g. germinate.plantinformatics.io
  * @param username, password  optional. Used in frontend not in backend.
  * @return a promise which resolves with germinateInstance or
  * rejects with ErrorStatus(), which the caller can pass to response cb.
  */
-function useGerminate(username, password) {
+function useGerminate(url, username, password) {
   const fnName = 'useGerminate';
   let connectedP;
   if (! germinateInstance) {
-      germinateInstance = new Germinate();
+      germinateInstance = new Germinate(url);
   }
   // if pre-existing germinateInstance and it has these fields, they are overridden.
   if (username && password) {
@@ -127,11 +128,22 @@ function germinateGenotypeLookup(datasetId, scope, preArgs, nLines, undefined, c
     samplesDataP = sampleNames.map(sampleName => {
       // e.g. '1-593'
       const
-      callSetDbId = name2Id[sampleName],
+      callSetDbId = name2Id[sampleName];
+      let mapid, sampleId;
+      /* may change - perhaps implement the Germinate callSetDbId format in Spark server.  */
+      if (callSetDbId.match(/^[0-9]+-[0-9]+$/)) {
+        // Germinate
+        [mapid, sampleId] = callSetDbId.split('-');
+      } else {
+        // Spark server
+        mapid = datasetId;
+        // sampleId is callSetDbId
+      }
+      const
       linkageGroupName = preArgs.linkageGroupName,
       dataP = ! callSetDbId ? 
         Promise.resolve([]) :
-        germinate.callsetsCalls(callSetDbId, linkageGroupName, start, end)
+        germinate.callsetsCalls(mapid, callSetDbId, linkageGroupName, start, end, nLines)
         .then(response => response.result.data);
       return dataP;
     });

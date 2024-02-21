@@ -8,6 +8,7 @@ import { bind, later, throttle } from '@ember/runloop';
 import $ from 'jquery';
 
 import { nameSort } from '../utils/common/arrays';
+import { serverTypeIsGerminateAPI } from './service/api-server';
 
 //------------------------------------------------------------------------------
 
@@ -106,7 +107,7 @@ export default Component.extend({
         promise
           .then((server) => {
             server.serverType = serverType;
-            if (this.typeIsGerminate) {
+            if (this.typeRequiresParent) {
               server.parentName = this.datasetSelected.id;
               server.chrMapping = this.chrMappingArray;
               this.dataView.axesForViewedBlocks();
@@ -197,6 +198,9 @@ export default Component.extend({
   typeIsGerminate : computed('typeSelected', function () {
     return this.typeSelected.id === 'Germinate';
   }),
+  typeRequiresParent : computed('typeSelected', function () {
+    return serverTypeIsGerminateAPI(this.typeSelected.id);
+  }),
 
   typesForSelect : computed(function () {
     const
@@ -204,6 +208,9 @@ export default Component.extend({
     typeNames = ['Pretzel' /*, 'noType'*/];
     if (this.urlOptions.Germinate) {
       typeNames.push('Germinate');
+    }
+    if (this.urlOptions.SparkServer) {
+      typeNames.push('Spark');
     }
     const
     types = typeNames

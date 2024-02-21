@@ -331,6 +331,18 @@ export default Service.extend({
     return this._ajax('Blocks/blockFeaturesCounts', 'GET', {id : block, block, interval, nBins, isZoomed, useBucketAuto, userOptions, options}, true);
   },
 
+  /** Request preparation of zoomed-out histograms for dataset id.
+   * @param id  datasetId
+   * @param userOptions genotypeSNPFilters
+   */
+  getDatasetFeaturesCounts(id, userOptions, options) {
+    dLog('services/auth getDatasetFeaturesCounts', id, userOptions, options);
+    /** Put id in the query params to get the benefit of loopback id support,
+     * and userOptions params in the body */
+    const statusP = this._ajax('Datasets/cacheblocksFeaturesCounts?' + $.param({id}), 'POST', JSON.stringify(userOptions), true);
+    return statusP;
+  },
+
   /** Get status of cached histogram of features counts for given block or all blocks
    * @param id  blockId
    * @param nBins number of bins to partition the block's features into

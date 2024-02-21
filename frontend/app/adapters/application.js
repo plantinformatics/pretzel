@@ -258,6 +258,9 @@ var config = {
   _ajax(options) {
     let result;
     const server = this._server || this.server;
+    /* if this is used then add Spark, as it has the same API as Germinate.
+     * .serverType is set in new-datasource-modal.js : onConfirm() : ServerLogin().then()
+     */
     if (server?.serverType !== 'Germinate') {
       result = this._super(...arguments);
     } else {

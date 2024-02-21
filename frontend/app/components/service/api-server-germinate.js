@@ -5,6 +5,7 @@ import { later } from '@ember/runloop';
 
 import { removePunctuation, ApiServerAttributes } from './api-server';
 import { Germinate } from '../../utils/data/germinate';
+import { reduceInSeries } from '../../utils/common/promises';
 
 //------------------------------------------------------------------------------
 
@@ -47,13 +48,16 @@ export default EmberObject.extend(ApiServerAttributes, {
     const
     fnName = 'getDatasets',
     germinate = this.germinateInstance,
-    datasetsP = germinate.maps()
-      .then(datasets => datasets.result.data.map(dataset =>
+    /** @param previousDatasetObj is not used
+     * @param dataset name data of one map from germinate /maps result
+     */
+    datasetLinkageGroupsFn = (previousDatasetObj, dataset) =>
           germinate.linkagegroups(dataset.mapDbId)
             .then(linkageGroups =>
               this.viewDatasetP(this.store, dataset, linkageGroups.result.data))
-            .catch(error => dLog(fnName, error))
-        )
+            .catch(error => dLog(fnName, error)),
+    datasetsP = germinate.maps()
+      .then(datasets => reduceInSeries(datasets.result.data, datasetLinkageGroupsFn)
       )
       .catch(error => dLog(fnName, error));
     return datasetsP;

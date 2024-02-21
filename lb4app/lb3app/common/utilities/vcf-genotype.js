@@ -45,7 +45,10 @@ function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
    * In that case moreParams will be passed to view, and paramsForQuery
    * will be passed to query.
    */
-  viewRequired = snpPolymorphismFilter || preArgs.mafThreshold,
+  viewRequired = snpPolymorphismFilter || preArgs.mafThreshold ||
+    preArgs.featureCallRateThreshold ||
+    preArgs.minAlleles !== undefined || preArgs.maxAlleles !== undefined ||
+    preArgs.typeSNP !== undefined,
   command = headerOnly ? 'view' : preArgs.SNPList ?
     (viewRequired ? 'counts_view' : 'counts_query') :
     preArgs.requestFormat ? (viewRequired ? 'view_query' : 'query') : 'view';
@@ -98,12 +101,15 @@ function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
     formatGT = (preArgs.requestFormat === 'CATG') ? '%TGT' : '%GT',
     /** now INFO/MAF is added if not present, by
      * vcfGenotypeLookup.{bash,Makefile} : dbName2Vcf() / %.MAF.vcf.gz
-     * So requestInfo means just 'request INFO/tSNP'.
+     * So requestInfo means just 'request INFO/tSNP' - no longer needed because
+     * to enable SNP filters to be applied in frontend also, request all of INFO/
+     * (until eb969a33 just INFO/MAF and INFO/tSNP were requested)
+     * Note that %INFO produces a column header '(null)' instead of 'INFO';
+     * this is handled in addFeaturesJson() in frontend/app/utils/data/vcf-feature.js.
      */
     requestInfo = preArgs.requestInfo,
     format = '%ID\t%POS' + '\t%REF\t%ALT' +
-      (requestInfo ? '\t%INFO/tSNP' : '') +
-      '\t%INFO/MAF' +
+      '\t%INFO' +
       '[\t' + formatGT + ']\n';
     /** Params passed to query if view|query is used, otherwise to command. */
     const paramsForQuery = ['-queryStart', headerOption, '-f', format, '-queryEnd'];
@@ -116,25 +122,53 @@ function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
       moreParams.push('--genotype');
       moreParams.push('het');
     }
-    /** default is no MAF filter, i.e. >= 0, (MAF is >=0) */
-    if (preArgs.mafThreshold) {
+    /** Just 1 --include or --exclude is permitted, so combine these
+     * mafThreshold and featureCallRateThreshold into 1 condition. */
+    const includeConditions = [];
+    const mafThresholdMax = 0.5;
+    /** default is no MAF filter, i.e. >= 0, (0 <= MAF <= 0.5)
+     * Also omit when condition is <= 0.5 (i.e. .mafUpper && .mafThreshold === mafThresholdMax).
+     */
+    if ((preArgs.mafThreshold !== undefined) &&
+        (preArgs.mafThreshold !== (preArgs.mafUpper ? mafThresholdMax : 0))) {
       const
       /** --min-af and --max-af uses "INFO/AC and INFO/AN when
        * available or FORMAT/GT" quoting BCFTOOLS(1), whereas
-       * --exclude MAF< / > will utilise INFO/MAF for example.
-       * Related : mafThresholdText(); inverted here because 'exclude'.
+       * --include MAF< / > may utilise INFO/MAF for example ? not clear so using INFO/MAF.
+       * Related : mafThresholdText() (components/panel/manage-genotype.js)
        */
-      afOption = 'MAF' + (preArgs.mafUpper ? '>' : '<') + preArgs.mafThreshold;
-      moreParams.push('--exclude');
-      moreParams.push(afOption);
+      afOption = 'INFO/MAF' + (preArgs.mafUpper ? '<=' : '>=') + preArgs.mafThreshold;
+      includeConditions.push(afOption);
     }
     if (preArgs.featureCallRateThreshold) {
       const
-      /** equivalent : N_PASS(GT!="./.")/N_SAMPLES */
-      fcrOption = 'F_PASS(GT!="./.") >= ' + preArgs.featureCallRateThreshold;
-      moreParams.push('-i');
-      moreParams.push(fcrOption);
+      /** equivalent to INFO/CR :
+       *   N_PASS(GT!="./.")/N_SAMPLES
+       *   F_PASS(GT!="./.")
+       * INFO/F_MISSING is converse of INFO/CR, so the following expression is 
+       * equivalent to : INFO/CR >= .featureCallRateThreshold
+       */
+      fcrOption = 'INFO/F_MISSING < ' + (1 - preArgs.featureCallRateThreshold);
+      includeConditions.push(fcrOption);
     }
+    if (includeConditions.length) {
+      moreParams.push('--include');	// aka. -i
+      moreParams.push(includeConditions.join(' && '));
+    }
+
+    if (preArgs.minAlleles !== undefined) {
+      moreParams.push('--min-alleles');
+      moreParams.push(preArgs.minAlleles);
+    }
+    if (preArgs.maxAlleles !== undefined) {
+      moreParams.push('--max-alleles');
+      moreParams.push(preArgs.maxAlleles);
+    }
+    if (preArgs.typeSNP) {
+      moreParams.push("--types");
+      moreParams.push("snps");
+    }
+
   }
   const samples = preArgs.samples;
   if (samples?.length) {
@@ -381,7 +415,79 @@ function vcfGenotypeFeaturesCountsStatus(datasetDir, cb) {
 };
 exports.vcfGenotypeFeaturesCountsStatus = vcfGenotypeFeaturesCountsStatus;
 
+const vcfGenotypeFeaturesCountsStatusP = util.promisify(vcfGenotypeFeaturesCountsStatus);
 
 
+//------------------------------------------------------------------------------
+
+exports.checkVCFsAreInstalled = checkVCFsAreInstalled;
+/** Check if base VCF and SNPLists are installed for any VCF datasets in datasets.
+ * The requirement for SNPLists is only applied if the base VCF is large.
+ * vcfGenotypeLookup.{bash,Makefile} will automatically generate
+ * .MAF.SNPList.vcf.gz if it is not present.
+ * If the size of the base .vcf.gz is such that this will take > ~5mins then
+ * require the user to install this .MAF.SNPList.vcf.gz before uploading the VCF
+ * worksheet.
+ * @return a promise yielding datasets status, with VCF datasets which are not
+ * installed having status falsey
+ */
+function checkVCFsAreInstalled(datasets, status) {
+  const
+  fnName = 'checkVCFsAreInstalled',
+  checkPs = datasets.map(dataset => {
+    console.log(fnName, dataset.name, dataset.tags);
+    const
+    isVCF = dataset.tags.includes('VCF'),
+    checkP = ! isVCF ? Promise.resolve(true) :
+      vcfGenotypeFeaturesCountsStatusP(dataset.name)
+      .then(vcfStatus => {
+        const
+        status = statusToObj(vcfStatus),
+        notInstalled = dataset.blocks.filter(block => {
+          const
+          chrName = block.name,
+          s = status[chrName],
+          /** size and time of chr base .vcf.gz e.g. ' 354566 Sep 12 16:20' */
+          sizeTime = s?.[''] ,
+          sizeMatch = sizeTime?.match(/^ *([0-9]+)/),
+          small = ! sizeMatch || (+sizeMatch[1] < 100e6),
+          ok = small || s['.MAF.SNPList'];
+          return ! ok;
+        });
+        console.log(dataset.name, notInstalled, status, vcfStatus);
+        return ! notInstalled.length;
+      });
+    return checkP;
+  });
+  return checkPs;
+}
+//------------------------------------------------------------------------------
+
+/** Construct a mapping from chr name to a list of suffixes of available .vcf.gz
+ * files for that chromosome.
+ */
+function statusToObj(vcfStatus) {
+  const
+  fnName = 'statusToObj',
+  /** extract from frontend/app/utils/data/vcf-files.js : statusToMatrix() */
+  a = vcfStatus.split('\n'),
+  /** collated into a summary object[chrName][colName] -> sizeTime
+   * This has the same information as map; combined with cols[] this enables
+   * producing a matrix with sorted column names.
+   */
+  summary = a.reduce((s, line) => {
+    const
+    m = line.match(/(.*) ([^.]+)(.*).vcf.gz(.*)/);
+    if (m) {
+      const
+      [whole, sizeTime, chrName, suffix, csi] = m,
+      colName = (suffix + csi), // .replaceAll('.', unicodeDot),
+      chr = s[chrName] || (s[chrName] = {});
+      s[chrName][colName] = sizeTime;
+      }
+    return s;
+  }, {});
+  return summary;
+}
 
 //------------------------------------------------------------------------------

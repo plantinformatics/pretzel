@@ -72,6 +72,17 @@ function valueNameIsNotSample(valueName) {
   return nonSampleNames.includes(valueName);
 }
 
+/** Map the column name '(null)' to 'INFO'
+ *
+ * Using --format %INFO outputs the whole of the INFO value; with the column
+ * header name '(null)'
+ * (when using e.g. %INFO/MAF, the column header name is the sub-field name, i.e. 'MAF')
+ */
+function columnNameINFOFix(columnNames) {
+  columnNames = columnNames.map(name => name == '(null)' ? 'INFO' : name);
+  return columnNames;
+}
+
 //------------------------------------------------------------------------------
 
 /**
@@ -111,6 +122,20 @@ function addGerminateOptions(requestOptions, block) {
     requestOptions.linkageGroupName = block._meta.linkageGroupName;
   }
   return requestOptions;
+}
+
+//------------------------------------------------------------------------------
+
+/** Request featuresCounts (histograms) for all blocks (chromosomes) of the
+ * given dataset.
+ * @param auth  service for sending API requests
+ * @param datasetId
+ * @param genotypeSNPFilters  current user-controlled thresholds for SNP filters
+ * controls.genotypeSNPFilters
+ */
+function getDatasetFeaturesCounts(auth, datasetId, genotypeSNPFilters) {
+  const promise = auth.getDatasetFeaturesCounts(datasetId, genotypeSNPFilters);
+  return promise;
 }
 
 //------------------------------------------------------------------------------
@@ -287,10 +312,19 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedService, 
         meta[nameVal[1]] = nameVal[2];
       }
     } else if (l.startsWith('#CHROM')) {
+      // Column header row output by bcftools view
       columnNames = l.slice(1).split('\t');
+      columnNames = columnNameINFOFix(columnNames);
       sampleNames = columnNames.slice(nColumnsBeforeSamples);
-    } else if (l.startsWith('# [1]ID')) {
+      // from columnNames.slice(0,9), appended tSNP.
+      const nonSampleFields = ['CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT', 'tSNP'];
+      columnIsGT = columnNames.map(c => nonSampleFields.includes(c));
+    } else if (l.startsWith('# [1]ID') || l.startsWith('#[1]ID')) {
+      // Column header row output by bcftools query
       // # [1]ID	[2]POS	[3]ExomeCapture-DAS5-002978:GT	[4]ExomeCapture-DAS5-003024:GT	[5]ExomeCapture-DAS5-003047:GT	[6]ExomeC
+      /* between versions 1.9 and 1.19 of bcftools, this changed '# [1]ID' to '#[1]ID'
+       * 1.9 is current on centos (2024Jan).
+       */
       columnIsGT = l
         .split(/\t\[[0-9]+\]/)
         .map((name) => name.endsWith(':GT'));
@@ -298,9 +332,12 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedService, 
       columnNames = l
         .replaceAll(':GT', '')
         .split(/\t\[[0-9]+\]/);
-      columnNames[0] = columnNames[0].replace(/^# \[1\]/, '');
+      columnNames[0] = columnNames[0].replace(/^# ?\[1\]/, '');
+      columnNames = columnNameINFOFix(columnNames);
       // nColumnsBeforeSamples is 2 in this case : skip ID, POS.
       sampleNames = columnNames.slice(2);
+      // skip the (null) / INFO column name
+      sampleNames.splice(2, 1);
     } else if (columnNames && l.length) {
       const values = l.split('\t');
 
@@ -338,6 +375,22 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedService, 
         case 'ALT' :
           break;
 
+        case 'INFO' : // (null)
+          fieldNameF = 'values.' + fieldName;
+          const infoEntries = value.split(';').map(kv => kv.split('='));
+          value = Object.fromEntries(infoEntries);
+
+          // Convert numeric values from string to number.
+          // equivalent : parseBooleanFields(f.values, ['MAF', 'tSNP']);
+          if (value.MAF) {
+            value.MAF = +value.MAF;
+          }
+          if (value.tSNP) {
+            value.tSNP = +value.tSNP;  // maybe accept any string.
+          }
+
+          break;
+
         default :
           fieldNameF = 'values.' + fieldName;
         }
@@ -370,6 +423,17 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedService, 
               /* could also use Ember_set() when ! prefix. */
               Ember_set(f, fieldNameF, value);
             }
+
+            /* These will not be needed after changing references to e.g.
+             * feature.values.MAF to feature.values.INFO.MAF, which is
+             * equivalent and replaces it. */
+            if (value.MAF) {
+              f.values.MAF = value.MAF;
+            }
+            if (value.tSNP) {
+              f.values.tSNP = value.tSNP;
+            }
+
           } else {
             f[fieldNameF] = value;
           }
@@ -480,8 +544,9 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedService, 
  * blocks are viewed from URL)
  */
 function blockEnsureFeatureCount(block) {
-  if (block.get('featureCount') === undefined) {
-    block.set('featureCount', block.get('features.length'));
+  const featuresLength = block.get('features.length');
+  if ((block.get('featureCount') ?? 0) < featuresLength) {
+    block.set('featureCount', featuresLength);
   }
 }
 
@@ -551,13 +616,8 @@ function addFeaturesGerminate(block, requestFormat, replaceResults, selectedServ
     // previously seeing in results : 'CnullT' - this is now fixed in java.
     const genotypeValue = call.genotypeValue;
     f.values[call.callSetName] = genotypeValue;
-    /* "variantName": "m2-23.0" 
-     * m2-23.0 => m2 is marker name and 23.0 is its position
-     * Some of the marker names contain '-', e.g. 'scaffold77480-1_24233-24233.0'
-     * so instead of split('-'), use .match(/(.+) ... ) which is greedy.
-     */
     let
-    [wholeString, markerName, positionText] = call.variantName.match(/(.+)-(.+)/),
+    {markerName, positionText} = variantNameSplit(call.variantName, i < 5),
     position = +positionText;
     if (isNaN(position)) {
       // handle Oct19 format :  dbid_mapid_ exome SNP name e.g. 6_20_6_scaffold77480, or?  scaffold72661_85293-85293.0
@@ -612,6 +672,36 @@ function addFeaturesGerminate(block, requestFormat, replaceResults, selectedServ
   return result;
 }
 
+/** Split the variantName from either Germinate or Spark server into component elements.
+ * @param variantName
+ * @param traceUnmatched  enable tracing of failure to parse variantName
+ * @return {markerName, positionText}
+ */
+function variantNameSplit(variantName, traceUnmatched) {
+  const fnName = 'variantNameSplit';
+  /** Germinate :
+   * "variantName": "m2-23.0" 
+   * m2-23.0 => m2 is marker name and 23.0 is its position
+   * Some of the marker names contain '-', e.g. 'scaffold77480-1_24233-24233.0'
+   * so instead of split('-'), use .match(/(.+) ... ) which is greedy.
+   *
+   * Spark server : e.g. "variantName":"Chr1A_4188418"
+   */
+  let match, wholeString, markerName, positionText;
+  if ((match = variantName.match(/(.+)-(.+)/))) {
+    // Germinate
+    [wholeString, markerName, positionText] = match;
+  } else if ((match = variantName.match(/(.+)_(.+)/))) {
+    // Spark server
+    let chrName;
+    [wholeString, chrName, positionText] = match;
+    // markerName is used to make feature .id and ._name unique
+    markerName = positionText;
+  } else if (traceUnmatched) {
+    dLog(fnName, variantName, 'not matched');
+  }
+  return {markerName, positionText};
+}
 
 // -----------------------------------------------------------------------------
 
@@ -1133,9 +1223,16 @@ function vcfFeatures2MatrixViewRowsResult(
   features.reduce(
     (res, feature) => {
       if (! enableFeatureFilters || featureFilter(feature)) {
-        featureSampleMAF(feature, optionsMAF);
+        if (feature.values.MAF === undefined) {
+          featureSampleMAF(feature, optionsMAF);
+        }
         const
         row = rowsAddFeature(res.rows, feature, 'Name', 0);
+        /* Chr column could be optional, e.g. if ! .brushedOrViewedScope.length
+         * .name relates to the genotype database (e.g. VCF), so it may be what
+         * users expect to see rather than .scope here.
+         */
+        row['Chr'] = feature.get('blockId.name');
         if (showHaplotypeColumn) {
           // column name is 'LD Block', originally  'Haplotype'.
           row['LD Block'] = stringSetFeature(featureHaplotypeValue(feature), feature);
@@ -1157,6 +1254,7 @@ function vcfFeatures2MatrixViewRowsResult(
         let filterFn =
             (sampleName) => 
             sampleFilters.every(fn => fn(block, sampleName)) &&
+            (sampleName !== 'INFO') &&
             caseRefAlt(sampleName);
 
         // can instead collate columnNames in following .reduce(), plus caseRefAlt().
@@ -1175,6 +1273,7 @@ function vcfFeatures2MatrixViewRowsResult(
               sampleFilters.every(fn => fn(block, sampleName))
           )
           // .filter(([sampleName, sampleValue]) => ! ['tSNP', 'MAF'].includes(sampleName))
+          .filter(([sampleName, sampleValue]) => sampleName !== 'INFO')
           .reduce(
           (res2, [sampleName, sampleValue]) => {
             let columnName;
@@ -1184,14 +1283,16 @@ function vcfFeatures2MatrixViewRowsResult(
               // the capital field name is used in : row[sampleName]
               sampleName = toTitleCase(sampleName);
             } else {
-              columnName = sampleName = sampleName2ColumnName(sampleName);
               /** Convert sample values to requestFormat; don't convert
-               * non-sample values such as tSNP, MAF.
+               * non-sample values such as tSNP, MAF, INFO.
                * May move sample values to form Feature.values.samples{}, which
-               * will make it simpler to apply distinct treatments to these. */
-              if (! ['tSNP', 'MAF'].includes(sampleName)) {
+               * will make it simpler to apply distinct treatments to these.
+               * sampleName2ColumnName() renames sampleName tSNP to 'LD Block'
+               */
+              if (! ['tSNP', 'MAF', 'INFO'].includes(sampleName)) {
                 sampleValue = valueToFormat(requestFormat, refAltValues, sampleValue);
               }
+              columnName = sampleName = sampleName2ColumnName(sampleName);
             }
             const 
             // featureNameValue(feature, sampleValue),
@@ -1428,9 +1529,13 @@ function featureSampleNames(sampleNamesSet, feature, filterFn) {
 //------------------------------------------------------------------------------
 
 /** Calculate sample MAF for features.
+ * Any existing value of feature.values.MAF is preserved, i.e.
+ * featureSampleMAF() is not called if (feature.values.MAF === undefined)
+ * That is also true in vcfFeatures2MatrixViewRowsResult().
  */
 function featuresSampleMAF(features, options) {
-  features.forEach(feature => featureSampleMAF(feature, options));
+  features.forEach(feature =>
+    (feature.values.MAF === undefined) && featureSampleMAF(feature, options));
 }
 /** Calculate sample MAF for feature, for the loaded samples, either selected or
  * all samples.
@@ -1503,6 +1608,78 @@ function copiesOfAlt(value, alt) {
 
 //------------------------------------------------------------------------------
 
+export { featureMafFilter };
+/** @return truthy iff feature.values.MAF satisfies {mafThreshold, mafUpper}
+ * @param mafThreshold, mafUpper are from userSettings.
+ * mafUpper may be undefined, default is false.
+ */
+function featureMafFilter(feature, mafThreshold, mafUpper) {
+  const
+  MAF = normalizeMaf(feature.values.MAF),
+  /** don't filter datasets which don't have MAF */
+  ok = (MAF === undefined) || 
+    ((+MAF < mafThreshold) === !!mafUpper);
+  return ok;
+}
+
+//------------------------------------------------------------------------------
+
+export { featureCallRateFilter };
+/** Filter feature by callRateThreshold.
+ * Call Rate of feature is read from INFO.CR or 1 - INFO.F_MISSING if defined,
+ * otherwise feature[callRateSymbol], which is calculated in
+ * collateBlockSamplesCallRate() from sample genotype values in feature.values.
+ * @return truthy if Call Rate of feature is >= callRateThreshold
+ * @param callRateThreshold is defined
+ * @param feature
+ */
+function featureCallRateFilter(callRateThreshold, feature) {
+  let callRate;
+  const INFO = feature.values?.INFO;
+  if (INFO && ((INFO.F_MISSING !== undefined) || (INFO.CR !== undefined))) {
+    callRate = (INFO.CR !== undefined) ? INFO.CR : 1 - INFO.F_MISSING;
+  } else {
+    const
+    sampleCount = feature[callRateSymbol];
+    /** OK (filter in) if callRate is undefined because of lack of counts. */
+    callRate = sampleCount && (sampleCount.calls + sampleCount.misses) ?
+      sampleCount.calls / (sampleCount.calls + sampleCount.misses) :
+      undefined;
+  }
+  const ok = ! callRate || (callRate >= callRateThreshold);
+  return ok;
+}
+
+//------------------------------------------------------------------------------
+
+export {featuresFilterNalleles};
+/** Filter features by the number of alleles in .values Ref and Alt.
+ * @param minAlleles, maxAlleles string from text input, in which the user is
+ * expected to enter a number.  ' ' is equivalent to 0.
+ * As in featureSatisfiesNalleles() : {min,max}Alleles may be undefined or ''
+ * indicating no constraint.
+ */
+function featuresFilterNalleles(features, minAlleles, maxAlleles) {
+  const fnName = 'featuresFilterNalleles';
+  dLog(fnName, minAlleles, maxAlleles, features.length);
+  features = features.filter(f => featureSatisfiesNalleles(f, minAlleles, maxAlleles));
+  dLog(fnName, features.length);
+  return features;
+}
+
+/** @return true if feature satisfies any constraints defined by minAlleles and maxAlleles.
+ * @param minAlleles, maxAlleles  non-negative integer in string format.
+ * may be undefined or '' indicating no constraint.
+ */
+function featureSatisfiesNalleles(feature, minAlleles, maxAlleles) {
+  const ok =
+    ((minAlleles === undefined) || (minAlleles === '') || (minAlleles <= feature.nAlleles)) &&
+      ((maxAlleles === undefined) || (maxAlleles === '') || (feature.nAlleles <= maxAlleles));
+  return ok;
+}
+
+//------------------------------------------------------------------------------
+
 /** Support a repeated storage pattern : object[symbol][fieldName] is an array.
  */
 function objectSymbolNameArray(object, symbol, fieldName) {
@@ -1562,6 +1739,63 @@ const variantSetSymbol = Symbol.for('variantSet');
 
 
 //------------------------------------------------------------------------------
+/** Determine if any of the genotype SNP Filters in the given userOptions define
+ * filters, i.e. are active.
+ * @return true if any of the filters in userOptions have a value.
+ * @param userOptions may be from fcResult.userOptions or
+ * controls.genotypeSNPFilters which are extracted from userSettings.genotype
+ */
+function genotypeSNPFiltersDefined(userOptions) {
+  const
+  /** a filter is active if its value satisfies :
+   *   (v !== undefined) && (v !== false) && (v !== 0) && (v !== '')
+   * which is effectively implemented by !!v
+   * minAlleles and maxAlleles have string values, and '0' is active, and !!'0' is true.
+   * whereas the other numeric values (mafUpper, mafThreshold, featureCallRateThreshold)
+   * are in-active when 0, and !!0 is false.
+   */
+  active = Object.values(userOptions).find(v => !!v);
+  return active;
+}
+
+export { genotypeSNPFiltersApply };
+/** Apply any filters defined in userOptions to feature.
+ * - snpPolymorphismFilter, mafUpper, mafThreshold, mafUpper, featureCallRateThreshold,
+ * - isecDatasetIds, isecFlags
+ * - minAlleles, maxAlleles
+ * @return truthy iff the feature is filtered in, i.e. satisfies the filter thresholds
+ */
+function genotypeSNPFiltersApply(userOptions, feature) {
+  let ok = true;
+  // these filters are passed in request : vcfGenotypeLookupDataset()
+
+  /* to implement snpPolymorphismFilter : factor from manage-genotype.js :
+   * snpPolymorphismFilter().
+   * can store counts in feature[Symbol.for('countsRefAlt')];  related : copiesOfAlt()
+   */
+
+  ok &&= featureMafFilter(feature, userOptions.mafThreshold, userOptions.mafUpper);
+  if (userOptions.featureCallRateThreshold) {
+    ok &&= featureCallRateFilter(userOptions.featureCallRateThreshold, feature);
+  }
+
+  /* perhaps implement some equivalent of this :
+      if (intersection) {
+        requestOptions.isecDatasetIds = intersection.datasetIds;
+        requestOptions.isecFlags = '-n' + intersection.flags;
+      }
+  */
+
+  if (userOptions.minAlleles || userOptions.maxAlleles) {
+    ok &&= featureSatisfiesNalleles(feature, userOptions.minAlleles, userOptions.maxAlleles);
+  }
+
+  // not yet implemented :  typeSNP
+
+  return ok;
+}
+
+//------------------------------------------------------------------------------
 
 
 export {
@@ -1570,10 +1804,12 @@ export {
   datasetId2Class,
   gtValueIsNumeric,
   addGerminateOptions,
+  getDatasetFeaturesCounts,
   vcfGenotypeLookup,
   addFeaturesJson,
   resultIsGerminate,
   addFeaturesGerminate,
+  variantNameSplit,
   featureBlockColourValue,
   normalizeMaf,
   sampleIsFilteredOut,
@@ -1590,4 +1826,5 @@ export {
   featuresSampleMAF,
   featureSampleMAF,
   objectSymbolNameArray,
+  genotypeSNPFiltersDefined,
 };

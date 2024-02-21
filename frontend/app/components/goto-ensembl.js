@@ -340,7 +340,12 @@ ApolloJBrowse.prototype.urlLocation = function urlLocation (gotoUrl, selectedBlo
     dLog('urlDawn', gotoUrl.get('selectedBlock.id'));
     if (selectedBlock) {
       /** map to name used by Dawn, e.g. 'chr1A' */
-      let chrName = 'chr' + selectedBlock.get('name');
+      let chrName = selectedBlock.get('name');
+      if (chrName.startsWith('Chr')) {
+	chrName.replace('Chr', 'chr');
+      } else if (! chrName.startsWith('chr')) {
+	chrName = 'chr' + chrName;
+      } 
       if (brushedDomain) {
         let 
           /** brush is Real, loc param is in base-pairs, so convert to Int. */

@@ -24,6 +24,8 @@ const { ErrorStatus } = require('../utilities/errorStatus.js');
 const { vcfGenotypeLookup, vcfGenotypeFeaturesCounts } = require('../utilities/vcf-genotype');
 const { germinateGenotypeSamples, germinateGenotypeLookup } = require('../utilities/germinate-genotype');
 const { parseBooleanFields } = require('../utilities/json-text');
+const { noCacheResult } = require('../utilities/remote-method.js');
+
 
 const germinateGenotypeSamplesP = util.promisify(germinateGenotypeSamples);
 
@@ -793,13 +795,21 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
    * @param useBucketAuto default false, which means $bucket with
    * boundaries calculated from interval and nBins; otherwise use
    * $bucketAuto.
-   * @param userOptions user settings : {mafThreshold, snpPolymorphismFilter}
+   * @param userOptions user settings : {
+   *   mafThreshold, snpPolymorphismFilter, featureCallRateThreshold,
+   *   minAlleles, maxAlleles, typeSNP}
    * @param options loopback options
    */
   Block.blockFeaturesCounts = function(id, interval, nBins, isZoomed, useBucketAuto, userOptions, options, res, cb) {
 
+    const snpFilterfieldNames = [
+      'snpPolymorphismFilter', 'mafThreshold', 'featureCallRateThreshold',
+      'minAlleles', 'maxAlleles', 'typeSNP',
+    ];
     if (userOptions) {
-      parseBooleanFields(userOptions, ['snpPolymorphismFilter', 'mafThreshold']);
+      /** parseBooleanFields() parses values which are represented as strings,
+       * including Boolean and numeric values */
+      parseBooleanFields(userOptions, snpFilterfieldNames);
     }
 
   let
@@ -815,9 +825,11 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     useCache = ! isZoomed || ! interval,
     cacheIdOptions = ! userOptions ? '' : Object.entries(userOptions)
       .reduce((result, [name, value]) => {
-        if (['mafThreshold', 'snpPolymorphismFilter'].includes(name)
-            && (value !== undefined) && (value !== null) && (value !== '')) {
-          result += '_' + value;
+        /** The SNP filter fields (snpFilterfieldNames) are optional; map
+         * undefined or null to '', to avoid the cacheId being ambiguous.
+         */
+        if (snpFilterfieldNames.includes(name)) {
+          result += '_' + (value ?? '');
         }
         return result;
       }, ''),
@@ -1214,6 +1226,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     returns: {type: 'array', root: true},
     description: "Returns an array of blocks with the status of their cached featuresCounts."
   });
+  Block.afterRemote('blocksFeaturesCountsStatus', noCacheResult);
 
   Block.remoteMethod('blockFeatureLimits', {
     accepts: [
