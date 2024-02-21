@@ -60,7 +60,17 @@ var config = {
     return host;
   },
 
-  namespace: ENV.apiNamespace,
+  /** Include rootURL into namespace, to be used by 
+   * @ember-data/adapter/addon/-private/build-url-mixin.js : _buildURL() -> urlPrefix()
+   * This could be handled by extending the adapter and introducing rootURL
+   * before namespace in urlPrefix(), but that may already be done in later
+   * versions.
+   *
+   * The conditional expression could be reduced to simply ENV.rootURL.replace(/^\//, ''),
+   * but most often rootURL till be just '/'
+   */
+  namespace: ((ENV.rootURL !== '/') ? ENV.rootURL.replace(/^\//, '') : '') +
+              ENV.apiNamespace,
 
   urlForFindRecord(id, type, snapshot) {
     let url = this._super(...arguments);

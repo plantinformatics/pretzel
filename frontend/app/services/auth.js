@@ -814,7 +814,8 @@ export default Service.extend({
   let
     apiHost =  requestServer && requestServer.host;
     let config = getOwner(this).resolveRegistration('config:environment')
-    let endpoint = (apiHost || config.apiHost) + '/' + config.apiNamespace + '/' + route
+    /** rootURL is / by default, and is expected to have a trailing /  */
+    let endpoint = (apiHost || config.apiHost) + config.rootURL + config.apiNamespace + '/' + route;
     /** Pretzel is designed to support multiple servers sub-domains for
      * different species (e.g. *.plantinformatics.io) and they have separate
      * logins, so the authentication cookie token is not shared between
