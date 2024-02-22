@@ -160,7 +160,7 @@
         {{/elem/button-tab}}
       </ul>
 
-      <div id="right-panel-content"  class={{rightPanelClass}}>
+      <div id="right-panel-content"  class={{this.rightPanelClass}}>
         {{#if (compare this.layout.right.tab '===' 'selection')}}
           {{panel/manage-features
             selectedFeatures=this.selectedFeatures
@@ -181,7 +181,7 @@
             selectedBlock=this.selectedBlock
             selectedFeatures=this.selectedFeatures
             updatedSelectedFeatures='updateSelectedFeatures'
-            userSettings=userSettings.genotype
+            userSettings=this.userSettings.genotype
             }}
 
         {{else if (and (compare this.layout.right.tab '===' 'settings') this.model.params.parsedOptions.advSettings)}}

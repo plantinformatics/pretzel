@@ -1,10 +1,10 @@
 {{!-- log 'entry-dataset-level' name values --}}
 {{record/entry-dataset-level0
-  node=values
-  name=name
-  values=values.blocks
-  controlOptions=controlOptions
+  node=this.values
+  name=this.name
+  values=this.values.blocks
+  controlOptions=this.controlOptions
   loadBlock="loadBlock"
-  selectBlock=selectBlock
-  selectedBlock=selectedBlock
-  selectDataset=selectDataset}}
+  selectBlock=this.selectBlock
+  selectedBlock=this.selectedBlock
+  selectDataset=this.selectDataset}}

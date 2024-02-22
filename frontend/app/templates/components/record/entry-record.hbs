@@ -1,41 +1,41 @@
-{{#if editing }}
+{{#if this.editing }}
   <div class="input-group">
     {{input
-      enter=(action "saveEdit" entry)
-      escape-press=(action "cancelEdit" entry)
+      enter=(action "saveEdit" this.entry)
+      escape-press=(action "cancelEdit" this.entry)
       type="text"
-      value=entry.name
+      value=this.entry.name
       class="form-control"
       placeholder="Placeholder"}}
     <span class="input-group-btn">
       {{elem/button-base
         icon="ok"
         classColour="success"
-        onClick=(action "saveEdit" entry)
+        onClick=(action "saveEdit" this.entry)
       }}
       {{elem/button-base
         icon="remove"
         classColour="danger"
-        onClick=(action "cancelEdit" entry)
+        onClick=(action "cancelEdit" this.entry)
       }}
     </span>
   </div>
 {{else}}
-  {{entry.name}}
-  {{elem/icon-acl record=entry}}
-  {{#if entry.editable }}
+  {{this.entry.name}}
+  {{elem/icon-acl record=this.entry}}
+  {{#if this.entry.editable }}
     {{#elem/dropdown-container
       right=true}}
       {{#elem/dropdown-row
         icon="pencil"
-        onClick=(action 'enableEdit' entry)}}
+        onClick=(action 'enableEdit' this.entry)}}
         Edit
       {{/elem/dropdown-row}}
-      {{#if entry.owner }}
+      {{#if this.entry.owner }}
         {{#elem/dropdown-row
           icon="lock"
-          onClick=(action 'flipPublic' entry)}}
-          {{#if entry.public}}
+          onClick=(action 'flipPublic' this.entry)}}
+          {{#if this.entry.public}}
           Make Private
           {{else}}
           Make Public
@@ -43,8 +43,8 @@
         {{/elem/dropdown-row}}
         {{#elem/dropdown-row
           icon="pencil"
-          onClick=(action 'flipReadOnly' entry)}}
-          {{#if entry.readOnly}}
+          onClick=(action 'flipReadOnly' this.entry)}}
+          {{#if this.entry.readOnly}}
           Make Editable
           {{else}}
           Make Read-Only
@@ -53,15 +53,15 @@
         {{elem/dropdown-separator}}
         {{#elem/dropdown-row
           icon="remove"
-          onClick=(action "deleteRecord" entry)}}
+          onClick=(action "deleteRecord" this.entry)}}
           Delete
         {{/elem/dropdown-row}}
       {{else}}
-        {{#if noAuth}}
+        {{#if this.noAuth}}
           {{elem/dropdown-separator}}
           {{#elem/dropdown-row
             icon="remove"
-            onClick=(action "deleteRecord" entry)}}
+            onClick=(action "deleteRecord" this.entry)}}
             Delete
           {{/elem/dropdown-row}}
         {{/if}}

@@ -2,13 +2,13 @@
 
 
   <tr>
-    <td>{{datasetName}}</td>
-    <td>{{block.block.scope}}</td>
-    <td>{{brushedDomainRounded}}</td>
+    <td>{{this.datasetName}}</td>
+    <td>{{this.block.block.scope}}</td>
+    <td>{{this.brushedDomainRounded}}</td>
     <!-- ----------------------------- -->
-    <td class="devel-visible">{{blockId}}</td>
-    <td class="devel-visible">{{zoomCounter}}</td>
-    <td style="display:none;"> {{features.length}} <!-- for features request. --></td>
+    <td class="devel-visible">{{this.blockId}}</td>
+    <td class="devel-visible">{{this.zoomCounter}}</td>
+    <td style="display:none;"> {{this.features.length}} <!-- for features request. --></td>
   </tr>
 
 <div>
@@ -27,7 +27,7 @@
 
 </div>
 <div>
-  <textarea>{{sequenceText}}</textarea>
+  <textarea>{{this.sequenceText}}</textarea>
 </div>
 
 
@@ -45,9 +45,9 @@
     <th>Dataset</th>
   </tr>
 
-  {{#each brushedBlocks as |brushedBlock| }}
+  {{#each this.brushedBlocks as |brushedBlock| }}
     <tr>
-      <td class="devel-visible">{{get featuresReceived brushedBlock.block.id}}</td>
+      <td class="devel-visible">{{get this.featuresReceived brushedBlock.block.id}}</td>
       <td>{{brushedBlock.featureCountInBrush}}</td>
       <td>{{brushedBlock.featuresCount}}</td>
       <td class="devel-visible">{{brushedBlock.block.id}}</td>

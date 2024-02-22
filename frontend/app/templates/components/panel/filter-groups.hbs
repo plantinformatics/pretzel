@@ -1,10 +1,10 @@
 <ul>
-  {{#each data as |filterGroup|}}
+  {{#each this.data as |filterGroup|}}
     {{!-- log 'filterGroup' filterGroup --}}
     {{panel/filter-group
       data=filterGroup
-      changed=(action changed filterGroup)
-      deleteFilterOrGroup=(action deleteFilterOrGroup filterGroup) }}
+      changed=(action this.changed filterGroup)
+      deleteFilterOrGroup=(action this.deleteFilterOrGroup filterGroup) }}
   {{/each}}
 </ul>
 
@@ -13,7 +13,7 @@
     icon="plus"
     classColour="success"
     onClick=(action "addFilterOrGroup")
-    disabled=maxFilterGroups
+    disabled=this.maxFilterGroups
     class='add'
   }}
     {{#ember-tooltip side="left" delay=500}}

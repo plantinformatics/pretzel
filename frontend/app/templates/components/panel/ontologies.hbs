@@ -6,12 +6,16 @@
       <ul class="list-group view-controls">
         <li class="list-group-item">
           <label style="display:inline">Ontology click :</label>
-          {{radio-button value='Hierarchy' groupValue=ontologyClick
-            changed=(action ontologyClickChanged preventDefault=false)
+          {{radio-button
+            value='Hierarchy'
+            groupValue=this.ontologyClick
+            changed=(action this.ontologyClickChanged preventDefault=false)
           }}
           Hierarchy &nbsp;&nbsp;
-          {{radio-button value='Level' groupValue=ontologyClick
-            changed=(action ontologyClickChanged preventDefault=false)
+          {{radio-button
+            value='Level'
+            groupValue=this.ontologyClick
+            changed=(action this.ontologyClickChanged preventDefault=false)
           }}
           Level &nbsp;&nbsp;
 
@@ -27,15 +31,15 @@
           <i class="glyphicon glyphicon-eye-open"></i></label>
       </span>
 
-      {{#if blockFeatureOntologies.length}}
-        {{log 'ontologies' ontologiesTree ontologiesTree.isFulfilled }}
-        {{#if ontologiesTree.isFulfilled}}
+      {{#if this.blockFeatureOntologies.length}}
+        {{log 'ontologies' this.ontologiesTree this.ontologiesTree.isFulfilled }}
+        {{#if this.ontologiesTree.isFulfilled}}
 
           <span style="display: inline-block; margin-left: 8em;">
             {{input type="checkbox"
               name="this.controlOptions.showHierarchy"
               checked=this.controlOptions.showHierarchy
-              input=(action showHierarchyChanged preventDefault=false)
+              input=(action this.showHierarchyChanged preventDefault=false)
               id="checkbox-showHierarchyView" }}
             <label for="checkbox-showHierarchyView" title="Show tree of Ontologies">
               <i class="glyphicon glyphicon-tree-conifer"></i></label>
@@ -43,9 +47,9 @@
 
           <ul class="list-group borderless">
             {{record/entry-values
-              values=ontologiesTree.content
-              levelMeta=levelMeta
-              controlOptions=controlOptions
+              values=this.ontologiesTree.content
+              levelMeta=this.levelMeta
+              controlOptions=this.controlOptions
               loadBlock=(action this.noAction)
               selectBlock=(action this.noAction)
               selectedBlock=(action this.noAction)

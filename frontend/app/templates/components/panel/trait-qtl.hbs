@@ -1,19 +1,24 @@
 
     <ul id="display-traits" class="list-group">
-        {{#if displayData.length}}
+        {{#if this.displayData.length}}
         {{!-- use min-height because currently only elements are <li> are float. --}}
         <li class="list-group-item" style="min-height: 55px;" >
           <span class="pull-right" >
-            {{input type="checkbox" name="viewAllFlag" checked=viewAllFlag  class="toggle-checkbox"
-              input=(action this.viewAll value='target.checked') }}
+            {{input
+              type="checkbox"
+              name="viewAllFlag"
+              checked=this.viewAllFlag
+              class="toggle-checkbox"
+              input=(action this.viewAll value='target.checked')
+            }}
           </span>
           <label class="pull-right" style="margin: 0.7em;">Show / Hide QTLs of all Traits</label>
         </li>
         {{/if}}
 
-        {{#each displayData as |trait|}}
+        {{#each this.displayData as |trait|}}
         <li 
-            class="list-group-item {{if (compare trait.id '===' selectedTrait.id) 'list-group-item-warning'}}"
+            class="list-group-item {{if (compare trait.id '===' this.selectedTrait.id) 'list-group-item-warning'}}"
             data-trait-id={{trait.id}}
             {{!-- action "selectTrait" trait on="click" --}}>
             <span style={{safe-style background-color=trait.colour}} class="traitColourBlock"></span>

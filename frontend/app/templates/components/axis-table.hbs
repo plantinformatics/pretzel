@@ -1,6 +1,11 @@
 
-{{#data-table data=tableData selectionMode='multiple' 
-   selectionChanged=(action 'selectionChanged') classNames=tableClassNames as |t|}}
+{{#data-table
+  data=this.tableData
+  selectionMode='multiple'
+  selectionChanged=(action "selectionChanged")
+  classNames=this.tableClassNames
+  as |t|
+}}
   {{t.selectionColumn}}
   {{t.column propertyName='feature' name='Feature'}}
   {{t.column propertyName='position' name='Position'}}

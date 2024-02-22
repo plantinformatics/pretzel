@@ -2,7 +2,7 @@
 <span>Connections Enabled :</span>
 
 <ul class="list-group">
-  {{#each-in flowsService.enabledFlows as |name flow|  }}    {{!-- key="name" ? --}}
+  {{#each-in this.flowsService.enabledFlows as |name flow|  }}    {{!-- key="name" ? --}}
     <li class="list-group-item">
       
       {{#if false }}  {{!-- debug trace --}}

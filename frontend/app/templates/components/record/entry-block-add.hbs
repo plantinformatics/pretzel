@@ -1,26 +1,26 @@
-{{#if entry.isViewed}}
+{{#if this.entry.isViewed}}
 {{else}}
   {{elem/button-base
     classSize='xs'
     classColour='success'
     icon='plus'
-    onClick=(action "loadBlock" entry)}}
+    onClick=(action "loadBlock" this.entry)}}
 {{/if}}
-{{entry.datasetId.content.name}}
-{{entry.name}}
-{{if (compare entry.name '!==' entry.scope) entry.scope }}
+{{this.entry.datasetId.content.name}}
+{{this.entry.name}}
+{{if (compare this.entry.name '!==' this.entry.scope) this.entry.scope }}
 {{!-- namespace is often too long; maybe fold it;  omit for now. --}}
 {{!-- entry.namespace --}}
 <span>
   <button class="badge btn btn-xs" style="background-color: #999;"
     onClick={{action this.toggleClicked}}
     onmouseover={{action this.enter}} onmouseout={{action this.leave}} >
-    {{entry.count}}
+    {{this.entry.count}}
   </button>
 
   {{#ember-popover side="auto" popperContainer="body" isShown=this.showToggleablePopover event="none" }}
   <ul class='feature-found'>
-    {{#each features as |feature|}}
+    {{#each this.features as |feature|}}
     <li>
       {{feature.name}}
       {{#with (compute (action this.featureHasAliases feature.name) ) as |featureAliases| }}

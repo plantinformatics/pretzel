@@ -1,5 +1,5 @@
 <div>
-  {{#elem/icon-toggle state=detailed iconTrue='collapse-down' iconFalse='expand' }}
+  {{#elem/icon-toggle state=this.detailed iconTrue='collapse-down' iconFalse='expand' }}
     {{#ember-tooltip side="right" delay=500}}
       Toggle the detailed display of the filter / grouping.
     {{/ember-tooltip}}
@@ -31,12 +31,12 @@
 
 <div class="filter-group-row">
   {{input
-    value=data.pattern
+    value=this.data.pattern
     class="form-control"
-    enter=(action changed this)
+    enter=(action this.changed this)
     placeholder="string or regular expression" }}
   {{#elem/button-base
-    click=(action changed this)
+    click=(action this.changed this)
     icon='ok'
     classColour="info"
     class='submit'
@@ -47,18 +47,22 @@
   {{/elem/button-base}}
 </div>
 
-{{#if detailed}}
+{{#if this.detailed}}
 
   {{!-- Filter or Grouping --}}
   <div class="filter-group-row" style="margin-top:1em">
     <label class="filter-group-col">Apply...</label>
     <span class="filter-group-2cols">
-      {{radio-button value='filter' groupValue=data.filterOrGroup
-        changed=(action changed this preventDefault=false)
+      {{radio-button
+        value='filter'
+        groupValue=this.data.filterOrGroup
+        changed=(action this.changed this preventDefault=false)
       }}
       Filter &nbsp;&nbsp;
-      {{radio-button value='group' groupValue=data.filterOrGroup
-        changed=(action changed this preventDefault=false)
+      {{radio-button
+        value='group'
+        groupValue=this.data.filterOrGroup
+        changed=(action this.changed this preventDefault=false)
       }}
       Grouping
     </span>
@@ -68,14 +72,20 @@
   <div class="filter-group-row">
     <label class="filter-group-col">Search...</label>
     <span class="filter-group-col">
-      {{input type="checkbox" name="fieldName" checked=data.fieldName
-        click=(action changed this preventDefault=false)
+      {{input
+        type="checkbox"
+        name="fieldName"
+        checked=this.data.fieldName
+        click=(action this.changed this preventDefault=false)
       }}
       Names
     </span>
     <span class="filter-group-col">
-      {{input type="checkbox" name="fieldMeta" checked=data.fieldMeta
-        click=(action changed this preventDefault=false)
+      {{input
+        type="checkbox"
+        name="fieldMeta"
+        checked=this.data.fieldMeta
+        click=(action this.changed this preventDefault=false)
       }}
       Metadata
     </span>
@@ -85,14 +95,20 @@
   <div class="filter-group-row">
     <label class="filter-group-col">Matching...</label>
     <span class="filter-group-col">
-      {{input type="checkbox" name="matchKey" checked=data.matchKey
-        click=(action changed this preventDefault=false)
+      {{input
+        type="checkbox"
+        name="matchKey"
+        checked=this.data.matchKey
+        click=(action this.changed this preventDefault=false)
       }}
       Keys
     </span>
     <span class="filter-group-col">
-      {{input type="checkbox" name="matchValue" checked=data.matchValue
-        click=(action changed this preventDefault=false)
+      {{input
+        type="checkbox"
+        name="matchValue"
+        checked=this.data.matchValue
+        click=(action this.changed this preventDefault=false)
       }}
       Values
     </span>
@@ -102,8 +118,11 @@
   <div class="filter-group-row">
     <label class="filter-group-col">Include...</label>
     <span class="filter-group-2cols">
-      {{input type="checkbox" name="applyDataset" checked=data.applyDataset
-        click=(action changed this preventDefault=false)
+      {{input
+        type="checkbox"
+        name="applyDataset"
+        checked=this.data.applyDataset
+        click=(action this.changed this preventDefault=false)
       }}
       Datasets
     </span>
@@ -113,33 +132,44 @@
   <div class="filter-group-row">
     <div class="filter-group-col" />
     <span class="filter-group-col">
-      {{input type="checkbox" name="applyBlock" checked=data.applyBlock
-        click=(action changed this preventDefault=false)
+      {{input
+        type="checkbox"
+        name="applyBlock"
+        checked=this.data.applyBlock
+        click=(action this.changed this preventDefault=false)
       }}
       Blocks
     </span>
     <span class="filter-group-col">
-      {{#elem/icon-toggle state=blockssubs iconTrue='collapse-down' iconFalse='expand' }}
+      {{#elem/icon-toggle
+        state=this.blockssubs iconTrue='collapse-down' iconFalse='expand'
+      }}
         {{#ember-tooltip side="bottom" delay=500}}
           Toggle Block sub-options
         {{/ember-tooltip}}
       {{/elem/icon-toggle}}
     </span>
   </div>
-  {{#if blockssubs}}
+  {{#if this.blockssubs}}
     <div class="filter-group-row">
       <div class="filter-group-col" />
       <span class="filter-group-col">
-        {{input type="checkbox" name="fieldScope" checked=data.fieldScope
-          click=(action changed this preventDefault=false)
-          disabled=(not data.applyBlock)
+        {{input
+          type="checkbox"
+          name="fieldScope"
+          checked=this.data.fieldScope
+          click=(action this.changed this preventDefault=false)
+          disabled=(not this.data.applyBlock)
         }}
         Scope
       </span>
       <span class="filter-group-col">
-        {{input type="checkbox" name="fieldNamespace" checked=data.fieldNamespace
-          click=(action changed this preventDefault=false)
-          disabled=(not data.applyBlock)
+        {{input
+          type="checkbox"
+          name="fieldNamespace"
+          checked=this.data.fieldNamespace
+          click=(action this.changed this preventDefault=false)
+          disabled=(not this.data.applyBlock)
         }}
         Namespace
       </span>
@@ -150,22 +180,31 @@
   <div class="filter-group-row">
     {{!-- pattern isRegExp --}}
     <span>
-      {{input type="checkbox" name="isRegExp" checked=data.isRegExp
-        click=(action changed this preventDefault=false)
+      {{input
+        type="checkbox"
+        name="isRegExp"
+        checked=this.data.isRegExp
+        click=(action this.changed this preventDefault=false)
       }}
       RegExp
     </span>
     {{!-- negate string / pattern --}}
     <span>
-      {{input type="checkbox" name="isNegated" checked=data.isNegated
-        click=(action changed this preventDefault=false)
+      {{input
+        type="checkbox"
+        name="isNegated"
+        checked=this.data.isNegated
+        click=(action this.changed this preventDefault=false)
       }}
       Negated
     </span>
     {{!-- caseSensitive string / pattern --}}
     <span>
-      {{input type="checkbox" name="isCaseSensitive" checked=data.isCaseSensitive
-        click=(action changed this preventDefault=false)
+      {{input
+        type="checkbox"
+        name="isCaseSensitive"
+        checked=this.data.isCaseSensitive
+        click=(action this.changed this preventDefault=false)
       }}
       Case Sensitive
     </span>

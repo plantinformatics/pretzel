@@ -16,7 +16,9 @@ import {
  * Now using : github.com/html-next/ember-raf-scheduler
  */
 
-import { scheduler } from 'ember-raf-scheduler';
+// ember-raf-scheduler is not updated for Ember v4
+// import { scheduler } from 'ember-raf-scheduler';
+const scheduler = undefined;
 
 //------------------------------------------------------------------------------
 
@@ -1146,8 +1148,9 @@ function AxisBrushZoom(oa) {
 
   function axisScaleChangedRaf(axis1d, t, updatePaths) {
     const
+    fn = () => axisScaleChanged(axis1d, t, updatePaths),
     job = 
-      scheduler.schedule('affect', () => axisScaleChanged(axis1d, t, updatePaths));
+      scheduler ? scheduler.schedule('affect', fn) : fn();
   }
   /** @param axis1d
    * @param updatePaths true : also update foreground paths.

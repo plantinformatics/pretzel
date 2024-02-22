@@ -117,7 +117,7 @@
     "ember-jsoneditor": "git+https://git@github.com/plantinformatics/ember-jsoneditor.git",
     "ember-lodash": "^4.19.5",
     "ember-promise-helpers": "^2.0.0",
-    "ember-raf-scheduler": "",
+    "ember-radio-button": "github:yapplabs/ember-radio-button",
     "ember-resolver": "^11.0.1",
     "ember-sortable": "^5",
     "ember-source": "^4.12",

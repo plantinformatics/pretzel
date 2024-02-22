@@ -1,8 +1,9 @@
 {{#tab.pane id=this.id title=this.name}}
 
-{{#elem/icon-toggle state=allActive
+{{#elem/icon-toggle state=this.allActive
   changed=(action 'allActiveChanged')
-  iconTrue='arrow-down' iconFalse='arrow-right' }}
+  iconTrue='arrow-down'
+  iconFalse='arrow-right' }}
   {{#ember-tooltip side="right" delay=2000}}
     Expand the tree of datasets displayed in the explorer, showing all the results of the filter / grouping.
   {{/ember-tooltip}}
@@ -11,13 +12,16 @@
 {{yield}}
 
 <ul class="list-group borderless">
-  {{record/entry-values values=values levelMeta=levelMeta
-    controlOptions=controlOptions
+  {{record/entry-values
+    values=this.values
+    levelMeta=this.levelMeta
+    controlOptions=this.controlOptions
     loadBlock="loadBlock"
     selectBlock=(action 'selectBlockAndDataset')
-    selectedBlock=selectedBlock
+    selectedBlock=this.selectedBlock
     selectDataset="selectDataset"
-    selectExpander=selectExpander}}
+    selectExpander=this.selectExpander
+  }}
 </ul>
 
 {{/tab.pane}}

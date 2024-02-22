@@ -7,10 +7,10 @@
   {{#if panelContainer.showComponent}}
 
   {{goto-feature-list  class="panel panel-primary"
-    queryParamsState=queryParamsState
-    selectedFeatures=selectedFeatures
+    queryParamsState=this.queryParamsState
+    selectedFeatures=this.selectedFeatures
     updateFeaturesInBlocks="updateFeaturesInBlocks"
-    loadBlock=(action loadBlock)
+    loadBlock=(action this.loadBlock)
   }}
 
   {{/if}} {{!-- showComponent --}}

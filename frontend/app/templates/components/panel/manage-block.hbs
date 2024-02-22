@@ -1,24 +1,24 @@
-{{#if block}}
+{{#if this.block}}
   <h4>{{record/entry-block
     loadBlock="loadBlock"
-    entry=block}}
+    entry=this.block}}
   </h4>
-  <label>Namespace</label><p>{{block.namespace}}</p>
+  <label>Namespace</label><p>{{this.block.namespace}}</p>
 
-  <label>Features</label><p>{{block.features.length}}</p>
+  <label>Features</label><p>{{this.block.features.length}}</p>
 
   {{#elem/panel-container state="primary" as |panelContainer|}}
     {{#elem/panel-heading icon="tags" panelContainer=panelContainer}}
       Annotations
-      <span class="badge">{{block.annotations.length}}</span>
+      <span class="badge">{{this.block.annotations.length}}</span>
       {{elem/button-refresh}}
     {{/elem/panel-heading}}
 
     {{#if panelContainer.showComponent}}
     <ul class="list-group">
       {{!-- existing annotations --}}
-      {{#if block.annotations}}
-        {{#each block.annotations as |entry index|}}
+      {{#if this.block.annotations}}
+        {{#each this.block.annotations as |entry index|}}
           {{record/entry-annotation
             entry=entry}}
         {{/each}}
@@ -34,7 +34,7 @@
           {{input
             enter=(action "addAnnotation")
             type="text"
-            value=newAnnotation
+            value=this.newAnnotation
             class="form-control"
             placeholder="New annotation..."}}
           <span class="input-group-btn">
@@ -42,7 +42,7 @@
               icon="plus"
               classColour="success"
               onClick=(action "addAnnotation")
-              disabled=disableCreateTag
+              disabled=this.disableCreateTag
             }}
           </span>
         </div>
@@ -54,14 +54,14 @@
   {{#elem/panel-container state="primary" as |panelContainer|}}
     {{#elem/panel-heading icon="resize-vertical" panelContainer=panelContainer}}
       Intervals
-      <span class="badge">{{block.intervals.length}}</span>
+      <span class="badge">{{this.block.intervals.length}}</span>
       {{elem/button-refresh}}
     {{/elem/panel-heading}}
 
     {{#if panelContainer.showComponent}}
     <ul class="list-group">
-      {{#if block.intervals}}
-        {{#each block.intervals as |entry index|}}
+      {{#if this.block.intervals}}
+        {{#each this.block.intervals as |entry index|}}
           {{record/entry-interval
             entry=entry
             selectBlock="selectBlock"
@@ -74,13 +74,13 @@
           </div>
         </li>
       {{/if}}
-      {{#if intervalSelected}}
+      {{#if this.intervalSelected}}
         <li href="#" class="list-group-item list-group-item-info">
           <div class="input-group">
             {{input
               enter=(action "addInterval")
               type="text"
-              value=newInterval
+              value=this.newInterval
               class="form-control"
               placeholder="New interval..."}}
             <span class="input-group-btn">
@@ -88,18 +88,18 @@
                 icon="plus"
                 classColour="success"
                 onClick=(action "addInterval")
-                disabled=disableCreateInterval
+                disabled=this.disableCreateInterval
               }}
             </span>
           </div>
           <h5> {{elem/icon-base name="arrow-up"}}
             <span class="label label-info">
-              {{elem/icon-base name="asterisk"}} {{intervalSelected.start.Marker}} {{intervalSelected.start.Position}} 
+              {{elem/icon-base name="asterisk"}} {{this.intervalSelected.start.Marker}} {{this.intervalSelected.start.Position}} 
             </span>
           </h5>
           <h5> {{elem/icon-base name="arrow-down"}}
             <span class="label label-info">
-              {{elem/icon-base name="asterisk"}} {{intervalSelected.end.Marker}} {{intervalSelected.end.Position}}
+              {{elem/icon-base name="asterisk"}} {{this.intervalSelected.end.Marker}} {{this.intervalSelected.end.Position}}
             </span>
           </h5>
         </li>

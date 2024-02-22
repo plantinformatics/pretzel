@@ -20,7 +20,7 @@
 </div>
 
 {{input
-    value=feature1
+    value=this.feature1
     class="form-control"
     placeholder="Marker/Gene Name / Location" }}
 
@@ -32,8 +32,8 @@
   />
   <label>Interval</label>
   {{input
-      type=hidden
-      value=feature2
+      type=this.hidden
+      value=this.feature2
       class="form-control"
       placeholder="Marker/Gene Name / Location" }}
 
@@ -51,17 +51,19 @@
 
 <button>Map
   {{#ember-popover  }}
-    {{goto-map mapList=mapsOfFeature }}
+    {{goto-map mapList=this.mapsOfFeature }}
   {{/ember-popover }}
 </button>
 <div>
-  {{#each mapsOfFeature as |map|}}
+  {{#each this.mapsOfFeature as |map|}}
     {{ map.name }}
   {{/each}}
 </div>
 </div>
 
-{{goto-ensembl featureName=feature1 selectedFeatures=selectedFeatures
-  selectedBlock=selectedBlock
+{{goto-ensembl
+  featureName=this.feature1
+  selectedFeatures=this.selectedFeatures
+  selectedBlock=this.selectedBlock
 }}
 

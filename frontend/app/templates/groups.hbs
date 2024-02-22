@@ -1,9 +1,9 @@
 <div class="group-outer groups">
 
-{{#if apiServers.multipleServers}}
+{{#if this.apiServers.multipleServers}}
   <div style="margin-bottom:3ex">
     <label>Server</label>
-    {{form/select-server selectedValue=model.server selectedServerChanged=(action this.selectedServerChanged) }}
+    {{form/select-server selectedValue=this.model.server selectedServerChanged=(action this.selectedServerChanged) }}
   </div>
 {{/if}}
 

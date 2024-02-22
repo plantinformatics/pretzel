@@ -2,7 +2,7 @@
 
     <li class="list-group-item">
       <span class="filter-group-col">
-        {{input type="checkbox" name="replaceDataset" checked=replaceDataset }}
+        {{input type="checkbox" name="replaceDataset" checked=this.replaceDataset }}
         <label>Replace Dataset with upload</label>
       </span>
     </li>
@@ -72,9 +72,9 @@ https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Comm
 
 <div class="panel panel-primary"></div>
 {{elem/panel-message
-  successMessage=successMessage
-  warningMessage=warningMessage
-  errorMessage=errorMessage}}
+  successMessage=this.successMessage
+  warningMessage=this.warningMessage
+  errorMessage=this.errorMessage}}
 
 <div>
   {{#each this.errors as |error|}}
@@ -85,10 +85,10 @@ https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Comm
   {{/each}}
 </div>
 
-{{#if isProcessing}}
+{{#if this.isProcessing}}
   {{#elem/panel-form
     name="info"
     heading="Processing..." }}
-      {{progressMsg}}
+      {{this.progressMsg}}
   {{/elem/panel-form}}
 {{/if}}

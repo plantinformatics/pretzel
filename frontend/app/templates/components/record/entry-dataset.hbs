@@ -1,24 +1,24 @@
 {{!-- log 'entry-dataset' entry.name entry  --}}
-<li class="list-group-item list-group-item-info {{if (compare entry.id '===' selectedDataset.id) 'list-group-item-warning'}}" {{action "selectDataset" entry on="click"}} style="display:flex">
-  {{#if editing }}
+<li class="list-group-item list-group-item-info {{if (compare this.entry.id '===' this.selectedDataset.id) 'list-group-item-warning'}}" {{action "selectDataset" this.entry on="click"}} style="display:flex">
+  {{#if this.editing }}
     <div class="input-group">
       {{input
-        enter=(action "saveEdit" entry)
-        escape-press=(action "cancelEdit" entry)
+        enter=(action "saveEdit" this.entry)
+        escape-press=(action "cancelEdit" this.entry)
         type="text"
-        value=entry.displayName
+        value=this.entry.displayName
         class="form-control"
         placeholder="Placeholder"}}
       <span class="input-group-btn">
         {{elem/button-base
           icon="ok"
           classColour="success"
-          onClick=(action "saveEdit" entry)
+          onClick=(action "saveEdit" this.entry)
         }}
         {{elem/button-base
           icon="remove"
           classColour="danger"
-          onClick=(action "cancelEdit" entry)
+          onClick=(action "cancelEdit" this.entry)
         }}
       </span>
     </div>
@@ -26,19 +26,19 @@
     {{elem/button-base
       classSize='xs'
       classColour='default'
-      icon=expandIcon
-      onClick=(action "switchDataset" entry)}}
-    <span title={{entry.displayName}} class="truncate" style="flex: 1;">
-      {{entry.displayName}}
+      icon=this.expandIcon
+      onClick=(action "switchDataset" this.entry)}}
+    <span title={{this.entry.displayName}} class="truncate" style="flex: 1;">
+      {{this.entry.displayName}}
     </span>
-    {{elem/icon-acl record=entry}}
-    {{#if entry.owner }}
+    {{elem/icon-acl record=this.entry}}
+    {{#if this.entry.owner }}
       {{#elem/dropdown-container
         right=true}}
         {{#elem/dropdown-row
           icon="lock"
-          onClick=(action 'flipPublic' entry)}}
-          {{#if entry.public}}
+          onClick=(action 'flipPublic' this.entry)}}
+          {{#if this.entry.public}}
           Make Private
           {{else}}
           Make Public
@@ -46,8 +46,8 @@
         {{/elem/dropdown-row}}
         {{#elem/dropdown-row
           icon="pencil"
-          onClick=(action 'flipReadOnly' entry)}}
-          {{#if entry.readOnly}}
+          onClick=(action 'flipReadOnly' this.entry)}}
+          {{#if this.entry.readOnly}}
           Make Editable
           {{else}}
           Make Read-Only
@@ -56,17 +56,17 @@
         {{elem/dropdown-separator}}
         {{#elem/dropdown-row
           icon="remove"
-          onClick=(action "deleteRecord" entry)}}
+          onClick=(action "deleteRecord" this.entry)}}
           Delete
         {{/elem/dropdown-row}}
       {{/elem/dropdown-container}}
     {{else}}
-      {{#if noAuth}}
+      {{#if this.noAuth}}
         {{#elem/dropdown-container
           right=true}}
           {{#elem/dropdown-row
             icon="remove"
-            onClick=(action "deleteRecord" entry)}}
+            onClick=(action "deleteRecord" this.entry)}}
             Delete
           {{/elem/dropdown-row}}
         {{/elem/dropdown-container}}
@@ -74,10 +74,10 @@
     {{/if}}
   {{/if}}
 </li>
-{{#if entryLayout.active}}
-  {{#each data as |block|}}
+{{#if this.entryLayout.active}}
+  {{#each this.data as |block|}}
     <li 
-      class="list-group-item {{if (compare block.id '===' selectedBlock.id) 'list-group-item-warning'}} {{nameClass block}}"
+      class="list-group-item {{if (compare block.id '===' this.selectedBlock.id) 'list-group-item-warning'}}{{nameClass block}}"
       {{action "selectBlock" block on="click"}}>
       {{record/entry-block
         onDelete="onDelete"
