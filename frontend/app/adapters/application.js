@@ -14,6 +14,7 @@ import {
   getConfiguredEnvironment,
   getSiteOrigin
 } from '../utils/configuration';
+import { ensureTrailingString } from '../utils/string';
 
 import { breakPoint } from '../utils/breakPoint';
 import { dLog } from '../utils/common/log';
@@ -65,12 +66,8 @@ var config = {
    * This could be handled by extending the adapter and introducing rootURL
    * before namespace in urlPrefix(), but that may already be done in later
    * versions.
-   *
-   * The conditional expression could be reduced to simply ENV.rootURL.replace(/^\//, ''),
-   * but most often rootURL till be just '/'
    */
-  namespace: ((ENV.rootURL !== '/') ? ENV.rootURL.replace(/^\//, '') : '') +
-              ENV.apiNamespace,
+  namespace: ENV.rootURLNamespace,
 
   urlForFindRecord(id, type, snapshot) {
     let url = this._super(...arguments);
@@ -169,6 +166,12 @@ var config = {
         this.set('session.requestServer', server);
       }
 
+    /** If .host ends with rootURL then don't include rootURL in .namespace.
+     * @ember-data/adapter : urlPrefix() combines .host .namespace
+     */
+    if (ensureTrailingString(this.host, '/').endsWith(ENV.rootURL)) {
+      this.namespace = ENV.apiNamespace;
+    }
     let url = this._super(modelName, id, snapshot, requestType, query);
     dLog(fnName, 'url', url, modelName, id, /*snapshot,*/ requestType);
     return url;
