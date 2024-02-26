@@ -818,7 +818,7 @@ if (false)  // not required, possibly not up to date
 Stack.prototype.childBlocks = function (names)
 {
   let me = this,
-  blocks  = d3.keys(stacks.blocks).filter(function (a) { return stacks.blocks[a].getStack() == me; } );
+  blocks  = Object.keys(stacks.blocks).filter(function (a) { return stacks.blocks[a].getStack() == me; } );
   if (! names)
     blocks = blocks.map(function (a) { return stacks.blocks[a]; } );
   return blocks;
@@ -1226,7 +1226,7 @@ stacks.stackIDs = function()
  * stacks).  */
 stacks.axisIDs = function()
 {
-  return d3.keys(this.axesP);
+  return Object.keys(this.axesP);
 };
 /** @return an array of the blockIds of the all the blocks of all axes (in all
  * stacks).  */
@@ -1234,7 +1234,7 @@ stacks.blockIDs = function()
 {
   // this.axisIDs() are contained in this.blocks.
   let
-    blockIDs = d3.values(this.blocks).reduce(function (result, b) {
+    blockIDs = Object.values(this.blocks).reduce(function (result, b) {
       if (b.axis) result.push(b.axisName);
       return result; }, []);
   return blockIDs;

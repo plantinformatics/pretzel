@@ -145,3 +145,5 @@ if (! d3.divgrid && window.d3_divgrid) {
   d3.divgrid = window.d3_divgrid;
   console.log('d3_divgrid', window.d3_divgrid);
 }
+
+require('./d3-tip')

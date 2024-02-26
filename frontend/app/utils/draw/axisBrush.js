@@ -674,7 +674,7 @@ function AxisBrushZoom(oa) {
          * features, regardless of uniqueness of names.
          */
         let blockFeatures = block.get('features');  // was oa.z[block.axisName];
-        /*d3.keys()*/ blockFeatures.forEach(function(feature) {
+        blockFeatures.forEach(function(feature) {
           let f = feature.name;
           // let feature = blockFeatures[f];
           let value = feature?.value;

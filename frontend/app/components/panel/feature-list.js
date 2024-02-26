@@ -149,7 +149,7 @@ export default Component.extend({
         ! selectedFeatures
         || (selectedFeatures.length === 0)
         || ((selectedFeatures.length === 1)
-            && ((d3.keys(f = selectedFeatures[0]).length === 0)
+            && ((Object.keys(f = selectedFeatures[0]).length === 0)
                 || (f.Chromosome === null && f.Feature === null && f.Position === null)
                )
            );

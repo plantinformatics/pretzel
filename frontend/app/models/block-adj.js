@@ -41,8 +41,8 @@ export default Model.extend(Evented, {
    * and utils/draw/stacksAxes : blockAdjKeyFn()
    */
 
-  block0: belongsTo('block', { inverse: null }),
-  block1: belongsTo('block', { inverse: null }),
+  block0: belongsTo('block', {async: true, inverse: null}),
+  block1: belongsTo('block', {async: true, inverse: null}),
   blockId0: attr('string'),
   blockId1: attr('string'),
   // pathsResult : undefined,

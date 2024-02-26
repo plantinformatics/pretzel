@@ -144,7 +144,7 @@ function reduceIdChildrenTreeR(tree, parentKey, index, fn, result) {
  */
 function justUnmatched(value) {
   // could instead pass a flag to datasetFilter() to discard unmatched.
-  let result = value.hasOwnProperty('unmatched') && (d3.keys(value).length === 1);
+  let result = value.hasOwnProperty('unmatched') && (Object.keys(value).length === 1);
   return result;
 }
 

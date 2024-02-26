@@ -5,7 +5,7 @@ window.d3_divgrid = function(config) {
   var columns = [];
 
   var dg = function(selection) {
-    if (columns.length == 0) columns = d3.keys(selection.data()[0][0]);
+    if (columns.length == 0) columns = Object.keys(selection.data()[0][0]);
 
     // header
     selection.selectAll(".header")

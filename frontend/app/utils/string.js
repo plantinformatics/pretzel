@@ -23,6 +23,7 @@ function stringCountString(string, stringSearch) {
  * (https://en.wikipedia.org/wiki/Title_case, see also CamelCase, which has a
  * leading lower-case https://en.wikipedia.org/wiki/Camel_case).
  *
+ * Replaces equivalent capitalize() (components/panel/paths-table.js) added in b3150c70, also :
  * extract from : https://stackoverflow.com/a/7225450/18307804, ZenMaster
  * (there are Ember utility functions for this also ...)
  */

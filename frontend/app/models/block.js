@@ -83,7 +83,7 @@ export default Model.extend({
   annotations: hasMany('annotation', { async: false, inverse : null }),
   intervals: hasMany('interval', { async: false, inverse : null }),
   // possibly async:true when !allInitially, if needed.
-  features: hasMany('feature', { async: false }),
+  features: hasMany('feature', {async: true, inverse : null}),
   range: attr('array'),
   scope: attr('string'),
   name: attr('string'),

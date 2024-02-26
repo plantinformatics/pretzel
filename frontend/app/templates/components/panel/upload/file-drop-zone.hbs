@@ -34,7 +34,8 @@ https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Comm
 
 --}}
 
-<FileDropzone @name="files" class="border border-primary" style="min-height: 15ex;" as |dropzone queue|>
+{{#let (file-queue name="datasets" onFileAdded=(action this.uploadSpreadsheet)) as |queue|}}
+<FileDropzone @name="files" class="border border-primary" style="min-height: 15ex;" as |dropzone|>
   {{#if dropzone.active}}
     {{#if dropzone.valid}}
       Drop to upload
@@ -49,10 +50,16 @@ https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Comm
       {{#if dropzone.supported}}
         Drag and drop Spreadsheets and JSON files onto this area to upload them or
       {{/if}}
-      <FileUpload
+      <!-- FileUpload
         @name="files"
         @for="upload-file"
-        @accept="
+        @multiple={{true}}>
+        <a tabindex=0></a>
+      </FileUpload -->
+
+      <input
+        type="file"
+        accept="
 	  application/json,
 	  application/vnd.google-apps.spreadsheet,
 	  application/vnd.oasis.opendocument.spreadsheet,
@@ -62,13 +69,14 @@ https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Comm
 	  application/zip,
 	  text/gff3
         "
-        @multiple={{true}}
-        @onfileadd={{action this.uploadSpreadsheet}}>
-        <a tabindex=0>Add a Spreadsheet.</a>
-      </FileUpload>
+        {{queue.selectFile}} {{!-- filter=this.validateFile --}}
+        >
+      <label>Add a Spreadsheet.</label>
     </p>
   {{/if}}
 </FileDropzone>
+{{/let}}
+
 
 <div class="panel panel-primary"></div>
 {{elem/panel-message

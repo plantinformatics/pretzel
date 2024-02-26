@@ -29,7 +29,9 @@ export default Component.extend({
       // tab.select() replaces this.addClassActive();
       let tabId = this.get('tabId');
       dLog('didRender', this.attrs.nav.active, this.attrs.tab.activeId);
+      if (false) {  // causes : "infinite rendering invalidation detected"
       this.attrs.tab.select(tabId);
+      }
     }
   },
 

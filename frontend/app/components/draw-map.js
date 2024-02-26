@@ -324,11 +324,12 @@ export default Component.extend(Evented, {
   updateColouredFeatures: function(features) {
     console.log("updateColouredFeatures in components/draw-map.js");
     let self = this;
-    this.get('scroller').scrollVertical('#holder', {
-      duration : 1000,
-      // easing : 'linear', // default is swing
-      offset : -60
-    }).then(function () {
+    /** replaces : (ember-scroll-to) .scrollVertical('#holder', { ... offset : -60 });
+     * not tested
+     */
+    const holderTop = document.getElementById("myDiv").offsetTop;
+    window.scrollTo({ top: holderTop - 60, behavior: 'smooth'});
+    later(function () {
       /* Could invert this control by using the same PathClasses instance as is
        * used for .configurePathColour() which sets .colouredFeaturesChanged,
        * and could instead set an enable flag, and here call
@@ -337,7 +338,7 @@ export default Component.extend(Evented, {
       let colouredFeaturesChanged = self.get('colouredFeaturesChanged');
       if (colouredFeaturesChanged)
         colouredFeaturesChanged(features);
-    });
+    }, 1000);
   },
 
   draw_flipRegion : undefined,
@@ -381,8 +382,6 @@ export default Component.extend(Evented, {
 
   /*------------------------------------------------------------------------*/
   
-  scroller: service(),
-
   axes1d : computed( function () { return stacks.axes1d; }),
   /*
    * stacks.axes1d is [axisID] -> axis-1d.
@@ -515,7 +514,7 @@ export default Component.extend(Evented, {
       /* Cause the evaluation of stacks-view:axesP; also evaluates blockAdjIds,
        * and block-adj.hbs evaluates paths{,Aliases}ResultLength and hence
        * requests paths.  This dependency architecture will be made clearer.  */
-      this.get('flowsService.blockAdjs');
+      // this.get('flowsService.blockAdjs');
       this.draw(retHash, 'dataReceived');
     });
   },
@@ -544,7 +543,7 @@ export default Component.extend(Evented, {
     {
       myData = {};
     }
-    myDataKeys = d3.keys(myData);
+    myDataKeys = Object.keys(myData);
     dLog("draw()", myData, myDataKeys.length, source);
 
     // Draw functionality goes here.
@@ -709,7 +708,7 @@ export default Component.extend(Evented, {
     if (! oa.z)
       oa.blockFeatureLocation = oa.z = myData;
     else  // merge myData into oa.z
-      d3.keys(myData).forEach(function (blockId) {
+      Object.keys(myData).forEach(function (blockId) {
         if (! oa.z[blockId])
           oa.z[blockId] = myData[blockId];
       });
@@ -732,7 +731,7 @@ export default Component.extend(Evented, {
       // when tasks are complete, receiveChr() is called via blockService : receivedBlock
     }
     else
-      d3.keys(myData).forEach(function (axis) {
+      Object.keys(myData).forEach(function (axis) {
         /** axis is chr name */
         receiveChr(axis, myData[axis], source);
       });
@@ -780,7 +779,7 @@ export default Component.extend(Evented, {
         delete c.chrName;
         if (trace_stack)
           dLog("receiveChr", axis, cmName[axis]);
-        d3.keys(c).forEach(function(feature) {
+        Object.keys(c).forEach(function(feature) {
           if (! isOtherField[feature]) {
             let f = z[axis][feature];
             // alternate filter, suited to physical maps : f.location > 2000000

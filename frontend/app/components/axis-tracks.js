@@ -926,7 +926,7 @@ export default InAxis.extend({
     /* input data errors such as [undefined, undefined] in intervals passed to createIntervalTree() can cause
      * e.g. RangeError: Maximum call stack size exceeded in Array.sort().
      */
-    d3.keys(intervals).forEach(function (axisName) {
+    Object.keys(intervals).forEach(function (axisName) {
       //Build tree
       intervalTree[axisName] = createIntervalTree(intervals[axisName]);
     });
@@ -1012,7 +1012,7 @@ export default InAxis.extend({
     dLog(gAxis.node());
     let layerModulus = thisAt.controlsView.axisLayerModulus;
     /** could skip the reference block blockIds[0]. */
-    let blockIds = d3.keys(tracks.intervalTree);
+    let blockIds = Object.keys(tracks.intervalTree);
     let
     /** For parseIntervals(), blockId is "1"; otherwise expect that blockId is a child of axisID.
         axisID = gAxis.node().parentElement.__data__, */
@@ -2101,7 +2101,7 @@ export default InAxis.extend({
     'trackBlocks.[]', 'trackBlocksR.0.featuresLength', 'trackBlocksR.0.features.[]',
     function () {
       let lengths = this.get('trackBlocks').map((block) => [block.axisName, block.block.get('featuresLength')]);
-      // similar : d3.keys(block.features())
+      // similar : Object.keys(block.features())
       console.log('blocksFeaturesLengths', lengths);
       return lengths;
     }),
@@ -2203,11 +2203,11 @@ export default InAxis.extend({
         blockFeatures[blockId] = features;
         return blockFeatures;
       }, {}),
-    intervalNames = d3.keys(intervals),
+    intervalNames = Object.keys(intervals),
     tracks = this.makeTree(intervals, intervalNames);
     /** may need to limit this to apply only for a significant change of zoomedDomain, e.g. zoomedDomainDebounced.  */
     if (clearLayers) {
-      d3.keys(intervals).forEach(function (axisName) {
+      Object.keys(intervals).forEach(function (axisName) {
         let ifs = intervals[axisName];
         // regionOfTree() will assign a layer to features with !f.layer
         ifs.forEach((f) => {if (f.layer) { f.layer = undefined; } });
@@ -2523,7 +2523,7 @@ export default InAxis.extend({
          } else
       */
       if (isViewed) {
-        let blockIds = d3.keys(tracks.intervalTree);
+        let blockIds = Object.keys(tracks.intervalTree);
 
         // intersect with axis zoom region;  layer the overlapping tracks; draw tracks.
         this.layoutAndDrawTracks.apply(this, [undefined, tracks]);

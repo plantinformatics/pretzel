@@ -1442,17 +1442,20 @@ export default ManageBase.extend({
       /** f may be {unmatched: Array}, which can be skipped. */
       let p = f.get && f.get('parent.content');
       return p; }) : [],
-    /** can update this .nest() to d3.group() */
-    n = d3.nest()
     /* the key function will return undefined or null for datasets without parents, which will result in a key of 'undefined' or 'null'. */
-      .key(function(f) { let p = f.get && f.get('parent'); return p ? p.get('displayName') : f.get('parentName'); })
-      .entries(withParentOnly ? withParent : datasets);
-    /** this reduce is mapping an array  [{key, values}, ..] to a hash {key : value, .. } */
+    key = function(f) { let p = f.get && f.get('parent'); return p ? p.get('displayName') : f.get('parentName'); },
+    entries = (withParentOnly ? withParent : datasets),
+    n = d3.group(entries, key);
+
+    /** originally used d3.nest() which produced an array [{key, values}, ..],
+     * whereas d3.group() returns {key : value, .. }, converted via .entries() to [[key, values], ..] .
+     * Since this .reduce() is mapping that result to a hash {key : value, .. },
+     * some simplification may be possible here.
+     */
     let grouped =
-      n.reduce(
+      Object.entries(n).reduce(
         function (result, datasetsByParent) {
-          let key = datasetsByParent.key,
-          values = datasetsByParent.values;
+          const [key, values] = datasetsByParent;
           /** hash: [scope] -> [blocks]. */
           if (trace_dataTree > 1)
             console.log('datasetsByParent', datasetsByParent);
@@ -1498,7 +1501,7 @@ export default ManageBase.extend({
           {
             /** key is parent name */
             result[key] =
-              me.datasetsToBlocksByScope(tabName, levelMeta, datasetsByParent.values);
+              me.datasetsToBlocksByScope(tabName, levelMeta, values);
           };
           return result;
         },

@@ -52,7 +52,7 @@ var config = {
 
   get host() {
     let store = this.store,
-    adapterOptions = store && store.adapterOptions,
+    adapterOptions = store && null, // store.adapterFor('block'),
     host = (adapterOptions && adapterOptions.host) || get(this, '_server.host');
     if (trace) {
       dLog('app/adapters/application.js host', adapterOptions, host, (trace < 2) ? [store.name, this._server?.name] : [this, store, this._server]);

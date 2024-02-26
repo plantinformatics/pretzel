@@ -56,6 +56,8 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
   apiServers: service(),
   controlsService : service('controls'),
   queryParamsService : service('query-params'),
+  router: service(),
+
 
   //----------------------------------------------------------------------------
   // based on ember-parachute/README.md
@@ -175,8 +177,8 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
 
       let queryParams = this.get('model.params');
       let me = this;
-      later( function () {
-        me.transitionToRoute({'queryParams': queryParams }); });
+      later( () => {
+        this.router.transitionTo({'queryParams': queryParams }); });
     },
     /** Un-view a block.
      * @param block store object; this is the only difference from action removeMap(),
@@ -465,6 +467,7 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
       'ember-polyfills.deprecate-assign',
     ];
     registerDeprecationHandler((message, options, next) => {
+      dLog('init', 'registerDeprecationHandler', options.id);
       if (! deprecationIds.includes(options.id)) {
         next(message, options);
       }

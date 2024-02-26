@@ -13,6 +13,7 @@ import { alphanum } from '@cablanchard/koelle-sort';
 import { valueGetType, logV } from '../../utils/value-tree';
 
 import { parentOfType, elt0 } from '../../utils/ember-devel';
+import { toTitleCase } from '../../utils/string';
 
 /*----------------------------------------------------------------------------*/
 
@@ -22,6 +23,8 @@ const dLog = console.debug;
 var levelMeta;
 
 const trace_entryValues = 1;
+
+const capitalize = toTitleCase;
 
 /*----------------------------------------------------------------------------*/
 
@@ -134,7 +137,7 @@ export default EntryBase.extend({
       else
         modelName = this.modelName(values);
       if (modelName)
-        modelName = modelName.capitalize();
+        modelName = capitalize(modelName);
     }
     return modelName;
   },

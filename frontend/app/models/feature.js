@@ -27,8 +27,8 @@ export default Model.extend({
   value: attr(),
   range: attr(),
   values: attr(),
-  parentId: belongsTo('feature', {inverse: 'features'}),
-  features: hasMany('feature', {inverse: 'parentId'}),
+  parentId: belongsTo('feature', {async: true, inverse: 'features'}),
+  features: hasMany('feature', {async: true, inverse: 'parentId'}),
 
   /*--------------------------------------------------------------------------*/
 
