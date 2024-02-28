@@ -52,6 +52,7 @@ envNames =
     'DEBUG',
     'DOTENV_CONFIG_DEBUG',
     'DOTENV_CONFIG_PATH',
+    'DOTENV_CONFIG_OVERRIDE',
   ];
 const
 processFieldNames =

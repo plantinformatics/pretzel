@@ -2,7 +2,7 @@ import Component from '@glimmer/component';
 import { computed } from '@ember/object';
 import { alias, reads } from '@ember/object/computed';
 import { later, /*once, bind,*/ debounce } from '@ember/runloop';
-import { task, didCancel } from 'ember-concurrency';
+import { /*task,*/ didCancel } from 'ember-concurrency';
 
 import { keepLatestTask } from 'ember-concurrency-decorators';
 
@@ -57,6 +57,15 @@ export default class DrawGraphAnnotationsComponent extends Component {
 
   //----------------------------------------------------------------------------
 
+  willDestroy() {
+    dLog('willDestroy');
+    // .renderOnce() will get cancelled so use .render().
+    this.render();
+    window.PretzelFrontend.graphAnnotations = null;
+  }
+
+  //----------------------------------------------------------------------------
+
   @computed()
   get renderOnceFn () {
     return () => ! this.isDestroying && this.renderOnce();
@@ -75,6 +84,7 @@ export default class DrawGraphAnnotationsComponent extends Component {
             dLog(fnName, 'taskInstance.catch', error);
             throw error;
           } else {
+            dLog(fnName, 'taskInstance.catch', 'TaskCancelation', error);
           }
         });
     }
@@ -152,10 +162,14 @@ export default class DrawGraphAnnotationsComponent extends Component {
       pM = pE.merge(pS);
       pM
         .transition().duration(100)
-        .attr('d', axis1d => this.annotationPath(axis1d, tableX, tableRowInterval));
+        .attr('d', axis1d =>
+          axis1d && ! axis1d.isDestroying &&
+            this.annotationPath(axis1d, tableX, tableRowInterval));
       pS.exit().remove();
       if (trace) {
-        dLog(fname, axes, viewportWidth, tableX, stackLocation, pS.nodes(), pE.nodes(), pM.node(), pM.nodes());
+        dLog(
+          fname, model.userSettings.genotype.showTablePositionAlignment, tableIsVisible,
+          axes, viewportWidth, tableX, stackLocation, pS.nodes(), pE.nodes(), pM.node(), pM.nodes());
       }
     }
   }

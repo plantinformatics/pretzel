@@ -595,6 +595,9 @@ export default Component.extend({
     }
     this.addComponentClass();
   },
+  /** Update the class list of the component element. Classes :
+   * . gtMergeRows
+   */
   addComponentClass() {
     /** gtMergeRows : datasetId is not displayed, so width is not set  */
     let ot = d3.select('#observational-table');
@@ -611,7 +614,7 @@ export default Component.extend({
     fnName = 'topLeftDialogUpdate',
     /** related : cornerClones */
     topLeftDialog = $('#observational-table .ht_clone_top_left_corner .colHeader.cornerHeader')[0];
-    dLog(fnName, topLeftDialog);
+    // dLog(fnName, topLeftDialog);
     Ember_set(this, 'tableApi.topLeftDialog', topLeftDialog);
     this.addComponentClass();
   },
@@ -696,16 +699,18 @@ export default Component.extend({
    */
   getLimitFeatures() {
     let features = [];
-    /** displayDataRows is undefined if empty. In that case (gtMergeRows) may be
-     * defined, with .length 0, so the result is undefined, as required.
+    /** displayDataRows is [] if empty (in gtMergeRows case);
+     * in that case the result is [], as required.
      */
     if (this.displayDataRows) {
       const d = this.displayDataRows;
-      features[0] = d[sparseArrayFirstIndex(d)];
-      features[1] = d.at(-1);
+      if (d.length) {
+        features[0] = d[sparseArrayFirstIndex(d)];
+        features[1] = d.at(-1);
+      }
     } else if (this.displayData) {
       const f = this.displayData.find(d => d.features)?.features;
-      if (f) {
+      if (f?.length) {
         features[0] = f[0];
         features[1] = f.at(-1);
       }
