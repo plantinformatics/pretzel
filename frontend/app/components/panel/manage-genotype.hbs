@@ -21,7 +21,7 @@
     {{!-- ----------------------------------------------------------------- --}}
     {{!-- tabTypeName is the text displayed on the tab for user identification of the contents, aka tabName.  --}}
 
-    <BsTab @customTabs={{true}} @onChange={{action this.onChangeTab}} @activeId={{this.activeId}} as |tab|>
+    <BsTab @customTabs={{true}} @fade={{false}} @onChange={{action this.onChangeTab}} @activeId={{this.activeId}} as |tab|>
       <BsNav @type="tabs" as |nav|>
         <ul class="nav nav-tabs li-active-extra counts">
 
@@ -77,7 +77,7 @@
 
               {{!-- --------------------------------------------------------- --}}
 
-              <BsTab @customTabs={{true}} @onChange={{action this.selectDataset}} @activeId={{this.activeIdDatasets}} as |tab|>
+              <BsTab @customTabs={{true}} @fade={{false}} @onChange={{action this.selectDataset}} @activeId={{this.activeIdDatasets}} as |tab|>
                 <BsNav @type="tabs" as |nav|>
                   <ul class="nav nav-tabs li-active-extra counts">
 
@@ -467,7 +467,7 @@
                   setSelected=this.setSelectedSampleFilter
                   as |tn|}}
 
-                  <BsTab @customTabs={{true}} @onChange={{action tn.onChangeTab}} @activeId={{tn.activeId}} as |tab|>
+                  <BsTab @customTabs={{true}} @fade={{false}} @onChange={{action tn.onChangeTab}} @activeId={{tn.activeId}} as |tab|>
                     <BsNav @type="tabs" as |nav|>
                       <ul class="nav nav-tabs li-active-extra counts">
 

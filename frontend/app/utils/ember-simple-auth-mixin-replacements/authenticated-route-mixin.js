@@ -22,13 +22,14 @@ import { inject as service } from '@ember/service';
 export default Mixin.create({
 // export default Route.extend({
   session: service(),
+  store: service(),
 
   beforeModel(transition) {
     this.session.requireAuthentication(transition, 'login');
   },
 
   model() {
-    return this.get('store').findAll('post');
+    return undefined; // this.get('store').findAll('post');
   }
 });
 

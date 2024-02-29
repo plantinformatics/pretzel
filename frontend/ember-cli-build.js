@@ -62,9 +62,10 @@ module.exports = function (defaults) {
   app.import(bootstrapJs + 'popover.js');
   app.import(bootstrapJs + 'button.js');
   app.import(bootstrapJs + 'tab.js');
-  app.import(bootstrapJs + 'dropdown.js');
   app.import(bootstrapJs + 'util.js');
+  app.import(bootstrapJs + 'dropdown.js');
   app.import('node_modules/numeric/lib/numeric.latest.js');
+  app.import('node_modules/@lix/d3-tip/index.js');  // src/
   app.import('node_modules/dompurify/dist/purify.js');
   app.import('node_modules/handsontable/dist/handsontable.js');
   app.import('node_modules/tsne-js/build/tsne.min.js', {

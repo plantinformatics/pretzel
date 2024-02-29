@@ -8,7 +8,7 @@
   {{#if panelContainer.showComponent}}
 
   <div>
-    <BsTab @customTabs={{true}} @activeId="sequence-search-input" as |tab|>
+    <BsTab @customTabs={{true}} @fade={{false}} @activeId="sequence-search-input" as |tab|>
 
       <BsNav @type="tabs" as |nav|>
         <nav.item @active={{bs-eq tab.activeId "sequence-search-input"}}><a href="#sequence-search-input" role="tab" onclick={{action tab.select "sequence-search-input"}}>{{elem/icon-base name="edit"}} Sequence Input</a></nav.item>

@@ -94,7 +94,7 @@
           {{#elem/button-tab
              side="right"
              key="block"
-             state=this.layout.right.tab onClick="setTab"}}
+             state=this.layout.right.tab onClick=(action "setTab") }}
             {{elem/icon-base name="globe"}}&nbsp; Block
           {{/elem/button-tab}}
         {{/if}}
@@ -102,28 +102,28 @@
         {{#elem/button-tab
            side="right"
            key="dataset"
-           state=this.layout.right.tab onClick="setTab"}}
+           state=this.layout.right.tab onClick=(action "setTab") }}
           {{elem/icon-base name="globe"}}&nbsp; Dataset
         {{/elem/button-tab}}
 
         {{#elem/button-tab
            side="right"
            key="selection"
-           state=this.layout.right.tab onClick="setTab"}}
+           state=this.layout.right.tab onClick=(action "setTab") }}
           {{elem/icon-base name="asterisk"}}&nbsp; Features <span class="badge">{{this.selectedFeatures.length}}</span>
         {{/elem/button-tab}}
 
         {{#elem/button-tab
            side="right"
            key="paths"
-           state=this.layout.right.tab onClick="setTab"}}
+           state=this.layout.right.tab onClick=(action "setTab") }}
           {{elem/icon-base name="globe"}}&nbsp; Paths <span class="badge">{{this.pathsTableSummary.count}}</span>
         {{/elem/button-tab}}
 
         {{#elem/button-tab
            side="right"
            key="genotype"
-           state=this.layout.right.tab onClick="setTab"}}
+           state=this.layout.right.tab onClick=(action "setTab") }}
           {{elem/icon-base name="barcode"}}&nbsp; Genotypes <span class="badge"></span>
 
           {{#if this.enableGenotypeControlsDialog}}
@@ -142,14 +142,14 @@
           {{#elem/button-tab
              side="right"
              key="settings"
-             state=this.layout.right.tab onClick="setTab"}}
+             state=this.layout.right.tab onClick=(action "setTab") }}
             {{elem/icon-base name="cog"}}&nbsp; Adv.
           {{/elem/button-tab}}
         {{/if}}
         {{#elem/button-tab
            class="pull-right"
            side="right"
-           onClick="setVisibility"}}
+           onClick=(action "setVisibility")}}
           {{elem/icon-base name="remove"}}
         {{/elem/button-tab}}
         {{#elem/button-tab

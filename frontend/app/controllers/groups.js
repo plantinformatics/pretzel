@@ -31,10 +31,14 @@ export default class GroupsController extends Controller {
 
   /** lookup owner and services when required. */
   @computed() get services () {
-    let owner = getOwner(this.target);
-    let
-    apiServers = owner.lookup('service:apiServers'),
-
+    let apiServers;
+    if (this.target) {
+      let owner = getOwner(this.target);
+      apiServers = owner.lookup('service:apiServers');
+    } else if (this.model.server) {
+      apiServers = this.model.server.apiServers;
+    }
+    const
     services = {
       apiServers
     };

@@ -145,7 +145,7 @@
 
   <div> {{!-- start of tabs and tree  --}}
 
-  <BsTab @customTabs={{true}} as |tab|>
+  <BsTab @customTabs={{true}} @fade={{false}} as |tab|>
     <BsNav class="api-server-tabs"  @type="tabs" as |nav|>
       {{#each-in this.servers as |apiServerName apiServer| }}
         {{panel/api-server-tab tab=tab nav=nav apiServerName=apiServerName apiServer=apiServer serverTabSelected=(action "serverTabSelected")}}
@@ -154,7 +154,7 @@
   </BsTab>
 
 
-  <BsTab @customTabs={{true}} @onChange={{action this.onChangeTab}} @activeId={{this.activeId}} as |tab|>
+  <BsTab @customTabs={{true}} @fade={{false}} @onChange={{action this.onChangeTab}} @activeId={{this.activeId}} as |tab|>
     <BsNav @type="tabs"  class="li-active-extra counts" as |nav|>
 
       {{#if this.blockFeatureTraits.length}}

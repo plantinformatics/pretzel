@@ -1,11 +1,11 @@
 <div id="left-panel" class="left-panel-shown" style="height:100%; border-right:1px solid #ddd; display: flex; flex-direction: column">
 
-  <BsTab @customTabs={{true}} @activeId="left-panel-explorer" as |tab|>
+  <BsTab @customTabs={{true}} @fade={{false}} @activeId="left-panel-explorer" as |tab|>
     <BsNav @type="tabs" class="nav-pills" style="margin-left:10px" as |nav|>
-      <nav.item @active={{bs-eq tab.activeId "left-panel-explorer"}}><a href="#left-panel-explorer" role="tab" onclick={{action tab.select "left-panel-explorer"}}>{{elem/icon-base name="folder-open"}} Explorer</a></nav.item>
-      <nav.item @active={{bs-eq tab.activeId "left-panel-view"}}><a href="#left-panel-view" role="tab" onclick={{action tab.select "left-panel-view"}}>{{elem/icon-base name="picture"}} View</a></nav.item>
-      <nav.item @active={{bs-eq tab.activeId "left-panel-feature-search"}}><a href="#left-panel-feature-search" role="tab" onclick={{action tab.select "left-panel-feature-search"}}>{{elem/icon-base name="search"}}Search</a></nav.item>
-      <nav.item @active={{bs-eq tab.activeId "left-panel-upload"}}><a href="#left-panel-upload" role="tab" onclick={{action tab.select "left-panel-upload"}}>{{elem/icon-base name="cloud-upload"}} Upload</a></nav.item>
+      <nav.item active={{bs-eq tab.activeId "left-panel-explorer"}}><a href="#left-panel-explorer" role="tab" class="nav-link" onclick={{action tab.select "left-panel-explorer"}}>{{elem/icon-base name="folder-open"}} Explorer</a></nav.item>
+      <nav.item @active={{bs-eq tab.activeId "left-panel-view"}}><a href="#left-panel-view" role="tab" class="nav-link" onclick={{action tab.select "left-panel-view"}}>{{elem/icon-base name="picture"}} View</a></nav.item>
+      <nav.item @active={{bs-eq tab.activeId "left-panel-feature-search"}}><a href="#left-panel-feature-search" role="tab" class="nav-link" onclick={{action tab.select "left-panel-feature-search"}}>{{elem/icon-base name="search"}}Search</a></nav.item>
+      <nav.item @active={{bs-eq tab.activeId "left-panel-upload"}}><a href="#left-panel-upload" role="tab" class="nav-link" onclick={{action tab.select "left-panel-upload"}}>{{elem/icon-base name="cloud-upload"}} Upload</a></nav.item>
     </BsNav>
     <div class="tab-content">
       <tab.pane @id="left-panel-feature-search" @title="Search">

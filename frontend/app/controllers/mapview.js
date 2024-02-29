@@ -475,6 +475,9 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
 
     this.queryParamsService.queryParamsHost = this;
     stacks.oa = this.oa;
+    if (! window.PretzelFrontend) {
+      window.PretzelFrontend = {};
+    }
 
     this._super.apply(this, arguments);
   },
