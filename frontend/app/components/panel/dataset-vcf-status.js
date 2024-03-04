@@ -54,27 +54,27 @@ export default class PanelDatasetVCFStatusComponent extends Component {
   }
 
   @computed('args.dataset')
-  get blockScopes() {
-    return this.args.dataset.blocks.mapBy('scope');
+  get blockNames() {
+    return this.args.dataset.blocks.mapBy('name');
   }
   @computed('args.dataset')
-  get blocksByScope() {
+  get blocksByName() {
     const
-    byScope = this.args.dataset.blocks.reduce((map, block) => {
-      map[block.scope] = block;
+    byName = this.args.dataset.blocks.reduce((map, block) => {
+      map[block.name] = block;
       return map;
     }, {});
-    return byScope;
+    return byName;
   }
-  /** Augment .vcfStatus.rows with .blockScopes, so that the result contains
-   * firstly a row for each of the .blockScopes, and then the remainder of
-   * .vcfStatus.rows, i.e. the rows whose .Name is not in .blockScopes.
+  /** Augment .vcfStatus.rows with .blockNames, so that the result contains
+   * firstly a row for each of the .blockNames, and then the remainder of
+   * .vcfStatus.rows, i.e. the rows whose .Name is not in .blockNames.
    *
    * This is displayed in the table; it ensures that there is a row for each
    * block of .dataset, and then rows for other VCFs which do not correspond to
-   * scopes of blocks of .dataset
+   * names of blocks of .dataset
    */
-  @computed('blockScopes', 'vcfStatus')
+  @computed('blockNames', 'vcfStatus')
   get rowsCombined() {
     let combined;
     if (this.vcfStatus) {
@@ -83,11 +83,11 @@ export default class PanelDatasetVCFStatusComponent extends Component {
 	byName[row.Name] = row;
 	return byName;
       }, {}),
-      blockRows = this.blockScopes.map(scope => {
-	const r = rowsByName[scope] || {Name : scope};
+      blockRows = this.blockNames.map(name => {
+	const r = rowsByName[name] || {Name : name};
 	return r;
       }),
-      nonBlockRows = this.vcfStatus.rows.filter(row => ! this.blockScopes.includes(row.Name));
+      nonBlockRows = this.vcfStatus.rows.filter(row => ! this.blockNames.includes(row.Name));
       combined = blockRows.concat(nonBlockRows);
     }
     return combined;
@@ -104,14 +104,14 @@ export default class PanelDatasetVCFStatusComponent extends Component {
     return icon;
   }
   
-  /** @return 'chrNotInDataset' if the given chromosome name is not in @dataset block scopes.
+  /** @return 'chrNotInDataset' if the given chromosome name is not in @dataset block names.
    * @param chrName chromosome name from .vcf.gz file name.
    */
   @action
   chrNotInDataset(chrName) {
     const
-    scopes = this.blockScopes,
-    className = scopes.includes(chrName) ? '' : 'chrNotInDataset';
+    names = this.blockNames,
+    className = names.includes(chrName) ? '' : 'chrNotInDataset';
     return className;
   }
   @action
@@ -124,7 +124,7 @@ export default class PanelDatasetVCFStatusComponent extends Component {
   @action
   chrStatus(chrName) {
     const
-    block = this.blocksByScope[chrName],
+    block = this.blocksByName[chrName],
     status = block ? block.featuresCountsStatus : '';
     return status;
   }
