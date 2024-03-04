@@ -26,7 +26,7 @@ services:
     build:
       context: .
       dockerfile: ./scripts/Dockerfile
-    image: plantinformaticscollaboration/pretzel:v2.17.5 # specifying name for built container
+    image: plantinformaticscollaboration/pretzel:v2.17.6 # specifying name for built container5
     command: node /app/lb3app/server/server.js
     environment:
       - "API_HOST=${API_HOST}"
@@ -46,13 +46,3 @@ services:
       - "${API_PORT_EXT}:${API_PORT_EXT}"
     networks:
       - devpretzel
-
-  # only used for testing
-  service_test:
-    image: bash:devel-alpine3.19
-    stdin_open: true # docker run -i
-    tty: true        # docker run -t
-    networks:
-      - devpretzel
-    depends_on:
-      - service_database
