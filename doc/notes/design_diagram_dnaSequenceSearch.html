@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <!-- using jsdelivr for css because unpkg gets :
+Refused to apply style from 'https://unpkg.com/mermaid@8.0.0/dist/mermaid.css' because its MIME type ('text/plain') is not a supported stylesheet MIME type, and strict MIME checking is enabled.
+ -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.css">
+</head>
+
+  <body>
+
+    <script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+
+    <script>
+mermaid.initialize({startOnLoad:true});
+    </script>
+
+<!-- based on copy of ./design_explorer_CF_diagram.html
+and ... egrep  -e  'blastn|BlastDb|dnaSequenceSearch' 
+ -->
+
+<h1>
+<a id="user-content-design" class="anchor" href="#design" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>
+Design
+</h1>
+<h2>
+<a id="user-content-explorer-CF-data-flow-diagrams" class="anchor" href="#explorer-CF-data-flow-diagrams" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>
+dnaSequenceSearch aka Blast Search request / data flow Diagram
+</h2>
+
+<!-- seems like recent versions of mermaid css make this additional formatting unnecessary, and possibly not used. -->
+<!-- for local editing, change href to mermaid_classDiagram.css -->
+<link type="text/css" rel="Stylesheet" href="https://cdn.jsdelivr.net/gh/plantinformatics/pretzel/doc/notes/mermaid_classDiagram.css" />
+
+<!-- Note below about clearfix. -->
+<div  class="clearfix">
+
+
+
+<div class="mermaid classDiagram" style="width: 100%;" >
+graph TD
+
+A(panel/sequence-search) --> |apiServer, dnaSequence, parent, searchType, resultRows, addDataset, datasetName, minLengthOfHit, minPercentIdentity, minPercentCoverage, options| B(auth.dnaSequenceSearch)
+
+B --> |network gap| C(Feature.dnaSequenceSearch)
+
+C --> D(dnaSequenceSearch.bash)
+
+D --> E(blastn_request.bash)
+
+E --> |local web api| F(:4000 blastServer.py)
+
+F --> G(blastn_cont.bash)
+
+G --> H(blastn)
+G --> I(docker run ncbi/blast blastn)
+
+
+</div>
+
+<!--
+
+/** not used */
+
+: ! 
+
+ -->
+
+<div  class="clearfix">
+</div>
+
+<p>
+Notes :
+<ul>
+  <li>
+The frontend component panel/sequence-search offers selection of datasets with the tag BlastDb (refn datasetsToSearch() in frontend/app/components/panel/sequence-search.js) 
+and will send a request via auth.dnaSequenceSearch() :
+  dnaSequenceSearch(
+    apiServer, dnaSequence, parent, searchType, resultRows, addDataset, datasetName,
+    minLengthOfHit, minPercentIdentity, minPercentCoverage,
+    options
+  )
+</li>
+
+<li>
+This is received by Feature.dnaSequenceSearch() in pretzel/lb4app/lb3app/common/models/feature.js, which sends the request via childProcess('dnaSequenceSearch.bash', ). It also has the capability to upload the result to mongoDb via upload.uploadParsedTryCb()
+It forwards requests via a queue with concurrency of 1 (sequenceSearchQueue), so that just 1 blastn is executed at a time; running multiple blast-s multiplies the memory use and can log-jam with even small numbers of requests (depending on available memory).
+</li>
+
+<li>
+The script pretzel/lb4app/lb3app/scripts/dnaSequenceSearch.bash recognises when it is running in a container and configures to use : blastn=$resourcesDir/blastn_request.bash
+Alternately blastn is used directly, which is used in development, or when running pretzel directly.
+</li>
+
+<li>
+pretzel/lb4app/lb3app/scripts/blastn_request.bash uses curl to post the request to blastnUrl=http://$hostIp:4000/commands/blastn
+which replies with a URL to watch for a result, which is retrieved with curl. This result is asynchronous, to allow for the time delay of blastn which is normally 5-300 secs.
+</li>
+
+<li>
+The Flask web api server pretzel/lb4app/lb3app/scripts/blastServer.py exposes 1 command : blastn, which calls the script pretzel/lb4app/lb3app/scripts/blastn_cont.bash
+(this could be incorporated into blastServer.py - the current approach simply maps from a request name to a script filename which implements the request, in which sense it is simply a switch routing requests to the appropriate implementation).
+It also maps dnaSequenceLookup to dnaSequenceLookup.bash
+</li>
+
+<li>
+blastn_cont.bash implements the request by running blastn directly, or if it is not installed, via docker run ncbi/blast blastn.
+</li>
+
+</ul>
+</p>
+
+
+
+<p>Code links</p>
+<ul>
+  <li><a href="https://github.com/plantinformatics/pretzel/blob/feature/ongoingGenotype/frontend/app/components/panel/sequence-search.js#L395">components/panel/sequence-search.js</a></li>
+  <li><a href="https://github.com/plantinformatics/pretzel/blob/feature/ongoingGenotype/lb4app/lb3app/common/models/feature.js#L212">Feature.dnaSequenceSearch()</a></li>
+  <li><a href="https://github.com/plantinformatics/pretzel/blob/feature/ongoingGenotype/lb4app/lb3app/scripts/dnaSequenceSearch.bash#L167">lb4app/lb3app/scripts/dnaSequenceSearch.bash</a></li>
+  <li><a href="https://github.com/plantinformatics/pretzel/blob/feature/ongoingGenotype/lb4app/lb3app/scripts/blastn_request.bash#L52">lb4app/lb3app/scripts/blastn_request.bash</a></li>
+  <li><a href="https://github.com/plantinformatics/pretzel/blob/feature/ongoingGenotype/lb4app/lb3app/scripts/blastServer.py#L37">lb4app/lb3app/scripts/blastServer.py</a></li>
+  <li><a href="https://github.com/plantinformatics/pretzel/blob/feature/ongoingGenotype/lb4app/lb3app/scripts/blastn_cont.bash#L52">lb4app/lb3app/scripts/blastn_cont.bash</a></li>
+  <li></li>
+</ul>
+
+<div  class="clearfix">
+</div>
+
+
+<p> Diagram drawn by :
+<a href="https://mermaidjs.github.io/">Mermaid</a>, 
+github <a href="https://github.com/knsv/mermaid">readme</a>
+</p>
+
+<hr>
+<!-- Use either this, or class="clearfix" on the previous div. -->
+<div style="clear:both">
+</div>
+
+
+
+</body>
+</html>
