@@ -4,7 +4,7 @@ version: "2"
 # at run time
 
 networks:
-  devpretzel:
+  pretzel:
     driver: bridge
 
 services:
@@ -18,15 +18,15 @@ services:
     expose:
       - "${MONGO_DEFAULT_PORT}"
     networks:
-      - devpretzel
+      - pretzel
 
-  pretzel: # node environment
+  api: # node environment
     depends_on:
       - database
     build:
       context: .
       dockerfile: ./scripts/Dockerfile
-    image: plantinformaticscollaboration/pretzel:v2.17.6 # specifying name for built container5
+    image: plantinformaticscollaboration/pretzel:latest # specifying name for built container
     command: node /app/lb3app/server/server.js
     environment:
       - "API_HOST=${API_HOST}"
@@ -45,4 +45,4 @@ services:
       # match ext / int ports for loopback
       - "${API_PORT_EXT}:${API_PORT_EXT}"
     networks:
-      - devpretzel
+      - pretzel
