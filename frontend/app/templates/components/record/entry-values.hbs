@@ -3,21 +3,21 @@
 {{#if this.valueIsDatasetsArray}}
   {{!-- log 'entry-datasets' values --}}
   {{record/entry-datasets
-    loadBlock="loadBlock"
-    selectBlock=(action 'selectBlock')
+    loadBlock=this.loadBlock
+    selectBlock=this.selectBlock
     selectedBlock=this.selectedBlock
-    selectDataset=(action 'selectDataset')
+    selectDataset=this.selectDataset
     selectedDataset=this.selectedDataset
     data=this.values}}
 
 {{else if this.valueIsBlocksArray }}   {{!-- type is blocks array --}}
   {{!-- log 'entry-blocks' --}}
   {{record/entry-blocks
-    loadBlock="loadBlock"
+    loadBlock=this.loadBlock
     data=this.values
-    selectBlock="selectBlock"
+    selectBlock=this.selectBlock
     selectedBlock=this.selectedBlock
-    selectDataset=(action 'selectDataset')}}
+    selectDataset=this.selectDataset}}
 
 {{else if (or this.valuesModelName (and this.values_levelComponent (not-eq this.values_levelComponent 'record/entry-values') (not this.parentDone) ) ) }}
   {{!-- log  'values' values 'levelComponent' values_levelComponent --}}
@@ -30,11 +30,11 @@
     valuesCase='parentDone'
     parentDone=true
     controlOptions=this.controlOptions
-    loadBlock="loadBlock"
+    loadBlock=this.loadBlock
     selectExpander=this.selectExpander
-    selectBlock="selectBlock"
+    selectBlock=this.selectBlock
     selectedBlock=this.selectedBlock
-    selectDataset=(action 'selectDataset')
+    selectDataset=this.selectDataset
   }}
 
 {{else if this.valueIsArray}}
@@ -48,11 +48,11 @@
       parentName=this.name
       valuesCase='valueIsArray'
       controlOptions=this.controlOptions
-      loadBlock="loadBlock"
+      loadBlock=this.loadBlock
       selectExpander=this.selectExpander
-      selectBlock="selectBlock"
+      selectBlock=this.selectBlock
       selectedBlock=this.selectedBlock
-      selectDataset=(action 'selectDataset')
+      selectDataset=this.selectDataset
     }}
   {{/each}}
 
@@ -71,10 +71,10 @@
         valuesCase='valuesIsMap'
         parentName=this.name
         controlOptions=this.controlOptions
-        loadBlock="loadBlock"
-        selectBlock="selectBlock"
+        loadBlock=this.loadBlock
+        selectBlock=this.selectBlock
         selectedBlock=this.selectedBlock
-        selectDataset=(action 'selectDataset')
+        selectDataset=this.selectDataset
       }}
     {{/with}}
   {{/each}}
@@ -89,12 +89,12 @@
       levelMeta=this.levelMeta
       name=(compute (action this.ontologyNameId value))
       parentName=this.values.id
-      loadBlock="loadBlock"
+      loadBlock=this.loadBlock
       controlOptions=this.controlOptions
       selectExpander=this.selectExpander
-      selectBlock="selectBlock"
+      selectBlock=this.selectBlock
       selectedBlock=this.selectedBlock
-      selectDataset=(action 'selectDataset')
+      selectDataset=this.selectDataset
     }}
   {{/each}}
 
@@ -115,10 +115,10 @@
         parentName=this.name
         controlOptions=this.controlOptions
         selectExpander=this.selectExpander
-        loadBlock="loadBlock"
-        selectBlock="selectBlock"
+        loadBlock=this.loadBlock
+        selectBlock=this.selectBlock
         selectedBlock=this.selectedBlock
-        selectDataset=(action 'selectDataset')
+        selectDataset=this.selectDataset
       }}
     {{/with}}
    {{/let}}

@@ -58,7 +58,7 @@ export default Component.extend({
       });
     },
     loadBlock(record) {
-      this.sendAction('loadBlock', record);
+      this.loadBlock(record);
     }
   }
 });

@@ -403,6 +403,9 @@ export default Component.extend(Evented, {
 
   actions: {
 //-	?
+    /**
+     * @param this	draw-map
+     */
     updatedSelectedFeatures: function(selectedFeatures) {
       /* run once to handle multiple settings of selectedFeatures (panel/left-panel and draw/axis-1d)
        * selectedFeatures is good candidate for converting to a model, simplifying this.
@@ -413,7 +416,7 @@ export default Component.extend(Evented, {
         // console.log(featuresAsArray);
         console.log("updatedSelectedFeatures in draw-map component",
                     selectedFeatures, featuresAsArray.length);
-        this.sendAction('updatedSelectedFeatures', featuresAsArray);
+        this.updatedSelectedFeatures(featuresAsArray);
       }
     },
 
@@ -967,12 +970,19 @@ export default Component.extend(Evented, {
         (oa.selectedFeatures = this.get('selectedService.blocksFeatures'));
 
     /** planning to move selectedFeatures out to a separate class/component;
-     * these 2 functions would be actions on it. */
-    //Reset the selected Feature region, everytime an axis gets deleted
+     * these 2 functions would be actions on it.
+     *
+     * Reset the selected Feature region, everytime an axis gets deleted
+     * @param this axisApi
+     */
     function sendUpdatedSelectedFeatures()
     {
       if (oa.drawOptions.showSelectedFeatures)
-        me.send('updatedSelectedFeatures', selectedFeatures);
+        // verification
+        if (me === this.drawMap) {
+          dLog('sendUpdatedSelectedFeatures', me, '!==', this.drawMap);
+        }
+        me.actions.updatedSelectedFeatures.apply(me, [selectedFeatures]);
     }
     //- moved to axes-1d.js : selectedFeatures_removeAxis(), selectedFeatures_removeBlock()
 

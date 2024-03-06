@@ -294,7 +294,7 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
       selectedBlock = store.peekRecord('block', blockId);
       /* Previous version traversed all blocks of selectedMaps to find one
        * matching blockId. */
-      this.send('selectBlock', selectedBlock)
+      this.actions.selectBlock.apply(this, [selectedBlock]);
     },
     /**
      * @param ds may be a promise (yielding a Dataset object)

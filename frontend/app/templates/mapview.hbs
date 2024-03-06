@@ -9,10 +9,10 @@
   
   {{panel/left-panel
     displayData=this.block.viewed
-    loadBlock="loadBlock"
-    removeBlock="removeBlock"
-    selectBlock="selectBlock"
-    selectDataset="selectDataset"
+    loadBlock=(action this.actions.loadBlock)
+    removeBlock=(action this.actions.removeBlock)
+    selectBlock=(action this.actions.selectBlock)
+    selectDataset=(action this.actions.selectDataset)
     selectedDataset=this.selectedDataset
 
     model=this.model
@@ -75,9 +75,9 @@
         params=this.model.params
         selectedBlock=this.selectedBlock
         addMap='addMap'
-        selectBlock="selectBlock"
-        removeBlock=(action 'removeBlock')
-        updatedSelectedFeatures='updateSelectedFeatures'
+        selectBlock=(action this.actions.selectBlock)
+        removeBlock=(action this.actions.removeBlock)
+        updatedSelectedFeatures=(action this.actions.updateSelectedFeatures)
         featuresInBlocks=this.featuresInBlocks
         selectChromById=(action 'selectBlockById')}}
     {{!-- {{/if}} --}}
@@ -86,6 +86,7 @@
 
     <div>
 
+      <div>layout.right{{this.layout.right.visible}},{{this.layout.right.tab}}</div>
   {{#if this.layout.right.visible}}
     <div id="right-panel" class="h-100">
 
@@ -168,7 +169,7 @@
         {{else if (compare this.layout.right.tab '===' 'block')}}
           {{panel/manage-block
             selectedFeatures=this.selectedFeatures
-            loadBlock="loadBlock"
+            loadBlock=this.loadBlock
             block=this.selectedBlock}}
         {{else if (compare this.layout.right.tab '===' 'dataset')}}
           {{panel/manage-dataset
@@ -180,7 +181,7 @@
             selectBlock=(action this.actions.selectBlock)
             selectedBlock=this.selectedBlock
             selectedFeatures=this.selectedFeatures
-            updatedSelectedFeatures='updateSelectedFeatures'
+            updatedSelectedFeatures=(action this.actions.updateSelectedFeatures)
             userSettings=this.userSettings.genotype
             }}
 

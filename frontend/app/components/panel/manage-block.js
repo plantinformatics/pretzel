@@ -40,9 +40,6 @@ export default ManageBase.extend({
       }
       this.set('newInterval', '')
     },
-    loadBlock(block) {
-      this.sendAction('loadBlock', block);
-    }
   },
   dataset: computed('block', function() {
     let block = this.get('block')

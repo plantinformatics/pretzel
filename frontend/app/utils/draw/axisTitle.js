@@ -208,7 +208,7 @@ function AxisTitle(oa) {
       let jQueryEventInfo = e.originalEvent && [e.originalEvent.path, e.originalEvent.srcElement, e.handleObj.type];
       dLog('showMenu', this, axisName, this.__data__, this.parentElement, this.parentElement.parentElement,
            e, jQueryEventInfo);
-      me.sendAction('selectBlock', block.block);
+      me.selectBlock(block.block);
 
       /** If the axis-menu is already displayed on a different axis,
        * reposition it to align with the axis of the clicked block title.

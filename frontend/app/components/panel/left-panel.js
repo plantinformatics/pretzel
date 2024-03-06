@@ -47,15 +47,6 @@ export default Component.extend({
     changeTab(select, tab) {
       select('left-panel-' + tab);
     },
-    selectBlock(block) {
-      this.sendAction('selectBlock', block);
-    },
-    removeBlock(block) {
-      this.sendAction('removeBlock', block);
-    },
-    selectDataset(dataset) {
-      this.sendAction('selectDataset', dataset);
-    },
     updateFeaturesInBlocks(featuresInBlocks) {
       this.sendAction('updateFeaturesInBlocks', featuresInBlocks);
     }

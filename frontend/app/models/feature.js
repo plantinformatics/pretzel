@@ -20,7 +20,7 @@ export default Model.extend({
 
   //----------------------------------------------------------------------------
 
-  blockId: belongsTo('block'),
+  blockId: belongsTo('block', {async: true, inverse: 'features'}),
   _name: attr('string'),
   /* currently have a mix of .range and .value in pretzel-data [develop];
    * handle both for now;  chrData() also handles either.  */

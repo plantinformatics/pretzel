@@ -3,7 +3,7 @@
   node=this.node
   nodeName=this.name
   selectedNode=this.selectedDataset
-  selectNode=(action 'selectDataset')
+  selectNode=this.selectDataset
 }}
 
   {{#record/entry-expander nodeName=this.name}}
@@ -14,10 +14,10 @@
         name=this.name
         parentDone=true
         controlOptions=this.controlOptions
-        loadBlock="loadBlock"
-        selectBlock="selectBlock"
+        loadBlock=this.loadBlock
+        selectBlock=this.selectBlock
         selectedBlock=this.selectedBlock
-        selectDataset="selectDataset"
+        selectDataset=this.selectDataset
       }}
     </ul>
 

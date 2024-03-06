@@ -1,6 +1,6 @@
 import { isArray } from '@ember/array';
 import { throttle, next, later } from '@ember/runloop';
-import EmberObject, { computed } from '@ember/object';
+import EmberObject, { computed, get as Ember_get } from '@ember/object';
 import { alias, filter, filterBy } from '@ember/object/computed';
 import $ from 'jquery';
 import { inject as service } from '@ember/service';
@@ -989,7 +989,7 @@ export default InAxis.extend({
 
     /* if parent is un-viewed, this function may be called after axis is removed
      * from stacks. */
-    if (! axis1d || ! Ember.get(axis1d, 'is2d'))
+    if (! axis1d || ! Ember_get(axis1d, 'is2d'))
     {
       let gp = 
         // <g.axis-use> may already be gone.
@@ -1150,7 +1150,7 @@ export default InAxis.extend({
       let feature = thisAt.featureData2Feature.get(d),
           value = feature.get('value');
       d = value;
-      let nonZeroInterval = Ember.isArray(d) && (d.length > 1) && (d[1] !== d[0]);
+      let nonZeroInterval = Array.isArray(d) && (d.length > 1) && (d[1] !== d[0]);
       /** if axis.zoomed then 0-height intervals are included, not filtered out.
        * In that case, need to give <rect> a height > 0.
        */

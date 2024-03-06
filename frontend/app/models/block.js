@@ -83,7 +83,7 @@ export default Model.extend({
   annotations: hasMany('annotation', { async: false, inverse : null }),
   intervals: hasMany('interval', { async: false, inverse : null }),
   // possibly async:true when !allInitially, if needed.
-  features: hasMany('feature', {async: true, inverse : null}),
+  features: hasMany('feature', {async: true, inverse : 'blockId'}),
   range: attr('array'),
   scope: attr('string'),
   name: attr('string'),
@@ -291,6 +291,17 @@ export default Model.extend({
     let isReference = this.isData || ! this.get('datasetId.parentName');
     return isReference;
   }),
+
+  //----------------------------------------------------------------------------
+
+  /** The zoomed-out domain.
+   */
+  domain : computed('range', 'limits', 'featuresDomain', function () {
+    const
+    domain = this.range || this.limits || this.featuresDomain;
+    return domain;
+  }),
+
   currentDomain : computed('zoomedDomain', 'referenceBlockOrSelf.range', 'featuresDomain', function () {
     let domain = this.get('zoomedDomain');
     if (! domain)  {

@@ -38,12 +38,12 @@ export default EntryBase.extend({
     selectDataset(dataset) {
       if (trace)
       console.log('dataset2 => ', dataset);
-      this.sendAction('selectDataset', dataset)
+      this.selectDataset(dataset);
     },
     selectBlock(block) {
       if (trace)
       console.log('block2 => ', block);
-      this.sendAction('selectBlock', block)
+      this.selectBlock(block);
     }
   }
 });

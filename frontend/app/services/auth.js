@@ -243,7 +243,7 @@ export default Service.extend({
       }
       // closePromise is a ember-concurrency TaskInstance, which defines .finally().
       // Could also closePromise.then(closeSource), but in that case the source has completed and would close normally.
-      closePromise.finally(closeSource);
+      closePromise?.finally(closeSource);
       function onError(e) {
         let state = e.eventPhase; // this.readyState seems constant.
         const stateName = ['CONNECTING', 'OPEN', 'CLOSED'];

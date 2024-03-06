@@ -223,10 +223,10 @@
             values=this.blockFeatureTraitsTree.content
             levelMeta=this.levelMeta
             controlOptions=this.controlOptions
-            loadBlock="loadBlock"
-            selectBlock="selectBlock"
+            loadBlock=this.loadBlock
+            selectBlock=this.selectBlock
             selectedBlock=this.selectedBlock
-            selectDataset="selectDataset"}}
+            selectDataset=this.selectDataset}}
       {{/if}}
 
       <!-- {{ontologiesTree.content}} -->
@@ -238,10 +238,10 @@
             values=this.ontologiesTree.content
             levelMeta=this.levelMeta
             controlOptions=this.controlOptions
-            loadBlock="loadBlock"
-            selectBlock="selectBlock"
+            loadBlock=this.loadBlock
+            selectBlock=this.selectBlock
             selectedBlock=this.selectedBlock
-            selectDataset="selectDataset"
+            selectDataset=this.selectDataset
             selectExpander=(action this.selectOntologyNode) }}
 
             <span style="display: inline-block; margin-left: 3em;">
@@ -274,10 +274,10 @@
             values=tabData
             levelMeta=this.levelMeta
             controlOptions=this.controlOptions
-            loadBlock="loadBlock"
-            selectBlock="selectBlock"
+            loadBlock=this.loadBlock
+            selectBlock=this.selectBlock
             selectedBlock=this.selectedBlock
-            selectDataset="selectDataset"}}
+            selectDataset=this.selectDataset}}
         {{/each-in}}
       {{else}}
         {{!-- log 'dataParentTypedFGTree' dataParentTypedFGTree --}}
@@ -289,10 +289,10 @@
             values=tabData
             levelMeta=this.levelMeta
             controlOptions=this.controlOptions
-            loadBlock="loadBlock"
-            selectBlock="selectBlock"
+            loadBlock=this.loadBlock
+            selectBlock=this.selectBlock
             selectedBlock=this.selectedBlock
-            selectDataset="selectDataset"}}
+            selectDataset=this.selectDataset}}
         {{/each-in}}
       {{/unless}}
 
@@ -304,17 +304,17 @@
               values=this.dataTree
               levelMeta=this.levelMeta
               controlOptions=this.controlOptions
-              loadBlock="loadBlock"
-              selectBlock="selectBlock"
+              loadBlock=this.loadBlock
+              selectBlock=this.selectBlock
               selectedBlock=this.selectedBlock
-              selectDataset="selectDataset"
+              selectDataset=this.selectDataset
             }}
           </ul>
         </tab.pane>
 
         <tab.pane @id="tab-explorer-byDataset" @title="by Dataset">
           {{record/entry-datasets
-            loadBlock="loadBlock"
+            loadBlock=this.loadBlock
             selectBlock=(action 'selectBlock')
             selectedBlock=this.selectedBlock
             selectDataset=(action 'selectDataset')
@@ -324,7 +324,7 @@
 
         <tab.pane @id="tab-explorer-references" @title="References">
           {{record/entry-datasets
-            loadBlock="loadBlock"
+            loadBlock=this.loadBlock
             selectBlock=(action 'selectBlock')
             selectedBlock=this.selectedBlock
             selectDataset=(action 'selectDataset')
@@ -366,12 +366,12 @@
               controlOptions=this.controlOptions
               entry=dataset
               selectedBlock=this.selectedBlock
-              selectBlock="selectBlock"
+              selectBlock=this.selectBlock
               deleteBlock="deleteBlock"
               onDelete="onDelete"
-              loadBlock="loadBlock"
+              loadBlock=this.loadBlock
               selectedDataset=this.selectedDataset
-              selectDataset="selectDataset"}}
+              selectDataset=this.selectDataset}}
           {{/each}}
         </ul>
 
@@ -386,7 +386,7 @@
 
 {{/elem/panel-container}}
 
-{{panel/select-parent block=this.blockWithoutParentOnPrimary loadBlock="loadBlock"}}
+{{panel/select-parent block=this.blockWithoutParentOnPrimary loadBlock=this.loadBlock}}
 
 {{panel/synonomous-parents blocks=this.viewedSynonomousReferenceBlocks}}
 

@@ -33,7 +33,7 @@ function getGroups(auth, own, server, apiServers) {
        */
       let cgrs = cgs.map((cg) => {
         let j = serializer[config.normalizerName](cg),
-            jr = serializer.store.push(j);
+            jr = /*serializer.*/store.push(j);
         return jr;
       });
       return cgrs;

@@ -214,19 +214,21 @@ function logElementDimensions2(jq) {
 
 /** Event filter for eltWidthResizable() ... d3 drag.filter()
  *  refn github.com/d3/d3-drag#drag_filter
+ *
+ * Originally used in {{,no}Shift,ctrl,no}Keyfilter(), until 8b4583cf :
+ *   let ev = d3.event.sourceEvent || d3.event; 
+ * @param ev  event, e.g. mousedown event MouseEventPrototype
+ * @param datum e.g. axis-1d
  */
-function shiftKeyfilter() {
-  let ev = d3.event.sourceEvent || d3.event; 
+function shiftKeyfilter(ev, datum) {
   return ev.shiftKey;
 }
 
-function noShiftKeyfilter() {
-  let ev = d3.event.sourceEvent || d3.event; 
+function noShiftKeyfilter(ev, datum) {
   return ! ev.shiftKey;
 }
 
-function ctrlKeyfilter() {
-  let ev = d3.event.sourceEvent || d3.event; 
+function ctrlKeyfilter(ev, datum) {
   return ev.ctrlKey;
 }
 
@@ -234,8 +236,7 @@ function ctrlKeyfilter() {
  * Used for axis brush.
  * These can be replaced by .keyModifier([d3.event.shiftKey]) after upgrading to d3 v4.
  */
-function noKeyfilter() {
-  let ev = d3.event.sourceEvent || d3.event; 
+function noKeyfilter(ev, datum) {
   return ! ev.shiftKey && ! ev.ctrlKey && ! ev.altKey;
 }
 

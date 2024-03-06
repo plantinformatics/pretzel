@@ -15,9 +15,6 @@ export default Component.extend({
     changeTab(tab) {
       this.sendAction('changeTab', tab);
     },
-    selectBlock(chr) {
-      this.sendAction('selectBlock', chr);
-    },
     selectDataset(dataset) {
       this.sendAction('selectDataset', dataset);
     }

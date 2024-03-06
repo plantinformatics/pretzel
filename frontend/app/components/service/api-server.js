@@ -280,7 +280,7 @@ const ApiServerAttributes = {
       let
       /** use .blocksOriginal, which filters out by .isCopy */
       blocks = this.datasetsBlocks && this.datasetsBlocks.flatMap((d) => d.blocksOriginal.map((b) => b)),
-      map = this.get('block').mapBlocksByReferenceAndScope(blocks);
+      map = ! blocks ? new Map() : this.get('block').mapBlocksByReferenceAndScope(blocks);
       return map;
     }),
 

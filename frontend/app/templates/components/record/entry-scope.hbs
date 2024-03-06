@@ -12,7 +12,7 @@
   {{#record/entry-expander nodeName=this.name hoverText=(or this.parentName this.name)}}
 
     {{record/entry-blocks
-      loadBlock="loadBlock"
+      loadBlock=this.loadBlock
       data=this.values
       selectBlock="selectBlock"
       selectedBlock=this.selectedBlock

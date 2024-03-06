@@ -43,11 +43,11 @@
                 primaryDatasets=@model.availableMapsTask._result
                 mapviewDatasets=this.datasets
                 refreshDatasets=this.refreshDatasets
-                loadBlock="loadBlock"
-                selectBlock="selectBlock"
+                loadBlock=this.loadBlock
+                selectBlock=this.selectBlock
                 selectedBlock=this.selectedBlock
                 selectedDataset=this.selectedDataset
-                selectDataset="selectDataset"
+                selectDataset=this.selectDataset
                 changeTab=(action 'changeTab' tab.select )
             }}
       </tab.pane>
@@ -58,9 +58,9 @@
                 selectedBlock=this.selectedBlock
                 view=this.view
                 changeTab=(action 'changeTab' tab.select )
-                loadBlock="loadBlock"
-                removeBlock="removeBlock"
-                selectBlock="selectBlock"
+                loadBlock=this.loadBlock
+                removeBlock=this.removeBlock
+                selectBlock=this.selectBlock
 
                 model=this.model
                 controls=this.controls

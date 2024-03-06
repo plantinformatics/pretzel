@@ -3,7 +3,7 @@
     {{record/entry-dataset
       entry=map
       selectedBlock=this.selectedBlock
-      selectBlock="selectBlock"
-      deleteBlock="deleteBlock"}}
+      selectBlock=(action this.actions.selectBlock)
+      deleteBlock=(action this.actions.deleteBlock)}}
   {{/each}}
 </ul>

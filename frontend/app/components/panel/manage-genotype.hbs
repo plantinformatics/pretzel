@@ -540,7 +540,7 @@
                               <label style="margin-left: 1em;" >Variant Intervals</label>
                             </div>
                             <ul class="list-group borderless haplotypeFilters">
-                              {{#each blocksVariantInterval as |blockVi|}}
+                              {{#each this.blocksVariantInterval as |blockVi|}}
                                 <li class="list-group-item">
                                   {{blockVi.datasetId.id}}
                                 </li>
@@ -1034,7 +1034,7 @@
 <div class="clear-both"></div>
 
 <style>
-  {{#each datasetsClasses as |datasetsClass|}}
+  {{#each this.datasetsClasses as |datasetsClass|}}
     {{concat ".col-Dataset-" datasetsClass.id}}
     {
       border-left : 5px solid {{datasetsClass.colour}};

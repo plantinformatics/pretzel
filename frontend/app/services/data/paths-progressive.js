@@ -45,14 +45,14 @@ const dLog = console.debug;
 const blocksUpdateDomainEnabled = false;
 
 function verifyFeatureRecord(fr, f) {
-  let frd = fr._internalModel.__data || fr._internalModel .__recordData.__data,
+  let
   /** Handle some older data which has .range instead of .value */
-  frdv = frd ? frd.value || frd.range : fr.get('value'),
+  frdv = fr.range ?? fr.get('value'),
   fv = f.value || f.range;
   if ((typeof(frdv) == "number") || (frdv.length === undefined))
     frdv = [frdv];
-  if ((typeof(fv) == "number") || (frdv.length === undefined))
-    frdv = [fv];
+  if ((typeof(fv) == "number") || (fv.length === undefined))
+    fv = [fv];
   /** @return 1 if end of interval matches forward, -1 if reverse, 0 if not match. */
   function sameOrReverse(i) { return (frdv[i] === fv[i]) ? 1 : (frdv[i] === fv[1-i]) ? -1 : 0; }
   /** if sameValue is true then sameDirection is implied, so not tested. */
@@ -66,7 +66,7 @@ function verifyFeatureRecord(fr, f) {
   same = 
     (fr.id === f._id) &&
     direction && sameDirection &&
-    ((frd ? frd._name : fr.get('name')) === (f.name || f._name));
+    (fr.get('name') === (f.name || f._name));
   return same;
 }
 
@@ -106,7 +106,7 @@ export default Service.extend({
       r = store.push({data: ba});
       else {
       let
-      ban = store.normalize('blockAdj', ba);
+      ban = store.normalize('block-adj', ba);
       r = store.push(ban);
         dLog('ensureBlockAdj', ban);
     }

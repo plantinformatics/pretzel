@@ -3,7 +3,7 @@
   identical to the sibling elements because the blocks are grouped by scope.
   --}}
 
-{{record/entry-block-add-button entry=this.entry loadBlock="loadBlock"}}
+{{record/entry-block-add-button entry=this.entry loadBlock=this.loadBlock}}
 <span title={{this.entry.datasetId.name}}>
   {{or this.entry.datasetId._meta.explorerName this.entry.datasetId._meta.shortName this.entry.datasetId.shortName this.entry.datasetId.name }}
 </span>

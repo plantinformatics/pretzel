@@ -47,11 +47,11 @@ export default EntryBase.extend({
   actions: {
     selectDataset(dataset) {
       console.log('selectDataset', dataset);
-      this.sendAction('selectDataset', dataset);
+      this.selectDataset(dataset);
     },
     selectBlock(block) {
       console.log('selectBlock', block);
-      this.sendAction('selectBlock', block);
+      this.selectBlock(block);
     },
     dataTypeName(value) {
       return this.dataTypeName(value);

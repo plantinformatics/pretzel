@@ -78,10 +78,10 @@
   {{#each this.data as |block|}}
     <li 
       class="list-group-item {{if (compare block.id '===' this.selectedBlock.id) 'list-group-item-warning'}}{{nameClass block}}"
-      {{action "selectBlock" block on="click"}}>
+      {{action this.selectBlock block on="click"}}>
       {{record/entry-block
         onDelete="onDelete"
-        loadBlock="loadBlock"
+        loadBlock=this.loadBlock
         title=block.fcStatus
         entry=block}}
     </li>

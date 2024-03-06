@@ -750,9 +750,14 @@ export default Service.extend(Evented, {
         viewedIds.pushObject(blockId);
       }
       else {
-        let removed = viewedIds.objectAt(index);
-        viewedIds.removeAt(index, 1);
-        dLog('setViewed removed', removed);
+        // later() so that mapsToView is modified after current render cycle.
+        later(() => {
+          const
+          index = viewedIds.indexOf(blockId),
+          removed = viewedIds.objectAt(index);
+          viewedIds.removeAt(index, 1);
+          dLog('setViewed removing', removed);
+        });
       }
     }
   },
@@ -1438,6 +1443,7 @@ export default Service.extend(Evented, {
   axesViewedBlocks2 : computed(
     'viewedBlocksReferences.[]',
     function () {
+      const fnName = 'axesViewedBlocks2';
       let br = this.get('viewedBlocksReferences'),
       map = br.reduce(
         (map, id_obj) => {
@@ -1447,6 +1453,9 @@ export default Service.extend(Evented, {
           if (! blocks)
             map.set(referenceBlock, blocks = []);
           let block = this.peekBlock(id);
+          if (! block) {
+            dLog(fnName, id, 'not found', id_obj);
+          } else
           if (blocks.indexOf(block) < 0)
             blocks.push(block);
           return map; },

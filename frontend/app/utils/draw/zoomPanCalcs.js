@@ -161,9 +161,7 @@ function intervalDirection(interval, direction) {
  * zoom : if interval > domainSize, set it to that limit
  * zoom & pan : if one (either) end of newDomain is outside axisReferenceDomain, set it to that limit
  *
- * Uses : d3.event,
- * d3.event.sourceEvent (! inFilter), d3.event.currentTarget (! inFilter && ! isPan)
- *
+ * @param event	WheelEvent
  * @param axis  axis1d (was Stacked)
  * @param axisApi for axisRange2Domain()
  * @param inFilter  true when called from zoomFilter() (d3.zoom().filter()),
@@ -173,7 +171,7 @@ function intervalDirection(interval, direction) {
  * include is a flag for which true means don't filter out this event.
  * newDomain is the new domain resulting from the zoom change.
  */
-function wheelNewDomain(axis, axisApi, inFilter) {
+function wheelNewDomain(event, axis, axisApi, inFilter) {
   const axis1d = axis;
   let yp = axis.y;
   /* if the axis does not yet have a domain then it won't have a scale.
@@ -183,11 +181,11 @@ function wheelNewDomain(axis, axisApi, inFilter) {
    */
   if (! yp) return inFilter ? false : undefined;
   /** Access these fields from the DOM event : .shiftKey, .deltaY, .currentTarget.
-   * When called from zoom(), d3.event is the d3 wrapper around the event, and
+   * When called from zoom(), event is the d3 wrapper around the event, and
    * the DOM event is referenced by .sourceEvent,  whereas in zoomFilter()
-   * d3.event is the DOM event.
+   * event is the DOM event.
    */
-  let e = inFilter ? d3.event : d3.event.sourceEvent,
+  let e = (event.type === 'zoom') ? event.sourceEvent : event,
   isPan = e.shiftKey;
   if (trace_zoom > 1)
     dLog(axis, inFilter, 'zoom Wheel scale', yp.domain(), yp.range(), e /*, oa.y, oa.ys */);
@@ -196,7 +194,7 @@ function wheelNewDomain(axis, axisApi, inFilter) {
     dLog('normalizeWheel', normalized);
 
   /** the element which is the target of the WheelEvent zoom/pan
-   * It is available as `this` in zoomFilter();  can instead be accessed via d3.event.currentTarget
+   * It is available as `this` in zoomFilter();  and accessed instead via event.currentTarget
    */
   let elt = e.currentTarget;
 
@@ -276,14 +274,14 @@ function wheelNewDomain(axis, axisApi, inFilter) {
   }
   else /* zoom */ {
     /** mousePosition used as centre for zoom, not used for pan. */
-    let mousePosition = elt && d3.mouse(elt);
+    let mousePosition = e.layerY;
     if ((trace_zoom > 1) && mousePosition)
       console.log('mousePosition', mousePosition);
     let
       range = yp.range(),
-    rangeYCentre = mousePosition[1];
+    rangeYCentre = mousePosition;
     if (rangeYCentre === undefined) {
-      dLog('mousePosition has no [1]', mousePosition);
+      dLog('mousePosition', mousePosition);
       return false;
     }
     let
@@ -291,7 +289,7 @@ function wheelNewDomain(axis, axisApi, inFilter) {
     /** This is the centre of zoom, i.e. the mouse position, not the centre of the axis.  */
     centre = axisBrushZoom.axisRange2Domain(axis1d, rangeYCentre),
 
-    transform = inFilter ? elt.__zoom : d3.event.transform, // currently only used in trace
+    transform = inFilter ? elt.__zoom : event.target.transform, // currently only used in trace
 
     deltaScale = 1 + deltaY/300,
     /** length of new domain.  Positive.
@@ -366,27 +364,40 @@ function ZoomFilter(oa) {
    * proportional to 2 ^ result of wheelDelta(). */
   let wheelDeltaFactor = 500 * 3 * 8;
   dLog('wheelDeltaFactor', wheelDeltaFactor);
-  function wheelDelta() {
-    return -d3.event.deltaY * (d3.event.deltaMode ? 120 : 1) / wheelDeltaFactor;
+  /**
+   * @param event	WheelEvent
+   */
+  function wheelDelta(event, axis1d) {
+    return -event.deltaY * (event.deltaMode ? 120 : 1) / wheelDeltaFactor;
   }
-  function zoomFilter(d) {
-    let  e = d3.event;
+  /**
+   * @param e	WheelEvent
+   * @param this	<g id="all<blockId>" class="axis-all">
+   * e.target.parentElement.parentElement.parentElement === this
+   */
+  function zoomFilter(e) {
+    /** e.target is <rect class="overlay" >
+     * <g class="brush">
+     *   <g clip-path="url(#axis-clip-<blockId>)" fill="none" pointer-events="none">
+     *     <rect class="overlay" pointer-events="all" cursor="crosshair" x="-8" y="0" width="16" height="530.8">
+     */
+    const  d = e.target.parentElement.__data__;
     let  include;
     /** WheelEvent is a subtype of MouseEvent; click to drag axis gets
      * MouseEvent - this is filtered out here so it will be handle by dragged().
-     * ! d3.event.button is the default zoom.filter, possibly superfluous here.
+     * ! event.button is the default zoom.filter, possibly superfluous here.
      */
-    let isMouseWheel = (d3.event instanceof WheelEvent) && ! d3.event.button;
+    let isMouseWheel = (e instanceof WheelEvent) && ! e.button;
     if (isMouseWheel) {
 
       if (e.shiftKey && trace_zoom > 1) {
-        dLog('zoom.filter shiftKey', this, arguments, d3.event, d);
+        dLog('zoom.filter shiftKey', this, arguments, e, d);
       }
 
       let axisName = d,
       axis = d;
 
-      include = wheelNewDomain(axis, oa.axisApi, true); // uses d3.event
+      include = wheelNewDomain(e, axis, oa.axisApi, true);
     }
     return include;
   }

@@ -116,7 +116,8 @@ const featureCountAutoDataProperties = {
   /** datum2Description() is not used;  possibly intended for the same
    * purpose as hoverTextFn(), so they could be assimilated.  */
   datum2Description : function(d) { return JSON.stringify(d._id); },
-  hoverTextFn : function (d, block) {
+  hoverTextFn : function (event, block) {
+    const d = event.target.__data__;
     let valueText = '[' + d._id.min + ',' + d._id.max + '] : ' + d.count,
     blockName = blockHoverName(block);
     if (options_devel) {
@@ -136,7 +137,8 @@ const featureCountDataProperties = Object.assign(
   {}, featureCountAutoDataProperties, {
     dataTypeName : 'featureCountData',
     datum2Location : function datum2Location(d) { return [d._id, d._id + d.idWidth[0]]; },
-    hoverTextFn : function (d, block) {
+    hoverTextFn : function (event, block) {
+      const d = event.target.__data__;
       let valueText = '' + d._id + ' +' + d.idWidth[0] + ' : ' + d.count,
       blockName = blockHoverName(block);
       if (options_devel) {

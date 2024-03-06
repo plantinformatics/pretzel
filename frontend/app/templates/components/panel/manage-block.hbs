@@ -1,6 +1,6 @@
 {{#if this.block}}
   <h4>{{record/entry-block
-    loadBlock="loadBlock"
+    loadBlock=this.loadBlock
     entry=this.block}}
   </h4>
   <label>Namespace</label><p>{{this.block.namespace}}</p>
@@ -64,8 +64,8 @@
         {{#each this.block.intervals as |entry index|}}
           {{record/entry-interval
             entry=entry
-            selectBlock="selectBlock"
-            deleteBlock="deleteBlock"}}
+            selectBlock=this.selectBlock
+            deleteBlock=this.deleteBlock}}
         {{/each}}
       {{else}}
         <li class="list-group-item list-group-item-default">

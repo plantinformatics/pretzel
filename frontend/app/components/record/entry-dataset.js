@@ -34,10 +34,6 @@ export default EntryBase.extend({
     return active? 'minus' : 'plus'
   }),
   actions: {
-    selectBlock(block) {
-      // console.log('SELECT BLOCK manage-explorer-dataset', block)
-      this.sendAction('selectBlock', block);
-    },
     deleteBlock(block) {
       this.sendAction('deleteBlock', block.id);
     },
@@ -55,7 +51,7 @@ export default EntryBase.extend({
       this.sendAction('onDelete', modelName, id);
     },
     selectDataset(dataset) {
-      this.sendAction('selectDataset', dataset);
+      this.selectDataset(dataset);
     }
   }
 });

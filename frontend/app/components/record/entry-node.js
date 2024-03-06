@@ -12,11 +12,11 @@ export default EntryBase.extend({
   actions: {
     selectDataset(dataset) {
       dLog('selectDataset', dataset);
-      this.sendAction('selectDataset', dataset);
+      this.selectDataset(dataset);
     },
     selectBlock(block) {
       dLog('selectBlock', block);
-      this.sendAction('selectBlock', block);
+      this.selectBlock(block);
     }
   }
 

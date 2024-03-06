@@ -80,10 +80,14 @@ function showHover(context, textFn, d, i, g) {
       /* this seems to follow the doc, but doesn't change .content
       node_
         .popover('show')
-        .popover({content : text}); */
-      let options = node_.data('bs.popover').options;
+        .popover({content : text});
+       * .config was .options in earlier version (bootstrap3)
+       */
+      let options = data.config;
       options.content = text;
       options.html = isHtml;
+      data.config.visible = true;
+      data.show();
     } else {
       /** https://getbootstrap.com/docs/3.4/javascript/#popovers */
       let options = {
@@ -109,7 +113,7 @@ function showHover(context, textFn, d, i, g) {
         dLog('showHover', text, context, textFn, d, i, g, node_.data('bs.popover'), node_.data('bs.popover').options);
       }
     }
-    node_.popover('show');
+    // node_.popover('show');
   }
 }
 function hideHover() {
@@ -117,6 +121,12 @@ function hideHover() {
   let node_ = config.hoverNearElement ? $(this) : $(config.popoverTarget);
   // for devel, comment this out to enable styling of popover in Web Inspector
   node_.popover('hide');
+  const data = node_.data('bs.popover');
+  if (data) {
+    data.config.visible = true;
+    data.hide();
+  }
+
   if (trace) {
     dLog('hideHover', node_);
   }

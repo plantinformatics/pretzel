@@ -9,7 +9,7 @@
   {{#record/entry-expander nodeName=this.name}}
     {{record/entry-blocks-array
       controlOptions=this.controlOptions
-      loadBlock="loadBlock"
+      loadBlock=this.loadBlock
       selectBlock=this.selectBlock
       selectedBlock=this.selectedBlock
       selectDataset=(action 'selectDataset')

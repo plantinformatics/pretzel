@@ -164,7 +164,7 @@ export default Model.extend(Evented, {
     return zoomedDomains;
   }),
   /** domain incorporates zoomedDomain and also flipped and blocksDomain */
-  domains : computed.alias('axesDomains'),  // .map('axes1d', (axis1d) => axis1d && axis1d.domain),
+  domains : alias('axesDomains'),  // .map('axes1d', (axis1d) => axis1d && axis1d.domain),
 
   /** Return the domains (i.e. zoom scope) of the 2 axes of this block-adj.
    * These are equivalent : 

@@ -57,13 +57,17 @@ module.exports = function (defaults) {
   //
   app.import('vendor/js/divgrid/divgrid.js');
   app.import('node_modules/colresizable/colResizable-1.6.min.js');
+  // app.import('node_modules/popper.js/dist/popper.js');
+  app.import('node_modules/bootstrap/dist/js/bootstrap.bundle.js');
   const bootstrapJs = 'node_modules/bootstrap/js/dist/'; // or src/
+  /*
   app.import(bootstrapJs + 'tooltip.js');
   app.import(bootstrapJs + 'popover.js');
   app.import(bootstrapJs + 'button.js');
   app.import(bootstrapJs + 'tab.js');
   app.import(bootstrapJs + 'util.js');
   app.import(bootstrapJs + 'dropdown.js');
+  */
   app.import('node_modules/numeric/lib/numeric.latest.js');
   app.import('node_modules/@lix/d3-tip/index.js');  // src/
   app.import('node_modules/dompurify/dist/purify.js');

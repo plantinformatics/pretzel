@@ -34,10 +34,10 @@ export default Ember.Component.extend({
   classNames: ['axis-menu'],
 
   /** the parameter will likely change from blockS (stacks) to block. */
-  block : computed.alias('blockS.block'),
-  axis1d : computed.alias('blockS.axis'),
+  block : alias('blockS.block'),
+  axis1d : alias('blockS.axis'),
   /** blockId of blockS */
-  axisName : computed.alias('blockS.axisName'),
+  axisName : alias('blockS.axisName'),
   menuActions : computed( function () {
     const
     oa = stacks.oa,

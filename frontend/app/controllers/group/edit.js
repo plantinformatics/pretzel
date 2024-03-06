@@ -43,7 +43,7 @@ export default class GroupEditController extends Controller {
 
   /** lookup owner and services when required. */
   @computed() get services () {
-    let owner = Ember.getOwner(this.target);
+    let owner = getOwner(this.target);
     let
     apiServers = owner.lookup('service:apiServers'),
     session = owner.lookup('service:session'),

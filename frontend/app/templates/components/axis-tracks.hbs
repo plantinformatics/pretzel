@@ -7,7 +7,7 @@
   showTrackBlocks : {{this.showTrackBlocks}}
 </div>
 
-{{#unless this.trackBlocks}}
+{{#unless true}} {{!-- this.trackBlocks --}}
 <div class="Tracks">
   {{content-editable
     value=this.selection
