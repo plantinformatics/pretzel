@@ -643,11 +643,11 @@ export default Service.extend({
             dLog(fnName, 'taskInstance.catch', blockId, error);
             throw error;
           } else {
-            lastResult = t.get('lastSuccessful.value');
+            lastResult = t.lastSuccessful?.value;
             // .lastRunning seems to be always null.
             dLog(
               fnName, 'using lastSuccessful.value', lastResult || t.lastSuccessful, 
-              t.get('state'), t.numRunning, t.numQueued, t.lastRunning
+              t.state, t.numRunning, t.numQueued, t.lastRunning
             );
           }
           return lastResult;

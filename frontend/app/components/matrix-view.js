@@ -631,8 +631,10 @@ export default Component.extend({
     const
     fnName = 'afterScrollVertically_tablePosition',
     table = this.table,
-    /** refn : https://github.com/handsontable/handsontable/issues/2429#issuecomment-406616217 */
-    wtScroll = table.view.wt.wtScroll,
+    /** refn : https://github.com/handsontable/handsontable/issues/2429#issuecomment-406616217
+     * This was table.view.wt.wtScroll in earlier version.  not a public API.
+     */
+    wtScroll = table.view._wt._wot.wtScroll,
     /** When called from event afterScrollVertically,
      * .get{First,Last}VisibleRow() are defined; they may be -1 otherwise, e.g.
      * table is empty / not initialised or no scroll yet.

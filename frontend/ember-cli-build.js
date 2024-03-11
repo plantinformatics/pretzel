@@ -71,7 +71,15 @@ module.exports = function (defaults) {
   app.import('node_modules/numeric/lib/numeric.latest.js');
   app.import('node_modules/@lix/d3-tip/index.js');  // src/
   app.import('node_modules/dompurify/dist/purify.js');
-  app.import('node_modules/handsontable/dist/handsontable.js');
+
+  /* Either import handsontable here, or
+   * via <link rel="stylesheet" > and <script > in app/index.html
+   */
+  const HoT = 'node_modules/handsontable/';
+  app.import(HoT + 'node_modules/numbro/dist/numbro.js');
+  app.import(HoT + 'dist/handsontable.full.min.js');  // handsontable.js
+  app.import(HoT + 'dist/handsontable.full.css'); // handsontable.css
+
   app.import('node_modules/tsne-js/build/tsne.min.js', {
     outputFile : 'assets/web-workers/tsne.min.js'
   });

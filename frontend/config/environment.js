@@ -94,6 +94,7 @@ module.exports = function (environment) {
    * https://handsontable.com/docs/7.4.2/tutorial-license-key.html
    */
   ENV.handsOnTableLicenseKey = process.env.handsOnTableLicenseKey;
+  console.log('config/environment', 'ENV.handsOnTableLicenseKey', process.env.handsOnTableLicenseKey);
 
 
   return ENV;

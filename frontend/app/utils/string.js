@@ -25,7 +25,11 @@ function stringCountString(string, stringSearch) {
  *
  * Replaces equivalent capitalize() (components/panel/paths-table.js) added in b3150c70, also :
  * extract from : https://stackoverflow.com/a/7225450/18307804, ZenMaster
- * (there are Ember utility functions for this also ...)
+ *
+ * Can now be replaced by : Ember utility functions :
+ * https://deprecations.emberjs.com/v3.x/#toc_ember-string-prototype_extensions
+ *  import  { capitalize } from "@ember/string";
+ * which handles multiple words
  */
 function toTitleCase(text) {
   const result = text.charAt(0).toUpperCase() + text.slice(1);

@@ -490,14 +490,14 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedService, 
         // .id is used by axisFeatureCircles_eltId().
         // ._name may be also added to other blocks.
         feature.id = block.id + '_' + feature._name;
-        let existingFeature = store.peekRecord('Feature', feature.id);
+        let existingFeature = store.peekRecord('feature', feature.id);
         if (existingFeature) {
           mergeFeatureValues(existingFeature, feature);
           feature = existingFeature;
           // this is included in createdFeatures, since it is a result from the current request.
         } else {
           // Replace Ember.Object() with models/feature.
-          feature = store.createRecord('Feature', feature);
+          feature = store.createRecord('feature', feature);
           /** fb is a Proxy */
           let fb = feature.get('blockId');
           if (fb.then) {
@@ -638,7 +638,7 @@ function addFeaturesGerminate(block, requestFormat, replaceResults, selectedServ
     feature._name = markerName;
     feature.id =
       block.id + '_' + datasetID + '_' + markerName;
-    let existingFeature = store.peekRecord('Feature', feature.id);
+    let existingFeature = store.peekRecord('feature', feature.id);
     if (existingFeature) {
       mergeFeatureValues(existingFeature, feature);
       feature = existingFeature;
@@ -648,7 +648,7 @@ function addFeaturesGerminate(block, requestFormat, replaceResults, selectedServ
       // addFeaturesJson() uses feature.blockId - not sure if that is applicable
       feature.blockId = block;
       // Replace Ember.Object() with models/feature.
-      feature = store.createRecord('Feature', feature);
+      feature = store.createRecord('feature', feature);
     }
 
     return feature;

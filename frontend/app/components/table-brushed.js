@@ -5,6 +5,7 @@ import EmberObject, { observer } from '@ember/object';
 import { computed } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { later, bind } from '@ember/runloop';
+import { capitalize } from '@ember/string';
 
 
 import { featureEdit } from '../components/form/feature-edit';
@@ -394,7 +395,7 @@ export default Component.extend({
   }),
 
   extraColumnsHeaders : computed('extraColumnsNames.[]', function () {
-    return this.get('extraColumnsNames').map((name) => name.capitalize());
+    return this.get('extraColumnsNames').map(capitalize);
   }),
   extraColumnsWidths : computed('extraColumnsNames.[]', function () {
     /** ref, alt are configured in featureValuesWidths; default value

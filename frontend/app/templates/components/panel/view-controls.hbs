@@ -188,21 +188,21 @@
     <li class="list-group-item">
       <label>Show Features which</label>
       <span class="filter-group-col">
-        {{input
+        <input
           type="checkbox"
           name="featureIntervalOverlap"
-          checked=this.featureIntervalOverlap
-          input=(action this.featureIntervalOverlapChanged preventDefault=false)
-        }}
+          checked={{this.featureIntervalOverlap}}
+          oninput={{action this.featureIntervalOverlapChanged preventDefault=false}}
+        />
         <label>overlap</label>
       </span>
       <span class="filter-group-col">
-        {{input
+        <input
           type="checkbox"
           name="featureIntervalContain"
-          checked=this.featureIntervalContain
-          input=(action this.featureIntervalContainChanged preventDefault=false)
-        }}
+          checked={{this.featureIntervalContain}}
+          oninput={{action this.featureIntervalContainChanged preventDefault=false}}
+        />
         <label>contain</label>
       </span>
       <label>the zoom or brush scope.</label>

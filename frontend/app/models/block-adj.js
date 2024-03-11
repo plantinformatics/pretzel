@@ -487,11 +487,11 @@ export default Model.extend(Evented, {
     task = this.get('taskGetPaths');
 
     // expected .drop() to handle this, but get "TaskInstance 'taskGetPaths' was cancelled because it belongs to a 'drop' Task that was already running. "
-    if (false && ! task.get('isIdle')) {
+    if (false && ! task.isIdle) {
       dLog('paths taskGetPaths', task.numRunning, task.numQueued, blockAdjId);
       // result = this.get('lastResult');
       if (task.numRunning > 1) {
-        result = task.get('lastPerformed');
+        result = task.lastPerformed;
         return result;
       }
     }
@@ -511,9 +511,9 @@ export default Model.extend(Evented, {
         if (! didCancel(error)) {
           dLog('call_taskGetPaths taskInstance.catch', blockAdjId, error);
           throw error; }
-        let lastResult = task.get('lastSuccessful.value');
+        let lastResult = task.lastSuccessful.value;
         dLog('call_taskGetPaths', 'using lastSuccessful.value', lastResult, 
-             task.get('state'), task.numRunning, task.numQueued
+             task.state, task.numRunning, task.numQueued
             );
         return lastResult;
       });

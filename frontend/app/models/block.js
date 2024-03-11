@@ -79,11 +79,11 @@ export default Model.extend({
   urlOptions : alias('queryParams.urlOptions'),
 
 
-  datasetId: belongsTo('dataset', { async: false, inverse : null }),
+  datasetId: belongsTo('dataset', { async: true, inverse : null }),
   annotations: hasMany('annotation', { async: false, inverse : null }),
   intervals: hasMany('interval', { async: false, inverse : null }),
   // possibly async:true when !allInitially, if needed.
-  features: hasMany('feature', {async: true, inverse : 'blockId'}),
+  features: hasMany('feature', {async: false, inverse : 'blockId'}),
   range: attr('array'),
   scope: attr('string'),
   name: attr('string'),

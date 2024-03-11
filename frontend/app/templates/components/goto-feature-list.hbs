@@ -37,13 +37,13 @@
   {{/if}}
 
   <span style="display: inline-block;">
-    {{input
+    <input
       type="checkbox"
       name="this.matchAliases"
-      checked=this.matchAliases
-      input=(action this.matchAliasesChanged preventDefault=false)
+      checked={{this.matchAliases}}
+      oninput={{action this.matchAliasesChanged preventDefault=false}}
       id="checkbox-matchAliases"
-    }}
+    />
     <label for="checkbox-matchAliases">Match aliases</label>
   </span>
 

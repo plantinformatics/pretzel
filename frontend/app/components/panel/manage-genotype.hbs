@@ -99,7 +99,7 @@
 
                   {{!-- --------------------------------------------------------- --}}
 
-                  {{log 'axisBrush' axisBrush}}
+                  {{log 'axisBrush' this.axisBrush}}
 
                   Server : 
                   {{this.apiServerSelectedOrPrimary.name}}
@@ -117,7 +117,7 @@
                           <th class="devel-visible">zoomCounter</th>
                         </tr>
 
-                      {{#each axisBrush.brushedAxes as |block| }}
+                      {{#each this.axisBrush.brushedAxes as |block| }}
 
                         <tr>
                           <td>
@@ -126,7 +126,7 @@
                             <div>{{block.axis.axis1d.referenceBlock.datasetId.id}}</div>
                           </td>
                           <td>{{block.block.scope}}</td>
-                          <td>{{brushedDomainRounded}}</td>
+                          <td>{{this.brushedDomainRounded}}</td>
                           <!-- ----------------------------- -->
                           <td class="devel-visible">{{blockId}}</td>
                           <td class="devel-visible">{{zoomCounter}}</td>
@@ -139,7 +139,7 @@
 
                     </div>
 
-                    <div>{{referenceDatasetName}}</div>
+                    <div>{{this.referenceDatasetName}}</div>
 
                     <div>
                       <label style="display:inline">Request Samples :
@@ -190,9 +190,9 @@
                           <i class="glyphicon glyphicon-filter"></i>
                           Search / Filter
                         </label>
-                        {{input id="sampleNameFilter" type="search" value=sampleNameFilter
-                          input=(action this.nameFilterChanged value="target.value")
-                          placeholder="Filter available samples by name" }}
+                        <input id="sampleNameFilter" type="search" value={{this.sampleNameFilter}}
+                          oninput={{action this.nameFilterChanged value="target.value"}}
+                          placeholder="Filter available samples by name" />
                           {{!-- maybe autocomplete="sample-name", but samples names are mostly numeric so it may be more of an impediment than a benefit for the user --}}
 
                         <span>
@@ -214,7 +214,7 @@
 
                       </div>
 
-                      {{ensureSamplesForDatasetTabEffect}}
+                      {{this.ensureSamplesForDatasetTabEffect}}
                       <div class="genotype-controls">
 
                         <select style="height:100px" class="form-control" multiple onchange={{action this.selectSample}}>
@@ -229,7 +229,7 @@
                     <div>
                       <label>Selected samples to be requested in VCF Lookup</label>
                       {{#if this.selectedCount}}
-                        <span class="sample-count">( {{selectedCount}} )</span>
+                        <span class="sample-count">( {{this.selectedCount}} )</span>
                       {{/if}}
 
                       <div>
@@ -282,13 +282,13 @@
                           Format for request and display
                         {{/ember-tooltip}}
                         </label>
-                        {{radio-button value='CATG' groupValue=requestFormat
-                          changed=(action requestFormatChanged preventDefault=false)
+                        {{radio-button value='CATG' groupValue=this.requestFormat
+                          changed=(action this.requestFormatChanged preventDefault=false)
                         }}
                         ACGT &nbsp;&nbsp;
                         <span>
-                        {{radio-button value='Numerical' groupValue=requestFormat
-                          changed=(action requestFormatChanged preventDefault=false)
+                        {{radio-button value='Numerical' groupValue=this.requestFormat
+                          changed=(action this.requestFormatChanged preventDefault=false)
                         }}
                         012 &nbsp;&nbsp;
                         {{#ember-tooltip side="right" delay=500}}
@@ -400,8 +400,8 @@
 
               {{!-- --------------------------------------------------------------- --}}
 
-              {{#if lookupMessage}}
-                {{elem/panel-message warningMessage=lookupMessage}}
+              {{#if this.lookupMessage}}
+                {{elem/panel-message warningMessage=this.lookupMessage}}
               {{/if}}
 
               {{!-- --------------------------------------------------------------- --}}
@@ -409,7 +409,7 @@
               <div class="genotype">
                 {{#if this.vcfExportText.length}}
                   <button type="button" class="btn btn-info btn-xs">
-                    {{#component "ember-csv@file-anchor" data=this.vcfExportText fileName=this.vcfExportFileName}} VCF Download{{/component}}
+                    {{!-- #component "ember-csv@file-anchor" data=this.vcfExportText fileName=this.vcfExportFileName}} VCF Download{{/component --}}
                   </button>
                 {{/if}}
               </div>

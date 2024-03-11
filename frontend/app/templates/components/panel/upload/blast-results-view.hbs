@@ -17,23 +17,23 @@
 
 {{#if 0}}
 <div>
-  {{input
+  <input
     type="checkbox"
     name="viewAllResultAxesFlag"
-    checked=this.viewAllResultAxesFlag
-    input=(action this.viewAllResultAxesChange)
-  }}
+    checked={{this.viewAllResultAxesFlag}}
+    oninput={{action this.viewAllResultAxesChange}}
+  />
   <label>View all axes with results</label>
 </div>
 {{/if}}
 
 <div>
-  {{input
+  <input
     type="checkbox"
     name="viewFeaturesFlag"
-    checked=this.viewFeaturesFlag
-    input=(action this.viewFeaturesChange)
-  }}
+    checked={{this.viewFeaturesFlag}}
+    oninput={{action this.viewFeaturesChange}}
+  />
   <label>Select / Deselect all</label>
 </div>
 

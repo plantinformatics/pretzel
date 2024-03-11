@@ -700,7 +700,7 @@ export default Component.extend({
     };
 
     dLog("tableDiv", tableDiv);
-    var table = new Handsontable(tableDiv, {
+    var table = tableDiv && new Handsontable(tableDiv, {
       data: data || [['', '', '']],
       minRows: 1,
       rowHeaders: true,

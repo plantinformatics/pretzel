@@ -113,8 +113,6 @@
     "ember-cli-htmlbars": "^6.3.0",
     "ember-composable-helpers": "^5.0.0",
     "ember-concurrency": "^4.0.0",
-    "ember-contextual-table": "^4",
-    "ember-csv": "^1.0.2",
     "ember-jsoneditor": "git+https://git@github.com/plantinformatics/ember-jsoneditor.git",
     "ember-lodash": "^4.19.5",
     "ember-models-table": "^5.2.0",

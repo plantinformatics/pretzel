@@ -162,6 +162,7 @@ function intervalDirection(interval, direction) {
  * zoom & pan : if one (either) end of newDomain is outside axisReferenceDomain, set it to that limit
  *
  * @param event	WheelEvent
+ * If event is a d3 wrapper event (event.type === 'zoom') then use event.sourceEvent
  * @param axis  axis1d (was Stacked)
  * @param axisApi for axisRange2Domain()
  * @param inFilter  true when called from zoomFilter() (d3.zoom().filter()),

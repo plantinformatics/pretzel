@@ -126,7 +126,7 @@ let config = {
     dLog('blocksLimitsTask', blocksLimitsTask);
     if (! blocksLimitsTask ||
         (! Array.isArray(blocksLimitsTask._result) &&
-         (! blocksLimitsTask.get || ! blocksLimitsTask.get('isRunning')))) {
+         ! blocksLimitsTask.isRunning)) {
       blocksLimitsTask = datasetsTask.then(() => 
         blockService.getBlocksLimits(undefined, {server: 'primary'})
           .then((limits) => dLog('getBlocksLimits', limits))

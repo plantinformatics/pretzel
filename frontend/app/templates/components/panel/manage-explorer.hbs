@@ -48,13 +48,13 @@
        {{/radio-button}}
 
       <span style="display: inline-block;">
-        {{input
+        <input
           type="checkbox"
           name="this.controlOptions.historyBlocks"
-          checked=this.controlOptions.historyBlocks
-          input=(action this.historyBlocksChanged preventDefault=false)
+          checked={{this.controlOptions.historyBlocks}}
+          oninput={{action this.historyBlocksChanged preventDefault=false}}
           id="checkbox-historyBlocks"
-        }}
+        />
         <label for="checkbox-historyBlocks">Viewed Chromosomes</label>
       </span>
 
@@ -94,14 +94,14 @@
   <div class="textInput">
     <i class="glyphicon glyphicon-filter"></i>
     {{!-- there is no suitable autocomplete, so may change to  =off --}}
-    {{input
+    <input
       id="nameFilter"
       type="search"
-      value=this.nameFilter
-      input=(action this.nameFilterChanged value="target.value")
+      value={{this.nameFilter}}
+      oninput={{action this.nameFilterChanged value="target.value"}}
       placeholder="Search All Datasets"
       autocomplete="dataset-name"
-    }}
+      />
   </div>
   <div class="button-row">
     <label>Case</label>
@@ -245,13 +245,13 @@
             selectExpander=(action this.selectOntologyNode) }}
 
             <span style="display: inline-block; margin-left: 3em;">
-              {{input
+              <input
                 type="checkbox"
                 name="this.controlOptions.showHierarchy"
-                checked=this.controlOptions.showHierarchy
-                input=(action this.showHierarchyChanged preventDefault=false)
+                checked={{this.controlOptions.showHierarchy}}
+                oninput={{action this.showHierarchyChanged preventDefault=false}}
                 id="checkbox-showHierarchy"
-              }}
+              />
               <label for="checkbox-showHierarchy"><i class="glyphicon glyphicon-tree-conifer"></i></label>
             </span>
 

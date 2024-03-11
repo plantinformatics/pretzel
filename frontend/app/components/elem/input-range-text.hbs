@@ -5,11 +5,11 @@
     {{yield}}
     <span class="sub-label filter-group-col">
       {{#unless @disabled}}
-        {{input
+        <input
           type="text"
-          value=this.valueText
-          input=(action this.valueTextChanged value=target.value)
-        }}
+          value={{this.valueText}}
+          oninput={{action this.valueTextChanged value="target.value"}}
+        />
       {{/unless}}
     </span>
   </div>

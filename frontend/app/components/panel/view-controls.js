@@ -266,7 +266,7 @@ export default Component.extend({
   sbSizeThresholdText : "" + sbSizeThresholdInitial,
   sbSizeThresholdTextChanged(value) {
     /* {{input value=sbSizeThresholdText ... }} sets
-     * this.sbSizeThresholdText, and (action ...  value=target.value)
+     * this.sbSizeThresholdText, and (action ...  value="target.value")
      * passes the same value to this function.  */
     if (this.sbSizeThresholdText !== value) {
       dLog('sbSizeThresholdTextChanged', this.sbSizeThresholdText, value);
@@ -326,7 +326,7 @@ export default Component.extend({
   axisLayerModulusText : "" + axisLayerModulusInitial,
   axisLayerModulusTextChanged(value) {
     /* {{input value=axisLayerModulusText ... }} sets
-     * this.axisLayerModulusText, and (action ...  value=target.value)
+     * this.axisLayerModulusText, and (action ...  value="target.value")
      * passes the same value to this function.  */
     if (this.axisLayerModulusText !== value) {
       dLog('axisLayerModulusTextChanged', this.axisLayerModulusText, value);

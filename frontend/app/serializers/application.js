@@ -1,3 +1,5 @@
+import { decamelize } from "@ember/string";
+
 import RESTSerializer from '@ember-data/serializer/rest';
 
 // import PartialModelRESTSerializer from 'ember-data-partial-model/mixins/rest-serializer';
@@ -42,7 +44,7 @@ export default RESTSerializer.extend(/*PartialModelRESTSerializer,*/ {
   // },
   serializeIntoHash: function(data, type, record, options) {
     console.log("SERIALIZE INTO HASH", data, record)
-    // var root = Ember.String.decamelize(type.modelName);
+    // var root = decamelize(type.modelName);
     // data[root] = this.serialize(record, options);
     var payload = this.serialize(record, options);
     var props = Object.keys(payload)

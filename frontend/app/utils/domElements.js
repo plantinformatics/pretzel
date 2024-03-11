@@ -52,20 +52,20 @@ let
 
   let startX;
   let dragResize = d3.drag()  // d3 v3: was .behavior
-    .on('drag', function(d, i, g) {
+    .on('drag', function(event, d) {
       if (trace_dom)
-        logElementDimensions(g[0], 'on drag');
+        logElementDimensions(this, 'on drag');
 
       // as for .resize() below,
       // .on() seems to apply a reasonable debounce, but if not, use Ember.run.debounce()
       // Determine resizer position relative to resizable (parent)
+      // relativeParent was passed to d3.mouse(), not required by d3.pointer().
       let relativeParent = (this.parentNode.parentNode.parentNode.tagName === 'foreignObject') ?
         this.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode : this.parentNode;
       const
-      mousePosition = d3.mouse(relativeParent),
+      mousePosition = d3.pointer(event),
       /** means y if vertical */
       x_ = mousePosition[+vertical],
-      event = d3.event,
       /** means dy if vertical */
       dx = event[vertical ? 'dy' : 'dx'],
       // dLog("eltWidthResizable drag x=", x, dx);

@@ -337,7 +337,7 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
       /** If this is called as refreshDatasets from data-csv then we want to get
        * blockFeatureLimits for the added block.
        * Perhaps can pass (undefined, {server : serverTabSelected}), and also
-       * check if blocksLimitsTask.get('isRunning') (factor out of
+       * check if blocksLimitsTask.isRunning (factor out of
        * mapview:model() )
        */
       newTaskInstance.then((datasets) => {

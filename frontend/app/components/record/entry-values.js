@@ -72,7 +72,7 @@ export default EntryBase.extend({
     /** RFC #176 (Javascript Modules API) changes Ember.isArray to isArray,
      * so append _ to variable name to distinguish it. */
     isArray_ = isArray(values);
-    if (trace_entryValues)
+    if (trace_entryValues > 1)
       console.log('valueIsArray', isArray_, length, this.get('name'), values);
     return isArray_;
   }),
@@ -103,7 +103,7 @@ export default EntryBase.extend({
       levelMeta = this.get('levelMeta'),
     values = this.get('values'),  // values.then ...
     dataTypeName = values && (valueGetType(levelMeta, values) || this.get('valuesModelName'));
-    if (trace_entryValues)
+    if (trace_entryValues > 1)
       console.log('dataTypeName', dataTypeName, values);
     return dataTypeName;
   }),
@@ -239,7 +239,9 @@ export default EntryBase.extend({
       array = Object.keys(values)
         .sort(alphanum)
         .map((key) => ({key, value : values[key]}));
-      dLog('keyValuesSorted', values, array);
+      if (trace_entryValues > 1)  {
+        dLog('keyValuesSorted', values, array);
+      }
     }
     return array;
   }),
