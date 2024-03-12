@@ -989,8 +989,8 @@ function AxisBrushZoom(oa) {
    * The datum of `that` is the axis-1d of the brushed axis.
    * @param brushedDomainClick  limits of the current brush, to which we are zooming
    * (brushedAxis1d.brushedDomain)
-   * defined when called via .Zoom .on('click' )
-   * undefined when called via .on('zoom' ), i.e. mousewheel zoom
+   * defined when called via .Zoom .on('click' ), i.e. event.type === 'click'
+   * undefined when called via .on('zoom' ), i.e. mousewheel zoom, event.type === 'zoom', isWheelEvent
    */
   function zoom(event, that, i, g, brushedDomainClick) {
     const fnName = 'zoom';
@@ -1002,6 +1002,7 @@ function AxisBrushZoom(oa) {
      * as in wheelNewDomain() : let e = (event.type === 'zoom') ? event.sourceEvent : event,
      */
     let e = event.sourceEvent || event; // was d3.event.sourceEvent;
+    /** equivalent : event.type === 'zoom' */
     let isWheelEvent = e instanceof WheelEvent;
     let timeStamp = e && e.timeStamp;
     me.set('axisZoom.zoomPan', {isWheelEvent, timeStamp});
@@ -1093,6 +1094,10 @@ function AxisBrushZoom(oa) {
       brushedDomain;
       ensureYscaleDomain(yp, axis1d);
 
+      if (event?.type === 'click') {
+        domain = brushedDomain = brushedDomainClick;
+        dLog(fnName, axisName, yp.domain(), yp.range(), axis1d.brushedRegion, axis1d.portion, brushedDomain);
+      } else // isWheelEvent
       if (event)  // if there is a mousewheel event
       {
         /** note the brushedDomain before the scale change, for updating the brush position */
