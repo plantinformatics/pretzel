@@ -303,6 +303,7 @@ export default Component.extend({
   },
 
   didRender() {
+    this._super(...arguments);
     later(this.renderOnceTable, 500);
   },
   renderOnceTable : computed( function() {

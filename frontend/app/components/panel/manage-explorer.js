@@ -124,6 +124,7 @@ export default ManageBase.extend({
   }),
   willDestroyElement() {
     this.get('apiServers').off('receivedDatasets', this.receivedDatasetsFn);
+    this._super(...arguments);
   },
 
   urlOptions : computed('model.params.options', function () {
@@ -1885,6 +1886,7 @@ export default ManageBase.extend({
      * is not currently destroyed when the left-panel tab is closed & re-opened,
      * so it is not currently required.
      willRender() {
+     this._super(...arguments);
      this.saveActiveId();
      },
   didRender() {

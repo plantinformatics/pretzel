@@ -62,11 +62,11 @@ export default class FormDatasetGraphComponent extends Component {
 
   simulation = null;
   willDestroyElement() {
-    this._super(...arguments);
-
     if (this.simulation) {
       this.simulation.stop();
     }
+
+    this._super(...arguments);
   }
 
   //----------------------------------------------------------------------------

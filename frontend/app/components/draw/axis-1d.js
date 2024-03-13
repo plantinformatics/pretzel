@@ -6,6 +6,7 @@ import Evented from '@ember/object/evented';
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
 
+import { task } from 'ember-concurrency';
 
 import { sum } from 'lodash/math';
 import { isEqual } from 'lodash/lang';
@@ -784,7 +785,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
    * @return if zoomed return the zoom yDomain, otherwise blockDomain.
    * Result .{0,1} are swapped if .flipped.
    */
-  domain : computed('zoomed', 'flipped', 'blocksDomain', 'zoomedDomain'/*Throttled*/, function () {
+  domain : computed('zoomed', 'flipped', 'blocksDomain', 'zoomedDomainThrottled'/**/, function () {
     /** Actually .zoomedDomain will be == blocksDomain when not zoomed, but
      * using it as a CP dependency causes problems, whereas blocksDomain has a
      * more direct dependency on axis' blocks' features' locations.
@@ -1115,9 +1116,10 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
    *  @return undefined; value is unused.
    */
   domainChanged : computed(
-    'domain.0', 'domain.1',
+    'zoomedDomainThrottled.{0,1}',
     function () {
       if (this.isDestroyed) return undefined;
+      /** dependency is zoomedDomainThrottled, but use .domain - the latest value. */
       let domain = this.get('domain'),
       domainDefined = this.get('domainDefined');
       // domain is initially undefined or []
@@ -1132,7 +1134,9 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
           dLog('domainChanged() no axisS y scale yet', domain, this);
         }
         else {
-          this.updateScaleDomain();
+          // .updateScaleDomain() is already done by zoom();  depend on .domain if it is to be done here instead.
+          // this.updateScaleDomain();
+          // await the result of updateAxis()
           /* if this.stack is not yet defined then defer, so use debounce instead of throttle */
           debounce(this, this.updateAxis, this.get('controlsView.throttleTime'));
         }
@@ -1178,8 +1182,12 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     let t = stacks.oa.svgContainer; //.transition().duration(750);
     let axisBrushZoom = AxisBrushZoom(stacks.oa);
     axisBrushZoom.axisScaleChanged(this, t, true);
-    this.stacksView.stacksAdjust(true);
+    /** promise result not yet used. */
+    const updateAxisP = this.updateAxisTask.perform();
   },
+  updateAxisTask : task(function *() {
+    this.stacksView.stacksAdjust(true);
+  }).keepLatest(),
   drawTicks() {
     /** based on extract from axisScaleChanged() */
     let

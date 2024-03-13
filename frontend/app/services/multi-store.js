@@ -19,8 +19,8 @@ export default Service.extend({
      * Init function, just initialize the list of store names.
      */
     init() {
-        Ember_set(this, 'storeNames', Ember_A());
         this._super(...arguments);
+        Ember_set(this, 'storeNames', Ember_A());
     },
 
     /**

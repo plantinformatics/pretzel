@@ -456,6 +456,8 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
   showAsymmetricAliases : false,
 
   init: function() {
+    this._super.apply(this, arguments);
+
     /** refn : https://discuss.emberjs.com/t/is-this-possible-to-turn-off-some-deprecations-warnings/8196 */
     let deprecationIds = [
       'ember-component.send-action',
@@ -478,8 +480,6 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
     if (! window.PretzelFrontend) {
       window.PretzelFrontend = {};
     }
-
-    this._super.apply(this, arguments);
   },
 
   currentURLDidChange: observer('target.currentURL', function () {

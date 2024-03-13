@@ -26,6 +26,8 @@ import { axisFontSizeApply } from '../../utils/draw/axis-draw';
 /*--------------------------------------------------------------------------*/
 
 const dLog = console.debug;
+const compName = 'components/panel/view-controls';	// originally draw-controls
+
 
 /** values for titleTextSize, font-size:  */
 const fontSizes = [
@@ -496,9 +498,9 @@ export default Component.extend({
   /*--------------------------------------------------------------------------*/
 
   didInsertElement() {
-    const fnName = "components/draw-controls didInsertElement()";
-    dLog(fnName, this.drawActions);
     this._super(...arguments);
+    const fnName = "didInsertElement()";
+    dLog(compName, fnName, this.drawActions);
 
     // console.log(fnName, 'controlsService.view', this.controlsService.get('view'));
     this.controlsService.set('view', this);
@@ -531,7 +533,7 @@ export default Component.extend({
       this.set('pathsViaStream', toBool(pathsViaStream));
   },
   willDestroyElement() {
-    dLog("components/draw-controls willDestroyElement()");
+    dLog(compName, "willDestroyElement()");
     this.drawActions.trigger("drawControlsLife", false);
 
     this._super.apply(this, arguments);

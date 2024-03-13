@@ -62,8 +62,8 @@ export default Model.extend(Evented, {
   /*--------------------------------------------------------------------------*/
 
   init() {
-    this.set('receivedAll', {});
     this._super.apply(this, arguments);
+    this.set('receivedAll', {});
   },
 
   /*--------------------------------------------------------------------------*/

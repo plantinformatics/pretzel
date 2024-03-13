@@ -40,6 +40,8 @@ import { fcsProperties } from '../utils/data-types';
 import { stacks } from '../utils/stacks';
 
 import { promiseText } from '../utils/ember-devel';
+import { compareDependencies } from '../utils/ember-devel';
+
 
 import BlockAxisView from '../utils/draw/block-axis-view';
 
@@ -1140,6 +1142,13 @@ export default Model.extend({
     '{zoomedDomainDebounced,zoomedDomainThrottled}.{0,1}',
     'limits',
     function () {
+      const dependencies = [
+    'featuresCountsResultsFiltered',
+    'featureCountInZoom',
+    'zoomedDomainDebounced.0', 'zoomedDomainThrottled.0',
+    'limits',];
+       compareDependencies(this, 'featuresCountIncludingZoom', dependencies);
+
       let
       count = this.get('axis1d.zoomed') ?
         (this.featuresCountsResultsFiltered.length ? this.get('featureCountInZoom') : undefined ) :
@@ -1213,8 +1222,13 @@ export default Model.extend({
   featureCountInZoom : computed('featuresCountsInZoom.[]', function () {
     let overlaps = this.get('featuresCountsInZoom') || [];
     let
-    domain = this.get('zoomedDomain'),
-    count = this.featureCountInInterval(overlaps, domain, 'Zoom');
+    count;
+    if (! this.axis1d?.zoomed) {
+      count = this.featureCount;
+    } else {
+      const domain = this.get('zoomedDomain');
+      count = this.featureCountInInterval(overlaps, domain, 'Zoom');
+    }
     return count;
   }),
   featureCountInBrush : computed('featuresCountsInBrush.[]', function () {
@@ -1482,6 +1496,15 @@ export default Model.extend({
     'featuresCountsResultsFiltered.[]',
     'featuresCountsThreshold',
     function () {
+      if (false) {
+      const dependencies = [
+    'featuresCountIncludingZoom',
+    'zoomedDomainDebounced.0',
+    'featuresCounts',
+    'featuresCountsResultsFiltered',
+    'featuresCountsThreshold',];
+      compareDependencies(this, 'isZoomedOut', dependencies);
+      }
     let
     count = this.get('featuresCountIncludingZoom'),
     featuresCountsThreshold = this.get('featuresCountsThreshold'),

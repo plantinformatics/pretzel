@@ -71,6 +71,7 @@ export default Component.extend({
   landingPageContentFileName : alias('siteSpecificHtmlUrl'),
 
   willRender : function () {
+    this._super(...arguments);
     console.log('willRender', this.get('landingPageContentFileName'));
     /* This .remove() is probably not required now that the promise result is
      * inserted via {{await}} in the hbs.

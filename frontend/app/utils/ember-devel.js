@@ -182,7 +182,8 @@ function arrayClear(array) {
 
 let objectDependenciesCache = new WeakMap();
 /** Compare the values of an object for CP dependencies.
- * Previous values are stored via a WeakMap, using object as key.
+ * Previous values are stored via a WeakMap, using object as key,
+ * so this only supports 1 compareDependencies() per object, i.e. 1 CP.
  * @param object Ember Object - this of the CP
  * @param label string to label the console.debug() output
  * @param dependencies array of strings which identify the dependencies

@@ -1062,7 +1062,7 @@ function AxisBrushZoom(oa) {
     }
     const axisName = axis1d.axisName;
 
-    let t = oa.svgContainer; // .transition().duration(750);
+    let t = isWheelEvent ? undefined : oa.svgContainer; // .transition().duration(750);
     /** The response to mousewheel zoom is direct, no transition delay.  requestAnimationFrame() is used. */
     let tRaf = undefined; // or t.duration(10);
     /** true if the axis domain is changed. */
@@ -1131,11 +1131,13 @@ function AxisBrushZoom(oa) {
         zoomedOut = isEqual(domainAllS, domainFS);
 
         axis1d.setZoomed(! zoomedOut);
+        // overlap : axis-1d : domainChanged()->updateScaleDomain() -> updateDomain()
         y.domain(domain);
         axis1d.ys.domain(domain);
         // scale domain is signed. currently .zoomedDomain is not, so maybeFlip().
         axis1d.setDomain(maybeFlip(domain, axis1d.flipped));
 
+        if (scheduler) {
         /* was updatePaths true, but pathUpdate() is too long for RAF.
          * No transition required for RAF.
          */
@@ -1145,6 +1147,9 @@ function AxisBrushZoom(oa) {
           axis1d, tRaf, false,  // args
           me.get('controls.view.debounceTime')
         );
+        } else {
+          axisScaleChanged(axis1d, t, /*updatePaths*/false);
+        }
         let brushExtent = axis1d.brushedRegion;
         if (brushedDomainClick) {
           /* on Zoom button click, clear the brush selection, because we have

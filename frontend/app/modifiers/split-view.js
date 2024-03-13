@@ -67,6 +67,8 @@ class SplitModifierManager {
 
 class SplitViewModifier extends EmberObject {
   didInsertElement(el, positional, args) {
+    this._super(...arguments);
+
     const registerInstance = args.registerInstance;
     if (registerInstance) {
       delete args.registerInstance;
@@ -80,6 +82,7 @@ class SplitViewModifier extends EmberObject {
   }
 
   didUpdate(el, positional, args) {
+    this._super(...arguments);
     let { rerender } = args;
     if (this.rerender !== rerender) {
       if (this.splitInstance) {
@@ -97,6 +100,7 @@ class SplitViewModifier extends EmberObject {
       this.splitInstance.destroy();
       this.splitInstance = null;
     }
+    this._super(...arguments);
   }
 }
 

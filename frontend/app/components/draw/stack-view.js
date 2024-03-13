@@ -34,8 +34,8 @@ export default class DrawStackViewComponent extends Component {
   axes;
 
   constructor(app, args) {
-    const axis1d = args.stack.axis1d;
     super(...arguments);
+    const axis1d = args.stack.axis1d;
 
     dLog('stack-view', this);
 
@@ -116,6 +116,7 @@ export default class DrawStackViewComponent extends Component {
       // ['axis1d', 'stackView']
       Array.from(Object.entries(this.args.stack)).flat() );
     this.args.register?.(this, false);
+    this._super(...arguments);
   }
 
   //----------------------------------------------------------------------------

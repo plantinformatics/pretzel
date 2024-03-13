@@ -1,10 +1,12 @@
 import { isArray } from '@ember/array';
 import { throttle, next, later } from '@ember/runloop';
-import EmberObject, { computed, get as Ember_get } from '@ember/object';
+import EmberObject, { computed, get as Ember_get, set as Ember_set } from '@ember/object';
 import { alias, filter, filterBy } from '@ember/object/computed';
 import $ from 'jquery';
 import { inject as service } from '@ember/service';
 import { A } from '@ember/array';
+
+import { task } from 'ember-concurrency';
 
 import { isEqual } from 'lodash/lang';
 
@@ -15,6 +17,7 @@ import {
   noShiftKeyfilter
 } from '../utils/domElements';
 import { configureHover } from '../utils/hover';
+import { compareDependencies } from '../utils/ember-devel';
 import InAxis from './in-axis';
 import {
   eltId,
@@ -698,9 +701,9 @@ export default InAxis.extend({
   },
 
   willDestroyElement() {
-    this._super(...arguments);
     console.log("components/axis-tracks willDestroyElement()");
     sharedProperties.axisTracks.removeObject(this);
+    this._super(...arguments);
   },
 
   didRender() {
@@ -2118,6 +2121,18 @@ export default InAxis.extend({
     'controlsViewed.visibleByOntology',
     'controlsViewed.showQTLsWithoutOntologies',
     function () {
+      const dependencies = [
+    'trackBlocksR.@each.visible',
+    'trackBlocksR.@each.featuresLength', 'trait.traits.@each.visible',
+    'trackBlocksR.@each.featuresCountsResultsFiltered',
+    'ontology.ontologyIsVisibleChangeCount',
+    'controlsViewed.visibleByTrait',
+    'controlsViewed.visibleByOntology',
+    'controlsViewed.showQTLsWithoutOntologies',
+        'trackBlocksR', 'ontology', 'controlsViewed',
+        'trait', 'trait.traits',
+      ];
+      compareDependencies(this, 'tracksTree', dependencies);
     let
     trait = this.get('trait'),
     ontology = this.get('ontology'),
@@ -2478,11 +2493,22 @@ export default InAxis.extend({
    * Using a task to wrap the transition will probably be a more maintainable
    * alternative (as in axis-ticks-selected.js : labelsTransitionPerform).
    */
+  slowDependenciesEffectDependencies : {axis1d : {}, controls : {}},
   slowDependenciesEffect : computed(
     'tracksTree',
     'axis1d.featureLength',
     'controls.genotypeSNPFilters',
     function() {
+      const d = this.slowDependenciesEffectDependencies;
+      ['tracksTree',
+    'axis1d.featureLength',
+    'controls.genotypeSNPFilters'].forEach(n => {
+      const v = this.get(n);
+      if (v !== Ember_get(d, n)) {
+        dLog('slowDependenciesEffect', n, v);
+        Ember_set(d, n, v);
+      }
+      });
       const axisTransitionTime = 750;
       later(() => (
         !this.isDestroyed && ! this.isDestroying &&
@@ -2507,6 +2533,9 @@ export default InAxis.extend({
      * CP the dependencies don't have the desired effect. */
     // 'sharedProperties.minQtlWidth',
     function() {
+      return this.showTrackBlocksTask.perform();
+    }),
+  showTrackBlocksTask : task(function *() {
       let tracks = this.get('tracksTree');
       let
       axis1d = this.get('axis1d'),
@@ -2525,13 +2554,15 @@ export default InAxis.extend({
       if (isViewed) {
         let blockIds = Object.keys(tracks.intervalTree);
 
+        // layoutAndDrawTracks() can also be wrapped in a task.
         // intersect with axis zoom region;  layer the overlapping tracks; draw tracks.
         this.layoutAndDrawTracks.apply(this, [undefined, tracks]);
         featuresLength = blockIds.map((blockId) => [blockId, tracks.intervalTree[blockId].intervals.length]);
         console.log('showTrackBlocks() featuresLength', featuresLength);
       }
       return featuresLength;
-    }),
+    }).keepLatest(),
+
   adjustedWidth : alias('parentView.adjustedWidth'),
   /** Render changes related to component / window resize.
    */
