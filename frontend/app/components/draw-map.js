@@ -437,14 +437,15 @@ export default Component.extend(Evented, {
         });
     },
 
+    /** not used. compare mapview : addMap and loadBlock */
     addMap : function(mapName) {
       dLog("controller/draw-map", "addMap", mapName);
-      this.sendAction('addMap', mapName);
+      this.addMap(mapName);
     },
 
     removeBlock(block) {
-      dLog('removeBlock', block.id);
-      this.sendAction('removeBlock', block);
+      dLog('removeBlock', block.id || block);
+      this.removeBlock(block);
     },
 
 

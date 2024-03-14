@@ -147,12 +147,12 @@ function DropTarget(oa, vc, g) {
     oa.currentDropTarget = {axisName: axisName, classList: classList};
   }
 
-  function dropTargetMouseOver(data, index, group){
-    console.log("dropTargetMouseOver() ", this, data, index, group);
+  function dropTargetMouseOver(event, data){
+    console.log("dropTargetMouseOver() ", this, data);
     this.classList.add("dragHover");
     storeDropTarget(data, this.classList);
   }
-  function dropTargetMouseOut(d){
+  function dropTargetMouseOut(event, d){
     console.log("dropTargetMouseOut", d);
     this.classList.remove("dragHover");
     oa.currentDropTarget = undefined;

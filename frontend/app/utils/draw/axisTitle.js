@@ -197,17 +197,15 @@ function AxisTitle(oa) {
       $(node_)
       .on('click', showMenuFn);
       */
-    /** @param e DOM event */
+    /** @param e MouseEventPrototype, DOM event */
     function showMenu(e) {
       let block = this.__data__;
       if (block.axis.blocks[0] !== block) {
         dLog('showMenu', 'data block', block, block.axis.blocks);
         block = block.axis.blocks[0];
       }
-      /** defined when called via jQuery.on(click) */
-      let jQueryEventInfo = e.originalEvent && [e.originalEvent.path, e.originalEvent.srcElement, e.handleObj.type];
       dLog('showMenu', this, axisName, this.__data__, this.parentElement, this.parentElement.parentElement,
-           e, jQueryEventInfo);
+           e);
       me.selectBlock(block.block);
 
       /** If the axis-menu is already displayed on a different axis,

@@ -123,7 +123,7 @@ function pathCreate(owner, store, feature0, feature1, block0, block1) {
     idText = locationPairKeyFn({ feature0, feature1}),
     r = store.peekRecord(modelName, idText);
     if (r)
-      dLog('pathCreate', feature0, feature1, block0, block1, r._internalModel.__attributes, r._internalModel.__data);
+      dLog('pathCreate', feature0, feature1, block0, block1, r.id);
     else if (false)
     {
       let data = {
@@ -142,7 +142,7 @@ function pathCreate(owner, store, feature0, feature1, block0, block1) {
       };
       r = store.push({data});
       if (trace_pc)
-        dLog('pathCreate', r, r.get('id'), r._internalModel, r._internalModel.__data, store, data);
+        dLog('pathCreate', r, r.get('id'), r.id, store, data);
     }
     else {
       let inputProperties = {

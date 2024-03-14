@@ -466,10 +466,10 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
 
   //----------------------------------------------------------------------------
 
-  dropIn(targetAxis1d, top) {
+  dropIn(event, targetAxis1d, top) {
     const fnName = 'dropIn' + '(axesP)';
-    console.log(fnName, this.get('axis.id'), this.axis.scope, targetAxis1d, top, targetAxis1d.get('axis.scope'));
-    targetAxis1d.stack.dropIn(this, targetAxis1d, top);
+    dLog(fnName, event.x, this.get('axis.id'), this.axis.scope, targetAxis1d, top, targetAxis1d.get('axis.scope'));
+    targetAxis1d.stack.dropIn(event, this, targetAxis1d, top);
   },
   dropOut() {
     const fnName = 'dropOut';

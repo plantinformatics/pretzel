@@ -176,7 +176,7 @@ function logV(levelMeta, v) {
     console.log(
       v.constructor.modelName,
       v.get('name'),
-      v._internalModel.__data
+      v.id
     );
   }
   else if (typeof v === 'object') {

@@ -303,11 +303,17 @@ export default Component.extend(AxisEvents, {
     return features;
   },
 
-  clickTriangle(feature, i, g) {
-    dLog('clickTriangle', feature, i, g.length, g[i], this);
+  /**
+   * @param event d3 event,
+   * @param feature
+   * @param this component:draw/axis-ticks-selected
+   */
+  clickTriangle(event, feature) {
+    //  feature === event.target.__data__
+    dLog('clickTriangle', feature, this);
     if (this.controls.noGuiModeFilter()) {
     let features, listName;
-    if (! d3.event.shiftKey) {
+    if (! event.shiftKey) {
       this.selected.clickLabel(feature);
       features = this.selected.labelledFeatures;
       listName = 'labelled';

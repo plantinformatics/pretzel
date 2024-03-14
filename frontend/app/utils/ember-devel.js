@@ -74,8 +74,10 @@ function getAttrOrCP(object, attrName) {
 
 /** Display Ember Data store Object field values.  for devel debug - this is not a public API.
  *  Before Ember V3 this was '_internalModel.__data'
+ *  In Ember V3 this was '_internalModel._recordData.__data'
+ *  In Ember V4 there is no apparent simple way to access record data, so just display .id :
  */
-const _internalModel_data = '_internalModel._recordData.__data';
+const _internalModel_data = 'id';
 
 //------------------------------------------------------------------------------
 
@@ -183,7 +185,8 @@ function arrayClear(array) {
 let objectDependenciesCache = new WeakMap();
 /** Compare the values of an object for CP dependencies.
  * Previous values are stored via a WeakMap, using object as key,
- * so this only supports 1 compareDependencies() per object, i.e. 1 CP.
+ * so this only supports 1 compareDependencies() per object, i.e. 1 CP;
+ * that limit can be passed by using label as an additional level of key.
  * @param object Ember Object - this of the CP
  * @param label string to label the console.debug() output
  * @param dependencies array of strings which identify the dependencies

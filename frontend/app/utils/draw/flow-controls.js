@@ -138,8 +138,7 @@ function flows_showControls (parentSelector)
     .attr("class",  function (flowName) { return flowName;})
     .classed("flowButton", true)
     .classed("selected", flowSelected)
-    .on('click', function (flowName /*, i, g*/) {
-      let event = d3.event;
+    .on('click', function (event, flowName) {
       console.log(flowName, event);
       // sharing click with Export menu
       if (event.shiftKey)

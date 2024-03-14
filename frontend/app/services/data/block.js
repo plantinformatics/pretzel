@@ -755,8 +755,11 @@ export default Service.extend(Evented, {
           const
           index = viewedIds.indexOf(blockId),
           removed = viewedIds.objectAt(index);
-          viewedIds.removeAt(index, 1);
-          dLog('setViewed removing', removed);
+          // viewedIds may be already updated
+          if (index !== -1) {
+            viewedIds.removeAt(index, 1);
+            dLog('setViewed removing', removed);
+          }
         });
       }
     }

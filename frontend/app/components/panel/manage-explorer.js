@@ -777,9 +777,10 @@ export default ManageBase.extend({
 
   /** datasets with a .parent, i.e. containing child data blocks */
   withParent: filter('data', function(dataset, index, array) {
+    const fnName = 'withParent';
     let parent = dataset.get('parent.content');
     if (trace_dataTree > 2)
-      console.log('withParent', dataset._internalModel.__data, parent && parent._internalModel.__data);
+      dLog(fnName, dataset.id, parent && parent.id);
     return parent;
   }),
   /** Names of all datasets - just for trace / devel, not used. */
@@ -894,14 +895,15 @@ export default ManageBase.extend({
    * @return true if dataset .displayName is not in .parentsSet
    */
   datasetFilterNotInParentsSet(dataset, index, array) {
+    const fnName = 'datasetFilterNotInParentsSet';
     let parentsSet = this.get('parentsSet'),
     name = dataset.get('displayName'),
     found = parentsSet.has(name);
     if (index === 0)
     {
-      console.log('dataWithoutParent1', array, parentsSet, dataset);
+      dLog('dataWithoutParent1', fnName, array, parentsSet, dataset);
     }
-    console.log(dataset._internalModel.__data, index, name, found);
+    dLog(fnName, dataset.id, index, name, found);
     return ! found;
   },
 

@@ -86,9 +86,9 @@ export default class DrawStackObject extends EmberObject {
 
   //----------------------------------------------------------------------------
 
-  dropIn(axis1d, targetAxis1d, top) {
+  dropIn(event, axis1d, targetAxis1d, top) {
     const fnName = 'stack:dropIn' + '(axesP)';
-    console.log(fnName, axis1d, targetAxis1d, top, this.axes.length);
+    dLog(fnName, event.x, axis1d, targetAxis1d, top, this.axes.length);
     logAxis1d(fnName, axis1d);
     logAxis1d(fnName + ' target', targetAxis1d);
 
@@ -101,7 +101,7 @@ export default class DrawStackObject extends EmberObject {
     anAxisName = targetAxis1d.axisName,
     axisName = axis1d.axisName,
     /** dropX.stack is current / original X position of target stack / targetAxis1d */
-    dropX = {event: d3.event.x, stack: oa.o[anAxisName]};
+    dropX = {event: event.x, stack: oa.o[anAxisName]};
     Stack.currentDrop = {out : false, stack: this, 'axisName': axisName, dropTime : Date.now(), x : dropX};
 
     const

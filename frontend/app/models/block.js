@@ -876,7 +876,7 @@ export default Model.extend({
               } else if ((block === undefined)) {
                 dLog(fnName, 'block undefined', datasetName, scope);
               } else if (scope !== block.get('scope')) {
-                dLog(fnName, 'not grouped by scope', block.get('id'), scope, block._internalModel.__data, datasetName);
+                dLog(fnName, 'not grouped by scope', block.get('id'), scope, block.brushName, datasetName);
               }
               /* viewedBlocksByReferenceAndScope() does not filter out
                * blocks[0], the reference block, even if it is not viewed, so
@@ -904,6 +904,7 @@ export default Model.extend({
    * @return reference block, or undefined
    */
   viewedReferenceBlock() {
+    const fnName = 'viewedReferenceBlock';
     let
     parentName = this.get('datasetId.parentName'),
     scope = this.get('scope');
@@ -916,7 +917,7 @@ export default Model.extend({
         if (referenceBlock.get('isCopy') && ! block.get('isCopy'))
           referenceBlock = block;
         else {
-          console.warn('viewedReferenceBlock', 'duplicate match', block.get('id'), block._internalModel.__data, parentName, scope);
+          console.warn(fnName, 'duplicate match', block.get('id'), block.brushName, parentName, scope);
         }
       } else
         referenceBlock = block;
@@ -961,7 +962,7 @@ export default Model.extend({
       dLog(fnName, 'synonomous reference viewed',
            referenceBlocks.map(blockInfo), datasetName, scope);
     }
-    function blockInfo(block) { return [block.id, block.store.name, block.get('_internalModel.__data')]; };
+    function blockInfo(block) { return [block.id, block.store.name, block.brushName]; };
     return referenceBlocks;
   },
 

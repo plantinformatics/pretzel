@@ -84,11 +84,12 @@ export default Service.extend({
 
   /** set up a block-adj object to hold results. */
   ensureBlockAdj(blockAdjId) {
+    const fnName = 'ensureBlockAdj';
     let store = this.get('store'),
     blockAdjIdText = blockAdjKeyFn(blockAdjId),
-    r = store.peekRecord('blockAdj', blockAdjIdText);
+    r = store.peekRecord('block-adj', blockAdjIdText);
     if (r)
-      dLog('ensureBlockAdj', blockAdjId, r._internalModel.__attributes, r._internalModel.__data);
+      dLog(fnName, blockAdjId, r.id);
     if (! r) {
       let ba = {
         type : 'block-adj',
@@ -108,10 +109,10 @@ export default Service.extend({
       let
       ban = store.normalize('block-adj', ba);
       r = store.push(ban);
-        dLog('ensureBlockAdj', ban);
+        dLog(fnName, ban);
     }
       if (trace_pathsP)
-        dLog('ensureBlockAdj', r, r.get('blockAdjId'), r._internalModel, r._internalModel.__data, store, ba);
+        dLog(fnName, r, r.get('blockAdjId'), r.id, store, ba);
     }
     return r;
   },
@@ -304,7 +305,7 @@ export default Service.extend({
     if (fr) {
       let verifyOK = verifyFeatureRecord(fr, f);
       if (! verifyOK)
-        dLog('peekRecord feature', f._id, f, fr._internalModel.__data, fr);
+        dLog('peekRecord feature', f._id, f, fr.id, fr);
       c = fr;
     }
     else
@@ -335,7 +336,7 @@ export default Service.extend({
       let fName = f._name || (c.get('blockId.name') + ':' + f.value[0]);
       storeFeature(stacks.oa, flowsService, fName, c, blockId);
       if (trace_pathsP > 2)
-        dLog(c.get('id'), c._internalModel.__data);
+        dLog(c.get('id'), c.id);
     }
     return c;
   },
@@ -380,7 +381,7 @@ export default Service.extend({
       // update the paths{,Aliases}ResultLength -Debounced and -Throttled values
       exists.updatePathsResult(resultFieldName, pathsResult);
       if (trace_pathsP > 1 + pathsViaStream)
-        dLog(resultFieldName, pathsResult, exists, exists._internalModel.__attributes, exists._internalModel.__data);
+        dLog(resultFieldName, pathsResult, exists, exists.id);
     }
 
     return firstResult;
@@ -613,7 +614,7 @@ export default Service.extend({
       block.axis1d.axisBrushObj = r;
     }
     if (r && trace_pathsP)
-      dLog(fnName, block.id, r._internalModel.__attributes, r._internalModel.__data);
+      dLog(fnName, block.id, r.id);
     return r;
   },
 
