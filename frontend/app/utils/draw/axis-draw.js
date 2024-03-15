@@ -275,7 +275,7 @@ AxisDraw.prototype.draw2 = function draw2(selections, axes, newRender, stacksAxe
         .filter(ctrlKeyfilter)
         .on("start", axisDrag.dragstarted) //start instead of dragstart in v4. 
         .on("drag", axisDrag.dragged)
-        .on("end", axisDrag.dragended));//function(d) { dragend(d); d3.event.sourceEvent.stopPropagation(); }))
+        .on("end", axisDrag.dragended));//function(d) { dragend(event, d); event.sourceEvent.stopPropagation(); }))
   if (g && trace_stack >= 1.5)
     logSelection(g);
 

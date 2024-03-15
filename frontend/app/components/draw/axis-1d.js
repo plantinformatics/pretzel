@@ -1212,7 +1212,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
       dLog('drawTicks', axisId, axisS, gAxis.nodes(), gAxis.node());
 
       
-      function showText(text) {
+      function showText(event, text) {
         if (! this.get('isDestroying') && ! this.get('headsUp.isDestroying')) {
           this.set('headsUp.tipText', text);
         }

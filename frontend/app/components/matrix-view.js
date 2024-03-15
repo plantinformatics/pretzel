@@ -415,7 +415,7 @@ export default Component.extend({
 
   initResizeListener() {
     d3.select(window) // '#right-panel'
-      .on('resize', () => this.updateTableHeight());
+      .on('resize', (event) => this.updateTableHeight());
   },
   updateTableHeight() {
     this.updateTableOnce();

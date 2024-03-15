@@ -234,7 +234,7 @@ function ctrlKeyfilter(ev, datum) {
 
 /** accept events without a key modifier, i.e. no Shift, Ctrl or Alt.
  * Used for axis brush.
- * These can be replaced by .keyModifier([d3.event.shiftKey]) after upgrading to d3 v4.
+ * These can be replaced by .keyModifier([event.shiftKey]) after upgrading to d3 v4.
  */
 function noKeyfilter(ev, datum) {
   return ! ev.shiftKey && ! ev.ctrlKey && ! ev.altKey;

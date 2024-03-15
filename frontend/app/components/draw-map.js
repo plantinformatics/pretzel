@@ -1072,25 +1072,27 @@ export default Component.extend(Evented, {
     //- moved to ../utils/draw/collate-paths.js : countPaths(), countPathsWithData()
 
     //User shortcut from the keybroad to manipulate the Axes
-    d3.select("#holder").on("keydown", function() {
-      if ((String.fromCharCode(d3.event.keyCode)) == "D") {
+    d3.select("#holder").on("keydown", function holderOnKeyDown(event) {
+      if ((String.fromCharCode(event.keyCode)) == "D") {
         console.log("Delete axis (not implemented)");
         // deleteAxis();
       }
-      else if ((String.fromCharCode(d3.event.keyCode)) == "Z") {
+      else if ((String.fromCharCode(event.keyCode)) == "Z") {
         zoomAxis();
       }
-      else if ((String.fromCharCode(d3.event.keyCode)) == "R") {
+      else if ((String.fromCharCode(event.keyCode)) == "R") {
         refreshAxis();
       }
-      else if ((String.fromCharCode(d3.event.keyCode)) == "A") {
+      else if ((String.fromCharCode(event.keyCode)) == "A") {
         /* replaced by tickOrPath === 'tick' or 'path' */
         oa.drawOptions.showAll = !oa.drawOptions.showAll;
         console.log("showAll", oa.drawOptions.showAll);
         refreshAxis();
       }
-      else if ((String.fromCharCode(d3.event.keyCode)) == " ") {
+      else if ((String.fromCharCode(event.keyCode)) == " ") {
         console.log("space");
+      } else {
+        dLog('holderOnKeyDown', event.keyCode);
       }
     });
 

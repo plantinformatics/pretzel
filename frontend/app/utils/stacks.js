@@ -1673,6 +1673,7 @@ Stack.prototype.contains = function (axisName)
     dLog("contains", axisName, axesP[axisName], oa.axes[axisName].parent);
   return this === stack;
 };
+// replaced by ./draw/stack.js : dropIn()
 /** Insert the named axis into this.axes[] at insertIndex (before if top, after
  * if ! top).
  * Preserve the sum of this.axes[*].portion (which is designed to be 1).
@@ -1705,7 +1706,7 @@ Stack.prototype.dropIn = function (axisName, insertIndex, top, transition)
   let anAxisName = this.axes[0].axisName,
   /** Store both the cursor x and the stack x; the latter is used, and seems
    * to give the right feel. */
-  dropX = {event: d3.event.x, stack: oa.o[anAxisName]};
+  dropX = {event: /*d3.*/event.x, stack: oa.o[anAxisName]};
   Stack.currentDrop = {out : false, stack: this, 'axisName': axisName, dropTime : Date.now(), x : dropX};
   if (! top)
     insertIndex++;

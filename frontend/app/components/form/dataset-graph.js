@@ -423,7 +423,7 @@ export default class FormDatasetGraphComponent extends Component {
      */
     textM
     // .each(function(d, i, g) { return me.configureHover(this, d, i, g); })
-      .on('mouseover', d => { this.datasetIdSelected = d.id; });
+      .on('mouseover', (event, d) => { this.datasetIdSelected = d.id; });
 
     textS.exit().remove();
   }

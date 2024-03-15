@@ -405,7 +405,7 @@ function AxisDrag(oa, vc) {
 //------------------------------------------------------------------------------
 
 // AxisDrag.prototype.dragended = dragended;
-  function dragended(event, axis1d /*, i, g*/) {
+  function dragended(event, axis1d) {
     const fnName = 'dragended';
     if (axis1d !== event.subject) {
       dLog(fnName, axis1d, '!==', event.subject);
