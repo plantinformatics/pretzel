@@ -159,10 +159,11 @@ function  configureSubTrackHover(interval)
  */
 function configureClick(selected, featureData2Feature) {
   return function (selection) {
-    selection.on('click', function (d, i, g) { clickTrack.apply(this, [selected, featureData2Feature, d]);});
+    selection.on('click', function (event, d) { clickTrack.apply(this, [selected, featureData2Feature, d]);});
   };
 }
 function clickTrack(selected, featureData2Feature, featureData) {
+  /** this is <rect class="track" >.  featureData === this.__data__ */
   let feature = featureData2Feature.get(featureData);
   dLog('clickTrack', featureData, feature.id, feature);
   selected.clickFeature(feature);
@@ -801,7 +802,7 @@ export default InAxis.extend({
        * configureClick2()
        */
       if (! selection.empty() && ! selection.duration) {
-        selection.on('click', function (d, i, g) {
+        selection.on('click', function (event, d) {
           if (thisAt.controls.noGuiModeFilter()) {
             /* clickTrack() does not yet use element this. */
             clickTrack.apply(this, [thisAt.selected, thisAt.featureData2Feature, d]);

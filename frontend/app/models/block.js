@@ -684,8 +684,12 @@ export default Model.extend({
     'datasetId', 'datasetId.parent.name', 'scope',
     'blockService.viewed.[]', 
     function () {
+      const fnName = 'referenceBlock';
       let 
         referenceBlock = this.viewedReferenceBlock() || this.referenceBlockSameServer();
+      if (this.hasTag('transient') || ! this.scope) {
+        dLog(fnName, this.brushName, this.scope, referenceBlock?.brushName, referenceBlock?.scope);
+      }
       return referenceBlock;
     }),
   /** Collate the potential referenceBlocks for this block, across all servers.

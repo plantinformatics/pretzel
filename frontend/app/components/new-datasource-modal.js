@@ -267,13 +267,13 @@ export default Component.extend({
       .map((scope, i) => (i+1).toString() + ' ' + scope).join('\n');
     return chrMapping;
   },
-  /** Set this.chrMapping, and also display it in the <textarea>, because
-   * {{textarea value=this.chrMapping }} only reads .chrMapping when it is
-   * created.
+  /** Set this.chrMapping, and also display it in the <Textarea>, because
+   * <Textarea @value={{this.chrMapping}} > only reads .chrMapping when it is
+   * created. (true when added in 2023Nov30 a4ecfd7d​, can re-test now with Ember v5 or 6).
    */
   setChrMapping(chrMapping) {
     /** This could be "set chrMapping() {", although it is not needed if chrMapping
-     * is defined before the {{textarea}} is created.
+     * is defined before the <textarea> is created.
      */
     const
     textarea = $('textarea#ndm_chrMapping')?.[0];

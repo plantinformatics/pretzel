@@ -24,7 +24,7 @@ selectedFeatures
 activeInput is true if this textarea is the current data source,
 false when selectedFeatures is the current data source.
 
-{{textarea featureNameList }}
+<Textarea featureNameList >
   . edit or Enter
     -> set activeInput=true
   . Enter

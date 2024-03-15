@@ -980,7 +980,7 @@ export default Component.extend(Evented, {
     {
       if (oa.drawOptions.showSelectedFeatures)
         // verification
-        if (me === this.drawMap) {
+        if (me !== this.drawMap) {
           dLog('sendUpdatedSelectedFeatures', me, '!==', this.drawMap);
         }
         me.actions.updatedSelectedFeatures.apply(me, [selectedFeatures]);

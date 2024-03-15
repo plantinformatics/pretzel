@@ -37,17 +37,18 @@
             <a target="_blank" href="https://en.wikipedia.org/wiki/FASTA_format">FASTA</a>
           </div>
 
-          {{textarea
+          <Textarea
             class="form-control"
             rows=16
-            maxlength=this.searchStringMaxLength
-            input=(action 'inputIsActive')
-            enter=(action 'dnaSequenceInput')
-            insert-newline=(action 'dnaSequenceInput')
-            escape-press=(action 'dnaSequenceInput')
-            paste=(action 'paste')
+            maxLength={{this.searchStringMaxLength}}
+            @input={{action 'inputIsActive'}}
+            @enter={{action 'dnaSequenceInput'}}
+            @insert-newline={{action 'dnaSequenceInput'}}
+            @escape-press={{action 'dnaSequenceInput'}}
+            @paste={{action 'paste'}}
             placeholder="e.g. >BobWhite_c10015_641
-AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" }}
+AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" >
+          </Textarea>
 
           <div style="margin: 1em; overflow-y: auto;" class="div-float-button">
             {{#if this.searching}}
