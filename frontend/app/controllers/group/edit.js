@@ -2,7 +2,6 @@ import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { computed, action } from '@ember/object';
 import { alias } from '@ember/object/computed';
-import { getOwner } from '@ember/application';
 
 /* global Ember */
 
@@ -25,15 +24,11 @@ const allowGroupsWhenPrivate = false;
  * @param model group
  */
 export default class GroupEditController extends Controller {
-  // @service auth;
-
-  // @service apiServers;
-  // apiServers: service(),
-
-  // @service session;
-  // session : service(),
-
-  // @service controls;
+  @service auth;
+  @service apiServers;
+  @service session;
+  @service controls;
+  @service router;
 
   // newClientName : string;
   constructor() {
@@ -41,17 +36,18 @@ export default class GroupEditController extends Controller {
     this.newClientName = undefined;
   }
 
-  /** lookup owner and services when required. */
+  /** lookup owner and services when required.
   @computed() get services () {
-    let owner = getOwner(this.target);
+    let owner = getOwner(this.target || this.model || this.group);
     let
     apiServers = owner.lookup('service:apiServers'),
     session = owner.lookup('service:session'),
     auth = owner.lookup('service:auth'),
     controls = owner.lookup('service:controls'),
+    router = owner.lookup('service:router'),
 
     services = {
-      apiServers, session, auth, controls
+      apiServers, session, auth, controls, router,
     };
     return services;
   }
@@ -59,6 +55,8 @@ export default class GroupEditController extends Controller {
   @alias('services.session') session;
   @alias('services.auth') auth;
   @alias('services.controls') controls;
+  @alias('services.router') router;
+ */
 
   @alias('model') group;
   /** .server.store === .groupStore. */
@@ -78,6 +76,9 @@ export default class GroupEditController extends Controller {
 
   @action
   refresh() {
+    if (! this.target) {
+      dLog('refresh', this.model);
+    }
     this.send('refreshModel');
   }
 
@@ -196,7 +197,7 @@ export default class GroupEditController extends Controller {
     fnName = 'removeGroupMemberClient',
     clientGroup = this.clientToClientGroup(client);
     if (clientGroup) {
-      this.removeGroupMember(clientGroup.id);
+      this.removeGroupMember(clientGroup);
     }
   }
 
@@ -231,7 +232,7 @@ export default class GroupEditController extends Controller {
     group = this.model,
     cgs = group.clientGroups,
     destroyPs = cgs.map((cg) => {
-      return this.removeGroupMember(cg.id);
+      return this.removeGroupMember(cg);
     });
     dLog(fnName, cgs);
     return Promise.all(destroyPs);
@@ -279,7 +280,7 @@ export default class GroupEditController extends Controller {
             routeGroups = owner.lookup('route:groups');
             routeGroups.transitionTo('groups');
             */
-            this.target.transitionTo('groups');
+            this.router.transitionTo('groups');
           })
           .catch((error) => {
             const errorDetail = error?.errors[0];

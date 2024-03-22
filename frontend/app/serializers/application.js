@@ -53,7 +53,7 @@ export default RESTSerializer.extend(/*PartialModelRESTSerializer,*/ {
     })
   },
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
-    dLog('application normalizeResponse', primaryModelClass.modelName, payload, id, requestType);
+    dLog('application normalizeResponse', store.name, primaryModelClass.modelName, payload, id, requestType);
     let payloadTemp = {};
     payloadTemp[primaryModelClass.modelName] = payload
     return this._super(store, primaryModelClass, payloadTemp, id, requestType);

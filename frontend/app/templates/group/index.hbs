@@ -1,6 +1,8 @@
 <label>group/index</label>
 
-     {{group/group-members group=this.group selectMember=(noop)}}
+     {{group/group-members group=this.model
+       selectMember=(noop)
+       removeGroupMember=(action this.removeGroupMember) }}
 
 
 {{outlet}}

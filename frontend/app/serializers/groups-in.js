@@ -18,9 +18,10 @@ export default class ClientGroupSerializer extends ApplicationSerializer {
     return ret;
   };
   /** normalize the result of /groups/in
+   * @param store
    * @param d response data
    */
-  normalizeGroupsIn(d) {
+  normalizeGroupsIn(store, d) {
     const fnName = 'normalizeGroupsIn';
     dLog(fnName, d);
     let
@@ -29,7 +30,7 @@ export default class ClientGroupSerializer extends ApplicationSerializer {
     /** client is handled by attribute2relationship() following */
     modelNameIncluded = ['group'],
     includedPlural = false;
-    let result = normalizeDataEmbedded(this.store, modelName, modelNameIncluded, includedPlural, d);
+    let result = normalizeDataEmbedded(store, modelName, modelNameIncluded, includedPlural, d);
     /** If the group has been deleted and not the client-group, then included will be [].
      */
     let data = result.included[0];

@@ -5,7 +5,7 @@ import { later as run_later } from '@ember/runloop';
 
 import $ from 'jquery';
 
-import { toPromiseProxy, toArrayPromiseProxy } from '../../utils/ember-devel';
+import { toPromiseProxy, toArrayPromiseProxy, objectAttributeChanged } from '../../utils/ember-devel';
 import { getGroups } from '../../utils/data/group';
 import { noGroup } from '../../utils/data/groups';
 
@@ -36,7 +36,11 @@ export default ManageBase.extend({
 
   onEditable : function() { dLog('onEditable'); return false; },
 
-  ownedByMe: alias("dataset.owner"),
+  /** alias("dataset.owner") does not appear to be updating, so instead using
+   * datasetOwned which is roughly equivalent, with the advantage that
+   * it uses sessionUserId whereas models/record.js : owner() uses .server.clientId
+   */
+  ownedByMe: alias("datasetOwned"),
   apiHost : alias("dataset.store.name"),
 
   datasetMeta: computed("dataset._meta", function() {
@@ -182,6 +186,7 @@ export default ManageBase.extend({
     if (this.dataset.get('groupId.id') == group.get('id')) {
       dLog(fnName, 'no change', this.dataset.get('id'), group.get('id') );
     } else {
+      objectAttributeChanged(this.dataset, 'groupId');
       this.dataset.set('groupId', group === noGroup ? null : group);
       this.dataset.save()
         .catch((err) => this.set('datasetGroupErrMsg', 'Dataset Group change ' + group.id + ' not saved.\n' + err));

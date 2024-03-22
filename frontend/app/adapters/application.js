@@ -173,6 +173,7 @@ var config = {
     let data = {};
     let
     object = store.peekRecord(snapshot.modelName, snapshot.id),
+    /* changedAttributes now contains relationships in some cases. */
     changedAttributes = snapshot.changedAttributes(),
     changedAttributesKeys = Object.keys(changedAttributes),
     /** object.hasDirtyAttributes seems to be true if either an attribute or relationship has changed.
@@ -181,24 +182,31 @@ var config = {
      * .groupId in the PATCH, to avoid writing [] to .blocks
      * This could be used more generally as other changes are added.
      */
-    /** probably github.com/ef4/ember-data-relationship-tracker offers a better solution. */
-    rc = snapshot._internalModel._relationshipProxyCache,
-    changedRelationshipKeys = Object.keys(rc);
-    if (! changedAttributesKeys.length &&
-        (snapshot.modelName === 'dataset') && 
-        (changedRelationshipKeys.length === 1) &&
-        (changedRelationshipKeys[0] === "groupId" )) {
-      /* expect changedAttributes is {}.
-       * If needed to set .groupId and attributes in one save, this can be expanded.
-       */
-      if (changedAttributesKeys.length) {
-        dLog(fnName, changedAttributes);
+    /** possibly github.com/ef4/ember-data-relationship-tracker offers a better solution, or :
+     * https://github.com/danielspaniel/ember-data-change-tracker
+     * https://www.npmjs.com/package/ember-data-relationship-dirty-tracking
+     * but they have not been updated to Ember v4.
+     */
+    record = snapshot.record,
+    attributesToSave = record[Symbol.for('attributesToSave')];
+    if (attributesToSave?.length) {
+      dLog(fnName, record.id, attributesToSave);
+      let attributeName;
+      while ((attributeName = attributesToSave.pop())) {
+        /** dataset record.get('clientId') is db id string instead of a proxy;
+         * to handle that case, could instead do :
+         *  const value = record.get(idField),
+         *  valueId = value.then ? value.get('id') : value
+         *  data[attributeName] = valueId || null;
+         */
+        const idField = attributeName.replace(/Id$/, 'Id.id');
+        /* map undefined to null, for JSON web API.
+         * When dataset.groupId is set to null, rc.groupId.get('id') returns
+         * undefined; map this to null, which is valid JSON in PATCH.
+         */
+        data[attributeName] = record.get(idField) || null;
       }
-      /* when dataset.groupId is set to null, rc.groupId.get('id') returns
-       * undefined; map this to null, which is valid JSON in PATCH.
-       * (snapshot._internalModel._record.groupId.content is null)
-       */
-      data.groupId = rc.groupId.get('id') || null;
+      dLog(fnName, data, record.id, changedAttributes, attributesToSave);
     } else if ((changedAttributesKeys.length === 1) && (type.modelName !== 'feature')) {
       /* excluding 'feature' because having attributes .value and .values seems to
        * confuse snapshot.changedAttributes() - when .values.Ontology is set,
@@ -215,8 +223,9 @@ var config = {
       let
       modelName = snapshot.modelName,
       serializer = store.serializerFor(modelName),
-      rename = serializer?.attrs[key];
-      data[rename || key] = snapshot.__attributes[key];
+      model = store.modelFor(modelName),
+      rename = serializer?._getMappedKey(key, model); // was serializer?.attrs[key] in Ember v3
+      data[rename || key] = snapshot.attr(key); // was .__attributes[key];
     } else {
     let serializer = store.serializerFor(type.modelName);
 

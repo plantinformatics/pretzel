@@ -30,7 +30,7 @@ export default Model.extend({
   clientId : belongsTo('client', {async: true, inverse: null/*'groupsOwn'*/}),
   /** members of the group */
   clients: hasMany('client', {async: false, inverse: null/*'groups'*/}),
-  clientGroups: hasMany('client-group', { async: false, inverse: null/*'group'*/ }),
+  clientGroups: hasMany('client-group', { async: false, inverse: 'groupId'}),
 
   // ---------------------------------------------------------------------------
 

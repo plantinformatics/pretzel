@@ -34,7 +34,9 @@ export default Service.extend(Evented, {
     // factored from components/goto-feature-list.js:blocksUnique() . (taskGet getBlocksOfFeatures)
     let
     serverTabSelectedName = this.get('serverTabSelected'),
-    serverTabSelected = serverTabSelectedName && this.get('apiServers').lookupServerName(serverTabSelectedName),
+    // init() does addServer() of primary, so evaluate this even if ! serverTabSelectedName
+    apiServers = this.get('apiServers'),
+    serverTabSelected = serverTabSelectedName && apiServers.lookupServerName(serverTabSelectedName),
     apiServer = serverTabSelected || this.get('apiServers.primaryServer');
     return apiServer;
   }),
