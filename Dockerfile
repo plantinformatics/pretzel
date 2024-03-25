@@ -4,12 +4,12 @@
 
 # samtools build layer is based on https://hub.docker.com/r/bschiffthaler/samtools/dockerfile
 
-ARG NODE_ALPINE_VERSION 12
+ARG NODE_ALPINE_VERSION 18
 
 # ${NODE_ALPINE_VERSION}
-FROM node:12-alpine as node-alpine-build-samtools
+FROM node:18-alpine as node-alpine-build-samtools
 
-ARG NODE_ALPINE_VERSION 12
+ARG NODE_ALPINE_VERSION 18
 ARG SAMTOOLS_VERSION=1.15.1
 ARG BUILD_NCPU=1
 
@@ -74,10 +74,10 @@ WORKDIR /
 #-------------------------------------------------------------------------------
 
 # ${NODE_ALPINE_VERSION}
-FROM node:12-alpine as node-alpine-pretzel
+FROM node:18-alpine as node-alpine-pretzel
 
 ARG PRETZEL_VERSION 2.15.0
-ARG NODE_ALPINE_VERSION 12
+ARG NODE_ALPINE_VERSION 18
 
 # node-sass version is selected so that the binary can be downloaded;
 # otherwise, node-gyp will be built, and hence the following dependencies on python, make, c++.
@@ -105,8 +105,7 @@ RUN apk add --no-cache git \
      terminus-font	\
      curl	\
      jq	\
-openssh \
-  && npm install bower -g
+openssh
 
 
 # ------------------------------------------------------------------------------
@@ -167,7 +166,7 @@ RUN date \
 
 
 RUN node --version
-RUN cd /frontend && (npm ci || npm install)  && bower install --allow-root
+RUN cd /frontend && (npm ci || npm install)
 
 # RUN cd /app && npm install nodemon@1.18.8 && npm ci
 
@@ -177,7 +176,6 @@ RUN ( [ ! -L /app/client ] || rm /app/client ) && \
   mv /frontend/dist /app/client \
   && cd / \
   && rm -rf /frontend \
-  && npm uninstall -g bower \
   && npm cache clean --force
 
 ENV EMAIL_VERIFY=NONE AUTH=ALL
@@ -187,7 +185,7 @@ ENTRYPOINT ["/usr/local/node16/bin/node", "/app/lb3app/server/server.js"]
 
 # ------------------------------------------------------------------------------
 
-ARG NODE_ALPINE_VERSION 12
+ARG NODE_ALPINE_VERSION 18
 ARG SAMTOOLS_VERSION=1.15.1
 ARG bcftoolsVer=1.15.1
 ARG PRETZEL_VERSION 2.15.0
