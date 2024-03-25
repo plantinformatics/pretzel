@@ -103,12 +103,15 @@ export default Component.extend({
           this.set('selected.features', features);
           this.get('selected').featureSearchResult(features);
 
-          let blockIds = new Set(),
+          let
+          blockIds = new Set(),
           blockCounts = {},
 
-          n = d3.nest()
-            .key(function(f) { return f.get('blockId.id'); /* was f.blockId */ })
-            .entries(features),
+          keyFn = function(f) { return f.get('blockId.id'); /* was f.blockId */ },
+          ne = d3.group(features, keyFn)
+            .entries(),
+          n = Array.from(ne)
+            .map(([key, values]) => ({key, values})),
           n1=n.sort(function (a,b) { return b.values.length - a.values.length; }),
           // n1.map(function (d) { return d.key; }),
           /** augment d.key : add references to the (block) record. */
