@@ -16,7 +16,7 @@ import {
   eltWidthResizable,
   noShiftKeyfilter
 } from '../utils/domElements';
-import { configureHover } from '../utils/hover';
+import { config as hoverConfig, configureHover } from '../utils/hover';
 import { compareDependencies } from '../utils/ember-devel';
 import InAxis from './in-axis';
 import {
@@ -815,11 +815,14 @@ export default InAxis.extend({
   // ---------------------------------------------------------------------------
 
   /** @return the given location as string for display as hover text.
+   * @param event d3 mouseover { target: rect.track, ... }
    * @param d featureData, i.e. interval, based on feature.value
    * called via text = textFn(context, d);
+   * @param this <rect class="track" >
    */
-  hoverQtlHtmlFn : function (thisAt, location, d, i, g) {
-    /** `this` is DOM element : g[i]. thisAt is axis-tracks object.   */
+  hoverQtlHtmlFn : function (thisAt, location, event, d) {
+    /** `this` is DOM element : <rect class="track" >.
+     * thisAt is axis-tracks object.   */
     /** location is d.description */
     /** based on hoverTextFn(). */
     let feature = thisAt.featureData2Feature.get(d);
@@ -832,7 +835,12 @@ export default InAxis.extend({
         ontologyColour = ontology && feature?.get('ontologyColour');
     let text;
     if (feature && (traitName || ontology)) {
-      text = '<div class="featureHover html QTL highlightFeature toolTip">\n' +
+      /* class highlightFeature here is not related to :
+       * - components/draw/highlight-feature.js : highlightFeature_draw()
+       * - utils/panel/axis-table.js : highlightFeature()
+       */
+      const toolTipClasses = hoverConfig.hoverNearElement ? 'highlightFeature toolTip' : '';
+      text = `<div class="featureHover html QTL ${toolTipClasses}">\n` +
         `<div>${location}</div>\n`;
       if (traitName) {
         d3.select('body').style('--hoverTraitColour', traitColour_);
@@ -849,7 +857,7 @@ export default InAxis.extend({
       text = (location == "string") ? location :  "" + location;
     }
     /* if (trace > 1)*/ {
-      dLog('hoverQtlHtmlFn', text, location, d, thisAt, g[i]);
+      dLog('hoverQtlHtmlFn', text, location, d, thisAt, this);
     }
     return text;
   },

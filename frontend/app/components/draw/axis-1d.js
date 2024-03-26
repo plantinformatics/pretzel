@@ -1212,7 +1212,11 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
       dLog('drawTicks', axisId, axisS, gAxis.nodes(), gAxis.node());
 
       
-      function showText(event, text) {
+      /**
+       * @param text
+       * @param event mouseover { target: text }
+       */
+      function showText(text, event, c) {
         if (! this.get('isDestroying') && ! this.get('headsUp.isDestroying')) {
           this.set('headsUp.tipText', text);
         }
@@ -1435,7 +1439,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     as.classed("extended", this.get('extended'));
   },
   buttonStateEffect : computed('brushed', 'zoomed', function () {
-    later(() => this.showZoomResetButtonState(), 200);
+    later(() => this.isDestroying && this.showZoomResetButtonState(), 200);
   }),
   showZoomResetButtonState() {
     let

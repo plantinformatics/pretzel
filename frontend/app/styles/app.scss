@@ -935,6 +935,17 @@ div.highlightFeature
   /* display: inline; */
 }
 
+/** Don't display the arrow when the tooltip is not shown adjacent to the
+ * element which it refers to; this is intended only for ! hoverNearElement;
+ * utils/hover.js : config, showHover().
+ */
+.popover.bs-popover-left > .arrow,
+.popover.bs-popover-right > .arrow
+{
+  display : none;
+}
+  
+
 .navbar {
   margin-bottom: 0px;
 }
