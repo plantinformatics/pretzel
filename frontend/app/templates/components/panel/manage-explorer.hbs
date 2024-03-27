@@ -257,9 +257,9 @@
 
           {{/record/entry-tab}}
         {{else}}
-          {{#tab.pane id='tab-explorer-Ontology' title='Ontology'}}
+          <tab.pane @id='tab-explorer-Ontology' id='tab-explorer-Ontology' @title='Ontology'>
             <div>Requesting the Ontology Tree ...</div>
-          {{/tab.pane}}
+          </tab.pane>
         {{/if}}
       {{/if}}
 
@@ -298,7 +298,7 @@
 
       {{#if this.enable_datatypeFromFamily}}
 
-        <tab.pane @id="tab-explorer-parent" @title="by Parent">
+        <tab.pane @id="tab-explorer-parent" id="tab-explorer-parent" @title="by Parent">
           <ul class="list-group borderless">
             {{record/entry-values
               values=this.dataTree
@@ -312,7 +312,7 @@
           </ul>
         </tab.pane>
 
-        <tab.pane @id="tab-explorer-byDataset" @title="by Dataset">
+        <tab.pane @id="tab-explorer-byDataset" id="tab-explorer-byDataset" @title="by Dataset">
           {{record/entry-datasets
             loadBlock=this.loadBlock
             selectBlock=(action 'selectBlock')
@@ -322,7 +322,7 @@
             data=this.dataWithoutParent}}
         </tab.pane>
 
-        <tab.pane @id="tab-explorer-references" @title="References">
+        <tab.pane @id="tab-explorer-references" id="tab-explorer-references" @title="References">
           {{record/entry-datasets
             loadBlock=this.loadBlock
             selectBlock=(action 'selectBlock')
@@ -334,7 +334,7 @@
 
       {{/if}}
 
-      <tab.pane @id="tab-explorer-datasets" @title="Datasets">
+      <tab.pane @id="tab-explorer-datasets" id="tab-explorer-datasets" @title="Datasets">
 
         <ul class="list-group borderless">
 

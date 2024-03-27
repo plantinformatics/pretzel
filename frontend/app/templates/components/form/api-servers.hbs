@@ -9,7 +9,7 @@
   {{/elem/panel-heading}}
 
   {{#if panelContainer.showComponent}}
-  <ul class="list-group">
+  <ul class="list-group w-100">
     {{#each-in this.servers as |apiServerName apiServer| }}
       <li class="list-group-item list-group-item-info">
         {{form/api-server name=apiServerName data=apiServer}}

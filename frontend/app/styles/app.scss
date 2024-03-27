@@ -2048,6 +2048,13 @@ ul.view-controls > li > div > .sub-label > span {
 
 /*------------------------------------*/
 
+/** Override the default 1% for a few buttons, JSON in Upload, and
+ * View : Flip Region, Reset Zooms
+ */
+div#left-panel .btn-group {
+  width : auto;
+}
+
 /* used for #left-panel-upload > div > .panel
  * Space is tight and the upload table has no side margin.
  */
@@ -2502,6 +2509,9 @@ div.genotype .ember-tooltip
 
 .h-100 {
   height: 100%;
+}
+.w-100 {
+  width: 100%;
 }
 
 

@@ -8,7 +8,7 @@
       <nav.item @active={{bs-eq tab.activeId "left-panel-upload"}}><a href="#left-panel-upload" role="tab" class="nav-link" onclick={{action tab.select "left-panel-upload"}}>{{elem/icon-base name="cloud-upload"}} Upload</a></nav.item>
     </BsNav>
     <div class="tab-content">
-      <tab.pane @id="left-panel-feature-search" @title="Search">
+      <tab.pane @id="left-panel-feature-search" id="left-panel-feature-search" @title="Search">
             {{panel/manage-search
                 view=this.view
                 queryParamsState=this.queryParamsState
@@ -36,7 +36,7 @@
       </tab.pane>
 
 
-      <tab.pane @id="left-panel-explorer" @title="Explorer">
+      <tab.pane @id="left-panel-explorer" id="left-panel-explorer" @title="Explorer">
             {{panel/manage-explorer
                 view=this.view
                 model=this.model
@@ -52,7 +52,7 @@
             }}
       </tab.pane>
 
-      <tab.pane @id="left-panel-view" @title="View">
+      <tab.pane @id="left-panel-view" id="left-panel-view" @title="View">
             {{panel/manage-view
                 displayData=this.displayData
                 selectedBlock=this.selectedBlock
@@ -75,7 +75,7 @@
             }}
       </tab.pane>
 
-      <tab.pane @id="left-panel-upload" @title="Upload">
+      <tab.pane @id="left-panel-upload" id="left-panel-upload" @title="Upload">
             {{panel/upload-data
                 datasets=this.datasets
                 refreshDatasets=this.refreshDatasets

@@ -1,4 +1,4 @@
-{{#this.tab.pane id=this.id title=this.name}}
+<this.tab.pane @id={{this.id}} id={{this.id}} @title={{this.name}}>
 
 {{#elem/icon-toggle state=this.allActive
   changed=(action 'allActiveChanged')
@@ -24,4 +24,4 @@
   }}
 </ul>
 
-{{/this.tab.pane}}
+</this.tab.pane>

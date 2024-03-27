@@ -1,20 +1,23 @@
 
-{{input
-  value=this.data.host
+<Input
+  @value={{this.data.host}}
   class="form-control"
   autocomplete="url"
-  placeholder="URL[:port] of API Host" }}
+  placeholder="URL[:port] of API Host" >
+</Input>
 
-{{input
-  value=this.data.user
+<Input
+  @value={{this.data.user}}
   class="form-control"
   autocomplete="username"
-  placeholder="User (email)"}}
-{{input
-  value=this.data.token
+  placeholder="User (email)">
+</Input>
+<Input
+  @value={{this.data.token}}
   class="form-control"
   autocomplete="current-password"
-  placeholder="Authentication Token"}}
+  placeholder="Authentication Token">
+</Input>
 
 <span class="pull-right">
   {{elem/button-refresh
