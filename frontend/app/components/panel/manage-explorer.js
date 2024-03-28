@@ -1456,19 +1456,22 @@ export default ManageBase.extend({
      * Since this .reduce() is mapping that result to a hash {key : value, .. },
      * some simplification may be possible here.
      *
-     * Object.entries(n) will not include the key undefined, so to display the
-     * orphan datasets use n.entries() which does,
-     * i.e. Array.from(n.entries()).reduce( )
+     * Object.entries(n) will not include the keys undefined or null, so to
+     * display the orphan datasets use n.entries() which does.
      */
-    let grouped =
-      Object.entries(n).reduce(
+    let grouped = Array.from(n.entries()).reduce(
+      /** Apply datasetsToBlocksByScope() to value or to the children of value
+       * if datasets in value are not children (i.e. ! key) */
         function (result, datasetsByParent) {
           const [key, values] = datasetsByParent;
           /** hash: [scope] -> [blocks]. */
           if (trace_dataTree > 1)
             console.log('datasetsByParent', datasetsByParent);
           // as commented in .key() function above.
-          if  ((key === 'undefined') || (key === 'null')) {
+          /* d3.nest() mapped keys to strings, which resulted in strings
+           * 'undefined' and 'null' for key here, whereas d3.group() preserves
+           * the original key values */
+          if  ((key === undefined) || (key === null)) {
             /* datasets without parent - no change atm, just convert the nest to hash.
              * but possibly move the children up to be parallel to the parents.
              * i.e. merge datasetsByParent.values into result.
