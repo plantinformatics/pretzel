@@ -6,7 +6,7 @@
   nodeName=this.name
   parentName=this.parentName
   selectedNode=this.selectedDataset
-  selectNode=(action 'selectDataset')
+  selectNode=this.selectDataset
 }}
 
   {{#record/entry-expander nodeName=this.name hoverText=(or this.parentName this.name)}}
@@ -14,9 +14,9 @@
     {{record/entry-blocks
       loadBlock=this.loadBlock
       data=this.values
-      selectBlock="selectBlock"
+      selectBlock=this.selectBlock
       selectedBlock=this.selectedBlock
-      selectDataset="selectDataset"}}
+      selectDataset=this.selectDataset}}
 
   {{/record/entry-expander}}
 

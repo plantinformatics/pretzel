@@ -32,7 +32,7 @@ import { task } from 'ember-concurrency';
 
 import { tab_explorer_prefix, text2EltId, keysLength } from '../../utils/explorer-tabId';
 import { parseOptions } from '../../utils/common/strings';
-import { thenOrNow } from '../../utils/common/promises';
+import { thenOrNow, contentOf } from '../../utils/common/promises';
 import { toPromiseProxy } from '../../utils/ember-devel';
 
 import {
@@ -809,7 +809,8 @@ export default ManageBase.extend({
     function uniqParentsByName(array) {
       return array
     /* withParent : */ .filter(function(dataset, index, array) {
-      return dataset.get('parent.content');
+      // .content was required earlier, perhaps not now.
+      return contentOf(dataset.get('parent'));
     })
     /* child1 :*/ .uniqBy('parentName')  // parent.name
     /* parents :*/ .mapBy('parent');
@@ -1454,6 +1455,10 @@ export default ManageBase.extend({
      * whereas d3.group() returns {key : value, .. }, converted via .entries() to [[key, values], ..] .
      * Since this .reduce() is mapping that result to a hash {key : value, .. },
      * some simplification may be possible here.
+     *
+     * Object.entries(n) will not include the key undefined, so to display the
+     * orphan datasets use n.entries() which does,
+     * i.e. Array.from(n.entries()).reduce( )
      */
     let grouped =
       Object.entries(n).reduce(
@@ -1544,7 +1549,7 @@ export default ManageBase.extend({
           else {
             blocks = filterBlocks(dataset);
           }
-          if (trace_dataTree > 1)
+          if (trace_dataTree > 2)
             dLog(name, levelMeta, 'levelMeta.set(', blocks, 'Blocks');
           levelMeta.set(blocks, 'Blocks');
           result2[name] = blocks;
