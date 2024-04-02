@@ -96,6 +96,17 @@
     "edition": "octane"
   },
   "private": true,
+
+  "overrides": {
+    "ember-cli-release" : {
+      "npm": {"glob": "6.0.3"},
+      "init-package-json": {"glob": "6.0.3"},
+      "node-gyp": {"glob": "6.0.3"},
+      "read-package-json": {"glob": "6.0.3"}
+    },
+    "has-unicode": "2.0.1"
+  },
+
   "dependencies": {
     "@ember/test-helpers": "^3.3.0",
     "@solgenomics/brapijs": "https://github.com/solgenomics/BrAPI-js.git",
