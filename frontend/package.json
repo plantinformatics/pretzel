@@ -96,11 +96,9 @@
     "edition": "octane"
   },
   "private": true,
-
   "overrides": {
     "has-unicode": "2.0.1"
   },
-
   "dependencies": {
     "@ember/test-helpers": "^3.3.0",
     "@solgenomics/brapijs": "https://github.com/solgenomics/BrAPI-js.git",

@@ -335,7 +335,9 @@ export default Component.extend({
       // flag that createTable() has started.
       this.set('table', null);
       later(() => {
-        this.createTable(this);
+        if (! this.isDestroying) {
+          this.createTable(this);
+        }
       });
     }
   },

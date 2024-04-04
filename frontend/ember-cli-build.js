@@ -76,7 +76,6 @@ module.exports = function (defaults) {
    * via <link rel="stylesheet" > and <script > in app/index.html
    */
   const HoT = 'node_modules/handsontable/';
-  app.import(HoT + 'node_modules/numbro/dist/numbro.js');
   app.import(HoT + 'dist/handsontable.full.min.js');  // handsontable.js
   app.import(HoT + 'dist/handsontable.full.css'); // handsontable.css
 

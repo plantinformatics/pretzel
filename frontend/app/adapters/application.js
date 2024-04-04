@@ -53,11 +53,22 @@ var config = {
   get host() {
     let store = this.store,
     adapterOptions = store && null, // store.adapterFor('block'),
-    host = (adapterOptions && adapterOptions.host) || get(this, '_server.host');
+    host = (adapterOptions && adapterOptions.host) || get(this, 'server.host');
     if (trace) {
       dLog('app/adapters/application.js host', adapterOptions, host, (trace < 2) ? [store.name, this._server?.name] : [this, store, this._server]);
     }
     return host;
+  },
+
+  /** determine the server to use.  */
+  get server() {
+    let
+    server =
+      this._server ||
+      this.apiServers.currentRequestServer ||
+      this.get('session.requestServer') ||
+      this.apiServers.primaryServer;
+    return server;
   },
 
   namespace: ENV.apiNamespace,
@@ -74,12 +85,30 @@ var config = {
 
   get headers() {
     let
+    fnName = 'headers',
     store = this.store,
     adapterOptions = store && store.adapterOptions,
     server = store.name && this.apiServers.lookupServerName(store.name) || this._server,
     token = server && server.token;
+    if (! server) {
+      server = this.apiServers.currentRequestServer;
+      if (server) {
+        const
+        serverTime = this.apiServers.get('currentRequestServerTime'),
+        now = Date.now();
+        if (now - serverTime > 1000 /*ms*/) {
+          dLog(fnName, now - serverTime, now, serverTime);
+          /*
+          server = undefined;
+          this.apiServers.set('currentRequestServer', null);
+          */
+        }
+        token = server?.token;
+      }
+      dLog(fnName, adapterOptions, store, server, token);
+    }
     if (trace) {
-      dLog('headers', adapterOptions, (trace < 2) ? [store.name, server?.name] : [store, server], token);
+      dLog(fnName, adapterOptions, (trace < 2) ? [store.name, server?.name] : [store, server], token);
     }
     return token && {
       Authorization : token
@@ -138,14 +167,24 @@ var config = {
         let
         id2Server = this.get('apiServers.id2Server'),
         map = this.get('apiServers.obj2Server'),
-        /** the above works for blocks; for datasets (e.g. delete), can lookup server name from snapshot.record */
-        snapshotServerName = snapshot && get(snapshot, 'record.store.name'),
-        serverName = queryServerName || snapshotServerName,
-        servers = this.get('apiServers.servers'),
-        snapshotServer = servers && serverName && servers[serverName];
-        server = map.get(serverHandle) || (id && id2Server[id]) || snapshotServer;
+        server = map.get(serverHandle) || (id && id2Server[id]);
+        /* Don't use this for findRecord because if the id is not loaded, get :
+         * Record client ... (@lid:client-...) is not yet loaded and thus cannot be accessed from the Snapshot during serialization
+         */
+        if (requestType !== 'findRecord' && ! server) {
+          const
+          /** the above works for blocks; for datasets (e.g. delete), can lookup server name from snapshot.record */
+          snapshotServerName = snapshot && get(snapshot, 'record.store.name'),
+          serverName = queryServerName || snapshotServerName,
+          servers = this.get('apiServers.servers'),
+          snapshotServer = servers && serverName && servers[serverName];
+          server = snapshotServer;
+          if (serverName) {
+            dLog(fnName, queryServerName, snapshotServerName, snapshotServer);
+          }
+        }
         if (trace) {
-          dLog(fnName, 'id2Server', id, requestType, snapshotServerName, (trace < 2) ? [server?.name] : [id2Server, map, server]);
+          dLog(fnName, 'id2Server', id, requestType, (trace < 2) ? [server?.name] : [id2Server, map, server]);
         }
       }
     }
@@ -160,7 +199,7 @@ var config = {
       }
 
     let url = this._super(modelName, id, snapshot, requestType, query);
-    dLog(fnName, 'url', url, modelName, id, /*snapshot,*/ requestType);
+    dLog(fnName, 'url', url, modelName, id, /*snapshot,*/ requestType, server?.name);
     return url;
   },
 

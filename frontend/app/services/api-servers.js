@@ -69,12 +69,10 @@ export default Service.extend(Evented, {
       let 
         /** similar calcs in @see adapters/application.js : host() */
       adapter = this.get('store').adapterFor('application'),
-      /** this is the API origin,  e.g.  'http://localhost:5000' */
-      host = adapter.get('host'),
       config =  getConfiguredEnvironment(this),
+      /** this is the API origin,  e.g.  'http://localhost:5000' */
       configApiHost = config.apiHost,
-
-      apiOrigin = configApiHost, // host,
+      apiOrigin = configApiHost,
 
       siteOrigin = getSiteOrigin(this);
 

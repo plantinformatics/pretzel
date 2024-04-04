@@ -185,6 +185,13 @@ const ApiServerAttributes = {
     /** server was a param when this function was an attribute of apiServers. */
     let server = this;
     server.groups.refresh();
+    /** filter is no longer available as store.adapterOptions in
+     * adapters/application.js : headers(), so obj2Server cannot be
+     * used, so pass server reference here; this will be cleared when
+     * used.
+     */
+    this.apiServers.set('currentRequestServer', this);
+    this.apiServers.set('currentRequestServerTime', Date.now());
     let datasetsTask = taskGetList.perform(server)
         .catch((error) => {
           // Recognise if the given task error is a TaskCancelation.
