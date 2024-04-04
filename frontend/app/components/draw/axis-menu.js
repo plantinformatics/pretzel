@@ -244,8 +244,10 @@ export default Ember.Component.extend({
        * hide and show tooltip to position it relative to the target.
        */
       later(() => {
-        tooltip.hide();
-        tooltip.show();
+        if (! this.isDestroying) {
+          tooltip.hide();
+          tooltip.show();
+        }
       }, dragTransitionTime+50);
     }
   }),

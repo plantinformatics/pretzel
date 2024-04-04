@@ -809,9 +809,11 @@ export default Service.extend({
        * being called, fall back to primaryServer, e.g. for runtimeConfig
        * which is used by getHoTLicenseKey() when the key is not defined in
        * the build environment.
+       * Related : app/adapters/application.js : server()
        */
-      requestServer = this.get(requestServerAttr)
-        || this.get('apiServers.primaryServer');
+      requestServer = this.get(requestServerAttr) ||
+        this.apiServers.currentRequestServer ||
+        this.get('apiServers.primaryServer');
       dLog(fnName, requestServer, this.get(requestServerAttr));
     }
 

@@ -64,9 +64,9 @@ var config = {
   get server() {
     let
     server =
-      this._server ||
       this.apiServers.currentRequestServer ||
       this.get('session.requestServer') ||
+      this._server ||
       this.apiServers.primaryServer;
     return server;
   },
@@ -88,8 +88,7 @@ var config = {
     fnName = 'headers',
     store = this.store,
     adapterOptions = store && store.adapterOptions,
-    server = store.name && this.apiServers.lookupServerName(store.name) || this._server,
-    token = server && server.token;
+    server = store.name && this.apiServers.lookupServerName(store.name);
     if (! server) {
       server = this.apiServers.currentRequestServer;
       if (server) {
@@ -103,10 +102,14 @@ var config = {
           this.apiServers.set('currentRequestServer', null);
           */
         }
-        token = server?.token;
       }
-      dLog(fnName, adapterOptions, store, server, token);
+      dLog(fnName, adapterOptions, store, server?.name);
     }
+    /** use currentRequestServerTime before ._server */
+    if (! server) {
+      server = this._server;
+    }
+    const token = server && server.token;
     if (trace) {
       dLog(fnName, adapterOptions, (trace < 2) ? [store.name, server?.name] : [store, server], token);
     }
