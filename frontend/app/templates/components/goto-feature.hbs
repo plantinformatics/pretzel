@@ -19,10 +19,11 @@
   </div>
 </div>
 
-{{input
-    value=this.feature1
+<Input
+    @value={{this.feature1}}
     class="form-control"
-    placeholder="Marker/Gene Name / Location" }}
+    placeholder="Marker/Gene Name / Location" >
+  </Input>  
 
 <div>
   <input type="checkbox" 
@@ -31,11 +32,12 @@
          checked="checked"
   />
   <label>Interval</label>
-  {{input
+  <Input
       type=this.hidden
-      value=this.feature2
+      @value={{this.feature2}}
       class="form-control"
-      placeholder="Marker/Gene Name / Location" }}
+      placeholder="Marker/Gene Name / Location" >
+  </Input>  
 
 
 </div>

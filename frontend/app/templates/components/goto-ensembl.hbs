@@ -1,8 +1,9 @@
 <div>
-  {{input
-    value=this.featureName
+  <Input
+    @value={{this.featureName}}
     class="form-control"
-    placeholder="Marker/Gene Name" }}
+    placeholder="Marker/Gene Name" >
+  </Input>  
 
   <span href="#" data-toggle="tooltip"
         style="margin-right: 1em; margin-left: 1em;"
@@ -11,10 +12,11 @@
 </div>
 
 <div style="flex-wrap: wrap;">
-  {{input
-    value=this.baseUrl
+  <Input
+    @value={{this.baseUrl}}
     class="form-control"
-    placeholder="Url to configure website" }}
+    placeholder="Url to configure website" >
+  </Input>  
 
   <select onchange={{action (mut this.website) value="target.value"}}>
     {{#each this.websites as |websiteChoice|}}

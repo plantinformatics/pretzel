@@ -31,12 +31,13 @@
       {{/if}}
       <li href="#" class="list-group-item list-group-item-info">
         <div class="input-group">
-          {{input
-            enter=(action "addAnnotation")
-            type="text"
-            value=this.newAnnotation
+          <Input
+            @enter={{this.actions.addAnnotation}}
+            @type="text"
+            @value={{this.newAnnotation}}
             class="form-control"
-            placeholder="New annotation..."}}
+            placeholder="New annotation...">
+          </Input>  
           <span class="input-group-btn">
             {{elem/button-base
               icon="plus"
@@ -77,12 +78,13 @@
       {{#if this.intervalSelected}}
         <li href="#" class="list-group-item list-group-item-info">
           <div class="input-group">
-            {{input
-              enter=(action "addInterval")
-              type="text"
-              value=this.newInterval
+            <Input
+              @enter={{this.actions.addInterval}}
+              @type="text"
+              @value={{this.newInterval}}
               class="form-control"
-              placeholder="New interval..."}}
+              placeholder="New interval...">
+            </Input>  
             <span class="input-group-btn">
               {{elem/button-base
                 icon="plus"

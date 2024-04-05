@@ -129,13 +129,14 @@
 <br>
 {{#if (eq this.selectedDataset 'new')}}
   <div id="new_dataset_options">
-  {{input 
+  <Input 
     type="text" 
-    value=this.newDatasetName 
+    @value={{this.newDatasetName }}
     class="form-control" 
     placeholder="New dataset name..." 
     disabled=this.isProcessing
-  }}
+  >
+  </Input>  
 
   <br>
   <label>Parent: </label>

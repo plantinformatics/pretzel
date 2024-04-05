@@ -98,6 +98,11 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
   //----------------------------------------------------------------------------
 
   /** Array of available datasets populated from model 
+   *
+   * This is currently not yielding useful values, possibly because
+   * availableMaps are not re-requested in each re-render; a more
+   * stable alternative is e.g.  left-panel :
+   * serverSelected_datasetsBlocks().
    */
   datasets: computed('model', 'model.availableMapsTask', 'model.availableMapsTask.value', function () {
     let task = this.get('model.availableMapsTask');

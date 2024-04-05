@@ -14,7 +14,11 @@ export default Component.extend({
   actions: {
     setEditing: function(editing) {
       this.set('editing', editing);
-      this.sendAction('setEditing', editing);
+      /** included when this function was added in 3127058e, there is
+       * no action setEditing other than this function, and presumably
+       * this had no effect :
+       *   this.sendAction('setEditing', editing);
+       */
     },
     enableEdit: function() {
       this.send('setEditing', true);

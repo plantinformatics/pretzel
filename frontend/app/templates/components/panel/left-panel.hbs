@@ -77,7 +77,7 @@
 
       <tab.pane @id="left-panel-upload" id="left-panel-upload" @title="Upload">
             {{panel/upload-data
-                datasets=this.datasets
+                datasets=this.serverSelected_datasetsBlocks
                 refreshDatasets=this.refreshDatasets
                 viewDataset=this.viewDataset
                 active=(bs-eq tab.activeId "left-panel-upload")

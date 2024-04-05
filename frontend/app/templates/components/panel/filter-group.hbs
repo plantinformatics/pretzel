@@ -30,11 +30,12 @@
 </div>
 
 <div class="filter-group-row">
-  {{input
-    value=this.data.pattern
+  <Input
+    @value={{this.data.pattern}}
     class="form-control"
     enter=(action this.changed this)
-    placeholder="string or regular expression" }}
+    placeholder="string or regular expression" >
+  </Input>  
   {{#elem/button-base
     click=(action this.changed this)
     icon='ok'

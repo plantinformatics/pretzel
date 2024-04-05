@@ -20,7 +20,8 @@ export default Component.extend({
    * This has the essentials from panel/manage-explorer.js : datasetsBlocks(),
    * and can probably replace it; left-panel can pass this value to manage-explorer.
    * Exclude copies from secondary servers, as is done in manage-explorer : datasetsBlocks().
-   * Currently used by just sequence-search.
+   * Currently used by just sequence-search and upload-data,
+   * in place of this.datasets, which is from mapview .dataset, which see.
    */
   serverSelected_datasetsBlocks : computed(
     'apiServers.serverSelected.datasetsBlocks.[]',
