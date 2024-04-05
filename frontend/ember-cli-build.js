@@ -33,7 +33,9 @@ module.exports = function (defaults) {
     'ember-bootstrap': {
       'bootstrapVersion': 4,
       'importBootstrapFont': false,
-      'importBootstrapCSS': true
+      'importBootstrapCSS': true,
+      /* added in app/templates/application.hbs : <div id="ember-bootstrap-wormhole"></div> */
+      insertEmberWormholeElementToDom : false,
     },
     webpack: {
       stats: {
