@@ -100,7 +100,9 @@ export default Record.extend({
   children : computed('parentName', function children () {
     let c = this.store.peekAll('dataset')
       .filterBy('parentName', this.get('id'));
-    dLog('children', c.length, this.id);
+    if (trace > 1) {
+      dLog('children', c.length, this.id, (trace > 2) && c.mapBy('id'));
+    }
     return c;
   }),
 

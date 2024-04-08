@@ -15,6 +15,18 @@ function I(value) { return value; }
 /** utils/data/vcf-files.js :  statusToMatrix() maps '.' to unicodeDot */
 const unicodeDot = '·';
 
+const allowedFileTypes = [
+  'image/gif', 'image/jpeg', 'image/png', 'image/webp',
+  'application/json',
+  'application/vnd.google-apps.spreadsheet',
+  'application/vnd.oasis.opendocument.spreadsheet',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/gzip',
+  'application/zip',
+  'text/gff3',
+];
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -67,26 +79,43 @@ export default UploadBase.extend({
 
   replaceDataset : true,
 
+  //----------------------------------------------------------------------------
+
+  validateFile(file) {
+    dLog('validateFile', file.type, file.name, file.size, file);
+    let ok = allowedFileTypes.includes(file.type);
+    if (! ok) {
+      ok = file.type.match(/\.json$|\.gz$|\.xlsx$|\.xls$|\.ods$/);
+    }
+    return ok;
+  },
+
+  //----------------------------------------------------------------------------
+
+  /** @action */
   uploadSpreadsheet(file) {
     const
-    blob = file.blob,
+    fnName = 'uploadSpreadsheet',
+    // blob = file.blob,
     queue = file.queue;
     dLog(
-      'uploadSpreadsheet', file.name,
-      blob.size,
-      blob.type,
-      blob.lastModifiedDate,
-      blob.lastModified,
+      fnName, file.name,
+      file.size,
+      file.type,
+      file.source,
+      // blob.lastModifiedDate,
+      file.file.lastModified,
+      new Date(file.file.lastModified),
       queue
     );
 
     this.setProcessing();
     this.scrollToTop();
 
-    var bufferPromise = blob.arrayBuffer();
-    blob.arrayBuffer().then((buffer) => {
+    /** previous : var bufferPromise = file.blob.arrayBuffer(); */
+    file.readAsArrayBuffer().then((buffer) => {
       /* process the ArrayBuffer */
-      dLog('arrayBuffer', buffer, buffer.byteLength);
+      dLog(fnName, 'arrayBuffer', buffer, buffer.byteLength);
       const
       fileName = file.name,
       data = arrayBufferToString(buffer),

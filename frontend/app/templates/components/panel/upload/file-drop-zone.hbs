@@ -35,7 +35,15 @@ https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Comm
 --}}
 
 {{#let (file-queue name="datasets" onFileAdded=(action this.uploadSpreadsheet)) as |queue|}}
-<FileDropzone @name="files" class="border border-primary" style="min-height: 15ex;" as |dropzone|>
+{{!-- drag/drop file file explorer Nautilus has source 'web', so enable allowUploadsFromWebsites to allow this --}}
+<FileDropzone
+ @queue={{queue}} @name="files"
+ @filter={{this.validateFile}}
+ @allowUploadsFromWebsites={{true}}
+ @multiple={{true}}
+ @cursor='move'
+ class="border border-primary" style="min-height: 15ex;"
+ as |dropzone|>
   {{#if dropzone.active}}
     {{#if dropzone.valid}}
       Drop to upload
@@ -49,6 +57,8 @@ https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Comm
     <p>
       {{#if dropzone.supported}}
         Drag and drop Spreadsheets and JSON files onto this area to upload them or
+      {{else}}
+        Dropzone not supported.
       {{/if}}
       <!-- FileUpload
         @name="files"
@@ -59,17 +69,7 @@ https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Comm
 
       <input
         type="file"
-        accept="
-	  application/json,
-	  application/vnd.google-apps.spreadsheet,
-	  application/vnd.oasis.opendocument.spreadsheet,
-	  application/vnd.ms-excel,
-	  application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,
-	  application/gzip,
-	  application/zip,
-	  text/gff3
-        "
-        {{queue.selectFile}} {{!-- filter=this.validateFile --}}
+        {{queue.selectFile filter=this.validateFile}}
         >
       <label>Add a Spreadsheet.</label>
     </p>
