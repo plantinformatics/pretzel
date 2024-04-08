@@ -35,11 +35,11 @@
 
   <Textarea
     class="form-control"
-    @input={{action 'inputIsActive'}}
+    oninput={{action 'inputIsActive'}}
     @enter={{action 'featureNameListInput'}}
     @insert-newline={{action 'featureNameListInput'}}
     @escape-press={{action 'featureNameListInput'}}
-    @paste={{action 'paste'}}
+    onpaste={{action 'paste'}}
     placeholder="Feature (Marker/Gene) Names
     (whitespace or comma separated)" >
   </Textarea>

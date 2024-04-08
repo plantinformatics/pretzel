@@ -41,11 +41,11 @@
             class="form-control"
             rows=16
             maxLength={{this.searchStringMaxLength}}
-            @input={{action 'inputIsActive'}}
+            oninput={{action 'inputIsActive'}}
             @enter={{action 'dnaSequenceInput'}}
             @insert-newline={{action 'dnaSequenceInput'}}
             @escape-press={{action 'dnaSequenceInput'}}
-            @paste={{action 'paste'}}
+            onpaste={{action 'paste'}}
             placeholder="e.g. >BobWhite_c10015_641
 AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" >
           </Textarea>

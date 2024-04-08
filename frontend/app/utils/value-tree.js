@@ -225,7 +225,9 @@ function leafCount(levelMeta, values) {
         (valueType == "Dataset") && 
           value.get &&
           value.get('isLoaded')) {
-        dLog('leafCount', valueType, value.get('id'), value.get('name'), value.get('blocks'));
+        if (trace_values) {
+          dLog('leafCount', valueType, value.get('id'), value.get('name'), value.get('blocks.length'), value.get('blocks'));
+        }
         count1 += value.get('blocks.length');
       }
       else {

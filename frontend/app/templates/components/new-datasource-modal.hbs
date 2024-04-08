@@ -53,11 +53,11 @@
         class='form-control'
         maxlength=1000
         @value={{this.chrMapping}}
-        @input={{action this.chrMappingInput}}
+        oninput={{action this.chrMappingInput}}
         @enter={{action this.chrMappingInputAction}}
         @insert-newline={{action this.chrMappingInputAction}}
         @escape-press={{action this.chrMappingInputAction}}
-        @paste={{action this.paste}}
+        onpaste={{action this.paste}}
         placeholder='e.g. 1 1A\n2 1B ...' >
       </Textarea>
 
