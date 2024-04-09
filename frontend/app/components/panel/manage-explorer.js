@@ -306,6 +306,11 @@ export default ManageBase.extend({
     treeP = this.get('treesForData'), // single-root : ontologyTree
     id2PnP = this.get('ontologyId2DatasetNodes'),
     promise = Promise.all([treeP, id2PnP]).then(([tree, id2Pn]) => {
+      /** undefined .levelMeta has been seen, when switching straight to /groups
+       * route as /mapview is still being computed and rendered */
+      if (! this.levelMeta) {
+        console.warn(fnName, 'levelMeta', this);
+      }
       let valueTree = blockFeatureOntologiesTreeEmbeddedFn(this.levelMeta, tree, id2Pn);
       /** valueTree is the root, e.g.  "CO_321:ROOT" : "Wheat traits", so count the children. */
       let keyLength = treesChildrenCount(valueTree);
