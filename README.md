@@ -45,7 +45,7 @@ For instructions on how to host pretzel without docker see https://docs.plantinf
 
 In the pretzel directory run the following command 
 
-    cd lb4app/lb3app/ && docker compose up
+    docker compose up
 
 Point your browser to [localhost:3000](http://localhost:3000/) and you should see:
 
