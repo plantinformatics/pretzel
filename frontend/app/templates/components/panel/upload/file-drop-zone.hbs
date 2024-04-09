@@ -35,21 +35,27 @@ https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Comm
 --}}
 
 {{#let (file-queue name="datasets" onFileAdded=(action this.uploadSpreadsheet)) as |queue|}}
-{{!-- drag/drop file file explorer Nautilus has source 'web', so enable allowUploadsFromWebsites to allow this --}}
+{{!--
+ refn : node_modules/ember-file-upload/dist/components/file-dropzone.js :
+ getEventSource() sets file-drop-zone .dataTransferWrapper.source = 'web' when
+ evt.dataTransfer.types[] is empty, and isAllowed() returns false for 'web' if
+ allowUploadsFromWebsites is not set, so source==='web' is something of a proxy
+ for empty .files[] / .types[].
+ isAllowed() enables setting .dropEffect and action calls e.g. onDragEnter, onDragLeave.
+   @allowUploadsFromWebsites={{true}}
+
+ These actions are not required but can be passed to <FileDropzone > for trace: @onDragEnter, @onDragLeave, @onDrop.
+ --}}
 <FileDropzone
- @queue={{queue}} @name="files"
- @filter={{this.validateFile}}
- @allowUploadsFromWebsites={{true}}
- @multiple={{true}}
- @cursor='move'
+ @queue={{queue}}
+ @filter={{action this.validateFile}}
+ @onDragEnter={{action this.onDragEnter}}
+ @onDragLeave={{action this.onDragLeave}}
+ @onDrop={{action this.onDrop}}
  class="border border-primary" style="min-height: 15ex;"
  as |dropzone|>
   {{#if dropzone.active}}
-    {{#if dropzone.valid}}
-      Drop to upload
-    {{else}}
-      Invalid
-    {{/if}}
+    {{this.typesText}}
   {{else if queue.files.length}}
     Uploading {{queue.files.length}} files. ({{queue.progress}}%)
   {{else}}

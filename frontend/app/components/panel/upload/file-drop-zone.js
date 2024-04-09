@@ -1,5 +1,7 @@
 import { inject as service } from '@ember/service';
 import { alias } from '@ember/object/computed';
+import { later } from '@ember/runloop';
+import { on } from '@ember/object/evented';
 
 import { statusToMatrix } from '../../../utils/data/vcf-files';
 
@@ -16,7 +18,7 @@ function I(value) { return value; }
 const unicodeDot = '·';
 
 const allowedFileTypes = [
-  'image/gif', 'image/jpeg', 'image/png', 'image/webp',
+  // 'image/gif', 'image/jpeg', 'image/png', 'image/webp',	// devel / testing
   'application/json',
   'application/vnd.google-apps.spreadsheet',
   'application/vnd.oasis.opendocument.spreadsheet',
@@ -81,16 +83,76 @@ export default UploadBase.extend({
 
   //----------------------------------------------------------------------------
 
+  didInsertElement: on('didInsertElement', function() {
+    if (window.PretzelFrontend) {
+      window.PretzelFrontend.fileDropZone = this;
+    }
+  }),
+
+  //----------------------------------------------------------------------------
+
+  // @action
   validateFile(file) {
-    dLog('validateFile', file.type, file.name, file.size, file);
+    dLog('validateFile', file.type, file.name, file.size, file, 'onDrag');
     let ok = allowedFileTypes.includes(file.type);
     if (! ok) {
       ok = file.type.match(/\.json$|\.gz$|\.xlsx$|\.xls$|\.ods$/);
     }
+    this.recentFileType = file.type;
     return ok;
   },
 
   //----------------------------------------------------------------------------
+
+  typesText : null,
+  // @action
+  /** required to make .files available in onDrop().
+   * by https://developer.mozilla.org/en-US/docs/Web/Guide/HTML/Drag_operations */
+  onDragEnter(files, dataTransferWrapper) {
+    const dt = dataTransferWrapper?.dataTransfer;
+    dLog('onDragEnter', files, dataTransferWrapper, dataTransferWrapper.itemDetails, dt?.types);
+    this.showTypes(files, dataTransferWrapper);
+    this.warningMessage = null;
+  },
+  showTypes(okFiles, dataTransferWrapper) {
+    const fnName = 'showTypes';
+    const dt = dataTransferWrapper.dataTransfer;
+    if (dt) {
+    // this.typesText = '[ ' + .join(', ') + ' ]';
+      const
+      filesText =
+        okFiles.length ? okFiles.mapBy('name') :
+        dt.files.length ? Array.from(dt.files).mapBy('name') :
+        dataTransferWrapper.itemDetails.length ? dataTransferWrapper.itemDetails.map(id => Object.values(id).join(':')) :
+        dt.types;
+      const
+      text = '[ ' + filesText.join(', ') + ' ]',
+      /* validateFile() is not done until drop : file-dropzone.js : addFiles() : .args.filter( )
+       * so including .recentFileType is not useful - the value lags.
+       * (this.recentFileType??'') +
+       */
+      typesText = (okFiles.length || dataTransferWrapper.itemDetails.length) + ' ' + text;
+      this.set('typesText', typesText);
+      dLog(fnName, this.typesText, 'onDrag');
+    }
+  },
+  // @action
+  onDragLeave(files, dataTransferWrapper) {
+    dLog('onDragLeave', files, dataTransferWrapper, dataTransferWrapper.itemDetails);
+    this.typesText = null;
+    this.recentFileType = null;
+  },
+  // @action
+  onDrop(addedFiles, dataTransfer) {
+    const dt = dataTransfer.dataTransfer;
+    dLog('onDrop', addedFiles, dataTransfer, dataTransfer.itemDetails, dt.items, dt.files, dt.types);
+    // this.showTypes(addedFiles, dataTransfer);
+    if (! addedFiles.length && dataTransfer.itemDetails.length) {
+      this.warningMessage = 
+        'Not accepted :' + dataTransfer.itemDetails.map(id => Object.values(id).join(':'));
+    }
+    // later(() => {this.typesText = null; this.recentFileType = null;} , 1000);
+  },
 
   /** @action */
   uploadSpreadsheet(file) {
