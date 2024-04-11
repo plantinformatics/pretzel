@@ -20,6 +20,8 @@ Agriculture Victoria hosts the following Pretzel instances for the following spe
 | Pulses | [https://pulses.plantinformatics.io/](https://pulses.plantinformatics.io/) |
 | Barley | https://barley.plantinformatics.io/  |
 
+Users can sign up for an account by following the Sign Up links in the top right of the page.
+
 ## Pretzel features
 
 - Integration of a diverse range of genetic and genomic information
