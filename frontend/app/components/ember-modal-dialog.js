@@ -3,6 +3,7 @@ import ModalDialog from 'ember-modal-dialog/components/modal-dialog';
 /** The metaeditor-modal in components/panel/manage-dataset uses
  * ember-modal-dialog, which defines modal-dialog; pretzel also defines
  * components/modal-dialog which is used in components/new-datasource-modal.
+ * Update : new-datasource-modal.hbs now uses <BsModal > , since 857d5ca8.
  *
  * To resolve the ambiguous name 'modal-dialog'; this component, named
  * ember-modal-dialog, wraps ember-modal-dialog/components/modal-dialog,

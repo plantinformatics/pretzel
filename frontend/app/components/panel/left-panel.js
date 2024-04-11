@@ -35,9 +35,6 @@ export default Component.extend({
       $(".left-panel-hidden").toggle();
       $(".left-panel-shown").trigger('toggled', [shown]);
     },
-    loadBlock(block) {
-      this.sendAction('loadBlock', block);
-    },
     /** Change to the named tab.
      * @param select  this is @action select() defined in ember-bootstrap/addon/components/base/bs-tab.js
      * @param tab name of tab to go to; without the prefix 'left-panel-'
@@ -48,8 +45,5 @@ export default Component.extend({
     changeTab(select, tab) {
       select('left-panel-' + tab);
     },
-    updateFeaturesInBlocks(featuresInBlocks) {
-      this.sendAction('updateFeaturesInBlocks', featuresInBlocks);
-    }
   }
 });

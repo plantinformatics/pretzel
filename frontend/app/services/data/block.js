@@ -771,7 +771,8 @@ export default Service.extend(Evented, {
   /**
    * The GUI does not provide a way for the user to unview a block which is not currently loaded.
    *
-   * Used by mixins/viewed-blocks.js : @see setViewed(),
+   * Previously used by (replaced by services/ block.setViewed())
+   * mixins/viewed-blocks.js : @see setViewed(),
    * @description which also defines an alternative implementation (unused) : @see setViewed0()
    *
    * @description

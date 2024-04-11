@@ -74,6 +74,7 @@ export default Component.extend({
   }),
 
   actions: {
+    /** passed as @onSubmit to <BsModal > */
     onConfirm() {
       const fnName = 'onConfirm';
       console.log(fnName);

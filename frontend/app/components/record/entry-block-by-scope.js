@@ -5,8 +5,8 @@ export default Component.extend({
 
   actions : {
     loadBlock(block) {
-      console.log('entry-block-by-scope: loadBlock', block, arguments);
-      this.sendAction('loadBlock', block);
+      console.log('entry-block-by-scope: loadBlock', block, arguments, this.entry?.brushName);
+      this.loadBlock(block);
     }
   }
 

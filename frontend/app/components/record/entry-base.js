@@ -47,8 +47,10 @@ export default Component.extend({
       record.set('readOnly', !visible);
       record.save();
     },
+    /** not used */
     selectRecord(record) {
-      this.sendAction('selectRecord', record);
+      let modelName = record?.get('constructor.modelName');
+      dLog('selectRecord', record?.id, record, modelName);
     },
     deleteRecord(record) {
       const fnName = 'deleteRecord';

@@ -65,8 +65,7 @@
         {{#each this.block.intervals as |entry index|}}
           {{record/entry-interval
             entry=entry
-            selectBlock=this.selectBlock
-            deleteBlock=this.deleteBlock}}
+            selectBlock=this.selectBlock}}
         {{/each}}
       {{else}}
         <li class="list-group-item list-group-item-default">

@@ -4,6 +4,7 @@
     <li class="list-group-item  {{if (compare block.id '===' this.selectedBlock.id) 'list-group-item-warning'}}" {{action "selectBlockAndDataset" block on="click"}} style="display: inline-block;">
       {{record/entry-block-by-scope
         loadBlock=this.loadBlock
+        selectDataset=this.selectDataset
         entry=block }}
       {{!--
       {{block.datasetId.name}}

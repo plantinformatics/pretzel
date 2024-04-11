@@ -34,9 +34,6 @@ export default EntryBase.extend({
     return active? 'minus' : 'plus'
   }),
   actions: {
-    deleteBlock(block) {
-      this.sendAction('deleteBlock', block.id);
-    },
     switchDataset(dataset) {
       // console.log('switchDataset')
       let active = this.get('entryLayout.active')

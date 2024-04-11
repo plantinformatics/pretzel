@@ -53,7 +53,9 @@
 
 <button>Map
   {{#ember-popover  }}
-    {{goto-map mapList=this.mapsOfFeature }}
+    {{goto-map mapList=this.mapsOfFeature
+      selectBlock=this.selectBlock
+    }}
   {{/ember-popover }}
 </button>
 <div>

@@ -1674,9 +1674,6 @@ export default ManageBase.extend({
     refreshAvailable() {
       this.refreshAvailable(); // See method function above
     },
-    deleteBlock(chr) {
-      this.sendAction('deleteBlock', chr.id);
-    },
     changeFilter: function(f) {
       this.set('filter', f)
     },

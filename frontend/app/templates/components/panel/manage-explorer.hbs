@@ -315,9 +315,9 @@
         <tab.pane @id="tab-explorer-byDataset" id="tab-explorer-byDataset" @title="by Dataset">
           {{record/entry-datasets
             loadBlock=this.loadBlock
-            selectBlock=(action 'selectBlock')
+            selectBlock=this.selectBlock
             selectedBlock=this.selectedBlock
-            selectDataset=(action 'selectDataset')
+            selectDataset=this.selectDataset
             selectedDataset=this.selectedDataset
             data=this.dataWithoutParent}}
         </tab.pane>
@@ -325,9 +325,9 @@
         <tab.pane @id="tab-explorer-references" id="tab-explorer-references" @title="References">
           {{record/entry-datasets
             loadBlock=this.loadBlock
-            selectBlock=(action 'selectBlock')
+            selectBlock=this.selectBlock
             selectedBlock=this.selectedBlock
-            selectDataset=(action 'selectDataset')
+            selectDataset=this.selectDataset
             selectedDataset=this.selectedDataset
             data=this.parents}}
         </tab.pane>
@@ -367,7 +367,6 @@
               entry=dataset
               selectedBlock=this.selectedBlock
               selectBlock=this.selectBlock
-              deleteBlock="deleteBlock"
               onDelete=this.onDelete
               refreshDatasets=this.refreshDatasets
               loadBlock=this.loadBlock

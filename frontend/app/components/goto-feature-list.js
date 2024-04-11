@@ -23,10 +23,7 @@ export default Component.extend({
   /*----------------------------------------------------------------------------*/
   actions : {
     loadBlock(block) {
-      this.sendAction('loadBlock', block);
-    },
-    updateFeaturesInBlocks(featuresInBlocks) {
-      this.sendAction('updateFeaturesInBlocks', featuresInBlocks);
+      this.loadBlock(block);
     },
     getBlocksOfFeatures : function () {
       console.log("getBlocksOfFeatures", this);
@@ -155,7 +152,7 @@ export default Component.extend({
             function (result, value) { result[value.key] = value.values; return result; },
             {} );
           console.log('featuresInBlocks', featuresInBlocks);
-          this.send('updateFeaturesInBlocks', featuresInBlocks);
+          this.updateFeaturesInBlocks(featuresInBlocks);
 
         });
   },

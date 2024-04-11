@@ -236,7 +236,8 @@ const ApiServerAttributes = {
         apiServers.incrementProperty('datasetsBlocksRefresh');
         // (where me = apiServers)
         // me.sendAction('receivedDatasets', datasetsHandle, blockValues);
-        // or via .evented() on task
+        // receivedDatasets : sendAction() is replaced by trigger().
+        // alternative : via .evented() on task
         apiServers.trigger('receivedDatasets', blockValues);
         // mapview : model() has already done getBlocksLimits() for primaryServer
         if (this.get('apiServers.primaryServer') !== this) {

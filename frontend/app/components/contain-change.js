@@ -22,10 +22,6 @@ export default Component.extend({
   }),
 
   actions : {
-    closeToolTip : function () {
-      console.log("path-hover closeToolTip");
-      this.sendAction('closeToolTip');
-    },
     /** initial value of pinned is undefined - falsey */
     pinToolTip : function () {
       console.log("path-hover pinToolTip", this.get('pinned'));

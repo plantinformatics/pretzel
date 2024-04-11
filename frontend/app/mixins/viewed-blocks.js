@@ -2,6 +2,9 @@ import Mixin from '@ember/object/mixin';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 
+/** replaced in 9e9ccdf :
+ * ...  use block.unViewChildBlocks() and block.setViewed in place of mixins/viewed-blocks
+ */
 export default Mixin.create({
   // already injected in controllers/mapview
   // block: service('data/block'),

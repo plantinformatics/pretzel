@@ -3,7 +3,7 @@
   node=this.node
   nodeName=this.name
   selectedNode=this.selectedDataset
-  selectNode=(action 'selectDataset')
+  selectNode=this.selectDataset
 }}
 
   {{#record/entry-expander nodeName=this.name}}
@@ -12,7 +12,7 @@
       loadBlock=this.loadBlock
       selectBlock=this.selectBlock
       selectedBlock=this.selectedBlock
-      selectDataset=(action 'selectDataset')
+      selectDataset=this.selectDataset
       data=this.values}}
       {{/record/entry-expander}}
 
