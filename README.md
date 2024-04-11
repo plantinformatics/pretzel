@@ -1,15 +1,26 @@
 
+<img src="https://plantinformatics.io/landingPageContent/pretzel-logo.png">
 
 [![Docker pulls](https://img.shields.io/docker/pulls/plantinformaticscollaboration/pretzel.svg?logo=docker&style=for-the-badge)](https://hub.docker.com/r/plantinformaticscollaboration/pretzel)
 [![Docker Image Version  (latest semver)](https://img.shields.io/docker/v/plantinformaticscollaboration/pretzel.svg?logo=docker&style=for-the-badge)](https://hub.docker.com/r/plantinformaticscollaboration/pretzel)
 
-This README is just a fast quick start document. You can find more detailed documentation at https://docs.plantinformatics.io/
+This README gives a high level overview of what Pretzel can do. More detailed documentation is being developed at https://docs.plantinformatics.io/.
 
 ## What is Pretzel
 
 Pretzel is a web-based online framework for the real-time interactive display integration of genetic and genomic datasets. It is built on Ember.js (front end), Loopback.js (back end) and D3.js (visualisation).
 
-Features include:
+## Get started now
+
+Agriculture Victoria hosts the following Pretzel instances for the following species for public datasets:
+
+| Species | URL |
+|--|--|
+| Wheat | [https://plantinformatics.io/](https://plantinformatics.io/) |
+| Pulses | [https://pulses.plantinformatics.io/](https://pulses.plantinformatics.io/) |
+| Barley | https://barley.plantinformatics.io/  |
+
+## Pretzel features
 
 - Integration of a diverse range of genetic and genomic information
 
@@ -25,53 +36,33 @@ Features include:
 
 - User-defined access controls on uploaded datasets, including sharing to groups of users
 
+- Dynamic link to Crop Ontology API for QTL trait definition and visualisation
+
+## Examples of Pretzel in action
+
+### Simultaneously investigating genome to genetic map relationships and zooming to specific regions to visualize genomic features
+
 ![Screenshot1](https://pretzel-images-public.s3.ap-southeast-2.amazonaws.com/screenshot1.png)
 
 > IWGSC RefSeq v1.0 genome assembly chromosome 7A zoomed around the RAC875_c1277_250 90k marker, with 90k markers (blue) and HC genes (purple) shown (left axis), aligned to the 8-way MAGIC genetic map (Shah et al. 2018, middle axis) and Avalon x Cadenza genetic map (Wang et al. 2014, right axis). The table shows relative position of markers in the genome assembly and MAGIC map.
 
+### Visualising chromosome-scale alignments between a genetic map to a genome assembly and syntenic relationships between different species' genomes
+
 ![Screenshot2](https://pretzel-images-public.s3.ap-southeast-2.amazonaws.com/screenshot2.png)
 
-> Westonia x Kauz genetic map based on 90 markers (Wang et al. 2014, left axis) aligned to IWGSC RefSeq v1.0 chromosome 2A (middle axis), aligned to barley Morex V2 assembly (right axis) with red lines between orthologous genes between wheat and barley.
+> Westonia x Kauz genetic map based on 90k markers (Wang et al. 2014, left axis) aligned to IWGSC RefSeq v1.0 chromosome 2A (middle axis), aligned to barley Morex V2 assembly (right axis) with red lines between orthologous genes between wheat and barley.
+
+### Projecting QTL information from a genetic map into a genome assembly
 
 ![Screenshot3](https://pretzel-images-public.s3.ap-southeast-2.amazonaws.com/screenshot3.png)
 
 > TaCOL-B5 marker position from Zhang et al. 2022 positioned in IWGSC RefSeq v1.0 chromosome 2A (left axis), aligned to SSR map from Shankar et al. 2017 with 3 QTLs shown in blue (right axis).
 
+### Exploring haplotypes around a gene in diverse germplasm
+
 ![Screenshot4](https://pretzel-images-public.s3.ap-southeast-2.amazonaws.com/screenshot4.png)
 
 > Exome-based haplotypes (right panel) from a subset of accessions from Keeble-Gagnere et al. 2021 ([https://doi.org/10.7910/DVN/5LVYI1](https://doi.org/10.7910/DVN/5LVYI1 "https://doi.org/10.7910/dvn/5lvyi1")), with SNP positions shown around TraesCS4A01G343700 in IWGSC RefSeq v1.0 (left panel).
-
-### Get started now
-
-Agriculture Victoria hosts the following Pretzel instances for the following species for public datasets:
-
-| Species | URL |
-|--|--|
-| Wheat | [https://plantinformatics.io/](https://plantinformatics.io/) |
-| Pulses | [https://pulses.plantinformatics.io/](https://pulses.plantinformatics.io/) |
-| Barley | https://barley.plantinformatics.io/  |
-
-## Quick start (Local hosting using docker)
-
-Please make sure docker has been installed before attempting any of the below steps.
-
-https://docs.docker.com/engine/install/
-
-For instructions on how to host pretzel without docker see https://docs.plantinformatics.io/
-
-### Docker on linux
-
-In the pretzel directory run the following command 
-
-    docker compose up
-
-Point your browser to [localhost:3000/signup](http://localhost:3000/signup) and you should see:
-
-![login](https://pretzel-images-public.s3.ap-southeast-2.amazonaws.com/screenshot5.png)
-
-You can create a user by signing up, then logging in with these details (by default, the user is created immediately without any  verification).
-
-For a full getting started guide please see https://docs.plantinformatics.io/
 
 
 ## Funding
