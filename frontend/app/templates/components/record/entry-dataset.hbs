@@ -81,7 +81,8 @@
       class="list-group-item {{if (compare block.id '===' this.selectedBlock.id) 'list-group-item-warning'}}{{nameClass block}}"
       {{action this.selectBlock block on="click"}}>
       {{record/entry-block
-        onDelete="onDelete"
+        onDelete=this.onDelete
+        refreshDatasets=this.refreshDatasets
         loadBlock=this.loadBlock
         title=block.fcStatus
         entry=block}}

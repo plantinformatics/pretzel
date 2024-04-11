@@ -1693,8 +1693,9 @@ export default ManageBase.extend({
       });
     },
     onDelete(modelName, id) {
+      dLog('onDelete', modelName, id, this._debugContainerKey);
       this.refreshAvailable();
-      this.sendAction('onDelete', modelName, id);
+      this.onDelete(modelName, id);
     },
     /** The user has clicked + to add a block.
      * If the block's dataset has a .parentName and doesn't have a
@@ -1717,7 +1718,7 @@ export default ManageBase.extend({
           block.referenceBlockSameServer() ||
           block.chooseReferenceBlock() ) {
         // mapview : loadBlock() will view the reference if it is not viewed.
-        this.sendAction('loadBlock', block);
+        this.loadBlock(block);
       } else
         this.set('blockWithoutParentOnPrimary', block);
 
@@ -1731,7 +1732,7 @@ export default ManageBase.extend({
           if (referenceBlock) {
             dLog('loadBlock viewing', dataBlock.id, 'as its referenceBlock', referenceBlock.id, 'is viewed');
             this.set('blockWithoutParentOnPrimary', null);
-            this.sendAction('loadBlock', dataBlock);
+            this.loadBlock(dataBlock);
           }
         }
       });

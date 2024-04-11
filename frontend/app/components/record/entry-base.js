@@ -4,6 +4,8 @@ import Component from '@ember/component';
 import { inject as service } from '@ember/service';
 import { run } from '@ember/runloop';
 
+import { dLog } from '../../utils/common/log';
+
 export default Component.extend({
   onInit: on('init', function() {
     this.set('editing', false);
@@ -49,16 +51,24 @@ export default Component.extend({
       this.sendAction('selectRecord', record);
     },
     deleteRecord(record) {
-      let id = record.id,
-        that = this;
-      /** equiv : record._internalModel.modelName */
+      const fnName = 'deleteRecord';
+      let id = record.id;
+
       let modelName = record.get('constructor.modelName');
+      dLog(fnName, modelName, id, this?.entry?.id, this?._debugContainerKey);
+      /** onDelete() un-views the block or the blocks of the dataset;
+       * This is done before deleting it. */
+      this.onDelete(modelName, id);
+
       // destroyRecord() is equivalent to deleteRecord() and immediate save()
       record.destroyRecord()
         .then(() => run(() => record.unloadRecord()))
-        .then(function() {
-        // Don't trigger downstream effects until complete
-        that.sendAction('onDelete', modelName, id);
+        .then(() => {
+          dLog(fnName, 'unloadRecord completed', modelName, id);
+          /** .refreshDatasets is passed to entry-dataset, and it
+           * passes it to entry-block, but other uses of entry-block
+           * do not */
+          this.get('refreshDatasets')?.();
       });
     },
     loadBlock(record) {

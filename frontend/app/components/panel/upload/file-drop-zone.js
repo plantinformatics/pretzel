@@ -214,7 +214,7 @@ export default UploadBase.extend({
         const
         datasetWarnings  = status.datasetsWithErrorsOrWarnings?.map(
           (d) => [d.name].concat(d.errors || []).concat(d.warnings || [])) || [],
-        warnings = status?.warnings.concat(datasetWarnings.flat());
+        warnings = (status?.warnings ?? []).concat(datasetWarnings.flat());
         this.set('warnings', warnings);
         this.set('errors', status?.errors || []);
         this.get('blockService').featureSaved();

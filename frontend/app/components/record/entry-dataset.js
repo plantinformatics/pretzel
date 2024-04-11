@@ -47,8 +47,8 @@ export default EntryBase.extend({
      * entry-base, sends onDelete dataset to manage-explorer ...
      */
      onDelete(modelName, id) {
-      console.log('entry-dataset', 'onDelete', modelName, id);
-      this.sendAction('onDelete', modelName, id);
+       console.log('entry-dataset', 'onDelete', modelName, id, this.entry?.id);
+       // this.onDelete(modelName, id);
     },
     selectDataset(dataset) {
       this.selectDataset(dataset);

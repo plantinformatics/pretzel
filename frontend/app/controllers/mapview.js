@@ -88,13 +88,6 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
     // fetch data
   },
 
-  actions: {
-    resetAll() {
-      // reset all query params to their default values specified in the query param map
-      this.resetQueryParams();
-    }
-  },
-
   //----------------------------------------------------------------------------
 
   /** Array of available datasets populated from model 
@@ -113,6 +106,14 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
   }),
 
   actions: {
+
+    /** Reset all query params to their default values specified in the query param map
+     * From : (@voll/) ember-parachute/README.md, see example of use there.
+     */
+    resetAll() {
+      this.resetQueryParams();
+    },
+
     // layout configuration
     setVisibility: function(side) {
       // dLog("setVisibility", side);
@@ -186,13 +187,21 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
         this.router.transitionTo({'queryParams': queryParams }); });
     },
     /** Un-view a block.
+     *
+     * The remove* functions remove objects from the display (i.e. un-view them),
+     * whereas the delete* functions delete objects, i.e. 
+     *   components/record/entry-base.js : deleteRecord()
+     *
      * @param block store object; this is the only difference from action removeMap(),
      * which takes a blockId
      */
-    removeBlock: function(block) {
+    removeBlock(block) {
+      const fnName = 'removeBlock';
       if (typeof block === "string")
         this.send('removeMap', block);
-      else {
+      else if (block.isDestroying) {
+        dLog(fnName, 'isDestroying', block.id, block.brushName);
+      } else {
         block.unViewChildBlocks();
         block.set('isViewed', false);
         this.removeUnviewedBlockFeaturesFromSelected();
@@ -200,23 +209,78 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
     },
     /** Change the state of the named block to not-viewed.
      * Equivalent to action removeBlock(), which takes a block record instead of a blockId.
-     * @param mapName blockId
+     * @param blockId
      */
-    removeMap : function(mapName) {
-      let blockId = mapName;
+    removeBlockId(blockId) {
       let block = this.blockFromId(blockId);
       block.unViewChildBlocks();
 
-      this.get('block').setViewed(mapName, false);
+      this.get('block').setViewed(blockId, false);
       later(() => this.removeUnviewedBlockFeaturesFromSelected(), 500);
     },
+    /**
+     * @param blockId (previously named mapName)
+     */
+    removeMap(blockId) {
+      this.removeBlockId(blockId);
+    },
+    removeBlocks(blocks) {
+      const fnName = 'removeBlocks';
+      dLog(fnName, blocks.map(b => [b.brushName, b.id, b.isViewed]));
+      blocks.forEach(block => this.removeBlock(block));
+    },
+    removeDatasetsBlocks(datasets) {
+      const
+      blocks = datasets.mapBy('blocks').flat();
+      this.removeBlocks(blocks);
+    },
+    removeDataset(dataset) {
+      const
+      fnName = 'removeDataset';
+      this.removeBlocks(Array.from(dataset.blocks));
+    },
+    /**
+     * @param datasetId mapName
+     */
+    removeDatasetId(datasetId) {
+      const
+      fnName = 'removeDatasetId';
+      dLog(fnName, 'datasets', this.datasets.mapBy('id'));
+      /** Following are 3 ways of determining blocks to unview from datasetId */
+      const
+      id2Server = this.get('apiServers.id2Server'),
+      server = id2Server[datasetId],
+      datasets = server.datasetsBlocks.filterBy('id', datasetId);
+      this.removeDatasetsBlocks(datasets);
+      /* related :
+       * this.apiServers.dataset2stores(id)
+       * d.datasetsByName
+       */
+      /** Expect that at this time datasetId is already removed from
+       * .dataset.values and is still present in .server.datasetsBlocks, so the
+       * above is more useful although the following is broadly equivalent :
+       */
+      const datasets2 = this.dataset.values.filterBy('id', datasetId);
+      // this.removeDatasetsBlocks(datasets2);
 
-    onDelete : function (modelName, id) {
+      /** This 3rd alternative is likely to be not needed. */
+      const
+      /** expect just 1 match per blockId, so could use .findBy() */
+      blocksToUnview = 
+        this.mapsToView.map(blockId => this.blockValues.filterBy('id', blockId))
+      // .filterBy('isViewed', true)
+        .filterBy('datasetId.id', datasetId);
+      this.removeBlocks(blocksToUnview);
+    },
+    onDelete(modelName, id) {
+      const fnName = 'onDelete';
       dLog('onDelete', modelName, id);
       if (modelName == 'block')
         this.send('removeMap', id); // block
-      else
-        dLog('TODO : undisplay child blocks of', modelName, id);
+      else {
+        dLog(fnName, 'undisplay child blocks of', modelName, id);
+        this.removeDatasetId(id);
+      }
     },
     toggleShowUnique: function() {
       dLog("controllers/mapview:toggleShowUnique()", this);
@@ -324,6 +388,7 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
       }
     },
     /** Re-perform task to get all available maps.
+     * This is passed to components as refreshDatasets.
      */
     updateModel: function() {
       let model = this.get('model');
@@ -332,6 +397,14 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
       let serverTabSelectedName = this.get('controlsService.serverTabSelected'),
       serverTabSelected = this.get('apiServers.serverSelected'),
       datasetsTask = serverTabSelected && serverTabSelected.getDatasets();
+
+      /** de-select .selectedDataset if it has been deleted. */
+      datasetsTask?.then(() => {
+        if (this.selectedDataset && this.selectedDataset.isDestroying) {
+          this.set('selectedDataset', null);
+        }
+      });
+
       {
       let
       /** expect that both serverTabSelected and datasetsTask are defined, regardless of serverTabSelectedName.  */
@@ -352,6 +425,15 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
       return datasetsTask;
     }
   },
+  /** forward these calls into .actions {}; these can be dropped when this
+   * component is converted from Ember Controller.extend() to a native class */
+  removeBlock(block)             { this.actions.removeBlock.apply(this, arguments); },
+  removeBlockId(blockId)         { this.actions.removeBlockId.apply(this, arguments); },
+  removeBlocks(blocks)           { this.actions.removeBlocks.apply(this, arguments); },
+  removeDatasetsBlocks(datasets) { this.actions.removeDatasetsBlocks.apply(this, arguments); },
+  removeDatasetId(datasetId)     { this.actions.removeDatasetId.apply(this, arguments); },
+
+  //----------------------------------------------------------------------------
 
   layout: EmberObject.create({
     'left': {
@@ -496,6 +578,7 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
   blockValues : readOnly('block.blockValues'),
 
   /** same as services/data/block @see peekBlock()
+   * equivalent to this.actions.blockFromId(), which is not referenced.  - these can be merged.
    */
   blockFromId : function(blockId) {
     let 
