@@ -298,7 +298,7 @@ const ApiServerAttributes = {
     const
     fnName = 'blocksFeaturesCountsStatus',
     /** [[blockId, status], ...] */
-    blocksStatusP = this.get('block').getBlocksFeaturesCountsStatus(/*blockIds*/undefined),
+    blocksStatusP = this.get('block').getBlocksFeaturesCountsStatus(/*blockIds*/undefined, this),
     byBlockIdP = blocksStatusP.then(blocksStatus => blocksStatus.reduce((result, bs) => {
       result[bs[0]] = bs[1];
       return result;

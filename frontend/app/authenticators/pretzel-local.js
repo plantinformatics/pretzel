@@ -40,8 +40,8 @@ export default Base.extend({
      * production) or undefined. */
     siteOrigin = getSiteOrigin(this),
     apiServers = this.get('apiServers'),
-    endpoint = config.apiHost + '/api/Clients/login';
-    console.log('authenticate', config, config.apiHost, siteOrigin);
+    endpoint = config.apiHost + config.rootURLNamespace + '/Clients/login';
+    console.log('authenticate', config, config.apiHost, config.rootURLNamespace, endpoint, siteOrigin);
     return new Promise((resolve, reject) => {
       $.ajax({
         url: endpoint,

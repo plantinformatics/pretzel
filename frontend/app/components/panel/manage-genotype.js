@@ -1054,6 +1054,14 @@ export default class PanelManageGenotypeComponent extends Component {
     return scope;
   }
 
+  /** Narrow .brushedOrViewedVCFBlocks to those blocks which are visible.
+   * Update : also filter by .brushedDomain, because brushedOrViewedVCFBlocks()
+   * expects blocks to have .brushedDomain; this also enables users to control
+   * which blocks are displayed in the genotype table by brushing or clearing
+   * the brush; if instead they would like to see genotypes of blocks which are
+   * not brushed, then this filter on .brushedDomain can be moved to
+   * vcfGenotypeLookupAllDatasets().
+   */
   @computed('brushedOrViewedVCFBlocks')
   get brushedOrViewedVCFBlocksVisible () {
     const
@@ -1061,7 +1069,8 @@ export default class PanelManageGenotypeComponent extends Component {
     blocks = this.brushedOrViewedVCFBlocks
       .map(abb => abb.block),
     visibleBlocks = blocks
-      .filterBy('visible');
+      .filterBy('visible')
+      .filterBy('brushedDomain');
     dLog(fnName, visibleBlocks, blocks);
     return visibleBlocks;
   }

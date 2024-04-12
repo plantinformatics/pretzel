@@ -489,7 +489,12 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedService, 
 
         // .id is used by axisFeatureCircles_eltId().
         // ._name may be also added to other blocks.
-        feature.id = block.id + '_' + feature._name;
+        /* append .value[0] to handle datasets with duplicate .name in 1 chr
+         * This could be optional - done just when
+         *  (existingFeature.get('value.0') !== feature.value[0])
+         */
+        feature.id = block.id + '_' + feature._name + '_' + feature.value[0];
+        feature.id = feature.id.replace('.', '_');
         let existingFeature = store.peekRecord('feature', feature.id);
         if (existingFeature) {
           mergeFeatureValues(existingFeature, feature);

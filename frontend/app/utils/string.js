@@ -42,3 +42,21 @@ export {
   stringCountString,
   toTitleCase,
 };
+
+//-------------------------------------------------------------------------------
+
+export { ensureTrailingString }
+/** Ensure that the given string ends with the given suffix, which may be a multi-char string.
+ * @param string
+ * @param suffix
+ * @desc
+ * Usage e.g. ensureTrailingString(apiHost, '/')
+ */
+function ensureTrailingString(string, suffix) {
+  if (! string.endsWith(suffix)) {
+    string += suffix;
+  }
+  return string;
+}
+
+//-------------------------------------------------------------------------------

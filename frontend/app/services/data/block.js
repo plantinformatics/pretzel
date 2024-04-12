@@ -653,13 +653,18 @@ export default Service.extend(Evented, {
     return blockP;
   },
 
-  getBlocksFeaturesCountsStatus: function (blockIds) {
+  /**
+   * @param server	apiServer
+   */
+  getBlocksFeaturesCountsStatus: function (blockIds, server) {
     const
     fnName = 'getBlocksFeaturesCountsStatus',
     nBins = this.get('featuresCountsNBins'),
     useBucketAuto = this.get('parsedOptions.useBucketAuto'),
+    /** if blockIds is undefined, then options.server is required */
+    options = {server},
     statusP =
-      this.get('auth').getBlocksFeaturesCountsStatus(blockIds, nBins, useBucketAuto, /*options*/{});
+      this.get('auth').getBlocksFeaturesCountsStatus(blockIds, nBins, useBucketAuto, options);
 
     return statusP;
   },

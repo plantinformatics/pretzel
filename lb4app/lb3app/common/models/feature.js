@@ -185,6 +185,30 @@ module.exports = function(Feature) {
    * @param options
    *
    * @param cb node response callback
+   *
+   * The frontend component panel/sequence-search offers selection of datasets with the tag BlastDb (refn datasetsToSearch() in frontend/app/components/panel/sequence-search.js) 
+   * and will send a request via auth.dnaSequenceSearch() :
+   *   dnaSequenceSearch(
+   *     apiServer, dnaSequence, parent, searchType, resultRows, addDataset, datasetName,
+   *     minLengthOfHit, minPercentIdentity, minPercentCoverage,
+   *     options
+   *   )
+   * 
+   * This is received by Feature.dnaSequenceSearch() in pretzel/lb4app/lb3app/common/models/feature.js, which sends the request via childProcess('dnaSequenceSearch.bash', ). It also has the capability to upload the result to mongoDb via upload.uploadParsedTryCb()
+   * It forwards requests via a queue with concurrency of 1 (sequenceSearchQueue), so that just 1 blastn is executed at a time; running multiple blast-s multiplies the memory use and can log-jam with even small numbers of requests (depending on available memory).
+   * 
+   * The script pretzel/lb4app/lb3app/scripts/dnaSequenceSearch.bash recognises when it is running in a container and configures to use : blastn=$resourcesDir/blastn_request.bash
+   * Alternately blastn is used directly, which is used in development, or when running pretzel directly.
+   * 
+   * pretzel/lb4app/lb3app/scripts/blastn_request.bash uses curl to post the request to blastnUrl=http://$hostIp:4000/commands/blastn
+   * which replies with a URL to watch for a result, which is retrieved with curl. This result is asynchronous, to allow for the time delay of blastn which is normally 5-300 secs.
+   * 
+   * The Flask web api server pretzel/lb4app/lb3app/scripts/blastServer.py exposes 1 command : blastn, which calls the script pretzel/lb4app/lb3app/scripts/blastn_cont.bash
+   * (this could be incorporated into blastServer.py - the current approach simply maps from a request name to a script filename which implements the request, in which sense it is simply a switch routing requests to the appropriate implementation).
+   * It also maps dnaSequenceLookup to dnaSequenceLookup.bash
+   * 
+   * blastn_cont.bash implements the request by running blastn directly, or if it is not installed, via docker run ncbi/blast blastn.
+   * 
    */
   Feature.dnaSequenceSearch = function(data, options, cb) {
     const models = this.app.models;

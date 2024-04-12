@@ -36,6 +36,26 @@ function statusToMatrix(vcfStatus) {
     m = line.match(/(.*) ([^.]+)(.*).vcf.gz(.*)/);
     // Array(5) [ "   3288524 Sep 26 14:13 1A.MAF.SNPList.vcf.gz", "   3288524 Sep 26 14:13", "1A", ".MAF.SNPList", "" ]
     if (m) {
+      /**  The dataset name may contain a '.', e.g. 
+       * Ta_PRJEB31218_IWGSC-RefSeq-v1.0_filtered-SNPs.chr1A.vcf.gz
+       * Perhaps handle with a regexp which [^-_] in the chr part;
+       * trialling this heuristic : expect the chr part to be 2-5 chars.
+       * Leading parts of m[3] (split at '.') which are > 5 chars are
+       * moved to m[2].
+       */
+      const
+      parts = m[3]?.split('.'),
+      i = parts?.findIndex(part => part.length > 0 && part.length <= 5);
+      if (i > 0) {
+        const
+        /** ".0_filtered-SNPs" */
+        namePart = parts.slice(0, i).join('.'),
+        /** "chr1A" */
+        chrPart = parts.slice(i).join('.');
+        m[2] += namePart;
+        m[3] = '.' + chrPart;
+      }
+
       const
       [whole, sizeTime, chrName, suffix, csi] = m,
       colName = (suffix + csi).replaceAll('.', unicodeDot),

@@ -77,7 +77,8 @@ const refAltHeadings = refAlt.map(toTitleCase);
  * Based on similar in table-brushed.js
  */
 const featureValuesWidths = {
-  Chr : 35,
+  /** increased to allow space for "Chr" prefix on chromosome name. */ 
+  Chr : 50,
   Name : 180,
   Position : 80,
   End : 80,

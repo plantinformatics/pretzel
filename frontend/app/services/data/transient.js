@@ -91,7 +91,7 @@ export default Service.extend({
     return record;
   },
 
-  pushBlockArgs(datasetId, scope, name, namespace) {
+  pushBlockArgs(datasetId, name, scope, namespace) {
     let
     /** may need to pass search ID also; depends on whether distinct blocks should be used for each search result. */
     /** prefix _id with datasetId to make it unique enough.  May use UUID. */
@@ -100,8 +100,12 @@ export default Service.extend({
     record = this.pushData(store, 'block', data);
     return record;
   },
-  blocksForSearch(datasetId, blockScopes, blockNames, namespace) {
-    let blocks = blockNames.map((name, i) => this.pushBlockArgs(datasetId, blockScopes[i], name, namespace));
+  /** Push into the (default) store blocks for the given datasetId and {name,scope,namespace}
+   * @param blockNames, scopesForNames are parallel
+   */
+  blocksForSearch(datasetId, blockNames, scopesForNames, namespace) {
+    let blocks = blockNames.map((name, i) =>
+      this.pushBlockArgs(datasetId, name, scopesForNames[i], namespace));
     return blocks;
   },
 

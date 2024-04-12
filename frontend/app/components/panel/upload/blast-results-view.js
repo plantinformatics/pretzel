@@ -368,9 +368,7 @@ export default Component.extend({
 
     let
     /** it is possible that the parent reference does not have blocks with name matching the results (blockNames) */
-    blocks = this.get('resultParentBlocks'),
-    /** split resultParentBlocks() into parentBlocks and resultParentBlocksByName(); array result is not required. */
-    blocksByName = blocks.reduce((result, block) => {result[block.get('name')] = block; return result; }, {});
+    blocksByName = this.get('resultParentBlocksByName'),
     blocks = blocksByName;
 
     /** toView[<Boolean>] is an array of blockNames to view / unview (depending on <Boolean> flag). */
@@ -394,10 +392,9 @@ export default Component.extend({
       (viewFlag) => toView[viewFlag] && this.get('viewDataset')(parentName, viewFlag, toView[viewFlag]));
   },
 
-  resultParentBlocks : computed('search.parent', 'blockNames.[]', function () {
-    const fnName = 'resultParentBlocks';
+  parentBlocks : computed('search.parent', function () {
+    const fnName = 'parentBlocks';
     let parentName = this.get('search.parent');
-    let blockNames = this.get('blockNames');
     let
     /** lookup on the server selected in dataset explorer, not primary. */
     server = this.get('apiServers').get('serverSelected'),
@@ -407,17 +404,28 @@ export default Component.extend({
      */
     if (! dataset) {
       dataset = server?.datasetsBlocks.findBy('name', parentName);
-      dLog('resultParentBlocks serverSelected dataset', dataset, parentName);
+      dLog(fnName, 'serverSelected dataset', dataset, parentName);
     }
     let
+    blockNames = this.get('blockNames'),
     blocks = dataset && dataset.get('blocks').toArray()
       .filter((b) => (blockNames.indexOf(b.get('name')) !== -1) );
     /** blockScopes is parallel to blockNames, and enables a mapping
      * from name (result) to scope (axis reference) */
     this.blockScopes = blockNames.map(name => blocks.findBy('name', name)?.scope);
+    return blocks;
+  }),
+  resultParentBlocksByName : computed('parentBlocks', 'blockNames.[]', function () {
+    const fnName = 'resultParentBlocks';
+
+    let blockNames = this.get('blockNames');
+    const
+    blocks = this.parentBlocks
+      .reduce((result, block) => {result[block.get('name')] = block; return result; }, {});
 
     if (! blocks.length && blockNames.length) {
-      dLog('resultParentBlocks', parentName, dataset, blockNames, blocks);
+      const parentName = this.get('search.parent');
+      dLog(fnName, parentName, blockNames, blocks);
     }
     return blocks;
   }),
@@ -476,10 +484,14 @@ export default Component.extend({
         this.get('search.parent'),
         namespace
       );
+      const
+      blocksByName = this.get('resultParentBlocksByName'),
+      scopesForNames = this.get('blockNames').map(name => blocksByName[name]?.scope || name);
       let blocks = transient.blocksForSearch(
         datasetName,
         this.blockScopes,
         this.get('blockNames'),
+        scopesForNames,
         namespace
       );
       /** change features[].blockId to match blocks[], which has dataset.id prefixed to make them distinct.  */

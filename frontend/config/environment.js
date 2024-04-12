@@ -9,13 +9,32 @@
 
 module.exports = function (environment) {
   const env = process.env;
+  const
+  apiHost = process.env.API_URL || 'http://localhost:5000',
+  apiNamespace = 'api',
+  /** use '' for relative assets/, for sub-directory routing e.g. example.com/pretzelDev/
+   * used with Ember local routing
+   * It is assumed that ROOT_URL has a leading and trailing '/'; it is '/' by default.
+   * ROOT_URL and rootURL relate to the primary, and don't apply if apiHost is
+   * not the primary server.
+   */
+  rootURL = (process.env.ROOT_URL !== undefined) ? process.env.ROOT_URL : '/',
+  /** Combine rootURL + apiNamespace.  This is used directly in URLs.
+   * Usage : apiHost + rootURLNamespace + '/' + route
+   * This could be '', otherwise it has a leading '/'.
+   * Like apiNamespace, this does not have a trailing '/'.
+   */
+  rootURLNamespace = rootURL + apiNamespace,
+  apiHostRootURLNamespace = apiHost + rootURLNamespace;
+
   const ENV = {
     modulePrefix: 'pretzel-frontend',
     environment,
-    apiHost: process.env.API_URL || 'http://localhost:5000',
-    // apiHost: 'http://sc-15-cdc.it.csiro.au:7000',
-    apiNamespace: 'api', // adding to the host for API calls
-    rootURL: '/', // used with Ember local routing
+    apiHost,
+    apiNamespace, // adding to the host for API calls
+    rootURL,
+    rootURLNamespace,
+    apiHostRootURLNamespace,
     // : Router location 'auto' is deprecated. Most users will want to set `locationType` to 'history' in config/environment.js for no change in behavior. See deprecation docs for details. [deprecation id: deprecate-auto-location]
     locationType: 'history',	// was auto. template has 'history'
     handsOnTableLicenseKey: null,

@@ -1,5 +1,6 @@
 import { pluralize } from 'ember-inflector';
 
+import ENV from '../../config/environment';
 
 import { breakPoint } from './breakPoint';
 
@@ -19,7 +20,7 @@ function normalizeData(modelName, host, d) {
   /** trim out /in .group, and /own .clients. caller does .relationships */
   {id, group, clients, ...attributes} = d,
   links = {
-    self: host + '/api/' + pluralize(modelName) + '/' + id
+    self: host + ENV.rootURLNamespace + '/' + pluralize(modelName) + '/' + id
   },
   data = {
     type : modelName,
