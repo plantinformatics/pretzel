@@ -831,8 +831,10 @@ export default Service.extend({
     const
     host = ensureTrailingString((apiHost || config.apiHost), '/'),
     /** rootURL may be /, append it if not already present.
-     * Some cases (e.g. / + /app/) will create //, so trim that.  */
-    hostRootUrl = ensureTrailingString(host, config.rootURL).replaceAll('//', '/');
+     * Some cases (e.g. / + /app/) will create //, so trim that, except for ://
+     */
+    hostRootUrl = ensureTrailingString(host, config.rootURL)
+      .replaceAll(/([^:])\/\//g, '$1/');
     let endpoint = hostRootUrl + config.apiNamespace + '/' + route;
     /** Pretzel is designed to support multiple servers sub-domains for
      * different species (e.g. *.plantinformatics.io) and they have separate
