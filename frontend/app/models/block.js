@@ -21,7 +21,7 @@ import {
   intervalOverlap,
   intervalOverlapCoverage
 } from '../utils/interval-calcs';
-import { binEvenLengthRound } from '../utils/draw/interval-bins';
+import { binEvenLengthRound } from 'interval-bins';
 import { subInterval, overlapInterval } from '../utils/draw/zoomPanCalcs';
 import {
   featuresCountsResultsCheckOverlap,
