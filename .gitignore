@@ -27,3 +27,4 @@ bower_components
 # etags file
 TAGS
 .vscodeignore
+.aider*
