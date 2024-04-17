@@ -82,6 +82,7 @@ module.exports = function (defaults) {
   app.import(HoT + 'dist/handsontable.full.css'); // handsontable.css
 
   // app.import('node_modules/interval-bins/dist/interval-bins.js');
+  app.import('node_modules/@plantinformatics/vcf-genotype-brapi/dist/vcf-genotype-brapi.js');
 
   app.import('node_modules/tsne-js/build/tsne.min.js', {
     outputFile : 'assets/web-workers/tsne.min.js'

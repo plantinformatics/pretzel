@@ -1,7 +1,7 @@
 // {{!-- check : selectSampleFilter activeSampleFilter tabName2IdDatasets selectedCount activeIdDatasets --}}
 
 import Component from '@glimmer/component';
-import EmberObject, { computed, action, set as Ember_set, setProperties } from '@ember/object';
+import EmberObject, { computed, action, get as Ember_get, set as Ember_set, setProperties } from '@ember/object';
 import { alias, reads } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
@@ -20,9 +20,10 @@ import { arrayChoose } from  '../../utils/common/arrays';
 import { intervalSize } from '../../utils/interval-calcs';
 import { overlapInterval } from '../../utils/draw/zoomPanCalcs';
 import { featuresIntervalsForTree } from '../../utils/data/features';
-import {
-  refAlt,
-  valueNameIsNotSample,
+let vcfGenotypeBrapi = window["vcf-genotype-brapi"];
+console.log('vcfGenotypeBrapi', vcfGenotypeBrapi, window["@plantinformatics/vcf-genotype-brapi@npm:pretzel.A8b"]);
+const /*import */{
+  setFrameworkFunctions,
   datasetId2Class,
   gtValueIsNumeric,
   addGerminateOptions,
@@ -30,6 +31,12 @@ import {
   addFeaturesJson,
   resultIsGerminate,
   addFeaturesGerminate,
+} = vcfGenotypeBrapi.vcfFeature; /*from 'vcf-genotype-brapi'; */
+
+import {
+  refAlt,
+  valueNameIsNotSample,
+
   normalizeMaf,
   sampleIsFilteredOut,
   columnName2SampleName,
@@ -2283,6 +2290,7 @@ export default class PanelManageGenotypeComponent extends Component {
 
     dLog(fnName, text.length, text && text.slice(0,200), blockV.get('id'));
     if (text && blockV) {
+      setFrameworkFunctions({Ember_get, Ember_set});
       const
       replaceResults = this.args.userSettings.replaceResults,
       nSamples = this.controls.view.pathsDensityParams.nSamples,

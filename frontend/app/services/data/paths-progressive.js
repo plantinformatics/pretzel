@@ -1,7 +1,7 @@
 import { allSettled } from 'rsvp';
 import { throttle } from '@ember/runloop';
 import { alias } from '@ember/object/computed';
-import { get as Ember_get } from '@ember/object';
+import { get as Ember_get, set as Ember_set } from '@ember/object';
 import Service, { inject as service } from '@ember/service';
 import { getOwner, setOwner } from '@ember/application';
 
@@ -14,11 +14,16 @@ import { task, didCancel } from 'ember-concurrency';
 import { stacks, Stacked } from '../../utils/stacks';
 import AxisBrushObject from '../../utils/draw/axis-brush';
 import { storeFeature } from '../../utils/feature-lookup';
-import {
+let vcfGenotypeBrapi = window["vcf-genotype-brapi"];
+console.log('vcfGenotypeBrapi', vcfGenotypeBrapi);
+const /*import */{
+  setFrameworkFunctions,
   addGerminateOptions,
   vcfGenotypeLookup, addFeaturesJson,
   resultIsGerminate,
   addFeaturesGerminate,
+} = vcfGenotypeBrapi.vcfFeature; // } from 'vcf-genotype-brapi';
+import {
   featuresSampleMAF,
 } from '../../utils/data/vcf-feature';
 import { updateDomain } from '../../utils/stacksLayout';
@@ -778,6 +783,7 @@ export default Service.extend({
          * @return text */
         function receivedDataVCF(text) {
           if (text && block) {
+            setFrameworkFunctions({Ember_get, Ember_set});
             const
             /** not used because 0 samples.
              * not used by Germinate because value from HDF is not re-formatted.

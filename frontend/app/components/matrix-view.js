@@ -26,9 +26,16 @@ import {
 } from '../utils/panel/axis-table';
 import { afterSelectionFeatures } from '../utils/panel/feature-table';
 import { tableYDimensions } from '../utils/panel/table-dom';
-import {
+let vcfGenotypeBrapi = window["vcf-genotype-brapi"];
+console.log('vcfGenotypeBrapi', vcfGenotypeBrapi);
+const /*import */{
   datasetId2Class,
+} = vcfGenotypeBrapi.vcfFeature;
+// } from 'vcf-genotype-brapi';
+
+import {
   featureBlockColourValue, columnNameAppendDatasetId, columnName2SampleName, valueIsCopies,
+
 } from '../utils/data/vcf-feature';
 import {
   referenceSamplesSymbol,
@@ -571,6 +578,11 @@ export default Component.extend({
   // ---------------------------------------------------------------------------
 
   afterRender(isForced) {
+    if (this.isDestroying) {
+      dLog('afterRender', 'isDestroying');
+      return;
+    }
+
     const topLeftDialogEnable = true;
     if (! topLeftDialogEnable) {
     const scope = this.dataScope;
