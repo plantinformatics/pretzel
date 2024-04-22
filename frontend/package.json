@@ -137,6 +137,7 @@
     "numeric": "github:lukaiser/numeric",
     "phantom": "^6.3.0",
     "tsne-js": "^1.0.3",
+		"vcf-genotype-brapi": "file:/../../pretzel.A8b/plantinformatics-vcf-genotype-brapi-1.0.0.tgz",
     "vector-cosine-similarity": "^1.8.0"
   }
 }

@@ -15,9 +15,9 @@ import { Measure } from './genotype-order';
 
 //------------------------------------------------------------------------------
 
-let vcfGenotypeBrapi = window["vcf-genotype-brapi"];
-console.log('vcfGenotypeBrapi', vcfGenotypeBrapi, window["@plantinformatics/vcf-genotype-brapi@npm:pretzel.A8b"]);
-const /*import */ {
+//let vcfGenotypeBrapi = window["vcf-genotype-brapi"];
+// console.log('vcfGenotypeBrapi', vcfGenotypeBrapi, window["@plantinformatics/vcf-genotype-brapi@npm:pretzel.A8b"]);
+import /*const */ {
   gtValueIsNumeric,
   datasetId2Class,
   addGerminateOptions,
@@ -29,7 +29,11 @@ const /*import */ {
   variantNameSplit,
   parseNumber,
   parseNumberFields,
-} = vcfGenotypeBrapi.vcfFeature; /*from vcf-genotype-brapi or '@plantinformatics/vcf-genotype-brapi@npm:pretzel.A8b'; */
+} /*= vcfGenotypeBrapi.vcfFeature; */ from 'vcf-genotype-brapi';
+ /* omitting @plantinformatics/ while using npm pack */
+/* /vcf-genotype-brapi/dist/*/
+ /* /dist/vcf-genotype-brapi.js */
+ /*  @npm:pretzel.A8b   vcf-genotype-brapi or */
 
 
 //------------------------------------------------------------------------------

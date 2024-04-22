@@ -14,15 +14,16 @@ import { task, didCancel } from 'ember-concurrency';
 import { stacks, Stacked } from '../../utils/stacks';
 import AxisBrushObject from '../../utils/draw/axis-brush';
 import { storeFeature } from '../../utils/feature-lookup';
-let vcfGenotypeBrapi = window["vcf-genotype-brapi"];
-console.log('vcfGenotypeBrapi', vcfGenotypeBrapi);
+//let vcfGenotypeBrapi = window["vcf-genotype-brapi"];
+import vcfGenotypeBrapi from 'vcf-genotype-brapi';
+//console.log('vcfGenotypeBrapi', vcfGenotypeBrapi);
 const /*import */{
   setFrameworkFunctions,
   addGerminateOptions,
   vcfGenotypeLookup, addFeaturesJson,
   resultIsGerminate,
   addFeaturesGerminate,
-} = vcfGenotypeBrapi.vcfFeature; // } from 'vcf-genotype-brapi';
+} = vcfGenotypeBrapi.vcfFeature; // from 'vcf-genotype-brapi';
 import {
   featuresSampleMAF,
 } from '../../utils/data/vcf-feature';

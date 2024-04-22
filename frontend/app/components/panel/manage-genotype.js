@@ -20,7 +20,8 @@ import { arrayChoose } from  '../../utils/common/arrays';
 import { intervalSize } from '../../utils/interval-calcs';
 import { overlapInterval } from '../../utils/draw/zoomPanCalcs';
 import { featuresIntervalsForTree } from '../../utils/data/features';
-let vcfGenotypeBrapi = window["vcf-genotype-brapi"];
+// let vcfGenotypeBrapi = window["vcf-genotype-brapi"];
+import vcfGenotypeBrapi from 'vcf-genotype-brapi';
 console.log('vcfGenotypeBrapi', vcfGenotypeBrapi, window["@plantinformatics/vcf-genotype-brapi@npm:pretzel.A8b"]);
 const /*import */{
   setFrameworkFunctions,

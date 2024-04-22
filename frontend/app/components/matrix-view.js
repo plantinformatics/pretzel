@@ -26,7 +26,8 @@ import {
 } from '../utils/panel/axis-table';
 import { afterSelectionFeatures } from '../utils/panel/feature-table';
 import { tableYDimensions } from '../utils/panel/table-dom';
-let vcfGenotypeBrapi = window["vcf-genotype-brapi"];
+//let vcfGenotypeBrapi = window["vcf-genotype-brapi"];
+import vcfGenotypeBrapi from 'vcf-genotype-brapi';
 console.log('vcfGenotypeBrapi', vcfGenotypeBrapi);
 const /*import */{
   datasetId2Class,

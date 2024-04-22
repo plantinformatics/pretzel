@@ -21,8 +21,15 @@ const { getAliases } = require('../utilities/localise-aliases');
 const { childProcess, dataOutReplyClosure, dataOutReplyClosureLimit } = require('../utilities/child-process');
 const { ArgsDebounce } = require('../utilities/debounce-args');
 const { ErrorStatus } = require('../utilities/errorStatus.js');
-const vcfGenotype = require('@plantinformatics/vcf-genotype-brapi/dist/vcf-genotype-brapi-node.js');
-const { vcfGenotypeLookup, vcfGenotypeFeaturesCounts } = vcfGenotype; //require('../utilities/vcf-genotype');
+
+let vcfGenotypeLookup, vcfGenotypeFeaturesCounts;
+import('@plantinformatics/vcf-genotype-brapi/dist/vcf-genotype-brapi-node.mjs').then(vcfGenotypeBrapi => {
+  const vcfGenotype = vcfGenotypeBrapi.default.vcfGenotype;
+  console.log('vcfGenotypeBrapi', vcfGenotypeBrapi, 'vcfGenotype', vcfGenotype);
+  vcfGenotypeLookup = vcfGenotype.vcfGenotypeLookup;
+  vcfGenotypeFeaturesCounts = vcfGenotype.vcfGenotypeFeaturesCounts;
+});
+//; //require('../utilities/vcf-genotype');
 const { germinateGenotypeSamples, germinateGenotypeLookup } = require('../utilities/germinate-genotype');
 const { parseBooleanFields } = require('../utilities/json-text');
 const { noCacheResult } = require('../utilities/remote-method.js');
