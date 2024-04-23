@@ -38,11 +38,20 @@ function removePunctuation(text) {
 export { serverTypeIsGerminateAPI };
 /** Map serverTypeName to a flag indicating if the server API is like Germinate / BrAPI;
  * i.e. this includes the Spark server.
- * @param serverTypeName 'Pretzel', 'Germinate', 'Spark'
+ * @param serverTypeName 'Pretzel', 'Germinate', 'Spark', 'BrAPI'
  */
 function serverTypeIsGerminateAPI(serverTypeName) {
   return ['Germinate', 'Spark'].includes(serverTypeName);
 }
+export { serverTypeIsBrAPI }
+/** Map serverTypeName to a flag indicating if the server API is BrAPI;
+ * i.e. this includes the Germinate and Spark servers.
+ * @param serverTypeName 'Pretzel', 'Germinate', 'Spark', 'BrAPI'
+ */
+function serverTypeIsBrAPI(serverTypeName) {
+  return ['BrAPI', 'Germinate', 'Spark'].includes(serverTypeName);
+}
+
 
 /*----------------------------------------------------------------------------*/
 

@@ -13,6 +13,16 @@ const dLog = console.debug;
 
 //------------------------------------------------------------------------------
 
+/** components/service/api-server-germinate extends
+ *  components/service/api-server
+ * It overrides these functions :
+ *   blockFeatureTraits()
+ *   blockFeatureOntologies()
+ *   getVersion()
+ *   getDatasets()
+ * and adds :
+ *   viewDatasetP()
+ */
 export default EmberObject.extend(ApiServerAttributes, {
 
   componentClassName : 'ApiServerGerminate',
@@ -85,7 +95,7 @@ export default EmberObject.extend(ApiServerAttributes, {
         /** linkageGroupName is used for /chromosome/ path param in API call. */
         _meta : {linkageGroupName : linkageGroup.linkageGroupName},
       },
-      blockP = store.createRecord('Block', blockAttributes);
+      blockP = store.createRecord('block', blockAttributes);
       return blockP;
     }),
     datasetP = Promise.all(blocksP).then(blocks => {
@@ -112,7 +122,7 @@ export default EmberObject.extend(ApiServerAttributes, {
         id2Server[block.get('id')] = this;
         block.set('mapName', germinateDataset.mapName);
       });
-      const p = store.createRecord('Dataset', datasetAttributes);
+      const p = store.createRecord('dataset', datasetAttributes);
       return p;
     });
     datasetP.then(dataset => {

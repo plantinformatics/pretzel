@@ -12,12 +12,15 @@ import {
   default as ApiServer,
   removePunctuation,
   serverTypeIsGerminateAPI,
+  serverTypeIsBrAPI,
 } from '../components/service/api-server';
 import {
   default as ApiServerGerminate
 } from '../components/service/api-server-germinate';
 
-import { useGerminate } from '../utils/data/germinate-genotype';
+import vcfGenotypeBrapi from 'vcf-genotype-brapi'; // ../utils/data/germinate-genotype';
+/** .default is automatically inserted here */
+const { useGerminate } = vcfGenotypeBrapi.germinateGenotype;
 
 // import ENV from '../../config/environment';
 
@@ -131,7 +134,7 @@ export default Service.extend(Evented, {
       },
     typeIsGerminate = typeIsGerminateAPI,
     ownerInjection = getOwner(this).ownerInjection(),
-    apiServerClass = typeIsGerminate ? ApiServerGerminate : ApiServer,
+    apiServerClass = serverTypeIsBrAPI(typeName) || typeIsGerminate ? ApiServerGerminate : ApiServer,
     server = apiServerClass.create(
       ownerInjection,
       serverBase),
@@ -384,7 +387,8 @@ export default Service.extend(Evented, {
       url = 'http://' + url;
     }
     const
-    typeIsGerminate = serverTypeIsGerminateAPI(typeName),
+    /** rename variable to typeIsBrAPI */
+    typeIsGerminate = serverTypeIsBrAPI(typeName) || serverTypeIsGerminateAPI(typeName),
     loginP = typeIsGerminate ?
       useGerminate(url, user, password) :
     $.ajax({

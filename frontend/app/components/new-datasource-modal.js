@@ -7,6 +7,8 @@ import { bind, later, throttle } from '@ember/runloop';
 
 import $ from 'jquery';
 
+import config from 'pretzel-frontend/config/environment';
+
 import { nameSort } from '../utils/common/arrays';
 import { serverTypeIsGerminateAPI } from './service/api-server';
 
@@ -98,7 +100,7 @@ export default Component.extend({
           host = host.replace(/\/mapview\/.*/, '');
           $('input[name=host]', this.element).val(host);
         }
-        if (! host.match(/^https?:\/\//)) {
+        if ((config.environment !== 'development') && ! host.match(/^https?:\/\//)) {
           host = "https://" + host;
           $('input[name=host]', this.element).val(host);
         }
@@ -212,6 +214,9 @@ export default Component.extend({
     }
     if (this.urlOptions.SparkServer) {
       typeNames.push('Spark');
+    }
+    if (true || this.urlOptions.BrAPI) {
+      typeNames.push('BrAPI');
     }
     const
     types = typeNames

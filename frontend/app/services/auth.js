@@ -582,6 +582,7 @@ export default Service.extend({
       'Blocks/genotypeSamples',
       'Blocks/vcfGenotypeLookup',
     ];
+    /** Add BrAPI case here, similar to Germinate. */
     if ((server?.serverType === 'Germinate')) {
       dLog(route, featuresCountEndpoints.includes(route));
       let vcfGenotypeP;
