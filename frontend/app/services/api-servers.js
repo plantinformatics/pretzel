@@ -18,7 +18,7 @@ import {
   default as ApiServerGerminate
 } from '../components/service/api-server-germinate';
 
-import vcfGenotypeBrapi from 'vcf-genotype-brapi'; // ../utils/data/germinate-genotype';
+import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi'; // ../utils/data/germinate-genotype';
 /** .default is automatically inserted here */
 const { useGerminate } = vcfGenotypeBrapi.germinateGenotype;
 

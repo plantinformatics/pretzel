@@ -101,6 +101,7 @@
   },
   "dependencies": {
     "@ember/test-helpers": "^3.3.0",
+    "@plantinformatics/vcf-genotype-brapi": "^1.0.0",
     "@solgenomics/brapijs": "https://github.com/solgenomics/BrAPI-js.git",
     "@voll/ember-parachute": "^2.0.0",
     "bluebird": "^3.7.2",
@@ -137,7 +138,6 @@
     "numeric": "github:lukaiser/numeric",
     "phantom": "^6.3.0",
     "tsne-js": "^1.0.3",
-		"vcf-genotype-brapi": "file:/../../pretzel.A8b/plantinformatics-vcf-genotype-brapi-1.0.0.tgz",
     "vector-cosine-similarity": "^1.8.0"
   }
 }

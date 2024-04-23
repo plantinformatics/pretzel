@@ -29,7 +29,7 @@ import /*const */ {
   variantNameSplit,
   parseNumber,
   parseNumberFields,
-} /*= vcfGenotypeBrapi.vcfFeature; */ from 'vcf-genotype-brapi';
+} /*= vcfGenotypeBrapi.vcfFeature; */ from '@plantinformatics/vcf-genotype-brapi';
  /* omitting @plantinformatics/ while using npm pack */
 /* /vcf-genotype-brapi/dist/*/
  /* /dist/vcf-genotype-brapi.js */

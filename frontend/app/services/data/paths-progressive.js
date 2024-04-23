@@ -15,7 +15,7 @@ import { stacks, Stacked } from '../../utils/stacks';
 import AxisBrushObject from '../../utils/draw/axis-brush';
 import { storeFeature } from '../../utils/feature-lookup';
 //let vcfGenotypeBrapi = window["vcf-genotype-brapi"];
-import vcfGenotypeBrapi from 'vcf-genotype-brapi';
+import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
 //console.log('vcfGenotypeBrapi', vcfGenotypeBrapi);
 const /*import */{
   setFrameworkFunctions,
