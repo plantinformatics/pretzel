@@ -27,24 +27,16 @@ export default Component.extend({
       this.getDatasets(server);
     }
   },
-
   allelematrices() {
     const
     fnName = 'allelematrices',
     server = this.get('data'),
-    germinate = server.germinateInstance;
-    dLog(fnName, this.name, this.attrs, this.data, germinate, germinate.brapi_root, this.__proto__);
-    /*
-     * function allelematrices(params, behavior)​
-     * function allelematrices_search(params, behavior)​
-      */
-    const data = {dataset : 'dataset1'};
-    germinate.brapi_root
-      //.data([data])
-      .allelematrices(data)
-      .all(function(objects){
-        dLog(fnName, objects);
-      });
+    url = server.germinateInstance.brapi_root.brapi.brapi_base_url;
+    if (url.match(/localhost:30/)) {
+      server.allelematrices();
+    } else {
+      server.variantsets_references_samples_allelematrices();
+    }
   },
 
 });

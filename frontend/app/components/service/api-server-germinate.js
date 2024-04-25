@@ -7,6 +7,21 @@ import { removePunctuation, ApiServerAttributes } from './api-server';
 import { Germinate } from '../../utils/data/germinate';
 import { reduceInSeries } from '../../utils/common/promises';
 
+/** For the prototype, add the BrAPIWrap methods to ApiServerGerminate, as there is no name clash.
+ * Probably BrAPIWrap will become the parent class of ApiServerGerminate.
+ */
+// import BrAPIWrap from '../../utils/data/brapi-genotype';
+import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
+console.log('vcfGenotypeBrapi', vcfGenotypeBrapi);
+const /*import {*/
+  BrAPIWrap
+/*}*/ = vcfGenotypeBrapi.brapiGenotype;
+/** imports from vcfGenotypeBrapi.* have values which are Getters, which are not
+ * suitable for .extend() so copy values to a plain javascript object.
+ */
+const {...BrAPIWrapObj} = BrAPIWrap;
+
+
 //------------------------------------------------------------------------------
 
 const dLog = console.debug;
@@ -23,7 +38,7 @@ const dLog = console.debug;
  * and adds :
  *   viewDatasetP()
  */
-export default EmberObject.extend(ApiServerAttributes, {
+export default EmberObject.extend(ApiServerAttributes, BrAPIWrapObj, {
 
   componentClassName : 'ApiServerGerminate',
 

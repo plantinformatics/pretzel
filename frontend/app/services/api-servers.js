@@ -387,10 +387,15 @@ export default Service.extend(Evented, {
       url = 'http://' + url;
     }
     const
+    /** useGerminate() will login via user, password for Germinate, not BrAPI.
+     * Passing a token skips .connect() in : germinate.js : connectedP(),
+     * which checks if (! this.token) )
+     */
+    token = typeName === 'BrAPI' ? 'No_token_required' : null,
     /** rename variable to typeIsBrAPI */
     typeIsGerminate = serverTypeIsBrAPI(typeName) || serverTypeIsGerminateAPI(typeName),
     loginP = typeIsGerminate ?
-      useGerminate(url, user, password) :
+      useGerminate(url, user, password, token) :
     $.ajax({
       url: url + '/api/Clients/login',
       type: 'POST',
@@ -409,7 +414,11 @@ export default Service.extend(Evented, {
       if (typeIsGerminate) {
         server.germinateInstance = response;
       }
-      server.getDatasets();
+      if (typeName === 'BrAPI') {
+        server.variantsets();
+      } else {
+        server.getDatasets();
+      }
       server.getVersion();
       return server;
     }).catch(function (error) {
