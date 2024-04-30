@@ -70,6 +70,7 @@ export default EmberObject.extend(ApiServerAttributes, BrAPIWrapObj, {
    * linkageGroup.
    */
   getDatasets : function () {
+    BrAPIWrap.setFrameworkFunctions({Ember_A, later});
     const
     fnName = 'getDatasets',
     germinate = this.germinateInstance,

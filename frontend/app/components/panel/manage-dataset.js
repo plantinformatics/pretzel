@@ -104,10 +104,18 @@ export default ManageBase.extend({
  */
   datasetOwned : computed('dataset', function () {
     const
+    dataset = this.dataset,
     datasetClientId = this.get('dataset.clientId'),
     sessionUserId = this.get('session.session.authenticated.clientId'),
     ok = datasetClientId === sessionUserId;
     dLog('datasetOwned', ok, datasetClientId, sessionUserId, this.get('dataset.id'));
+    const requestedBlocksSymbol = Symbol.for('requestedBlocks');
+    if (! dataset.blocks.length && dataset.tags.includes('BrAPI') &&
+        ! dataset[requestedBlocksSymbol]) {
+      const server = dataset.server;
+      dataset[requestedBlocksSymbol] = true;
+      server.viewDatasetBlocksBrapiGenotypeP(dataset);
+    }
     return ok;
   }),
 

@@ -6,6 +6,9 @@ import Evented from '@ember/object/evented';
 import Service, { inject as service } from '@ember/service';
 import { isPresent } from '@ember/utils';
 
+import { A as Ember_A } from '@ember/array';
+import { later } from '@ember/runloop';
+
 import { find as collection_find } from 'lodash/collection';
 
 import {
@@ -21,6 +24,8 @@ import {
 import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi'; // ../utils/data/germinate-genotype';
 /** .default is automatically inserted here */
 const { useGerminate } = vcfGenotypeBrapi.germinateGenotype;
+const BrAPIWrap = vcfGenotypeBrapi.brapiGenotype;
+
 
 // import ENV from '../../config/environment';
 
@@ -390,8 +395,9 @@ export default Service.extend(Evented, {
     /** useGerminate() will login via user, password for Germinate, not BrAPI.
      * Passing a token skips .connect() in : germinate.js : connectedP(),
      * which checks if (! this.token) )
+     * 'null' here means no token required, recognised by fetchEndpoint_fetch().
      */
-    token = typeName === 'BrAPI' ? 'No_token_required' : null,
+    token = typeName === 'BrAPI' ? 'null' : null,
     /** rename variable to typeIsBrAPI */
     typeIsGerminate = serverTypeIsBrAPI(typeName) || serverTypeIsGerminateAPI(typeName),
     loginP = typeIsGerminate ?
@@ -414,6 +420,7 @@ export default Service.extend(Evented, {
       if (typeIsGerminate) {
         server.germinateInstance = response;
       }
+      BrAPIWrap.setFrameworkFunctions({Ember_A, later});
       if (typeName === 'BrAPI') {
         server.variantsets();
       } else {

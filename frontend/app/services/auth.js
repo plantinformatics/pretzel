@@ -583,6 +583,11 @@ export default Service.extend({
       'Blocks/vcfGenotypeLookup',
     ];
     /** Add BrAPI case here, similar to Germinate. */
+    if ((server?.serverType === 'BrAPI')) {
+      dLog(route, featuresCountEndpoints.includes(route));
+      const vcfGenotypeP = Promise.resolve([]);
+      return vcfGenotypeP;
+    } else
     if ((server?.serverType === 'Germinate')) {
       dLog(route, featuresCountEndpoints.includes(route));
       let vcfGenotypeP;
