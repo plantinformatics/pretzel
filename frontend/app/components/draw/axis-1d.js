@@ -630,7 +630,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
       if (b.get('isViewed') && (this.blockColour(b) < 0)) {
         let free = used.findIndex(function (bi, i) {
           /** bi is block or dataset, @see blockColourObj(). */
-          return !bi || !bi.get('isViewed');
+          return !bi || bi.isDestroying || !bi.get('isViewed');
         });
         const obj = blockColourObj(b);
         if (free > 0) {

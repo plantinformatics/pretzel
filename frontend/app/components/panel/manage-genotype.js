@@ -32,6 +32,8 @@ const /*import */{
   addFeaturesJson,
   resultIsGerminate,
   addFeaturesGerminate,
+  resultIsBrapi,
+  addFeaturesBrapi,
 } = vcfGenotypeBrapi.vcfFeature; /*from 'vcf-genotype-brapi'; */
 
 import {
@@ -1771,6 +1773,7 @@ export default class PanelManageGenotypeComponent extends Component {
     /** implemented by common/models/block.js : Block.vcfGenotypeSamples().  */
     const
     fnName = 'vcfGenotypeSamples',
+    vcfDataset = contentOf(vcfBlock?.get('datasetId')),
     vcfDatasetId = vcfBlock?.get('datasetId.id'),
     vcfDatasetIdAPI = vcfBlock?.get('datasetId.genotypeId'),
     /** as in .lookupScope */
@@ -1784,10 +1787,16 @@ export default class PanelManageGenotypeComponent extends Component {
         {} );
       textP.then(
         (text) => {
-          const t = text?.text || text;
+          let t = text?.text || text;
           /** Germinate result may be received by frontend or server. */
           const isGerminate = resultIsGerminate(t);
-          dLog(fnName, t?.length || Object.keys(text), t?.slice(0, 60));
+          /** trace 5 samples or 60 chars of text */
+          dLog(fnName, t?.length || Object.keys(text), t?.slice(0, isGerminate ? 5 : 60));
+          if (vcfDataset.hasTag('BrAPI')) {
+            // related : this.datasetStoreSampleNames()
+            vcfDataset.samples = t;
+            t = t.mapBy('sampleName');
+          }
           let sampleNamesText, sampleNames;
           if (isGerminate) {
             /* result from Germinate is currently an array of string sample names. */
@@ -1973,7 +1982,9 @@ export default class PanelManageGenotypeComponent extends Component {
     requestSamplesAll = userSettings.requestSamplesAll,
     requestSamplesFiltered = userSettings.requestSamplesFiltered,
     samplesLimit = userSettings.samplesLimit;
+    /** If requestSamplesAll and no filter or limit, then result samples is not required, undefined. */
     let ok = requestSamplesAll && ! requestSamplesFiltered && ! limitSamples;
+    /** if requestSamplesFiltered or requestSamplesFiltered then determine samplesRaw. */
     if (! ok) {
       if (requestSamplesAll) {
         if (userSettings.samplesIntersection) {
@@ -1985,7 +1996,6 @@ export default class PanelManageGenotypeComponent extends Component {
           // Related : datasetStoreSampleNames().
           samplesRaw = this.sampleCache.sampleNames[datasetId]
             ?.trim().split('\n');
-          ok &&= ! samplesRaw;
         } else {
         // All sample names received for lookupDatasetId.
         samplesRaw = this.samples;
@@ -2272,10 +2282,25 @@ export default class PanelManageGenotypeComponent extends Component {
     const
     fnName = 'vcfGenotypeReceiveResult',
     isGerminate = resultIsGerminate(text),
-    callsData = isGerminate && text;
+    isBrapi = resultIsBrapi(text),
+    callsData = (isGerminate || isBrapi) && text;
     if (isGerminate) {
       text = callsData.map(snp => Object.entries(snp).join('\t')).join('\n');
       dLog(fnName, text.length, callsData.length);
+    } else if (isBrapi) {
+      /* .variantDbIds is undefined if there are no variants in range. */
+      text = callsData.variantDbIds?.map((variantDbId, i) => {
+        const
+        chrPosId = [
+          blockV.get('name'),
+          variantDbId.replace(/.*_/, ''),
+          variantDbId],
+        cols = chrPosId.concat(callsData.dataMatrices[0].dataMatrix[i]);
+        return cols.join('\t');
+      }).join('\n')
+        || '';
+      // it looks like empty result is : { dataMatrices : [], ... }
+      dLog(fnName, text.length, callsData.variantDbIds?.length, callsData.dataMatrices[0]?.dataMatrix?.length);
     }
     // displays vcfGenotypeText in textarea, which triggers this.vcfGenotypeTextSetWidth();
     this.vcfGenotypeText = text;
@@ -2296,7 +2321,8 @@ export default class PanelManageGenotypeComponent extends Component {
       replaceResults = this.args.userSettings.replaceResults,
       nSamples = this.controls.view.pathsDensityParams.nSamples,
       germinateOptions = {nSamples},
-      added = isGerminate ?
+      added = isBrapi ?
+        addFeaturesBrapi(blockV, requestFormat, replaceResults, this.selectedService, callsData, germinateOptions) : isGerminate ?
         addFeaturesGerminate(blockV, requestFormat, replaceResults, this.selectedService, callsData, germinateOptions) :
         addFeaturesJson(blockV, requestFormat, replaceResults, this.selectedService, text),
       options = {requestSamplesAll : userSettings.requestSamplesAll, selectedSamples : added.sampleNames /*this.selectedSamples*/};
@@ -3397,7 +3423,11 @@ export default class PanelManageGenotypeComponent extends Component {
         (text) => {
           const
           isGerminate = resultIsGerminate(text);
-          this.headerText = isGerminate ? text.join('\t') : text;
+          /** for BrAPI, domain [0, 1] will return 0 results, and hence 0
+           * callSetDbIds, so use .samples */
+          this.headerText = resultIsBrapi(text) ? '#CHROM	POS	ID	' +
+            (text.callSetDbIds?.join('\t') || samples.replaceAll('\n', '\t') || '') :
+            isGerminate ? text.join('\t') : text;
           if (trace) {
             dLog(fnName, text);
           }
