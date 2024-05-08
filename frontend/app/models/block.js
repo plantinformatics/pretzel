@@ -1385,7 +1385,7 @@ export default Model.extend({
       // based on similar in featureInRange().
       valueInInterval = this.controls.get('view.valueInInterval');
       /** filter by axisBrush .brushedDomain */
-      features = this.features.filter((f) => valueInInterval(f.value, interval));
+      features = this.features.filter((f) => f.value && valueInInterval(f.value, interval));
     } else {
       features = this.features.toArray();
     }

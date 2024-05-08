@@ -1793,9 +1793,9 @@ export default class PanelManageGenotypeComponent extends Component {
           /** trace 5 samples or 60 chars of text */
           dLog(fnName, t?.length || Object.keys(text), t?.slice(0, isGerminate ? 5 : 60));
           if (vcfDataset.hasTag('BrAPI')) {
-            // related : this.datasetStoreSampleNames()
             vcfDataset.samples = t;
             t = t.mapBy('sampleName');
+            this.datasetStoreSampleNames(vcfBlock, t);
           }
           let sampleNamesText, sampleNames;
           if (isGerminate) {
@@ -3391,11 +3391,16 @@ export default class PanelManageGenotypeComponent extends Component {
   get headerTextP() {
     const
     fnName = 'headerText',
-    {samples, samplesOK} = this.samplesOK(false),
+    isBrAPI = this.lookupBlock.hasTag('BrAPI') ||
+      (this.lookupBlock?.server?.serverType === 'BrAPI'),
+    /** not clear why passing limitSamples false for VCF (edit was 2023 'Mar  1 21:20') */
+    {samples, samplesOK} = this.samplesOK(isBrAPI),
     domainInteger = [0, 1],
     /** this is .lookupDatasetId if ! isGerminate */
     vcfDatasetId = this.lookupBlock?.get('datasetId.genotypeId'),
-    scope = this.lookupScope;
+    scope = this.lookupScope,
+    /** VCF format, \t separated. sample names are appended. */
+    columnHeadersChrPosId = '#CHROM	POS	ID	';
     let textP;
     /** After a brush, this CP is re-evaluated, although the dependencies
      * compare === with the previous values.  Could memo-ize the value based on
@@ -3405,6 +3410,30 @@ export default class PanelManageGenotypeComponent extends Component {
      * lookupDatasetId; depends on whether result vcfExportText combines
      * brushedOrViewedVCFBlocksVisible into a single VCF.
      */
+
+    if (isBrAPI) {
+      const datasetId = vcfDatasetId; // === this.lookupDatasetId
+      /** BrAPI (and Germinate) construct the header from the samples list. */
+      let allSamples, text;
+      if (this.requestSamplesSelected) {
+        text = columnHeadersChrPosId + this.selectedSamples?.join('\t');
+      } else if (samples) {  // maybe check ?.length
+        text = columnHeadersChrPosId + samples.replaceAll('\n', '\t');
+      } else if ((allSamples = (datasetId && this.sampleCache?.sampleNames?.[datasetId]))) {
+        text = columnHeadersChrPosId + allSamples.replaceAll('\n', '\t');
+      } else if (this.samples) {
+        text = columnHeadersChrPosId + this.samples.join('\t');
+      } else {
+        // get samples
+        textP = this.lookupBlock?.server.brapiGenotypeSamples(datasetId).then(samples =>
+          columnHeadersChrPosId + samples /*.callSetDbIds*/ ?.join('\t')).then(headerText =>
+            this.headerText = headerText);
+      }
+      if (text) {
+        this.headerText = text;
+        textP = Promise.resolve(text);
+      }
+    } else
     if (samplesOK && scope && vcfDatasetId) {
       const
       requestFormat = this.requestFormat,
@@ -3425,7 +3454,7 @@ export default class PanelManageGenotypeComponent extends Component {
           isGerminate = resultIsGerminate(text);
           /** for BrAPI, domain [0, 1] will return 0 results, and hence 0
            * callSetDbIds, so use .samples */
-          this.headerText = resultIsBrapi(text) ? '#CHROM	POS	ID	' +
+          this.headerText = (isBrAPI || resultIsBrapi(text)) ? columnHeadersChrPosId +
             (text.callSetDbIds?.join('\t') || samples.replaceAll('\n', '\t') || '') :
             isGerminate ? text.join('\t') : text;
           if (trace) {
@@ -3467,7 +3496,10 @@ export default class PanelManageGenotypeComponent extends Component {
       headerText = headerText.slice(0, headerText.length-1);
     }
     const
-    tableRows = this.insertChromColumn(vcfGenotypeText),
+    /** BrAPI headerTextP includes chrPosId[] columns, so don't call insertChromColumn().
+     * Probably the current result (headerText, vcfGenotypeText) is for .lookupBlock */
+    isBrAPI = this.lookupBlock.hasTag('BrAPI'),
+    tableRows = isBrAPI ? vcfGenotypeText : this.insertChromColumn(vcfGenotypeText),
     combined = headerText.concat(tableRows);
     return combined;
   }

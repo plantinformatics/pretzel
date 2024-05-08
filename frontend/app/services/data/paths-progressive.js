@@ -861,7 +861,19 @@ export default Service.extend({
     requestFormat = 'CATG',
     genotypeSNPFilters = this.controls.genotypeSNPFilters,
     requestOptions = Object.assign({requestFormat}, genotypeSNPFilters);
+    let samples = [];
     addGerminateOptions(requestOptions, block);
+    /** VCF lookup does not require param samples, but Germinate and BrAPI require
+     * samples to be given.
+     */
+    if (block.hasTag('BrAPI')) {
+      const sampleNames = block.get('datasetId.sampleNames');
+      if (! sampleNames?.length) {
+        return Promise.resolve([]);
+      } else {
+        samples = [sampleNames[0]];
+      }
+    }
     const
     /* generally block.name and .scope are the same.
      * To handle vcf files with e.g. %CHROM 'chr1A' instead of '1A',
@@ -869,7 +881,7 @@ export default Service.extend({
      * vcfGenotypeLookup().
      */
     textP = vcfGenotypeLookup(
-      this.auth, /*samples*/[], domainInteger,
+      this.auth, samples, domainInteger,
       requestOptions, vcfDatasetId, block.name, rowLimit
     );
 
