@@ -397,7 +397,8 @@ export default Service.extend(Evented, {
      * which checks if (! this.token) )
      * 'null' here means no token required, recognised by fetchEndpoint_fetch().
      */
-    token = typeName === 'BrAPI' ? 'null' : null,
+    isSouthGreen = url.includes('gigwa.ird.fr'),
+    token = (typeName === 'BrAPI') && ! isSouthGreen ? 'null' : null,
     /** rename variable to typeIsBrAPI */
     typeIsGerminate = serverTypeIsBrAPI(typeName) || serverTypeIsGerminateAPI(typeName),
     loginP = typeIsGerminate ?
