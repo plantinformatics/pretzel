@@ -1,6 +1,6 @@
 import { pluralize } from 'ember-inflector';
 
-import ENV from '../../config/environment';
+import ENV from 'pretzel-frontend/config/environment';
 
 import { breakPoint } from './breakPoint';
 

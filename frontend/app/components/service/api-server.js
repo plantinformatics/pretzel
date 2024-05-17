@@ -257,7 +257,7 @@ const ApiServerAttributes = {
     return dbOriginal;
   }),
 
-  /** Request block.featuresCount for all blocks.
+  /** Request block.featureCount for all blocks.
    */
   featuresCountAllTaskInstance : computed('name', function () {
     dLog('featuresCountAllTaskInstance', this.name, this);
