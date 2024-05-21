@@ -205,19 +205,15 @@ export default Component.extend({
   typesForSelect : computed(function () {
     const
     fnName = 'typesForSelect',
-    typeNames = ['Pretzel' /*, 'noType'*/];
+    types = [{id : 'Pretzel' /* 'noType'*/, name : 'Pretzel'}];
     if (this.urlOptions.Germinate) {
-      typeNames.push('Germinate');
+      types.push({id : 'Germinate', name : 'Germinate (Experimental)'});
     }
     if (this.urlOptions.SparkServer) {
-      typeNames.push('Spark');
+      types.push({id : 'Spark', name : 'Spark (Experimental)'});
     }
-    const
-    types = typeNames
-      .map(name => ({id : name, name}))
-    
-    // types[2].name = '';
-    // types.findBy('id', 'noType').name = '';
+    // types.push(noType);  // not required so far, i.e. a server type must be selected.
+
     this.set('typeSelected', types.findBy('id', 'Pretzel'));
     return types;
   }),
