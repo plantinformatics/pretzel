@@ -431,7 +431,10 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
     view : {  },
     /** to add .viewed, use computed() to provide `this`
     viewed : () => this.get('controlsService.viewed'),  */
-    window : {tablesPanelRight : false } }),
+    /** Changing tablesPanelRight : false -> true because that suits the
+     * Genotype Table, which is now a predominant display panel.
+     */
+    window : {tablesPanelRight : true } }),
 
   queryParams: ['mapsToView'],
   mapsToView: [],
