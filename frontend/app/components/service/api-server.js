@@ -257,7 +257,7 @@ const ApiServerAttributes = {
     return dbOriginal;
   }),
 
-  /** Request block.featuresCount for all blocks.
+  /** Request block.featureCount for all blocks.
    */
   featuresCountAllTaskInstance : computed('name', function () {
     dLog('featuresCountAllTaskInstance', this.name, this);
@@ -290,7 +290,7 @@ const ApiServerAttributes = {
     const
     fnName = 'blocksFeaturesCountsStatus',
     /** [[blockId, status], ...] */
-    blocksStatusP = this.get('block').getBlocksFeaturesCountsStatus(/*blockIds*/undefined),
+    blocksStatusP = this.get('block').getBlocksFeaturesCountsStatus(/*blockIds*/undefined, this),
     byBlockIdP = blocksStatusP.then(blocksStatus => blocksStatus.reduce((result, bs) => {
       result[bs[0]] = bs[1];
       return result;

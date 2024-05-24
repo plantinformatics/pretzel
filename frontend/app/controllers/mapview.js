@@ -233,7 +233,7 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
     },
     getSummaryAndData(block) {
       /* Before progressive loading this would load the data (features) of the block.
-       * Now it just loads summary information : featuresCount (block total) and
+       * Now it just loads summary information : featureCount (block total) and
        * also featuresCounts (binned counts).
        * The block record itself is already loaded in the initial Datasets request;
        * - it is the parameter `block`.

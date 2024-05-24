@@ -49,6 +49,7 @@
     <tr>
       <td class="devel-visible">{{get featuresReceived brushedBlock.block.id}}</td>
       <td>{{brushedBlock.featureCountInBrush}}</td>
+      {{!-- result of components/draw/axis-brush.js : brushedBlocks() contains .featuresCount, whereas models/block.js attribute is .featureCount --}}
       <td>{{brushedBlock.featuresCount}}</td>
       <td class="devel-visible">{{brushedBlock.block.id}}</td>
       <td>{{brushedBlock.block.datasetId.shortNameOrName}}</td>

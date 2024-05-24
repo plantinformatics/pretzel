@@ -19,6 +19,7 @@ const promisify = bluebird/*Promise*/.promisify;
 import {
   germinateGenotypeSamples, germinateGenotypeLookup, ensureSamplesParam,
 } from '../utils/data/germinate-genotype';
+import { ensureTrailingString } from '../utils/string';
 
 /* global EventSource */
 
@@ -826,7 +827,15 @@ export default Service.extend({
   let
     apiHost =  requestServer && requestServer.host;
     let config = getOwner(this).resolveRegistration('config:environment')
-    let endpoint = (apiHost || config.apiHost) + '/' + config.apiNamespace + '/' + route
+    /** If defined, requestServer.host may include rootURL if that is defined. */
+    const
+    host = ensureTrailingString((apiHost || config.apiHost), '/'),
+    /** rootURL may be /, append it if not already present.
+     * Some cases (e.g. / + /app/) will create //, so trim that, except for ://
+     */
+    hostRootUrl = ensureTrailingString(host, config.rootURL)
+      .replaceAll(/([^:])\/\//g, '$1/');
+    let endpoint = hostRootUrl + config.apiNamespace + '/' + route;
     /** Pretzel is designed to support multiple servers sub-domains for
      * different species (e.g. *.plantinformatics.io) and they have separate
      * logins, so the authentication cookie token is not shared between
@@ -838,8 +847,9 @@ export default Service.extend({
      *  "If not explicitly set, the cookie domain defaults to the domain the
      *  session was authenticated on."
      */
-    if (trace) {
-      dLog('_endpoint', apiHost, endpoint, trace > 1 && [requestServer, config]);
+    /*if (trace)*/ {
+      dLog('_endpoint', apiHost, hostRootUrl, config.apiHost, config.rootURL,
+           endpoint, trace > 1 && [requestServer, config]);
     }
     return endpoint
   },
