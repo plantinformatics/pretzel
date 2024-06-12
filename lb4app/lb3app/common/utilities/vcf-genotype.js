@@ -21,6 +21,7 @@ const { binEvenLengthRound, binBoundaries } = require('../utilities/block-featur
 /**
  * @param datasetDir  name of directory containing the VCF dataset
  * @param scope e.g. '1A'; identifies the vcf file, i.e. datasetId/scope.vcf.gz
+ * scope===undefined or null signifies that all scopes of the dataset should be searched.
  * @param preArgs args to be inserted in command line, additional to the datasetDir / vcf dir name.
  * See comment in frontend/app/services/auth.js : vcfGenotypeLookup()
  * @param nLines if defined, limit the output to nLines.
@@ -66,11 +67,15 @@ function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
    * to ChildProcess.spawn (node:internal/child_process) which calls
    * spawn(options) which converts non-strings to strings, e.g. arrays are
    * joined with ',' into a single string.  undefined -> 'undefined'.
+   *
+   * If scope is undefined then preArgs.datasetVcfFile is expected.
    */
   let moreParams = [
-    command, datasetDir, scope,
-    isecFlags || '', isecDatasetIdsText || '',
-    '-r', preArgs.region ];
+    command, datasetDir, scope || preArgs.datasetVcfFile,
+    isecFlags || '', isecDatasetIdsText || ''],
+      regionParams = scope ? ['-r', preArgs.region] : ['', ''];
+  moreParams = moreParams.concat(regionParams);
+
   /** from BCFTOOLS(1) :
    bcftools view [OPTIONS] file.vcf.gz [REGION [...]]
       -h, --header-only
@@ -108,12 +113,17 @@ function vcfGenotypeLookup(datasetDir, scope, preArgs_, nLines, dataOutCb, cb) {
      * this is handled in addFeaturesJson() in frontend/app/utils/data/vcf-feature.js.
      */
     requestInfo = preArgs.requestInfo,
-    format = '%ID\t%POS' + '\t%REF\t%ALT' +
+    formatChromosome = scope ? '' : '%CHROM\t',
+    format = formatChromosome + '%ID\t%POS' + '\t%REF\t%ALT' +
       '\t%INFO' +
       '[\t' + formatGT + ']\n';
     /** Params passed to query if view|query is used, otherwise to command. */
     const paramsForQuery = ['-queryStart', headerOption, '-f', format, '-queryEnd'];
     moreParams = moreParams.concat(paramsForQuery);
+    if (preArgs.snpNames?.length) {
+      const snpNames = ['-snpsStart'].concat(preArgs.snpNames).concat(['-snpsEnd']);
+      moreParams = moreParams.concat(snpNames);
+    }
     if (headerOnly) {
       moreParams.push('--force-samples');
     }

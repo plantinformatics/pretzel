@@ -1,0 +1,75 @@
+
+{{#elem/panel-container state="primary" as |panelContainer|}}
+  {{#elem/panel-heading icon="search" panelContainer=panelContainer}}
+    VCF Genotype Search
+  {{/elem/panel-heading}}
+
+  {{#if panelContainer.showComponent}}
+
+
+  <div style="padding : 1em">
+
+    <label>VCF to search : </label>
+    <select 
+      id="parent" 
+      onchange={{action (mut selectedDatasetId) value="target.value"}} 
+      style="width: 100%"
+      >
+      <option value='' selected>None</option>
+      {{#each datasetsForSearch key="name" as |dataset|}}
+      <option value={{dataset.id}}>{{dataset.displayName}}</option>
+      {{/each}}
+    </select>
+
+  <label>Samples input :</label>
+
+  <div>
+    <Textarea
+      class="selectedSamplesInput"
+      @value={{this.selectedSamplesText}}
+      @input={{action this.sampleNameListInputKey value="target.value" }}
+      @enter={{this.sampleNameListInput}}
+      @insert-newline={{this.sampleNameListInput}}
+      @escape-press={{this.sampleNameListInput}}
+      placeholder="Sample Names"
+      style="width: 100%"
+      >
+    </Textarea>
+  </div>
+
+
+  <label>Features input :</label>
+
+  <div>
+    <Textarea
+      class="selectedFeaturesInput"
+      @value={{this.selectedFeaturesText}}
+      @input={{action this.featureNameListInputKey value="target.value" }}
+      @enter={{this.featureNameListInput}}
+      @insert-newline={{this.featureNameListInput}}
+      @escape-press={{this.featureNameListInput}}
+      placeholder="Feature Names"
+      style="width: 100%"
+      >
+    </Textarea>
+  </div>
+
+  {{yield}}
+
+  {{!-- maybe use manageGenotype.vcfGenotypeSamplesSelected, or derive .selectedSamples from .selectedSamplesText --}}
+  <button type="submit" class="btn btn-info pull-right margin-top"
+    onclick={{action this.vcfGenotypeSearch}}
+    disabled={{this.vcfGenotypeSearchDisabled}}
+    >Search</button>
+    {{!-- Effect: request the vcfFiles for the selected dataset --}}
+    <div style="display:none">{{this.datasetVcfFiles}}</div>
+    <div class="clearfix"></div>
+
+  </div>
+
+  {{/if}} {{!-- showComponent --}}
+{{/elem/panel-container}}
+
+
+
+
