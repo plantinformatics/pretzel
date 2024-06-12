@@ -388,6 +388,7 @@ export default class PanelManageGenotypeComponent extends Component {
     if (window.PretzelFrontend) {
       window.PretzelFrontend.manageGenotype = this;
     }
+    this.controls.registrationsByName['component:panel/manage-genotype'] = this;
 
     this.namesFilters = new NamesFilters();
     Object.entries(this.sampleFilterTypes).forEach(
@@ -2137,23 +2138,36 @@ export default class PanelManageGenotypeComponent extends Component {
       });
   }
   /** Send API request for VCF genotype of the given vcfDatasetId.
+   * If scope is defined it indicates which scope / chromosome of vcfDatasetId,
+   * should be searched; otherwise search all scopes of the dataset.
+   * blockV.scope === scope.
    * @param blockV  brushed / Viewed visible VCF / Genotype Block
    *   (from .lookupBlock or .brushedOrViewedVCFBlocksVisible)
+   * blockV is undefined and not used if scope is not defined.
    * @param vcfDatasetId one of the VCF genotype datasets on the brushed axis
    * This is the API id, i.e. .genotypeId, not dataset .id
    * i.e. this is blockV.datasetId.genotypeId
+   * [genotype-search] : scope is not defined and vcfDatasetId is dataset.
    * @param intersection return calls for SNPs which have positions in these datasets.
    * {datasetIds, flags} or undefined.  
    *   .datasetIds includes this one (vcfDatasetId).
    *   .flags : for bcftools isec, without the -n.
    * @param scope of the brushed axis
    * @param domainInteger brushed domain on the axis / parent
+   * domainInteger is not applicable if scope is undefined, so this parameter is
+   * used in that case to carry {datasetVcfFiles, snpNames} from genotype-search.
    * @param samples selected samples to request
    * @param samplesLimitEnable  .args.userSettings.samplesLimitEnable
    */
   vcfGenotypeLookupDataset(blockV, vcfDatasetId, intersection, scope, domainInteger, samples, samplesLimitEnable) {
     const fnName = 'vcfGenotypeLookupDataset';
-    if (scope) {
+    let dataset;
+    // equivalent : (typeof dataset !== 'string' && dataset.constructor.modelName === 'dataset')
+    if (! scope) {
+      dataset = vcfDatasetId;
+      vcfDatasetId = dataset.id;
+    }
+    /*if (scope)*/ {
       const
       userSettings = this.args.userSettings,
       requestFormat = this.requestFormat,
@@ -2185,16 +2199,32 @@ export default class PanelManageGenotypeComponent extends Component {
         requestOptions.typeSNP = userSettings.typeSNP;
       }
 
-      addGerminateOptions(requestOptions, blockV);
-      const
-      textP = vcfGenotypeLookup(this.auth, samples, domainInteger,  requestOptions, vcfDatasetId, scope, this.rowLimit);
+      if (blockV) {
+        addGerminateOptions(requestOptions, blockV);
+      }
+
+      const requestP = () => {
+      const textP = vcfGenotypeLookup(
+        this.auth, samples, domainInteger, requestOptions,
+        vcfDatasetId, scope, this.rowLimit);
       // re-initialise file-anchor with the new @data
       this.vcfExportText = null;
       textP.then(
-        this.vcfGenotypeReceiveResult.bind(this, blockV, requestFormat, userSettings))
+        this.vcfGenotypeReceiveResult.bind(this, scope ? blockV : dataset, requestFormat, userSettings))
         .catch(this.showError.bind(this, fnName));
 
+      };
+
+      if (scope) {
+        const textP = requestP();
+      } else {
+        const searchScope = domainInteger;
+        /** perhaps reduceInSeries(array, elt2PromiseFn, starting_promise */
+        const textsP = searchScope.datasetVcfFiles.map(fileName =>
+          {requestOptions.datasetVcfFile = fileName; requestP(); });
+      }
     }
+    // result (promise) not yet required
   }
   /** Construct isec params for a lookup of vcfDatasetId, if required.
    * If datasets other than this one (vcfDatasetId) have defined positionFilter,
@@ -2260,6 +2290,9 @@ export default class PanelManageGenotypeComponent extends Component {
     return intersection;
   }
 
+  /**
+   * @param blockV  dataset in the case of [genotype-search], otherwise blockV
+   */
   vcfGenotypeReceiveResult(blockV, requestFormat, userSettings, text) {
     const
     fnName = 'vcfGenotypeReceiveResult',
@@ -2272,7 +2305,9 @@ export default class PanelManageGenotypeComponent extends Component {
     // displays vcfGenotypeText in textarea, which triggers this.vcfGenotypeTextSetWidth();
     this.vcfGenotypeText = text;
     this.headerTextP.then((headerText) => {
-      const combined = this.combineHeader(headerText, this.vcfGenotypeText)
+      const
+      combined = ! headerText ? this.vcfGenotypeText :
+        this.combineHeader(headerText, this.vcfGenotypeText)
       /** ember-csv:file-anchor.js is designed for spreadsheets, and hence
        * expects each row to be an array of cells.
        */
@@ -2281,8 +2316,9 @@ export default class PanelManageGenotypeComponent extends Component {
       later(() => this.vcfExportText = combined, 1000);
     });
 
-    dLog(fnName, text.length, text && text.slice(0,200), blockV.get('id'));
-    if (text && blockV) {
+    // [genotype-search] does not apply to addFeaturesGerminate().
+    dLog(fnName, text.length, text && text.slice(0,200), blockV?.get('id'));
+    if (text /*&& blockV*/) {
       const
       replaceResults = this.args.userSettings.replaceResults,
       nSamples = this.controls.view.pathsDensityParams.nSamples,
@@ -3358,9 +3394,12 @@ export default class PanelManageGenotypeComponent extends Component {
     fnName = 'headerText',
     {samples, samplesOK} = this.samplesOK(false),
     domainInteger = [0, 1],
+    dialogMode = this.args.userSettings.dialogMode,
     /** this is .lookupDatasetId if ! isGerminate */
-    vcfDatasetId = this.lookupBlock?.get('datasetId.genotypeId'),
-    scope = this.lookupScope;
+    vcfDatasetId = dialogMode ? dialogMode.datasetId :
+      this.lookupBlock?.get('datasetId.genotypeId'),
+    scope = this.lookupScope,
+    scopeOK = scope || (dialogMode?.component === 'genotype-search');
     let textP;
     /** After a brush, this CP is re-evaluated, although the dependencies
      * compare === with the previous values.  Could memo-ize the value based on
@@ -3370,7 +3409,7 @@ export default class PanelManageGenotypeComponent extends Component {
      * lookupDatasetId; depends on whether result vcfExportText combines
      * brushedOrViewedVCFBlocksVisible into a single VCF.
      */
-    if (samplesOK && scope && vcfDatasetId) {
+    if (samplesOK && scopeOK && vcfDatasetId) {
       const
       requestFormat = this.requestFormat,
       userSettings = this.args.userSettings,
@@ -3380,6 +3419,14 @@ export default class PanelManageGenotypeComponent extends Component {
       /** requestOptions.linkageGroupName may not be required when getting headers. */
       requestOptions = {requestFormat, requestSamplesAll, headerOnly : true};
       addGerminateOptions(requestOptions, this.lookupBlock);
+      let searchScope = domainInteger;
+      if (! scope) {
+        const
+        apiServer = this.controls.apiServerSelectedOrPrimary,
+        dataset = apiServer.datasetsBlocks.findBy('id', vcfDatasetId),
+        vcfFiles = dataset?.[Symbol.for('vcfFiles')];
+        requestOptions.datasetVcfFile = vcfFiles?.[0];
+      }
       /** these params are not applicable when headerOnly : samples, domainInteger, rowLimit. */
       textP = vcfGenotypeLookup(
         this.auth, samples, domainInteger,
