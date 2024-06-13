@@ -2304,7 +2304,7 @@ export default class PanelManageGenotypeComponent extends Component {
     }
     // displays vcfGenotypeText in textarea, which triggers this.vcfGenotypeTextSetWidth();
     this.vcfGenotypeText = text;
-    this.headerTextP.then((headerText) => {
+    this.headerTextP?.then((headerText) => {
       const
       combined = ! headerText ? this.vcfGenotypeText :
         this.combineHeader(headerText, this.vcfGenotypeText)
@@ -2339,6 +2339,12 @@ export default class PanelManageGenotypeComponent extends Component {
          * showSamplesWithinBrush().
          */
         this.filterSamples(/*showHideSampleFn*/undefined, /*matrixView*/undefined);
+
+        if (added.resultBlocks.size) {
+          /** param of blockViewAndBrush() is [block, featuresDomain] */
+          Array.from(added.resultBlocks.entries()).forEach(this.blockViewAndBrush.bind(this));
+        }
+
         const showOtherBlocks = true;
         if (showOtherBlocks) {
           this.showSamplesWithinBrush();
@@ -2368,6 +2374,30 @@ export default class PanelManageGenotypeComponent extends Component {
       }
     }
 
+  }
+
+  //----------------------------------------------------------------------------
+
+  blockViewAndBrush([block, featuresDomain]) {
+    const fnName = 'blockViewAndBrush';
+    /* this works, but is already achieved by loadBlock() : viewRelatedBlocks(block)
+     *  this.blockService.setViewed(block.id, true);
+     */
+    this.args.loadBlock(block);
+    later(() => { this.blockService.pathsPro.ensureAxisBrush(block);
+                  later(() => this.blockSetBrushedDomain(block, featuresDomain), 2000); });
+  }
+  blockSetBrushedDomain(block, featuresDomain) {
+    const
+    fnName = 'blockSetBrushedDomain',
+    abs = this.axisBrushService,
+    abb = abs.brushesByBlock[block.referenceBlock.id],
+    axis1d = block.axis,
+    brushRange = featuresDomain.map(axis1d.y);
+    axis1d.set('brushedRegion', brushRange);
+    dLog(fnName, brushRange, featuresDomain, block.brushName, abb, axis1d.axisBrushObj);
+    axis1d.axisBrushObj.brushedDomain = featuresDomain;
+    this.axisBrushService.incrementProperty('brushCount');
   }
 
   //----------------------------------------------------------------------------
@@ -3395,7 +3425,7 @@ export default class PanelManageGenotypeComponent extends Component {
     {samples, samplesOK} = this.samplesOK(false),
     domainInteger = [0, 1],
     dialogMode = this.args.userSettings.dialogMode,
-    /** this is .lookupDatasetId if ! isGerminate */
+    /** lookupBlock.datasetId.genotypeId is .lookupDatasetId if ! isGerminate */
     vcfDatasetId = dialogMode ? dialogMode.datasetId :
       this.lookupBlock?.get('datasetId.genotypeId'),
     scope = this.lookupScope,
@@ -3443,6 +3473,8 @@ export default class PanelManageGenotypeComponent extends Component {
         })
         .catch(this.showError.bind(this, fnName));
       textP = toPromiseProxy(textP);
+    } else {
+      dLog(fnName, scope, dialogMode, samplesOK, scopeOK, vcfDatasetId);
     }
     return textP;
   }

@@ -7,7 +7,7 @@ import { stringCountString, toTitleCase } from '../string';
 import { stringGetFeature, stringSetSymbol, stringSetFeature } from '../panel/axis-table';
 import { contentOf } from '../common/promises';
 import { featuresIntervalsForTree } from './features';
-import { intervalsIntersect } from '../interval-calcs';
+import { intervalsIntersect, intervalMerge } from '../interval-calcs';
 import { Measure } from './genotype-order';
 
 
@@ -250,7 +250,9 @@ scaffold38755_709316	709316	0/0	0/1	0/0	0/0	0/0	./.	0/0	0/0	0/0	0/1	0/0	0/0	0/0	
 /** Parse VCF output and add features to block.
  * @return
  *  { createdFeatures : array of created Features,
- *    sampleNames : array of sample names }
+ *    sampleNames : array of sample names,
+ *    resultBlocks : blocks of the result rows, in the case of [genotype-search],
+ *  }
  *
  * @param block view dataset block for corresponding scope (chromosome)
  * In the case of [genotype-search] all scopes (chromosomes) of the dataset are searched,
@@ -263,6 +265,8 @@ scaffold38755_709316	709316	0/0	0/1	0/0	0/0	0/0	./.	0/0	0/0	0/0	0/1	0/0	0/0	0/0	
 function addFeaturesJson(block, requestFormat, replaceResults, selectedService, text) {
   /** true if block is given; otherwise determine block of each row, from CHROM column. */
   const blockGiven = block.constructor.modelName === 'block';
+  /** If ! blockGiven, collate the blocks of the result rows. */
+  const resultBlocks = new Map();
   let dataset;
   if (! blockGiven) {
     if (block.constructor.modelName !== 'dataset') {
@@ -387,6 +391,7 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedService, 
           let scope = value.replace(/^chr/, '');
           if (! blockGiven) {
             block = dataset.blocks.findBy('name', value);
+            resultBlocks.has(block) || resultBlocks.set(block, []);
             value = block;
           } else
           if (scope !== block.scope) {
@@ -478,6 +483,11 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedService, 
         return f;
       }, {});
       // or EmberObject.create({value : []});
+
+      if (! blockGiven) {
+        const featuresDomain = resultBlocks.get(block);
+        intervalMerge(featuresDomain, feature.value);
+      }
 
       /* CHROM column is present in default format, and omitted when -f is used
        * i.e. 'CATG', 'Numerical', so in this case set .blockId here. */
@@ -575,7 +585,7 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedService, 
     dLog(fnName, lines.length, text.length);
   }
 
-  let result = {createdFeatures, sampleNames};
+  let result = {createdFeatures, sampleNames, resultBlocks};
   return result;
 }
 
