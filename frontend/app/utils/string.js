@@ -55,3 +55,20 @@ function ensureTrailingString(string, suffix) {
 }
 
 //-------------------------------------------------------------------------------
+
+export { namesTrim }
+
+/** Given input of a list of names of Samples or SNPs /  Features text e.g. from a <textarea>, 
+ * remove leading and trailing whitespace and excess newlines.
+ */
+function namesTrim(namesText) {
+  const
+  trimmed = namesText
+    .replaceAll(/[ \t]+/g, '\n')
+    .replaceAll(/\n\n+/g, '\n')
+    .replace(/^\n/, '')
+    .replace(/\n$/, '');
+  return trimmed;
+}
+
+//-------------------------------------------------------------------------------

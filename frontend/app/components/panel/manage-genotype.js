@@ -1379,6 +1379,8 @@ export default class PanelManageGenotypeComponent extends Component {
   selectedSamplesText = '';
 
   /** parse the contents of the textarea
+   * This partially overlaps with namesTrim() (utils/string.js),
+   * which doesn't split into an array, but does remove additional cases of whitespace.
    * @param value text contents of <Textarea>
    * @return sample names array
    */

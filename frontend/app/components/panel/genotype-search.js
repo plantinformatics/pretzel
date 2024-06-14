@@ -10,6 +10,8 @@ import { tracked } from '@glimmer/tracking';
 
 import { statusToMatrix } from '../../utils/data/vcf-files';
 
+import { namesTrim } from '../../utils/string';
+
 //------------------------------------------------------------------------------
 
 const dLog = console.debug;
@@ -145,7 +147,9 @@ export default class PanelGenotypeSearchComponent extends Component {
    */
   @computed('selectedSamplesText')
   get selectedSamples() {
-    const samples = this.selectedSamplesText ? this.manageGenotype?.sampleNameListInputParse(this.selectedSamplesText) : [];
+    const
+    samples = ! this.selectedSamplesText ? [] :
+      this.manageGenotype?.sampleNameListInputParse(namesTrim(this.selectedSamplesText));
     return samples;
   }
 
@@ -176,7 +180,7 @@ export default class PanelGenotypeSearchComponent extends Component {
   @action
   vcfGenotypeSearch() {
     const fnName = 'vcfGenotypeSearch';
-    const searchScope = {datasetVcfFiles : this.vcfFiles, snpNames : this.selectedFeaturesText};
+    const searchScope = {datasetVcfFiles : this.vcfFiles, snpNames : namesTrim(this.selectedFeaturesText)};
     /** vcfGenotypeSearchDisabled prevents call to vcfGenotypeSearch() if ! this.manageGenotype */
     const manageGenotype = this.manageGenotype;
     /** Signify that manageGenotype component is operating under the control of
@@ -190,7 +194,7 @@ export default class PanelGenotypeSearchComponent extends Component {
       /*intersection*/ undefined,
       /*scope*/ undefined,
       /*domainInteger*/ searchScope,
-      /*samples*/ this.selectedSamplesText,
+      /*samples*/ namesTrim(this.selectedSamplesText),
       /*samplesLimitEnable*/ false);
     later(() => manageGenotype.args.userSettings.dialogMode = null, 10000);
 
