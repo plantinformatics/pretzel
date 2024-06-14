@@ -113,8 +113,11 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
       this.set(`layout.${side}.visible`, !visibility);
     },
     setTab: function(side, tab) {
-      dLog("setTab", side, tab, this.get('layout'));
-      this.set(`layout.${side}.tab`, tab);
+      const fieldName = `layout.${side}.tab`;
+      if (this.get(fieldName) !== tab) {
+        dLog("setTab", side, tab, this.get('layout'));
+        this.set(fieldName, tab);
+      }
     },
     updateSelectedFeatures: function(features) {
       // dLog("updateselectedFeatures in mapview", features.length);
@@ -434,7 +437,7 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
     /** Changing tablesPanelRight : false -> true because that suits the
      * Genotype Table, which is now a predominant display panel.
      */
-    window : {tablesPanelRight : true } }),
+    window : {tablesPanelRight : true, navigation : { } } }),
 
   queryParams: ['mapsToView'],
   mapsToView: [],
@@ -457,6 +460,8 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
   showAsymmetricAliases : false,
 
   init: function() {
+    this._super.apply(this, arguments);
+
     /** refn : https://discuss.emberjs.com/t/is-this-possible-to-turn-off-some-deprecations-warnings/8196 */
     let deprecationIds = [
       'ember-component.send-action',
@@ -471,7 +476,7 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
     this.queryParamsService.queryParamsHost = this;
     stacks.oa = this.oa;
 
-    this._super.apply(this, arguments);
+    this.controls.window.navigation.setTab = this.actions.setTab.bind(this);
   },
 
   currentURLDidChange: observer('target.currentURL', function () {

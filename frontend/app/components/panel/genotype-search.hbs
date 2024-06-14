@@ -12,7 +12,9 @@
     <label>VCF to search : </label>
     <select 
       id="parent" 
-      onchange={{action (mut selectedDatasetId) value="target.value"}} 
+      onchange={{action (pipe
+        (action (mut selectedDatasetId) value="target.value")
+        this.navigateGenotypeTable ) }} 
       style="width: 100%"
       >
       <option value='' selected>None</option>

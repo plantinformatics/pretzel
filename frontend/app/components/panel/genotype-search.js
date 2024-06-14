@@ -115,32 +115,45 @@ export default class PanelGenotypeSearchComponent extends Component {
     return filesP;
   }
 
+  setSamplesSelected() {
+    const ok = this.manageGenotype && ! this.manageGenotype.isDestroying;
+    if (ok) {
+      this.manageGenotype.vcfGenotypeSamplesSelected = this.selectedSamples;
+    }
+    return ok;
+  }
+  setSamplesSelectedLater() {
+    if (! this.setSamplesSelected()) {
+    this.navigateGenotypeTable();
+      later(() => this.setSamplesSelected(), 2000);
+    }
+  }
+
   @action
   sampleNameListInputKey(value) {
     const fnName = 'sampleNameListInputKey';
     dLog(fnName, value.length);
-    if (this.manageGenotype) {
-      this.manageGenotype.vcfGenotypeSamplesSelected = this.selectedSamples;
-    }
+    this.navigateGenotypeTable();
+    this.setSamplesSelectedLater();
   }
   @action
   sampleNameListInput(value, event) {
     const fnName = 'sampleNameListInput';
     dLog(fnName, value.length, event.target.value.length); // , event
-    if (this.manageGenotype) {
-      this.manageGenotype.vcfGenotypeSamplesSelected = this.selectedSamples;
-    }
+    this.setSamplesSelected();
   }
 
   @action
-  featureNameListInputKey(a, b, c) {
+  featureNameListInputKey(value) {
     const fnName = 'featureNameListInputKey';
-    dLog(fnName, a, b, c);
+    dLog(fnName, value.length);
+    this.navigateGenotypeTable();
+    this.setSamplesSelectedLater();
   }
   @action
-  featureNameListInput(a, b, c) {
+  featureNameListInput(value, event) {
     const fnName = 'featureNameListInput';
-    dLog(fnName, a, b, c);
+    dLog(fnName, value.length, event.code);
   }
 
   /** Convert string selectedSamplesText into an array.
@@ -178,6 +191,12 @@ export default class PanelGenotypeSearchComponent extends Component {
   }
 
   @action
+  navigateGenotypeTable() {
+    /** Select the Genotype Table display manage-genotype in the right panel. */
+    this.controls.window.navigation.setTab('right', 'genotype');
+  }
+
+  @action
   vcfGenotypeSearch() {
     const fnName = 'vcfGenotypeSearch';
     const searchScope = {datasetVcfFiles : this.vcfFiles, snpNames : namesTrim(this.selectedFeaturesText)};
@@ -188,6 +207,9 @@ export default class PanelGenotypeSearchComponent extends Component {
      */
     manageGenotype.args.userSettings.dialogMode =
       {component : 'genotype-search', datasetId : this.selectedDatasetId};
+
+    this.navigateGenotypeTable();
+
     this.manageGenotype.vcfGenotypeLookupDataset(
       /*blockV*/ undefined,
       /*vcfDatasetId*/ this.selectedDataset,  // [genotype-search] dataset instead of datasetId
