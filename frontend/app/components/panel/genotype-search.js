@@ -46,6 +46,9 @@ export default class PanelGenotypeSearchComponent extends Component {
   @tracked
   vcfFiles;
 
+  @tracked
+  resultCount = 0;
+
   //----------------------------------------------------------------------------
 
   constructor() {
@@ -59,6 +62,13 @@ export default class PanelGenotypeSearchComponent extends Component {
 
   get manageGenotype() {
     return this.controls.registrationsByName['component:panel/manage-genotype'];
+  }
+
+  /** manageGenotype.lookupMessage is not effective as a dependency */
+  @computed('resultCount')
+  get lookupMessage() {
+    dLog('lookupMessage', this.resultCount, this.manageGenotype?.lookupMessage);
+    return this.manageGenotype?.lookupMessage;
   }
 
   @computed('controls.apiServerSelectedOrPrimary.datasetsBlocks')
@@ -210,6 +220,12 @@ export default class PanelGenotypeSearchComponent extends Component {
 
     this.navigateGenotypeTable();
 
+    /** This needs to be tied closely to the user action, not in
+     * vcfGenotypeLookupDataset() which can be repeated for one user action. */
+    this.manageGenotype.lookupMessage = null;
+
+    const
+    resultP =
     this.manageGenotype.vcfGenotypeLookupDataset(
       /*blockV*/ undefined,
       /*vcfDatasetId*/ this.selectedDataset,  // [genotype-search] dataset instead of datasetId
@@ -218,9 +234,19 @@ export default class PanelGenotypeSearchComponent extends Component {
       /*domainInteger*/ searchScope,
       /*samples*/ namesTrim(this.selectedSamplesText),
       /*samplesLimitEnable*/ false);
-    later(() => manageGenotype.args.userSettings.dialogMode = null, 10000);
 
-    dLog(fnName);
+    /** .resultCount signals that lookupMessage is available, so it should be
+     * incremented after .lookupMessage is set.
+     * resultP is derived from the promise in whose .catch() .lookupMessage is
+     * set; it seems that the .finally() is performed before the .catch(), so
+     * use later().
+     */
+    resultP.finally(() => later(() => {
+      manageGenotype.args.userSettings.dialogMode = null;
+      this.resultCount++;
+      dLog(fnName, 'resultCount', this.resultCount); }));
+
+    dLog(fnName, searchScope, manageGenotype.args.userSettings.dialogMode);
   }
   
 

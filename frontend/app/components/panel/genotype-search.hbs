@@ -69,6 +69,11 @@
 
   </div>
 
+  {{#if this.lookupMessage}}
+    {{elem/panel-message warningMessage=this.lookupMessage}}
+  {{/if}}
+
+
   {{/if}} {{!-- showComponent --}}
 {{/elem/panel-container}}
 

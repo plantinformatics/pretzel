@@ -8,6 +8,9 @@ import { tracked } from '@glimmer/tracking';
 import { later } from '@ember/runloop';
 import { A as Ember_A } from '@ember/array';
 
+// see comment in vcfGenotypeLookupDataset()
+import { allSettled } from 'rsvp';
+
 import { uniq, uniqWith, intersection } from 'lodash/array';
 
 import createIntervalTree from 'interval-tree-1d';
@@ -2160,6 +2163,9 @@ export default class PanelManageGenotypeComponent extends Component {
    * used in that case to carry {datasetVcfFiles, snpNames} from genotype-search.
    * @param samples selected samples to request
    * @param samplesLimitEnable  .args.userSettings.samplesLimitEnable
+   *
+   * @return promise signalling response or failure.
+   * promise yields : scope ? text of response : array of text responses, 1 per chromosome matching snpNames.
    */
   vcfGenotypeLookupDataset(blockV, vcfDatasetId, intersection, scope, domainInteger, samples, samplesLimitEnable) {
     const fnName = 'vcfGenotypeLookupDataset';
@@ -2169,6 +2175,7 @@ export default class PanelManageGenotypeComponent extends Component {
       dataset = vcfDatasetId;
       vcfDatasetId = dataset.id;
     }
+    let resultP;
     /*if (scope)*/ {
       const
       userSettings = this.args.userSettings,
@@ -2214,19 +2221,22 @@ export default class PanelManageGenotypeComponent extends Component {
       textP.then(
         this.vcfGenotypeReceiveResult.bind(this, scope ? blockV : dataset, requestFormat, userSettings))
         .catch(this.showError.bind(this, fnName));
-
+      return textP;
       };
 
       if (scope) {
         const textP = requestP();
+        resultP = textP;
       } else {
         const searchScope = domainInteger;
         /** perhaps reduceInSeries(array, elt2PromiseFn, starting_promise */
         const textsP = searchScope.datasetVcfFiles.map(fileName =>
-          {requestOptions.datasetVcfFile = fileName; requestP(); });
+          {requestOptions.datasetVcfFile = fileName; return requestP(); });
+        /** Currently in this context Promise is RSVP, which doesn't have Promise.allSettled(). */
+        resultP = (Promise.allSettled || allSettled)(textsP);
       }
     }
-    // result (promise) not yet required
+    return resultP;
   }
   /** Construct isec params for a lookup of vcfDatasetId, if required.
    * If datasets other than this one (vcfDatasetId) have defined positionFilter,
@@ -2387,7 +2397,7 @@ export default class PanelManageGenotypeComponent extends Component {
      */
     this.args.loadBlock(block);
     later(() => { this.blockService.pathsPro.ensureAxisBrush(block);
-                  later(() => this.blockSetBrushedDomain(block, featuresDomain), 2000); });
+                  later(() => this.blockSetBrushedDomain(block, featuresDomain), 2000); }, 2000);
   }
   blockSetBrushedDomain(block, featuresDomain) {
     const
