@@ -10,7 +10,7 @@ import { tracked } from '@glimmer/tracking';
 
 import { statusToMatrix } from '../../utils/data/vcf-files';
 
-import { namesTrim } from '../../utils/string';
+import { namesTrim, namesTrimUniq } from '../../utils/string';
 
 //------------------------------------------------------------------------------
 
@@ -209,7 +209,8 @@ export default class PanelGenotypeSearchComponent extends Component {
   @action
   vcfGenotypeSearch() {
     const fnName = 'vcfGenotypeSearch';
-    const searchScope = {datasetVcfFiles : this.vcfFiles, snpNames : namesTrim(this.selectedFeaturesText)};
+    const snpNames = namesTrimUniq(this.selectedFeaturesText);
+    const searchScope = {datasetVcfFiles : this.vcfFiles, snpNames};
     /** vcfGenotypeSearchDisabled prevents call to vcfGenotypeSearch() if ! this.manageGenotype */
     const manageGenotype = this.manageGenotype;
     /** Signify that manageGenotype component is operating under the control of
@@ -225,6 +226,7 @@ export default class PanelGenotypeSearchComponent extends Component {
     this.manageGenotype.lookupMessage = null;
 
     const
+    samples = namesTrimUniq(this.selectedSamplesText),
     resultP =
     this.manageGenotype.vcfGenotypeLookupDataset(
       /*blockV*/ undefined,
@@ -232,7 +234,7 @@ export default class PanelGenotypeSearchComponent extends Component {
       /*intersection*/ undefined,
       /*scope*/ undefined,
       /*domainInteger*/ searchScope,
-      /*samples*/ namesTrim(this.selectedSamplesText),
+      /*samples*/ samples,
       /*samplesLimitEnable*/ false);
 
     /** .resultCount signals that lookupMessage is available, so it should be
