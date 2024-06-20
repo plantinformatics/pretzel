@@ -22,6 +22,7 @@
 # where datasetId is a datablock not a reference / parent.
 # This is split into the array isecDatasetIdsArray.
 # When isecDatasetIds is given, -R is used, so -r should not be given.
+# @param regionParams	2 params : -r Chr1A:1-100000, or '' ''
 # @param preArgs	remaining args : $*
 #
 # preArgs may contain -queryStart paramsForQuery -queryEnd
@@ -152,9 +153,16 @@ fi
   scope="$3"
   isecFlags="$4"
   isecDatasetIds="$5"
-  shift 5
+  regionParams=("$6" "$7")
+  shift 7
   # Switch off logging for preArgs, which contains samples which may be a large list.
   set +x
+
+  # if array is 2 empty strings '' '', discard contents
+  if [ -z "${regionParams[0]}" -a  -z "${regionParams[1]}"]; then 
+    regionParams=()
+  fi
+
 
   preArgsAll=("${@}")
   # split preArgsAll into 3 arrays : preArgs, paramsForQuery and snpNames.
@@ -188,6 +196,7 @@ fi
        isecFlags="$isecFlags", isecDatasetIds="$isecDatasetIds",	\
        paramsForQuery="${paramsForQuery[@]}",	\
        snpNames="${snpNames[@]}",	\
+       regionParams="${regionParams[@]}",	\
        preArgs="${preArgs[@]}"  >> $logFile
 
 set -x
@@ -354,7 +363,7 @@ function prepareCommonSNPs() {
         # provide 0 return status
         true
       fi
-      regionParams=($1 $2); shift 2;
+
       # This outputs this note : "Note: -w option not given, printing list of sites..."
       # The options suggested in this post :
       #   https://github.com/samtools/bcftools/issues/334#issuecomment-147310754
@@ -375,6 +384,8 @@ function prepareCommonSNPs() {
 # and using params, which are of the form -r 1A:1188384-1191531
 # @param command
 # @param vcfGz
+# Global arrays used :
+# @param regionParams
 # @param ..."${preArgs[@]}", using only the initial regionParams
 # Uses : "${preArgs[@]}" "${paramsForQuery[@]}" "${snpNames[@]}"
 function bcftoolsCommand() {
@@ -394,13 +405,8 @@ function bcftoolsCommand() {
   # '%ID\t%POS\t%REF\t%ALT[\t%TGT]\n' is a single arg.
   if [ ${#isecDatasetIdsArray[@]} -gt 0 ]
   then
-    # uses $vcfGzs.  $@ is preArgs, starting with "${regionParams[@]}"
-    regionParams=($1 $2); shift 2;
-    # if array is 2 empty strings '' '', discard contents
-    if [ -z "${regionParams[0]}" -a  -z "${regionParams[1]}"]; then 
-      regionParams=()
-    fi
-    preArgs=("${preArgs[@]:2}")
+    # uses $vcfGzs.
+
     # Use absolute path for logFile because this is within cd ... "$vcfDir"
     >> $serverDir/$logFile echo regionParams="${regionParams[@]}", "${@}"
     if prepareCommonSNPs "${regionParams[@]}"
@@ -410,7 +416,7 @@ function bcftoolsCommand() {
     then
       # regionParams are used by prepareCommonSNPs and cannot be used with
       # -R "$commonSNPs", which incorporates them.
-      2>&$F_ERR "$bcftools" view  -O v -R "$commonSNPs" "$vcfGz" "${preArgs[@]}" | \
+      2>&$F_ERR "$bcftools" view  -O v -R "$commonSNPs" "$vcfGz" "${regionParams[@]}" "${preArgs[@]}" | \
         2>&$F_ERR "$bcftools" "$command" "${paramsForQuery[@]}"
     else
       2>&$F_ERR "$bcftools" view -O v -R "$commonSNPs" \
@@ -437,8 +443,6 @@ function bcftoolsCommand() {
       command=$(echo "$command" | sed s/counts_//)
     fi
 
-    # discard 2 leading empty strings '' '' from array
-    eval preArgs=("${preArgs[@]}")
     # ( set -x; >> $serverDir/$logFile echo regionParams=${#regionParams[@]}:"${regionParams[@]}", preArgs=${#preArgs[@]}:"${preArgs[@]}", ; >/dev/null set +x)
     # ${@} here is preArgs, starting with regionParams
     if [ "$command" = view_query ]
@@ -540,12 +544,12 @@ else
       # see vcf-genotype.js : vcfGenotypeLookup() : preArgs.samples
       # set +x
       # some elements in preArgs may contain white-space, e.g. format "%ID\t%POS[\t%TGT]\n"
-      if bcftoolsCommand "$command" "$vcfGz" "${preArgs[@]}" # uses ... "${preArgs[@]}" "${paramsForQuery[@]}"
+      if bcftoolsCommand "$command" "$vcfGz" # "${preArgs[@]}" # uses ... "${regionParams[@]}" "${preArgs[@]}" "${paramsForQuery[@]}"
       then
         status=$?	# 0
       else
         status=$?
-        echo 1>&$F_ERR 'Error:' "Unable to run bcftools $command $datasetIdParam $scope $isecFlags $isecDatasetIds $commonSNPs $vcfGz ${preArgs[@]}"
+        echo 1>&$F_ERR 'Error:' "Unable to run bcftools $command $datasetIdParam $scope $isecFlags $isecDatasetIds $commonSNPs $vcfGz ${regionParams[@]} ${preArgs[@]}"
         # Possibly transient failure because 1 request is doing isec
         # and another tries to read empty isec output.
         [ -n "$isecDatasetIds" ] && 1>&$F_ERR ll -d "$commonSNPs"
