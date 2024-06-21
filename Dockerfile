@@ -4,12 +4,12 @@
 
 # samtools build layer is based on https://hub.docker.com/r/bschiffthaler/samtools/dockerfile
 
-ARG NODE_ALPINE_VERSION 12
+ARG NODE_ALPINE_VERSION=12
 
 # ${NODE_ALPINE_VERSION}
 FROM node:12-alpine as node-alpine-build-samtools
 
-ARG NODE_ALPINE_VERSION 12
+ARG NODE_ALPINE_VERSION=12
 ARG SAMTOOLS_VERSION=1.15.1
 ARG BUILD_NCPU=1
 
@@ -76,8 +76,8 @@ WORKDIR /
 # ${NODE_ALPINE_VERSION}
 FROM node:12-alpine as node-alpine-pretzel
 
-ARG PRETZEL_VERSION 2.15.0
-ARG NODE_ALPINE_VERSION 12
+ARG PRETZEL_VERSION=2.17.8
+ARG NODE_ALPINE_VERSION=12
 
 # node-sass version is selected so that the binary can be downloaded;
 # otherwise, node-gyp will be built, and hence the following dependencies on python, make, c++.
@@ -155,7 +155,7 @@ RUN mkdir $NODE_BE $NODE_BE/bin $NODE_BE/lib
 COPY --from=node:16-alpine /usr/local/bin  $NODE_BE/bin
 COPY --from=node:16-alpine /usr/local/lib  $NODE_BE/lib
 
-
+# may be required later, for upgradeFrontend2 : -g rollup && npm install rollup@4.14.2
 RUN date \
   && ls -sF $NODE_BE/lib \
   && export PATH=$NODE_BE/bin:$PATH \
@@ -171,6 +171,11 @@ RUN cd /frontend && (npm ci || npm install)  && bower install --allow-root
 
 # RUN cd /app && npm install nodemon@1.18.8 && npm ci
 
+ARG ROOT_URL
+ENV ROOT_URL=${ROOT_URL}
+LABEL ROOT_URL=${ROOT_URL}
+# if sass binary binding not available may need : npm rebuild node-sass &&
+# echo ROOT_URL=${ROOT_URL} && ROOT_URL=/pretzelUpdate 
 RUN cd /frontend && node_modules/ember-cli/bin/ember build --environment production
 
 RUN ( [ ! -L /app/client ] || rm /app/client ) && \
@@ -187,10 +192,10 @@ ENTRYPOINT ["/usr/local/node16/bin/node", "/app/lb3app/server/server.js"]
 
 # ------------------------------------------------------------------------------
 
-ARG NODE_ALPINE_VERSION 12
+ARG NODE_ALPINE_VERSION=12
 ARG SAMTOOLS_VERSION=1.15.1
 ARG bcftoolsVer=1.15.1
-ARG PRETZEL_VERSION 2.15.0
+ARG PRETZEL_VERSION=2.17.8
 
 
 LABEL maintainer='github.com/plantinformatics'
