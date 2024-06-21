@@ -251,7 +251,7 @@ scaffold38755_709316	709316	0/0	0/1	0/0	0/0	0/0	./.	0/0	0/0	0/0	0/1	0/0	0/0	0/0	
  * @return
  *  { createdFeatures : array of created Features,
  *    sampleNames : array of sample names,
- *    resultBlocks : blocks of the result rows, in the case of [genotype-search],
+ *    resultBlocks : blocks of the result rows, in the case of [genotype-search], otherwise undefined
  *  }
  *
  * @param block view dataset block for corresponding scope (chromosome)
@@ -266,7 +266,7 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedService, 
   /** true if block is given; otherwise determine block of each row, from CHROM column. */
   const blockGiven = block.constructor.modelName === 'block';
   /** If ! blockGiven, collate the blocks of the result rows. */
-  const resultBlocks = new Map();
+  const resultBlocks = blockGiven ? undefined : new Map();
   let dataset;
   if (! blockGiven) {
     if (block.constructor.modelName !== 'dataset') {

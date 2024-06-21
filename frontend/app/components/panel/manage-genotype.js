@@ -2352,7 +2352,7 @@ export default class PanelManageGenotypeComponent extends Component {
          */
         this.filterSamples(/*showHideSampleFn*/undefined, /*matrixView*/undefined);
 
-        if (added.resultBlocks.size) {
+        if (added.resultBlocks) {
           /** param of blockViewAndBrush() is [block, featuresDomain] */
           Array.from(added.resultBlocks.entries()).forEach(this.blockViewAndBrush.bind(this));
         }
