@@ -159,7 +159,7 @@ fi
   set +x
 
   # if array is 2 empty strings '' '', discard contents
-  if [ -z "${regionParams[0]}" -a  -z "${regionParams[1]}"]; then 
+  if [ -z "${regionParams[0]}" -a  -z "${regionParams[1]}" ]; then
     regionParams=()
   fi
 
