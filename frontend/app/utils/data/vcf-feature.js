@@ -61,10 +61,12 @@ const cellMultiFeatures = false;
  * displayed in the column header (without the trailing "\t" + datasetId).
  * Related : columnNameIsNotSample() (for current usage, these 2 could
  * potentially be merged).
+ * INFO is a field of feature.values and is not a sample.
  */
 const nonSampleNames = [
   'ref', 'alt', 'tSNP', 'MAF',
   'Ref', 'Alt', 'LD Block',
+  'INFO',
 ];
 /** Given a key within Feature.values, classify it as sample (genotype data) or other field.
  */
@@ -469,10 +471,10 @@ function addFeaturesJson(block, requestFormat, replaceResults, selectedService, 
             /* These will not be needed after changing references to e.g.
              * feature.values.MAF to feature.values.INFO.MAF, which is
              * equivalent and replaces it. */
-            if (value.MAF) {
+            if (value.MAF !== undefined) {
               f.values.MAF = value.MAF;
             }
-            if (value.tSNP) {
+            if (value.tSNP !== undefined) {
               f.values.tSNP = value.tSNP;
             }
 
