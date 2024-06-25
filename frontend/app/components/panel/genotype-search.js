@@ -226,7 +226,9 @@ export default class PanelGenotypeSearchComponent extends Component {
     this.manageGenotype.lookupMessage = null;
 
     const
-    samples = namesTrimUniq(this.selectedSamplesText),
+    samples = namesTrimUniq(this.selectedSamplesText);
+    manageGenotype.vcfGenotypeSamplesSelectedAll[this.selectedDatasetId] = samples;
+    const
     resultP =
     this.manageGenotype.vcfGenotypeLookupDataset(
       /*blockV*/ undefined,

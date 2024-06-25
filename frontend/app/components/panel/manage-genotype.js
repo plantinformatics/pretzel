@@ -282,10 +282,16 @@ export default class PanelManageGenotypeComponent extends Component {
   // @computed('lookupBlockSamples.selected')
   @computed('lookupDatasetId', 'receivedNamesCount')
   get vcfGenotypeSamplesSelected() {
+    if (! this.lookupDatasetId) {
+      dLog('get vcfGenotypeSamplesSelected', this.lookupDatasetId);
+    }
     let selected = this.vcfGenotypeSamplesSelectedAll[this.lookupDatasetId];
     return selected;
   }
   set vcfGenotypeSamplesSelected(selected) {
+    if (! this.lookupDatasetId) {
+      dLog('set vcfGenotypeSamplesSelected', this.lookupDatasetId);
+    }
     this.vcfGenotypeSamplesSelectedAll[this.lookupDatasetId] = selected;
   }
 
@@ -2355,6 +2361,12 @@ export default class PanelManageGenotypeComponent extends Component {
         if (added.resultBlocks) {
           /** param of blockViewAndBrush() is [block, featuresDomain] */
           Array.from(added.resultBlocks.entries()).forEach(this.blockViewAndBrush.bind(this));
+          /** In this case, genotype-search is searching just 1 dataset, so
+           * resultBlocks are expected to be in that dataset.
+           * text is from a single VCF lookup; so although in other cases
+           * dataset intersection can be used, resultBlocks are still expected
+           * to be in a single dataset.
+           */
         }
 
         const showOtherBlocks = true;
@@ -2648,7 +2660,7 @@ export default class PanelManageGenotypeComponent extends Component {
     return fn;
   }
 
-  /**
+  /** Is given sampleName selected for block ?
    * @return true if sampleName is selected in dataset of block,
    * or valueNameIsNotSample(sampleName), i.e. sampleName is ref/alt/etc.
    */
