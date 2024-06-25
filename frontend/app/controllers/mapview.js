@@ -393,6 +393,22 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
 
   //----------------------------------------------------------------------------
 
+  /** Register the Split.js instance which alternates in position between Right/Bottom.
+   * and contains Dataset / Features / Paths / Genotypes
+   */
+  registerInstanceRightSplit(splitInstance) {
+    dLog('registerInstanceRightSplit', splitInstance, this.rightSplitInstance);
+    /* To provide also support for setSizes([100, 0]) when display of
+     * the right panel is toggled, factor out leftSplitListen() to a
+     * sub-component wrapping split-view.
+     * For now, this instance reference enables the Genotype Table
+     * width to be set for genotype-search.
+     */
+    this.controls.window.rightSplitInstance = splitInstance;
+  },
+
+  //----------------------------------------------------------------------------
+
   splitViewDirection : computed('tablesPanelRight', function () {
     let direction = this.tablesPanelRight ? 'horizontal' : 'vertical';
     dLog('splitViewDirection', direction, this.tablesPanelRight);

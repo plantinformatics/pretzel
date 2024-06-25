@@ -204,6 +204,7 @@ export default class PanelGenotypeSearchComponent extends Component {
   navigateGenotypeTable() {
     /** Select the Genotype Table display manage-genotype in the right panel. */
     this.controls.window.navigation.setTab('right', 'genotype');
+    this.controls.window.rightSplitInstance?.setSizes([35, 65]);
   }
 
   @action
