@@ -506,7 +506,7 @@ then
   if ! cd "$vcfDir"/"$datasetIdParam"
   then
     echo 1>&$F_ERR 'Error:' $? "VCF dataset dir is not configured", "$datasetIdParam", PWD=$PWD
-  elif [ "$scope" = "noLinks" ]
+  elif [ "$scope" = DISABLED_"noLinks" ]
   then
     ll | fgrep -v -e ' -> ' | fgrep  .vcf.gz | cut -c13-
   else
