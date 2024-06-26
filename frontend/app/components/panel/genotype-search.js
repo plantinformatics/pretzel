@@ -10,7 +10,7 @@ import { tracked } from '@glimmer/tracking';
 
 import { statusToMatrix } from '../../utils/data/vcf-files';
 
-import { namesTrim, namesTrimUniq } from '../../utils/string';
+import { namesTrim, namesTrimArrayUniq, namesTrimUniq } from '../../utils/string';
 
 //------------------------------------------------------------------------------
 
@@ -227,8 +227,9 @@ export default class PanelGenotypeSearchComponent extends Component {
     this.manageGenotype.lookupMessage = null;
 
     const
-    samples = namesTrimUniq(this.selectedSamplesText);
-    manageGenotype.vcfGenotypeSamplesSelectedAll[this.selectedDatasetId] = samples;
+    samplesArray = namesTrimArrayUniq(this.selectedSamplesText),
+    samples = samplesArray.join('\n');
+    manageGenotype.vcfGenotypeSamplesSelectedAll[this.selectedDatasetId] = samplesArray;
     const
     resultP =
     this.manageGenotype.vcfGenotypeLookupDataset(
