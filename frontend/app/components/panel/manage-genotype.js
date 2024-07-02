@@ -17,7 +17,7 @@ import createIntervalTree from 'interval-tree-1d';
 
 import NamesFilters from '../../utils/data/names-filters';
 import { toPromiseProxy, toArrayPromiseProxy, addObjectArrays, arrayClear } from '../../utils/ember-devel';
-import { thenOrNow, contentOf } from '../../utils/common/promises';
+import { thenOrNow, contentOf, pollCondition } from '../../utils/common/promises';
 import { clipboard_writeText } from '../../utils/common/html';
 import { arrayChoose } from  '../../utils/common/arrays';
 import { intervalSize } from '../../utils/interval-calcs';
@@ -2409,18 +2409,35 @@ export default class PanelManageGenotypeComponent extends Component {
      *  this.blockService.setViewed(block.id, true);
      */
     this.args.loadBlock(block);
-    later(() => { this.blockService.pathsPro.ensureAxisBrush(block);
-                  later(() => this.blockSetBrushedDomain(block, featuresDomain), 2000); }, 2000);
+    pollCondition(250, () => block.axis1d, () =>
+      this.blockBrushDomain(block, featuresDomain));
   }
+  blockBrushDomain(block, featuresDomain) {
+    const fnName = 'blockBrushDomain';
+    /** caller blockViewAndBrush() ensures this via pollCondition(, () => block.axis1d, ) */
+    if (! block.axis1d) {
+      console.warn(fnName, block.brushName);
+    } else {
+      const referenceBlock = block.referenceBlock;
+      this.blockService.pathsPro.ensureAxisBrush(referenceBlock);
+      later(() => this.blockSetBrushedDomain(block, featuresDomain), 2000);
+    }
+  };
+
   blockSetBrushedDomain(block, featuresDomain) {
     const
     fnName = 'blockSetBrushedDomain',
     abs = this.axisBrushService,
+    /** for viewing in console. abb is defined after .brushedDomain is set.
+     * (services/data/axis-brush.js : brushedAxes() filters by .brushedDomain )
+     * then abb === axis1d.axisBrushObj, 
+     */
     abb = abs.brushesByBlock[block.referenceBlock.id],
     axis1d = block.axis,
     brushRange = featuresDomain.map(axis1d.y);
     axis1d.set('brushedRegion', brushRange);
-    dLog(fnName, brushRange, featuresDomain, block.brushName, abb, axis1d.axisBrushObj);
+    dLog(fnName, brushRange, featuresDomain, block.brushName, abs.brushesByBlock,
+         abb === axis1d.axisBrushObj, axis1d.axisBrushObj);
     /** Use Ember.set() because .brushedDomain is used in a tracking context. */
     Ember_set(axis1d.axisBrushObj, 'brushedDomain', featuresDomain);
     this.axisBrushService.incrementProperty('brushCount');

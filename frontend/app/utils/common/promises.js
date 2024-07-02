@@ -1,3 +1,10 @@
+import { later } from '@ember/runloop';
+
+//------------------------------------------------------------------------------
+
+const dLog = console.debug;
+
+//------------------------------------------------------------------------------
 
 /* related : ../ember-devel.js : nowOrLater(), promiseText(), to{,Array}PromiseProxy()  */
 
@@ -49,6 +56,26 @@ function reduceInSeries(array, elt2PromiseFn, starting_promise) {
       (previous) => elt2PromiseFn(previous, currentElement)),
     starting_promise ?? Promise.resolve());
   return promise;
+}
+
+//------------------------------------------------------------------------------
+
+export { pollCondition }
+/** If condition is truthy, do okFn,
+ * else wait initialWait, with back-off, until condition is truthy, or time is > 10sec.
+ * @param initialWait	milliseconds to wait before first retry, 
+ * @param conditionFn	function returning booleanish
+ * @param okFn
+ */
+function pollCondition(initialWait, conditionFn, okFn) {
+  if (conditionFn()) {
+    okFn();
+  } else if (initialWait > 10e3) {
+    console.warn('pollCondition', 'timed out', initialWait, conditionFn, okFn);
+  } else {
+    dLog('pollCondition', initialWait);
+    later(() => pollCondition(initialWait * 2, conditionFn, okFn), initialWait);
+  }
 }
 
 //------------------------------------------------------------------------------
