@@ -2223,7 +2223,8 @@ export default class PanelManageGenotypeComponent extends Component {
         this.auth, samples, domainInteger, requestOptions,
         vcfDatasetId, scope, this.rowLimit);
       // re-initialise file-anchor with the new @data
-      this.vcfExportText = null;
+      /* file-anchor param data should be a defined array ; its init() does this.get("data").reduce. */
+      this.vcfExportText = [];
       textP.then(
         this.vcfGenotypeReceiveResult.bind(this, scope ? blockV : dataset, requestFormat, userSettings))
         .catch(this.showError.bind(this, fnName));
@@ -2420,7 +2421,8 @@ export default class PanelManageGenotypeComponent extends Component {
     brushRange = featuresDomain.map(axis1d.y);
     axis1d.set('brushedRegion', brushRange);
     dLog(fnName, brushRange, featuresDomain, block.brushName, abb, axis1d.axisBrushObj);
-    axis1d.axisBrushObj.brushedDomain = featuresDomain;
+    /** Use Ember.set() because .brushedDomain is used in a tracking context. */
+    Ember_set(axis1d.axisBrushObj, 'brushedDomain', featuresDomain);
     this.axisBrushService.incrementProperty('brushCount');
   }
 

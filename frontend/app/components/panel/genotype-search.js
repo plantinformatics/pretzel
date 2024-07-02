@@ -114,7 +114,7 @@ export default class PanelGenotypeSearchComponent extends Component {
         const
         /** .vcf.gz files for this dataset, filtering out .MAF and .MAF.SNPList .vcf.gz */
         vr = vcfStatus.text.split('\n').filter(r =>
-          !r.match('.MAF') && ! r.match('.csi') && r.match(/\.vcf\.gz$/)),
+          ! r.match('.MAF') && ! r.match('.SNPList') && ! r.match('.csi') && r.match(/\.vcf\.gz$/)),
         /* row contains file size, date, name; extract name, assuming it does
          * not contain spaces. e.g. " 291386658 Jan 9 21:30 chr1A.vcf.gz" */
         files = vr.map(r => r.replace(/.* /, ''));
