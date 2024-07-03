@@ -292,7 +292,7 @@ export default class PanelManageGenotypeComponent extends Component {
     if (! this.lookupDatasetId) {
       dLog('set vcfGenotypeSamplesSelected', this.lookupDatasetId);
     }
-    this.vcfGenotypeSamplesSelectedAll[this.lookupDatasetId] = selected;
+    (this.vcfGenotypeSamplesSelectedAll || this.args.userSettings.vcfGenotypeSamplesSelected)[this.lookupDatasetId] = selected;
   }
 
   @tracked
