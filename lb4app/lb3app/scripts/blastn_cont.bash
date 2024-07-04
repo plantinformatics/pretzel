@@ -12,9 +12,11 @@ echo fileName,dbName=$* >> $logFile
 unused_var=${blastDir:=/mnt/data_blast/blast}
 case "$2" in
   *.dir/*)
+    B_suffix=datasetId
     B=$blastDir/datasetId
     ;;
   *)
+    B_suffix=GENOME_REFERENCES
     B=$blastDir/GENOME_REFERENCES
     ;;
 esac
@@ -24,7 +26,7 @@ esac
 which blastn 2>/dev/null; blastnIsInstalled=$?
 # or blastVersion=`blastn -version` ; blastnIsInstalled=$?
 
-echo PWD=$PWD, fileName,dbName=$*, blastDir=$blastDir >> $logFile
+echo PWD=$PWD, fileName,dbName=$*, blastDir=$blastDir, B_suffix=$B_suffix >> $logFile
 # fileName is e.g. /tmp/tmpo4kfn__8/cbf064c0.query.fasta
 fileName=$1
 dbName=$2
@@ -38,14 +40,16 @@ then
 fi
 
 # if not $blastnIsInstalled, then queries/ should be configured.
-if [ -d queries ]
+if [ $blastnIsInstalled -eq 0 ]
 then
-  # to pass $fileName to the blast container, copy it into $B which is available to the container as /blast/blastdb/
-  queryFile=queries/$(basename $fileName)
-  cp -p "$fileName" "$queryFile"
-else
   queryFile=$fileName
+else
+  # to pass $fileName to the blast container, copy it into $blastDir which is available to the container as /blast/blastdb/
+  queries=$( [[ -d queries ]] && echo queries || ( ( [[ -d $blastDir/queries ]] ||  mkdir $blastDir/queries  ) && echo queries ) )
+  queryFile=$queries/$(basename $fileName)
+  cp -p "$fileName" "$B/$queryFile"
 fi
+echo blastnIsInstalled=$blastnIsInstalled, queries=$queries, $fileName="$fileName" queryFile="$queryFile" >> $logFile
 
 if [ $blastnIsInstalled -eq 0 ]
 then
@@ -53,9 +57,9 @@ then
   blastn  -outfmt '6 std qlen slen' -query  "$queryFile"  -db $B/$dbName
 else
   docker run  --rm  -v \
-   $B:/blast/blastdb	\
+   $blastDir:/blast/blastdb	\
    ncbi/blast blastn	\
    -query  /blast/blastdb/"$queryFile"	\
-   -db /blast/blastdb/$dbName	\
+   -db /blast/blastdb/$B_suffix/$dbName	\
    -outfmt '6 std qlen slen'
 fi
