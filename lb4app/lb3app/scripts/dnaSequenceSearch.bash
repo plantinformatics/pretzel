@@ -25,7 +25,7 @@ esac
 # Default value of toolsDev, if not set above.
 unused_var=${toolsDev:=$resourcesDir/tools/dev}
 unused_var=${blastn:=blastn}
-unused_var=${blastDir:=/mnt/data_blast/blast}
+unused_var=${blastDir:=${mntData=/mnt/data}/blast}
 unused_var=${datasetIdDir:=$blastDir/datasetId}
 
 

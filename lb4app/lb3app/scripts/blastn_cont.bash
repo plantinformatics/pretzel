@@ -9,7 +9,7 @@ logFile=~/log/blast/blastn_cont
 #   190509_RGT_Planet_pseudomolecules_V1/190509_RGT_Planet_pseudomolecules_V1.fasta
 
 echo fileName,dbName=$* >> $logFile
-unused_var=${blastDir:=/mnt/data_blast/blast}
+unused_var=${blastDir:=${mntData=/mnt/data}/blast}
 case "$2" in
   *.dir/*)
     B_suffix=datasetId
@@ -48,6 +48,7 @@ else
   queries=$( [[ -d queries ]] && echo queries || ( ( [[ -d $blastDir/queries ]] ||  mkdir $blastDir/queries  ) && echo queries ) )
   queryFile=$queries/$(basename $fileName)
   cp -p "$fileName" "$B/$queryFile"
+  cp -p "$fileName" "$blastDir/$queryFile"
 fi
 echo blastnIsInstalled=$blastnIsInstalled, queries=$queries, $fileName="$fileName" queryFile="$queryFile" >> $logFile
 

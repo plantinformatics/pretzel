@@ -63,7 +63,7 @@ unused_var=${blastDir:=/mnt/data_blast}
 # blastDir=tmp/blast
 set -x
 # vcfDir=tmp/vcf
-vcfDir=${mntData=/mnt/pretzelData}/vcf
+vcfDir=${mntData=/mnt/data}/vcf
 if [ ! -e "$vcfDir" -a -e "$blastDir/vcf" ]
 then
   vcfDir="$blastDir/vcf"
