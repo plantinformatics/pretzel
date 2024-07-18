@@ -44,6 +44,8 @@ services:
       - "EMAIL_FROM=${EMAIL_FROM}"
       - "EMAIL_VERIFY=${EMAIL_VERIFY}"
       - "EMAIL_ADMIN=${EMAIL_ADMIN}"
+      - "mntData=${mntData}"
+      - "handsOnTableLicenseKey=${handsOnTableLicenseKey}"
     volumes:
       # landingPageVolume=(--volume /home/$USER/pretzel-static-pages/$landingPageDirName:/app/client/landingPageContent)
       # blastVolume
