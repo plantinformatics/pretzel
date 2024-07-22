@@ -10,6 +10,10 @@ case $PWD in
     resourcesDir=${scriptsDir=/app/lb3app/scripts}
     toolsDev=$resourcesDir
     blastn=$resourcesDir/blastn_request.bash
+    case $resourcesDir in
+      /*) ;;
+      *) blastn=$serverDir/$blastn ;;
+    esac
     ;;
   # orig : *backend
   *lb4app)

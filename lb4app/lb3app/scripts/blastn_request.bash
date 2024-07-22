@@ -6,18 +6,19 @@
 
 # precursor of $logBlastDir
 # B=/mnt/data_blast/blast/GENOME_REFERENCES/190509_RGT_Planet_pseudomolecules_V1
-if [ -d ~/log ]
+if [ -d ~/log/. ]
 then 
-  logDir= ~/log
+  logDir=~/log
 elif [ -d /log ] || mkdir /log
 then
   logDir=/log
 else
-  logDir= .
+  logDir=.
 fi
 logBlastDir=$logDir/blast 
 [ -d  $logBlastDir ] || mkdir $logBlastDir || exit $?
 logFile=$logBlastDir/blastn_request
+errorFile=$logDir/blastn.error
 
 set -x
 # args : -query "$fileName"  -db "$dbName" -outfmt '6 std qlen slen'
@@ -38,10 +39,19 @@ queryDir=$logBlastDir/queries
 queryFile=$md5.query.fasta
 cp -p "$fileName" "$queryDir"/$md5.query.fasta
 
+# $B/results/ in dev testing
+resultDir=$logBlastDir/results
+[ -d "$resultDir" ] || mkdir "$resultDir" || exit
+resultFile="$resultDir/"$(basename $fileName)
+
 # Flask server is on port 4000
 # dev testing : localhost
-hostIp=$(ip route show | awk '/default/ {print $3}')
-blastnUrl=http://$hostIp:4000/commands/blastn
+# from feature/blastn_contPy 34652180 in .A3
+hostIpDefault=$(ip route show | awk '/default/ {print $3}')
+unused_var=${hostIp=$hostIpDefault}
+unused_var=${FLASK_PORT=4000}
+blastnUrl=http://$hostIp:$FLASK_PORT/commands/blastn
+
 
 # -X POST -H 'Content-Type: application/json' --data-binary
 #  -d 
@@ -49,7 +59,16 @@ blastnUrl=http://$hostIp:4000/commands/blastn
 # and https://flask.palletsprojects.com/en/1.1.x/api/#flask.Request.files
 # , \"'"$dbName"'\"
 cd "$queryDir"
-result_url=$(curl -s -F "$queryFile"=@"$queryFile" -F request_json='{"args": ["'@"$queryFile"'", "'"$dbName"'"]}' $blastnUrl | tee -a $logFile | jq ".error // .result_url")
+# -s / --silent suppresses error messages, whereas --no-progress-meter suppresses just the progress-meter
+if curl --no-progress-meter 2>$errorFile  >"$resultFile".whole  -F "$queryFile"=@"$queryFile" -F request_json='{"args": ["'@"$queryFile"'", "'"$dbName"'"]}' $blastnUrl
+then
+  result_url=$(< "$resultFile".whole  tee -a $logFile | jq ".error // .result_url")
+else
+  echo -n 'Error:'; cat "$errorFile"
+  (echo first status=$status; cat "$errorFile") >>$logFile
+  exit $status
+fi
+
 case $result_url in
   *' already exists'*)
     # 2nd line is "null"
@@ -58,6 +77,7 @@ case $result_url in
     ;;
   null|'')
     # error return : result_url=null
+    (echo status=1; cat "$errorFile") >>$logFile
     exit 1
     ;;
   *)
@@ -66,26 +86,49 @@ case $result_url in
     ;;
 esac
 
-# $B/results/ in dev testing
-resultDir=$logBlastDir/results
-[ -d "$resultDir" ] || mkdir "$resultDir" || exit
-resultFile="$resultDir/$fileName"
+
 # timeout after 2 min (24  * 5sec)
 # blast can take minutes - may increase this (have used 40; it delays failure which can slow devel)
 for i in $(yes ' ' | head -24 | cat -n)
 do
   # Without  --raw-output, the .report string is wrapped with "" and has \t
   # First result may be : {"key":"60a3ec3c","status":"running"}. length of "running\n" is 8
-  if curl -s $result_url | tee "$resultFile".whole | jq --raw-output ".report // .status" > "$resultFile"  && [ \! -s "$resultFile" ] || [ "$(ls -ld  "$resultFile" | awk ' {print $5;}')" -eq 8 ] ;
+  status=0
+  if curl --no-progress-meter $result_url 2>$errorFile > "$resultFile".whole
   then
-    sleep 5
+    < "$resultFile".whole  jq --raw-output ".report // .status" > "$resultFile"
+    if [ \! -s "$resultFile" ] || [ "$(ls -ld  "$resultFile" | awk ' {print $5;}')" -eq 8 ]
+    then
+      sleep 5
+    else
+      # Trace number of seconds waited, i.e. delay * time steps.
+      expr 5 \* $i 1>&2
+      # If .error field is not empty, output it prefixed with 'Error:'
+      # ls -lArtF $resultDir  >>$logFile
+      # < "$resultFile".whole jq --raw-output .error  >>$logFile
+      < "$resultFile".whole jq --raw-output .error | sed '/^$/d'  > "$resultFile".error
+      if [ -s "$resultFile".error ]
+      then
+        echo -n 'Error:'; cat "$resultFile".error
+      fi
+      sed '/^running$/d' "$resultFile"
+      status=$?
+      (echo done status=$status; cat "$errorFile") >>$logFile
+      exit $status
+    fi
+    
   else
-    # Trace time steps while waiting.
-    expr 5 \* $i 1>&2
-    sed '/^running$/d' "$resultFile"
-    exit $?
+    status=$?
+    echo -n 'Error:'; cat "$errorFile"
+    (echo error status=$status; cat "$errorFile") >>$logFile
+    exit $status
   fi
 done
+
+# final output has :
+#   success : 'returncode': 0, 'error': '', 'report': 'WAPO1\tchr7A\t100.000\t183\t0\t0\t1\t183\...'   (for example)
+#   failure : 'returncode': 1, 'report': '', "error": "dir /mnt/data_blast/blast/datasetId is not present. 1\n", (for example)
+# 'status' field is not present in final output, only in "running"
 
 # output
 # 127.0.0.1 - - [18/May/2021 06:26:25] "POST /commands/blastn HTTP/1.1" 202 -

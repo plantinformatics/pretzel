@@ -23,7 +23,7 @@ esac
 [ -d $B ] || { status=$?; echo 1>&2 "dir $B is not present." $status ; exit $status; }
 
 # $blastnIsInstalled is 0 (true) if blastn is installed locally, otherwise use blast container.
-which blastn 2>/dev/null; blastnIsInstalled=$?
+which blastn 2>/dev/null 1>/dev/null; blastnIsInstalled=$?
 # or blastVersion=`blastn -version` ; blastnIsInstalled=$?
 
 echo PWD=$PWD, fileName,dbName=$*, blastDir=$blastDir, B_suffix=$B_suffix >> $logFile
