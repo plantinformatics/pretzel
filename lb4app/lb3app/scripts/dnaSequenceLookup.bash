@@ -24,7 +24,8 @@ esac
 unused_var=${toolsDev=$resourcesDir/tools/dev}
 unused_var=${samtools=samtools}
 # or /faidx after blast/
-unused_var=${blastDir:=/mnt/data_blast/blast}
+# /mnt/data_blast
+unused_var=${blastDir:=${mntData=/mnt/data}/blast}
 unused_var=${datasetIdDir:=$blastDir/datasetId}
 
 # Test if running within container.
