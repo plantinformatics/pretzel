@@ -607,7 +607,9 @@ export default Service.extend({
       url,
       type: method,
       crossDomain: true,
-      headers: {},
+      headers: {
+        accept: 'application/json',
+      },
       contentType: 'application/json'
     }
 

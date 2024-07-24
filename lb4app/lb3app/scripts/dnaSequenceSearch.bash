@@ -139,7 +139,8 @@ function datasetId2dbName()
     # Can't use soft-link across container boundary, but can pass its path
     # The link may have a trailing /. Ensure that $dir has a trailing /.
     dir=$( [ -L "$datasetId".dir ] && ls -ld "$datasetId".dir | sed 's/.*\/GENOME_REFERENCES\///;s/\([^/]\)$/\1\//' )
-    dbName=$blastDir/GENOME_REFERENCES/$dir$(cat "$datasetId".dbName)
+    # previously prefixed with $blastDir/GENOME_REFERENCES/
+    dbName=$dir$(cat "$datasetId".dbName)
   else
     dbName="$datasetId".dir/$(cat "$datasetId".dbName)
   fi

@@ -241,7 +241,7 @@ module.exports = function(Feature) {
       } else
       if (chunk && (chunk.length >= 6) && (chunk.asciiSlice(0,6) === 'Error:')) {
         // could use chunk.asciiSlice(6) to trim off the leading 'Error:'
-        cb(new ErrorStatus(400, chunk.toString()));
+        cb(ErrorStatus(400, chunk.toString()));
       } else {
         const
         textLines = chunk.toString().split('\n')
