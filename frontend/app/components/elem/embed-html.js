@@ -128,6 +128,7 @@ export default Component.extend({
         imgs.attr('src', function (index, val) { return val.replace(/^/, path + '/'); });
       });
     });
+    promise = 
     promise.catch(
       function (/*jqXHR, statusText,*/ error) {
         let callbackContext = this,
