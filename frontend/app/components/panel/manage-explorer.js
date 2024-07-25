@@ -122,6 +122,10 @@ export default ManageBase.extend({
     };
     // or bind(this, function ...);
   }),
+  didInsertElement() {
+    this._super(...arguments);
+    this.changeTab('explorer');
+  },
   willDestroyElement() {
     this.get('apiServers').off('receivedDatasets', this.receivedDatasetsFn);
     this._super(...arguments);
