@@ -23,6 +23,7 @@ services:
   api: # node environment
     depends_on:
       - database
+      # Could have depends_on: blastserver, but it is not a critical dependency
     build:
       context: .
       dockerfile: ./scripts/Dockerfile
@@ -32,6 +33,8 @@ services:
       - "API_HOST=${API_HOST}"
       - "API_PORT_EXT=${API_PORT_EXT}"
       - "API_PORT_PROXY=${API_PORT_PROXY}"
+      - "hostIp=${hostIp}"
+      - "FLASK_PORT=4000"       # ${BLASTSERVER_PORT}"
       - "DB_HOST=database"
       - "DB_PORT=${MONGO_DEFAULT_PORT}"
       - "DB_NAME=${DB_NAME}"
@@ -60,18 +63,17 @@ services:
 
   blastserver: # Python Flask blastn server, used for DNA Sequence Search
     image: blastserver # based on python
+    environment:
+      - "FLASK_PORT=4000"       # ${BLASTSERVER_PORT}"
     volumes:
       # mntData=/mnt/data_blast
       - $mntData/blast:$mntData/blast
       # Enables scripts/blastn_cont.bash to run blastn via docker
       - /usr/bin/docker:/usr/bin/docker
       - /var/run/docker.sock:/var/run/docker.sock
-    expose:
-      - "4000"
+    # Don't expose the BLASTSERVER_ / FLASK_PORT (e.g.4000) - not required
     ports:
       # name this ${BLASTSERVER_PORT}
-      - "4000:4000"
+      - ":4000"
     networks:
       - pretzel
-
-
