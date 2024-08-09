@@ -250,6 +250,7 @@ export default Record.extend({
   groupIsVisible : computed(
     'groupId.id',
     'server.groups.groupsInIds',
+    'groupId.owner',
     function groupIsVisible() {
     let
     visible,
