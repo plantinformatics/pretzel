@@ -85,6 +85,7 @@ const cellMultiFeatures = false;
 const nonSampleNames = [
   'ref', 'alt', 'tSNP', 'MAF',
   'Ref', 'Alt', 'LD Block',
+  'INFO',
 ];
 /** Given a key within Feature.values, classify it as sample (genotype data) or other field.
  */
