@@ -1,3 +1,4 @@
+import { ensureTrailingString } from '../app/utils/string';
 
 //------------------------------------------------------------------------------
 // Added
@@ -17,8 +18,10 @@ module.exports = function (environment) {
    * It is assumed that ROOT_URL has a leading and trailing '/'; it is '/' by default.
    * ROOT_URL and rootURL relate to the primary, and don't apply if apiHost is
    * not the primary server.
+   * Update - ROOT_URL may not have a trailing /, so append one here as required;
+   * similar in adapters/application.js : buildURL() and auth.js : _endpoint() : hostRootUrl
    */
-  rootURL = (process.env.ROOT_URL !== undefined) ? process.env.ROOT_URL : '/',
+  rootURL = (process.env.ROOT_URL !== undefined) ? ensureTrailingString(process.env.ROOT_URL, '/') : '/',
   /** Combine rootURL + apiNamespace.  This is used directly in URLs.
    * Usage : apiHost + rootURLNamespace + '/' + route
    * This could be '', otherwise it has a leading '/'.

@@ -22,15 +22,15 @@ var config = {
   },
   // for third-party auth handling
   // "user": {
-  //   "dataSource": "db",
+  //   "dataSource": "mongoDs",
   //   "public": true
   // },
   "UserCredential": {
-    "dataSource": "db",
+    "dataSource": "mongoDs",
     "public": false
   },
   "UserIdentity": {
-    "dataSource": "db",
+    "dataSource": "mongoDs",
     "public": false
   },
   //
@@ -61,18 +61,18 @@ var config = {
     "public": false
   },
   "ACL": {
-    "dataSource": "db",
+    "dataSource": "mongoDs",
     "public": false
   },
   "RoleMapping": {
-    "dataSource": "db",
+    "dataSource": "mongoDs",
     "public": false,
     "options": {
       "strictObjectIDCoercion": true
     }
   },
   "Role": {
-    "dataSource": "db",
+    "dataSource": "mongoDs",
     "public": false
   },
   "Dataset": {

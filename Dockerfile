@@ -161,7 +161,7 @@ RUN date \
   && export NODE_PATH=$NODE_BE/lib/node_modules \
   && cd $NODE_BE/lib && npm -v && node -v \
   && npm config set scripts-prepend-node-path true \
-  && cd /app && npm install nodemon@1.18.8 && npm ci \
+  && cd /app && npm install -g rollup && npm install rollup@4.14.2 nodemon@1.18.8 && npm ci \
   && date
 
 
@@ -170,7 +170,10 @@ RUN cd /frontend && (npm ci || npm install)
 
 # RUN cd /app && npm install nodemon@1.18.8 && npm ci
 
-RUN cd /frontend && node_modules/ember-cli/bin/ember build --environment production
+ARG ROOT_URL
+ENV ROOT_URL=${ROOT_URL}
+LABEL ROOT_URL=${ROOT_URL}
+RUN cd /frontend && npm rebuild node-sass && echo ROOT_URL=${ROOT_URL} && ROOT_URL=/pretzelUpdate node_modules/ember-cli/bin/ember build --environment production
 
 RUN ( [ ! -L /app/client ] || rm /app/client ) && \
   mv /frontend/dist /app/client \
