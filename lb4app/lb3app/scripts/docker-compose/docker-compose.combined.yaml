@@ -48,6 +48,8 @@ services:
       - "EMAIL_VERIFY=${EMAIL_VERIFY}"
       - "EMAIL_ADMIN=${EMAIL_ADMIN}"
       - "mntData=${mntData}"
+      - "blastDir=$blastDir"
+      # - "scriptsDir=/app/lb3app/scripts"
       - "handsOnTableLicenseKey=${handsOnTableLicenseKey}"
     volumes:
       # landingPageVolume=(--volume /home/$USER/pretzel-static-pages/$landingPageDirName:/app/client/landingPageContent)
@@ -65,6 +67,14 @@ services:
     image: blastserver # based on python
     environment:
       - "FLASK_PORT=4000"       # ${BLASTSERVER_PORT}"
+      # scriptsDir is hard-wired in the image
+      # - "scriptsDir=/usr/src/app"
+      # pretzelDir may be undefined
+      # - "pretzelDir=$pretzelDir"
+      # blastn_cont.bash defines mntData to /mnt/data
+      # Perhaps use - "mntData=${mntData:-/mnt/data}
+      - "mntData=$mntData"
+      - "blastDir=$blastDir"
     volumes:
       # mntData=/mnt/data_blast
       - $mntData/blast:$mntData/blast

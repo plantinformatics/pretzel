@@ -47,6 +47,7 @@ resultFile="$resultDir/"$(basename $fileName)
 # Flask server is on port 4000
 # dev testing : localhost
 # from feature/blastn_contPy 34652180 in .A3
+# Within docker-compose, blastserver will be .3 because it is the 3rd container, so use ip name defined by docker : 'blastserver'
 hostIpDefault=$(ip route show | awk '/default/ {print $3}')
 unused_var=${hostIp=$hostIpDefault}
 unused_var=${FLASK_PORT=4000}

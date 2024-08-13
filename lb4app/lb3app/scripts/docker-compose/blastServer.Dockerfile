@@ -21,11 +21,13 @@ LABEL scriptsDir=${scriptsDir}
 # ENV logFile=${logFile}
 # LABEL logFile=${logFile}
 
-ARG mntData=/mnt/data_blast
+# Override with docker build --build-arg mntData=..
+# or docker run -e mntData=..., or docker compose --env-file with mntData=...
+ARG mntData=${mntData:-/mnt/data}
 ENV mntData=${mntData}
 LABEL mntData=${mntData}
-
-ARG blastDir=${mntData}/blast
+# Use blastDir if defined, or default value based on mntData if defined.
+ARG blastDir=${blastDir:-${mntData:-/mnt/data}/blast}
 ENV blastDir=${blastDir}
 LABEL blastDir=${blastDir}
 

@@ -57,8 +57,15 @@ case $PWD in
     resourcesDir=resources
     ;;
 esac
-# relative to $serverDir
-unused_var=${scriptsDir=lb3app/scripts}
+# Ensure scriptsDir is absolute, not relative to $serverDir
+case $scriptsDir in
+  '') scriptsDir=$serverDir/lb3app/scripts ;;
+  # relative to $serverDir
+  /*) scriptsDir=$serverDir/$scriptsDir ;;
+  *) ;;
+esac
+
+fi
 # Default value of toolsDev, if not set above.
 unused_var=${toolsDev=$resourcesDir/tools/dev}
 unused_var=${bcftools=bcftools}
@@ -299,7 +306,7 @@ function dbName2Vcf() {
     # This file will have INFO/MAF.
     vcfGz=$(echo "$vcfInputGz" | sed 's/.vcf/.MAF.vcf/')
     # Use -e instead of -f, as $vcfInputGz could be a file or symbolic link.
-    [ -e "$vcfGz" ] || make -rR -f $serverDir/$scriptsDir/vcfGenotypeLookup.Makefile "$vcfGz"
+    [ -e "$vcfGz" ] || make -rR -f $scriptsDir/vcfGenotypeLookup.Makefile "$vcfGz"
 
     # If file does not have an index (.csi), create it.
     # Use -e instead of -f, as csi file could be a file or symbolic link.

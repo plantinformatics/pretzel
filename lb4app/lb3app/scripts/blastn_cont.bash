@@ -9,7 +9,8 @@ logFile=~/log/blast/blastn_cont
 #   190509_RGT_Planet_pseudomolecules_V1/190509_RGT_Planet_pseudomolecules_V1.fasta
 
 echo fileName,dbName=$* >> $logFile
-unused_var=${blastDir:=${mntData=/mnt/data}/blast}
+echo blastDir=$blastDir, mntData=$mntData  >> $logFile
+unused_var=${blastDir:=${mntData:=/mnt/data}/blast}
 case "$2" in
   *.dir/*)
     B_suffix=datasetId
