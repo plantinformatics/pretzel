@@ -1,4 +1,15 @@
-import { ensureTrailingString } from '../app/utils/string';
+//------------------------------------------------------------------------------
+// gets : SyntaxError: Cannot use import statement outside a module
+// import { ensureTrailingString } from '../app/utils/string';
+// Copied from app/utils/string.js :
+function ensureTrailingString(string, suffix) {
+  if (! string.endsWith(suffix)) {
+    string += suffix;
+  }
+  return string;
+}
+//------------------------------------------------------------------------------
+
 
 //------------------------------------------------------------------------------
 // Added
