@@ -1485,7 +1485,12 @@ export default InAxis.extend({
         ra.call(thisAt.configureClick2());
       }
       rs.merge(ra)
-        .transition().duration(featureTrackTransitionTime)
+      /* Since the framework library update (feature/upgradeFrontend{,2}) this
+       * transition seems to cause axis track rectangles to have initially small
+       * width e.g. ~0.001.  Solving this is not a priority - this transition
+       * does not seem to have a big visual effect.
+       */
+        // .transition().duration(featureTrackTransitionTime)
         .attr('width', pathOrRect(undefined, width));
 
       function attributesForReplace(d, i, g) {
