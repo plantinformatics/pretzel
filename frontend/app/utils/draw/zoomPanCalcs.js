@@ -3,6 +3,7 @@
 /*----------------------------------------------------------------------------*/
 
 import { isEqual } from 'lodash/lang';
+import { pick } from 'lodash/object';
 
 //------------------------------------------------------------------------------
 
@@ -173,6 +174,11 @@ function intervalDirection(interval, direction) {
  * newDomain is the new domain resulting from the zoom change.
  */
 function wheelNewDomain(event, axis, axisApi, inFilter) {
+  const fnName = 'wheelNewDomain';
+  /** axis1d is also the datum of event.currentTarget, which is e.g.
+   *   <g class="axis-all" id="all60db119e162b5e27516170a3">
+   * i.e. axis1d = event.currentTarget.__data__
+   */
   const axis1d = axis;
   let yp = axis.y;
   /* if the axis does not yet have a domain then it won't have a scale.
@@ -230,7 +236,7 @@ function wheelNewDomain(event, axis, axisApi, inFilter) {
   
   if (noDomain(axisReferenceDomain)) {
     if (trace_zoom)
-      dLog('wheelNewDomain() no domain yet', axisReferenceDomain);
+      dLog(fnName, '() no domain yet', axisReferenceDomain);
     axisReferenceDomain = undefined;
   }
   if (axisReferenceDomain === undefined) {
@@ -275,7 +281,46 @@ function wheelNewDomain(event, axis, axisApi, inFilter) {
   }
   else /* zoom */ {
     /** mousePosition used as centre for zoom, not used for pan. */
-    let mousePosition = e.layerY;
+    let mousePosition = e.layerY; // or .offsetY, similar value
+
+    /** Offset mousePosition by a portion of the y offset of the axis relative
+     * to the <svg>.  At the top of the axis use all of yOffset, and at the
+     * bottom use 0, and use a linear proportion in between.  This appears to
+     * work, but is brittle and will be replaced - this function is due for a
+     * rewrite.
+     */
+    const
+    oa = axis1d.drawMap.oa,
+    /** oa.svgContainer.node() is the top-level element within <svg> :
+     * <svg class="FeatureMapViewer"
+     *    <g transform="translate(0,1)">
+     */
+    svg = oa.svgContainer.node().parentElement,
+    svgRect = svg.getBoundingClientRect(),
+    /** event.target is the reference for the mouse movement :
+     * <rect class="overlay" pointer-events="all" cursor="crosshair" x="-8" y="0" width="16" height="391.35"></rect>
+     */
+    target = event.target,
+    targetRect = target.getBoundingClientRect(),
+    yOffset = targetRect.y - svgRect.y;
+
+    if (trace_zoom > 1) {
+      const
+      fieldNames = ["clientY", "deltaY", "layerY", "movementY", "offsetY",
+		     "pageY", "screenY", "wheelDeltaY"],
+      y = pick(event, fieldNames);
+      dLog(fnName, yOffset, mousePosition, 'y', y);
+    }
+
+    if (yOffset > 0) {
+      trace_zoom && dLog(fnName, yOffset, mousePosition);
+      /** This works ok on Chrome, not Firefox. The whole of
+       * wheelNewDomain() can be updated to use recent d3 features */
+      const maxY = 400;
+      mousePosition -= yOffset * (maxY - mousePosition) / (maxY - yOffset);
+    }
+
+
     if ((trace_zoom > 1) && mousePosition)
       console.log('mousePosition', mousePosition);
     let

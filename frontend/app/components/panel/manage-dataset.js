@@ -110,7 +110,7 @@ export default ManageBase.extend({
     ok = datasetClientId === sessionUserId;
     dLog('datasetOwned', ok, datasetClientId, sessionUserId, this.get('dataset.id'));
     const requestedBlocksSymbol = Symbol.for('requestedBlocks');
-    if (! dataset.blocks.length && dataset.tags.includes('BrAPI') &&
+    if (! dataset.blocks?.length && dataset.tags?.includes('BrAPI') &&
         ! dataset[requestedBlocksSymbol]) {
       const server = dataset.server;
       dataset[requestedBlocksSymbol] = true;
