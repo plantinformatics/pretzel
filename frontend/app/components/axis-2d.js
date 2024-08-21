@@ -719,6 +719,15 @@ export default Component.extend(Evented, AxisEvents, {
         p = axisUse.selectAll('g.axis-use > path')
           // .transition().duration(transitionEnable * 1000)
           .attr("transform",function(d) {return "translate(" + (width) + ",0)";});
+
+	/** An axis displaying a QTL dataset has <g.axis-use> (.is2d is true);
+	 * if it is then split (.extended becomes true)
+	 * axis-2d:didInsertElement() : show() is not called, so pick that up here.
+	 */
+	if (this.get('axis1d.extended') && ! p.size() ) {
+	  later(() => this.show());
+	}
+
         dLog('positionRightEdgeEffect', axisUse.node(), width, p.node());
       }
     }
