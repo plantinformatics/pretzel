@@ -472,6 +472,10 @@ export default Component.extend(Evented, AxisEvents, {
   /** receive notification of draw-map resize. */
   resized : function(prevSize, currentSize) {
     dLog("resized in components/axis-2d", this, prevSize, currentSize);
+    /* maybe positionRightEdge(); it is not otherwise done when window resizes, but width is not effected.
+    this.get('positionRightEdge').perform(); */
+    // update <path d=sLine > : edgeHeight
+    this.show();
   },
 
   /*--------------------------------------------------------------------------*/
