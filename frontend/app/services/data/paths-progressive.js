@@ -87,6 +87,7 @@ export default Service.extend({
   apiServers : service(),
   controls : service(),
   selectedService : service('data/selected'),
+  headsUp : service('data/heads-up'),
 
   /** set up a block-adj object to hold results. */
   ensureBlockAdj(blockAdjId) {
@@ -850,6 +851,7 @@ export default Service.extend({
 
   vcfGenotypeLookup(block, paramAxis) {
     const
+    fnName = 'vcfGenotypeLookup',
     /** params for  */
     vcfDatasetId = block.get('datasetId.genotypeId'),
     domain = paramAxis.domain || block.get('axis1d.domain'),
@@ -885,7 +887,25 @@ export default Service.extend({
       requestOptions, vcfDatasetId, block.name, rowLimit
     );
 
+    textP
+    /* can add .then(result => this.showText('')), possibly with a source label
+     * param so that error streams are independent. */
+      .catch(error => {
+        dLog(fnName, 'catch', error);
+        this.showText(error.responseJSON.error.message);
+      });
     return textP;
+  },
+
+
+  /** Display text for user messages / notifications.
+   * @param text
+   */
+  showText(text) {
+    // copied from components/draw/axis-1d.js : drawTicks() : showText()
+    if (! this.get('isDestroying') && ! this.get('headsUp.isDestroying')) {
+      this.set('headsUp.tipText', text);
+    }
   },
 
 
