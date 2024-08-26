@@ -1484,6 +1484,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
    * @param datasetId  name of VCF / Genotype / view dataset, or vcf directory name
    * @param scope e.g. '1A'; identifies the vcf file, i.e. datasetId/scope.vcf.gz
    * Could pass blockId instead  of datasetId and scope.
+   * scope===undefined or null signifies that all scopes of the dataset should be searched.
    * @param nLines if defined, limit the output to nLines.
    * @param preArgs args to be inserted in command line, additional to the vcf file name.
    * See comment in frontend/app/services/auth.js : vcfGenotypeLookup()
@@ -1492,7 +1493,8 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     const
     fnName = 'vcfGenotypeLookup';
 
-    parseBooleanFields(preArgs, ['snpPolymorphismFilter', 'requestSamplesAll', 'requestInfo', 'headerOnly', 'mafUpper']);
+    /** These boolean and numeric arguments are received as strings, so parse them. */
+    parseBooleanFields(preArgs, ['snpPolymorphismFilter', 'requestSamplesAll', 'requestInfo', 'headerOnly', 'mafThreshold', 'mafUpper', 'featureCallRateThreshold']);
 
     /** Caching is generally not applicable to this request, because the region
      * / interval is always present - when zoomed out only the features counts
@@ -1550,7 +1552,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
   const vcfGenotypeLookupOptions = {
     accepts: [
       {arg: 'datasetId', type: 'string', required: true},
-      {arg: 'scope', type: 'string', required: true},
+      {arg: 'scope', type: 'string', required: false},
       {arg: 'preArgs', type: 'object', required: false},
       {arg: 'nLines', type: 'number', required: false},
       {arg: "options", type: "object", http: "optionsFromRequest"},

@@ -2,13 +2,21 @@
 // gets : SyntaxError: Cannot use import statement outside a module
 // import { ensureTrailingString } from '../app/utils/string';
 // Copied from app/utils/string.js :
+// import { ensureTrailingString } from '../app/utils/string';
+/** Ensure that the given string ends with the given suffix, which may be a multi-char string.
+ * @param string
+ * @param suffix
+ * @desc
+ * Usage e.g. ensureTrailingString(apiHost, '/')
+ */
 function ensureTrailingString(string, suffix) {
   if (! string.endsWith(suffix)) {
     string += suffix;
   }
   return string;
 }
-//------------------------------------------------------------------------------
+
+//-------------------------------------------------------------------------------
 
 
 //------------------------------------------------------------------------------

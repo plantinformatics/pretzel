@@ -14,6 +14,7 @@ import { keyBy } from 'lodash/collection';
 
 import { stacks } from '../../utils/stacks';
 import { intervalSize, truncateMantissa }  from '../../utils/interval-calcs';
+import { featuresCountsResultSum } from '../../utils/draw/featuresCountsResults';
 import { breakPoint } from '../../utils/breakPoint';
 
 //------------------------------------------------------------------------------
@@ -642,6 +643,12 @@ export default Service.extend(Evented, {
                 block.featuresCountsResultsMergeOrAppend(result);
                 // after MergeOrAppend, .featuresCountsResultsFiltered seems preferable to featuresCounts
                 block.set('featuresCounts', featuresCounts);
+                // could also check block.limits matches featuresCountsDomain(featuresCounts)
+                const featureCount = featuresCountsResultSum(featuresCounts);
+                if (! block.featureCount || (block.featureCount < featureCount)) {
+                  dLog(fnName, block.featureCount, 'featureCount', featureCount);
+                  block.set('featureCount', featureCount);
+                }
               }
             });
             }
@@ -1053,6 +1060,7 @@ export default Service.extend(Evented, {
   viewedChartable: computed(
     'viewed.@each.{featuresCounts,isChartable,isZoomedOut}',
     function() {
+      const fnName = 'viewedChartable';
       let records =
         this.get('viewed')
         .filter(function (block) {
@@ -1063,11 +1071,13 @@ export default Service.extend(Evented, {
             console.log('viewedChartable', tags, block);
           return featuresCounts || line;
         });
-      if (trace_block > 1)
+      if (trace_block > 1) {
         console.log(
+          're. featuresCounts',
           'viewedChartable', records
             .map(function(blockR) { return blockR.view.longName(); })
         );
+      }
       return records;  // .toArray()
     }),
 

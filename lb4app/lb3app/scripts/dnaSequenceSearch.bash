@@ -10,6 +10,10 @@ case $PWD in
     resourcesDir=${scriptsDir=/app/lb3app/scripts}
     toolsDev=$resourcesDir
     blastn=$resourcesDir/blastn_request.bash
+    case $resourcesDir in
+      /*) ;;
+      *) blastn=$serverDir/$blastn ;;
+    esac
     ;;
   # orig : *backend
   *lb4app)
@@ -25,7 +29,7 @@ esac
 # Default value of toolsDev, if not set above.
 unused_var=${toolsDev:=$resourcesDir/tools/dev}
 unused_var=${blastn:=blastn}
-unused_var=${blastDir:=/mnt/data_blast/blast}
+unused_var=${blastDir:=${mntData=/mnt/data}/blast}
 unused_var=${datasetIdDir:=$blastDir/datasetId}
 
 
@@ -135,7 +139,8 @@ function datasetId2dbName()
     # Can't use soft-link across container boundary, but can pass its path
     # The link may have a trailing /. Ensure that $dir has a trailing /.
     dir=$( [ -L "$datasetId".dir ] && ls -ld "$datasetId".dir | sed 's/.*\/GENOME_REFERENCES\///;s/\([^/]\)$/\1\//' )
-    dbName=$blastDir/GENOME_REFERENCES/$dir$(cat "$datasetId".dbName)
+    # previously prefixed with $blastDir/GENOME_REFERENCES/
+    dbName=$dir$(cat "$datasetId".dbName)
   else
     dbName="$datasetId".dir/$(cat "$datasetId".dbName)
   fi

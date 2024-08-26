@@ -60,7 +60,7 @@ export default BaseForm.extend({
 	  reason += match[2];
 	  htmlPageError = reason;
 	}
-      } else {
+      } else if (reason !== 'error') {
 	reason = JSON.parse(reason);
       }
 

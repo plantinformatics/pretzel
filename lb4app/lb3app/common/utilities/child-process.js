@@ -180,7 +180,7 @@ exports.childProcess = (scriptName, postData, useFile, fileName, moreParams, dat
       let
       errors_warnings = errors.concat(warnings).join("\n");
       errors = []; warnings = [];
-      cb(new ErrorStatus(400, errors_warnings));
+      cb(ErrorStatus(400, errors_warnings));
     } else {
       // process each tmp/out_json/"$datasetName".json
       const message = 'Processed file ' + fileName;

@@ -196,6 +196,7 @@ export default Component.extend(Evented, AxisEvents, {
         let 
         featureCountInBrush = this.round1(block.get('featuresCountIncludingBrush')),
         featuresCount = this.round1(block.get('featuresCountIncludingZoom'));
+        // possibly rename this field featuresCount -> featureCount, to align with block.featureCount
         return {block, featuresCount, featureCountInBrush};
       });
       dLog('brushedBlocks', brushedBlocks);

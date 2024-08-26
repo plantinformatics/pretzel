@@ -37,6 +37,7 @@
         onDragEnd : described in split.js/README.md : Documentation --}}
   <div {{split-view direction=this.splitViewDirection
     rerender=this.splitViewDirection
+    registerInstance=(action this.registerInstanceRightSplit)
     onDragEnd=(action this.onDragEnd)
     sizes=this.sizesPrev minSize=(array 20 5)
     gutterSize=15}}
@@ -183,6 +184,7 @@
             selectedFeatures=this.selectedFeatures
             updatedSelectedFeatures=(action this.actions.updateSelectedFeatures)
             userSettings=this.userSettings.genotype
+            loadBlock=(action this.actions.loadBlock)
             }}
 
         {{else if (and (compare this.layout.right.tab '===' 'settings') this.model.params.parsedOptions.advSettings)}}

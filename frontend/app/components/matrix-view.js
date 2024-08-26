@@ -1678,7 +1678,9 @@ export default Component.extend({
         longest = w;
       }
     });
-    return longest + 20;
+    const height = longest !== 0 ? longest + 20 : longest;
+    dLog('colHeaderHeight', height, longest, this.userSettings.columnHeaderHeight);
+    return height;
   }),
   /** For each value (column data / block / sample)  of .columns{},
    *   for each feature,
@@ -1943,7 +1945,8 @@ export default Component.extend({
     let table = this.get('table');
     let data = this.get('data');
     const gtPlainRender = this.urlOptions.gtPlainRender;
-    dLog('matrix-view', fnName, t, rows.length, rowHeaderWidth, colHeaderHeight, tableHeight, table, data, this.blockSamples && 'vcf');
+    dLog('matrix-view', fnName, t, rows.length, rowHeaderWidth, 'colHeaderHeight', colHeaderHeight, tableHeight, table, data, this.blockSamples && 'vcf');
+    d3.select('body').style('--matrixViewColumnHeaderHeight', '' + colHeaderHeight + 'px');
 
     if (gtPlainRender & 0b10000) {
       this.hideColumns();
@@ -2248,6 +2251,7 @@ export default Component.extend({
    * @param columnHeaderHeight initially .colHeaderHeight, then resizer height
    */
   setColumnHeaderHeight(columnHeaderHeight) {
+    dLog('setColumnHeaderHeight', columnHeaderHeight);
     /* In the case of manage-genotype (i.e. ! fullPage), matrix-view does not
      * use this, instead .height = tableHeightFromParent(), enabled by calculateTableHeight.
      *
@@ -2268,6 +2272,7 @@ export default Component.extend({
     const body = d3.select('body');
     if (! body.style('--matrixViewColumnHeaderHeight')) {
       const height = this.get('colHeaderHeight') || 300;
+      dLog('defaultColumnHeaderHeight', height, body.node());
       body.style('--matrixViewColumnHeaderHeight', '' + height + 'px');
     }
   },

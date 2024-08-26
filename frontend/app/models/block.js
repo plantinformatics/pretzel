@@ -157,7 +157,7 @@ export default Model.extend({
    */
   showPaths : computed(
     'datasetId._meta.paths', 'id',
-    'featuresCountIncludingZoom', 'featuresCount',
+    'featuresCountIncludingZoom', 'featureCount',
     function () {
     let
     dataset = this.get('datasetId'),
@@ -204,10 +204,10 @@ export default Model.extend({
      * So disable paths if tagged HighDensity.
      *
      * this expression uses the fact that (undefined < featureCountForPaths) is false.
-     * .featureValueCount is approx 2 * .featuresCount because it sums feature.value.length which is often 2.
+     * .featureValueCount is approx 2 * .featureCount because it sums feature.value.length which is often 2.
      */
       paths &&= ! this.get('isHighDensity') && (
-        (this.get('featuresCount') < featureCountForPaths) ||
+        (this.get('featureCount') < featureCountForPaths) ||
           (this.get('featureValueCount') < featureCountForPaths * 2) ||
           (this.get('featuresCountIncludingZoom') < featureCountForPaths));
       // dLog('showPaths', dataset, paths);

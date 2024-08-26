@@ -9,6 +9,8 @@
     </BsNav>
     <div class="tab-content">
       <tab.pane @id="left-panel-feature-search" id="left-panel-feature-search" @title="Search">
+            <Panel::GenotypeSearch/>
+
             {{panel/manage-search
                 view=this.view
                 queryParamsState=this.queryParamsState

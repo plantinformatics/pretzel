@@ -23,6 +23,17 @@ export default Service.extend(Evented, {
    */
   viewed2 : {},
 
+  //----------------------------------------------------------------------------
+  /** Classic Components can be found via :
+   * Ember.getOwner(component) .lookup('component:' + 'panel/manage-explorer')
+   * but Glimmer Components seem to be not registered, so that would have to be
+   * done.  registrationsByName provides a simple lookup mechanism for those
+   * Glimmer Components, e.g.  'component:panel/manage-genotype'
+   */
+  registrationsByName : {},
+
+  //----------------------------------------------------------------------------
+
   /** @return the api server indicated by the tab currently selected
    * by the user (serverTabSelected), or primaryServer if tab not
    * changed.

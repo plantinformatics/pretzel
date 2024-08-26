@@ -10,7 +10,7 @@ import { stringCountString, toTitleCase } from '../string';
 import { stringGetFeature, stringSetSymbol, stringSetFeature } from '../panel/axis-table';
 import { contentOf } from '../common/promises';
 import { featuresIntervalsForTree } from './features';
-import { intervalsIntersect } from '../interval-calcs';
+import { intervalsIntersect, intervalMerge } from '../interval-calcs';
 import { Measure } from './genotype-order';
 
 //------------------------------------------------------------------------------
@@ -81,6 +81,7 @@ const cellMultiFeatures = false;
  * displayed in the column header (without the trailing "\t" + datasetId).
  * Related : columnNameIsNotSample() (for current usage, these 2 could
  * potentially be merged).
+ * INFO is a field of feature.values and is not a sample.
  */
 const nonSampleNames = [
   'ref', 'alt', 'tSNP', 'MAF',

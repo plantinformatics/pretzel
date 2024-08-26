@@ -60,3 +60,39 @@ function ensureTrailingString(string, suffix) {
 }
 
 //-------------------------------------------------------------------------------
+
+export { namesTrim, namesTrimArrayUniq, namesTrimUniq }
+
+/** Given input of a list of names of Samples or SNPs /  Features text e.g. from a <textarea>, 
+ * remove leading and trailing whitespace and excess newlines.
+ * Treat whitespace and commas as newlines.
+ */
+function namesTrim(namesText) {
+  const
+  trimmed = namesText
+    .replaceAll(/[ \t,]+/g, '\n')
+    .replaceAll(/\n\n+/g, '\n')
+    .replace(/^\n/, '')
+    .replace(/\n$/, '');
+  return trimmed;
+}
+/** As for namesTrim(), but convert to an array and remove duplicates.
+ */
+function namesTrimArrayUniq(namesText) {
+  const
+  array = namesText
+    .split(/[ \t\n,]+/g)
+    .uniq()
+    .filter(s => s);
+  return array;
+}
+/** As for namesTrimArrayUniq(), and join the array elements back into a single
+ * string separated by newlines.  */
+function namesTrimUniq(namesText) {
+  const
+  string = namesTrimArrayUniq(namesText).join('\n');
+  return string;
+}
+
+
+//-------------------------------------------------------------------------------

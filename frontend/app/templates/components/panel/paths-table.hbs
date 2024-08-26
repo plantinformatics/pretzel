@@ -12,7 +12,9 @@
       {{!-- based on elem/button-submit.hbs, could be factored --}}
       <div class="">
         <button type="submit" {{action "requestAllPaths"}} class="btn btn-info {{if this.loading 'disabled'}}">Get all brushed paths</button>
-        <button class="btn btn-info">{{!-- #component "ember-csv@file-anchor" data=this.csvExportData}} CSV Download{{/component  --}} </button>
+        {{#if this.csvExportData.length}}
+          <button class="btn btn-info">{{#component "ember-csv@file-anchor" data=csvExportData}} CSV Download{{/component}} </button>
+        {{/if}}
         <br>
         <br>
       </div>

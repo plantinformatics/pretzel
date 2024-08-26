@@ -3,6 +3,7 @@ import $ from 'jquery';
 
 /*global d3 */
 /* global CSS */
+/* global DOMParser */
 
 const trace_dom = 0;
 const dLog = console.debug;
@@ -459,10 +460,43 @@ function responseTextParseHtml(responseText) {
   fnName = 'responseTextParseHtml',
   parser = new DOMParser(),
   doc = parser.parseFromString(responseText, 'text/html'),
+  body = doc.body,
   // doc.querySelector('title')
   pre = doc?.querySelector('body pre'),
-  // &nbsp; precedes "at"
-  text = pre?.textContent.replace(/at \/.*/, '');
+  textContent = pre?.textContent;
+  let text = textContent;
+  if (textContent) {
+    /** format is error message followed by stack backtrace, with "at" at the
+     * start of each backtrace line.
+     * "at" was followed by a path but now it may be function name (path)
+     * e.g. "at exports.ErrorStatus (/app/"
+     * Currently observing space and nbsp (U+00A0, decimal 160, octal 0240) before "at"
+     * https://www.compart.com/en/unicode/U+00A0
+     * so try splitting on that first.
+     * There are 2 pairs; if that is consistent the split could be on fromCharCode(32, 160, 32, 160).
+     */
+    const lines = textContent.split(String.fromCharCode(32, 160));
+    if (lines) {
+      text = lines[0];
+    } else {
+      // &nbsp; precedes "at"
+      /* probably drop the \/; preferably avoid getting text/html responses so
+       * this is not used */
+      text = textContent.replace(/at \/.*/, '');
+    }
+  } else {
+    /** The above works if body.childNodes is NodeList(3) [ #text, pre, #text ]
+     * but it may be NodeList(3) [ #text, div#wrapper, #text ].
+     * In both cases body.childNodes[1] contains the message text.
+     * For div#wrapper there is no backtrace to split off,  e.g. "
+      Error
+      400 Error:curl: (7) Failed to connect to localhost port 4000 after 0 ms: Couldn't connect to server
+
+      
+    "
+    */
+    text = body.childNodes[1]?.textContent;
+  }
   return text;
 }
 

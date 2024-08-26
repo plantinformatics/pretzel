@@ -121,8 +121,11 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
       this.set(`layout.${side}.visible`, !visibility);
     },
     setTab: function(side, tab) {
-      dLog("setTab", side, tab, this.get('layout'));
-      this.set(`layout.${side}.tab`, tab);
+      const fieldName = `layout.${side}.tab`;
+      if (this.get(fieldName) !== tab) {
+        dLog("setTab", side, tab, this.get('layout'));
+        this.set(fieldName, tab);
+      }
     },
     updateSelectedFeatures: function(features) {
       // dLog("updateselectedFeatures in mapview", features.length);
@@ -304,7 +307,7 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
     },
     getSummaryAndData(block) {
       /* Before progressive loading this would load the data (features) of the block.
-       * Now it just loads summary information : featuresCount (block total) and
+       * Now it just loads summary information : featureCount (block total) and
        * also featuresCounts (binned counts).
        * The block record itself is already loaded in the initial Datasets request;
        * - it is the parameter `block`.
@@ -479,6 +482,22 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
 
   //----------------------------------------------------------------------------
 
+  /** Register the Split.js instance which alternates in position between Right/Bottom.
+   * and contains Dataset / Features / Paths / Genotypes
+   */
+  registerInstanceRightSplit(splitInstance) {
+    dLog('registerInstanceRightSplit', splitInstance, this.rightSplitInstance);
+    /* To provide also support for setSizes([100, 0]) when display of
+     * the right panel is toggled, factor out leftSplitListen() to a
+     * sub-component wrapping split-view.
+     * For now, this instance reference enables the Genotype Table
+     * width to be set for genotype-search.
+     */
+    this.controls.window.rightSplitInstance = splitInstance;
+  },
+
+  //----------------------------------------------------------------------------
+
   splitViewDirection : computed('tablesPanelRight', function () {
     let direction = this.tablesPanelRight ? 'horizontal' : 'vertical';
     dLog('splitViewDirection', direction, this.tablesPanelRight);
@@ -520,7 +539,10 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
     view : {  },
     /** to add .viewed, use computed() to provide `this`
     viewed : () => this.get('controlsService.viewed'),  */
-    window : {tablesPanelRight : false } }),
+    /** Changing tablesPanelRight : false -> true because that suits the
+     * Genotype Table, which is now a predominant display panel.
+     */
+    window : {tablesPanelRight : true, navigation : { } } }),
 
   queryParams: ['mapsToView'],
   mapsToView: [],
@@ -567,6 +589,8 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
     if (! window.PretzelFrontend) {
       window.PretzelFrontend = {};
     }
+
+    this.controls.window.navigation.setTab = this.actions.setTab.bind(this);
   },
 
   currentURLDidChange: observer('target.currentURL', function () {
