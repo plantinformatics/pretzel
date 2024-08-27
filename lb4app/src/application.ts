@@ -11,6 +11,8 @@ import {Lb3AppBooterComponent} from '@loopback/booter-lb3app';
 
 import path from 'path';
 import {MySequence} from './sequence';
+import {DatasetRepository} from './repositories';
+import {DatasetController} from './controllers';
 
 /* global process */
 
@@ -55,5 +57,8 @@ export class PretzelApplication extends BootMixin(
       },
     };
     this.component(Lb3AppBooterComponent);
+
+    this.repository(DatasetRepository);
+    this.controller(DatasetController);
   }
 }

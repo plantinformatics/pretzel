@@ -59,6 +59,18 @@ export class Dataset extends Record {
   })
   parent?: string;
 
+  @property({
+    type: 'array',
+    itemType: 'object',
+  })
+  blocks?: object[];
+
+  @property({
+    type: 'array',
+    itemType: 'object',
+  })
+  features?: object[];
+
   // Define well-known properties here
 
   // Indexer property to allow additional data
