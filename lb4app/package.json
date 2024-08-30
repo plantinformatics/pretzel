@@ -71,7 +71,7 @@
     "dotenv": "^16.0.0",
     "express-sse": "^0.5.3",
     "helmet": "^5.0.2",
-    "interval-bins": "git+https://git@github.com/plantinformatics/interval-bins.git",
+    "interval-bins": "github:plantinformatics/interval-bins",
     "interval-tree-1d": "^1.0.4",
     "jquery-param": "^1.1.8",
     "lodash": "^4.17.21",
