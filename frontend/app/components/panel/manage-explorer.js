@@ -320,7 +320,8 @@ export default ManageBase.extend({
       let keyLength = treesChildrenCount(valueTree);
       this.set('blockFeatureOntologiesTreeEmbeddedKeyLength', keyLength);  // perhaps rename both to keysLength.
       return valueTree;
-    });
+    })
+      .catch(error => { dLog(fnName, error.responseJSON.error || error); return Promise.resolve({}); });
     return promise;
   }),
 
