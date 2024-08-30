@@ -88,7 +88,6 @@
     "openai": "^3.3.0",
     "passport-ldapauth": "3.0.1",
     "promise-queue": "^2.2.5",
-    "serve-favicon": "^2.5.0",
     "tslib": "^2.0.0",
     "vectra": "^0.1.2",
     "xlsx": "^0.18.5"
