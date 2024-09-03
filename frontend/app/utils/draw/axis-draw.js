@@ -282,12 +282,11 @@ AxisDraw.prototype.draw2 = function draw2(selections, axes, newRender, stacksAxe
 
 
   let dropTarget = new DropTarget(oa, oa.vc, g);
-
-  [true, false].forEach(function (i) {
-    dropTarget.add(i);
-    // dropTarget.addMiddle(i);
-  });
-
+  /** i.e. g.stack > g.axis-outer */
+  const axisAll = d3.selectAll('g.axis-outer');
+  /** default publishMode to false, i.e. show dropTarget */
+  const show = ! (oa.drawOptions.publishMode ?? false);
+  dropTarget.show(axisAll, show);
 
   /** from newly added g.axis-all : filter out those which have a parent which draws their axis. */
   // i.e. filter out data blocks, which are not primary (referenceBlock of an axis)

@@ -699,6 +699,8 @@ export default Component.extend({
     this.drawOptions.publishMode = ! checked;
     /** the checkbox is 'Show', so hide if ! checked. */
     svgContainer.classed("publishMode", ! checked);
+    // or add dependency 'oa.drawOptions.publishMode' to axesViewedEffect()
+    oa.axisApi.stacksView.draw();
   },
 
   axisFontSizeChanged(value) {
