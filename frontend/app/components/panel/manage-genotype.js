@@ -235,6 +235,8 @@ export default class PanelManageGenotypeComponent extends Component {
   @service('data/haplotype') haplotypeService;
   @service('query-params') queryParamsService;
   @service('data/selected') selectedService;
+  @service('data/transient') transient;
+
 
 
   @alias('controls.apiServerSelectedOrPrimary') apiServerSelectedOrPrimary;
@@ -2413,6 +2415,15 @@ export default class PanelManageGenotypeComponent extends Component {
            * to be in a single dataset.
            */
         }
+
+        const scope = blockV.get('scope');
+        /* for components/panel/genotype-search.js */
+        if (! scope) {
+          added.createdFeatures.forEach(f => {
+            this.transient.showFeature(f, true);
+          });
+        }
+
 
         const showOtherBlocks = true;
         if (showOtherBlocks) {
