@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# for blastn, installed from ncbi/blast in /blast/
+export PATH=$PATH:/blast/bin
+
 logFile=~/log/blast/blastn_cont
 
 # dbName is the blastdb name / path within this dir $B

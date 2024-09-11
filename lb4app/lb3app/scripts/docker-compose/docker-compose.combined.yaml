@@ -78,9 +78,6 @@ services:
     volumes:
       # mntData=/mnt/data_blast
       - $mntData/blast:$mntData/blast
-      # Enables scripts/blastn_cont.bash to run blastn via docker
-      - /usr/bin/docker:/usr/bin/docker
-      - /var/run/docker.sock:/var/run/docker.sock
     # Don't expose the BLASTSERVER_ / FLASK_PORT (e.g.4000) - not required
     ports:
       # name this ${BLASTSERVER_PORT}

@@ -1,7 +1,25 @@
+#-------------------------------------------------------------------------------
+
+# Copy the blastn binary and related files from the ncbi/blast image
+FROM ncbi/blast:latest as blast
+
 # Use an official Python runtime as a parent image
 FROM python:3.7
 
+COPY --from=blast /blast /blast
+# Also copy liblmdb.so* which blastn depends on.
+# Lightning Memory-Mapped Database
+# Refn :
+#   https://github.com/LMDB/lmdb
+#   http://www.lmdb.tech/
+#   https://www.symas.com/lmdb
+COPY --from=blast /usr/lib/x86_64-linux-gnu/liblmdb.so* /usr/lib/x86_64-linux-gnu/
+
 #-------------------------------------------------------------------------------
+
+ARG BLASTSERVER_VERSION=1.0.4
+ENV BLASTSERVER_VERSION=${BLASTSERVER_VERSION}
+LABEL BLASTSERVER_VERSION=${BLASTSERVER_VERSION}
 
 ARG FLASK_PORT=4000
 ENV FLASK_PORT=${FLASK_PORT}
