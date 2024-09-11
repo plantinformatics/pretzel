@@ -17,7 +17,7 @@ COPY --from=blast /usr/lib/x86_64-linux-gnu/liblmdb.so* /usr/lib/x86_64-linux-gn
 
 #-------------------------------------------------------------------------------
 
-ARG BLASTSERVER_VERSION=1.0.4
+ARG BLASTSERVER_VERSION=1.0.5
 ENV BLASTSERVER_VERSION=${BLASTSERVER_VERSION}
 LABEL BLASTSERVER_VERSION=${BLASTSERVER_VERSION}
 
