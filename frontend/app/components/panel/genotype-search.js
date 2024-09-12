@@ -1,6 +1,6 @@
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
-import EmberObject, { computed, action } from '@ember/object';
+import EmberObject, { computed, action, get as Ember_get } from '@ember/object';
 import { alias, reads } from '@ember/object/computed';
 import { later } from '@ember/runloop';
 
@@ -205,6 +205,7 @@ export default class PanelGenotypeSearchComponent extends Component {
     /** Select the Genotype Table display manage-genotype in the right panel. */
     this.controls.window.navigation.setTab('right', 'genotype');
     this.controls.window.rightSplitInstance?.setSizes([35, 65]);
+    Ember_get(this.manageGenotype, 'vcfGenotypeSamplesSelectedAll');
   }
 
   @action

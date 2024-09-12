@@ -18,6 +18,7 @@ import createIntervalTree from 'interval-tree-1d';
 import NamesFilters from '../../utils/data/names-filters';
 import { toPromiseProxy, toArrayPromiseProxy, addObjectArrays, arrayClear } from '../../utils/ember-devel';
 import { thenOrNow, contentOf, pollCondition } from '../../utils/common/promises';
+import { responseTextParseHtml } from '../../utils/domElements';
 import { clipboard_writeText } from '../../utils/common/html';
 import { arrayChoose } from  '../../utils/common/arrays';
 import { intervalSize } from '../../utils/interval-calcs';
@@ -1965,7 +1966,13 @@ export default class PanelManageGenotypeComponent extends Component {
   // ---------------------------------------------------------------------------
 
   showError(fnName, error) {
-    let
+    let message;
+    /** As in components/form/base.js : handleError(), see comment there;
+     * see also checkError().
+     */
+    if (! error.responseJSON && error.responseText) {
+      error = responseTextParseHtml(error.responseText);
+    } else {
     message = error.responseJSON?.error?.message ?? error;
     dLog(fnName, message, error.status, error.statusText);
     if (message?.split) {
@@ -1974,9 +1981,9 @@ export default class PanelManageGenotypeComponent extends Component {
       message = match[0];
     }
     }
+    }
     this.lookupMessage = message;
   }
-
 
   // ---------------------------------------------------------------------------
 
@@ -2055,7 +2062,7 @@ export default class PanelManageGenotypeComponent extends Component {
      * currently received from Germinate data / interface, so cannot determine
      * Numerical format (number of copies of Alt).  So request and display CATG.
      */
-    if (this.lookupBlock.hasTag('Germinate')) {
+    if (this.lookupBlock?.hasTag('Germinate')) {
       Ember_set(this, 'args.userSettings.requestFormat', 'CATG');
     }
     if (this.args.userSettings.autoLookup) {
@@ -3640,7 +3647,7 @@ export default class PanelManageGenotypeComponent extends Component {
     const
     /** BrAPI headerTextP includes chrPosId[] columns, so don't call insertChromColumn().
      * Probably the current result (headerText, vcfGenotypeText) is for .lookupBlock */
-    isBrAPI = this.lookupBlock.hasTag('BrAPI'),
+    isBrAPI = this.lookupBlock?.hasTag('BrAPI'),
     tableRows = isBrAPI ? vcfGenotypeText : this.insertChromColumn(vcfGenotypeText),
     combined = headerText.concat(tableRows);
     return combined;
