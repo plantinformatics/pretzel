@@ -205,7 +205,14 @@ export default class PanelGenotypeSearchComponent extends Component {
     /** Select the Genotype Table display manage-genotype in the right panel. */
     this.controls.window.navigation.setTab('right', 'genotype');
     this.controls.window.rightSplitInstance?.setSizes([35, 65]);
-    Ember_get(this.manageGenotype, 'vcfGenotypeSamplesSelectedAll');
+    /** vcfGenotypeSamplesSelectedAll is used by vcfGenotypeSearch().
+     * In manage-genotype : vcfGenotypeSamplesSelectedAll depends on
+     * .userSettings.vcfGenotypeSamplesSelected which is set by
+     * userSettingsDefaults().
+     * Above setTab('right', 'genotype) will ensure manage-genotype is rendered;
+     * wait for a render cycle.
+     */
+    later(() => Ember_get(this.manageGenotype, 'vcfGenotypeSamplesSelectedAll'), 500);
   }
 
   @action
@@ -230,7 +237,11 @@ export default class PanelGenotypeSearchComponent extends Component {
     const
     samplesArray = namesTrimArrayUniq(this.selectedSamplesText),
     samples = samplesArray.join('\n');
-    manageGenotype.vcfGenotypeSamplesSelectedAll[this.selectedDatasetId] = samplesArray;
+    if (! manageGenotype.vcfGenotypeSamplesSelectedAll) {
+      dLog(fnName, 'vcfGenotypeSamplesSelectedAll not defined');
+    } else {
+      manageGenotype.vcfGenotypeSamplesSelectedAll[this.selectedDatasetId] = samplesArray;
+    }
     const
     resultP =
     this.manageGenotype.vcfGenotypeLookupDataset(

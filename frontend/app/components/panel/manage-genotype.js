@@ -291,14 +291,14 @@ export default class PanelManageGenotypeComponent extends Component {
   @alias('args.userSettings.vcfGenotypeSamplesSelected')
   vcfGenotypeSamplesSelectedAll;
 
-  /** see selectedSamples() */
+  /** aliased as selectedSamples() */
   // @computed('lookupBlockSamples.selected')
   @computed('lookupDatasetId', 'receivedNamesCount')
   get vcfGenotypeSamplesSelected() {
     if (! this.lookupDatasetId) {
       dLog('get vcfGenotypeSamplesSelected', this.lookupDatasetId);
     }
-    let selected = this.vcfGenotypeSamplesSelectedAll[this.lookupDatasetId];
+    let selected = this.vcfGenotypeSamplesSelectedAll?.[this.lookupDatasetId];
     return selected;
   }
   set vcfGenotypeSamplesSelected(selected) {
@@ -1971,16 +1971,16 @@ export default class PanelManageGenotypeComponent extends Component {
      * see also checkError().
      */
     if (! error.responseJSON && error.responseText) {
-      error = responseTextParseHtml(error.responseText);
+      message = responseTextParseHtml(error.responseText);
     } else {
-    message = error.responseJSON?.error?.message ?? error;
-    dLog(fnName, message, error.status, error.statusText);
-    if (message?.split) {
-    const match = message?.split('Error: Unable to run bcftools');
-    if (match.length > 1) {
-      message = match[0];
-    }
-    }
+      message = error.responseJSON?.error?.message ?? error;
+      dLog(fnName, message, error.status, error.statusText);
+      if (message?.split) {
+        const match = message?.split('Error: Unable to run bcftools');
+        if (match.length > 1) {
+          message = match[0];
+        }
+      }
     }
     this.lookupMessage = message;
   }
