@@ -75,7 +75,7 @@ https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Comm
 
       <input
         type="file"
-        {{queue.selectFile filter=this.validateFile}}
+        {{queue.selectFile filter=(action this.validateFile)}}
         >
       <label>Add a Spreadsheet.</label>
     </p>
