@@ -128,17 +128,24 @@ then
   fileName=$serverDir/"$fileName"
 fi
 
+# Indicates if the flask blastServer.py is running in a container, 0 === true, 1 === false
+# Default is 0 (i.e. in a container); define pretzel api server env : export flaskInContainer=1 otherwise.
+unused_var=${flaskInContainer:=0}
+
 function datasetId2dbName()
 {
   if [ ! -f "$datasetId".dbName ]
   then
     dbName="$datasetId"
     echo 1>&4 'Warning:' "no file '$datasetId.dbName', using '$datasetId'"
-  elif [ $inContainer -eq 0  -a  ! -d "$datasetId".dir ]
+  elif [ $inContainer -eq 0 -a $flaskInContainer -eq 0  -a  ! -d "$datasetId".dir ]
   then
     # Can't use soft-link across container boundary, but can pass its path
+    # so use ls to get the link value.
+    # Trim off the LHS, up to GENOME_REFERENCES/, or up to ' -> '.
+    # Earlier versions of blastn_cont.bash expected dbName to be relative.
     # The link may have a trailing /. Ensure that $dir has a trailing /.
-    dir=$( [ -L "$datasetId".dir ] && ls -ld "$datasetId".dir | sed 's/.*\/GENOME_REFERENCES\///;s/\([^/]\)$/\1\//' )
+    dir=$( [ -L "$datasetId".dir ] && ls -ld "$datasetId".dir | sed 's/.*\/GENOME_REFERENCES\///;s/.* -> //;s/\([^/]\)$/\1\//' )
     # previously prefixed with $blastDir/GENOME_REFERENCES/
     dbName=$dir$(cat "$datasetId".dbName)
   else
