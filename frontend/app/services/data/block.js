@@ -294,8 +294,11 @@ export default Service.extend(Evented, {
     rootsP = this.get('ontologyIds').then((ois) => {
       let
       rootsSet = ois.reduce((result, ontologyId) => {
+        /** skip ontologyId if it is a number.
+         * ontologyId is expected to be a string.
+         */
         let
-        rootIdMatch = ontologyId.match(/^(CO_[0-9]+):/),
+        rootIdMatch = ontologyId?.match && ontologyId.match(/^(CO_[0-9]+):/),
         rootId = rootIdMatch && rootIdMatch[1];
         if (rootId) {
           result.add(rootId);

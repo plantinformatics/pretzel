@@ -92,7 +92,7 @@ export default Service.extend({
       this.levelMeta.set(valueTree, {typeName : 'term', name : 'CO'});
       return blockFeatureOntologiesTreeEmbeddedFn(this.levelMeta, valueTree, id2Pn);
     })
-      .catch(error => { dLog(fnName, error.responseJSON.error || error); return Promise.resolve({}); });
+      .catch(error => { dLog(fnName, error?.responseJSON?.error || error); return Promise.resolve({}); });
     return promise;
   }),
 
@@ -106,7 +106,7 @@ export default Service.extend({
     id2PnP = this.get('ontologyId2DatasetNodes'),
     promise = Promise.all([treeP, id2PnP])
       .then(([tree, id2Pn]) => blockFeatureOntologiesTreeEmbeddedFn(this.levelMeta, tree, id2Pn))
-      .catch(error => { dLog(fnName, error.responseJSON.error || error); return Promise.resolve({}); });
+      .catch(error => { dLog(fnName, error?.responseJSON?.error || error); return Promise.resolve({}); });
     return promise;
   }),
 
