@@ -1058,7 +1058,13 @@ export default Model.extend({
     'axis1d.axisBrushComp.block.brushedDomain.{0,1}',
     'axis1d.brushedDomain.{0,1}',
     function() {
-      let brushedDomain = this.get('axis1d.axisBrushComp.block.brushedDomain') ||
+      /** axis1d.brushedDomain uses scale to convert, whereas
+       * axisBrushObj.brushedDomain is direct, i.e. exact.
+       * axisBrushObj.block is the reference block (i.e. not recursive).
+       */
+      let brushedDomain =
+          this.get('axis1d.axisBrushObj.brushedDomain') ||
+          this.get('axis1d.axisBrushComp.block.brushedDomain') ||
           this.get('axis1d.brushedDomain');
       return brushedDomain;
     }),

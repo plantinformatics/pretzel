@@ -331,7 +331,9 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   }),
   /** pixel range of brush selection / thumb, or undefined if no current selection. */
   brushedRegion : null,
-  /** expect this is the same as : .axisBrushObj.brushedDomain */
+  /** expect this is the same as : .axisBrushObj.brushedDomain
+   * except that using the scale to convert brushedRegion (pixels) to domain introduces inaccuracy.
+   */
   brushedDomain : computed('brushedRegion', function () {
     let
     brushedRegion = this.get('brushedRegion'),
