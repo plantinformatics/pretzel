@@ -1006,7 +1006,7 @@ export { featureMafFilter };
  */
 function featureMafFilter(feature, mafThreshold, mafUpper) {
   const
-  MAF = normalizeMaf(feature.values.MAF),
+  MAF = normalizeMaf(feature.values?.MAF),
   /** don't filter datasets which don't have MAF */
   ok = (MAF === undefined) || 
     ((+MAF < mafThreshold) === !!mafUpper);
