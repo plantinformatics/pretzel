@@ -7,7 +7,7 @@
   {{#if panelContainer.showComponent}}
 
 
-  <div style="padding : 1em">
+  <div style="padding : 1em" class="genotypeSearch">
 
     <label>VCF to search : </label>
     <select 
@@ -24,6 +24,11 @@
     </select>
 
   <label>Samples input :</label>
+
+  {{#if this.manageGenotypeDefined}}
+    <Panel::GenotypeSamples @the={{this.manageGenotype}} @userSettings={{@userSettings}} >
+    </Panel::GenotypeSamples>
+  {{/if}}
 
   <div>
     <Textarea

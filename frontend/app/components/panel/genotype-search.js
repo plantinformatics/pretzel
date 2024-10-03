@@ -25,9 +25,9 @@ export default class PanelGenotypeSearchComponent extends Component {
   @service('data/dataset') datasetService;
   @service() auth;
 
-/*
   // @alias('args.userSettings')
   @alias('manageGenotype.selectedSamplesText') selectedSamplesText
+/*
   constructor() {
     this.manageGenotype = null;
   }
@@ -38,8 +38,8 @@ export default class PanelGenotypeSearchComponent extends Component {
   @tracked
   selectedDatasetId = null;
 
-  @tracked
-  selectedSamplesText;
+  /* @tracked
+  selectedSamplesText; */
   @tracked
   selectedFeaturesText;
 
@@ -60,6 +60,7 @@ export default class PanelGenotypeSearchComponent extends Component {
     }
   }
 
+  @tracked manageGenotypeDefined = false;
   get manageGenotype() {
     return this.controls.registrationsByName['component:panel/manage-genotype'];
   }
@@ -179,7 +180,7 @@ export default class PanelGenotypeSearchComponent extends Component {
   /** The dependency on manageGenotype does not cause update; possibly use
    * Evented listener to monitor for manage-genotype lifecycle events.
    */
-  @computed('selectedSamplesText', 'selectedFeaturesText', 'vcfFiles', 'manageGenotype')
+  @computed('selectedSamplesText.length', 'selectedFeaturesText.length', 'vcfFiles.length', 'manageGenotype')
   get vcfGenotypeSearchDisabled() {
     const
     fnName = 'vcfGenotypeSearchDisabled',
@@ -195,13 +196,14 @@ export default class PanelGenotypeSearchComponent extends Component {
       this.vcfFiles?.length,
       !! this.manageGenotype);
     if (this.manageGenotype) {
-      this.manageGenotype.vcfGenotypeSamplesSelected = this.selectedSamples;
+      later(() => this.manageGenotype.vcfGenotypeSamplesSelected = this.selectedSamples);
     }
     return disabled;
   }
 
   @action
   navigateGenotypeTable() {
+    const fnName = 'navigateGenotypeTable';
     /** Select the Genotype Table display manage-genotype in the right panel. */
     this.controls.window.navigation.setTab('right', 'genotype');
     this.controls.window.rightSplitInstance?.setSizes([35, 65]);
@@ -212,7 +214,14 @@ export default class PanelGenotypeSearchComponent extends Component {
      * Above setTab('right', 'genotype) will ensure manage-genotype is rendered;
      * wait for a render cycle.
      */
-    later(() => Ember_get(this.manageGenotype, 'vcfGenotypeSamplesSelectedAll'), 500);
+    later(() => {
+      this.manageGenotypeDefined = !! this.manageGenotype;
+      if (this.manageGenotype) {
+        Ember_get(this.manageGenotype, 'vcfGenotypeSamplesSelectedAll');
+      } else {
+        dLog(fnName, 'manageGenotype', this.manageGenotype);
+      }
+    }, 500);
   }
 
   @action

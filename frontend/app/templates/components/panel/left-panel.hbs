@@ -9,7 +9,7 @@
     </BsNav>
     <div class="tab-content">
       <tab.pane @id="left-panel-feature-search" id="left-panel-feature-search" @title="Search">
-            <Panel::GenotypeSearch/>
+            <Panel::GenotypeSearch @userSettings={{this.userSettings.genotype}} />
 
             {{panel/manage-search
                 view=this.view

@@ -2300,6 +2300,11 @@ textarea.vcfGenotypeSamplesText
 {
   height: 20ex;
 }
+div.genotypeSearch > div > .genotype-controls > select.form-control,
+div.genotypeSearch > div > div > textarea
+{
+  width: 100%;
+}
 div.genotype > div > div > textarea,
 .vcfGenotypeSamplesSelected
 {
