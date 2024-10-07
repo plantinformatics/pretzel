@@ -30,7 +30,7 @@ export default Service.extend(Evented, {
    * done.  registrationsByName provides a simple lookup mechanism for those
    * Glimmer Components, e.g.  'component:panel/manage-genotype'
    */
-  registrationsByName : {},
+  registrationsByName : { updateCount : 0},
 
   //----------------------------------------------------------------------------
 

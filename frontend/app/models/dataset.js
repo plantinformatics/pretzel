@@ -299,4 +299,19 @@ export default Record.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** Return a block of this dataset, choosing either the first viewed
+   * block or the first block.
+   * This is used by genotype-search / manage-genotype 
+   * @return block
+   */
+  aBlock : computed( function () {
+    const
+    blocks = this.blocks,
+    viewedBlocks = blocks.findBy('isViewed'),
+    block = viewedBlocks || blocks[0];
+    return block;
+  }),
+
+  //----------------------------------------------------------------------------
+
 });

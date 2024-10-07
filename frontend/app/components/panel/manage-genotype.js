@@ -400,6 +400,23 @@ export default class PanelManageGenotypeComponent extends Component {
 
   // ---------------------------------------------------------------------------
 
+  /** register or de-register this component.
+   * @param handle this (component) or null
+   */
+  registerByName(handle) {
+    const fnName = 'registerByName';
+    /** check : registered value === null xor handle === null. */
+    const
+    registered = this.controls.registrationsByName['component:panel/manage-genotype'],
+    ok = ((handle === null) ? (registered === this) : ! registered) &&
+      ((registered === null) !== (handle === null));
+    dLog(fnName, handle, ok);
+    Ember_set(this.controls.registrationsByName, 'component:panel/manage-genotype', handle);
+    // this.controls.registrationsByName.updateCount++;
+  }
+
+  //----------------------------------------------------------------------------
+
   constructor() {
     super(...arguments);
 
@@ -410,7 +427,7 @@ export default class PanelManageGenotypeComponent extends Component {
     if (window.PretzelFrontend) {
       window.PretzelFrontend.manageGenotype = this;
     }
-    this.controls.registrationsByName['component:panel/manage-genotype'] = this;
+    this.registerByName(this);
 
     this.namesFilters = new NamesFilters();
     Object.entries(this.sampleFilterTypes).forEach(
@@ -538,6 +555,14 @@ export default class PanelManageGenotypeComponent extends Component {
     }
 
   }
+
+  //----------------------------------------------------------------------------
+
+  @action
+  onWillDestroy() {
+    this.registerByName(null);
+  }
+
 
   //----------------------------------------------------------------------------
 
@@ -1186,7 +1211,8 @@ export default class PanelManageGenotypeComponent extends Component {
 
   //----------------------------------------------------------------------------
 
-  /** @return the {axisBrush, vcfBlock} selected via gui pull-down
+  /** @return the {axisBrush, vcfBlock} selected via the GUI,
+   * dataset tabs (originally a pull-down).
    */
   @computed('brushedOrViewedVCFBlocks', 'axisBrushBlockIndex')
   get axisBrushBlock() {
@@ -1218,10 +1244,11 @@ export default class PanelManageGenotypeComponent extends Component {
    * May later pass lookupDatasetId .meta.vcfFilename
    * See comments in vcfGenotypeLookup() re. vcfDatasetId / parent.
    */
-  @computed('lookupBlock')
+  @computed('lookupBlock', 'args.userSettings.selectedDataset')
   get lookupDatasetId() {
     const b = this.lookupBlock;
-    return b?.get('datasetId.id');
+    const datasetId = this.args.userSettings.selectedDataset?.id || b?.get('datasetId.id');
+    return datasetId;
   }
   /** Scope of lookupBlock, which used to identify the (reference) chromosome in
    * request to genotype database, e.g. bcftools
@@ -1285,7 +1312,10 @@ export default class PanelManageGenotypeComponent extends Component {
     }
     return commonSamples;
   }
-  /** @return for .lookupDatasetId selected by user, the sampleNames array
+  /** Get the selected sample names for lookupBlock / lookupDatasetId.
+   * Not used, instead vcfGenotypeSamplesSelectedAll() is used directly instead
+   * in vcfGenotypeSamplesSelected().
+   * @return for .lookupDatasetId selected by user, the sampleNames array
    * received, and the .selectedSamples the user has selected from those.
    */
   @computed('lookupDatasetId', 'receivedNamesCount')
@@ -1293,6 +1323,8 @@ export default class PanelManageGenotypeComponent extends Component {
     /** related : datasetStoreSampleNames() */
     const names = this.sampleCache.sampleNames[this.lookupDatasetId];
     let selected = this.vcfGenotypeSamplesSelectedAll[this.lookupDatasetId];
+    /* If sampleNames are cached for lookupDatasetId and none are selected, copy
+     * (initial) samples to selected. */
     if (false && names?.length && ! selected) {
       selected = names.slice(0, 256).split('\n').slice(0, 6).join('\n');
       this.vcfGenotypeSamplesSelected = selected;
@@ -1513,18 +1545,30 @@ export default class PanelManageGenotypeComponent extends Component {
     }
   }
   /** Return viewed (loaded) VCF blocks
+   * Also include a block from genotype-search .selectedDatasetId
+   * if that does not already have a viewed block.
    *
    * @return [{axisBrush, vcfBlock}, ...]
    */
-  @computed('blockService.viewed.[]')
+  @computed('blockService.viewed.[]', 'args.userSettings.selectedDataset')
   get viewedVCFBlocks() {
     const
     fnName = 'viewedVCFBlocks',
     vcfBlocks = this.blockService.viewed.filter(
       (b) => b.get('isVCF')),
-    blocks = vcfBlocks.map((block) => ({
-      axisBrush : EmberObject.create({block : block.referenceBlock}),
-      block}));
+    block2Abb = (block) => ({
+      axisBrush : EmberObject.create({block : block.referenceBlock}), block});
+    let blocks = vcfBlocks.map(block2Abb);
+    const selectedDataset = this.args.userSettings.selectedDataset;
+    // -	also check if a block in blocks[] is in selectedDataset.
+    if (selectedDataset) {
+      const dBlock = selectedDataset.get('aBlock');
+      if (dBlock) {
+        const dBlockA = [dBlock].map(block2Abb);
+        dLog(fnName, dBlock, dBlockA);        
+        blocks = blocks.concat(dBlockA);
+      }
+    }
     dLog(fnName, blocks, this.blockService.viewed.length, this.blockService.params.mapsToView);
     return blocks;
   }
@@ -1787,7 +1831,7 @@ export default class PanelManageGenotypeComponent extends Component {
   vcfGenotypeSamplesDataset(vcfBlock) {
     /** implemented by common/models/block.js : Block.vcfGenotypeSamples().  */
     const
-    fnName = 'vcfGenotypeSamples',
+    fnName = 'vcfGenotypeSamplesDataset',
     vcfDataset = contentOf(vcfBlock?.get('datasetId')),
     vcfDatasetId = vcfBlock?.get('datasetId.id'),
     vcfDatasetIdAPI = vcfBlock?.get('datasetId.genotypeId'),

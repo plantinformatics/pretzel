@@ -1,6 +1,6 @@
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
-import EmberObject, { computed, action, get as Ember_get } from '@ember/object';
+import EmberObject, { computed, action, get as Ember_get, set as Ember_set } from '@ember/object';
 import { alias, reads } from '@ember/object/computed';
 import { later } from '@ember/runloop';
 
@@ -37,6 +37,7 @@ export default class PanelGenotypeSearchComponent extends Component {
 
   @tracked
   selectedDatasetId = null;
+  // @alias('manageGenotype.selectedDatasetId') selectedDatasetId;
 
   /* @tracked
   selectedSamplesText; */
@@ -60,7 +61,15 @@ export default class PanelGenotypeSearchComponent extends Component {
     }
   }
 
-  @tracked manageGenotypeDefined = false;
+  @action
+  didInsertElement_() {
+    // Showing the Genotype Table enables this.manageGenotype to be defined.
+    later(() => this.navigateGenotypeTable());
+  }
+
+  //----------------------------------------------------------------------------
+
+  @computed('controls.registrationsByName.component:panel/manage-genotype')
   get manageGenotype() {
     return this.controls.registrationsByName['component:panel/manage-genotype'];
   }
@@ -80,14 +89,31 @@ export default class PanelGenotypeSearchComponent extends Component {
     return datasets;
   }
 
+  //----------------------------------------------------------------------------
+
+  @action
+  selectDataset(event) {
+    this.selectedDatasetId = event.target.value;
+    this.selectedSamplesText = '';
+  }
+
+
   @computed('selectedDatasetId')
   get selectedDataset() {
     const
+    fnName = 'selectedDataset',
     /** By passing original=true, the result .length should be <= 1.
      * datasets[] elements are e.g. { name: "http___localhost_3000", server: {...}, store: {...}, dataset: {...} }
  */
-    datasets = this.datasetService.datasetsForName(this.selectedDatasetId, /*original*/true);
-    return datasets?.[0]?.dataset;
+    datasets = this.selectedDatasetId && 
+      this.datasetService.datasetsForName(this.selectedDatasetId, /*original*/true),
+    /** null if ! this.selectedDatasetId */
+    dataset = datasets?.[0]?.dataset;
+    if (this.manageGenotype && ! this.manageGenotype.isDestroying) {
+      dLog(fnName, this.selectedDatasetId, this.selectedDatasetId === dataset?.get('id'));
+      Ember_set(this.args.userSettings, 'selectedDataset', dataset);
+    }
+    return dataset;
   }
 
   @computed('selectedDatasetId')
@@ -124,6 +150,23 @@ export default class PanelGenotypeSearchComponent extends Component {
         return files;
       });
     return filesP;
+  }
+
+  @computed('selectedDatasetId')
+  get ensureSamplesForSelectedDatasetEffect() {
+    /** related : manage-genotype : vcfGenotypeSamples()
+     */
+    const fnName = 'ensureSamplesForSelectedDatasetEffect';
+    const sampleNames = this.manageGenotype.sampleCache.sampleNames[this.selectedDatasetId];
+    if (! sampleNames && this.selectedDataset) {
+      /** A block of .selectedDataset, choosing either the first viewed block or
+       * the first block. */
+      const vcfBlock = this.selectedDataset.get('aBlock');
+      dLog(fnName, vcfBlock.brushName);
+      if (vcfBlock) {
+        const textP = this.manageGenotype.vcfGenotypeSamplesDataset(vcfBlock);
+      }
+    }
   }
 
   setSamplesSelected() {
@@ -215,7 +258,6 @@ export default class PanelGenotypeSearchComponent extends Component {
      * wait for a render cycle.
      */
     later(() => {
-      this.manageGenotypeDefined = !! this.manageGenotype;
       if (this.manageGenotype) {
         Ember_get(this.manageGenotype, 'vcfGenotypeSamplesSelectedAll');
       } else {
@@ -229,12 +271,12 @@ export default class PanelGenotypeSearchComponent extends Component {
     const fnName = 'vcfGenotypeSearch';
     const snpNames = namesTrimUniq(this.selectedFeaturesText);
     const searchScope = {datasetVcfFiles : this.vcfFiles, snpNames};
-    /** vcfGenotypeSearchDisabled prevents call to vcfGenotypeSearch() if ! this.manageGenotype */
     const manageGenotype = this.manageGenotype;
+    /** vcfGenotypeSearchDisabled prevents call to vcfGenotypeSearch() if ! this.manageGenotype */
     /** Signify that manageGenotype component is operating under the control of
      * the genotype-search dialog / "automation wizard".
      */
-    manageGenotype.args.userSettings.dialogMode =
+    this.args.userSettings.dialogMode =
       {component : 'genotype-search', datasetId : this.selectedDatasetId};
 
     this.navigateGenotypeTable();

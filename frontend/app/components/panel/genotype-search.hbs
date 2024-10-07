@@ -1,3 +1,4 @@
+{{did-insert this.didInsertElement_}}
 
 {{#elem/panel-container state="primary" as |panelContainer|}}
   {{#elem/panel-heading icon="search" panelContainer=panelContainer}}
@@ -13,7 +14,7 @@
     <select 
       id="parent" 
       onchange={{action (pipe
-        (action (mut this.selectedDatasetId) value="target.value")
+        this.selectDataset
         this.navigateGenotypeTable ) }} 
       style="width: 100%"
       >
@@ -25,9 +26,12 @@
 
   <label>Samples input :</label>
 
-  {{#if this.manageGenotypeDefined}}
-    <Panel::GenotypeSamples @the={{this.manageGenotype}} @userSettings={{@userSettings}} >
-    </Panel::GenotypeSamples>
+  {{#if this.manageGenotype}}
+    {{#unless this.manageGenotype.isDestroying }}
+      <Panel::GenotypeSamples @the={{this.manageGenotype}} @userSettings={{@userSettings}} >
+        {{this.ensureSamplesForSelectedDatasetEffect}}
+      </Panel::GenotypeSamples>
+    {{/unless}}
   {{/if}}
 
   <div>

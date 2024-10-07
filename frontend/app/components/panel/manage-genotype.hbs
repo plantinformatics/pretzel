@@ -1,5 +1,5 @@
 {{this.selectedSampleEffect}}
-
+{{will-destroy this.onWillDestroy}}
 
 {{#if this.showInputDialog}}
 
@@ -178,6 +178,7 @@
                     </div>
                     {{!-- i.e. panel/genotype-samples --}}
                     <Panel::GenotypeSamples @the={{this}} @userSettings={{@userSettings}} >
+                      {{this.ensureSamplesForDatasetTabEffect}}
                     </Panel::GenotypeSamples>
 
                   {{!-- --------------------------------------------------------------------- --}}
