@@ -1560,13 +1560,22 @@ export default class PanelManageGenotypeComponent extends Component {
       axisBrush : EmberObject.create({block : block.referenceBlock}), block});
     let blocks = vcfBlocks.map(block2Abb);
     const selectedDataset = this.args.userSettings.selectedDataset;
-    // -	also check if a block in blocks[] is in selectedDataset.
-    if (selectedDataset) {
+    /** Possibly add a block of selectedDataset to blocks[].
+     * Not sure if this is going to be required; currently working OK without it.
+     */
+    if (false && selectedDataset) {
       const dBlock = selectedDataset.get('aBlock');
       if (dBlock) {
-        const dBlockA = [dBlock].map(block2Abb);
-        dLog(fnName, dBlock, dBlockA);        
-        blocks = blocks.concat(dBlockA);
+        /** Check if a block in blocks[] is in selectedDataset. viewedVCFBlocks
+         * is used to request samples, and for genotype-search .selectedDataset
+         * need only be represented in blocks[] once.
+         */
+        const alreadyPresent = blocks.find(b => b.block.datasetId === dBlock.datasetId);
+        if (! alreadyPresent) {
+          const dBlockA = [dBlock].map(block2Abb);
+          dLog(fnName, dBlock, dBlockA);        
+          blocks = blocks.concat(dBlockA);
+        }
       }
     }
     dLog(fnName, blocks, this.blockService.viewed.length, this.blockService.params.mapsToView);
