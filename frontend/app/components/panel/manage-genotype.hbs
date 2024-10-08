@@ -177,7 +177,8 @@
 
                     </div>
                     {{!-- i.e. panel/genotype-samples --}}
-                    <Panel::GenotypeSamples @the={{this}} @userSettings={{@userSettings}} >
+                    <Panel::GenotypeSamples @the={{this}} @userSettings={{@userSettings}}
+                      @showIntersectionCheckbox={{true}} >
                       {{this.ensureSamplesForDatasetTabEffect}}
                     </Panel::GenotypeSamples>
 

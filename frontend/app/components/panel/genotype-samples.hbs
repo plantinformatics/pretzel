@@ -16,6 +16,7 @@
       placeholder="Filter available samples by name" />
       {{!-- maybe autocomplete="sample-name", but samples names are mostly numeric so it may be more of an impediment than a benefit for the user --}}
 
+    {{#if @showIntersectionCheckbox}}
     <span>
       <input type="checkbox"
         style="margin-left: 3em;"
@@ -29,6 +30,8 @@
         Select from samples which are common to the viewed VCF datasets
       {{/ember-tooltip}}
     </span>
+    {{/if}}
+
     <div>
       {{@the.filterErrorText}}
     </div>

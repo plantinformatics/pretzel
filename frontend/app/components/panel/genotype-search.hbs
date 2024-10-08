@@ -28,25 +28,12 @@
 
   {{#if this.manageGenotype}}
     {{#unless this.manageGenotype.isDestroying }}
-      <Panel::GenotypeSamples @the={{this.manageGenotype}} @userSettings={{@userSettings}} >
+      <Panel::GenotypeSamples @the={{this.manageGenotype}} @userSettings={{@userSettings}}
+        @showIntersectionCheckbox={{false}} >
         {{this.ensureSamplesForSelectedDatasetEffect}}
       </Panel::GenotypeSamples>
     {{/unless}}
   {{/if}}
-
-  <div>
-    <Textarea
-      class="selectedSamplesInput"
-      @value={{this.selectedSamplesText}}
-      @input={{action this.sampleNameListInputKey value="target.value" }}
-      @enter={{this.sampleNameListInput}}
-      @insert-newline={{this.sampleNameListInput}}
-      @escape-press={{this.sampleNameListInput}}
-      placeholder="Sample Names"
-      style="width: 100%"
-      >
-    </Textarea>
-  </div>
 
 
   <label>Features input :</label>
