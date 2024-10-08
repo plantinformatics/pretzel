@@ -100,6 +100,17 @@ export default Component.extend(AxisEvents, {
     return true;
   }),
 
+  /** Re-render when the number of selected / shiftClicked / labelled Features changes.
+   */
+  selectedFeaturesEffect : computed(
+    'selected.selectedFeatures.length',
+    'selected.shiftClickedFeatures.length',
+    'selected.labelledFeatures.length',
+    'selected.features.length',
+    function () {
+      this.renderTicksThrottle();
+    }),
+
   didRender() {
     this._super.apply(this, arguments);
 
