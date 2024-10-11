@@ -90,7 +90,8 @@ function setRowAttributes(table, data, dataIsRows) {
    * These 2 uses should fall into alignment as the genotype table requirements evolve.
    */
   const dataIsColumns = ! dataIsRows && data?.length;
-  if (dataIsRows) {
+  if (false && dataIsRows) {
+    // actually this is already done in the caller setRowAttributes() in matrix-view.js.
     /* displayDataRows is a sparse array, indexed by Position (value.0)
      * Object.values() returns the non-empty values, which will correspond to the table rows.
      */

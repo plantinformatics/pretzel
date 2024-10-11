@@ -2951,7 +2951,8 @@ export default class PanelManageGenotypeComponent extends Component {
     } else {
       const userSettings = this.args.userSettings;
       let
-      referenceBlock = this.axisBrush?.get('block'),
+      // originally just 1 brushed axis, and hence 1 referenceBlock
+      // referenceBlock = this.axisBrush?.get('block'),
       /** parallel to .gtDatasetIds.
        * expect : block.referenceBlock.id === referenceBlock.id
        * Based on : .brushedOrViewedVCFBlocksVisible()
@@ -3024,7 +3025,7 @@ export default class PanelManageGenotypeComponent extends Component {
              * Add features to : this.displayDataRows.
              */
             const nonVCF = this.nonVCFFeaturesWithinBrushData;
-            const displayDataRows = sampleGenotypes.rows;
+            const referenceBlockRows = sampleGenotypes.rows;
             /** Annotate rows with features from nonVCF.features which overlap them.
              * nonVCFFeaturesWithinBrushData() could return []{datasetId, features : [] },
              * and that datasetId could be passed to annotateRowsFromFeatures() with its features.
@@ -3036,7 +3037,19 @@ export default class PanelManageGenotypeComponent extends Component {
              * Earlier functionality instead displayed start and end position of
              * all of nonVCF.features, using rowsAddFeature(), until 54baad61.
              */
-            annotateRowsFromFeatures(displayDataRows, nonVCF.features, this.selectedFeaturesValuesFields);
+            for (const [referenceBlock, displayDataRows] of referenceBlockRows.entries()) {
+              annotateRowsFromFeatures(displayDataRows, nonVCF.features, this.selectedFeaturesValuesFields);
+            }
+            const
+            /** for each referenceBlock : a sparse array indexed by Position  */
+            sparseRows = Array.from(referenceBlockRows.values()),
+            /** sparseArray.values() fills out the array, whereas
+             * Object.values(sparseArray) does not. Similarly for .entries().
+             */
+            rowsArrays = sparseRows.map(a => Object.values(a)),
+            /** Array.prototype.concat === [].concat */
+            displayDataRows = [].concat.apply([], rowsArrays);
+
             const currentFeaturesValuesFields = featuresValuesFields(nonVCF.features);
             const
             datasetIds = nonVCF.features.mapBy('blockId.datasetId.id').uniq(),

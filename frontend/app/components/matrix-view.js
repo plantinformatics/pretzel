@@ -826,6 +826,7 @@ export default Component.extend({
     if ((typeof prop === 'string') && (prop.endsWith('Position') || prop.endsWith('End'))) {
       // see also col_name_fn(), table-brushed.js : featureValuesColumnsAttributes
       cellProperties.type = 'numeric';
+      cellProperties.renderer = Handsontable.renderers.NumericRenderer;
     } else if (prop === 'Block') {
       cellProperties.renderer = 'blockColourRenderer';
     } else if (sampleName === 'LD Block') {

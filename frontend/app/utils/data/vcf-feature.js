@@ -579,7 +579,7 @@ function vcfFeatures2MatrixViewRows(
     res = vcfFeatures2MatrixViewRowsResult(
       res, requestFormat, features, featureFilter, sampleFilters, sampleNamesCmp, options, datasetIndex);
     return res;
-  }, {rows : [], sampleNames : []});
+  }, {rows : new Map(), sampleNames : []});
   return result;
 }
 /** Similar to vcfFeatures2MatrixView(), but merge rows with identical position,
@@ -591,6 +591,9 @@ function vcfFeatures2MatrixViewRows(
  * @param options { userSettings }
  * @param datasetIndex index of this dataset in the featuresArrays passed to vcfFeatures2MatrixViewRows().
  * @param result : {rows, sampleNames}. function can be called via .reduce()
+ * rows is [Map by referenceBlock][position] -> row
+ * (it was simply [position] -> row, until ee226f3d)
+ * (an alternative to Map : [referenceBlock.datasetId.id][scope] )
  */
 function vcfFeatures2MatrixViewRowsResult(
   result, requestFormat, features, featureFilter, sampleFilters,
@@ -618,7 +621,11 @@ function vcfFeatures2MatrixViewRowsResult(
           featureSampleMAF(feature, optionsMAF);
         }
         const
-        row = rowsAddFeature(res.rows, feature, 'Name', 0);
+        referenceBlock = feature.get('blockId.referenceBlock'),
+        map = res.rows,
+        newArray = [],
+        rows = map.get(referenceBlock) || (map.set(referenceBlock, newArray), newArray),
+        row = rowsAddFeature(rows, feature, 'Name', 0);
         /* Chr column could be optional, e.g. if ! .brushedOrViewedScope.length
          * .name relates to the genotype database (e.g. VCF), so it may be what
          * users expect to see rather than .scope here.
@@ -847,7 +854,8 @@ function annotateRowsFromFeatures(rows, features, selectedFeaturesValuesFields) 
   );
 }
 
-/**
+/** Add a field of feature to row; roughly row[fieldName].push(value)
+ * but value is mapped to a String which references feature.
  * @param fieldName used to index row{}
  * @param value feature.name or feature.values[fieldName]
  */
@@ -871,7 +879,8 @@ function rowAddFeatureField(row, feature, fieldName, value) {
   rowDatasetFeatures.push(featureString);
 }
 
-/** @return [datasetId] -> Set of field names of features[*].values{}, 1 Set per datasetId.
+/** Collate field names (keys) of .values of the given features.
+ * @return [datasetId] -> Set of field names of features[*].values{}, 1 Set per datasetId.
  * @param features array of non-VCF features, i.e. features[*].values are not samples
  */
 function featuresValuesFields(features) {
