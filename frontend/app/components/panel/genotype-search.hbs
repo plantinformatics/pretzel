@@ -33,6 +33,12 @@
         {{this.ensureSamplesForSelectedDatasetEffect}}
       </Panel::GenotypeSamples>
     {{/unless}}
+  {{else}}
+    <div>
+      <button type="submit" class="btn btn-info btn-xs" style="margin-bottom: 1em"
+        onclick={{this.navigateGenotypeTable}}
+        >Show Samples</button>
+    </div>
   {{/if}}
 
 
@@ -56,7 +62,7 @@
 
   {{!-- maybe use manageGenotype.vcfGenotypeSamplesSelected, or derive .selectedSamples from .selectedSamplesText --}}
   <button type="submit" class="btn btn-info pull-right margin-top"
-    onclick={{action this.vcfGenotypeSearch}}
+    onclick={{this.vcfGenotypeSearch}}
     disabled={{this.vcfGenotypeSearchDisabled}}
     >Search</button>
     {{!-- Effect: request the vcfFiles for the selected dataset --}}

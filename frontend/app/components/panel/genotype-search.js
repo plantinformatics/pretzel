@@ -239,7 +239,11 @@ export default class PanelGenotypeSearchComponent extends Component {
       this.vcfFiles?.length,
       !! this.manageGenotype);
     if (this.manageGenotype) {
-      later(() => this.manageGenotype.vcfGenotypeSamplesSelected = this.selectedSamples);
+      later(() => {
+        if (this.manageGenotype && ! this.manageGenotype.isDestroying) {
+          this.manageGenotype.vcfGenotypeSamplesSelected = this.selectedSamples;
+        }
+      });
     }
     return disabled;
   }
