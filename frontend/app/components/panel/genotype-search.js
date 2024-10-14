@@ -91,10 +91,16 @@ export default class PanelGenotypeSearchComponent extends Component {
 
   //----------------------------------------------------------------------------
 
+  /** User has selected a datasetId from the pull-down list.
+   * Set that value .selectedDatasetId.
+   * Also use .navigateGenotypeTableP() because .selectedSamplesText depends on .manageGenotype
+   */
   @action
   selectDataset(event) {
     this.selectedDatasetId = event.target.value;
-    this.selectedSamplesText = '';
+    this.navigateGenotypeTableP().then(() => {
+      this.selectedSamplesText = '';
+    });
   }
 
 
@@ -178,8 +184,7 @@ export default class PanelGenotypeSearchComponent extends Component {
   }
   setSamplesSelectedLater() {
     if (! this.setSamplesSelected()) {
-    this.navigateGenotypeTable();
-      later(() => this.setSamplesSelected(), 2000);
+      this.navigateGenotypeTableP().then(() => this.setSamplesSelected());
     }
   }
 
@@ -250,10 +255,17 @@ export default class PanelGenotypeSearchComponent extends Component {
 
   @action
   navigateGenotypeTable() {
-    const fnName = 'navigateGenotypeTable';
+    this.navigateGenotypeTableP();
+  }
+  /** Navigate to show the Genotype Table (manage-genotype) in the right panel.
+   * @return promise yielding when manage-genotype is displayed
+   */
+  navigateGenotypeTableP() {
+    const fnName = 'navigateGenotypeTableP';
     /** Select the Genotype Table display manage-genotype in the right panel. */
     this.controls.window.navigation.setTab('right', 'genotype');
     this.controls.window.rightSplitInstance?.setSizes([35, 65]);
+    const promise = new Promise((resolve, reject) => {
     /** vcfGenotypeSamplesSelectedAll is used by vcfGenotypeSearch().
      * In manage-genotype : vcfGenotypeSamplesSelectedAll depends on
      * .userSettings.vcfGenotypeSamplesSelected which is set by
@@ -262,12 +274,16 @@ export default class PanelGenotypeSearchComponent extends Component {
      * wait for a render cycle.
      */
     later(() => {
-      if (this.manageGenotype) {
+      if (this.manageGenotype && ! this.manageGenotype.isDestroying) {
         Ember_get(this.manageGenotype, 'vcfGenotypeSamplesSelectedAll');
+        resolve();
       } else {
         dLog(fnName, 'manageGenotype', this.manageGenotype);
+        reject();
       }
     }, 500);
+    });
+    return promise;
   }
 
   @action
