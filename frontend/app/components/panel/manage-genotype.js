@@ -1171,6 +1171,13 @@ export default class PanelManageGenotypeComponent extends Component {
       dLog(fnName, 'initial activeDatasetId', datasetIds[0], this.activeDatasetId);
       later(() => {
         this.setSelectedDataset(datasetIds[0]);
+	/** The above sets @active of the <nav.item > i.e. <li>, but the class
+	 * active is not added, perhaps because it has already rendered.  So use
+	 * datasetTabActiveClass() for the initial render; after that the user
+	 * clicks on the tab which sets active class OK. There is hopefully a
+	 * more elegant way to do this.
+	 */
+	this.datasetTabActiveClass();
       });
     }
     dLog(fnName, datasetIds, this.gtDatasets);
@@ -3902,6 +3909,22 @@ export default class PanelManageGenotypeComponent extends Component {
       this.mut_axisBrushBlockIndex(i);
     }
     this.setSelectedDataset(datasetId);
+  }
+
+  //----------------------------------------------------------------------------
+
+  /** Add class active to the <li> parent of <a> of .activeIdDatasets
+   * See comment in gtDatasetTabs().
+   */
+  datasetTabActiveClass() {
+    const
+    /** "a[href$='#tab-view-Datasets-<datasetId>']" */
+    selector = "a[href$='#" + this.activeIdDatasets + "']",
+    /** <a href="#tab-view-Datasets-<datasetId>" role="tab"> */
+    a0 = $(selector)[0],
+    /** <li class="nav-item active-detail"> */
+    li = a0?.parentElement;
+    li?.classList.add('active');
   }
 
   //----------------------------------------------------------------------------
