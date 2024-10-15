@@ -266,22 +266,22 @@ export default class PanelGenotypeSearchComponent extends Component {
     this.controls.window.navigation.setTab('right', 'genotype');
     this.controls.window.rightSplitInstance?.setSizes([35, 65]);
     const promise = new Promise((resolve, reject) => {
-    /** vcfGenotypeSamplesSelectedAll is used by vcfGenotypeSearch().
-     * In manage-genotype : vcfGenotypeSamplesSelectedAll depends on
-     * .userSettings.vcfGenotypeSamplesSelected which is set by
-     * userSettingsDefaults().
-     * Above setTab('right', 'genotype) will ensure manage-genotype is rendered;
-     * wait for a render cycle.
-     */
-    later(() => {
-      if (this.manageGenotype && ! this.manageGenotype.isDestroying) {
-        Ember_get(this.manageGenotype, 'vcfGenotypeSamplesSelectedAll');
-        resolve();
-      } else {
-        dLog(fnName, 'manageGenotype', this.manageGenotype);
-        reject();
-      }
-    }, 500);
+      /** vcfGenotypeSamplesSelectedAll is used by vcfGenotypeSearch().
+       * In manage-genotype : vcfGenotypeSamplesSelectedAll depends on
+       * .userSettings.vcfGenotypeSamplesSelected which is set by
+       * userSettingsDefaults().
+       * Above setTab('right', 'genotype) will ensure manage-genotype is rendered;
+       * wait for a render cycle.
+       */
+      later(() => {
+        if (this.manageGenotype && ! this.manageGenotype.isDestroying) {
+          Ember_get(this.manageGenotype, 'vcfGenotypeSamplesSelectedAll');
+          resolve();
+        } else {
+          dLog(fnName, 'manageGenotype', this.manageGenotype);
+          reject();
+        }
+      }, 500);
     });
     return promise;
   }
