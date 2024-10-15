@@ -1,3 +1,5 @@
+import { later } from '@ember/runloop';
+
 import { stacks } from './stacks';
 
 /* global Ember */
@@ -80,10 +82,12 @@ function showHover(context, textFn, d, i, g) {
     if (trace) { dLog(fnName, data, text); }
     if (data) {
       /* if ! hoverNearElement, display the text in the popoverTarget instead of
-       * in a popover near the popoverTarget;  this is currently preferred
-       * because the display persists. */
+       * in a popover near the popoverTarget. */
       if (! hoverNearElement) {
-        node_.html(isHtml ? text : '<p>' + text + '</p>');
+        const html = isHtml ? text : '<p>' + text + '</p>';
+        node_.html(html);
+        /** Clear the text after 5secs. */
+        later(() => (node_.html() === html) && node_.html(''), 5000);
       } else if (false) {
         /* this seems to follow the doc; it displays but doesn't change .content.
          * _getContent() uses data.config.content, refn :
