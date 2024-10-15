@@ -351,9 +351,12 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
         }
         // this.send('setTab', 'right', 'block');
 
+	/** Don't switch to the dataset tab if the Genotype Table is displayed */
+	const rightTab = this.get('layout.right.tab');
         let queryParams = this.get('model.params');
         /* if the block tab in right panel is not displayed then select the block's dataset. */
-        if (! (queryParams.options && queryParams.parsedOptions.blockTab)) {
+        if ((rightTab !== "genotype") &&
+	    ! (queryParams.options && queryParams.parsedOptions.blockTab)) {
           this.send('selectDataset', block.datasetId);
         }
       }
