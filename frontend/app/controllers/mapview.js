@@ -528,7 +528,12 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
   toggleLayout(value) {
     const fnName = 'toggleLayout';
     this.toggleProperty('tablesPanelRight');
-    /** tablesPanelRight is initially false, so it is OK to set body class in toggle action. */
+    this.renderBodyClass_tablesPanelRight();
+  },
+  /** Set <body> class according to value of tablesPanelRight.
+   * This is called via {{did-insert }} and from toggleLayout().
+   */
+  renderBodyClass_tablesPanelRight() {
     d3.select('body')
       .classed('tablesPanelRight', this.get('tablesPanelRight'));
   },
@@ -676,7 +681,7 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
     store = server.get('store'),
     dataset = store.peekRecord('dataset', datasetName);
     /** If not found on primary then check the server selected in dataset
-     * explorer.  Could do just this instad of checking primary - probably
+     * explorer.  Could do just this instead of checking primary - probably
      * viewDataset should be relative to serverSelected by default.
      * blast-results-view.js : resultParentBlocks() does the same.
      */
