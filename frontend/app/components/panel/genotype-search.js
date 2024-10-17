@@ -35,9 +35,7 @@ export default class PanelGenotypeSearchComponent extends Component {
 
   //----------------------------------------------------------------------------
 
-  @tracked
-  selectedDatasetId = null;
-  // @alias('manageGenotype.selectedDatasetId') selectedDatasetId;
+  @alias('args.userSettings.selectedDatasetId') selectedDatasetId;
 
   /* @tracked
   selectedSamplesText; */
@@ -54,6 +52,11 @@ export default class PanelGenotypeSearchComponent extends Component {
 
   constructor() {
     super(...arguments);
+
+    // selectedDatasetId is tracked, so this may be required.
+    if (this.selectedDatasetId === undefined) {
+      this.selectedDatasetId = null;
+    }
 
     // used in development only, in Web Inspector console.
     if (window.PretzelFrontend) {
@@ -99,7 +102,9 @@ export default class PanelGenotypeSearchComponent extends Component {
   selectDataset(event) {
     this.selectedDatasetId = event.target.value;
     this.navigateGenotypeTableP().then(() => {
-      this.selectedSamplesText = '';
+      // equivalent : manageGenotype.vcfGenotypeSamplesSelectedAll
+      const selectedSamples = this.args.userSettings.vcfGenotypeSamplesSelected[this.selectedDatasetId];
+      this.selectedSamplesText = selectedSamples ? selectedSamples.join('\n') : '';
     });
   }
 
@@ -243,13 +248,6 @@ export default class PanelGenotypeSearchComponent extends Component {
       this.selectedFeaturesText?.length,
       this.vcfFiles?.length,
       !! this.manageGenotype);
-    if (this.manageGenotype) {
-      later(() => {
-        if (this.manageGenotype && ! this.manageGenotype.isDestroying) {
-          this.manageGenotype.vcfGenotypeSamplesSelected = this.selectedSamples;
-        }
-      });
-    }
     return disabled;
   }
 
