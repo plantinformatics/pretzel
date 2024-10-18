@@ -25,8 +25,7 @@ export default class PanelGenotypeSearchComponent extends Component {
   @service('data/dataset') datasetService;
   @service() auth;
 
-  // @alias('args.userSettings')
-  @alias('manageGenotype.selectedSamplesText') selectedSamplesText
+  @alias('args.userSettings.selectedSamplesText') selectedSamplesText
 /*
   constructor() {
     this.manageGenotype = null;
@@ -230,18 +229,20 @@ export default class PanelGenotypeSearchComponent extends Component {
     return samples;
   }
 
-  /** The dependency on manageGenotype does not cause update; possibly use
-   * Evented listener to monitor for manage-genotype lifecycle events.
+  /** Disable the Search button until the user has selected samples and input
+   * features / SNPs.
    */
-  @computed('selectedSamplesText.length', 'selectedFeaturesText.length', 'vcfFiles.length', 'manageGenotype')
+  @computed('selectedSamplesText.length', 'selectedFeaturesText.length', 'vcfFiles.length')
   get vcfGenotypeSearchDisabled() {
+    /* Until 1596ae33, this also depended on 'manageGenotype'; now changed
+     * Search button to show manage-genotype if it is not shown.
+     */
     const
     fnName = 'vcfGenotypeSearchDisabled',
     disabled = 
       ! this.selectedSamplesText?.length ||
       ! this.selectedFeaturesText?.length ||
-      ! this.vcfFiles?.length ||
-      ! this.manageGenotype;
+      ! this.vcfFiles?.length;
     dLog(
       fnName, disabled,
       this.selectedSamplesText?.length,
@@ -335,6 +336,10 @@ export default class PanelGenotypeSearchComponent extends Component {
 
     dLog(fnName, searchScope, manageGenotype.args.userSettings.dialogMode);
   }
-  
+
+  @action
+  vcfGenotypeSearchAfterNavigate() {
+    this.navigateGenotypeTableP().then(() => this.vcfGenotypeSearch());
+  }
 
 }

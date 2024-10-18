@@ -448,9 +448,7 @@ export default class PanelManageGenotypeComponent extends Component {
 
     //--------------------------------------------------------------------------
     const selectedSamples = userSettings.vcfGenotypeSamplesSelected[userSettings.selectedDatasetId];
-    if (selectedSamples) {
-      later(() => this.selectedSamplesText = selectedSamples.join('\n'));
-    }
+    later(() => this.selectedSamplesText = selectedSamples ? selectedSamples.join('\n') : '');
     //--------------------------------------------------------------------------
 
     if (userSettings.samplesIntersection === undefined) {
@@ -1443,8 +1441,9 @@ export default class PanelManageGenotypeComponent extends Component {
    *  user select -> append to selectedSamples ( -> selectedSamplesText)
    *  paste -> (selectedSamplesText and) selectedSamples
    */
-  @tracked
-  selectedSamplesText = '';
+  /*@tracked
+  selectedSamplesText = ''; */
+  @alias('args.userSettings.selectedSamplesText') selectedSamplesText;
 
   /** parse the contents of the textarea
    * This partially overlaps with namesTrim() (utils/string.js),

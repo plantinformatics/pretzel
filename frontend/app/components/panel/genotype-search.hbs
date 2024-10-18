@@ -60,7 +60,7 @@
 
   {{!-- maybe use manageGenotype.vcfGenotypeSamplesSelected, or derive .selectedSamples from .selectedSamplesText --}}
   <button type="submit" class="btn btn-info pull-right margin-top"
-    onclick={{this.vcfGenotypeSearch}}
+    onclick={{this.vcfGenotypeSearchAfterNavigate}}
     disabled={{this.vcfGenotypeSearchDisabled}}
     >Search</button>
     {{!-- Effect: request the vcfFiles for the selected dataset --}}
