@@ -1441,8 +1441,6 @@ export default class PanelManageGenotypeComponent extends Component {
    *  user select -> append to selectedSamples ( -> selectedSamplesText)
    *  paste -> (selectedSamplesText and) selectedSamples
    */
-  /*@tracked
-  selectedSamplesText = ''; */
   @alias('args.userSettings.selectedSamplesText') selectedSamplesText;
 
   /** parse the contents of the textarea
