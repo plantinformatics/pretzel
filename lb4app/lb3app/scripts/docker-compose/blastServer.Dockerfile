@@ -14,6 +14,9 @@ COPY --from=blast /blast /blast
 #   http://www.lmdb.tech/
 #   https://www.symas.com/lmdb
 COPY --from=blast /usr/lib/x86_64-linux-gnu/liblmdb.so* /usr/lib/x86_64-linux-gnu/
+COPY --from=blast /usr/bin/parallel /usr/bin/
+COPY --from=blast /usr/bin/vmtouch /usr/bin/
+
 
 #-------------------------------------------------------------------------------
 
