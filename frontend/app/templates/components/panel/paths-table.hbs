@@ -12,8 +12,9 @@
       {{!-- based on elem/button-submit.hbs, could be factored --}}
       <div class="">
         <button type="submit" {{action "requestAllPaths"}} class="btn btn-info {{if this.loading 'disabled'}}">Get all brushed paths</button>
-        {{#if this.csvExportData.length}}
-          <button class="btn btn-info">{{#component "ember-csv@file-anchor" data=csvExportData}} CSV Download{{/component}} </button>
+        {{!-- https://github.com/lukecoy/ember-csv last commit was 2019Apr17, approx ember v3.0.2, so disable this until it is forked and upgraded.  --}}
+        {{#if false}} {{!-- this.csvExportData.length --}}
+          <button class="btn btn-info">{{#component "ember-csv@file-anchor" data=this.csvExportData}} CSV Download{{/component}} </button>
         {{/if}}
         <br>
         <br>
