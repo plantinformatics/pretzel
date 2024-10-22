@@ -1,85 +1,88 @@
 <div id="left-panel" class="left-panel-shown" style="height:100%; border-right:1px solid #ddd; display: flex; flex-direction: column">
 
-  <BsTab @customTabs={{true}} @activeId="left-panel-explorer" as |tab|>
+  <BsTab @customTabs={{true}} @fade={{false}} @activeId="left-panel-explorer" as |tab|>
     <BsNav @type="tabs" class="nav-pills" style="margin-left:10px" as |nav|>
-      <nav.item @active={{bs-eq tab.activeId "left-panel-explorer"}}><a href="#left-panel-explorer" role="tab" onclick={{action tab.select "left-panel-explorer"}}>{{elem/icon-base name="folder-open"}} Explorer</a></nav.item>
-      <nav.item @active={{bs-eq tab.activeId "left-panel-view"}}><a href="#left-panel-view" role="tab" onclick={{action tab.select "left-panel-view"}}>{{elem/icon-base name="picture"}} View</a></nav.item>
-      <nav.item @active={{bs-eq tab.activeId "left-panel-feature-search"}}><a href="#left-panel-feature-search" role="tab" onclick={{action tab.select "left-panel-feature-search"}}>{{elem/icon-base name="search"}}Search</a></nav.item>
-      <nav.item @active={{bs-eq tab.activeId "left-panel-upload"}}><a href="#left-panel-upload" role="tab" onclick={{action tab.select "left-panel-upload"}}>{{elem/icon-base name="cloud-upload"}} Upload</a></nav.item>
+      <nav.item active={{bs-eq tab.activeId "left-panel-explorer"}}><a href="#left-panel-explorer" role="tab" class="nav-link" onclick={{action tab.select "left-panel-explorer"}}>{{elem/icon-base name="folder-open"}} Explorer</a></nav.item>
+      <nav.item @active={{bs-eq tab.activeId "left-panel-view"}}><a href="#left-panel-view" role="tab" class="nav-link" onclick={{action tab.select "left-panel-view"}}>{{elem/icon-base name="picture"}} View</a></nav.item>
+      <nav.item @active={{bs-eq tab.activeId "left-panel-feature-search"}}><a href="#left-panel-feature-search" role="tab" class="nav-link" onclick={{action tab.select "left-panel-feature-search"}}>{{elem/icon-base name="search"}}Search</a></nav.item>
+      <nav.item @active={{bs-eq tab.activeId "left-panel-upload"}}><a href="#left-panel-upload" role="tab" class="nav-link" onclick={{action tab.select "left-panel-upload"}}>{{elem/icon-base name="cloud-upload"}} Upload</a></nav.item>
     </BsNav>
     <div class="tab-content">
-      <tab.pane @id="left-panel-feature-search" @title="Search">
+      <tab.pane @id="left-panel-feature-search" id="left-panel-feature-search" @title="Search">
+            <Panel::GenotypeSearch @userSettings={{this.userSettings.genotype}} />
+
             {{panel/manage-search
-                view=view
-                queryParamsState=queryParamsState
-                loadBlock=(action loadBlock)
-                selectedBlock=selectedBlock
-                selectedFeatures=selectedFeatures
-                updateFeaturesInBlocks="updateFeaturesInBlocks"
+                view=this.view
+                queryParamsState=this.queryParamsState
+                loadBlock=(action this.loadBlock)
+                selectedBlock=this.selectedBlock
+                selectedFeatures=this.selectedFeatures
+                updateFeaturesInBlocks=this.updateFeaturesInBlocks
             }}
 
             <Panel::SelectedServer/>
 
             {{panel/sequence-search
-                datasets=serverSelected_datasetsBlocks
-                view=view
-                selectedFeatures=selectedFeatures
-                refreshDatasets=refreshDatasets
-                viewDataset=viewDataset
+                datasets=this.serverSelected_datasetsBlocks
+                view=this.view
+                selectedFeatures=this.selectedFeatures
+                refreshDatasets=this.refreshDatasets
+                viewDataset=this.viewDataset
             }}
 
             {{panel/search-lookup
-                selectedFeatures=selectedFeatures
-                selectedBlock=selectedBlock
+                selectedFeatures=this.selectedFeatures
+                selectedBlock=this.selectedBlock
             }}
 
       </tab.pane>
 
 
-      <tab.pane @id="left-panel-explorer" @title="Explorer">
+      <tab.pane @id="left-panel-explorer" id="left-panel-explorer" @title="Explorer">
             {{panel/manage-explorer
-                view=view
-                model=model
+                view=this.view
+                model=this.model
                 primaryDatasets=@model.availableMapsTask._result
-                mapviewDatasets=datasets
-                refreshDatasets=refreshDatasets
-                loadBlock="loadBlock"
-                selectBlock="selectBlock"
-                selectedBlock=selectedBlock
-                selectedDataset=selectedDataset
-                selectDataset="selectDataset"
+                mapviewDatasets=this.datasets
+                refreshDatasets=this.refreshDatasets
+                loadBlock=this.loadBlock
+                onDelete=this.onDelete
+                selectBlock=this.selectBlock
+                selectedBlock=this.selectedBlock
+                selectedDataset=this.selectedDataset
+                selectDataset=this.selectDataset
                 changeTab=(action 'changeTab' tab.select )
             }}
       </tab.pane>
 
-      <tab.pane @id="left-panel-view" @title="View">
+      <tab.pane @id="left-panel-view" id="left-panel-view" @title="View">
             {{panel/manage-view
-                displayData=displayData
-                selectedBlock=selectedBlock
-                view=view
+                displayData=this.displayData
+                selectedBlock=this.selectedBlock
+                view=this.view
                 changeTab=(action 'changeTab' tab.select )
-                loadBlock="loadBlock"
-                removeBlock="removeBlock"
-                selectBlock="selectBlock"
+                loadBlock=this.loadBlock
+                removeBlock=this.removeBlock
+                selectBlock=this.selectBlock
 
-                model=model
-                controls=controls
-                isShowUnique=isShowUnique
-                pathColourScale=pathColourScale
-                scaffolds=scaffolds
-                scaffoldMarkers=scaffoldMarkers
-                showScaffoldFeatures=showScaffoldFeatures
-                showAsymmetricAliases=showAsymmetricAliases
-                selectedFeatures=selectedFeatures
-                updateFeaturesInBlocks="updateFeaturesInBlocks"
+                model=this.model
+                controls=this.controls
+                isShowUnique=this.isShowUnique
+                pathColourScale=this.pathColourScale
+                scaffolds=this.scaffolds
+                scaffoldMarkers=this.scaffoldMarkers
+                showScaffoldFeatures=this.showScaffoldFeatures
+                showAsymmetricAliases=this.showAsymmetricAliases
+                selectedFeatures=this.selectedFeatures
+                updateFeaturesInBlocks=this.updateFeaturesInBlocks
             }}
       </tab.pane>
 
-      <tab.pane @id="left-panel-upload" @title="Upload">
+      <tab.pane @id="left-panel-upload" id="left-panel-upload" @title="Upload">
             {{panel/upload-data
-                datasets=datasets
-                refreshDatasets=refreshDatasets
-                viewDataset=viewDataset
+                datasets=this.serverSelected_datasetsBlocks
+                refreshDatasets=this.refreshDatasets
+                viewDataset=this.viewDataset
                 active=(bs-eq tab.activeId "left-panel-upload")
             }}
       </tab.pane>

@@ -386,9 +386,9 @@ AxisCharts.prototype.controls = function controls()
   append = this.dom.gca,
   select = this.dom.gc;
 
-  function toggleBarsLineClosure(chart /*, i, g*/)
+  function toggleBarsLineClosure(event, chart)
   {
-    d3.event.stopPropagation();
+    event.stopPropagation();
     chart.toggleBarsLine();
   }
 
@@ -636,7 +636,7 @@ Chart1.prototype.prepareScales =  function (data, drawSize)
   scales.xWidth = 
     d3.scaleLinear().range(xRange);
   if (dataConfig.barAsHeatmap) {
-    scales.xColour = d3.scaleOrdinal().range(d3.schemeCategory20);
+    scales.xColour = d3.scaleOrdinal().range(d3.schemeCategory10/*20*/);
   }
   // datum2LocationScaled() uses me.scales.x rather than the value in the closure in which it was created.
   scales.x = dataConfig.barAsHeatmap ? scales.xColour : scales.xWidth;

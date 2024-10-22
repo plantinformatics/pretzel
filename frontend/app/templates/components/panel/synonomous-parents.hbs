@@ -1,11 +1,11 @@
-{{#if blocks.length}}
+{{#if this.blocks.length}}
   {{#ember-modal-dialog modal-id="synonomous-parents-modal" title="Parents with same name already viewed" header-icon='plane'}}
 
     <p>A dataset with that name has already been loaded : </p>
 
     <div>
       <ul class="list-unstyled">
-        {{#each blocks as |parentBlock|}}
+        {{#each this.blocks as |parentBlock|}}
           <li>
             <span title='{{parentBlock.name}}' >{{parentBlock.name}}</span>
             {{!-- parentBlock.id --}} {{!-- parentBlock.scope --}} {{parentBlock.datasetId.id}} ({{parentBlock.store.name}})</li>

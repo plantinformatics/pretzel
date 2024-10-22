@@ -1,13 +1,13 @@
-{{#if icon}}
-  {{elem/icon-base name=icon}}&nbsp;
+{{#if this.icon}}
+  {{elem/icon-base name=this.icon}}&nbsp;
 {{/if}}
 
 
     <span class="pull-right">
       {{x-toggle
         theme='light'
-        value=panelContainer.showComponent
-        onToggle=(action panelContainer.toggleShow panelContainer) }}
+        value=this.panelContainer.showComponent
+        onToggle=(action this.panelContainer.toggleShow this.panelContainer) }}
     </span>
 
 {{yield}}

@@ -6,7 +6,7 @@
     <button type="button" onclick={{this.getDatasetFeaturesCounts}} class="btn btn-info btn-xs margin-1em">Prepare Dataset Histograms</button>
 
     <div class="margin-top status-icon">
-      {{#data-table data=this.rowsCombined as |t| }}
+      {{!-- #data-table data=this.rowsCombined as |t| }}
 
         {{#t.column propertyName='Name' name='Chr' defaultHeader=true as |col|}}
           <span class={{call (fn this.chrNotInDataset col.row.Name ) }}>{{col.row.Name}}</span>
@@ -43,7 +43,7 @@
           </span>
         {{/t.column}}
 
-      {{/data-table}}
+      {{/data-table --}}
     </div>
 
     <span class="filter-group-col">

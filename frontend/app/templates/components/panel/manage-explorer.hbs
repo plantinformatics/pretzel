@@ -12,33 +12,49 @@
 
     <li class="list-group-item">
       <label style="display:inline"></label>
-      {{#radio-button value='Normal' groupValue=this.controlOptions.historyView
-        changed=(action historyViewChanged preventDefault=false) }}
+      {{#radio-button
+        value='Normal'
+        groupValue=this.controlOptions.historyView
+        changed=(action this.historyViewChanged preventDefault=false)
+      }}
       <span>All</span>
       {{/radio-button}}
        &nbsp;&nbsp;
 
-      {{#radio-button value='Recent' groupValue=this.controlOptions.historyView
-        changed=(action historyViewChanged preventDefault=false) }}
-      <span>Recent</span>
+      {{#radio-button
+        value='Recent'
+        groupValue=this.controlOptions.historyView
+        changed=(action this.historyViewChanged preventDefault=false)
+      }}
+        <span>Recent</span>
       {{/radio-button}}
        &nbsp;&nbsp;
 
-      {{#radio-button value='Favourites' groupValue=this.controlOptions.historyView
-        changed=(action historyViewChanged preventDefault=false) }}
-      <span>Favourites</span>
-      {{/radio-button}}
+       {{#radio-button
+         value='Favourites'
+         groupValue=this.controlOptions.historyView
+         changed=(action this.historyViewChanged preventDefault=false)
+       }}
+       <span>Favourites</span>
+       {{/radio-button}}
        &nbsp;&nbsp;
 
-      {{#radio-button value='Viewed' groupValue=this.controlOptions.historyView
-        changed=(action historyViewChanged preventDefault=false) }}
-      <span>Viewed</span>
-      {{/radio-button}}
+       {{#radio-button
+         value='Viewed'
+         groupValue=this.controlOptions.historyView
+         changed=(action this.historyViewChanged preventDefault=false)
+       }}
+       <span>Viewed</span>
+       {{/radio-button}}
 
       <span style="display: inline-block;">
-        {{input type="checkbox" name="this.controlOptions.historyBlocks" checked=this.controlOptions.historyBlocks
-          input=(action historyBlocksChanged preventDefault=false)
-          id="checkbox-historyBlocks" }}
+        <input
+          type="checkbox"
+          name="this.controlOptions.historyBlocks"
+          checked={{this.controlOptions.historyBlocks}}
+          oninput={{action this.historyBlocksChanged preventDefault=false}}
+          id="checkbox-historyBlocks"
+        />
         <label for="checkbox-historyBlocks">Viewed Chromosomes</label>
       </span>
 
@@ -55,12 +71,16 @@
 
     </li>
 
-  {{#if urlOptions.naturalSearch}}
+  {{#if this.urlOptions.naturalSearch}}
   <div class="textInput" style="margin-left : 1em" >
     <i class="glyphicon glyphicon-filter"></i>
-    {{input id="naturalQuery" type="search" value=naturalQuery
+    {{input
+      id="naturalQuery"
+      type="search"
+      value=this.naturalQuery
       enter=(action this.naturalQueryChanged)
-      placeholder="Natural language search" }}
+      placeholder="Natural language search"
+    }}
     <BsButton @type="info" @onClick={{action (mut this.enableNaturalSearchDialog) true}}>Dialog</BsButton>
     <BsButton @type="info" @onClick={{action (mut this.enableDatasetGraphDialog) true}}>Graph</BsButton>
   </div>
@@ -74,9 +94,14 @@
   <div class="textInput">
     <i class="glyphicon glyphicon-filter"></i>
     {{!-- there is no suitable autocomplete, so may change to  =off --}}
-    {{input id="nameFilter" type="search" value=nameFilter
-      input=(action this.nameFilterChanged value="target.value")
-      placeholder="Search All Datasets" autocomplete="dataset-name" }}
+    <input
+      id="nameFilter"
+      type="search"
+      value={{this.nameFilter}}
+      oninput={{action this.nameFilterChanged value="target.value"}}
+      placeholder="Search All Datasets"
+      autocomplete="dataset-name"
+      />
   </div>
   <div class="button-row">
     <label>Case</label>
@@ -99,18 +124,18 @@
     />
   </div>
 
-  {{#if urlOptions.filterGroups}}
-    {{panel/filter-groups data=filterGroups changed=(action 'filterGroupsChanged') }}
+  {{#if this.urlOptions.filterGroups}}
+    {{panel/filter-groups data=this.filterGroups changed=(action 'filterGroupsChanged') }}
   {{/if}}
 
 
-  {{#if availableMapsTask.isRunning}}
+  {{#if this.availableMapsTask.isRunning}}
     <div class="panel-body">
       <div class="well">
         Loading resources. 
       </div>
     </div>
-  {{else if dataEmpty}}
+  {{else if this.dataEmpty}}
     <div class="panel-body">
       <div class="well">
         No datasets found!
@@ -120,41 +145,41 @@
 
   <div> {{!-- start of tabs and tree  --}}
 
-  <BsTab @customTabs={{true}} as |tab|>
+  <BsTab @customTabs={{true}} @fade={{false}} as |tab|>
     <BsNav class="api-server-tabs"  @type="tabs" as |nav|>
-      {{#each-in servers as |apiServerName apiServer| }}
+      {{#each-in this.servers as |apiServerName apiServer| }}
         {{panel/api-server-tab tab=tab nav=nav apiServerName=apiServerName apiServer=apiServer serverTabSelected=(action "serverTabSelected")}}
       {{/each-in}}
     </BsNav>
   </BsTab>
 
 
-  <BsTab @customTabs={{true}} @onChange={{action this.onChangeTab}} @activeId={{this.activeId}} as |tab|>
+  <BsTab @customTabs={{true}} @fade={{false}} @onChange={{action this.onChangeTab}} @activeId={{this.activeId}} as |tab|>
     <BsNav @type="tabs"  class="li-active-extra counts" as |nav|>
 
-      {{#if blockFeatureTraits.length}}
+      {{#if this.blockFeatureTraits.length}}
         {{#let 'Trait' as |tabTypeName|}}
           {{#let (compute (action "datasetTypeTabId" tabTypeName)) as |tabId|}}
             <nav.item class="active-detail" @active={{bs-eq tab.activeId tabId}}><a href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
-              <div>{{blockFeatureTraitsTreeKeyLength}}</div>
+              <div>{{this.blockFeatureTraitsTreeKeyLength}}</div>
             </nav.item>
           {{/let}}
         {{/let}}
       {{/if}}
         
-      {{#if blockFeatureOntologies.length}}
+      {{#if this.blockFeatureOntologies.length}}
         {{#let 'Ontology' as |tabTypeName|}}
           {{#let (compute (action "datasetTypeTabId" tabTypeName)) as |tabId|}}
             <nav.item class="active-detail" @active={{bs-eq tab.activeId tabId}}><a href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
-              <div>{{ontologiesTreeKeyLength}}</div>
+              <div>{{this.ontologiesTreeKeyLength}}</div>
             </nav.item>
           {{/let}}
         {{/let}}
       {{/if}}
         
 
-      {{#unless enable_parentBeforeFilter}}
-        {{#each-in dataTypedTreeFG as |tabTypeName tabData|}}
+      {{#unless this.enable_parentBeforeFilter}}
+        {{#each-in this.dataTypedTreeFG as |tabTypeName tabData|}}
           {{!-- log 'tabTypeName' tabTypeName 'tabData' tabData (compute (action 'keysLength' tabData)) --}}
           {{#let (compute (action "datasetTypeTabId" tabTypeName)) as |tabId|}}
             <nav.item class="active-detail" @active={{bs-eq tab.activeId tabId}}><a href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
@@ -163,7 +188,7 @@
           {{/let}}
         {{/each-in}}
       {{else}}
-        {{#each-in dataParentTypedFGTree as |tabTypeName tabData|}}
+        {{#each-in this.dataParentTypedFGTree as |tabTypeName tabData|}}
             <nav.item class="active-detail" @active={{bs-eq tab.activeId (concat "#" (compute (action "datasetTypeTabId" tabTypeName)) '2')}}><a href={{concat "#" (compute (action "datasetTypeTabId" tabTypeName)) '2'}} role="tab" onclick={{action tab.select (concat "#" (compute (action "datasetTypeTabId" tabTypeName)) '2') }}>{{tabTypeName}}</a>
               <div>{{compute (action 'keysLength' tabData)}}</div>
             </nav.item>
@@ -171,138 +196,145 @@
       {{/unless}}
 
 
-      {{#if enable_datatypeFromFamily}}
+      {{#if this.enable_datatypeFromFamily}}
 
         <nav.item class="active-detail" @active={{bs-eq tab.activeId "tab-explorer-parent"}}><a href="#tab-explorer-parent" role="tab" onclick={{action tab.select "tab-explorer-parent"}}>Children</a>
         </nav.item>
         <nav.item class="active-detail" @active={{bs-eq tab.activeId "tab-explorer-byDataset"}}><a href="#tab-explorer-byDataset" role="tab" onclick={{action tab.select "tab-explorer-byDataset"}}>Unrelated</a>
-          <div>{{dataWithoutParent.length}}</div>
+          <div>{{this.dataWithoutParent.length}}</div>
         </nav.item>
         <nav.item class="active-detail" @active={{bs-eq tab.activeId "tab-explorer-references"}}><a href="#tab-explorer-references" role="tab" onclick={{action tab.select "tab-explorer-references"}}>Parents</a>
-          <div>{{parents.length}}</div>
+          <div>{{this.parents.length}}</div>
         </nav.item>
 
       {{/if}}
       <nav.item class="active-detail" @active={{bs-eq tab.activeId "tab-explorer-datasets"}}><a href="#tab-explorer-datasets" role="tab" onclick={{action tab.select "tab-explorer-datasets"}}>All Datasets</a>
-        <div>{{data.length}}</div>
+        <div>{{this.data.length}}</div>
       </nav.item>
 
     </BsNav>
 
     <div class="tab-content">
 
-      {{#if blockFeatureTraits.length}}
+      {{#if this.blockFeatureTraits.length}}
           {{record/entry-tab 
             tab=tab
             name='Trait'
-            values=blockFeatureTraitsTree.content
-            levelMeta=levelMeta
-            controlOptions=controlOptions
-            loadBlock="loadBlock"
-            selectBlock="selectBlock"
-            selectedBlock=selectedBlock
-            selectDataset="selectDataset"}}
+            values=this.blockFeatureTraitsTree.content
+            levelMeta=this.levelMeta
+            controlOptions=this.controlOptions
+            loadBlock=this.loadBlock
+            selectBlock=this.selectBlock
+            selectedBlock=this.selectedBlock
+            selectDataset=this.selectDataset}}
       {{/if}}
 
       <!-- {{ontologiesTree.content}} -->
-      {{#if blockFeatureOntologies.length}}
-        {{#if ontologiesTree.isFulfilled}}
+      {{#if this.blockFeatureOntologies.length}}
+        {{#if this.ontologiesTree.isFulfilled}}
           {{#record/entry-tab 
             tab=tab
             name='Ontology'
-            values=ontologiesTree.content
-            levelMeta=levelMeta
-            controlOptions=controlOptions
-            loadBlock="loadBlock"
-            selectBlock="selectBlock"
-            selectedBlock=selectedBlock
-            selectDataset="selectDataset"
+            values=this.ontologiesTree.content
+            levelMeta=this.levelMeta
+            controlOptions=this.controlOptions
+            loadBlock=this.loadBlock
+            selectBlock=this.selectBlock
+            selectedBlock=this.selectedBlock
+            selectDataset=this.selectDataset
             selectExpander=(action this.selectOntologyNode) }}
 
             <span style="display: inline-block; margin-left: 3em;">
-              {{input type="checkbox" name="this.controlOptions.showHierarchy" checked=this.controlOptions.showHierarchy
-                input=(action showHierarchyChanged preventDefault=false)
-                id="checkbox-showHierarchy" }}
+              <input
+                type="checkbox"
+                name="this.controlOptions.showHierarchy"
+                checked={{this.controlOptions.showHierarchy}}
+                oninput={{action this.showHierarchyChanged preventDefault=false}}
+                id="checkbox-showHierarchy"
+              />
               <label for="checkbox-showHierarchy"><i class="glyphicon glyphicon-tree-conifer"></i></label>
             </span>
 
           {{/record/entry-tab}}
         {{else}}
-          {{#tab.pane id='tab-explorer-Ontology' title='Ontology'}}
+          <tab.pane @id='tab-explorer-Ontology' id='tab-explorer-Ontology' @title='Ontology'>
             <div>Requesting the Ontology Tree ...</div>
-          {{/tab.pane}}
+          </tab.pane>
         {{/if}}
       {{/if}}
 
 
-      {{#unless enable_parentBeforeFilter}}
+      {{#unless this.enable_parentBeforeFilter}}
         {{!-- log 'dataTypedTreeFG' dataTypedTreeFG --}}
-        {{#each-in dataTypedTreeFG as |tabTypeName tabData|}}
+        {{#each-in this.dataTypedTreeFG as |tabTypeName tabData|}}
           {{!-- log 'tabTypeName' tabTypeName 'tabData' tabData (compute (action 'keysLength' tabData)) --}}
           {{record/entry-tab 
             tab=tab
             name=tabTypeName
             values=tabData
-            levelMeta=levelMeta
-            controlOptions=controlOptions
-            loadBlock="loadBlock"
-            selectBlock="selectBlock"
-            selectedBlock=selectedBlock
-            selectDataset="selectDataset"}}
+            levelMeta=this.levelMeta
+            controlOptions=this.controlOptions
+            loadBlock=this.loadBlock
+            selectBlock=this.selectBlock
+            selectedBlock=this.selectedBlock
+            selectDataset=this.selectDataset}}
         {{/each-in}}
       {{else}}
         {{!-- log 'dataParentTypedFGTree' dataParentTypedFGTree --}}
-        {{#each-in dataParentTypedFGTree as |tabTypeName tabData|}}
+        {{#each-in this.dataParentTypedFGTree as |tabTypeName tabData|}}
           {{!-- log 'tabTypeName' tabTypeName 'tabData' tabData (compute (action 'keysLength' tabData)) --}}
           {{record/entry-tab 
             tab=tab
             name=(concat tabTypeName '2')
             values=tabData
-            levelMeta=levelMeta
-            controlOptions=controlOptions
-            loadBlock="loadBlock"
-            selectBlock="selectBlock"
-            selectedBlock=selectedBlock
-            selectDataset="selectDataset"}}
+            levelMeta=this.levelMeta
+            controlOptions=this.controlOptions
+            loadBlock=this.loadBlock
+            selectBlock=this.selectBlock
+            selectedBlock=this.selectedBlock
+            selectDataset=this.selectDataset}}
         {{/each-in}}
       {{/unless}}
 
-      {{#if enable_datatypeFromFamily}}
+      {{#if this.enable_datatypeFromFamily}}
 
-        <tab.pane @id="tab-explorer-parent" @title="by Parent">
+        <tab.pane @id="tab-explorer-parent" id="tab-explorer-parent" @title="by Parent">
           <ul class="list-group borderless">
-            {{record/entry-values values=dataTree levelMeta=levelMeta
-              controlOptions=controlOptions
-              loadBlock="loadBlock"
-              selectBlock="selectBlock"
-              selectedBlock=selectedBlock
-              selectDataset="selectDataset"}}
+            {{record/entry-values
+              values=this.dataTree
+              levelMeta=this.levelMeta
+              controlOptions=this.controlOptions
+              loadBlock=this.loadBlock
+              selectBlock=this.selectBlock
+              selectedBlock=this.selectedBlock
+              selectDataset=this.selectDataset
+            }}
           </ul>
         </tab.pane>
 
-        <tab.pane @id="tab-explorer-byDataset" @title="by Dataset">
+        <tab.pane @id="tab-explorer-byDataset" id="tab-explorer-byDataset" @title="by Dataset">
           {{record/entry-datasets
-            loadBlock="loadBlock"
-            selectBlock=(action 'selectBlock')
-            selectedBlock=selectedBlock
-            selectDataset=(action 'selectDataset')
-            selectedDataset=selectedDataset
-            data=dataWithoutParent}}
+            loadBlock=this.loadBlock
+            selectBlock=this.selectBlock
+            selectedBlock=this.selectedBlock
+            selectDataset=this.selectDataset
+            selectedDataset=this.selectedDataset
+            data=this.dataWithoutParent}}
         </tab.pane>
 
-        <tab.pane @id="tab-explorer-references" @title="References">
+        <tab.pane @id="tab-explorer-references" id="tab-explorer-references" @title="References">
           {{record/entry-datasets
-            loadBlock="loadBlock"
-            selectBlock=(action 'selectBlock')
-            selectedBlock=selectedBlock
-            selectDataset=(action 'selectDataset')
-            selectedDataset=selectedDataset
-            data=parents}}
+            loadBlock=this.loadBlock
+            selectBlock=this.selectBlock
+            selectedBlock=this.selectedBlock
+            selectDataset=this.selectDataset
+            selectedDataset=this.selectedDataset
+            data=this.parents}}
         </tab.pane>
 
       {{/if}}
 
-      <tab.pane @id="tab-explorer-datasets" @title="Datasets">
+      <tab.pane @id="tab-explorer-datasets" id="tab-explorer-datasets" @title="Datasets">
 
         <ul class="list-group borderless">
 
@@ -328,18 +360,18 @@
             </span>
           </li>
   
-          {{#each dataPre as |dataset|}}
+          {{#each this.dataPre as |dataset|}}
             {{record/entry-dataset
-              filter=filter
-              controlOptions=controlOptions
+              filter=this.filter
+              controlOptions=this.controlOptions
               entry=dataset
-              selectedBlock=selectedBlock
-              selectBlock="selectBlock"
-              deleteBlock="deleteBlock"
-              onDelete="onDelete"
-              loadBlock="loadBlock"
-              selectedDataset=selectedDataset
-              selectDataset="selectDataset"}}
+              selectedBlock=this.selectedBlock
+              selectBlock=this.selectBlock
+              onDelete=this.onDelete
+              refreshDatasets=this.refreshDatasets
+              loadBlock=this.loadBlock
+              selectedDataset=this.selectedDataset
+              selectDataset=this.selectDataset}}
           {{/each}}
         </ul>
 
@@ -354,11 +386,11 @@
 
 {{/elem/panel-container}}
 
-{{panel/select-parent block=blockWithoutParentOnPrimary loadBlock="loadBlock"}}
+{{panel/select-parent block=this.blockWithoutParentOnPrimary loadBlock=this.loadBlock}}
 
-{{panel/synonomous-parents blocks=viewedSynonomousReferenceBlocks}}
+{{panel/synonomous-parents blocks=this.viewedSynonomousReferenceBlocks}}
 
-{{#if enableShow}}
+{{#if this.enableShow}}
   {{new-datasource-modal closeNewDatasourceModal=(action 'closeNewDatasourceModal')}} 
 {{/if}}
 

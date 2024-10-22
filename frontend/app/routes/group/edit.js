@@ -2,7 +2,7 @@ import Route from '@ember/routing/route';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 
-
+import { setupControllerModelOwnerTarget } from '../../utils/ember-devel';
 import { getGroups, groupDatasets } from '../../utils/data/group';
 
 // -----------------------------------------------------------------------------
@@ -15,6 +15,12 @@ let dLog = trace ? console.debug : function () { };
 export default class GroupEditRoute extends Route {
   @service auth;
   @service apiServers;
+
+  //----------------------------------------------------------------------------
+
+  setupController = setupControllerModelOwnerTarget;
+
+  //----------------------------------------------------------------------------
 
   @action
   willTransition(transition) {
@@ -43,7 +49,7 @@ export default class GroupEditRoute extends Route {
    */
   @action
   refreshModel() {
-    const fnName = 'refreshModel';
+    const fnName = 'routes/group/edit:refreshModel';
     dLog(fnName);
     let
     group = this.controller.model,

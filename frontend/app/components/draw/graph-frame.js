@@ -300,7 +300,7 @@ export default Component.extend({
       oa.foreground =
         oa.svgContainer.append("g") // foreground has as elements "paths" that correspond to features
         .attr("class", "foreground");
-      let flowValues = d3.values(oa.flows),
+      let flowValues = Object.values(oa.flows),
       flowsg = oa.foreground.selectAll("g")
         .data(flowValues)
         .enter()
@@ -669,7 +669,7 @@ export default Component.extend({
       {
         if (redrawAxes) {
           const stacksView = this.oa.axisApi.stacksView;
-          stacksView.stacksRedraw();
+          stacksView?.stacksRedraw();
         }
         if (false && ! layoutChanged) {
           // Currently debounce-d in resizeThis(), so call directly here.

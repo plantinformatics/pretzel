@@ -15,7 +15,7 @@ export default Component.extend({
   // actions
   actions: {
     onClick() {
-      this.sendAction('onClick', this.side, this.key);
+      this.onClick(this.side, this.key);
     }
   }
 });

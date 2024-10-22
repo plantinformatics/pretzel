@@ -13,18 +13,18 @@ const enableModifiers = false;
 
 function configureSyntenyBlockClicks(selection) {
   selection
-    .on('click', function (d, i, g) {
-      if (enableModifiers && d3.event.shiftKey) {
-        syntenyBlockSelect.apply(this, [d, i, g]);
-      } else if (enableModifiers && d3.event.ctrlKey) {
-        syntenyBlockAdjust.apply(this, [d, i, g]);
+    .on('click', function (event, d) {
+      if (enableModifiers && event.shiftKey) {
+        syntenyBlockSelect.apply(this, [d]);
+      } else if (enableModifiers && event.ctrlKey) {
+        syntenyBlockAdjust.apply(this, [d]);
       } else {
         let selectedElements = getSelectedElements();
         if (selectedElements && (selectedElements.get('selectOrApply') === 'apply')) {
-          syntenyBlockApply.apply(this, [d, i, g]);
+          syntenyBlockApply.apply(this, [d]);
         } else {
           if (enableModifiers) {
-            syntenyBlockEdit.apply(this, [d, i, g]);
+            syntenyBlockEdit.apply(this, [d]);
           }
         }
       };
@@ -42,7 +42,7 @@ function getSelectedElements() {
  * Called via d3 on <path> .syntenyEdge :
  *   .on('click', syntenyBlockEdit)
  */
-function syntenyBlockEdit(d, i, g) {
+function syntenyBlockEdit(d) {
   /** not decided yet whether selectedElements will be 1 per draw-map or singleton. */
   let selectedElements = getSelectedElements();
   if (selectedElements && Array.isArray(selectedElements)) {
@@ -56,7 +56,7 @@ function syntenyBlockEdit(d, i, g) {
  * Also : if removing this element, remove other elements on the same block-adj;
  * this is analogous to shift-click de/selecting neighbouring elements.
  */
-function syntenyBlockSelect(d, i, g) {
+function syntenyBlockSelect(d) {
   let selectedElements = getSelectedElements();
   if (selectedElements) {
     if (selectedElements.includes(this)) {
@@ -102,7 +102,7 @@ function elementsSameBlockAdj(e) {
 /** Add this element to selectedElements, if it is not already present.
  * If it is present, remove it;  i.e. toggle its selectedness.
  */
-function syntenyBlockAdjust(d, i, g) {
+function syntenyBlockAdjust(d) {
   let selectedElements = getSelectedElements();
   if (selectedElements) {
     if (selectedElements.includes(this)) {
@@ -115,7 +115,7 @@ function syntenyBlockAdjust(d, i, g) {
     }
   }
 }
-function syntenyBlockApply(d, i, g) {
+function syntenyBlockApply(d) {
   let selectedElements = getSelectedElements();
   if (selectedElements) {
     selectedElements.get('applyColour')(this);

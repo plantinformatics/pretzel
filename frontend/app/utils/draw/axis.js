@@ -442,7 +442,7 @@ let
 let
   /** axisTitle is not currently using schemeCategory10, so can use it here. */
   trait_colour_scale =
-  d3.scaleOrdinal().range(d3.schemeCategory20);
+  d3.scaleOrdinal().range(d3.schemeCategory10/*20*/);
 
 
 /** for the stroke and fill of axis title menu

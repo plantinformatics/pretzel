@@ -20,15 +20,15 @@ export default Model.extend({
 
   //----------------------------------------------------------------------------
 
-  blockId: belongsTo('block'),
+  blockId: belongsTo('block', {async: true, inverse: 'features'}),
   _name: attr('string'),
   /* currently have a mix of .range and .value in pretzel-data [develop];
    * handle both for now;  chrData() also handles either.  */
   value: attr(),
   range: attr(),
   values: attr(),
-  parentId: belongsTo('feature', {inverse: 'features'}),
-  features: hasMany('feature', {inverse: 'parentId'}),
+  parentId: belongsTo('feature', {async: true, inverse: 'features'}),
+  features: hasMany('feature', {async: true, inverse: 'parentId'}),
 
   /*--------------------------------------------------------------------------*/
 

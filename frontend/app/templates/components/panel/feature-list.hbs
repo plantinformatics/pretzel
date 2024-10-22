@@ -1,12 +1,12 @@
 {{!-- --------------------------------------------------------------------- --}}
 
-{{searchFeatureNamesEffect}}
+{{this.searchFeatureNamesEffect}}
 
 {{!-- --------------------------------------------------------------------- --}}
 
 <div style="display: flex;">
   <span>Selected Features</span>
-  <span class="badge">{{selectedFeatures.length}}</span>
+  <span class="badge">{{this.selectedFeatures.length}}</span>
 
   <div style="margin-top: -9px;">
     {{!-- can use these in <a> instead of glyphicon-arrow-{left,right} (smaller)
@@ -29,20 +29,21 @@
 
 <div>
   <span>Features Input</span>
-  {{#if activeInput}}
-    <span class="badge">{{featureNameList.featureNameList.length}}</span>
+  {{#if this.activeInput}}
+    <span class="badge">{{this.featureNameList.featureNameList.length}}</span>
   {{/if}}
 
-  {{textarea
+  <Textarea
     class="form-control"
-    maxLength=15
-    input=(action 'inputIsActive')
-    enter=(action 'featureNameListInput')
-    insert-newline=(action 'featureNameListInput')
-    escape-press=(action 'featureNameListInput')
-    paste=(action 'paste')
+    oninput={{action 'inputIsActive'}}
+    @enter={{action 'featureNameListInput'}}
+    @insert-newline={{action 'featureNameListInput'}}
+    @escape-press={{action 'featureNameListInput'}}
+    onpaste={{action 'paste'}}
     placeholder="Feature (Marker/Gene) Names
-    (whitespace or comma separated)" }}
+    (whitespace or comma separated)" >
+  </Textarea>
+
 </div>
 
 

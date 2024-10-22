@@ -1,21 +1,21 @@
-{{rendererConfigEffect}}
+{{this.rendererConfigEffect}}
 {{this.tableHeightEffect}}
 {{this.positionFilterEffect}}
 
 {{!---------------------------------------------------------------------------}}
 
 <div id=timeMeasure></div>
-{{#if selectedColumnName}}
+{{#if this.selectedColumnName}}
   <div>
-    <label>Selected sample column :&nbsp;</label>{{selectedColumnName}}
+    <label>Selected sample column :&nbsp;</label>{{this.selectedColumnName}}
   </div>
 {{/if}}
 
 {{!---------------------------------------------------------------------------}}
 
 
-    {{#if noData}}
-      {{#unless blockSamples}}
+    {{#if this.noData}}
+      {{#unless this.blockSamples}}
         <div class="well">
             <span>Select individuals to display using Dataset Explorer</span>
         </div>
@@ -29,16 +29,22 @@
 <ul class="list-group view-controls">
   <li class="list-group-item">
     <label style="display:inline">Select phase to display in CATG :</label>
-    {{radio-button value='0' groupValue=selectPhase
-      changed=(action selectPhaseChanged preventDefault=false)
+    {{radio-button
+      value='0'
+      groupValue=this.selectPhase
+      changed=(action this.selectPhaseChanged preventDefault=false)
     }}
     0 &nbsp;&nbsp; /
-    {{radio-button value='1' groupValue=selectPhase
-      changed=(action selectPhaseChanged preventDefault=false)
+    {{radio-button
+      value='1'
+      groupValue=this.selectPhase
+      changed=(action this.selectPhaseChanged preventDefault=false)
     }}
     1 &nbsp;&nbsp;
-    {{radio-button value='both' groupValue=selectPhase
-      changed=(action selectPhaseChanged preventDefault=false)
+    {{radio-button
+      value='both'
+      groupValue=this.selectPhase
+      changed=(action this.selectPhaseChanged preventDefault=false)
     }}
     Both &nbsp;&nbsp;
   </li>

@@ -89,7 +89,13 @@ export default class DataGroups extends EmberObject {
   getGroups(own) {
     let
     server = this.server,
-    groupsP = server.getVersion().then((apiVersion) => {
+    /** getDatasets() does not delay on getVersion(), and getGroups2() is
+     * required before getDatasets() so that dataset groupId.owner evaluates correctly.
+     * So either delay getDatasets() until getVersion() is done, or simply
+     * assume version is OK (there are no current servers older than apiVersion 2)
+     */
+    groupsP = Promise.resolve(2)/*server.getVersion()*/.then((apiVersion) => {
+      // if (apiVersion >= 2)
       return this.getGroups2(apiVersion, own); });
     return toArrayPromiseProxy(groupsP);
   }
@@ -118,10 +124,12 @@ export default class DataGroups extends EmberObject {
   /** extract the groupIds from the groups/in result
    */
   saveGroupInIds(gi) {
+    const fnName = 'saveGroupInIds';
     let groupIds = gi.toArray()
-        .mapBy('_internalModel._relationshipProxyCache.groupId.content.id');
+        .mapBy('groupId.id');
     if (groupIds) {
       this.set('groupsInIds', groupIds);
+      dLog(fnName, groupIds);
     }
   }
 

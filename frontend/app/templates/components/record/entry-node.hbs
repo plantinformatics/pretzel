@@ -1,21 +1,24 @@
 
 <li class="list-group-item list-group-item-info" >
-  {{#record/entry-expander nodeName=name
-      values=values
-      levelMeta=levelMeta
-      selectExpander=selectExpander
+  {{#record/entry-expander nodeName=this.name
+      values=this.values
+      levelMeta=this.levelMeta
+      selectExpander=this.selectExpander
     }}
 
     {{!-- log 'entry-node' name values --}}
     <ul>
-      {{record/entry-values values=values.node levelMeta=levelMeta
-        name=name
+      {{record/entry-values
+        values=this.values.node
+        levelMeta=this.levelMeta
+        name=this.name
         parentDone=true
-        controlOptions=controlOptions
-        loadBlock="loadBlock"
-        selectBlock="selectBlock"
-        selectedBlock=selectedBlock
-        selectDataset="selectDataset"}}
+        controlOptions=this.controlOptions
+        loadBlock=this.loadBlock
+        selectBlock=this.selectBlock
+        selectedBlock=this.selectedBlock
+        selectDataset=this.selectDataset
+      }}
     </ul>
 
   {{/record/entry-expander}}

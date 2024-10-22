@@ -5,7 +5,14 @@ export default Component.extend({
   tagName: 'span',
   // attributes
   click: function() {
-    this.sendAction('onClick');
+    /** 3828f884 created this component with this function :
+     *   click: function() { this.sendAction('onClick'); },
+     * here and in siblings button-refresh and dropdown-row, so it may
+     * have been an unused leftover in this case.
+     * 48e5ec2d added {{action this.click }} in .hbs to <button .dropdown-toggle>
+     * which calls this function, but it's not clear that it has a role.
+     */
+    console.log('dropdown-container', 'click');
   },
   // classes
   // classNames: ['btn'],

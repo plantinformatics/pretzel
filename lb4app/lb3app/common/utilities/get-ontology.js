@@ -1,5 +1,11 @@
+'use strict';
+
 const bent = require('bent');
 const param = require('jquery-param');
+
+/*----------------------------------------------------------------------------*/
+
+const { ErrorStatus } = require('../utilities/errorStatus.js');
 
 /*----------------------------------------------------------------------------*/
 
@@ -28,7 +34,7 @@ exports.ontologyGetTree = function (id) {
 
   let
   promise = exports.ontologyGetNode(/*rootId*/ id, /*id*/undefined)
-    .then((o) => exports.ontologyGetChildren(id, o));
+    .then((o) => o && exports.ontologyGetChildren(id, o));
   return promise;
 };
 
@@ -89,12 +95,17 @@ exports.ontologyGetNode = function (rootId, id) {
 
   console.log(fnName, host, endPoint, rootId, id, url);
 
+  /** If the promise value returned does not include .catch() or if
+   * the .catch() throws then the server exits.
+   * So instead, undefined is returned, which is handled in Ontology.getTree().
+   */
   let promise =
     getJSON(url /*, body, headers */)
       /** expect result is an array with 1 element. */
       .then((a) => ((a.length === 1) ? a[0] : a))
       .catch(function (err) {
         console.log(fnName, endPoint, id, queryParams, err);
+        // throw ErrorStatus(404, fnName);
       });
   promise.then((ontologies) => console.log(fnName, ontologies && ontologies.length));
   return promise;

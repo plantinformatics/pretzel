@@ -138,8 +138,7 @@ function flows_showControls (parentSelector)
     .attr("class",  function (flowName) { return flowName;})
     .classed("flowButton", true)
     .classed("selected", flowSelected)
-    .on('click', function (flowName /*, i, g*/) {
-      let event = d3.event;
+    .on('click', function (event, flowName) {
       console.log(flowName, event);
       // sharing click with Export menu
       if (event.shiftKey)
@@ -181,7 +180,7 @@ function updateSelections_flowControls() {
   let foreground = d3.select('#holder svg > g > g.foreground');
   /** parent of flow <g>s, for [frontend, progress] */
   let flowPg = [foreground, foreground.select('g > g.progress')];
-  d3.keys(flows).forEach(function (flowName) {
+  Object.keys(flows).forEach(function (flowName) {
     let flow = flows[flowName];
     [false, true].forEach((progress) => {
       /** separate <g> for paths loaded via paths-progressive from backend API (g).

@@ -41,11 +41,11 @@
              -->
           <li class="active-detail">
             <a data-toggle="tab" href="#tab-paths-density" onclick={{action "pathTabActive" "density"}}>Paths - Density</a>
-            <div>{{ pathControlActiveDensity }}</div>
+            <div>{{ this.pathControlActiveDensity }}</div>
           </li>
           <li class="active-detail active">
             <a data-toggle="tab" href="#tab-paths-sample" onclick={{action "pathTabActive" "sample"}}>- Sample</a>
-            <div>{{ pathControlActiveSample }}</div>
+            <div>{{ this.pathControlActiveSample }}</div>
           </li>
 
         </ul>
@@ -55,8 +55,8 @@
           <div id="tab-paths-density" class="tab-pane fade">
             <input type="range" 
               id="range-pathDensity" 
-              value={{pathDensity}}
-              oninput={{action (mut pathDensity) value="target.value"}}
+              value={{this.pathDensity}}
+              oninput={{action (mut this.pathDensity) value="target.value"}}
               min="-50" max="50"
             >
           </div>
@@ -64,8 +64,8 @@
           <div id="tab-paths-sample" class="tab-pane fade in active">
             <input type="range" 
               id="range-pathSample" 
-              value={{pathSample}}
-              oninput={{action (mut pathSample) value="target.value"}}
+              value={{this.pathSample}}
+              oninput={{action (mut this.pathSample) value="target.value"}}
               min="0" max="100"
             >
           </div>
@@ -77,15 +77,15 @@
     </li>
     <li class="list-group-item">
       <div>
-        {{input type="checkbox" checked=pathsViaStream class="toggle"}}
+        {{input type="checkbox" checked=this.pathsViaStream class="toggle"}}
         <label>Path Stream</label>
-        <span class="sub-label"> Limit : <span>{{ pathControlNFeatures }}</span></span>
+        <span class="sub-label"> Limit : <span>{{ this.pathControlNFeatures }}</span></span>
       </div>
       <div>
         <input type="range" 
           id="range-pathNFeatures" 
-          value={{pathNFeatures}} 
-               oninput={{action (mut pathNFeatures) value="target.value"}}
+          value={{this.pathNFeatures}} 
+               oninput={{action (mut this.pathNFeatures) value="target.value"}}
           min="0" max="100"
         />
       </div>
@@ -95,25 +95,25 @@
     <li class="list-group-item">
       <div>
         <label>Binned Feature Counts</label>
-        <div class="sub-label"> Number of Bins : <span>{{ featuresCountsNBins }}</span></div>
+        <div class="sub-label"> Number of Bins : <span>{{ this.featuresCountsNBins }}</span></div>
       </div>
       <div>
         <input type="range" 
          id="range-featuresCountsNBinsLinear" 
-         value={{featuresCountsNBinsLinear}} 
-               oninput={{action (mut featuresCountsNBinsLinear) value="target.value"}}
+         value={{this.featuresCountsNBinsLinear}} 
+               oninput={{action (mut this.featuresCountsNBinsLinear) value="target.value"}}
          min="0" max="100"
         />
       </div>
 
       <div>
-        <span class="sub-label"> Threshold : <span>{{ featuresCountsThreshold }}</span></span>
+        <span class="sub-label"> Threshold : <span>{{ this.featuresCountsThreshold }}</span></span>
       </div>
       <div>
         <input type="range" 
          id="range-featuresCountsThresholdLinear" 
-         value={{featuresCountsThresholdLinear}} 
-               oninput={{action (mut featuresCountsThresholdLinear) value="target.value"}}
+         value={{this.featuresCountsThresholdLinear}} 
+               oninput={{action (mut this.featuresCountsThresholdLinear) value="target.value"}}
          min="0" max="100"
         />
       </div>
@@ -124,18 +124,18 @@
     <li class="list-group-item">
       <label>Distributed Join</label>
       <span class="filter-group-col">
-        {{input type="checkbox" name="pathJoinClient" checked=pathJoinClient }}
+        {{input type="checkbox" name="pathJoinClient" checked=this.pathJoinClient }}
         <label>Client</label>
       </span>
       <span class="filter-group-col">
-        {{input type="checkbox" name="pathJoinRemote" checked=pathJoinRemote }}
+        {{input type="checkbox" name="pathJoinRemote" checked=this.pathJoinRemote }}
         <label>Server</label>
       </span>
     </li>
 
     <li class="list-group-item">
       <span class="filter-group-col">
-        {{input type="checkbox" name="modeBarLine" checked=chartBarLine }}
+        {{input type="checkbox" name="modeBarLine" checked=this.chartBarLine }}
         <label>Chart Bar / Line</label>
       </span>
     </li>
@@ -159,7 +159,7 @@
       <div>
         <input type="checkbox"
           checked="checked"
-          oninput={{action hideAxisTextClass}}  >
+          oninput={{action this.hideAxisTextClass}}  >
         <label>Show Axis Text</label>
       </div>
       <div>
@@ -188,13 +188,21 @@
     <li class="list-group-item">
       <label>Show Features which</label>
       <span class="filter-group-col">
-        {{input type="checkbox" name="featureIntervalOverlap" checked=featureIntervalOverlap
-          input=(action featureIntervalOverlapChanged preventDefault=false) }}
+        <input
+          type="checkbox"
+          name="featureIntervalOverlap"
+          checked={{this.featureIntervalOverlap}}
+          oninput={{action this.featureIntervalOverlapChanged preventDefault=false}}
+        />
         <label>overlap</label>
       </span>
       <span class="filter-group-col">
-        {{input type="checkbox" name="featureIntervalContain" checked=featureIntervalContain
-          input=(action featureIntervalContainChanged preventDefault=false)  }}
+        <input
+          type="checkbox"
+          name="featureIntervalContain"
+          checked={{this.featureIntervalContain}}
+          oninput={{action this.featureIntervalContainChanged preventDefault=false}}
+        />
         <label>contain</label>
       </span>
       <label>the zoom or brush scope.</label>
@@ -202,16 +210,22 @@
 
     <li class="list-group-item">
       <label style="display:inline">When only 1 end of alignment path is within zoom, show :</label>
-      {{radio-button value='tick' groupValue=tickOrPath
-        changed=(action tickOrPathChanged preventDefault=false)
+      {{radio-button
+        value='tick'
+        groupValue=this.tickOrPath
+        changed=(action this.tickOrPathChanged preventDefault=false)
       }}
       tick &nbsp;&nbsp;
-      {{radio-button value='path' groupValue=tickOrPath
-        changed=(action tickOrPathChanged preventDefault=false)
+      {{radio-button
+        value="path"
+        groupValue=this.tickOrPath
+        changed=(action this.tickOrPathChanged preventDefault=false)
       }}
       path &nbsp;&nbsp;
-      {{radio-button value='nothing' groupValue=tickOrPath
-        changed=(action tickOrPathChanged preventDefault=false)
+      {{radio-button
+        value='nothing'
+        groupValue=this.tickOrPath
+        changed=(action this.tickOrPathChanged preventDefault=false)
       }}
       nothing
 
@@ -230,18 +244,18 @@
     <li class="list-group-item horiz-2">
       <div>
       <span class="filter-group-col">
-        {{input type="checkbox" name="pathGradientUpper" checked=pathGradientUpper }}
+        {{input type="checkbox" name="pathGradientUpper" checked=this.pathGradientUpper }}
         {{#ember-tooltip side="right" delay=500}}
           Use threshold as an upper / lower limit.
         {{/ember-tooltip}}
       </span>
-      <label class="inline-margin">Path Colinearity Threshold : {{pathGradient}}</label>
+      <label class="inline-margin">Path Colinearity Threshold : {{this.pathGradient}}</label>
       <input type="range" 
        id="range-pathGradient" 
        name="pathGradient" 
        min="0" max="100"
-       value={{pathGradientInt}}
-       oninput={{action (mut pathGradientInt) value="target.value"}}
+       value={{this.pathGradientInt}}
+       oninput={{action (mut this.pathGradientInt) value="target.value"}}
       />
       </div>
       <div>
@@ -333,7 +347,7 @@
     
       <div>
         <label>Graph Text Size</label>
-        <span class="sub-label" style="margin-left: 7px;">{{ titleTextSize }}</span>
+        <span class="sub-label" style="margin-left: 7px;">{{ this.titleTextSize }}</span>
       <input type="range"
        value=4
        oninput={{action this.titleTextSizeInput}}
@@ -372,8 +386,8 @@
           <span class="sub-label">
           {{input
             type="text"
-            value=axisLayerModulusText
-            enter=(action axisLayerModulusTextChanged value=target.value)
+            value=this.axisLayerModulusText
+            enter=(action this.axisLayerModulusTextChanged value=this.target.value)
             id="axisLayerModulusText"
           }}
           </span>
@@ -381,8 +395,8 @@
         <input type="range"
          id="range-axisLayerModulus" 
          min="0" max="50"
-         value={{axisLayerModulusLinear}}
-         oninput={{action axisLayerModulusLinearChanged value="target.value"}}
+         value={{this.axisLayerModulusLinear}}
+         oninput={{action this.axisLayerModulusLinearChanged value="target.value"}}
         />
       </div>
 
@@ -394,8 +408,8 @@
         <span class="sub-label">
         {{input
           type="text"
-          value=sbSizeThresholdText
-          enter=(action sbSizeThresholdTextChanged value=target.value)
+          value=this.sbSizeThresholdText
+          enter=(action this.sbSizeThresholdTextChanged value=this.target.value)
           id="sbSizeThresholdText"
         }}
         </span>
@@ -403,15 +417,15 @@
       <input type="range"
        id="range-sbSizeThreshold" 
        min="0" max="50"
-       value={{sbSizeThresholdLinear}}
-       oninput={{action sbSizeThresholdLinearChanged value="target.value"}}
+       value={{this.sbSizeThresholdLinear}}
+       oninput={{action this.sbSizeThresholdLinearChanged value="target.value"}}
       />
     </li>
 
     <li class="list-group-item">
       <div>
         <label style="float:right">Times (ms)</label>
-        <span class="sub-label"> Debounce : <span>{{ debounceTime }}</span></span>
+        <span class="sub-label"> Debounce : <span>{{ this.debounceTime }}</span></span>
       </div>
       <div>
         <input type="range" 
@@ -423,7 +437,7 @@
         />
       </div>
       <div>
-        <span class="sub-label"> Throttle : <span>{{ throttleTime }}</span></span>
+        <span class="sub-label"> Throttle : <span>{{ this.throttleTime }}</span></span>
       </div>
       <div>
         <input type="range" 

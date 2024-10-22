@@ -3,7 +3,7 @@ import $ from 'jquery';
 import { get } from '@ember/object';
 import { inject as service } from '@ember/service';
 import RESTAdapter from '@ember-data/adapter/rest';
-import DataAdapterMixin from 'ember-simple-auth/mixins/data-adapter-mixin';
+import DataAdapterMixin from '../utils/ember-simple-auth-mixin-replacements/data-adapter-mixin'; // 'ember-simple-auth/mixins/data-adapter-mixin';
 // import PartialModelAdapter from 'ember-data-partial-model/mixins/adapter';
 import { pluralize } from 'ember-inflector';
 
@@ -53,12 +53,23 @@ var config = {
 
   get host() {
     let store = this.store,
-    adapterOptions = store && store.adapterOptions,
-    host = (adapterOptions && adapterOptions.host) || get(this, '_server.host');
+    adapterOptions = store && null, // store.adapterFor('block'),
+    host = (adapterOptions && adapterOptions.host) || get(this, 'server.host');
     if (trace) {
       dLog('app/adapters/application.js host', adapterOptions, host, (trace < 2) ? [store.name, this._server?.name] : [this, store, this._server]);
     }
     return host;
+  },
+
+  /** determine the server to use.  */
+  get server() {
+    let
+    server =
+      this.apiServers.currentRequestServer ||
+      this.get('session.requestServer') ||
+      this._server ||
+      this.apiServers.primaryServer;
+    return server;
   },
 
   /** Include rootURL into namespace, to be used by 
@@ -81,12 +92,33 @@ var config = {
 
   get headers() {
     let
+    fnName = 'headers',
     store = this.store,
     adapterOptions = store && store.adapterOptions,
-    server = store.name && this.apiServers.lookupServerName(store.name) || this._server,
-    token = server && server.token;
+    server = store.name && this.apiServers.lookupServerName(store.name);
+    if (! server) {
+      server = this.apiServers.currentRequestServer;
+      if (server) {
+        const
+        serverTime = this.apiServers.get('currentRequestServerTime'),
+        now = Date.now();
+        if (now - serverTime > 1000 /*ms*/) {
+          dLog(fnName, now - serverTime, now, serverTime);
+          /*
+          server = undefined;
+          this.apiServers.set('currentRequestServer', null);
+          */
+        }
+      }
+      dLog(fnName, adapterOptions, store, server?.name);
+    }
+    /** use currentRequestServerTime before ._server */
+    if (! server) {
+      server = this._server;
+    }
+    const token = server && server.token;
     if (trace) {
-      dLog('headers', adapterOptions, (trace < 2) ? [store.name, server?.name] : [store, server], token);
+      dLog(fnName, adapterOptions, (trace < 2) ? [store.name, server?.name] : [store, server], token);
     }
     return token && {
       Authorization : token
@@ -145,14 +177,24 @@ var config = {
         let
         id2Server = this.get('apiServers.id2Server'),
         map = this.get('apiServers.obj2Server'),
-        /** the above works for blocks; for datasets (e.g. delete), can lookup server name from snapshot.record */
-        snapshotServerName = snapshot && get(snapshot, 'record.store.name'),
-        serverName = queryServerName || snapshotServerName,
-        servers = this.get('apiServers.servers'),
-        snapshotServer = servers && serverName && servers[serverName];
-        server = map.get(serverHandle) || (id && id2Server[id]) || snapshotServer;
+        server = map.get(serverHandle) || (id && id2Server[id]);
+        /* Don't use this for findRecord because if the id is not loaded, get :
+         * Record client ... (@lid:client-...) is not yet loaded and thus cannot be accessed from the Snapshot during serialization
+         */
+        if (requestType !== 'findRecord' && ! server) {
+          const
+          /** the above works for blocks; for datasets (e.g. delete), can lookup server name from snapshot.record */
+          snapshotServerName = snapshot && get(snapshot, 'record.store.name'),
+          serverName = queryServerName || snapshotServerName,
+          servers = this.get('apiServers.servers'),
+          snapshotServer = servers && serverName && servers[serverName];
+          server = snapshotServer;
+          if (serverName) {
+            dLog(fnName, queryServerName, snapshotServerName, snapshotServer);
+          }
+        }
         if (trace) {
-          dLog(fnName, 'id2Server', id, requestType, snapshotServerName, (trace < 2) ? [server?.name] : [id2Server, map, server]);
+          dLog(fnName, 'id2Server', id, requestType, (trace < 2) ? [server?.name] : [id2Server, map, server]);
         }
       }
     }
@@ -173,7 +215,7 @@ var config = {
       this.namespace = ENV.apiNamespace;
     }
     let url = this._super(modelName, id, snapshot, requestType, query);
-    dLog(fnName, 'url', url, modelName, id, /*snapshot,*/ requestType);
+    dLog(fnName, 'url', url, modelName, id, /*snapshot,*/ requestType, server?.name);
     return url;
   },
 
@@ -186,6 +228,7 @@ var config = {
     let data = {};
     let
     object = store.peekRecord(snapshot.modelName, snapshot.id),
+    /* changedAttributes now contains relationships in some cases. */
     changedAttributes = snapshot.changedAttributes(),
     changedAttributesKeys = Object.keys(changedAttributes),
     /** object.hasDirtyAttributes seems to be true if either an attribute or relationship has changed.
@@ -194,24 +237,31 @@ var config = {
      * .groupId in the PATCH, to avoid writing [] to .blocks
      * This could be used more generally as other changes are added.
      */
-    /** probably github.com/ef4/ember-data-relationship-tracker offers a better solution. */
-    rc = snapshot._internalModel._relationshipProxyCache,
-    changedRelationshipKeys = Object.keys(rc);
-    if (! changedAttributesKeys.length &&
-        (snapshot.modelName === 'dataset') && 
-        (changedRelationshipKeys.length === 1) &&
-        (changedRelationshipKeys[0] === "groupId" )) {
-      /* expect changedAttributes is {}.
-       * If needed to set .groupId and attributes in one save, this can be expanded.
-       */
-      if (changedAttributesKeys.length) {
-        dLog(fnName, changedAttributes);
+    /** possibly github.com/ef4/ember-data-relationship-tracker offers a better solution, or :
+     * https://github.com/danielspaniel/ember-data-change-tracker
+     * https://www.npmjs.com/package/ember-data-relationship-dirty-tracking
+     * but they have not been updated to Ember v4.
+     */
+    record = snapshot.record,
+    attributesToSave = record[Symbol.for('attributesToSave')];
+    if (attributesToSave?.length) {
+      dLog(fnName, record.id, attributesToSave);
+      let attributeName;
+      while ((attributeName = attributesToSave.pop())) {
+        /** dataset record.get('clientId') is db id string instead of a proxy;
+         * to handle that case, could instead do :
+         *  const value = record.get(idField),
+         *  valueId = value.then ? value.get('id') : value
+         *  data[attributeName] = valueId || null;
+         */
+        const idField = attributeName.replace(/Id$/, 'Id.id');
+        /* map undefined to null, for JSON web API.
+         * When dataset.groupId is set to null, rc.groupId.get('id') returns
+         * undefined; map this to null, which is valid JSON in PATCH.
+         */
+        data[attributeName] = record.get(idField) || null;
       }
-      /* when dataset.groupId is set to null, rc.groupId.get('id') returns
-       * undefined; map this to null, which is valid JSON in PATCH.
-       * (snapshot._internalModel._record.groupId.content is null)
-       */
-      data.groupId = rc.groupId.get('id') || null;
+      dLog(fnName, data, record.id, changedAttributes, attributesToSave);
     } else if ((changedAttributesKeys.length === 1) && (type.modelName !== 'feature')) {
       /* excluding 'feature' because having attributes .value and .values seems to
        * confuse snapshot.changedAttributes() - when .values.Ontology is set,
@@ -228,8 +278,9 @@ var config = {
       let
       modelName = snapshot.modelName,
       serializer = store.serializerFor(modelName),
-      rename = serializer?.attrs[key];
-      data[rename || key] = snapshot.__attributes[key];
+      model = store.modelFor(modelName),
+      rename = serializer?._getMappedKey(key, model); // was serializer?.attrs[key] in Ember v3
+      data[rename || key] = snapshot.attr(key); // was .__attributes[key];
     } else {
     let serializer = store.serializerFor(type.modelName);
 
@@ -274,7 +325,7 @@ var config = {
     /* if this is used then add Spark, as it has the same API as Germinate.
      * .serverType is set in new-datasource-modal.js : onConfirm() : ServerLogin().then()
      */
-    if (server?.serverType !== 'Germinate') {
+    if (server?.serverType === 'Germinate') {	// BrAPI ?
       result = this._super(...arguments);
     } else {
       dLog('_ajax', options, this, server);

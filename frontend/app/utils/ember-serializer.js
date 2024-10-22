@@ -68,7 +68,8 @@ function normalizeDataEmbedded(store, modelName, modelNameIncluded, includedPlur
   const fnName = 'normalizeDataEmbedded';
   dLog(fnName, d);
   let
-  host = store.adapterOptions.host || '',
+  adapter = store.adapterFor(modelName),
+  host = adapter.host || '',
   data = normalizeData(modelName, host, d),
   included = [],
   include1 = function (modelNameIncluded, includedPlural, d, attributes) {

@@ -1,9 +1,9 @@
 <ul class="list-group">
-  {{#each mapList as |map|}}
+  {{#each this.mapList as |map|}}
     {{record/entry-dataset
       entry=map
-      selectedBlock=selectedBlock
-      selectBlock="selectBlock"
-      deleteBlock="deleteBlock"}}
+      selectedBlock=this.selectedBlock
+      selectBlock=this.selectBlock
+      }}
   {{/each}}
 </ul>

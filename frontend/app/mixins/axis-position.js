@@ -46,7 +46,7 @@ export default Mixin.create({
     let store = this.get('store');
     this.set('currentPosition', store.createRecord('vline-position'));
     this.set('lastDrawn', store.createRecord('vline-position'));
-    this._super(...arguments);
+    // this._super(...arguments);
   }),
 
 
@@ -97,6 +97,7 @@ export default Mixin.create({
     let
     throttled = lodash_throttle(
       function currentPosition_setDomain (domain) {
+        dLog('currentPosition_setDomain', domain);
         this.set('currentPosition.yDomainThrottled', domain);
       }, this.get('controls.view.throttleTime'));
     dLog('currentPosition_setDomain', this.get('controls.view.throttleTime'));

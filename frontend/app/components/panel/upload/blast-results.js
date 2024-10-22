@@ -4,6 +4,8 @@ import { inject as service } from '@ember/service';
 import { alias } from '@ember/object/computed';
 import { later as run_later } from '@ember/runloop';
 
+import { responseTextParseHtml } from '../../../utils/domElements';
+
 import uploadBase from '../../../utils/panel/upload-base';
 import uploadTable from '../../../utils/panel/upload-table';
 
@@ -138,7 +140,12 @@ export default Component.extend({
       // copied from data-base.js - could be factored.
       (err, status) => {
         dLog(fnName, 'dnaSequenceSearch reject', err, status);
+        const htmlError = err.responseText && responseTextParseHtml(err.responseText);
         let errobj = err?.responseJSON?.error || err.statusText;
+        if (! err?.responseJSON && htmlError) {
+          errobj += ':\t' + htmlError;
+        }
+
         console.log(fnName, errobj, status, err.status);
         let errmsg = null;
         if (errobj.message) {

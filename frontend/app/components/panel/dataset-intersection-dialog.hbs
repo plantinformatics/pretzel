@@ -30,11 +30,11 @@
     <div></div>
     <div>
       {{#if (and @dataset.positionFilter (gt @gtDatasetsLength 1))}}
-        {{input
+        <input
           type="text"
-          value=this.chooseK
-          input=(action this.chooseKChanged value=target.value)
-        }}
+          value={{this.chooseK}}
+          oninput={{action this.chooseKChanged value="target.value"}}
+        />
         Overlapping datasets
       {{/if}}
     </div>

@@ -22,11 +22,12 @@ export default Controller.extend({
    * Note : mapview uses '?options'. so using 'options' here gets error :
    * "... cannot have more than one controller property map to the same query
    * param key."
-   */
   queryParams: [{options : {as : 'appOptions'}}],
+   */
+  queryParams : ['appOptions'], 
 
-  parsedOptions : computed('options', function () {
-    let options = this.get('options'),
+  parsedOptions : computed('appOptions', function () {
+    let options = this.get('appOptions'),
     parsedOptions = options && parseOptions(options);
     dLog('parsedOptions', options);
     return parsedOptions;

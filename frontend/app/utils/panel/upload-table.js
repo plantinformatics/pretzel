@@ -33,6 +33,7 @@ export default {
   /** Returns a selected dataset name OR
    *  Attempts to create a new dataset with entered name */
   getDatasetId() {
+    const fnName = 'getDatasetId';
     var that = this;
     let datasets = that.get('datasets');
     return new Promise(function(resolve, reject) {
@@ -61,7 +62,11 @@ export default {
           let newDataset = that.get('store').createRecord('Dataset', newDetails);
           newDataset.save().then(() => {
             resolve(newDataset.id);
-          });
+          })
+            .catch((err) => {
+              dLog(fnName, newDetails, err);
+              that.setError(err.message + '\n' + newMap);
+            });
         }
       }
     });

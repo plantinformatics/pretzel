@@ -1,32 +1,32 @@
-{{#if block}}
+{{#if this.block}}
   {{#ember-modal-dialog modal-id="select-parent-modal" title="Select Parent" header-icon='plane'}}
 
     <p>Before loading this block :
-    {{!-- block.id --}} {{block.datasetId.id}}:{{block.name}} ({{block.store.name}})
+    {{!-- block.id --}} {{this.block.datasetId.id}}:{{this.block.name}} ({{this.block.store.name}})
     </p>
-    {{log block}}
-    <p>you need to load a reference with name '{{block.datasetId.parentName}}', containing a block with scope '{{block.scope}}'</p>
+    {{log this.block}}
+    <p>you need to load a reference with name '{{this.block.datasetId.parentName}}', containing a block with scope '{{this.block.scope}}'</p>
 
     <div>
-      {{#if referenceBlocks.length}}
+      {{#if this.referenceBlocks.length}}
         <p>e.g. one of these :
           potential parent references :</p>
         <ul>
-          {{#each referenceBlocks as |parentBlock|}}
+          {{#each this.referenceBlocks as |parentBlock|}}
             <li>
               {{!-- entry (parentBlock) is passed to loadBlock by entry-block-add-button : loadBlock(). --}}
               {{record/entry-block-add-button
-                loadBlock=(action loadBlock)
+                loadBlock=(action this.loadBlock)
                 entry=parentBlock }}
               <span title='{{parentBlock.name}}' >{{parentBlock.name}}</span>
               {{!-- parentBlock.id --}} {{!-- parentBlock.scope --}} {{parentBlock.datasetId.id}} ({{parentBlock.store.name}})</li>
           {{/each}}
         </ul>
       {{/if}}
-      {{#if referenceBlocksCopies.length}}
+      {{#if this.referenceBlocksCopies.length}}
         <p>Local copies of parent references : </p>
         <ul>
-          {{#each referenceBlocksCopies as |parentBlock|}}
+          {{#each this.referenceBlocksCopies as |parentBlock|}}
             <li>{{!-- parentBlock.id --}} {{parentBlock.name}} {{!-- parentBlock.scope --}} {{parentBlock.datasetId.id}} {{parentBlock._meta._origin.host}}</li>
           {{/each}}
         </ul>

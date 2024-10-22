@@ -18,6 +18,7 @@ import {
   featureGetBlock
 } from '../../utils/paths-api';
 import { eltClassName } from '../../utils/domElements';
+import { toTitleCase } from '../../utils/string';
 import config from '../../config/environment';
 
 
@@ -27,11 +28,8 @@ const trace = 0;
 const fileName = 'panel/paths-table.js';
 
 const columnFields = ['block', 'feature', 'position', 'positionEnd'];
-const columnFieldsCap = columnFields.map((s) => s.capitalize());
-
-var capitalize = (string) => {
-  return string[0].toUpperCase() + string.slice(1);
-};
+const capitalize = toTitleCase;
+const columnFieldsCap = columnFields.map(capitalize);
 
 /** Concat the given arrays.
  * If either array is empty then return the other array (possibly Array.concat()
@@ -217,15 +215,12 @@ export default Component.extend({
     {
       this.showData(d);
     },
-    updatePathsCount(pathsCount) {
-      this.sendAction('updatePathsCount', pathsCount);
-    },
   },
 
   sendUpdatePathsCount(pathsCount) {
     once(() => {
       if (! this.isDestroying) {
-        this.send('updatePathsCount', pathsCount);
+        this.updatePathsCount(pathsCount);
       }
     });
   },
@@ -269,7 +264,7 @@ export default Component.extend({
     const
     blockLabelToBlockAdj = (this.blockLabelToBlockAdj ||= {}),
     blockAdjs = this.get('flowsService.blockAdjs');
-    blockAdjs.forEach((blockAdj) => {
+    blockAdjs?.forEach((blockAdj) => {
       let
       blocks = blockAdj.get('blocks'),
       blockAdjLabel = blocks.map((block) => block.get('datasetNameAndScope'))
@@ -304,7 +299,7 @@ export default Component.extend({
 
     let
       blockAdjs = this.get('flowsService.blockAdjs'),
-    tableData = blockAdjs.reduce(function (result, blockAdj) {
+    tableData = ! blockAdjs ? [] : blockAdjs.reduce(function (result, blockAdj) {
       // components/panel/manage-settings.js:14:        return feature.Block === selectedBlock.id
       if (! selectedBlock || blockAdj.adjacentTo(selectedBlock)) {
         /** Prepare a row with a pair of values to add to the table */
@@ -602,7 +597,7 @@ export default Component.extend({
 
     let
       blockAdjs = this.get('flowsService.blockAdjs');
-    blockAdjs.forEach(function (blockAdj) {
+    blockAdjs?.forEach(function (blockAdj) {
       if (! selectedBlock || blockAdj.adjacentTo(selectedBlock)) {
         let p = blockAdj.call_taskGetPaths();
         loadingPromises.push(p);
@@ -705,7 +700,7 @@ export default Component.extend({
     };
 
     dLog("tableDiv", tableDiv);
-    var table = new Handsontable(tableDiv, {
+    var table = tableDiv && new Handsontable(tableDiv, {
       data: data || [['', '', '']],
       minRows: 1,
       rowHeaders: true,

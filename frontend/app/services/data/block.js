@@ -294,8 +294,11 @@ export default Service.extend(Evented, {
     rootsP = this.get('ontologyIds').then((ois) => {
       let
       rootsSet = ois.reduce((result, ontologyId) => {
+        /** skip ontologyId if it is a number.
+         * ontologyId is expected to be a string.
+         */
         let
-        rootIdMatch = ontologyId.match(/^(CO_[0-9]+):/),
+        rootIdMatch = ontologyId?.match && ontologyId.match(/^(CO_[0-9]+):/),
         rootId = rootIdMatch && rootIdMatch[1];
         if (rootId) {
           result.add(rootId);
@@ -762,9 +765,17 @@ export default Service.extend(Evented, {
         viewedIds.pushObject(blockId);
       }
       else {
-        let removed = viewedIds.objectAt(index);
-        viewedIds.removeAt(index, 1);
-        dLog('setViewed removed', removed);
+        // later() so that mapsToView is modified after current render cycle.
+        later(() => {
+          const
+          index = viewedIds.indexOf(blockId),
+          removed = viewedIds.objectAt(index);
+          // viewedIds may be already updated
+          if (index !== -1) {
+            viewedIds.removeAt(index, 1);
+            dLog('setViewed removing', removed);
+          }
+        });
       }
     }
   },
@@ -775,7 +786,8 @@ export default Service.extend(Evented, {
   /**
    * The GUI does not provide a way for the user to unview a block which is not currently loaded.
    *
-   * Used by mixins/viewed-blocks.js : @see setViewed(),
+   * Previously used by (replaced by services/ block.setViewed())
+   * mixins/viewed-blocks.js : @see setViewed(),
    * @description which also defines an alternative implementation (unused) : @see setViewed0()
    *
    * @description
@@ -1453,6 +1465,7 @@ export default Service.extend(Evented, {
   axesViewedBlocks2 : computed(
     'viewedBlocksReferences.[]',
     function () {
+      const fnName = 'axesViewedBlocks2';
       let br = this.get('viewedBlocksReferences'),
       map = br.reduce(
         (map, id_obj) => {
@@ -1462,6 +1475,9 @@ export default Service.extend(Evented, {
           if (! blocks)
             map.set(referenceBlock, blocks = []);
           let block = this.peekBlock(id);
+          if (! block) {
+            dLog(fnName, id, 'not found', id_obj);
+          } else
           if (blocks.indexOf(block) < 0)
             blocks.push(block);
           return map; },

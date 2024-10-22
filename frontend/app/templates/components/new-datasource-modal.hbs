@@ -5,7 +5,7 @@
   @submitTitle="Connect"
   @size=""
   @closeButton={{true}}
-  @fade={{true}}
+  @fade={{false}}
   @backdrop={{true}}
   @backdropClose={{true}}
   @onSubmit={{action "onConfirm"}}
@@ -48,17 +48,18 @@
 
       <div class="input-label">Chromosome name mapping</div>
       {{!--         rows=21 --}}
-      {{textarea
+      <Textarea
         id='ndm_chrMapping'
         class='form-control'
         maxlength=1000
-        value=this.chrMapping
-        input=(action this.chrMappingInput)
-        enter=(action this.chrMappingInputAction)
-        insert-newline=(action this.chrMappingInputAction)
-        escape-press=(action this.chrMappingInputAction)
-        paste=(action this.paste)
-        placeholder='e.g. 1 1A\n2 1B ...' }}
+        @value={{this.chrMapping}}
+        oninput={{action this.chrMappingInput}}
+        @enter={{action this.chrMappingInputAction}}
+        @insert-newline={{action this.chrMappingInputAction}}
+        @escape-press={{action this.chrMappingInputAction}}
+        onpaste={{action this.paste}}
+        placeholder='e.g. 1 1A\n2 1B ...' >
+      </Textarea>
 
       {{/if}}
 
@@ -67,7 +68,7 @@
   {{#if this.errorText}}
     <div>
       <h4>Login Failed</h4>
-      {{errorText}}
+      {{this.errorText}}
     </div>
   {{/if}}
 

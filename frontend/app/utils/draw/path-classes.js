@@ -52,7 +52,7 @@ let pathColourDefault = "#808";
  * meaning of values :
  *  set path_colour_domain to
  *   1 : features
- *   2 : d3.keys(aliasGroup)
+ *   2 : Object.keys(aliasGroup)
  *  colour according to input from colouredFeatures; just the listed featureNames is coloured :
  *  each line of featureNames is         domain is
  *   3: featureName                      featureName-s
@@ -129,7 +129,7 @@ function PathClasses(oa) {
       switch (use_path_colour_scale)
       {
       case 1 : path_colour_domain = oa.features; break;
-      case 2 : path_colour_domain = d3.keys(oa.aliasGroup); break;
+      case 2 : path_colour_domain = Object.keys(oa.aliasGroup); break;
       default:
       case 4:
       case 3 : path_colour_domain = ["unused"];
@@ -228,7 +228,7 @@ function PathClasses(oa) {
           let intervalName = makeIntervalName(mapChrName, [col[1], + col[2]]);
           intervalNames.add(intervalName);
         }
-        d3.keys(intervals).forEach(function (axisName) {
+        Object.keys(intervals).forEach(function (axisName) {
           //Build tree
           intervalTree[axisName] = createIntervalTree(intervals[axisName]);
         });

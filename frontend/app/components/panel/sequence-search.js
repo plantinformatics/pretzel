@@ -167,11 +167,16 @@ export default Component.extend({
       }
     },
     paste: function(event) {
+      const fnName = 'paste';
       /** text is "" at this time. */
       /** this action function is called before jQuery val() is updated. */
       later(() => {
-        let text = event && (event.target.value || event.originalEvent.target.value);
-        console.log('paste', event, text.length);
+        /** paste has already affected event.target.value.
+         * event.originalEvent is now Restricted { };
+         * event.explicitOriginalTarget.value is defined, but not required.
+         */
+        let text = event.target.value;
+        dLog(fnName, event, text.length);
 
         /** Between each '>marker-name' line, join the subsequent lines. */
         let lines = text.split('\n');

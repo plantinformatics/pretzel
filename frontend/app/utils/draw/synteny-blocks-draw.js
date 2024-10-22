@@ -66,9 +66,10 @@ function showSynteny(syntenyBlocks, t, oa)
     return sb[SB_SIZE] > sbSizeThreshold;
   }
   function sbZoomFilter(sb) {
+    const pathDataUtils = PathDataUtils(oa);
     let 
       inRangeLR = [[0, 2], [1, 4]]
-      .map(([chrI, featureI]) => axisApi.featureInRange(sb[chrI], sb[featureI])),
+      .map(([chrI, featureI]) => pathDataUtils.featureInRange(sb[chrI], sb[featureI])),
     inCount = inRangeLR.reduce((sum, flag) => sum += flag ? 1 : 0),
     lineIn = inCount >= (allowPathsOutsideZoom ? 1 : 2);
     return lineIn;

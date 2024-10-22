@@ -1,28 +1,44 @@
-<div>axesP : {{axesP.length}}</div>
-{{block.axis1dReferenceBlocks}} {{ axis1dArray }}
-{{#each axesP as |axis axisIndex|}}
+<div>axesP : {{this.axesP.length}}</div>
+{{this.block.axis1dReferenceBlocks}}
+{{this.axis1dArray}}
+{{#each this.axesP as |axis axisIndex|}}
   {{!-- axis is the primary / reference block of the axis --}}
-  {{#draw/axis-1d drawMap=drawMap axis=axis axes2d=axes2d
-     stacksView=stacksView
-     axis1dExists=(action this.axis1dExists)
-     as |axis1d|}}
+  {{#draw/axis-1d
+    drawMap=this.drawMap
+    axis=axis
+    axes2d=this.axes2d
+    stacksView=this.stacksView
+    axis1dExists=(action this.axis1dExists)
+    as |axis1d|
+  }}
     <div>axis : {{axis1d.axis.id}}, {{axis1d.extended}}</div>
     {{#if axis1d.is2d}}
       {{axis-2d
-        model=model
-        drawMap=drawMap data=drawMap.oa axis1d=axis1d axisID=axis1d.axis.id axisObj=(hash axisID=axis1d.axis.id extended=axis1d.extended) }}
+        model=this.model
+        drawMap=this.drawMap
+        data=this.drawMap.oa
+        axis1d=axis1d
+        axisID=axis1d.axis.id
+        axisObj=(hash axisID=axis1d.axis.id extended=axis1d.extended)
+      }}
     {{/if}}
 
-    {{draw/axis-ticks-selected axis1d=axis1d axisId=axis.id
-      drawMap=drawMap
-      featuresInBlocks=featuresInBlocks
-      clickedFeaturesByAxis=selected.clickedFeaturesByAxis
-      shiftClickedFeaturesByAxis=selected.shiftClickedFeaturesByAxis
-      labelledFeaturesByAxis=selected.labelledFeaturesByAxis
+    {{draw/axis-ticks-selected
+      axis1d=axis1d
+      axisId=axis.id
+      drawMap=this.drawMap
+      featuresInBlocks=this.featuresInBlocks
+      clickedFeaturesByAxis=this.selected.clickedFeaturesByAxis
+      shiftClickedFeaturesByAxis=this.selected.shiftClickedFeaturesByAxis
+      labelledFeaturesByAxis=this.selected.labelledFeaturesByAxis
     }}
   {{/draw/axis-1d}}
 {{/each}}
 
-{{#if menuAxis }}
-  {{draw/axis-menu blockS=menuAxis axisApi=drawMap.oa.axisApi xOffsetsChangeCount=drawMap.xOffsetsChangeCount}}
+{{#if this.menuAxis}}
+  {{draw/axis-menu
+    blockS=this.menuAxis
+    axisApi=this.drawMap.oa.axisApi
+    xOffsetsChangeCount=this.drawMap.xOffsetsChangeCount
+  }}
 {{/if}}

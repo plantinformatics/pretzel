@@ -16,7 +16,7 @@ export default EntryBase.extend({
   /*--------------------------------------------------------------------------*/
   actions : {
     loadBlock(block) {
-      this.sendAction('loadBlock', block);
+      this.loadBlock(block.content);
     }
   }, // actions
   /*--------------------------------------------------------------------------*/

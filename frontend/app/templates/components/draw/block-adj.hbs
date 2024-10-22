@@ -1,4 +1,4 @@
-<div>block-adj : {{object-at 0 blockAdjId}}, {{object-at 1 blockAdjId}}, {{pathsResultLength}} {{pathsAliasesResultLength}}, {{blockAdj.zoomCounter}} {{blockAdj.pathsRequestLength.direct}} {{blockAdj.pathsRequestLength.alias}},
-  {{pathsRequest}},
-  {{#if parsedOptions.pathTransform}} {{zoomedDomainsEffect}}, {{/if}}
-  {{heightChanged}} {{axisStackChangedCount}}, {{updatePathsPositionDebounce}}</div>
+<div>block-adj : {{object-at 0 this.blockAdjId}}, {{object-at 1 this.blockAdjId}}, {{this.pathsResultLength}} {{this.pathsAliasesResultLength}}, {{this.blockAdj.zoomCounter}} {{this.blockAdj.pathsRequestLength.direct}} {{this.blockAdj.pathsRequestLength.alias}},
+  {{this.pathsRequest}},
+  {{#if this.parsedOptions.pathTransform}} {{this.zoomedDomainsEffect}}, {{/if}}
+  {{this.heightChanged}} {{this.axisStackChangedCount}}, {{this.updatePathsPositionDebounce}}</div>

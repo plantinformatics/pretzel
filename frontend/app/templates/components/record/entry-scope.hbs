@@ -1,19 +1,22 @@
 {{!-- values is an array of blocks --}}
 
 {{!-- log 'entry-scope' name values this this.parentView --}}
-{{#record/entry-selectable node=node nodeName=name
-   parentName=parentName
-   selectedNode=selectedDataset
-   selectNode=(action 'selectDataset')}}
+{{#record/entry-selectable
+  node=this.node
+  nodeName=this.name
+  parentName=this.parentName
+  selectedNode=this.selectedDataset
+  selectNode=this.selectDataset
+}}
 
-  {{#record/entry-expander nodeName=name hoverText=(or parentName name)}}
+  {{#record/entry-expander nodeName=this.name hoverText=(or this.parentName this.name)}}
 
     {{record/entry-blocks
-      loadBlock="loadBlock"
-      data=values
-      selectBlock="selectBlock"
-      selectedBlock=selectedBlock
-      selectDataset="selectDataset"}}
+      loadBlock=this.loadBlock
+      data=this.values
+      selectBlock=this.selectBlock
+      selectedBlock=this.selectedBlock
+      selectDataset=this.selectDataset}}
 
   {{/record/entry-expander}}
 

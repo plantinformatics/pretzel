@@ -33,17 +33,4 @@ export default EntryBase.extend({
     return block;
   }),
 
-
-  actions: {
-    selectDataset(dataset) {
-      if (trace)
-      console.log('dataset2 => ', dataset);
-      this.sendAction('selectDataset', dataset)
-    },
-    selectBlock(block) {
-      if (trace)
-      console.log('block2 => ', block);
-      this.sendAction('selectBlock', block)
-    }
-  }
 });

@@ -1,5 +1,7 @@
 /* global exports */
 /* global require */
+/* global process */
+/* global __dirname */
 
 
 /**
@@ -36,13 +38,16 @@ const indexP = ensureIndex();
 const { OpenAIApi, Configuration } = require('openai');
 
 function connectOpenAIApi() {
-  console.log('connectOpenAIApi');
+  let api;
   const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-  const configuration = new Configuration({
-    apiKey: OPENAI_API_KEY,
-  });
+  if (OPENAI_API_KEY) {
+    console.log('connectOpenAIApi', 'OPENAI_API_KEY', OPENAI_API_KEY.slice(-3));
+    const configuration = new Configuration({
+      apiKey: OPENAI_API_KEY,
+    });
+    api = new OpenAIApi(configuration);
+  }
 
-  const api = new OpenAIApi(configuration);
   return api;
 }
 const apiP = connectOpenAIApi();

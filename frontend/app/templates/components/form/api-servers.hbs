@@ -1,7 +1,7 @@
 {{!-- enable display of <tspan.blockServer>, when apiServers.serversLength > 1 --}}
-{{multipleServersEffect}}
+{{this.multipleServersEffect}}
 
-{{#elem/panel-container state="primary" showComponent=showList as |panelContainer|}}
+{{#elem/panel-container state="primary" showComponent=this.showList as |panelContainer|}}
 
   {{#elem/panel-heading icon="globe" panelContainer=panelContainer}}
     Datasources
@@ -9,8 +9,8 @@
   {{/elem/panel-heading}}
 
   {{#if panelContainer.showComponent}}
-  <ul class="list-group">
-    {{#each-in servers as |apiServerName apiServer| }}
+  <ul class="list-group w-100">
+    {{#each-in this.servers as |apiServerName apiServer| }}
       <li class="list-group-item list-group-item-info">
         {{form/api-server name=apiServerName data=apiServer}}
       </li>

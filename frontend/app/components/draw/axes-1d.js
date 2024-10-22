@@ -3,6 +3,7 @@ import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
+import { A as Ember_A } from '@ember/array';
 
 import AxisEvents from '../../utils/draw/axis-events';
 
@@ -28,7 +29,7 @@ export default Component.extend(Evented, /*AxisEvents,*/ {
   block : service('data/block'),
   selected : service('data/selected'),
 
-  menuAxis : computed.alias('drawMap.menuAxis'),
+  menuAxis : alias('drawMap.menuAxis'),
 
   /*--------------------------------------------------------------------------*/
 
@@ -36,7 +37,7 @@ export default Component.extend(Evented, /*AxisEvents,*/ {
     this._super(...arguments);
 
     this.get('block').set('axes1d', this);
-    this.set('axis1dArray', Ember.A());
+    this.set('axis1dArray', Ember_A());
 
     const axisApi = this.drawMap.oa.axisApi;
     axisApi.selectedFeatures_removeAxis = this.selectedFeatures_removeAxis.bind(this);

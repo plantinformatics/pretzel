@@ -5,6 +5,7 @@
 # was /backend/
 /lb4app/lb3app/client
 /lb4app/lb3app/tmp
+/lb4app/tmp
 /tmp
 /log
 *.log
@@ -27,3 +28,4 @@ bower_components
 # etags file
 TAGS
 .vscodeignore
+.aider*

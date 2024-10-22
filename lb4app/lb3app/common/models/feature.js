@@ -17,6 +17,7 @@ var upload = require('../utilities/upload');
 var { filterBlastResults } = require('../utilities/sequence-search');
 var blockFeatures = require('../utilities/block-features');
 const { ArgsDebounce } = require('../utilities/debounce-args');
+const { ErrorStatus } = require('../utilities/errorStatus.js');
 
 const cacheLibraryName = '../utilities/results-cache';
 var cache = require(cacheLibraryName);
@@ -239,7 +240,8 @@ module.exports = function(Feature) {
         cb(null, []);
       } else
       if (chunk && (chunk.length >= 6) && (chunk.asciiSlice(0,6) === 'Error:')) {
-        cb(new Error(chunk.toString()));
+        // could use chunk.asciiSlice(6) to trim off the leading 'Error:'
+        cb(ErrorStatus(400, chunk.toString()));
       } else {
         const
         textLines = chunk.toString().split('\n')

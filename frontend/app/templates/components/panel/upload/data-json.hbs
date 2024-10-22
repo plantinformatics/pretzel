@@ -1,13 +1,13 @@
 {{elem/panel-message
-  successMessage=successMessage
-  warningMessage=warningMessage
-  errorMessage=errorMessage}}
+  successMessage=this.successMessage
+  warningMessage=this.warningMessage
+  errorMessage=this.errorMessage}}
 
-{{#if isProcessing}}
+{{#if this.isProcessing}}
   {{#elem/panel-form
     name="info"
     heading="Processing..." }}
-      {{progressMsg}}
+      {{this.progressMsg}}
   {{/elem/panel-form}}
 {{/if}}
 
@@ -20,5 +20,5 @@
     <br>
     <input
       type="submit"
-      class="btn btn-primary {{if isProcessing 'disabled'}}">
+      class="btn btn-primary {{if this.isProcessing 'disabled'}}">
   </form>

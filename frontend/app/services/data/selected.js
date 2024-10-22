@@ -271,9 +271,10 @@ export default Service.extend(Evented, {
   },
   selectedFeaturesMergeFeature(mapChrName, feature)  {
     const
-    key = [mapChrName, feature.name, feature.value[0]].join('_'),
+    Position = feature.value?.[0] || '',
+    key = [mapChrName, feature.name, Position].join('_'),
     existing = this.selectedFeaturesIndex[key],
-    selectionFeature = {Chromosome : mapChrName, Feature : feature.name, Position : feature.value[0], feature},
+    selectionFeature = {Chromosome : mapChrName, Feature : feature.name, Position, feature},
     sf = existing || (this.selectedFeaturesIndex[key] = selectionFeature);
     if (existing) {
       Object.assign(existing, selectionFeature);

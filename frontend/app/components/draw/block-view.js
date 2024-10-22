@@ -6,7 +6,7 @@ import { inject as service } from '@ember/service';
 import { ensureBlockFeatures } from '../../utils/feature-lookup';
 import { subInterval } from '../../utils/draw/zoomPanCalcs';
 import { intervalSize, intervalOverlapCoverage }  from '../../utils/interval-calcs';
-import { binEvenLengthRound } from '../../utils/draw/interval-bins';
+import { binEvenLengthRound } from 'interval-bins';
 import { featuresCountsResultsSansOverlap } from '../../utils/draw/featuresCountsResults';
 
 /*----------------------------------------------------------------------------*/

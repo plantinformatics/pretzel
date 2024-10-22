@@ -7,8 +7,8 @@ export default EntryBase.extend({
       console.log('selectBlockAndDataset', 'block => ', block);
       var dataset = block.get('datasetId')
       console.log('dataset => ', dataset);
-      this.sendAction('selectDataset', dataset)
-      this.sendAction('selectBlock', block)
+      this.selectDataset(dataset);
+      this.selectBlock(block);
     }
   }
 });

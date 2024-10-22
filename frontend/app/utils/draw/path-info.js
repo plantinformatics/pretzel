@@ -86,19 +86,28 @@ function PathInfo(oa) {
    * call to handleMouseOver() with d===null; reproduced by brushing a region
    * on an axis then moving cursor over that axis).
    */
-  setupMouseHover(
-    d3.selectAll(".foreground > g > g > path")
-  );
+  /** Call setupMouseHover() with a default pathSelection which covers
+   * all intended target elements.
+   * This was previously done when a PathInfo was constructed, but is
+   * probably not required, and is not currently exported or used.
+   */
+  function setupMouseHoverInitialDefault() {
+    const pathSelection = d3.selectAll(".foreground > g > g > path");
+    setupMouseHover.apply(this, [pathSelection]);
+  }
 
   /** Setup the functions handleMouse{Over,Out}() on events mouse{over,out}
    * on elements in the given selection.
-   * The selected path elements are assumed to have __data__ which is either
-   * sLine (svg line text) which identifies the hover text, or ffaa data
+   * The selected path elements are assumed to have __data__ which was formerly
+   * sLine (svg line text) which identifies the hover text, and now : path-data ffaa data
    * which enables hover text to be calculated.
    * @param pathSelection	<path> elements
    */
   function setupMouseHover(pathSelection)
   {
+    /* use curry() to inject param pathInfo (this).
+     * param event is prepended before pathInfo.
+     */
     pathSelection
       .on("mouseover", curry(handleMouseOver)(this))
       .on("mouseout", curry(handleMouseOut)(this));
@@ -147,15 +156,23 @@ function PathInfo(oa) {
 
 
   /**
-   * @param d   SVG path data string of path
+   * @param pathInfo	instance of PathInfo
+   * @param d   component:draw/path-data
+   * this.__data__ === d
    * @param this  path element
+   * e.g. <path class="blockAdj" d="M300,246.771L1123.733,179.904">
    */
-  function handleMouseOver(pathInfo, d, i){
+  function handleMouseOver(pathInfo, event, d){
     const fnName = 'handleMouseOver';
     let sLine, pathFeaturesHash;
     let pathFeatures = oa.pathFeatures;
     let hoverFeatures;
-    /** d is either sLine (pathDataIsLine===true) or array ffaa. */
+    /** d was originally SVG path data string of path, i.e. sLine (pathDataIsLine===true),
+     * then array ffaa, now path-data which has attributes :
+     *   ffaa  i.e. feature0, feature1, blockId0, blockId1
+     *   d.feature{0,1} are ember data store objects, and d.blockId{0,1} are db ids.
+     * There are no current uses with pathDataIsLine, so this can be dropped.
+     */
     let pathDataIsLine = typeof(d) === "string";
     // don't interrupt dragging with pathHover
     if (Stack.currentDrag || ! oa.drawOptions.showPathHover)
@@ -168,6 +185,9 @@ function PathInfo(oa) {
     }
     else
     {
+      /*
+       * this.getAttribute('d') === d.pathU()[0]
+       */
       sLine = this.getAttribute("d");
       pathFeaturesHash = pathFeatures[sLine];
       if ((pathFeaturesHash === undefined) && ! pathDataIsLine)
@@ -261,7 +281,7 @@ function PathInfo(oa) {
     listFeatures += '\n<button id="toolTipClose">&#x2573;</button>\n'; // ╳
     toolTip.html(listFeatures);
 
-    toolTip.show(d, i);
+    toolTip.show(this);
 
     let ph2=ph1.appendTo(pt);
     const me = oa.eventBus;
@@ -294,7 +314,7 @@ function PathInfo(oa) {
   /**
    * @param this  path element
    */
-  function handleMouseOut(pathInfo, d){
+  function handleMouseOut(pathInfo, event, d){
     // stroke attributes of this revert to default, as hover ends
     d3.select(this)
       .classed("hovered", false);

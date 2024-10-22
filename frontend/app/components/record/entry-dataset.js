@@ -34,13 +34,6 @@ export default EntryBase.extend({
     return active? 'minus' : 'plus'
   }),
   actions: {
-    selectBlock(block) {
-      // console.log('SELECT BLOCK manage-explorer-dataset', block)
-      this.sendAction('selectBlock', block);
-    },
-    deleteBlock(block) {
-      this.sendAction('deleteBlock', block.id);
-    },
     switchDataset(dataset) {
       // console.log('switchDataset')
       let active = this.get('entryLayout.active')
@@ -51,11 +44,11 @@ export default EntryBase.extend({
      * entry-base, sends onDelete dataset to manage-explorer ...
      */
      onDelete(modelName, id) {
-      console.log('entry-dataset', 'onDelete', modelName, id);
-      this.sendAction('onDelete', modelName, id);
+       console.log('entry-dataset', 'onDelete', modelName, id, this.entry?.id);
+       // this.onDelete(modelName, id);
     },
     selectDataset(dataset) {
-      this.sendAction('selectDataset', dataset);
+      this.selectDataset(dataset);
     }
   }
 });

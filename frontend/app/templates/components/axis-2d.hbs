@@ -1,10 +1,10 @@
 {{!-- axis-2d is used within a <foreignObject> within a g.axis, created by axisShowExtend()
      It is rendered into div#axis2D (will add axisID) using ember-wormhole.
      --}}
-{{#if axis1d.extended}}
+{{#if this.axis1d.extended}}
 
 {{#if 0}}
-{{#ember-wormhole to=targetEltId }}
+{{#ember-wormhole to=this.targetEltId }}
   <div class="resizer inFO" style="float:right;">
     {{!-- Being within <foreignObject>, this alternative is used to create and position the resizer arrow;
     Because content is not displayed when position: relative; set via  .resizer:not(.inFO)::after.
@@ -19,7 +19,7 @@
     <div class="menuHead">
       &#x21F9;&nbsp;&#x21F9;
     </div>
-    {{#if urlOptions.splitAxes }}
+    {{#if this.urlOptions.splitAxes }}
       <div class="subMenu">
         <button {{action "addTracks"}}>&#x2225;</button>
         <button {{action "addChart"}}>&#x2630;</button>
@@ -30,7 +30,7 @@
   </div>
 
   <div class="accordion-div">
-    {{component "axis-accordion" subComponents=subComponents data=data tableData=tableData axis=this}}
+    {{component "axis-accordion" subComponents=this.subComponents data=this.data tableData=this.tableData axis=this}}
   </div>
 
 
@@ -39,27 +39,46 @@
 
 {{/if}}
 
-{{positionRightEdgeEffect}}
-<div>axis-2d : {{axisID}}, {{targetEltId}},  {{subComponents.length}} :
+{{this.positionRightEdgeEffect}}
+<div>axis-2d : {{this.axisID}}, {{this.targetEltId}},  {{this.subComponents.length}} :
   <div>subComponents :
-    {{#draw/axis-blocks axis1d=axis1d dataBlocks=dataBlocks
-      childWidths=childWidths.centre trackWidth=trackWidth
-      as |axisBlocks| }}
-      {{axis-charts data=data axis=this axisID=axisID childWidths=childWidths.centre
-        allocatedWidths=allocatedWidths blocks=viewedChartable
-        resizeEffect=resizeEffect axisBlocks=axisBlocks
-        trackWidth=trackWidth
+    {{#draw/axis-blocks
+      axis1d=this.axis1d
+      dataBlocks=this.dataBlocks
+      childWidths=this.childWidths.centre
+      trackWidth=this.trackWidth
+      as |axisBlocks|
+    }}
+      {{axis-charts
+        data=this.data
+        axis=this
+        axisID=this.axisID
+        childWidths=this.childWidths.centre
+        allocatedWidths=this.allocatedWidths
+        blocks=this.viewedChartable
+        resizeEffect=this.resizeEffect
+        axisBlocks=axisBlocks
+        trackWidth=this.trackWidth
       }}
-      {{log 'blockService' blockService 'viewedChartable' blockService.viewedChartable}}
-      {{axis-tracks axis=this axisID=axisID childWidths=childWidths
-        allocatedWidths=allocatedWidths trackBlocksR=trackBlocks
-        resizeEffect=resizeEffect axisBlocks=axisBlocks
-        trackWidth=trackWidth
-        model=model
+      {{log
+        'blockService'
+        this.blockService
+        'viewedChartable'
+        this.blockService.viewedChartable
+      }}
+      {{axis-tracks
+        axis=this
+        axisID=this.axisID
+        childWidths=this.childWidths
+        allocatedWidths=this.allocatedWidths
+        trackBlocksR=this.trackBlocks
+        resizeEffect=this.resizeEffect
+        axisBlocks=axisBlocks
+        trackWidth=this.trackWidth
+        model=this.model
       }}
     {{/draw/axis-blocks}}
-
-    {{#each subComponents as |subComponent|}}
+    {{#each this.subComponents as |subComponent|}}
       {{subComponent}}
     {{/each}}
   </div>

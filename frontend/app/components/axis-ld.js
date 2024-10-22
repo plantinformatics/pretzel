@@ -147,7 +147,7 @@ export default InAxis.extend({
     axis= this.get("axis"),
     axisID = this.parentView.axis.axisID, // axis.
     /** first stage : all features;  later  just the zoomed or brushed features. */
-    featureNames = d3.keys(oa.z[axisID]),
+    featureNames = Object.keys(oa.z[axisID]),
     data = featureNames,
     margin = {top: 110, right: 20, bottom: 40, left: 20},
     ranges = this.getRanges(margin);

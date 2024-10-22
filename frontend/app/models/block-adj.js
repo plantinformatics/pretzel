@@ -41,8 +41,8 @@ export default Model.extend(Evented, {
    * and utils/draw/stacksAxes : blockAdjKeyFn()
    */
 
-  block0: belongsTo('block', { inverse: null }),
-  block1: belongsTo('block', { inverse: null }),
+  block0: belongsTo('block', {async: true, inverse: null}),
+  block1: belongsTo('block', {async: true, inverse: null}),
   blockId0: attr('string'),
   blockId1: attr('string'),
   // pathsResult : undefined,
@@ -62,8 +62,8 @@ export default Model.extend(Evented, {
   /*--------------------------------------------------------------------------*/
 
   init() {
-    this.set('receivedAll', {});
     this._super.apply(this, arguments);
+    this.set('receivedAll', {});
   },
 
   /*--------------------------------------------------------------------------*/
@@ -164,7 +164,7 @@ export default Model.extend(Evented, {
     return zoomedDomains;
   }),
   /** domain incorporates zoomedDomain and also flipped and blocksDomain */
-  domains : computed.alias('axesDomains'),  // .map('axes1d', (axis1d) => axis1d && axis1d.domain),
+  domains : alias('axesDomains'),  // .map('axes1d', (axis1d) => axis1d && axis1d.domain),
 
   /** Return the domains (i.e. zoom scope) of the 2 axes of this block-adj.
    * These are equivalent : 
@@ -487,11 +487,11 @@ export default Model.extend(Evented, {
     task = this.get('taskGetPaths');
 
     // expected .drop() to handle this, but get "TaskInstance 'taskGetPaths' was cancelled because it belongs to a 'drop' Task that was already running. "
-    if (false && ! task.get('isIdle')) {
+    if (false && ! task.isIdle) {
       dLog('paths taskGetPaths', task.numRunning, task.numQueued, blockAdjId);
       // result = this.get('lastResult');
       if (task.numRunning > 1) {
-        result = task.get('lastPerformed');
+        result = task.lastPerformed;
         return result;
       }
     }
@@ -511,9 +511,9 @@ export default Model.extend(Evented, {
         if (! didCancel(error)) {
           dLog('call_taskGetPaths taskInstance.catch', blockAdjId, error);
           throw error; }
-        let lastResult = task.get('lastSuccessful.value');
+        let lastResult = task.lastSuccessful.value;
         dLog('call_taskGetPaths', 'using lastSuccessful.value', lastResult, 
-             task.get('state'), task.numRunning, task.numQueued
+             task.state, task.numRunning, task.numQueued
             );
         return lastResult;
       });

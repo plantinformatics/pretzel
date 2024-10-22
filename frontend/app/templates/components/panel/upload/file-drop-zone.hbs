@@ -2,7 +2,7 @@
 
     <li class="list-group-item">
       <span class="filter-group-col">
-        {{input type="checkbox" name="replaceDataset" checked=replaceDataset }}
+        {{input type="checkbox" name="replaceDataset" checked=this.replaceDataset }}
         <label>Replace Dataset with upload</label>
       </span>
     </li>
@@ -34,13 +34,28 @@ https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Comm
 
 --}}
 
-<FileDropzone @name="files" class="border border-primary" style="min-height: 15ex;" as |dropzone queue|>
+{{#let (file-queue name="datasets" onFileAdded=(action this.uploadSpreadsheet)) as |queue|}}
+{{!--
+ refn : node_modules/ember-file-upload/dist/components/file-dropzone.js :
+ getEventSource() sets file-drop-zone .dataTransferWrapper.source = 'web' when
+ evt.dataTransfer.types[] is empty, and isAllowed() returns false for 'web' if
+ allowUploadsFromWebsites is not set, so source==='web' is something of a proxy
+ for empty .files[] / .types[].
+ isAllowed() enables setting .dropEffect and action calls e.g. onDragEnter, onDragLeave.
+   @allowUploadsFromWebsites={{true}}
+
+ These actions are not required but can be passed to <FileDropzone > for trace: @onDragEnter, @onDragLeave, @onDrop.
+ --}}
+<FileDropzone
+ @queue={{queue}}
+ @filter={{action this.validateFile}}
+ @onDragEnter={{action this.onDragEnter}}
+ @onDragLeave={{action this.onDragLeave}}
+ @onDrop={{action this.onDrop}}
+ class="border border-primary" style="min-height: 15ex;"
+ as |dropzone|>
   {{#if dropzone.active}}
-    {{#if dropzone.valid}}
-      Drop to upload
-    {{else}}
-      Invalid
-    {{/if}}
+    {{this.typesText}}
   {{else if queue.files.length}}
     Uploading {{queue.files.length}} files. ({{queue.progress}}%)
   {{else}}
@@ -48,33 +63,32 @@ https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Comm
     <p>
       {{#if dropzone.supported}}
         Drag and drop Spreadsheets and JSON files onto this area to upload them or
+      {{else}}
+        Dropzone not supported.
       {{/if}}
-      <FileUpload
+      <!-- FileUpload
         @name="files"
         @for="upload-file"
-        @accept="
-	  application/json,
-	  application/vnd.google-apps.spreadsheet,
-	  application/vnd.oasis.opendocument.spreadsheet,
-	  application/vnd.ms-excel,
-	  application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,
-	  application/gzip,
-	  application/zip,
-	  text/gff3
-        "
-        @multiple={{true}}
-        @onfileadd={{action this.uploadSpreadsheet}}>
-        <a tabindex=0>Add a Spreadsheet.</a>
-      </FileUpload>
+        @multiple={{true}}>
+        <a tabindex=0></a>
+      </FileUpload -->
+
+      <input
+        type="file"
+        {{queue.selectFile filter=(action this.validateFile)}}
+        >
+      <label>Add a Spreadsheet.</label>
     </p>
   {{/if}}
 </FileDropzone>
+{{/let}}
+
 
 <div class="panel panel-primary"></div>
 {{elem/panel-message
-  successMessage=successMessage
-  warningMessage=warningMessage
-  errorMessage=errorMessage}}
+  successMessage=this.successMessage
+  warningMessage=this.warningMessage
+  errorMessage=this.errorMessage}}
 
 <div>
   {{#each this.errors as |error|}}
@@ -85,10 +99,10 @@ https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Comm
   {{/each}}
 </div>
 
-{{#if isProcessing}}
+{{#if this.isProcessing}}
   {{#elem/panel-form
     name="info"
     heading="Processing..." }}
-      {{progressMsg}}
+      {{this.progressMsg}}
   {{/elem/panel-form}}
 {{/if}}

@@ -2,11 +2,11 @@
 
 
     <button
-     onclick={{action toggleApply}}
+     onclick={{action this.toggleApply}}
      type="button"><img src="/assets/images/bucketFill.png" alt="Click to enable colour paint mode">
     </button>
 
-    {{spectrum-color-picker color=elementColour preferredFormat="rgb"}}
+    {{spectrum-color-picker color=this.elementColour preferredFormat="rgb"}}
 
     {{!-- ----------------------------------------------------------------- --}}
 
@@ -31,12 +31,16 @@
     <div>
     <label>Click to :</label>
     <span>
-      {{radio-button value='select' groupValue=selectOrApply
-        changed=(action changedClick this preventDefault=false)
+      {{radio-button
+        value='select'
+        groupValue=this.selectOrApply
+        changed=(action this.changedClick this preventDefault=false)
       }}
       Select &nbsp;&nbsp;
-      {{radio-button value='apply' groupValue=selectOrApply
-        changed=(action changedClick this preventDefault=false)
+      {{radio-button
+        value='apply'
+        groupValue=this.selectOrApply
+        changed=(action this.changedClick this preventDefault=false)
       }}
       Apply
     </span>
@@ -45,31 +49,31 @@
 
 
     {{elem/x-toggle
-      value=showAdvanced
+      value=this.showAdvanced
       }}
 
-    {{#if showAdvanced}}
+    {{#if this.showAdvanced}}
 
     <div>
       <label>Set :</label>
       <span>
         {{input type="checkbox"
-          checked=enableSetFill
-          name=enableSetFill }}
+          checked=this.enableSetFill
+          name=this.enableSetFill }}
         <label>Fill</label>
       </span>
       <span>
         {{input type="checkbox"
-          checked=enableSetStroke
-          name=enableSetStroke }}
+          checked=this.enableSetStroke
+          name=this.enableSetStroke }}
         <label>Stroke</label>
       </span>
     </div>
 
     <div>
-      {{ selectedElementsLength}} selected
+      {{ this.selectedElementsLength}} selected
       <button
-       onclick={{action clearSelectedElements}}
+       onclick={{action this.clearSelectedElements}}
        type="button">Clear
       </button>
 

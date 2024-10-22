@@ -1,25 +1,25 @@
-{{#if dataset}}
+{{#if this.dataset}}
   <div class="dataset-description">
-  <h4 class="truncate" title={{dataset.name}}>{{dataset.name}}</h4>
+  <h4 class="truncate" title={{this.dataset.name}}>{{this.dataset.name}}</h4>
 
   <table class="table table-striped dataset-table">
     <tbody>
-      <tr><td>Namespace</td><td style="overflow-wrap : break-word; max-width : 20em;">{{dataset.namespace}}</td></tr>
-      <tr><td>Parent</td><td>{{dataset.parentName}}</td></tr>
-      <tr><td>Created</td><td>{{formatDate dataset.createdAt}}</td></tr>
-      <tr><td>Last Updated</td><td>{{formatDate dataset.updatedAt}}</td></tr>
-      <tr><td>Public</td><td>{{dataset.public}}</td></tr>
-      <tr><td>Read Only</td><td>{{dataset.readOnly}}</td></tr>
-      {{#if dataset.tags.length}}
+      <tr><td>Namespace</td><td style="overflow-wrap : break-word; max-width : 20em;">{{this.dataset.namespace}}</td></tr>
+      <tr><td>Parent</td><td>{{this.dataset.parentName}}</td></tr>
+      <tr><td>Created</td><td>{{formatDate this.dataset.createdAt}}</td></tr>
+      <tr><td>Last Updated</td><td>{{formatDate this.dataset.updatedAt}}</td></tr>
+      <tr><td>Public</td><td>{{this.dataset.public}}</td></tr>
+      <tr><td>Read Only</td><td>{{this.dataset.readOnly}}</td></tr>
+      {{#if this.dataset.tags.length}}
         <tr><td>tags</td><td>
-          {{#each dataset.tags as |tag index|}}
+          {{#each this.dataset.tags as |tag index|}}
               {{#if index}}<nbsp/>{{/if}}
               {{tag}}
           {{/each}}
         </td></tr>
       {{/if}}
 
-      {{#unless dataset.public}}
+      {{#unless this.dataset.public}}
       <tr><td>Group</td>
         <td>
         {{#if this.datasetOwned}}
@@ -28,11 +28,11 @@
              selectedGroupChanged=(action this.datasetChangeGroup) }}
            {{this.datasetGroupErrMsg}}
          {{else}}
-           {{dataset.groupId.name}}<!-- {{dataset.groupId.id}} -->
+           {{this.dataset.groupId.name}}<!-- {{dataset.groupId.id}} -->
          {{/if}}
       </td></tr>
-      {{#if dataset.groupId}}
-        <tr><td>Group Owner</td><td>{{dataset.groupId.clientId.email}}
+      {{#if this.dataset.groupId}}
+        <tr><td>Group Owner</td><td>{{this.dataset.groupId.clientId.email}}
         </td></tr>
       {{/if}}
       {{/unless}}
@@ -44,7 +44,7 @@
 
   <div class="metaeditor-panel">
 
-    <div style="margin-top:0.8ex"><div class="col-md-5">apiHost</div><div class="col-md-6">{{apiHost}}</div></div>
+    <div style="margin-top:0.8ex"><div class="col-md-5">apiHost</div><div class="col-md-6">{{this.apiHost}}</div></div>
 
 
     <div class="meta-row" style="z-index:10; padding-top: 4ex;">
@@ -55,15 +55,15 @@
         <span>View</span>
         {{x-toggle
         theme='light'
-        value=toggleShowJsonViewer
+        value=this.toggleShowJsonViewer
         style="display: inline-block;"
-        onToggle=(action (mut toggleShowJsonViewer)) }}
+        onToggle=(action (mut this.toggleShowJsonViewer)) }}
 
         {{#elem/button-base
           icon="pencil"
           classColour="info"
           onClick=(action "toggleEditor")
-          disabled=(not ownedByMe)}}
+          disabled=(not this.ownedByMe)}}
           Edit
         {{/elem/button-base}}
 
@@ -71,25 +71,25 @@
     </div>
 
 
-    {{#unless editorVisible}}
+    {{#unless this.editorVisible}}
       {{!-- see comment toggleShowJsonViewer() --}}
-      {{#if toggleShowJsonViewer}}
+      {{#if this.toggleShowJsonViewer}}
         {{!-- earlier versions of json-editor supported a param disabled=true. This is now achieved via onEditable which returns false.
               mode='view' also works.   --}}
-        {{json-editor json=datasetMeta name='Metadata'  onEditable=(action this.onEditable) search=false}}
+        {{json-editor json=this.datasetMeta name='Metadata' onEditable=(action this.onEditable) search=false}}
       {{/if}}
     {{/unless}}
 
   </div>
   <div>
-    {{#if editorVisible}}
+    {{#if this.editorVisible}}
       {{#ember-modal-dialog
         onClose=(action "toggleEditor")
         targetAttachment="center"
         translucentOverlay=true
       }}
       {{!-- Glavin001/ember-jsoneditor does not use attrs.onChange --}}
-        <div class="metaeditor-modal">{{json-editor json=currentMeta onChange=(action this.mutateJson)}}</div>
+        <div class="metaeditor-modal">{{json-editor json=this.currentMeta onChange=(action this.mutateJson)}}</div>
         <div>
           <button
             type="button"

@@ -152,7 +152,7 @@ function storeFeature2(oa, flowsService, feature, f, axisID) {
     // f.aliases = [];
     // f.id is already set.
     if (trace_feature > 1)
-      console.log('storeFeature', axisID, feature, f._internalModel.__data, f, oa.z[axisID]);
+      console.log('storeFeature', axisID, feature, f.id, f, oa.z[axisID]);
 
     oa.z[axisID][feature] = f;
   }

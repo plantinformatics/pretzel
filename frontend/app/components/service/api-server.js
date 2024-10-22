@@ -38,11 +38,20 @@ function removePunctuation(text) {
 export { serverTypeIsGerminateAPI };
 /** Map serverTypeName to a flag indicating if the server API is like Germinate / BrAPI;
  * i.e. this includes the Spark server.
- * @param serverTypeName 'Pretzel', 'Germinate', 'Spark'
+ * @param serverTypeName 'Pretzel', 'Germinate', 'Spark', 'BrAPI'
  */
 function serverTypeIsGerminateAPI(serverTypeName) {
   return ['Germinate', 'Spark'].includes(serverTypeName);
 }
+export { serverTypeIsBrAPI }
+/** Map serverTypeName to a flag indicating if the server API is BrAPI;
+ * i.e. this includes the Germinate and Spark servers.
+ * @param serverTypeName 'Pretzel', 'Germinate', 'Spark', 'BrAPI'
+ */
+function serverTypeIsBrAPI(serverTypeName) {
+  return ['BrAPI', 'Germinate', 'Spark'].includes(serverTypeName);
+}
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -185,6 +194,13 @@ const ApiServerAttributes = {
     /** server was a param when this function was an attribute of apiServers. */
     let server = this;
     server.groups.refresh();
+    /** filter is no longer available as store.adapterOptions in
+     * adapters/application.js : headers(), so obj2Server cannot be
+     * used, so pass server reference here; this will be cleared when
+     * used.
+     */
+    this.apiServers.set('currentRequestServer', this);
+    this.apiServers.set('currentRequestServerTime', Date.now());
     let datasetsTask = taskGetList.perform(server)
         .catch((error) => {
           // Recognise if the given task error is a TaskCancelation.
@@ -229,7 +245,8 @@ const ApiServerAttributes = {
         apiServers.incrementProperty('datasetsBlocksRefresh');
         // (where me = apiServers)
         // me.sendAction('receivedDatasets', datasetsHandle, blockValues);
-        // or via .evented() on task
+        // receivedDatasets : sendAction() is replaced by trigger().
+        // alternative : via .evented() on task
         apiServers.trigger('receivedDatasets', blockValues);
         // mapview : model() has already done getBlocksLimits() for primaryServer
         if (this.get('apiServers.primaryServer') !== this) {
@@ -280,7 +297,7 @@ const ApiServerAttributes = {
       let
       /** use .blocksOriginal, which filters out by .isCopy */
       blocks = this.datasetsBlocks && this.datasetsBlocks.flatMap((d) => d.blocksOriginal.map((b) => b)),
-      map = this.get('block').mapBlocksByReferenceAndScope(blocks);
+      map = ! blocks ? new Map() : this.get('block').mapBlocksByReferenceAndScope(blocks);
       return map;
     }),
 

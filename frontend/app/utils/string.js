@@ -23,8 +23,13 @@ function stringCountString(string, stringSearch) {
  * (https://en.wikipedia.org/wiki/Title_case, see also CamelCase, which has a
  * leading lower-case https://en.wikipedia.org/wiki/Camel_case).
  *
+ * Replaces equivalent capitalize() (components/panel/paths-table.js) added in b3150c70, also :
  * extract from : https://stackoverflow.com/a/7225450/18307804, ZenMaster
- * (there are Ember utility functions for this also ...)
+ *
+ * Can now be replaced by : Ember utility functions :
+ * https://deprecations.emberjs.com/v3.x/#toc_ember-string-prototype_extensions
+ *  import  { capitalize } from "@ember/string";
+ * which handles multiple words
  */
 function toTitleCase(text) {
   const result = text.charAt(0).toUpperCase() + text.slice(1);
@@ -53,5 +58,41 @@ function ensureTrailingString(string, suffix) {
   }
   return string;
 }
+
+//-------------------------------------------------------------------------------
+
+export { namesTrim, namesTrimArrayUniq, namesTrimUniq }
+
+/** Given input of a list of names of Samples or SNPs /  Features text e.g. from a <textarea>, 
+ * remove leading and trailing whitespace and excess newlines.
+ * Treat whitespace and commas as newlines.
+ */
+function namesTrim(namesText) {
+  const
+  trimmed = namesText
+    .replaceAll(/[ \t,]+/g, '\n')
+    .replaceAll(/\n\n+/g, '\n')
+    .replace(/^\n/, '')
+    .replace(/\n$/, '');
+  return trimmed;
+}
+/** As for namesTrim(), but convert to an array and remove duplicates.
+ */
+function namesTrimArrayUniq(namesText) {
+  const
+  array = namesText
+    .split(/[ \t\n,]+/g)
+    .uniq()
+    .filter(s => s);
+  return array;
+}
+/** As for namesTrimArrayUniq(), and join the array elements back into a single
+ * string separated by newlines.  */
+function namesTrimUniq(namesText) {
+  const
+  string = namesTrimArrayUniq(namesText).join('\n');
+  return string;
+}
+
 
 //-------------------------------------------------------------------------------

@@ -154,7 +154,7 @@ AxisTitleBlocksServers.prototype.positionDig = function() {
 };
 
 
-AxisTitleBlocksServers.prototype.position =     function(axisTitleS) {
+AxisTitleBlocksServers.prototype.position =     function(event, axisTitleS) {
   /** circle select - the text in the tspan is a unicode circle */
   let cS = AxisTitleBlocksServers.prototype.select(axisTitleS);
   cS

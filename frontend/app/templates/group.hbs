@@ -1,17 +1,17 @@
 <div class="group-outer">
 
   {{!-- when server is added to groups query-params, lookup from group.store.name --}}
-  {{#link-to 'groups' classNames='btn btn-info btn-xs' tagName='button'}}
+  {{#link-to route='groups' classNames='btn btn-info btn-xs' tagName='button'}}
   <i class="glyphicon glyphicon-arrow-left"></i>
   {{/link-to}}
 
 
 {{#let this.model as |group|}}
 
-  {{#if apiServers.multipleServers}}
+  {{#if this.apiServers.multipleServers}}
     <div style="margin-top: 2ex; margin-bottom:3ex">
       <label>Server</label>
-      <span>{{server.tabId}}</span>
+      <span>{{this.server.tabId}}</span>
     </div>
   {{/if}}
 
@@ -56,7 +56,7 @@
         oninput={{action (action this.setWritable) value="target.checked" }}  >
       <label for="select-group-as-filter">Group Members can add Datasets to this Group</label>
       </div>
-      <div>{{setWritableMsg}}</div>
+      <div>{{this.setWritableMsg}}</div>
     </div>
 
 

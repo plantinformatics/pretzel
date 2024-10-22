@@ -54,14 +54,14 @@ export default Component.extend(Evented, {
       var dataset = block.get('datasetId.content') || block.get('datasetId');
       console.log('selectBlockAndDataset', 'block => ', block.get('name'),
                   'dataset => ', dataset.get('name'));
-      this.sendAction('selectDataset', dataset);
-      this.sendAction('selectBlock', block);
+      this.selectDataset(dataset);
+      this.selectBlock(block);
     },
     selectDataset(dataset) {
-      this.sendAction('selectDataset', dataset);
+      this.selectDataset(dataset);
     },
     loadBlock(block) {
-      this.sendAction('loadBlock', block);
+      this.loadBlock(block);
     },
     allActiveChanged(active) {
       console.log('allActiveChanged', active, this.get('allActive'), this);

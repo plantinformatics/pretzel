@@ -1,0 +1,82 @@
+{{did-insert this.didInsertElement_}}
+
+{{#elem/panel-container state="primary" as |panelContainer|}}
+  {{#elem/panel-heading icon="search" panelContainer=panelContainer}}
+    VCF Genotype Search
+  {{/elem/panel-heading}}
+
+  {{#if panelContainer.showComponent}}
+
+
+  <div style="padding : 1em" class="genotypeSearch">
+
+    <label>VCF to search : </label>
+    <select 
+      id="parent" 
+      onchange={{this.selectDataset}} 
+      style="width: 100%"
+      >
+      <option value='' selected>None</option>
+      {{#each this.datasetsForSearch key="name" as |dataset|}}
+      <option value={{dataset.id}}>{{dataset.displayName}}</option>
+      {{/each}}
+    </select>
+
+  <label>Samples input :</label>
+
+  {{#if this.manageGenotype}}
+    {{#unless this.manageGenotype.isDestroying }}
+      <Panel::GenotypeSamples @the={{this.manageGenotype}} @userSettings={{@userSettings}}
+        @showIntersectionCheckbox={{false}} >
+        {{this.ensureSamplesForSelectedDatasetEffect}}
+      </Panel::GenotypeSamples>
+    {{/unless}}
+  {{else}}
+    <div>
+      <button type="submit" class="btn btn-info btn-xs" style="margin-bottom: 1em"
+        onclick={{this.navigateGenotypeTable}}
+        >Show Samples</button>
+    </div>
+  {{/if}}
+
+
+  <label>Features input :</label>
+
+  <div>
+    <Textarea
+      class="selectedFeaturesInput"
+      @value={{this.selectedFeaturesText}}
+      @input={{action this.featureNameListInputKey value="target.value" }}
+      @enter={{this.featureNameListInput}}
+      @insert-newline={{this.featureNameListInput}}
+      @escape-press={{this.featureNameListInput}}
+      placeholder="Feature Names"
+      style="width: 100%"
+      >
+    </Textarea>
+  </div>
+
+  {{yield}}
+
+  {{!-- maybe use manageGenotype.vcfGenotypeSamplesSelected, or derive .selectedSamples from .selectedSamplesText --}}
+  <button type="submit" class="btn btn-info pull-right margin-top"
+    onclick={{this.vcfGenotypeSearchAfterNavigate}}
+    disabled={{this.vcfGenotypeSearchDisabled}}
+    >Search</button>
+    {{!-- Effect: request the vcfFiles for the selected dataset --}}
+    <div style="display:none">{{this.datasetVcfFiles}}</div>
+    <div class="clearfix"></div>
+
+  </div>
+
+  {{#if this.lookupMessage}}
+    {{elem/panel-message warningMessage=this.lookupMessage}}
+  {{/if}}
+
+
+  {{/if}} {{!-- showComponent --}}
+{{/elem/panel-container}}
+
+
+
+

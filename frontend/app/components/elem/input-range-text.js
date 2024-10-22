@@ -94,7 +94,7 @@ export default class ElemInputRangeTextComponent extends Component {
   @action
   valueTextChanged(value) {
     /* {{input value=valueText ... }} sets
-     * this.valueText, and (action ...  value=target.value)
+     * this.valueText, and (action ...  value="target.value")
      * passes the same value to this function.
      * this.valueText is already set by value=this.valueText in hbs
      */

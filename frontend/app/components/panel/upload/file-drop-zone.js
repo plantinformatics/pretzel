@@ -1,5 +1,7 @@
 import { inject as service } from '@ember/service';
 import { alias } from '@ember/object/computed';
+import { later } from '@ember/runloop';
+import { on } from '@ember/object/evented';
 
 import { statusToMatrix } from '../../../utils/data/vcf-files';
 
@@ -14,6 +16,18 @@ function I(value) { return value; }
 
 /** utils/data/vcf-files.js :  statusToMatrix() maps '.' to unicodeDot */
 const unicodeDot = '·';
+
+const allowedFileTypes = [
+  // 'image/gif', 'image/jpeg', 'image/png', 'image/webp',	// devel / testing
+  'application/json',
+  'application/vnd.google-apps.spreadsheet',
+  'application/vnd.oasis.opendocument.spreadsheet',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/gzip',
+  'application/zip',
+  'text/gff3',
+];
 
 
 /*----------------------------------------------------------------------------*/
@@ -67,26 +81,103 @@ export default UploadBase.extend({
 
   replaceDataset : true,
 
+  //----------------------------------------------------------------------------
+
+  didInsertElement: on('didInsertElement', function() {
+    if (window.PretzelFrontend) {
+      window.PretzelFrontend.fileDropZone = this;
+    }
+  }),
+
+  //----------------------------------------------------------------------------
+
+  // @action
+  validateFile(file) {
+    dLog('validateFile', file.type, file.name, file.size, file, 'onDrag');
+    let ok = allowedFileTypes.includes(file.type);
+    if (! ok) {
+      ok = file.type.match(/\.json$|\.gz$|\.xlsx$|\.xls$|\.ods$/);
+    }
+    this.recentFileType = file.type;
+    return ok;
+  },
+
+  //----------------------------------------------------------------------------
+
+  typesText : null,
+  // @action
+  /** required to make .files available in onDrop().
+   * by https://developer.mozilla.org/en-US/docs/Web/Guide/HTML/Drag_operations */
+  onDragEnter(files, dataTransferWrapper) {
+    const dt = dataTransferWrapper?.dataTransfer;
+    dLog('onDragEnter', files, dataTransferWrapper, dataTransferWrapper.itemDetails, dt?.types);
+    this.showTypes(files, dataTransferWrapper);
+    this.warningMessage = null;
+  },
+  showTypes(okFiles, dataTransferWrapper) {
+    const fnName = 'showTypes';
+    const dt = dataTransferWrapper.dataTransfer;
+    if (dt) {
+    // this.typesText = '[ ' + .join(', ') + ' ]';
+      const
+      filesText =
+        okFiles.length ? okFiles.mapBy('name') :
+        dt.files.length ? Array.from(dt.files).mapBy('name') :
+        dataTransferWrapper.itemDetails.length ? dataTransferWrapper.itemDetails.map(id => Object.values(id).join(':')) :
+        dt.types;
+      const
+      text = '[ ' + filesText.join(', ') + ' ]',
+      /* validateFile() is not done until drop : file-dropzone.js : addFiles() : .args.filter( )
+       * so including .recentFileType is not useful - the value lags.
+       * (this.recentFileType??'') +
+       */
+      typesText = (okFiles.length || dataTransferWrapper.itemDetails.length) + ' ' + text;
+      this.set('typesText', typesText);
+      dLog(fnName, this.typesText, 'onDrag');
+    }
+  },
+  // @action
+  onDragLeave(files, dataTransferWrapper) {
+    dLog('onDragLeave', files, dataTransferWrapper, dataTransferWrapper.itemDetails);
+    this.typesText = null;
+    this.recentFileType = null;
+  },
+  // @action
+  onDrop(addedFiles, dataTransfer) {
+    const dt = dataTransfer.dataTransfer;
+    dLog('onDrop', addedFiles, dataTransfer, dataTransfer.itemDetails, dt.items, dt.files, dt.types);
+    // this.showTypes(addedFiles, dataTransfer);
+    if (! addedFiles.length && dataTransfer.itemDetails.length) {
+      this.warningMessage = 
+        'Not accepted :' + dataTransfer.itemDetails.map(id => Object.values(id).join(':'));
+    }
+    // later(() => {this.typesText = null; this.recentFileType = null;} , 1000);
+  },
+
+  /** @action */
   uploadSpreadsheet(file) {
     const
-    blob = file.blob,
+    fnName = 'uploadSpreadsheet',
+    // blob = file.blob,
     queue = file.queue;
     dLog(
-      'uploadSpreadsheet', file.name,
-      blob.size,
-      blob.type,
-      blob.lastModifiedDate,
-      blob.lastModified,
+      fnName, file.name,
+      file.size,
+      file.type,
+      file.source,
+      // blob.lastModifiedDate,
+      file.file.lastModified,
+      new Date(file.file.lastModified),
       queue
     );
 
     this.setProcessing();
     this.scrollToTop();
 
-    var bufferPromise = blob.arrayBuffer();
-    blob.arrayBuffer().then((buffer) => {
+    /** previous : var bufferPromise = file.blob.arrayBuffer(); */
+    file.readAsArrayBuffer().then((buffer) => {
       /* process the ArrayBuffer */
-      dLog('arrayBuffer', buffer, buffer.byteLength);
+      dLog(fnName, 'arrayBuffer', buffer, buffer.byteLength);
       const
       fileName = file.name,
       data = arrayBufferToString(buffer),
@@ -123,7 +214,7 @@ export default UploadBase.extend({
         const
         datasetWarnings  = status.datasetsWithErrorsOrWarnings?.map(
           (d) => [d.name].concat(d.errors || []).concat(d.warnings || [])) || [],
-        warnings = status?.warnings.concat(datasetWarnings.flat());
+        warnings = (status?.warnings ?? []).concat(datasetWarnings.flat());
         this.set('warnings', warnings);
         this.set('errors', status?.errors || []);
         this.get('blockService').featureSaved();

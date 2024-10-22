@@ -167,7 +167,7 @@ function blocksFilterCurrentlyViewed(blocks) {
 function blockValuesIdText(me, blocksTraits) {
   blocksTraits.forEach((bt) => {
     bt.Ontologies = bt.Ontologies
-      .filter((oid) => oid !== '')
+      .filter((oid) => oid !== '' && (typeof oid === 'string'))
       .map((oid)=> {
         let result = oid;
         if (! oid.startsWith('[')) {

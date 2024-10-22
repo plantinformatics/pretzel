@@ -16,7 +16,7 @@ import { stacks } from '../stacks';
  */
 function showTickLocations(scaffoldTicks, t)
 {
-  d3.keys(scaffoldTicks).forEach
+  Object.keys(scaffoldTicks).forEach
   (showTickLocationsOfAxis.bind(scaffoldTicks, t));
 }
 function showTickLocationsOfAxis(scaffoldTicks, t, axisName) {

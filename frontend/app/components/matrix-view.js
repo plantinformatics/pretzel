@@ -26,9 +26,17 @@ import {
 } from '../utils/panel/axis-table';
 import { afterSelectionFeatures } from '../utils/panel/feature-table';
 import { tableYDimensions } from '../utils/panel/table-dom';
-import {
+//let vcfGenotypeBrapi = window["vcf-genotype-brapi"];
+import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
+console.log('vcfGenotypeBrapi', vcfGenotypeBrapi);
+const /*import */{
   datasetId2Class,
+} = vcfGenotypeBrapi.vcfFeature;
+// } from 'vcf-genotype-brapi';
+
+import {
   featureBlockColourValue, columnNameAppendDatasetId, columnName2SampleName, valueIsCopies,
+
 } from '../utils/data/vcf-feature';
 import {
   referenceSamplesSymbol,
@@ -304,6 +312,7 @@ export default Component.extend({
   },
 
   didRender() {
+    this._super(...arguments);
     later(this.renderOnceTable, 500);
   },
   renderOnceTable : computed( function() {
@@ -415,7 +424,7 @@ export default Component.extend({
 
   initResizeListener() {
     d3.select(window) // '#right-panel'
-      .on('resize', () => this.updateTableHeight());
+      .on('resize', (event) => this.updateTableHeight());
   },
   updateTableHeight() {
     this.updateTableOnce();
@@ -570,6 +579,11 @@ export default Component.extend({
   // ---------------------------------------------------------------------------
 
   afterRender(isForced) {
+    if (this.isDestroying) {
+      dLog('afterRender', 'isDestroying');
+      return;
+    }
+
     const topLeftDialogEnable = true;
     if (! topLeftDialogEnable) {
     const scope = this.dataScope;
@@ -632,8 +646,10 @@ export default Component.extend({
     const
     fnName = 'afterScrollVertically_tablePosition',
     table = this.table,
-    /** refn : https://github.com/handsontable/handsontable/issues/2429#issuecomment-406616217 */
-    wtScroll = table.view.wt.wtScroll,
+    /** refn : https://github.com/handsontable/handsontable/issues/2429#issuecomment-406616217
+     * This was table.view.wt.wtScroll in earlier version.  not a public API.
+     */
+    wtScroll = table.view._wt._wot.wtScroll,
     /** When called from event afterScrollVertically,
      * .get{First,Last}VisibleRow() are defined; they may be -1 otherwise, e.g.
      * table is empty / not initialised or no scroll yet.
@@ -810,6 +826,7 @@ export default Component.extend({
     if ((typeof prop === 'string') && (prop.endsWith('Position') || prop.endsWith('End'))) {
       // see also col_name_fn(), table-brushed.js : featureValuesColumnsAttributes
       cellProperties.type = 'numeric';
+      cellProperties.renderer = Handsontable.renderers.NumericRenderer;
     } else if (prop === 'Block') {
       cellProperties.renderer = 'blockColourRenderer';
     } else if (sampleName === 'LD Block') {
@@ -913,10 +930,16 @@ export default Component.extend({
       }
     } else
     if (columnName.startsWith('LD Block')) {
-    const ldBlock = this.haplotypeToggleRC(row, col);
-    if (ldBlock) {
-      later(() => this.table.render(), 1000);
-    }
+      /** row === -1 when user clicks in the column heading row.
+       * No action is taken in this case; could e.g. toggle LD Block sorting of
+       * sample columns.
+       */
+      if (row >= 0) {
+        const ldBlock = this.haplotypeToggleRC(row, col);
+        if (ldBlock) {
+          later(() => this.table.render(), 1000);
+        }
+      }
     } else if (
       this.datasetColumns.includes(columnName) &&
         (features = cellFeaturesWithDatasetTag(this.table, row, col, 'variantInterval'))
@@ -1662,7 +1685,9 @@ export default Component.extend({
         longest = w;
       }
     });
-    return longest + 20;
+    const height = longest !== 0 ? longest + 20 : longest;
+    dLog('colHeaderHeight', height, longest, this.userSettings.columnHeaderHeight);
+    return height;
   }),
   /** For each value (column data / block / sample)  of .columns{},
    *   for each feature,
@@ -1927,7 +1952,8 @@ export default Component.extend({
     let table = this.get('table');
     let data = this.get('data');
     const gtPlainRender = this.urlOptions.gtPlainRender;
-    dLog('matrix-view', fnName, t, rows.length, rowHeaderWidth, colHeaderHeight, tableHeight, table, data, this.blockSamples && 'vcf');
+    dLog('matrix-view', fnName, t, rows.length, rowHeaderWidth, 'colHeaderHeight', colHeaderHeight, tableHeight, table, data, this.blockSamples && 'vcf');
+    d3.select('body').style('--matrixViewColumnHeaderHeight', '' + colHeaderHeight + 'px');
 
     if (gtPlainRender & 0b10000) {
       this.hideColumns();
@@ -2232,6 +2258,7 @@ export default Component.extend({
    * @param columnHeaderHeight initially .colHeaderHeight, then resizer height
    */
   setColumnHeaderHeight(columnHeaderHeight) {
+    dLog('setColumnHeaderHeight', columnHeaderHeight);
     /* In the case of manage-genotype (i.e. ! fullPage), matrix-view does not
      * use this, instead .height = tableHeightFromParent(), enabled by calculateTableHeight.
      *
@@ -2252,6 +2279,7 @@ export default Component.extend({
     const body = d3.select('body');
     if (! body.style('--matrixViewColumnHeaderHeight')) {
       const height = this.get('colHeaderHeight') || 300;
+      dLog('defaultColumnHeaderHeight', height, body.node());
       body.style('--matrixViewColumnHeaderHeight', '' + height + 'px');
     }
   },

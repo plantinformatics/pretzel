@@ -85,7 +85,7 @@ export default Component.extend(Evented, AxisEvents, {
      * secondary stores, so it it better to convert model:axis-brush to (plain-old) JS Object.
      */
     if (this.get('axis')) {
-      dataset = this.get('axis.axis').referenceBlockOrSelf.get('datasetId');
+      dataset = this.get('axis.axis.referenceBlockOrSelf.datasetId');
     } else {
       dataset = this.get('block.block.datasetId');
     }

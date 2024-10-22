@@ -7,6 +7,8 @@ import { bind, later, throttle } from '@ember/runloop';
 
 import $ from 'jquery';
 
+import config from 'pretzel-frontend/config/environment';
+
 import { nameSort } from '../utils/common/arrays';
 import { serverTypeIsGerminateAPI } from './service/api-server';
 
@@ -74,6 +76,7 @@ export default Component.extend({
   }),
 
   actions: {
+    /** passed as @onSubmit to <BsModal > */
     onConfirm() {
       const fnName = 'onConfirm';
       console.log(fnName);
@@ -97,7 +100,7 @@ export default Component.extend({
           host = host.replace(/\/mapview\/.*/, '');
           $('input[name=host]', this.element).val(host);
         }
-        if (! host.match(/^https?:\/\//)) {
+        if ((config.environment !== 'development') && ! host.match(/^https?:\/\//)) {
           host = "https://" + host;
           $('input[name=host]', this.element).val(host);
         }
@@ -205,19 +208,18 @@ export default Component.extend({
   typesForSelect : computed(function () {
     const
     fnName = 'typesForSelect',
-    typeNames = ['Pretzel' /*, 'noType'*/];
+    types = [{id : 'Pretzel' /* 'noType'*/, name : 'Pretzel'}];
     if (this.urlOptions.Germinate) {
-      typeNames.push('Germinate');
+      types.push({id : 'Germinate', name : 'Germinate (Experimental)'});
     }
     if (this.urlOptions.SparkServer) {
-      typeNames.push('Spark');
+      types.push({id : 'Spark', name : 'Spark (Experimental)'});
     }
-    const
-    types = typeNames
-      .map(name => ({id : name, name}))
-    
-    // types[2].name = '';
-    // types.findBy('id', 'noType').name = '';
+    if (this.urlOptions.BrAPI) {
+      types.push({id : 'BrAPI', name : 'BrAPI'});
+    }
+    // types.push(noType);  // not required so far, i.e. a server type must be selected.
+
     this.set('typeSelected', types.findBy('id', 'Pretzel'));
     return types;
   }),
@@ -267,13 +269,13 @@ export default Component.extend({
       .map((scope, i) => (i+1).toString() + ' ' + scope).join('\n');
     return chrMapping;
   },
-  /** Set this.chrMapping, and also display it in the <textarea>, because
-   * {{textarea value=this.chrMapping }} only reads .chrMapping when it is
-   * created.
+  /** Set this.chrMapping, and also display it in the <Textarea>, because
+   * <Textarea @value={{this.chrMapping}} > only reads .chrMapping when it is
+   * created. (true when added in 2023Nov30 a4ecfd7d​, can re-test now with Ember v5 or 6).
    */
   setChrMapping(chrMapping) {
     /** This could be "set chrMapping() {", although it is not needed if chrMapping
-     * is defined before the {{textarea}} is created.
+     * is defined before the <textarea> is created.
      */
     const
     textarea = $('textarea#ndm_chrMapping')?.[0];

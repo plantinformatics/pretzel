@@ -3,6 +3,7 @@ import $ from 'jquery';
 
 /*global d3 */
 /* global CSS */
+/* global DOMParser */
 
 const trace_dom = 0;
 const dLog = console.debug;
@@ -52,20 +53,20 @@ let
 
   let startX;
   let dragResize = d3.drag()  // d3 v3: was .behavior
-    .on('drag', function(d, i, g) {
+    .on('drag', function(event, d) {
       if (trace_dom)
-        logElementDimensions(g[0], 'on drag');
+        logElementDimensions(this, 'on drag');
 
       // as for .resize() below,
       // .on() seems to apply a reasonable debounce, but if not, use Ember.run.debounce()
       // Determine resizer position relative to resizable (parent)
+      // relativeParent was passed to d3.mouse(), not required by d3.pointer().
       let relativeParent = (this.parentNode.parentNode.parentNode.tagName === 'foreignObject') ?
         this.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode : this.parentNode;
       const
-      mousePosition = d3.mouse(relativeParent),
+      mousePosition = d3.pointer(event),
       /** means y if vertical */
       x_ = mousePosition[+vertical],
-      event = d3.event,
       /** means dy if vertical */
       dx = event[vertical ? 'dy' : 'dx'],
       // dLog("eltWidthResizable drag x=", x, dx);
@@ -214,28 +215,29 @@ function logElementDimensions2(jq) {
 
 /** Event filter for eltWidthResizable() ... d3 drag.filter()
  *  refn github.com/d3/d3-drag#drag_filter
+ *
+ * Originally used in {{,no}Shift,ctrl,no}Keyfilter(), until 8b4583cf :
+ *   let ev = d3.event.sourceEvent || d3.event; 
+ * @param ev  event, e.g. mousedown event MouseEventPrototype
+ * @param datum e.g. axis-1d
  */
-function shiftKeyfilter() {
-  let ev = d3.event.sourceEvent || d3.event; 
+function shiftKeyfilter(ev, datum) {
   return ev.shiftKey;
 }
 
-function noShiftKeyfilter() {
-  let ev = d3.event.sourceEvent || d3.event; 
+function noShiftKeyfilter(ev, datum) {
   return ! ev.shiftKey;
 }
 
-function ctrlKeyfilter() {
-  let ev = d3.event.sourceEvent || d3.event; 
+function ctrlKeyfilter(ev, datum) {
   return ev.ctrlKey;
 }
 
 /** accept events without a key modifier, i.e. no Shift, Ctrl or Alt.
  * Used for axis brush.
- * These can be replaced by .keyModifier([d3.event.shiftKey]) after upgrading to d3 v4.
+ * These can be replaced by .keyModifier([event.shiftKey]) after upgrading to d3 v4.
  */
-function noKeyfilter() {
-  let ev = d3.event.sourceEvent || d3.event; 
+function noKeyfilter(ev, datum) {
   return ! ev.shiftKey && ! ev.ctrlKey && ! ev.altKey;
 }
 
@@ -458,10 +460,43 @@ function responseTextParseHtml(responseText) {
   fnName = 'responseTextParseHtml',
   parser = new DOMParser(),
   doc = parser.parseFromString(responseText, 'text/html'),
+  body = doc.body,
   // doc.querySelector('title')
   pre = doc?.querySelector('body pre'),
-  // &nbsp; precedes "at"
-  text = pre?.textContent.replace(/at \/.*/, '');
+  textContent = pre?.textContent;
+  let text = textContent;
+  if (textContent) {
+    /** format is error message followed by stack backtrace, with "at" at the
+     * start of each backtrace line.
+     * "at" was followed by a path but now it may be function name (path)
+     * e.g. "at exports.ErrorStatus (/app/"
+     * Currently observing space and nbsp (U+00A0, decimal 160, octal 0240) before "at"
+     * https://www.compart.com/en/unicode/U+00A0
+     * so try splitting on that first.
+     * There are 2 pairs; if that is consistent the split could be on fromCharCode(32, 160, 32, 160).
+     */
+    const lines = textContent.split(String.fromCharCode(32, 160));
+    if (lines) {
+      text = lines[0];
+    } else {
+      // &nbsp; precedes "at"
+      /* probably drop the \/; preferably avoid getting text/html responses so
+       * this is not used */
+      text = textContent.replace(/at \/.*/, '');
+    }
+  } else {
+    /** The above works if body.childNodes is NodeList(3) [ #text, pre, #text ]
+     * but it may be NodeList(3) [ #text, div#wrapper, #text ].
+     * In both cases body.childNodes[1] contains the message text.
+     * For div#wrapper there is no backtrace to split off,  e.g. "
+      Error
+      400 Error:curl: (7) Failed to connect to localhost port 4000 after 0 ms: Couldn't connect to server
+
+      
+    "
+    */
+    text = body.childNodes[1]?.textContent;
+  }
   return text;
 }
 

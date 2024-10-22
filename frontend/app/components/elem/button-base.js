@@ -5,7 +5,7 @@ export default Component.extend({
   tagName: 'button',
   // attributes
   click: function() {
-    this.sendAction('onClick');
+    this.onClick();
   },
   attributeBindings: ['disabled'],
   // classes

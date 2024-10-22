@@ -45,6 +45,7 @@ envNames =
     'scriptsDir',
     'blastDir',
     'vcfDir',
+    'mntData',
     'toolsDev',
     'datasetIdDir',
     'blastn',

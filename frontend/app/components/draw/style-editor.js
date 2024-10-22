@@ -4,7 +4,7 @@ import { alias } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 
 import SpectrumColorPickerComponent from 'ember-spectrum-color-picker/components/spectrum-color-picker';
-import { storageFor } from 'ember-local-storage';
+import { storageFor } from '@facilecomm/ember-local-storage';
 
 
 /* global d3 */

@@ -2,7 +2,7 @@
 <span>Connections Enabled :</span>
 
 <ul class="list-group">
-  {{#each-in flowsService.enabledFlows as |name flow|  }}    {{!-- key="name" ? --}}
+  {{#each-in this.flowsService.enabledFlows as |name flow|  }}    {{!-- key="name" ? --}}
     <li class="list-group-item">
       
       {{#if false }}  {{!-- debug trace --}}
@@ -11,7 +11,7 @@
         {{ flow.visible }}
         {{ flow.enabled }}
       {{/if}}
-      {{input type="checkbox" checked=flow.visible class="toggle" input=(action "toggleVisible" name true) }}
+      <input type="checkbox" checked={{flow.visible}} class="toggle" oninput={{action "toggleVisible" name true}} />
       <label {{action "toggleVisible" name true on="click" }}>{{flow.title}}</label>
     </li>
 

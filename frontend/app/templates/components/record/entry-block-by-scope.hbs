@@ -3,12 +3,12 @@
   identical to the sibling elements because the blocks are grouped by scope.
   --}}
 
-{{record/entry-block-add-button entry=entry loadBlock="loadBlock"}}
-<span title={{entry.datasetId.name}}>
-  {{or entry.datasetId._meta.explorerName entry.datasetId._meta.shortName entry.datasetId.shortName entry.datasetId.name }}
+{{record/entry-block-add-button entry=this.entry loadBlock=this.loadBlock}}
+<span title={{this.entry.datasetId.name}}>
+  {{or this.entry.datasetId._meta.explorerName this.entry.datasetId._meta.shortName this.entry.datasetId.shortName this.entry.datasetId.name }}
 </span>
-{{#if (compare entry.name '!==' entry.scope) }}
-  <span class="blockInScope" title={{entry.name}}>{{entry.name}}</span>
+{{#if (compare this.entry.name '!==' this.entry.scope) }}
+  <span class="blockInScope" title={{this.entry.name}}>{{this.entry.name}}</span>
 {{/if}}
 
 

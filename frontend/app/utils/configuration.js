@@ -29,8 +29,9 @@ function getSiteOrigin(thisObject)
   /** from services/api-servers.js : init() */
   let
   application = getOwner(thisObject).lookup('controller:application'),
+  // used location.concreteImplementation.location in Ember 3
   /** e.g.  'http://localhost:4200' */
-  siteOrigin = application.target.location.concreteImplementation.location.origin;
+  siteOrigin = application.target.location.location.origin;
   
   return siteOrigin;
 };

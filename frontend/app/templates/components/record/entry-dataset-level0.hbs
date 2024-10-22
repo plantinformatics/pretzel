@@ -1,16 +1,19 @@
 {{!-- log 'entry-dataset-level0' node name values this --}}
-{{#record/entry-selectable node=node nodeName=name
-   selectedNode=selectedDataset
-   selectNode=(action 'selectDataset')}}
+{{#record/entry-selectable
+  node=this.node
+  nodeName=this.name
+  selectedNode=this.selectedDataset
+  selectNode=this.selectDataset
+}}
 
-  {{#record/entry-expander nodeName=name}}
+  {{#record/entry-expander nodeName=this.name}}
     {{record/entry-blocks-array
-      controlOptions=controlOptions
-      loadBlock="loadBlock"
-      selectBlock=selectBlock
-      selectedBlock=selectedBlock
-      selectDataset=(action 'selectDataset')
-      data=values}}
+      controlOptions=this.controlOptions
+      loadBlock=this.loadBlock
+      selectBlock=this.selectBlock
+      selectedBlock=this.selectedBlock
+      selectDataset=this.selectDataset
+      data=this.values}}
       {{/record/entry-expander}}
 
-    {{/record/entry-selectable}}
+{{/record/entry-selectable}}

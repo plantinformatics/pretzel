@@ -13,6 +13,7 @@ import { alphanum } from '@cablanchard/koelle-sort';
 import { valueGetType, logV } from '../../utils/value-tree';
 
 import { parentOfType, elt0 } from '../../utils/ember-devel';
+import { toTitleCase } from '../../utils/string';
 
 /*----------------------------------------------------------------------------*/
 
@@ -22,6 +23,8 @@ const dLog = console.debug;
 var levelMeta;
 
 const trace_entryValues = 1;
+
+const capitalize = toTitleCase;
 
 /*----------------------------------------------------------------------------*/
 
@@ -44,11 +47,11 @@ export default EntryBase.extend({
   actions: {
     selectDataset(dataset) {
       console.log('selectDataset', dataset);
-      this.sendAction('selectDataset', dataset);
+      this.selectDataset(dataset);
     },
     selectBlock(block) {
       console.log('selectBlock', block);
-      this.sendAction('selectBlock', block);
+      this.selectBlock(block);
     },
     dataTypeName(value) {
       return this.dataTypeName(value);
@@ -69,7 +72,7 @@ export default EntryBase.extend({
     /** RFC #176 (Javascript Modules API) changes Ember.isArray to isArray,
      * so append _ to variable name to distinguish it. */
     isArray_ = isArray(values);
-    if (trace_entryValues)
+    if (trace_entryValues > 1)
       console.log('valueIsArray', isArray_, length, this.get('name'), values);
     return isArray_;
   }),
@@ -100,7 +103,7 @@ export default EntryBase.extend({
       levelMeta = this.get('levelMeta'),
     values = this.get('values'),  // values.then ...
     dataTypeName = values && (valueGetType(levelMeta, values) || this.get('valuesModelName'));
-    if (trace_entryValues)
+    if (trace_entryValues > 1)
       console.log('dataTypeName', dataTypeName, values);
     return dataTypeName;
   }),
@@ -134,7 +137,7 @@ export default EntryBase.extend({
       else
         modelName = this.modelName(values);
       if (modelName)
-        modelName = modelName.capitalize();
+        modelName = capitalize(modelName);
     }
     return modelName;
   },
@@ -236,7 +239,9 @@ export default EntryBase.extend({
       array = Object.keys(values)
         .sort(alphanum)
         .map((key) => ({key, value : values[key]}));
-      dLog('keyValuesSorted', values, array);
+      if (trace_entryValues > 1)  {
+        dLog('keyValuesSorted', values, array);
+      }
     }
     return array;
   }),

@@ -7,13 +7,38 @@ import { removePunctuation, ApiServerAttributes } from './api-server';
 import { Germinate } from '../../utils/data/germinate';
 import { reduceInSeries } from '../../utils/common/promises';
 
+/** For the prototype, add the BrAPIWrap methods to ApiServerGerminate, as there is no name clash.
+ * Probably BrAPIWrap will become the parent class of ApiServerGerminate.
+ */
+// import BrAPIWrap from '../../utils/data/brapi-genotype';
+import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
+console.log('vcfGenotypeBrapi', vcfGenotypeBrapi);
+const /*import {*/
+  BrAPIWrap
+/*}*/ = vcfGenotypeBrapi.brapiGenotype;
+/** imports from vcfGenotypeBrapi.* have values which are Getters, which are not
+ * suitable for .extend() so copy values to a plain javascript object.
+ */
+const {...BrAPIWrapObj} = BrAPIWrap;
+
+
 //------------------------------------------------------------------------------
 
 const dLog = console.debug;
 
 //------------------------------------------------------------------------------
 
-export default EmberObject.extend(ApiServerAttributes, {
+/** components/service/api-server-germinate extends
+ *  components/service/api-server
+ * It overrides these functions :
+ *   blockFeatureTraits()
+ *   blockFeatureOntologies()
+ *   getVersion()
+ *   getDatasets()
+ * and adds :
+ *   viewDatasetP()
+ */
+export default EmberObject.extend(ApiServerAttributes, BrAPIWrapObj, {
 
   componentClassName : 'ApiServerGerminate',
 
@@ -45,6 +70,7 @@ export default EmberObject.extend(ApiServerAttributes, {
    * linkageGroup.
    */
   getDatasets : function () {
+    BrAPIWrap.setFrameworkFunctions({Ember_A, later});
     const
     fnName = 'getDatasets',
     germinate = this.germinateInstance,
@@ -85,7 +111,7 @@ export default EmberObject.extend(ApiServerAttributes, {
         /** linkageGroupName is used for /chromosome/ path param in API call. */
         _meta : {linkageGroupName : linkageGroup.linkageGroupName},
       },
-      blockP = store.createRecord('Block', blockAttributes);
+      blockP = store.createRecord('block', blockAttributes);
       return blockP;
     }),
     datasetP = Promise.all(blocksP).then(blocks => {
@@ -112,7 +138,7 @@ export default EmberObject.extend(ApiServerAttributes, {
         id2Server[block.get('id')] = this;
         block.set('mapName', germinateDataset.mapName);
       });
-      const p = store.createRecord('Dataset', datasetAttributes);
+      const p = store.createRecord('dataset', datasetAttributes);
       return p;
     });
     datasetP.then(dataset => {

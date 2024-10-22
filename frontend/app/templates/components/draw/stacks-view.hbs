@@ -1,20 +1,17 @@
 {{!-- stacksCount : {{ stacksCount } }, {{ axesP.length --}}
 
-{{axesViewedEffect.length}}
+{{this.axesViewedEffect.length}}
 {{log 'stacks-view' 'axesP' this.stacks.length this.stacks this }}
 {{this.stacks.length}}
 {{#each this.axesViewedEffect as | stack | }}
   {{stack.portions.length}}
 {{/each}}
 
-{{draw/axes-1d drawMap=drawMap axes2d=axes2d
-  model=model
-  stacksView=this
-  featuresInBlocks=featuresInBlocks
+{{draw/axes-1d drawMap=this.drawMap axes2d=this.axes2d model=this.model stacksView=this featuresInBlocks=this.featuresInBlocks
 }}
 {{#if @model.userSettings.genotype.showTablePositionAlignment}}
 {{draw/graph-annotations
-  model=model
+  model=this.model
   stacksView=this
   rightAxes=this.rightStack.axes
 }}

@@ -14,7 +14,7 @@ export default Component.extend({
   actions : {
     loadBlock(block) {
       console.log('select-parent: loadBlock', block, arguments);
-      this.sendAction('loadBlock', block);
+      this.loadBlock(block);
     },
     clearBlock : function() {
       dLog('clearBlock', this.get('block.id'));
