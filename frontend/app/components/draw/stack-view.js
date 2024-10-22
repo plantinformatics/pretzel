@@ -34,8 +34,8 @@ export default class DrawStackViewComponent extends Component {
   axes;
 
   constructor(app, args) {
-    const axis1d = args.stack.axis1d;
     super(...arguments);
+    const axis1d = args.stack.axis1d;
 
     dLog('stack-view', this);
 
@@ -69,18 +69,19 @@ export default class DrawStackViewComponent extends Component {
     this.sideClasses = p.sideClasses;
     this.add = p.add;  // Stack_add;
     this.addAxis = p.addAxis;
-    this.insert = p.insert;
-    this.findIndex = p.findIndex;
-    this.remove = p.remove;
+    // replaced by DrawStackObject.prototype.*
+    // this.insert = p.insert;
+    // this.findIndex = p.findIndex;
+    // this.remove = p.remove;
     this.remove2 = p.remove2;
     // this.removeStacked1 = p.removeStacked1;
     this.delete = p.delete;
     this.move = p.move;
     this.shift = p.shift;
     this.contains = p.contains;
-    this.dropIn = p.dropIn;
+    // this.dropIn = p.dropIn;
     this.releasePortion = p.releasePortion;
-    this.dropOut = p.dropOut;
+    // this.dropOut = p.dropOut;
     this.calculatePositions = p.calculatePositions;
     this.axisTransform = p.axisTransform;
     this.axisTransformO = p.axisTransformO;
@@ -116,6 +117,7 @@ export default class DrawStackViewComponent extends Component {
       // ['axis1d', 'stackView']
       Array.from(Object.entries(this.args.stack)).flat() );
     this.args.register?.(this, false);
+    this._super(...arguments);
   }
 
   //----------------------------------------------------------------------------

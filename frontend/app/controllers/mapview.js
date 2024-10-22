@@ -8,7 +8,7 @@ import { readOnly, alias, reads, or } from '@ember/object/computed';
 import { A as Ember_A } from '@ember/array';
 import DS from 'ember-data';
 
-import QueryParams from 'ember-parachute';
+import QueryParams from '@voll/ember-parachute';
 
 //------------------------------------------------------------------------------
 
@@ -56,6 +56,8 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
   apiServers: service(),
   controlsService : service('controls'),
   queryParamsService : service('query-params'),
+  router: service(),
+
 
   //----------------------------------------------------------------------------
   // based on ember-parachute/README.md
@@ -86,16 +88,14 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
     // fetch data
   },
 
-  actions: {
-    resetAll() {
-      // reset all query params to their default values specified in the query param map
-      this.resetQueryParams();
-    }
-  },
-
   //----------------------------------------------------------------------------
 
   /** Array of available datasets populated from model 
+   *
+   * This is currently not yielding useful values, possibly because
+   * availableMaps are not re-requested in each re-render; a more
+   * stable alternative is e.g.  left-panel :
+   * serverSelected_datasetsBlocks().
    */
   datasets: computed('model', 'model.availableMapsTask', 'model.availableMapsTask.value', function () {
     let task = this.get('model.availableMapsTask');
@@ -106,6 +106,14 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
   }),
 
   actions: {
+
+    /** Reset all query params to their default values specified in the query param map
+     * From : (@voll/) ember-parachute/README.md, see example of use there.
+     */
+    resetAll() {
+      this.resetQueryParams();
+    },
+
     // layout configuration
     setVisibility: function(side) {
       // dLog("setVisibility", side);
@@ -113,8 +121,11 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
       this.set(`layout.${side}.visible`, !visibility);
     },
     setTab: function(side, tab) {
-      dLog("setTab", side, tab, this.get('layout'));
-      this.set(`layout.${side}.tab`, tab);
+      const fieldName = `layout.${side}.tab`;
+      if (this.get(fieldName) !== tab) {
+        dLog("setTab", side, tab, this.get('layout'));
+        this.set(fieldName, tab);
+      }
     },
     updateSelectedFeatures: function(features) {
       // dLog("updateselectedFeatures in mapview", features.length);
@@ -175,17 +186,25 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
 
       let queryParams = this.get('model.params');
       let me = this;
-      later( function () {
-        me.transitionToRoute({'queryParams': queryParams }); });
+      later( () => {
+        this.router.transitionTo({'queryParams': queryParams }); });
     },
     /** Un-view a block.
+     *
+     * The remove* functions remove objects from the display (i.e. un-view them),
+     * whereas the delete* functions delete objects, i.e. 
+     *   components/record/entry-base.js : deleteRecord()
+     *
      * @param block store object; this is the only difference from action removeMap(),
      * which takes a blockId
      */
-    removeBlock: function(block) {
+    removeBlock(block) {
+      const fnName = 'removeBlock';
       if (typeof block === "string")
         this.send('removeMap', block);
-      else {
+      else if (block.isDestroying) {
+        dLog(fnName, 'isDestroying', block.id, block.brushName);
+      } else {
         block.unViewChildBlocks();
         block.set('isViewed', false);
         this.removeUnviewedBlockFeaturesFromSelected();
@@ -193,23 +212,78 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
     },
     /** Change the state of the named block to not-viewed.
      * Equivalent to action removeBlock(), which takes a block record instead of a blockId.
-     * @param mapName blockId
+     * @param blockId
      */
-    removeMap : function(mapName) {
-      let blockId = mapName;
+    removeBlockId(blockId) {
       let block = this.blockFromId(blockId);
       block.unViewChildBlocks();
 
-      this.get('block').setViewed(mapName, false);
+      this.get('block').setViewed(blockId, false);
       later(() => this.removeUnviewedBlockFeaturesFromSelected(), 500);
     },
+    /**
+     * @param blockId (previously named mapName)
+     */
+    removeMap(blockId) {
+      this.removeBlockId(blockId);
+    },
+    removeBlocks(blocks) {
+      const fnName = 'removeBlocks';
+      dLog(fnName, blocks.map(b => [b.brushName, b.id, b.isViewed]));
+      blocks.forEach(block => this.removeBlock(block));
+    },
+    removeDatasetsBlocks(datasets) {
+      const
+      blocks = datasets.mapBy('blocks').flat();
+      this.removeBlocks(blocks);
+    },
+    removeDataset(dataset) {
+      const
+      fnName = 'removeDataset';
+      this.removeBlocks(Array.from(dataset.blocks));
+    },
+    /**
+     * @param datasetId mapName
+     */
+    removeDatasetId(datasetId) {
+      const
+      fnName = 'removeDatasetId';
+      dLog(fnName, 'datasets', this.datasets.mapBy('id'));
+      /** Following are 3 ways of determining blocks to unview from datasetId */
+      const
+      id2Server = this.get('apiServers.id2Server'),
+      server = id2Server[datasetId],
+      datasets = server.datasetsBlocks.filterBy('id', datasetId);
+      this.removeDatasetsBlocks(datasets);
+      /* related :
+       * this.apiServers.dataset2stores(id)
+       * d.datasetsByName
+       */
+      /** Expect that at this time datasetId is already removed from
+       * .dataset.values and is still present in .server.datasetsBlocks, so the
+       * above is more useful although the following is broadly equivalent :
+       */
+      const datasets2 = this.dataset.values.filterBy('id', datasetId);
+      // this.removeDatasetsBlocks(datasets2);
 
-    onDelete : function (modelName, id) {
+      /** This 3rd alternative is likely to be not needed. */
+      const
+      /** expect just 1 match per blockId, so could use .findBy() */
+      blocksToUnview = 
+        this.mapsToView.map(blockId => this.blockValues.filterBy('id', blockId))
+      // .filterBy('isViewed', true)
+        .filterBy('datasetId.id', datasetId);
+      this.removeBlocks(blocksToUnview);
+    },
+    onDelete(modelName, id) {
+      const fnName = 'onDelete';
       dLog('onDelete', modelName, id);
       if (modelName == 'block')
         this.send('removeMap', id); // block
-      else
-        dLog('TODO : undisplay child blocks of', modelName, id);
+      else {
+        dLog(fnName, 'undisplay child blocks of', modelName, id);
+        this.removeDatasetId(id);
+      }
     },
     toggleShowUnique: function() {
       dLog("controllers/mapview:toggleShowUnique()", this);
@@ -277,9 +351,12 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
         }
         // this.send('setTab', 'right', 'block');
 
+	/** Don't switch to the dataset tab if the Genotype Table is displayed */
+	const rightTab = this.get('layout.right.tab');
         let queryParams = this.get('model.params');
         /* if the block tab in right panel is not displayed then select the block's dataset. */
-        if (! (queryParams.options && queryParams.parsedOptions.blockTab)) {
+        if ((rightTab !== "genotype") &&
+	    ! (queryParams.options && queryParams.parsedOptions.blockTab)) {
           this.send('selectDataset', block.datasetId);
         }
       }
@@ -292,7 +369,7 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
       selectedBlock = store.peekRecord('block', blockId);
       /* Previous version traversed all blocks of selectedMaps to find one
        * matching blockId. */
-      this.send('selectBlock', selectedBlock)
+      this.actions.selectBlock.apply(this, [selectedBlock]);
     },
     /**
      * @param ds may be a promise (yielding a Dataset object)
@@ -317,6 +394,7 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
       }
     },
     /** Re-perform task to get all available maps.
+     * This is passed to components as refreshDatasets.
      */
     updateModel: function() {
       let model = this.get('model');
@@ -325,6 +403,14 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
       let serverTabSelectedName = this.get('controlsService.serverTabSelected'),
       serverTabSelected = this.get('apiServers.serverSelected'),
       datasetsTask = serverTabSelected && serverTabSelected.getDatasets();
+
+      /** de-select .selectedDataset if it has been deleted. */
+      datasetsTask?.then(() => {
+        if (this.selectedDataset && this.selectedDataset.isDestroying) {
+          this.set('selectedDataset', null);
+        }
+      });
+
       {
       let
       /** expect that both serverTabSelected and datasetsTask are defined, regardless of serverTabSelectedName.  */
@@ -335,7 +421,7 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
       /** If this is called as refreshDatasets from data-csv then we want to get
        * blockFeatureLimits for the added block.
        * Perhaps can pass (undefined, {server : serverTabSelected}), and also
-       * check if blocksLimitsTask.get('isRunning') (factor out of
+       * check if blocksLimitsTask.isRunning (factor out of
        * mapview:model() )
        */
       newTaskInstance.then((datasets) => {
@@ -345,6 +431,15 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
       return datasetsTask;
     }
   },
+  /** forward these calls into .actions {}; these can be dropped when this
+   * component is converted from Ember Controller.extend() to a native class */
+  removeBlock(block)             { this.actions.removeBlock.apply(this, arguments); },
+  removeBlockId(blockId)         { this.actions.removeBlockId.apply(this, arguments); },
+  removeBlocks(blocks)           { this.actions.removeBlocks.apply(this, arguments); },
+  removeDatasetsBlocks(datasets) { this.actions.removeDatasetsBlocks.apply(this, arguments); },
+  removeDatasetId(datasetId)     { this.actions.removeDatasetId.apply(this, arguments); },
+
+  //----------------------------------------------------------------------------
 
   layout: EmberObject.create({
     'left': {
@@ -390,6 +485,22 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
 
   //----------------------------------------------------------------------------
 
+  /** Register the Split.js instance which alternates in position between Right/Bottom.
+   * and contains Dataset / Features / Paths / Genotypes
+   */
+  registerInstanceRightSplit(splitInstance) {
+    dLog('registerInstanceRightSplit', splitInstance, this.rightSplitInstance);
+    /* To provide also support for setSizes([100, 0]) when display of
+     * the right panel is toggled, factor out leftSplitListen() to a
+     * sub-component wrapping split-view.
+     * For now, this instance reference enables the Genotype Table
+     * width to be set for genotype-search.
+     */
+    this.controls.window.rightSplitInstance = splitInstance;
+  },
+
+  //----------------------------------------------------------------------------
+
   splitViewDirection : computed('tablesPanelRight', function () {
     let direction = this.tablesPanelRight ? 'horizontal' : 'vertical';
     dLog('splitViewDirection', direction, this.tablesPanelRight);
@@ -420,7 +531,12 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
   toggleLayout(value) {
     const fnName = 'toggleLayout';
     this.toggleProperty('tablesPanelRight');
-    /** tablesPanelRight is initially false, so it is OK to set body class in toggle action. */
+    this.renderBodyClass_tablesPanelRight();
+  },
+  /** Set <body> class according to value of tablesPanelRight.
+   * This is called via {{did-insert }} and from toggleLayout().
+   */
+  renderBodyClass_tablesPanelRight() {
     d3.select('body')
       .classed('tablesPanelRight', this.get('tablesPanelRight'));
   },
@@ -431,7 +547,10 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
     view : {  },
     /** to add .viewed, use computed() to provide `this`
     viewed : () => this.get('controlsService.viewed'),  */
-    window : {tablesPanelRight : false } }),
+    /** Changing tablesPanelRight : false -> true because that suits the
+     * Genotype Table, which is now a predominant display panel.
+     */
+    window : {tablesPanelRight : true, navigation : { } } }),
 
   queryParams: ['mapsToView'],
   mapsToView: [],
@@ -454,12 +573,20 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
   showAsymmetricAliases : false,
 
   init: function() {
+    this._super.apply(this, arguments);
+
     /** refn : https://discuss.emberjs.com/t/is-this-possible-to-turn-off-some-deprecations-warnings/8196 */
     let deprecationIds = [
       'ember-component.send-action',
       /** ember-bootstrap/utils/cp/listen-to.js uses Ember.getWithDefault() */
-      'ember-metal.get-with-default'];
+      'ember-metal.get-with-default',
+      // "... will be removed in ember-data 6.0."
+      'ember-data:deprecate-legacy-imports',
+      // "... will be removed in ember-source 5.0.0. See https://deprecations.emberjs.com/v4.x/#toc_ember-polyfills-deprecate-assign for more details."
+      'ember-polyfills.deprecate-assign',
+    ];
     registerDeprecationHandler((message, options, next) => {
+      dLog('init', 'registerDeprecationHandler', options.id);
       if (! deprecationIds.includes(options.id)) {
         next(message, options);
       }
@@ -467,8 +594,11 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
 
     this.queryParamsService.queryParamsHost = this;
     stacks.oa = this.oa;
+    if (! window.PretzelFrontend) {
+      window.PretzelFrontend = {};
+    }
 
-    this._super.apply(this, arguments);
+    this.controls.window.navigation.setTab = this.actions.setTab.bind(this);
   },
 
   currentURLDidChange: observer('target.currentURL', function () {
@@ -480,6 +610,7 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
   blockValues : readOnly('block.blockValues'),
 
   /** same as services/data/block @see peekBlock()
+   * equivalent to this.actions.blockFromId(), which is not referenced.  - these can be merged.
    */
   blockFromId : function(blockId) {
     let 
@@ -553,7 +684,7 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
     store = server.get('store'),
     dataset = store.peekRecord('dataset', datasetName);
     /** If not found on primary then check the server selected in dataset
-     * explorer.  Could do just this instad of checking primary - probably
+     * explorer.  Could do just this instead of checking primary - probably
      * viewDataset should be relative to serverSelected by default.
      * blast-results-view.js : resultParentBlocks() does the same.
      */

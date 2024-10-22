@@ -4,14 +4,14 @@
     {{/elem/panel-heading}}
     {{#if panelContainer.showComponent}}
 
-  <BsTab @customTabs={{true}} @onChange={{action this.onChangeTab}} @activeId={{this.activeId}} as |tab|>
+  <BsTab @customTabs={{true}} @fade={{false}} @onChange={{action this.onChangeTab}} @activeId={{this.activeId}} as |tab|>
     <BsNav @type="tabs" as |nav|>
     <ul class="nav nav-tabs li-active-extra counts">
 
         {{#let 'Blocks' as |tabTypeName|}}
           {{#let (compute (action this.datasetTypeTabId tabTypeName)) as |tabId|}}
             <nav.item class="active-detail" @active={{bs-eq tab.activeId tabId}}><a href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
-              <div>{{block.viewed.length}}</div>
+              <div>{{this.block.viewed.length}}</div>
             </nav.item>
           {{/let}}
         {{/let}}
@@ -19,7 +19,7 @@
         {{#let 'Trait' as |tabTypeName|}}
           {{#let (compute (action this.datasetTypeTabId tabTypeName)) as |tabId|}}
             <nav.item class="active-detail" @active={{bs-eq tab.activeId tabId}}><a href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
-              <div>{{trait.traitsInView.length}}</div>
+              <div>{{this.trait.traitsInView.length}}</div>
             </nav.item>
           {{/let}}
         {{/let}}
@@ -27,7 +27,7 @@
         {{#let 'Ontology' as |tabTypeName|}}
           {{#let (compute (action this.datasetTypeTabId tabTypeName)) as |tabId|}}
             <nav.item class="active-detail" @active={{bs-eq tab.activeId tabId}}><a href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
-              <div>{{compute (action this.keysLength ontology.ontologyIsVisible)}}</div>
+              <div>{{compute (action this.keysLength this.ontology.ontologyIsVisible)}}</div>
             </nav.item>
           {{/let}}
         {{/let}}
@@ -47,7 +47,7 @@
 
     {{!--  will split this out to a separate component.  time to release. --}}
     <ul id="display-blocks" class="list-group">
-        {{#if hasDisplayData}}
+        {{#if this.hasDisplayData}}
         <li class="list-group-item" style="min-height: 55px;" >
           <span class="pull-right">
             {{elem/button-base
@@ -60,11 +60,11 @@
         </li>
         {{/if}}
 
-        {{#each displayData as |block|}}
+        {{#each this.displayData as |block|}}
         <li 
-            class="list-group-item {{if (compare block.id '===' selectedBlock.id) 'list-group-item-warning'}}"
+            class="list-group-item {{if (compare block.id '===' this.selectedBlock.id) 'list-group-item-warning'}}"
             data-chr-id={{block.id}}
-            {{action "selectBlock" block on="click"}}>
+            {{action this.selectBlock block on="click"}}>
             <span title="{{block.datasetId.name}} {{block.name}}" class="truncate" style="max-width:260px">
               {{block.datasetId.name}} {{block.name}}
             </span>
@@ -75,7 +75,7 @@
                 classSize='xs'
                 classColour='danger'
                 icon='minus'
-                onClick=(action "removeBlock" block)}}
+                onClick=(action this.removeBlock block)}}
             </span>
 
             <p class="list-group-item-text">
@@ -104,7 +104,7 @@
           {{#let (compute (action this.datasetTypeTabId tabTypeName)) as |tabId|}}
 
 {{#tab.pane id=tabId title=tabTypeName}}
-{{panel/trait-qtl data=trait.traitsInView}}
+{{panel/trait-qtl data=this.trait.traitsInView}}
 {{/tab.pane}}
           {{/let}}
         {{/let}}
@@ -137,8 +137,8 @@
 
 {{!-- --------------------------------------------------------------------- --}}
 
-{{#if isMapview}}
-{{#elem/panel-container state="primary" showComponent=showChartOptions as |panelContainer|}}
+{{#if this.isMapview}}
+{{#elem/panel-container state="primary" showComponent=this.showChartOptions as |panelContainer|}}
   {{#elem/panel-heading icon="wrench" panelContainer=panelContainer}}
     Chart Options
 
@@ -149,26 +149,26 @@
     {{!-- .chart-options is enabled by options=chartOptions -> body.chartOptions .chart-options CSS  --}}
     <ul class="list-group chart-options">
       <li class="list-group-item">
-        {{input type="checkbox" checked=isShowUnique class="toggle"}}
+        {{input type="checkbox" checked=this.isShowUnique class="toggle"}}
         <label {{action "toggleShowUnique" on="click"}}>Show Unique</label>
       </li>
       <li class="list-group-item">
-        {{input type="checkbox" checked=pathColourScale class="toggle"}}
+        {{input type="checkbox" checked=this.pathColourScale class="toggle"}}
         <label {{action "togglePathColourScale" on="click"}}>Path Colour Scale</label>
       </li>
       <li class="list-group-item">
-        {{input type="checkbox" checked=showScaffoldFeatures class="toggle"}}
+        {{input type="checkbox" checked=this.showScaffoldFeatures class="toggle"}}
         <label>Show Scaffold Features</label>
       </li>
       <li class="list-group-item">
-        {{input type="checkbox" checked=showAsymmetricAliases class="toggle"}}
+        {{input type="checkbox" checked=this.showAsymmetricAliases class="toggle"}}
         <label>Show Asymmetric Aliases</label>
       </li>
     </ul>
 
     <div class="panel-body">
       <div class="drawing-controls flowButtons vspace1">
-        {{draw/flow-controls viewOptions=(hash isShowUnique pathColourScale showScaffoldFeatures showAsymmetricAliases) modelParamOptions=model.params.options }}
+        {{draw/flow-controls viewOptions=(hash this.isShowUnique this.pathColourScale this.showScaffoldFeatures this.showAsymmetricAliases) modelParamOptions=this.model.params.options }}
       </div>
     </div>
 
@@ -178,7 +178,7 @@
 
 {{!-- --------------------------------------------------------------------- --}}
 
-{{panel/view-controls controls=controls drawActions=this}}
+{{panel/view-controls controls=this.controls drawActions=this}}
 
 {{!-- --------------------------------------------------------------------- --}}
 

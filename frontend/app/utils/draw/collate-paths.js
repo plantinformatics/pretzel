@@ -67,7 +67,7 @@ function collateStacks()
 {
   if (trace_adj)
     console.log('collateStacks', flowsService, flows);
-  d3.keys(flows).forEach(function(flowName) {
+  Object.keys(flows).forEach(function(flowName) {
     let flow = flows[flowName];
     if (flow.enabled && flow.collate)
     {
@@ -90,7 +90,7 @@ function countPaths(svgRoot)
   if (svgRoot)
   {
     let nPaths = 0;
-    d3.keys(flows).forEach(function(flowName) {
+    Object.keys(flows).forEach(function(flowName) {
       let flow = flows[flowName];
       if (flow.enabled && flow.collate)
       {
@@ -212,7 +212,7 @@ function collateData()
 {
   let featureAliasGroupAxes = flowsService.featureAliasGroupAxes;
   let oa = oa_();
-  d3.keys(oa.z).forEach(function(axis) {
+  Object.keys(oa.z).forEach(function(axis) {
     let za = oa.z[axis];
     // console.log("collateData", axis, za);
     if (featureAliasGroupAxes[axis] === undefined)
@@ -222,7 +222,7 @@ function collateData()
     {
       axisFeatureAliasToFeature[axis] = {};
       let aafa  = axisFeatureAliasToFeature[axis];
-      d3.keys(za).forEach(function(feature) {
+      Object.keys(za).forEach(function(feature) {
         if ((feature != "mapName") && (feature != "chrName")
             && ! isOtherField[feature])
         {
@@ -294,11 +294,11 @@ function collateFeatureClasses(featureScaffold)
 {
   let aliasGroupClasses = flowsService.aliasGroupClasses;
   let oa = oa_();
-  d3.keys(oa.z).forEach(
+  Object.keys(oa.z).forEach(
     function(axisName)
     {
       let za = oa.z[axisName];
-      d3.keys(za).forEach(
+      Object.keys(za).forEach(
         function(featureName)
         {
           if (! isOtherField[featureName])
@@ -419,7 +419,7 @@ function collateStacks1()
         if (collatePaths4Multi && a0Server === a1Server)
           dLog(a0Name, a1.axisName, 'both on', a0Server.host);
         else
-        d3.keys(za0).forEach(function(feature0) {
+        Object.keys(za0).forEach(function(feature0) {
           if (! isOtherField[feature0])
           {
             /** a0, a1 could be derived from za0[feature0].axis, za1[feature0].axis */
@@ -499,7 +499,7 @@ function collateStacks1()
     }
   }
   if (pathsUnique && trace_path)
-    console.log("collateStacks", " featureAxes", d3.keys(featureAxes).length, ", pathsUnique", pathsUnique.length);
+    console.log("collateStacks", " featureAxes", Object.keys(featureAxes).length, ", pathsUnique", pathsUnique.length);
   if (trace_path > 4)
   {
     for (let featurej in featureAxes) {
@@ -631,7 +631,7 @@ function collateStacksA()
   let adjCount = 0, adjCountNew = 0, pathCount = 0;
   let oa = oa_();
   // could change this to traverse adjAxes (post filter) instead of keys(oa.z)
-  d3.keys(oa.z).forEach(
+  Object.keys(oa.z).forEach(
     function(axisName)
     {
       let za = oa.z[axisName];
@@ -666,7 +666,7 @@ function collateStacksA()
           log_adjAxes_a(adjs);
         }
         let trace_count = 1;
-        d3.keys(za).forEach(
+        Object.keys(za).forEach(
           function(featureName)
           {
             if (! isOtherField[featureName]) {
@@ -773,7 +773,7 @@ function aliasesText(aliases)
 function aliasText(alias)
 {
   let text =
-    d3.keys(alias).forEach(function(a) {
+    Object.keys(alias).forEach(function(a) {
       return a.toString() + alias[a];
     });
   return text;
@@ -975,11 +975,11 @@ function filterPaths()
         console.log("a1Name", a1Name, axisId2Name(a1Name), (a0Name > a1Name));
       let b;
       if ((b = aliased[aNames[0]]) && (b = b[aNames[1]]))
-        d3.keys(b).forEach(function (f0 ) {
+        Object.keys(b).forEach(function (f0 ) {
           let b0=b[f0 ];
-          let b0_fs = d3.keys(b0),
+          let b0_fs = Object.keys(b0),
           b0_fs_n = b0_fs.length;
-          d3.keys(b0).forEach(function (f1 ) {
+          Object.keys(b0).forEach(function (f1 ) {
             let b01=b0[f1 ];
             let ffaa = b01;
             // filter here, e.g. uniqueness
@@ -999,7 +999,7 @@ function filterPaths()
         });
     });
   };
-  d3.keys(adjAxes).forEach(selectCurrentAdjPaths);
+  Object.keys(adjAxes).forEach(selectCurrentAdjPaths);
   if (trace_adj > 1)
     console.log("filterPaths", put.length, pathsUnique.length);
 }

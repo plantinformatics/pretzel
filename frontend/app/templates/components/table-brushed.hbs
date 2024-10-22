@@ -36,10 +36,10 @@
 -->
 <div id="table-brushed"> </div>
 
-{{saveFeatureMsg}}
+{{this.saveFeatureMsg}}
 
-{{#if formFeatureEditEnable}}
+{{#if this.formFeatureEditEnable}}
   {{#ember-modal-dialog modal-id="feature-edit-modal" title="Feature Edit" header-icon='edit'}}
-      {{form/feature-edit cell=formFeatureEditEnable close=(action this.closeFeatureEdit) tableData=data}}
+      {{form/feature-edit cell=this.formFeatureEditEnable close=(action this.closeFeatureEdit) tableData=this.data}}
   {{/ember-modal-dialog}}
 {{/if}}

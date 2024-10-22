@@ -66,13 +66,13 @@ function variableBands() {
   combinedScale.domain =
     function (_) {
       return arguments.length
-        ? ( dLog("combinedScale.domain", _), scale.domain(_))
+        ? ( trace_scale && dLog("combinedScale.domain", _), scale.domain(_))
         : scale.domain(); };
 
   combinedScale.range =
     function(_) {
       return arguments.length
-        ? ( dLog("combinedScale.range", _), scale.range(_))
+        ? ( trace_scale && dLog("combinedScale.range", _), scale.range(_))
         : scale.range();
     };
 

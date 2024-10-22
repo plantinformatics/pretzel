@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <!-- using jsdelivr for css because unpkg gets :
+Refused to apply style from 'https://unpkg.com/mermaid@8.0.0/dist/mermaid.css' because its MIME type ('text/plain') is not a supported stylesheet MIME type, and strict MIME checking is enabled.
+ -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.css">
+</head>
+
+  <body>
+
+    <script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+
+    <script>
+mermaid.initialize({startOnLoad:true});
+    </script>
+
+<!-- based on copy of ./design_diagram_dnaSequenceSearch.html, via design_diagram_vcfFeature.html
+
+ -->
+
+<h1>
+<a id="user-content-design" class="anchor" href="#design" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>
+Design
+</h1>
+<h2>
+<a id="user-content-explorer-CF-data-flow-diagrams" class="anchor" href="#explorer-CF-data-flow-diagrams" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>
+Design diagram showing the Genotype web API requests
+</h2>
+
+<!-- seems like recent versions of mermaid css make this additional formatting unnecessary, and possibly not used. -->
+<!-- for local editing, change href to mermaid_classDiagram.css -->
+<link type="text/css" rel="Stylesheet" href="https://cdn.jsdelivr.net/gh/plantinformatics/pretzel/doc/notes/mermaid_classDiagram.css" />
+
+<!-- Note below about clearfix. -->
+<div  class="clearfix">
+
+<h2>Custom API</h2>
+
+<div class="mermaid classDiagram" style="width: 100%;" >
+sequenceDiagram
+  participant C as Pretzel Frontend GUI
+  participant S as Pretzel Server
+
+  C->>S: Blocks/vcfGenotypeLookup
+  create participant B as bcftools
+  S->>B: bcftools query or view
+  destroy B
+  B->>S: VCF result
+  S->>C: VCF result
+</div>
+<!--     destroy B -->
+
+<h2>BrAPI</h2>
+<div class="mermaid classDiagram" style="width: 100%;" >
+sequenceDiagram
+
+  participant C as Pretzel Frontend GUI
+  participant S as Pretzel Server
+
+  C->>S: brapi/v2/search/allelematrix
+  create participant B as bcftools
+  S->>B: bcftools query or view 
+  destroy B
+  B->>S: VCF result
+  S->>C: allelematrix result
+
+</div>
+
+<!--
+
+/** not used */
+
+: ! 
+
+ -->
+
+<div  class="clearfix">
+</div>
+
+<p>
+Notes :
+<ul>
+<li></li>
+</ul>
+</p>
+
+
+
+<p>Code links</p>
+<ul>
+  <li><a href="https://github.com/plantinformatics/vcf-genotype-brapi/blob/develop/src/utils/data/vcf-feature.js">vcf-genotype-brapi/blob/develop/src/utils/data/vcf-feature.js</a></li>
+  <li><a href="https://github.com/plantinformatics/pretzel/blob/feature/ongoingGenotype/frontend/app/services/auth.js">frontend/app/services/auth.js</a></li>
+</ul>
+
+<div  class="clearfix">
+</div>
+
+
+<p> Diagram drawn by :
+<a href="https://mermaidjs.github.io/">Mermaid</a>, 
+github <a href="https://github.com/knsv/mermaid">readme</a>
+</p>
+
+<hr>
+<!-- Use either this, or class="clearfix" on the previous div. -->
+<div style="clear:both">
+</div>
+
+
+
+</body>
+</html>

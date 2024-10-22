@@ -1,6 +1,6 @@
 {{!-- display feature name, with click/hover action to display goto-feature  --}}
 {{!-- {{bind-attr __data=feature}} --}}
-{{feature}}
+{{this.feature}}
 {{#ember-popover popoverHideDelay=3000  }} {{!--targetId="featureName"  --}}
-  {{goto-feature drawActions=undefined data=data feature1=feature}}
+  {{goto-feature drawActions=undefined data=this.data feature1=this.feature}}
 {{/ember-popover }}

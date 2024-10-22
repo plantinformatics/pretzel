@@ -4,7 +4,7 @@ export default Component.extend({
   tagName: 'li',
   // attributes
   click: function() {
-    this.sendAction('onClick');
+    this.onClick();
   },
   // classes
   // actions

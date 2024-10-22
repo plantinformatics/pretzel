@@ -2,6 +2,7 @@
 
 const Queue = require('promise-queue');
 
+const { ErrorStatus } = require('../utilities/errorStatus.js');
 var { queueAppend } = require('../utilities/request-queue');
 
 var acl = require('../utilities/acl');
@@ -74,11 +75,25 @@ module.exports = function(Ontology) {
           if (trace > 1) {
             console.log(fnName, root, cacheId, 'put', ontologyTree);
           }
-          cache.put(cacheId, ontologyTree);
-          cb(null, ontologyTree);
+          // ontologyTree may be undefined (false) if request fails
+          if (! ontologyTree) {
+            cb(fnName + ' : result ' + ontologyTree);
+          } else {
+            cache.put(cacheId, ontologyTree);
+            cb(null, ontologyTree);
+          }
         })
         // signature of .catch() error function matches cb : (err)
-          .catch(cb);
+        .catch(error => {
+          const
+          text = (error.name === 'AggregateError') ?
+            // error.errors.toString() is similar, with join(',')
+            error.errors.map(e => e.toString()).join('\n') :
+            error.responseJSON?.message || error.message || error;
+          console.log(error, text);
+          // cb(ErrorStatus(404, text));
+          cb(null, {});
+        });
         return ontologyTreeP;
         }
       }

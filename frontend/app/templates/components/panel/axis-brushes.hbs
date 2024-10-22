@@ -1,4 +1,4 @@
-{{log 'flowsService.axisBrush' flowsService.axisBrush}}
+{{log 'flowsService.axisBrush' this.flowsService.axisBrush}}
 <table>
   <tr>
     <th>Dataset Name</th>
@@ -9,7 +9,7 @@
     <th class="devel-visible">zoomCounter</th>
   </tr>
 
-{{#each flowsService.axisBrush.brushedAxes as |brushedAxis| }}
+{{#each this.flowsService.axisBrush.brushedAxes as |brushedAxis| }}
   {{draw/axis-brush block=brushedAxis }}
 {{/each}}
 

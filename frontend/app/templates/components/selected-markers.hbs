@@ -31,10 +31,10 @@
 
 <div class="pull-left">
   <ul>
-    {{#if showScaffoldFeatures}}
-      {{#each scaffolds as |scaffold index|}}
+    {{#if this.showScaffoldFeatures}}
+      {{#each this.scaffolds as |scaffold index|}}
 	<li class="{{scaffold}}">
-	  <div data-toggle="tooltip" title={{scaffold-features scaffolds index scaffoldFeatures}}>
+	  <div data-toggle="tooltip" title={{scaffold-features this.scaffolds index this.scaffoldFeatures}}>
 	    {{scaffold}}
 	  </div>
 	</li>
@@ -48,7 +48,7 @@
 </div>
 
 {{content-editable
-  value=selection
+  value=this.selection
   placeholder="Features to be coloured"
   escape-press="putContent"
   class="colouredFeatures"

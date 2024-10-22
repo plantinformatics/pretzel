@@ -71,17 +71,11 @@ export default ManageBase.extend({
   // ---------------------------------------------------------------------------
 
   actions: {
-    loadBlock(block) {
-      this.sendAction('loadBlock', block);
-    },
-    removeBlock(block) {
-      this.sendAction('removeBlock', block);
-    },
     removeDisplayData() {
       let me = this;
       let displayData = this.get('displayData');
       for (let i=displayData.length-1; i >= 0; i--) {
-        me.send('removeBlock', displayData[i]);
+        me.removeBlock(displayData[i]);
       }
 
       this.get('ontology').ontologyIsVisibleClearAll();

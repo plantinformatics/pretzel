@@ -1,4 +1,5 @@
 import Controller from '@ember/controller';
+import { inject as service } from '@ember/service';
 import { computed, action } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import { getOwner } from '@ember/application';
@@ -12,15 +13,18 @@ const dLog = console.debug;
 // -----------------------------------------------------------------------------
 
 export default class GroupsController extends Controller {
-
-  // @service apiServers;
+  @service router;
+  @service apiServers;
 
   queryParams = ['server'];
   // .server is initially undefined.
 
   @computed('server')
   get serverObj() {
-    const server = this.apiServers.lookupServerTabId(this.server);
+    const
+    apiServers = this.apiServers,
+    server = this.server ? apiServers.lookupServerTabId(this.server) : 
+      apiServers.primaryServer;
     return server;
   }
 
@@ -29,24 +33,33 @@ export default class GroupsController extends Controller {
     this.newClientName = undefined;
   }
 
-  /** lookup owner and services when required. */
+  /** lookup owner and services when required.
   @computed() get services () {
-    let owner = getOwner(this.target);
-    let
-    apiServers = owner.lookup('service:apiServers'),
-
+    let apiServers;
+    let router;
+    if (this.target) {
+      dLog('services', 'target route', this.target);
+      let owner = getOwner(this.target);
+      apiServers = owner.lookup('service:apiServers');
+      router = owner.lookup('service:router');
+    } else if (this.model.server) {
+      apiServers = this.model.server.apiServers;
+    }
+    const
     services = {
-      apiServers
+      apiServers, router,
     };
     return services;
   }
   @alias('services.apiServers') apiServers;
+  @alias('services.router') router;
+ */
 
   @action
   selectedServerChanged(server) {
     dLog('selectedServerChanged', server);
     let queryParams = {server : server.tabId};
-    this.target.transitionTo({queryParams});
+    this.router.transitionTo({queryParams});
     // this.send('refreshModel');
   }
 

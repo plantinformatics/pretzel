@@ -1,15 +1,15 @@
 <div style="padding: 1em">
 
   {{panel/feature-list
-    queryParamsState=queryParamsState
+    queryParamsState=this.queryParamsState
     getBlocksOfFeatures=(action this.actions.getBlocksOfFeatures)
-    selectedFeatures=selectedFeatures }}
+    selectedFeatures=this.selectedFeatures }}
 
 
   {{#if false}}	{{!-- debug trace --}}
     <div>
       <ul class="list-group">
-        {{#each selectedFeatures key="Feature" as |feature|}}
+        {{#each this.selectedFeatures key="Feature" as |feature|}}
           <li class="list-group-item">
             {{ feature.Chromosome }}
             {{ feature.Feature }}
@@ -22,12 +22,12 @@
 
 
   {{#if this.matchAliases }}
-    {{#with (keys featuresAliases.search) as |featureNames|}}
+    {{#with (keys this.featuresAliases.search) as |featureNames|}}
       {{#if featureNames.length }}
         <div>
           <span>Aliases found :</span>
           <ul style="list-style:none">
-            {{#each-in featuresAliases.search as |aliasedFeature aliases|}}
+            {{#each-in this.featuresAliases.search as |aliasedFeature aliases|}}
               <li>{{aliasedFeature}} ( {{aliases}} )</li>
             {{/each-in}}
           </ul>
@@ -37,9 +37,13 @@
   {{/if}}
 
   <span style="display: inline-block;">
-    {{input type="checkbox" name="this.matchAliases" checked=this.matchAliases
-      input=(action matchAliasesChanged preventDefault=false)
-      id="checkbox-matchAliases" }}
+    <input
+      type="checkbox"
+      name="matchAliases"
+      checked={{this.matchAliases}}
+      oninput={{action this.matchAliasesChanged preventDefault=false}}
+      id="checkbox-matchAliases"
+    />
     <label for="checkbox-matchAliases">Match aliases</label>
   </span>
 
@@ -53,7 +57,7 @@
    --}}
   {{#elem/button-base
      click=(action "getBlocksOfFeatures")
-     classNames=refreshClassNames
+     classNames=this.refreshClassNames
      icon='refresh'
      classColour="primary"
   }}
@@ -62,7 +66,7 @@
 
   {{!-- The above (if loading 'disabled') is not effective, so display
    ⏰  U+023F0  ALARM CLOCK --}}
-  {{#if loading }}
+  {{#if this.loading }}
     <div class="pull-right" style="margin-right:2em;">
       &#x23F0;
     </div>
@@ -71,22 +75,22 @@
   {{!-- →	&#8594;	&rarr;	RIGHTWARDS ARROW --}}
 
   <div style="clear:both; margin-top : 4ex;">
-    {{#if blocksOfFeatures.length}}
+    {{#if this.blocksOfFeatures.length}}
       <span class="badge">
-        {{blocksOfFeatures.length}}
+        {{this.blocksOfFeatures.length}}
       </span>
     {{/if}}
   </div>
 </div>
 
 <ul class="list-group blocks-found">
-  {{#each blocksOfFeatures key="key.id" as |block|}}
+  {{#each this.blocksOfFeatures key="key.id" as |block|}}
     <li class="list-group-item">
       {{record/entry-block-add
         entry=block.key.record
         features=block.values
         featuresAliases=this.featuresAliases.result
-        loadBlock="loadBlock"
+        loadBlock=this.loadBlock
       }}
     </li>
   {{/each}}

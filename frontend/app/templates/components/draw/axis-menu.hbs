@@ -1,8 +1,8 @@
-{{xOffsetsEffect}}
+{{this.xOffsetsEffect}}
 
 <EmberPopover
   @tooltipClass="axis-menu" @innerClass="axis-menu-inner"
-  @popperContainer="body" @targetId={{concat 't' axisName}}
+  @popperContainer="body" @targetId={{concat 't' this.axisName}}
   @isShown={{true}} @event='none'
   @onHide={{action 'onHide'}}
   as |popover| >
@@ -13,7 +13,7 @@
        {{!-- Unicode values of icons are noted in comment appended to axis-menu.js --}}
       <button onClick={{action "deleteMap"}}>╳</button>
       <button onClick={{action "flipAxis"}}>⇅</button>
-      {{#if urlOptions.dotPlot}}
+      {{#if this.urlOptions.dotPlot}}
         <button onClick={{action "perpendicularAxis"}}>↷</button>
       {{/if}}
       <button onClick={{action "extendMap"}}>⇲</button>
@@ -26,10 +26,10 @@
       onClick={{action (pipe (toggle "editingShortName" this) (action this.editedShortName) )  }}>
       <i class="glyphicon glyphicon-pencil"></i>
     </button>
-    {{block.datasetId.name}} : {{block.name}}
+    {{this.block.datasetId.name}} : {{this.block.name}}
   </div>
 
-  {{#if editingShortName}}
+  {{#if this.editingShortName}}
   <div>
     {{input value=this.block.datasetId._meta.shortName
      }}
@@ -37,7 +37,7 @@
   {{/if}}
 
   <ul class="list-unstyled dataBlocks">
-    {{#each dataBlocks as |dBlockS|}}
+    {{#each this.dataBlocks as |dBlockS|}}
     <li style={{compute (action this.dataBlockColourStyle dBlockS)}}>
       {{#if this.multipleServers}}
         {{!-- circle character is unicode : (U+2B24) : Black Large Circle --}}

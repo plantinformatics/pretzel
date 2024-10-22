@@ -39,7 +39,7 @@ export default class DataHaplotypeService extends Service {
    */
   @computed()
   get haplotypeColourScale () { 
-    const scale = d3.scaleOrdinal().range(d3.schemeCategory20);
+    const scale = d3.scaleOrdinal().range(d3.schemeCategory10/*20*/);
     return scale;
   }
 
@@ -49,7 +49,7 @@ export default class DataHaplotypeService extends Service {
    */
   @computed()
   get variantIntervalColourScale () { 
-    const scale = d3.scaleOrdinal().range(d3.schemeCategory20);
+    const scale = d3.scaleOrdinal().range(d3.schemeCategory10/*20*/);
     return scale;
   }
 

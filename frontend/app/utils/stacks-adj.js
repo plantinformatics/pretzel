@@ -98,7 +98,7 @@ function collateAdjacentAxes(/*stacks*/)
   if (trace_adj > 1)
     log_adjAxes(adjAxes);
   else if (trace_adj)
-    console.log("collateAdjacentAxes", d3.keys(adjAxes).map(Stacked.longName));
+    console.log("collateAdjacentAxes", Object.keys(adjAxes).map(Stacked.longName));
 
   let changed = ! isEqual(previous, adjAxes);
   if (changed) {
@@ -121,7 +121,7 @@ function collateAdjacentAxes(/*stacks*/)
       /* if ! stacks.length || ! adjAxesKeys.length then adjAxesArr will be set to [].
        * adjAxesArr is a dependent key of CP blockAdjIds (flows-collate.js).
        */
-      let adjAxesKeys = d3.keys(adjAxes);
+      let adjAxesKeys = Object.keys(adjAxes);
       let current = flowsService.get('adjAxesArr');
       
       dLog(current, 'adjAxesKeys', adjAxesKeys);
@@ -151,7 +151,7 @@ function log_adjAxes()
 {
   let adjAxes = flowsService.adjAxes;
   console.log("adjAxes");
-  d3.keys(adjAxes).forEach(function(a0Name) {
+  Object.keys(adjAxes).forEach(function(a0Name) {
     let a0 = adjAxes[a0Name];
     console.log(a0Name, axisId2Name(a0Name), a0.length);
     for (let a1i=0; a1i < a0.length; a1i++) {

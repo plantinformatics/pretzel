@@ -1,4 +1,4 @@
-{{queryParamsService.urlOptionsEffect}}
+{{this.queryParamsService.urlOptionsEffect}}
 
 {{!-- <div class="resizer" style="float:right;">
 </div> The resizer in mapview adjacent this works so this is probably not needed. --}}
@@ -7,7 +7,7 @@
   <!--<ul>
        <li>{{selectedMapset.name}}</li>
        </ul> -->
-  <div id="headsUp">{{headsUp.tipText}}</div>
+  <div id="headsUp">{{this.headsUp.tipText}}</div>
 
 
   <div id="popoverTarget" style="float:right"></div>
@@ -16,50 +16,60 @@
 {{yield}}
 
 <div class="devel-visible">
-  {{draw/graph-frame oa=oa drawMap=this drawMap=this
-    controls=controls
-    componentGeometry=componentGeometry
+  {{draw/graph-frame
+    oa=this.oa
+    drawMap=this
+    drawMap=this
+    controls=this.controls
+    componentGeometry=this.componentGeometry
     data=this.data
-    panelLayout=panelLayout
+    panelLayout=this.panelLayout
   }}
-  {{draw/stacks-view stacksOld=oa.stacks oa=oa drawMap=this axes2d=axes2d
-    model=model
-    featuresInBlocks=featuresInBlocks
+  {{draw/stacks-view
+    stacksOld=this.oa.stacks
+    oa=this.oa
+    drawMap=this
+    axes2d=this.axes2d
+    model=this.model
+    featuresInBlocks=this.featuresInBlocks
   }}
   {{!-- This info will be thinned or removed as axes development progresses. --}}
 
   {{!-- wait until targetId="toolTip" will resolve --}}
-  {{#if toolTipCreated }}
+  {{#if this.toolTipCreated }}
     {{!-- 2nd line of args passed are through to path-hover --}}
-    {{contain-change  targetId="toolTip"    closeToolTip=(action "closeToolTipA") 
-      drawMap=this data=oa
+    {{contain-change
+      targetId="toolTip"
+      closeToolTip=(action "closeToolTipA")
+      drawMap=this
+      data=this.oa
     }}
   {{/if}}
-  <div>paths : {{paths.length}}</div>
+  <div>paths : {{this.paths.length}}</div>
 </div>
-{{draw/link-path stackEvents=this pathReceiver=this modelParamOptions=params.options}}
+{{draw/link-path stackEvents=this pathReceiver=this modelParamOptions=this.params.options}}
 
 <div class="devel-visible">
-  <div>brushedAxes : {{flowsService.axisBrush.brushedAxes.length}}</div>
+  <div>brushedAxes : {{this.flowsService.axisBrush.brushedAxes.length}}</div>
 
-  <div>{{blockService.viewedIds.length}},  blockAdjs : {{flowsService.blockAdjIds.length}}  {{flowsService.blockAdjsCP.length}}</div>
+  <div>{{this.blockService.viewedIds.length}},  blockAdjs : {{this.flowsService.blockAdjIds.length}}  {{this.flowsService.blockAdjsCP.length}}</div>
   <div>
-    {{#each flowsService.blockAdjs as |blockAdj| }}
-      {{draw/block-adj blockAdj=blockAdj drawMap=this  xOffsets=xOffsets }}
+    {{#each this.flowsService.blockAdjs as |blockAdj| }}
+      {{draw/block-adj blockAdj=blockAdj drawMap=this xOffsets=this.xOffsets }}
     {{/each}}
   </div>
 </div>
 
-{{#if axisFeatureCircleHover}}
-  {{path-hover data=oa features=hoverFeatures }} {{!-- targetId=axisFeatureTargetId  "holder" --}}
+{{#if this.axisFeatureCircleHover}}
+  {{path-hover data=this.oa features=this.hoverFeatures }} {{!-- targetId=axisFeatureTargetId  "holder" --}}
 {{/if}}
-{{#if urlOptions.hoverFeatures}}
+{{#if this.urlOptions.hoverFeatures}}
   <div class="hoverFeatures">
     <span>Hovered Features</span>
-    {{#each hoverFeatures as |feature|}}
+    {{#each this.hoverFeatures as |feature|}}
       <div>
-        {{feature-name data=oa feature=feature}}
-        {{#each (maps-of-feature oa feature) as |map|}}
+        {{feature-name data=this.oa feature=feature}}
+        {{#each (maps-of-feature this.oa feature) as |map|}}
           {{ map.name }}
         {{/each}}
       </div>

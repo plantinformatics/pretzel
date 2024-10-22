@@ -5,8 +5,8 @@ const dLog = console.debug;
 
 export default Model.extend({
 
-  feature0 : belongsTo('feature', { inverse: null }),
-  feature1 : belongsTo('feature', { inverse: null }),
+  feature0 : belongsTo('feature', {async: true, inverse: null}),
+  feature1 : belongsTo('feature', {async: true, inverse: null}),
 
   /** block{0,1} are currently copies of data values, will become references to
    * store objects, as with feature{0,1}

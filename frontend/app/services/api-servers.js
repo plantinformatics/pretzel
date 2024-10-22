@@ -6,18 +6,26 @@ import Evented from '@ember/object/evented';
 import Service, { inject as service } from '@ember/service';
 import { isPresent } from '@ember/utils';
 
+import { A as Ember_A } from '@ember/array';
+import { later } from '@ember/runloop';
+
 import { find as collection_find } from 'lodash/collection';
 
 import {
   default as ApiServer,
   removePunctuation,
   serverTypeIsGerminateAPI,
+  serverTypeIsBrAPI,
 } from '../components/service/api-server';
 import {
   default as ApiServerGerminate
 } from '../components/service/api-server-germinate';
 
-import { useGerminate } from '../utils/data/germinate-genotype';
+import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi'; // ../utils/data/germinate-genotype';
+/** .default is automatically inserted here */
+const { useGerminate } = vcfGenotypeBrapi.germinateGenotype;
+const BrAPIWrap = vcfGenotypeBrapi.brapiGenotype;
+
 
 // import ENV from '../../config/environment';
 
@@ -69,12 +77,10 @@ export default Service.extend(Evented, {
       let 
         /** similar calcs in @see adapters/application.js : host() */
       adapter = this.get('store').adapterFor('application'),
-      /** this is the API origin,  e.g.  'http://localhost:5000' */
-      host = adapter.get('host'),
       config =  getConfiguredEnvironment(this),
+      /** this is the API origin,  e.g.  'http://localhost:5000' */
       configApiHost = config.apiHost,
-
-      apiOrigin = configApiHost, // host,
+      apiOrigin = configApiHost,
 
       siteOrigin = getSiteOrigin(this);
 
@@ -133,7 +139,7 @@ export default Service.extend(Evented, {
       },
     typeIsGerminate = typeIsGerminateAPI,
     ownerInjection = getOwner(this).ownerInjection(),
-    apiServerClass = typeIsGerminate ? ApiServerGerminate : ApiServer,
+    apiServerClass = serverTypeIsBrAPI(typeName) || typeIsGerminate ? ApiServerGerminate : ApiServer,
     server = apiServerClass.create(
       ownerInjection,
       serverBase),
@@ -386,9 +392,17 @@ export default Service.extend(Evented, {
       url = 'http://' + url;
     }
     const
-    typeIsGerminate = serverTypeIsGerminateAPI(typeName),
+    /** useGerminate() will login via user, password for Germinate, not BrAPI.
+     * Passing a token skips .connect() in : germinate.js : connectedP(),
+     * which checks if (! this.token) )
+     * 'null' here means no token required, recognised by fetchEndpoint_fetch().
+     */
+    isSouthGreen = url.includes('gigwa.ird.fr'),
+    token = (typeName === 'BrAPI') && ! isSouthGreen ? 'null' : null,
+    /** rename variable to typeIsBrAPI */
+    typeIsGerminate = serverTypeIsBrAPI(typeName) || serverTypeIsGerminateAPI(typeName),
     loginP = typeIsGerminate ?
-      useGerminate(url, user, password) :
+      useGerminate(url, user, password, token) :
     $.ajax({
       url: url + '/api/Clients/login',
       type: 'POST',
@@ -407,7 +421,12 @@ export default Service.extend(Evented, {
       if (typeIsGerminate) {
         server.germinateInstance = response;
       }
-      server.getDatasets();
+      BrAPIWrap.setFrameworkFunctions({Ember_A, later});
+      if (typeName === 'BrAPI') {
+        server.variantsets();
+      } else {
+        server.getDatasets();
+      }
       server.getVersion();
       return server;
     }).catch(function (error) {

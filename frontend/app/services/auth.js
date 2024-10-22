@@ -4,6 +4,7 @@ import { alias } from '@ember/object/computed';
 import $ from 'jquery';
 import Service, { inject as service } from '@ember/service';
 import { isEmpty, typeOf } from '@ember/utils';
+import { serverTypeIsBrAPI } from '../components/service/api-server';
 
 import {
   isObject,
@@ -16,9 +17,13 @@ import { after } from 'lodash/function';
 import bluebird from 'bluebird';
 const promisify = bluebird/*Promise*/.promisify;
 
-import {
+import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
+// const /*import*/ { brapiGenotypeAllelematrix } /* from */ = vcfGenotypeBrapi.brapiGenotypeAllelematrix;
+const /*import*/ {
   germinateGenotypeSamples, germinateGenotypeLookup, ensureSamplesParam,
-} from '../utils/data/germinate-genotype';
+} //from '../utils/data/germinate-genotype';
+   = vcfGenotypeBrapi.germinateGenotype;
+
 import { ensureTrailingString } from '../utils/string';
 
 /* global EventSource */
@@ -244,7 +249,7 @@ export default Service.extend({
       }
       // closePromise is a ember-concurrency TaskInstance, which defines .finally().
       // Could also closePromise.then(closeSource), but in that case the source has completed and would close normally.
-      closePromise.finally(closeSource);
+      closePromise?.finally(closeSource);
       function onError(e) {
         let state = e.eventPhase; // this.readyState seems constant.
         const stateName = ['CONNECTING', 'OPEN', 'CLOSED'];
@@ -464,7 +469,7 @@ export default Service.extend({
     /** No need to stringify here for Germinate apiServer - could be done in
      * utils/data/germinate.js, but callsets are specified in URL so URL size is
      * the limit. */
-    isGerminate = apiServer.serverType === 'Germinate';
+    isGerminate = serverTypeIsBrAPI(apiServer.serverType);  // includes 'Germinate'
     return this._ajax(
       'Blocks/vcfGenotypeLookup' + (post ? 'Post' : ''),
       post ? 'POST' : 'GET',
@@ -564,6 +569,9 @@ export default Service.extend({
    *
    * @param dataIn  an object, or for POST : JSON.stringify(data object)
    * The object may define .options.server or .server
+   * Moving the JSON.stringify(data) from the calling functions into here will
+   * simplify this function and _server().
+   * i.e. if (post) { dataIn = JSON.stringify(dataIn) }
    * @param apiServer optional - server may also be passed as dataIn.server, which is deleted;
    * this param is used for some POST calls
    * (phasing out : requestServerAttr - .session.requestServer)
@@ -582,6 +590,32 @@ export default Service.extend({
       'Blocks/genotypeSamples',
       'Blocks/vcfGenotypeLookup',
     ];
+    /** Add BrAPI case here, similar to Germinate. */
+    if ((server?.serverType === 'BrAPI')) {
+      dLog(route, featuresCountEndpoints.includes(route));
+      let vcfGenotypeP;
+      if (route === 'Blocks/genotypeSamples') {
+        /** could handle this in genotypeSamples(), if block.hasTag('BrAPI') */
+        const
+        {datasetId, scope} = dataIn;
+        vcfGenotypeP = server.brapiGenotypeSamples(datasetId);
+      } else if (route.startsWith('Blocks/vcfGenotypeLookup')) {  // also matches : 'Blocks/vcfGenotypeLookupPost'
+        const
+        {datasetId, scope, preArgs, nLines} = dataIn,
+        dataset = server.datasetsBlocks?.findBy('id', datasetId),
+        block = dataset?.blocks.findBy('name', scope);
+        // or ('_meta.brapi.reference.referenceName', referenceName)
+        vcfGenotypeP = ! (preArgs.samples || block.get('datasetId.samples')) ?
+          Promise.resolve([]) :
+          /* ensureSamplesParam(datasetId, scope, preArgs).then(
+             preArgs =>*/ server.brapiGenotypeAllelematrix(block, preArgs.region, preArgs.samples); // );
+            // germinateGenotypeLookupP(datasetId, scope, preArgs, nLines, undefined));
+
+      } else {
+        vcfGenotypeP = Promise.resolve([]);
+      }
+      return vcfGenotypeP;
+    } else
     if ((server?.serverType === 'Germinate')) {
       dLog(route, featuresCountEndpoints.includes(route));
       let vcfGenotypeP;
@@ -607,7 +641,9 @@ export default Service.extend({
       url,
       type: method,
       crossDomain: true,
-      headers: {},
+      headers: {
+        accept: 'application/json',
+      },
       contentType: 'application/json'
     }
 
@@ -810,9 +846,11 @@ export default Service.extend({
        * being called, fall back to primaryServer, e.g. for runtimeConfig
        * which is used by getHoTLicenseKey() when the key is not defined in
        * the build environment.
+       * Related : app/adapters/application.js : server()
        */
-      requestServer = this.get(requestServerAttr)
-        || this.get('apiServers.primaryServer');
+      requestServer = this.get(requestServerAttr) ||
+        this.apiServers.currentRequestServer ||
+        this.get('apiServers.primaryServer');
       dLog(fnName, requestServer, this.get(requestServerAttr));
     }
 

@@ -7,7 +7,7 @@ export default Component.extend({
   tagName: 'span',
   // attributes
   click: function() {
-    this.sendAction('onClick');
+    this.onClick();
   },
   // classes
   classNames: undefined,

@@ -5,8 +5,8 @@ import EmberObject from '@ember/object';
 export default EmberObject.extend({
   
   init() {
-    console.log('init', this.get('sibings'));
     this._super(...arguments);
+    console.log('init', this.get('sibings'));
 
     this.siblings.addObject(this);
   },

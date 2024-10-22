@@ -100,11 +100,14 @@ export default Record.extend({
   children : computed('parentName', function children () {
     let c = this.store.peekAll('dataset')
       .filterBy('parentName', this.get('id'));
+    if (trace > 1) {
+      dLog('children', c.length, this.id, (trace > 2) && c.mapBy('id'));
+    }
     return c;
   }),
 
-  groupId: belongsTo('group'),
-  blocks: hasMany('block', { async: false }),
+  groupId: belongsTo('group', { async: true, inverse : null }),
+  blocks: hasMany('block', { async: false, inverse : null }),
   type: attr('string'),
   namespace: attr('string'),
   tags: attr('array'),
@@ -247,6 +250,7 @@ export default Record.extend({
   groupIsVisible : computed(
     'groupId.id',
     'server.groups.groupsInIds',
+    'groupId.owner',
     function groupIsVisible() {
     let
     visible,
@@ -294,5 +298,20 @@ export default Record.extend({
   }),
 
   /*--------------------------------------------------------------------------*/
+
+  /** Return a block of this dataset, choosing either the first viewed
+   * block or the first block.
+   * This is used by genotype-search / manage-genotype 
+   * @return block
+   */
+  aBlock : computed( function () {
+    const
+    blocks = this.blocks,
+    viewedBlocks = blocks.findBy('isViewed'),
+    block = viewedBlocks || blocks[0];
+    return block;
+  }),
+
+  //----------------------------------------------------------------------------
 
 });

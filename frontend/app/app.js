@@ -3,6 +3,8 @@ import Resolver from 'ember-resolver';
 import loadInitializers from 'ember-load-initializers';
 import config from 'pretzel-frontend/config/environment';
 
+import { d3Packages } from './utils/draw/d3-initialise-global';
+
 export default class App extends Application {
   modulePrefix = config.modulePrefix;
   podModulePrefix = config.podModulePrefix;
@@ -19,3 +21,4 @@ export default class App extends Application {
 }
 
 loadInitializers(App, config.modulePrefix);
+

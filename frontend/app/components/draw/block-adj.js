@@ -1137,11 +1137,11 @@ looking at the currently displayed paths in a block_adj :
      */
      transitionEnd =  new Promise(function(resolve, reject){
        transition
-         .on('end', (d) => resolve(d))
-         .on('interrupt', (d, i, g) => {
+         .on('end', (event, d) => resolve(d))
+         .on('interrupt', (event, d) => {
            resolve(d);
            if (trace_blockAdj > 2) {
-             dLog('interrupt', d, i, g); }; }); });  // also 'cancel', when version update
+             dLog('interrupt', d); }; }); });  // also 'cancel', when version update
     if (trace_blockAdj) {
       dLog('pathPosition', pathSelection.node());
       transitionEnd.then(() => dLog('pathPosition end', pathSelection.node()));

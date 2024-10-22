@@ -124,8 +124,9 @@ function AxisDrag(oa, vc) {
 
 // AxisDrag.prototype.dragstarted = dragstarted;
 
-  function dragstarted(start_axis1d /*, start_index, start_group*/) {
+  function dragstarted(event, start_axis1d /*, start_index, start_group*/) {
     const
+    fnName = 'dragstarted',
     stacks = start_axis1d.stacksView.stacks,
     x = oa.stacks.x;
     Stack.currentDrop = undefined;
@@ -135,14 +136,17 @@ function AxisDrag(oa, vc) {
     /** disable this as currently togglePathColourScale() sets pathColourScale as a boolean
      * maybe have a pull-down selector because multi-value.
      use_path_colour_scale = me.get('pathColourScale'); */
-    console.log("dragstarted", this, start_d/*, start_index, start_group*/);
+    dLog(fnName, this, start_d/*, start_index, start_group*/);
     let cl = {/*self: this,*/ d: start_d/*, index: start_index, group: start_group, axisIDs: axisIDs*/};
     let svgContainer = oa.svgContainer;
     svgContainer.classed("axisDrag", true);
     d3.select(this).classed("active", true);
-    /** start_axis1d === d3.event.subject */
-    console.log(d3.event.subject.fx, d3.event.subject.x);
-    d3.event.subject.fx = x(start_axis1d);
+    /** start_axis1d === event.subject */
+    if (start_axis1d !== event.subject) {
+      dLog(fnName, start_axis1d, '!==', event.subject);
+    }
+    dLog(fnName, event.subject.fx, event.subject.x);
+    event.subject.fx = x(start_axis1d);
     let axisS = svgContainer.selectAll(".stack > .axis-outer");
     if (axisS && trace_stack >= 1.5)
       logSelection(axisS);
@@ -160,14 +164,14 @@ function AxisDrag(oa, vc) {
      {
        const d = axis1d.axisName;
        let xd = x(axis1d),
-       /** d3.event has various x,y values, which are sufficient for this
+       /** event has various x,y values, which are sufficient for this
         * purpose, e.g. x, subject.x, sourceEvent.clientX, sourceEvent.x */
-       startX = d3.event.x,
+       startX = event.x,
        middle = this.classList.contains("middle"),
        left = this.classList.contains("left"),
        isCurrent =
          (d != cl.d) &&  (! middle || ((left) === (xd < startX)));
-       // console.log("current classed", this, d3.event, d, /*index, group,*/ cl, xd, startX, middle, left, isCurrent);
+       // console.log("current classed", this, event, d, /*index, group,*/ cl, xd, startX, middle, left, isCurrent);
        return isCurrent;
      });
   }
@@ -176,9 +180,14 @@ function AxisDrag(oa, vc) {
   /** @param  d (datum) name of axis being dragged.
    * @see stacks.log() for description of stacks.changed
    */
-  function dragged(axis1d) {
+  function dragged(event, axis1d) {
+    const fnName = 'dragged';
     const d = axis1d.axisName;
     const /*oa = this.oa,*/ me = oa.eventBus, vc = oa.vc, axisApi = oa.axisApi;
+    if (axis1d !== event.subject) {
+      dLog(fnName, axis1d, '!==', event.subject);
+    }
+
     /** Transition created to manage any changes. */
     let t;
     /** X distance from start of drag */
@@ -195,11 +204,11 @@ function AxisDrag(oa, vc) {
       /** currentDrop references the axisName being dragged and the stack it is dropped into or out of. */
       let currentDrop = Stack.currentDrop,
       /** Use the start of the drag, or the most recent drop */
-      xDistanceRef = (currentDrop && currentDrop.x) ? currentDrop.x.stack : d3.event.subject.fx,
+      xDistanceRef = (currentDrop && currentDrop.x) ? currentDrop.x.stack : axis1d.fx,
       now = Date.now();
       if (trace_drag)
       {
-        console.log("dragged xDistanceRef", d3.event.x, currentDrop && currentDrop.x, xDistanceRef);
+        console.log("dragged xDistanceRef", event.x, currentDrop && currentDrop.x, xDistanceRef);
         console.log("dragged", currentDrop, d);
       }
       /** true iff currentDrop is recent */
@@ -228,7 +237,7 @@ function AxisDrag(oa, vc) {
              * with this exception : .dropIn() redraws the source stack of the axis.
              */
             // if (draw_orig) stack.dropIn(d, zoneParent.axisIndex, top, t);
-            axis1d?.dropIn(targetAxis1d, top);
+            axis1d?.dropIn(event, targetAxis1d, top);
             breakPointEnableSet(1);
             deleteAfterDrag(stacks);
             // axisChangeGroupElt(d, t);
@@ -242,7 +251,7 @@ function AxisDrag(oa, vc) {
         // For the case : drag ended in a middle zone (or outside any DropTarget zone)
         // else if d is in a >1 stack then remove it else move the stack
         else if ((! currentDrop || !currentDrop.out)
-                 && ((xDistance = Math.abs(d3.event.x - xDistanceRef)) > vc.xDropOutDistance))
+                 && ((xDistance = Math.abs(event.x - xDistanceRef)) > vc.xDropOutDistance))
         {
           /** dragged axis, source stack */
           const stack = axis1d.stack;
@@ -281,8 +290,8 @@ function AxisDrag(oa, vc) {
     // if (! dropTargetEnd)
     {
       let o = oa.o;
-      // console.log("dragged o[d]", o[d], d3.event.x);
-      o[d] = d3.event.x;
+      // console.log("dragged o[d]", o[d], event.x);
+      o[d] = event.x;
       // Now impose boundaries on the x-range you can drag.
       /** The boundary values */
       let dragLimit = oa.vc.dragLimit;
@@ -396,7 +405,11 @@ function AxisDrag(oa, vc) {
 //------------------------------------------------------------------------------
 
 // AxisDrag.prototype.dragended = dragended;
-  function dragended(axis1d /*, i, g*/) {
+  function dragended(event, axis1d) {
+    const fnName = 'dragended';
+    if (axis1d !== event.subject) {
+      dLog(fnName, axis1d, '!==', event.subject);
+    }
     const stacks = axis1d.stacksView.stacks;
     deleteAfterDrag(stacks);
     const /*oa = this.oa,*/ vc = oa.vc, axisApi = oa.axisApi;
@@ -427,7 +440,7 @@ function AxisDrag(oa, vc) {
     d3.select(this).classed("active", false);
     let svgContainer = oa.svgContainer;
     svgContainer.classed("axisDrag", false);
-    d3.event.subject.fx = null;
+    axis1d.fx = null;
     Stack.currentDrag = undefined;
     /* collateO() is deferred while .currentDrag, so do it now. */
     axisApi.collateO?.();
@@ -441,7 +454,7 @@ function AxisDrag(oa, vc) {
 
     if (svgContainer.classed("dragTransition"))
     {
-      console.log("dragended() dragTransition, end");
+      dLog(fnName, "dragTransition, end");
       dragTransition(false);
     }
     stacks.log();

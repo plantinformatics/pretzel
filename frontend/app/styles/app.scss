@@ -1,3 +1,7 @@
+//------------------------------------------------------------------------------
+
+$font-size-base: 1.45rem;
+
 /* -------------------------------------------------------------------------- */
 
 @import "ember-modal-dialog/ember-modal-structure";
@@ -934,6 +938,17 @@ div.highlightFeature
   opacity:  0.9;
   /* display: inline; */
 }
+
+/** Don't display the arrow when the tooltip is not shown adjacent to the
+ * element which it refers to; this is intended only for ! hoverNearElement;
+ * utils/hover.js : config, showHover().
+ */
+.popover.bs-popover-left > .arrow,
+.popover.bs-popover-right > .arrow
+{
+  display : none;
+}
+  
 
 .navbar {
   margin-bottom: 0px;
@@ -2037,6 +2052,13 @@ ul.view-controls > li > div > .sub-label > span {
 
 /*------------------------------------*/
 
+/** Override the default 1% for a few buttons, JSON in Upload, and
+ * View : Flip Region, Reset Zooms
+ */
+div#left-panel .btn-group {
+  width : auto;
+}
+
 /* used for #left-panel-upload > div > .panel
  * Space is tight and the upload table has no side margin.
  */
@@ -2278,6 +2300,11 @@ textarea.vcfGenotypeSamplesText
 {
   height: 20ex;
 }
+div.genotypeSearch > div > .genotype-controls > select.form-control,
+div.genotypeSearch > div > div > textarea
+{
+  width: 100%;
+}
 div.genotype > div > div > textarea,
 .vcfGenotypeSamplesSelected
 {
@@ -2491,6 +2518,9 @@ div.genotype .ember-tooltip
 
 .h-100 {
   height: 100%;
+}
+.w-100 {
+  width: 100%;
 }
 
 
@@ -2778,7 +2808,7 @@ ul.dataBlocks > li > * {
 
 /* -------------------------------------------------------------------------- */
 
-@import "ember-bootstrap/bootstrap-sprockets";
+/* @import "ember-bootstrap/bootstrap-sprockets"; */
 @import "ember-bootstrap/bootstrap";
 
 @import "ember-modal-dialog/ember-modal-structure";

@@ -1,21 +1,30 @@
 
-{{input
-  value=data.host
+<Input
+  @value={{this.data.host}}
   class="form-control"
   autocomplete="url"
-  placeholder="URL[:port] of API Host" }}
+  placeholder="URL[:port] of API Host" >
+</Input>
 
-{{input
-  value=data.user
+<Input
+  @value={{this.data.user}}
   class="form-control"
   autocomplete="username"
-  placeholder="User (email)"}}
-{{input
-  value=data.token
+  placeholder="User (email)">
+</Input>
+<Input
+  @value={{this.data.token}}
   class="form-control"
   autocomplete="current-password"
-  placeholder="Authentication Token"}}
+  placeholder="Authentication Token">
+</Input>
 
+{{#unless (eq this.data.serverType "Pretzel")}}
+  {{this.data.serverType}}
+  {{#if (eq this.data.serverType "BrAPI")}}
+    <button type="button" onclick={{action this.allelematrices}} class="btn btn-info btn-xs">v2/allelematrices</button>
+  {{/if}}
+{{/unless}}
 <span class="pull-right">
   {{elem/button-refresh
     onClick=(action 'getDatasets')}}

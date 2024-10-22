@@ -69,8 +69,10 @@ export default Base.extend({
           });
         });
       }, function(xhr, status, error) {
-	console.log(fnName, xhr, status, error);
-        var response = xhr.responseText;
+        console.log(fnName, xhr, status, error);
+        /** xhr.hasOwnProperty('responseText') is false (when no server);
+         * perhaps .responseText is replaced by .statusText */
+        var response = xhr.responseText || status || error || xhr.statusText;
         run(function(){
           reject(response);
         });

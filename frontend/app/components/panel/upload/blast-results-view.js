@@ -197,6 +197,14 @@ export default Component.extend({
            * this.get('apiServers').get('primaryServer').get('store'), dataset =
            * store.peekRecord('dataset', parentName); which could be a CP.  For
            * the moment it is sufficient to disable use of chrName2Pretzel().
+           *
+           * Update : resultParentBlocks() now calculates .blockScopes, which is
+           * passed from viewFeatures() to blocksForSearch() to enable it to map
+           * from result chr name to scope, and set up the result block with
+           * corresponding name and scope so that
+           * selectedFeaturesOfBlockLookup() -> transientFeaturesLookup() can
+           * match axis reference scope with result chr; it also enables
+           * .referenceBlock to be defined, which could be used.
            */
           block: /*chrName2Pretzel*/(row[c_chr]),
           // Make sure val is a number, not a string.
@@ -399,7 +407,12 @@ export default Component.extend({
       dLog(fnName, 'serverSelected dataset', dataset, parentName);
     }
     let
-    blocks = dataset && dataset.get('blocks').toArray();
+    blockNames = this.get('blockNames'),
+    blocks = dataset && dataset.get('blocks').toArray()
+      .filter((b) => (blockNames.indexOf(b.get('name')) !== -1) );
+    /** blockScopes is parallel to blockNames, and enables a mapping
+     * from name (result) to scope (axis reference) */
+    this.blockScopes = blockNames.map(name => blocks.findBy('name', name)?.scope);
     return blocks;
   }),
   resultParentBlocksByName : computed('parentBlocks', 'blockNames.[]', function () {
@@ -476,6 +489,7 @@ export default Component.extend({
       scopesForNames = this.get('blockNames').map(name => blocksByName[name]?.scope || name);
       let blocks = transient.blocksForSearch(
         datasetName,
+        this.blockScopes,
         this.get('blockNames'),
         scopesForNames,
         namespace

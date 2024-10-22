@@ -43,6 +43,9 @@ export default Service.extend(Evented, {
     /* featuresCounts is now enabled by default. */
     if (! options.hasOwnProperty('featuresCounts'))
       options.featuresCounts = true;
+    /* Germinate is now enabled by default. */
+    if (! options.hasOwnProperty('Germinate'))
+      options.Germinate = true;
     
     return options;
   }),

@@ -1,8 +1,9 @@
 <div>
-  {{input
-    value=featureName
+  <Input
+    @value={{this.featureName}}
     class="form-control"
-    placeholder="Marker/Gene Name" }}
+    placeholder="Marker/Gene Name" >
+  </Input>  
 
   <span href="#" data-toggle="tooltip"
         style="margin-right: 1em; margin-left: 1em;"
@@ -11,31 +12,32 @@
 </div>
 
 <div style="flex-wrap: wrap;">
-  {{input
-    value=baseUrl
+  <Input
+    @value={{this.baseUrl}}
     class="form-control"
-    placeholder="Url to configure website" }}
+    placeholder="Url to configure website" >
+  </Input>  
 
-  <select onchange={{action (mut website) value="target.value"}}>
-    {{#each websites as |websiteChoice|}}
-      <option value={{websiteChoice}} selected={{eq website websiteChoice}}>{{websiteChoice}}</option>
+  <select onchange={{action (mut this.website) value="target.value"}}>
+    {{#each this.websites as |websiteChoice|}}
+      <option value={{websiteChoice}} selected={{eq this.website websiteChoice}}>{{websiteChoice}}</option>
     {{/each}}
   </select>
 
 
   <a target="_blank"
-     href={{url}} >
-    {{featureName}}
+     href={{this.url}} >
+    {{this.featureName}}
   </a>
 
   <a target="_blank"
-     href={{urlSelected}} >
-    {{selectedFeatures0Name}}
+     href={{this.urlSelected}} >
+    {{this.selectedFeatures0Name}}
   </a>
-  {{#if brushedDomain }}
+  {{#if this.brushedDomain }}
     <a target="_blank"
-       href={{urlLocation}} >
-      {{anchorLocationText}}
+       href={{this.urlLocation}} >
+      {{this.anchorLocationText}}
     </a>
   {{/if}}
 

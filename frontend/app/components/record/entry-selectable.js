@@ -23,7 +23,7 @@ export default Component.extend({
 
   click() {
     // console.log('entry-selectable click', this, this.get('node'), this.get('element'), this.get('parentView'));
-    this.sendAction('selectNode', this.get('node'));
+    this.selectNode(this.get('node'));
   }
 
 });

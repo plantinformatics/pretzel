@@ -2,9 +2,8 @@ from flask import Flask
 from flask_executor import Executor
 from flask_shell2http import Shell2HTTP
 
-
 import sys
-
+import os
 
 # python's inbuilt logging module
 import logging
@@ -31,9 +30,21 @@ def my_callback_fn(context, future):
   print(context, future.result())
 
 # callback_fn=my_callback_fn, 
+
 # was : scripts/
 # /backend/ is changed to /lb4app/lb3app/, maybe temporarily
-scriptsDir="/home/ec2-user/pretzel/lb4app/lb3app/scripts"
+if 'scriptsDir' in os.environ:
+  scriptsDir = os.getenv('scriptsDir')
+else:
+  # pretzelDir is the root of a git checkout of pretzel
+  if 'pretzelDir' in os.environ:
+    scriptsDir = os.getenv('pretzelDir') + "/lb4app/lb3app/scripts"
+  else:
+    scriptsDir = "/app/lb3app/scripts"  # /usr/src/app in blastserver container
+
+if not 'mntData' in os.environ:
+  print('mntData not defined')
+
 shell2http.register_command(endpoint="blastn", command_name=(scriptsDir+"/blastn_cont.bash"), callback_fn=my_callback_fn, decorators=[])
 shell2http.register_command(endpoint="dnaSequenceLookup", command_name=(scriptsDir+"/dnaSequenceLookup.bash"), callback_fn=my_callback_fn, decorators=[])
 

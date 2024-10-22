@@ -21,6 +21,8 @@ export default class GroupsOwnSerializer extends ApplicationSerializer {
       let payload = {};
       payload[model.modelName] = hash;
       // model === this.serializerFor(prop)
+      dLog('normalize', this.store.name, this._super);
+      debugger;
       ret = this._super(this.store, model, payload, hash.id, /*requestType*/'findRecord');
     } else {
       ret = this._super(...arguments);
@@ -29,9 +31,10 @@ export default class GroupsOwnSerializer extends ApplicationSerializer {
   };
 
   /** normalize the result of /groups/in
+   * @param store
    * @param d response data
    */
-  normalizeGroupsOwn(d) {
+  normalizeGroupsOwn(store, d) {
     const fnName = 'normalizeGroupsOwn';
     dLog(fnName, d);
     let
@@ -39,7 +42,7 @@ export default class GroupsOwnSerializer extends ApplicationSerializer {
     modelName = 'group',
     modelNameIncluded = 'client',
     includedPlural = true;
-    let result = normalizeDataEmbedded(this.store, modelName, [modelNameIncluded], includedPlural, d);
+    let result = normalizeDataEmbedded(store, modelName, [modelNameIncluded], includedPlural, d);
 
     let data = result.data;
     // data.relationships is initialised

@@ -1,12 +1,15 @@
 // {{!-- check : selectSampleFilter activeSampleFilter tabName2IdDatasets selectedCount activeIdDatasets --}}
 
 import Component from '@glimmer/component';
-import EmberObject, { computed, action, set as Ember_set, setProperties } from '@ember/object';
+import EmberObject, { computed, action, get as Ember_get, set as Ember_set, setProperties } from '@ember/object';
 import { alias, reads } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { later } from '@ember/runloop';
 import { A as Ember_A } from '@ember/array';
+
+// see comment in vcfGenotypeLookupDataset()
+import { allSettled } from 'rsvp';
 
 import { uniq, uniqWith, intersection } from 'lodash/array';
 
@@ -14,15 +17,18 @@ import createIntervalTree from 'interval-tree-1d';
 
 import NamesFilters from '../../utils/data/names-filters';
 import { toPromiseProxy, toArrayPromiseProxy, addObjectArrays, arrayClear } from '../../utils/ember-devel';
-import { thenOrNow, contentOf } from '../../utils/common/promises';
+import { thenOrNow, contentOf, pollCondition } from '../../utils/common/promises';
+import { responseTextParseHtml } from '../../utils/domElements';
 import { clipboard_writeText } from '../../utils/common/html';
 import { arrayChoose } from  '../../utils/common/arrays';
 import { intervalSize } from '../../utils/interval-calcs';
 import { overlapInterval } from '../../utils/draw/zoomPanCalcs';
 import { featuresIntervalsForTree } from '../../utils/data/features';
-import {
-  refAlt,
-  valueNameIsNotSample,
+// let vcfGenotypeBrapi = window["vcf-genotype-brapi"];
+import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
+console.log('vcfGenotypeBrapi', vcfGenotypeBrapi, window["@plantinformatics/vcf-genotype-brapi@npm:pretzel.A8b"]);
+const /*import */{
+  setFrameworkFunctions,
   datasetId2Class,
   gtValueIsNumeric,
   addGerminateOptions,
@@ -30,6 +36,14 @@ import {
   addFeaturesJson,
   resultIsGerminate,
   addFeaturesGerminate,
+  resultIsBrapi,
+  addFeaturesBrapi,
+} = vcfGenotypeBrapi.vcfFeature; /*from 'vcf-genotype-brapi'; */
+
+import {
+  refAlt,
+  valueNameIsNotSample,
+
   normalizeMaf,
   sampleIsFilteredOut,
   columnName2SampleName,
@@ -222,6 +236,8 @@ export default class PanelManageGenotypeComponent extends Component {
   @service('data/haplotype') haplotypeService;
   @service('query-params') queryParamsService;
   @service('data/selected') selectedService;
+  @service('data/transient') transient;
+
 
 
   @alias('controls.apiServerSelectedOrPrimary') apiServerSelectedOrPrimary;
@@ -275,15 +291,21 @@ export default class PanelManageGenotypeComponent extends Component {
   @alias('args.userSettings.vcfGenotypeSamplesSelected')
   vcfGenotypeSamplesSelectedAll;
 
-  /** see selectedSamples() */
+  /** aliased as selectedSamples() */
   // @computed('lookupBlockSamples.selected')
   @computed('lookupDatasetId', 'receivedNamesCount')
   get vcfGenotypeSamplesSelected() {
-    let selected = this.vcfGenotypeSamplesSelectedAll[this.lookupDatasetId];
+    if (! this.lookupDatasetId) {
+      dLog('get vcfGenotypeSamplesSelected', this.lookupDatasetId);
+    }
+    let selected = this.vcfGenotypeSamplesSelectedAll?.[this.lookupDatasetId];
     return selected;
   }
   set vcfGenotypeSamplesSelected(selected) {
-    this.vcfGenotypeSamplesSelectedAll[this.lookupDatasetId] = selected;
+    if (! this.lookupDatasetId) {
+      dLog('set vcfGenotypeSamplesSelected', this.lookupDatasetId);
+    }
+    (this.vcfGenotypeSamplesSelectedAll || this.args.userSettings.vcfGenotypeSamplesSelected)[this.lookupDatasetId] = selected;
   }
 
   @tracked
@@ -378,6 +400,23 @@ export default class PanelManageGenotypeComponent extends Component {
 
   // ---------------------------------------------------------------------------
 
+  /** register or de-register this component.
+   * @param handle this (component) or null
+   */
+  registerByName(handle) {
+    const fnName = 'registerByName';
+    /** check : registered value === null xor handle === null. */
+    const
+    registered = this.controls.registrationsByName['component:panel/manage-genotype'],
+    ok = ((handle === null) ? (registered === this) : ! registered) &&
+      ((registered === null) !== (handle === null));
+    dLog(fnName, handle, ok);
+    Ember_set(this.controls.registrationsByName, 'component:panel/manage-genotype', handle);
+    // this.controls.registrationsByName.updateCount++;
+  }
+
+  //----------------------------------------------------------------------------
+
   constructor() {
     super(...arguments);
 
@@ -388,6 +427,7 @@ export default class PanelManageGenotypeComponent extends Component {
     if (window.PretzelFrontend) {
       window.PretzelFrontend.manageGenotype = this;
     }
+    this.registerByName(this);
 
     this.namesFilters = new NamesFilters();
     Object.entries(this.sampleFilterTypes).forEach(
@@ -405,6 +445,11 @@ export default class PanelManageGenotypeComponent extends Component {
     if (userSettings.vcfGenotypeSamplesSelected === undefined) {
       userSettings.vcfGenotypeSamplesSelected = {};
     }
+
+    //--------------------------------------------------------------------------
+    const selectedSamples = userSettings.vcfGenotypeSamplesSelected[userSettings.selectedDatasetId];
+    later(() => this.selectedSamplesText = selectedSamples ? selectedSamples.join('\n') : '');
+    //--------------------------------------------------------------------------
 
     if (userSettings.samplesIntersection === undefined) {
       userSettings.samplesIntersection = false;
@@ -515,6 +560,14 @@ export default class PanelManageGenotypeComponent extends Component {
     }
 
   }
+
+  //----------------------------------------------------------------------------
+
+  @action
+  onWillDestroy() {
+    this.registerByName(null);
+  }
+
 
   //----------------------------------------------------------------------------
 
@@ -1123,6 +1176,13 @@ export default class PanelManageGenotypeComponent extends Component {
       dLog(fnName, 'initial activeDatasetId', datasetIds[0], this.activeDatasetId);
       later(() => {
         this.setSelectedDataset(datasetIds[0]);
+	/** The above sets @active of the <nav.item > i.e. <li>, but the class
+	 * active is not added, perhaps because it has already rendered.  So use
+	 * datasetTabActiveClass() for the initial render; after that the user
+	 * clicks on the tab which sets active class OK. There is hopefully a
+	 * more elegant way to do this.
+	 */
+	this.datasetTabActiveClass();
       });
     }
     dLog(fnName, datasetIds, this.gtDatasets);
@@ -1163,7 +1223,8 @@ export default class PanelManageGenotypeComponent extends Component {
 
   //----------------------------------------------------------------------------
 
-  /** @return the {axisBrush, vcfBlock} selected via gui pull-down
+  /** @return the {axisBrush, vcfBlock} selected via the GUI,
+   * dataset tabs (originally a pull-down).
    */
   @computed('brushedOrViewedVCFBlocks', 'axisBrushBlockIndex')
   get axisBrushBlock() {
@@ -1195,10 +1256,11 @@ export default class PanelManageGenotypeComponent extends Component {
    * May later pass lookupDatasetId .meta.vcfFilename
    * See comments in vcfGenotypeLookup() re. vcfDatasetId / parent.
    */
-  @computed('lookupBlock')
+  @computed('lookupBlock', 'args.userSettings.selectedDataset')
   get lookupDatasetId() {
     const b = this.lookupBlock;
-    return b?.get('datasetId.id');
+    const datasetId = this.args.userSettings.selectedDataset?.id || b?.get('datasetId.id');
+    return datasetId;
   }
   /** Scope of lookupBlock, which used to identify the (reference) chromosome in
    * request to genotype database, e.g. bcftools
@@ -1262,7 +1324,10 @@ export default class PanelManageGenotypeComponent extends Component {
     }
     return commonSamples;
   }
-  /** @return for .lookupDatasetId selected by user, the sampleNames array
+  /** Get the selected sample names for lookupBlock / lookupDatasetId.
+   * Not used, instead vcfGenotypeSamplesSelectedAll() is used directly instead
+   * in vcfGenotypeSamplesSelected().
+   * @return for .lookupDatasetId selected by user, the sampleNames array
    * received, and the .selectedSamples the user has selected from those.
    */
   @computed('lookupDatasetId', 'receivedNamesCount')
@@ -1270,6 +1335,8 @@ export default class PanelManageGenotypeComponent extends Component {
     /** related : datasetStoreSampleNames() */
     const names = this.sampleCache.sampleNames[this.lookupDatasetId];
     let selected = this.vcfGenotypeSamplesSelectedAll[this.lookupDatasetId];
+    /* If sampleNames are cached for lookupDatasetId and none are selected, copy
+     * (initial) samples to selected. */
     if (false && names?.length && ! selected) {
       selected = names.slice(0, 256).split('\n').slice(0, 6).join('\n');
       this.vcfGenotypeSamplesSelected = selected;
@@ -1374,10 +1441,11 @@ export default class PanelManageGenotypeComponent extends Component {
    *  user select -> append to selectedSamples ( -> selectedSamplesText)
    *  paste -> (selectedSamplesText and) selectedSamples
    */
-  @tracked
-  selectedSamplesText = '';
+  @alias('args.userSettings.selectedSamplesText') selectedSamplesText;
 
   /** parse the contents of the textarea
+   * This partially overlaps with namesTrim() (utils/string.js),
+   * which doesn't split into an array, but does remove additional cases of whitespace.
    * @param value text contents of <Textarea>
    * @return sample names array
    */
@@ -1488,18 +1556,39 @@ export default class PanelManageGenotypeComponent extends Component {
     }
   }
   /** Return viewed (loaded) VCF blocks
+   * Also include a block from genotype-search .selectedDatasetId
+   * if that does not already have a viewed block.
    *
    * @return [{axisBrush, vcfBlock}, ...]
    */
-  @computed('blockService.viewed.[]')
+  @computed('blockService.viewed.[]', 'args.userSettings.selectedDataset')
   get viewedVCFBlocks() {
     const
     fnName = 'viewedVCFBlocks',
     vcfBlocks = this.blockService.viewed.filter(
       (b) => b.get('isVCF')),
-    blocks = vcfBlocks.map((block) => ({
-      axisBrush : EmberObject.create({block : block.referenceBlock}),
-      block}));
+    block2Abb = (block) => ({
+      axisBrush : EmberObject.create({block : block.referenceBlock}), block});
+    let blocks = vcfBlocks.map(block2Abb);
+    const selectedDataset = this.args.userSettings.selectedDataset;
+    /** Possibly add a block of selectedDataset to blocks[].
+     * Not sure if this is going to be required; currently working OK without it.
+     */
+    if (false && selectedDataset) {
+      const dBlock = selectedDataset.get('aBlock');
+      if (dBlock) {
+        /** Check if a block in blocks[] is in selectedDataset. viewedVCFBlocks
+         * is used to request samples, and for genotype-search .selectedDataset
+         * need only be represented in blocks[] once.
+         */
+        const alreadyPresent = blocks.find(b => b.block.datasetId === dBlock.datasetId);
+        if (! alreadyPresent) {
+          const dBlockA = [dBlock].map(block2Abb);
+          dLog(fnName, dBlock, dBlockA);        
+          blocks = blocks.concat(dBlockA);
+        }
+      }
+    }
     dLog(fnName, blocks, this.blockService.viewed.length, this.blockService.params.mapsToView);
     return blocks;
   }
@@ -1762,7 +1851,8 @@ export default class PanelManageGenotypeComponent extends Component {
   vcfGenotypeSamplesDataset(vcfBlock) {
     /** implemented by common/models/block.js : Block.vcfGenotypeSamples().  */
     const
-    fnName = 'vcfGenotypeSamples',
+    fnName = 'vcfGenotypeSamplesDataset',
+    vcfDataset = contentOf(vcfBlock?.get('datasetId')),
     vcfDatasetId = vcfBlock?.get('datasetId.id'),
     vcfDatasetIdAPI = vcfBlock?.get('datasetId.genotypeId'),
     /** as in .lookupScope */
@@ -1776,10 +1866,16 @@ export default class PanelManageGenotypeComponent extends Component {
         {} );
       textP.then(
         (text) => {
-          const t = text?.text || text;
+          let t = text?.text || text;
           /** Germinate result may be received by frontend or server. */
           const isGerminate = resultIsGerminate(t);
-          dLog(fnName, t?.length || Object.keys(text), t?.slice(0, 60));
+          /** trace 5 samples or 60 chars of text */
+          dLog(fnName, t?.length || Object.keys(text), t?.slice(0, isGerminate ? 5 : 60));
+          if (vcfDataset.hasTag('BrAPI')) {
+            vcfDataset.samples = t;
+            t = t.mapBy('sampleName');
+            this.datasetStoreSampleNames(vcfBlock, t);
+          }
           let sampleNamesText, sampleNames;
           if (isGerminate) {
             /* result from Germinate is currently an array of string sample names. */
@@ -1934,18 +2030,24 @@ export default class PanelManageGenotypeComponent extends Component {
   // ---------------------------------------------------------------------------
 
   showError(fnName, error) {
-    let
-    message = error.responseJSON?.error?.message ?? error;
-    dLog(fnName, message, error.status, error.statusText);
-    if (message?.split) {
-    const match = message?.split('Error: Unable to run bcftools');
-    if (match.length > 1) {
-      message = match[0];
-    }
+    let message;
+    /** As in components/form/base.js : handleError(), see comment there;
+     * see also checkError().
+     */
+    if (! error.responseJSON && error.responseText) {
+      message = responseTextParseHtml(error.responseText);
+    } else {
+      message = error.responseJSON?.error?.message ?? error;
+      dLog(fnName, message, error.status, error.statusText);
+      if (message?.split) {
+        const match = message?.split('Error: Unable to run bcftools');
+        if (match.length > 1) {
+          message = match[0];
+        }
+      }
     }
     this.lookupMessage = message;
   }
-
 
   // ---------------------------------------------------------------------------
 
@@ -1965,7 +2067,9 @@ export default class PanelManageGenotypeComponent extends Component {
     requestSamplesAll = userSettings.requestSamplesAll,
     requestSamplesFiltered = userSettings.requestSamplesFiltered,
     samplesLimit = userSettings.samplesLimit;
+    /** If requestSamplesAll and no filter or limit, then result samples is not required, undefined. */
     let ok = requestSamplesAll && ! requestSamplesFiltered && ! limitSamples;
+    /** if requestSamplesFiltered or requestSamplesFiltered then determine samplesRaw. */
     if (! ok) {
       if (requestSamplesAll) {
         if (userSettings.samplesIntersection) {
@@ -1977,7 +2081,6 @@ export default class PanelManageGenotypeComponent extends Component {
           // Related : datasetStoreSampleNames().
           samplesRaw = this.sampleCache.sampleNames[datasetId]
             ?.trim().split('\n');
-          ok &&= ! samplesRaw;
         } else {
         // All sample names received for lookupDatasetId.
         samplesRaw = this.samples;
@@ -2023,7 +2126,7 @@ export default class PanelManageGenotypeComponent extends Component {
      * currently received from Germinate data / interface, so cannot determine
      * Numerical format (number of copies of Alt).  So request and display CATG.
      */
-    if (this.lookupBlock.hasTag('Germinate')) {
+    if (this.lookupBlock?.hasTag('Germinate')) {
       Ember_set(this, 'args.userSettings.requestFormat', 'CATG');
     }
     if (this.args.userSettings.autoLookup) {
@@ -2137,23 +2240,40 @@ export default class PanelManageGenotypeComponent extends Component {
       });
   }
   /** Send API request for VCF genotype of the given vcfDatasetId.
+   * If scope is defined it indicates which scope / chromosome of vcfDatasetId,
+   * should be searched; otherwise search all scopes of the dataset.
+   * blockV.scope === scope.
    * @param blockV  brushed / Viewed visible VCF / Genotype Block
    *   (from .lookupBlock or .brushedOrViewedVCFBlocksVisible)
+   * blockV is undefined and not used if scope is not defined.
    * @param vcfDatasetId one of the VCF genotype datasets on the brushed axis
    * This is the API id, i.e. .genotypeId, not dataset .id
    * i.e. this is blockV.datasetId.genotypeId
+   * [genotype-search] : scope is not defined and vcfDatasetId is dataset.
    * @param intersection return calls for SNPs which have positions in these datasets.
    * {datasetIds, flags} or undefined.  
    *   .datasetIds includes this one (vcfDatasetId).
    *   .flags : for bcftools isec, without the -n.
    * @param scope of the brushed axis
    * @param domainInteger brushed domain on the axis / parent
+   * domainInteger is not applicable if scope is undefined, so this parameter is
+   * used in that case to carry {datasetVcfFiles, snpNames} from genotype-search.
    * @param samples selected samples to request
    * @param samplesLimitEnable  .args.userSettings.samplesLimitEnable
+   *
+   * @return promise signalling response or failure.
+   * promise yields : scope ? text of response : array of text responses, 1 per chromosome matching snpNames.
    */
   vcfGenotypeLookupDataset(blockV, vcfDatasetId, intersection, scope, domainInteger, samples, samplesLimitEnable) {
     const fnName = 'vcfGenotypeLookupDataset';
-    if (scope) {
+    let dataset;
+    // equivalent : (typeof dataset !== 'string' && dataset.constructor.modelName === 'dataset')
+    if (! scope) {
+      dataset = vcfDatasetId;
+      vcfDatasetId = dataset.id;
+    }
+    let resultP;
+    /*if (scope)*/ {
       const
       userSettings = this.args.userSettings,
       requestFormat = this.requestFormat,
@@ -2185,16 +2305,41 @@ export default class PanelManageGenotypeComponent extends Component {
         requestOptions.typeSNP = userSettings.typeSNP;
       }
 
-      addGerminateOptions(requestOptions, blockV);
-      const
-      textP = vcfGenotypeLookup(this.auth, samples, domainInteger,  requestOptions, vcfDatasetId, scope, this.rowLimit);
-      // re-initialise file-anchor with the new @data
-      this.vcfExportText = null;
-      textP.then(
-        this.vcfGenotypeReceiveResult.bind(this, blockV, requestFormat, userSettings))
-        .catch(this.showError.bind(this, fnName));
+      if (blockV) {
+        addGerminateOptions(requestOptions, blockV);
+      }
 
+      const requestP = () => {
+      const textP = vcfGenotypeLookup(
+        this.auth, samples, domainInteger, requestOptions,
+        vcfDatasetId, scope, this.rowLimit);
+      // re-initialise file-anchor with the new @data
+      /* file-anchor param data should be a defined array ; its init() does this.get("data").reduce. */
+      this.vcfExportText = [];
+      textP.then(
+        this.vcfGenotypeReceiveResult.bind(this, scope ? blockV : dataset, requestFormat, userSettings))
+        .catch(this.showError.bind(this, fnName));
+      return textP;
+      };
+
+      if (scope) {
+        const textP = requestP();
+        resultP = textP;
+      } else {
+        const searchScope = domainInteger;
+        /** perhaps reduceInSeries(array, elt2PromiseFn, starting_promise */
+        const textsP = searchScope.datasetVcfFiles.map(fileName =>
+          {requestOptions.datasetVcfFile = fileName; return requestP(); });
+        /** Currently in this context Promise is RSVP, which doesn't have Promise.allSettled().
+         * Update : Promise now has .allSettled, at least in current Firefox.
+         * The ternary expression is used here because (Promise.allSettled || allSettled)(textsP) gets :
+         *   Uncaught TypeError: Receiver of Promise.allSettled call is not a non-null object
+         * where Receiver is the 'this' argument.
+         */
+        resultP = Promise.allSettled ? Promise.allSettled(textsP) : allSettled(textsP);
+      }
     }
+    return resultP;
   }
   /** Construct isec params for a lookup of vcfDatasetId, if required.
    * If datasets other than this one (vcfDatasetId) have defined positionFilter,
@@ -2260,19 +2405,39 @@ export default class PanelManageGenotypeComponent extends Component {
     return intersection;
   }
 
+  /**
+   * @param blockV  dataset in the case of [genotype-search], otherwise blockV
+   */
   vcfGenotypeReceiveResult(blockV, requestFormat, userSettings, text) {
     const
     fnName = 'vcfGenotypeReceiveResult',
     isGerminate = resultIsGerminate(text),
-    callsData = isGerminate && text;
+    isBrapi = resultIsBrapi(text),
+    callsData = (isGerminate || isBrapi) && text;
     if (isGerminate) {
       text = callsData.map(snp => Object.entries(snp).join('\t')).join('\n');
       dLog(fnName, text.length, callsData.length);
+    } else if (isBrapi) {
+      /* .variantDbIds is undefined if there are no variants in range. */
+      text = callsData.variantDbIds?.map((variantDbId, i) => {
+        const
+        chrPosId = [
+          blockV.get('name'),
+          variantDbId.replace(/.*_/, ''),
+          variantDbId],
+        cols = chrPosId.concat(callsData.dataMatrices[0].dataMatrix[i]);
+        return cols.join('\t');
+      }).join('\n')
+        || '';
+      // it looks like empty result is : { dataMatrices : [], ... }
+      dLog(fnName, text.length, callsData.variantDbIds?.length, callsData.dataMatrices[0]?.dataMatrix?.length);
     }
     // displays vcfGenotypeText in textarea, which triggers this.vcfGenotypeTextSetWidth();
     this.vcfGenotypeText = text;
-    this.headerTextP.then((headerText) => {
-      const combined = this.combineHeader(headerText, this.vcfGenotypeText)
+    this.headerTextP?.then((headerText) => {
+      const
+      combined = ! headerText ? this.vcfGenotypeText :
+        this.combineHeader(headerText, this.vcfGenotypeText)
       /** ember-csv:file-anchor.js is designed for spreadsheets, and hence
        * expects each row to be an array of cells.
        */
@@ -2281,13 +2446,20 @@ export default class PanelManageGenotypeComponent extends Component {
       later(() => this.vcfExportText = combined, 1000);
     });
 
-    dLog(fnName, text.length, text && text.slice(0,200), blockV.get('id'));
-    if (text && blockV) {
+    // [genotype-search] does not apply to addFeaturesGerminate().
+    dLog(fnName, text.length, text && text.slice(0,200), blockV?.get('id'));
+    /* commented out the &&blockV 'Jun  6 22:30' after undefined blockV logged in 2024Jun04. is that permitted in one of these cases isBrapi / isGerminate ? */
+    if (! blockV) {
+      dLog(fnName, 'blockV', blockV, isBrapi, isGerminate);
+    }
+    if (text /*&& blockV*/) {
+      setFrameworkFunctions({Ember_get, Ember_set});
       const
       replaceResults = this.args.userSettings.replaceResults,
       nSamples = this.controls.view.pathsDensityParams.nSamples,
       germinateOptions = {nSamples},
-      added = isGerminate ?
+      added = isBrapi ?
+        addFeaturesBrapi(blockV, requestFormat, replaceResults, this.selectedService, callsData, germinateOptions) : isGerminate ?
         addFeaturesGerminate(blockV, requestFormat, replaceResults, this.selectedService, callsData, germinateOptions) :
         addFeaturesJson(blockV, requestFormat, replaceResults, this.selectedService, text),
       options = {requestSamplesAll : userSettings.requestSamplesAll, selectedSamples : added.sampleNames /*this.selectedSamples*/};
@@ -2303,6 +2475,27 @@ export default class PanelManageGenotypeComponent extends Component {
          * showSamplesWithinBrush().
          */
         this.filterSamples(/*showHideSampleFn*/undefined, /*matrixView*/undefined);
+
+        if (added.resultBlocks) {
+          /** param of blockViewAndBrush() is [block, featuresDomain] */
+          Array.from(added.resultBlocks.entries()).forEach(this.blockViewAndBrush.bind(this));
+          /** In this case, genotype-search is searching just 1 dataset, so
+           * resultBlocks are expected to be in that dataset.
+           * text is from a single VCF lookup; so although in other cases
+           * dataset intersection can be used, resultBlocks are still expected
+           * to be in a single dataset.
+           */
+        }
+
+        const scope = blockV.get('scope');
+        /* for components/panel/genotype-search.js */
+        if (! scope) {
+          added.createdFeatures.forEach(f => {
+            this.transient.showFeature(f, true);
+          });
+        }
+
+
         const showOtherBlocks = true;
         if (showOtherBlocks) {
           this.showSamplesWithinBrush();
@@ -2332,6 +2525,48 @@ export default class PanelManageGenotypeComponent extends Component {
       }
     }
 
+  }
+
+  //----------------------------------------------------------------------------
+
+  blockViewAndBrush([block, featuresDomain]) {
+    const fnName = 'blockViewAndBrush';
+    /* this works, but is already achieved by loadBlock() : viewRelatedBlocks(block)
+     *  this.blockService.setViewed(block.id, true);
+     */
+    this.args.loadBlock(block);
+    pollCondition(250, () => block.axis1d, () =>
+      this.blockBrushDomain(block, featuresDomain));
+  }
+  blockBrushDomain(block, featuresDomain) {
+    const fnName = 'blockBrushDomain';
+    /** caller blockViewAndBrush() ensures this via pollCondition(, () => block.axis1d, ) */
+    if (! block.axis1d) {
+      console.warn(fnName, block.brushName);
+    } else {
+      const referenceBlock = block.referenceBlock;
+      this.blockService.pathsPro.ensureAxisBrush(referenceBlock);
+      later(() => this.blockSetBrushedDomain(block, featuresDomain), 2000);
+    }
+  };
+
+  blockSetBrushedDomain(block, featuresDomain) {
+    const
+    fnName = 'blockSetBrushedDomain',
+    abs = this.axisBrushService,
+    /** for viewing in console. abb is defined after .brushedDomain is set.
+     * (services/data/axis-brush.js : brushedAxes() filters by .brushedDomain )
+     * then abb === axis1d.axisBrushObj, 
+     */
+    abb = abs.brushesByBlock[block.referenceBlock.id],
+    axis1d = block.axis,
+    brushRange = featuresDomain.map(axis1d.y);
+    axis1d.set('brushedRegion', brushRange);
+    dLog(fnName, brushRange, featuresDomain, block.brushName, abs.brushesByBlock,
+         abb === axis1d.axisBrushObj, axis1d.axisBrushObj);
+    /** Use Ember.set() because .brushedDomain is used in a tracking context. */
+    Ember_set(axis1d.axisBrushObj, 'brushedDomain', featuresDomain);
+    this.axisBrushService.incrementProperty('brushCount');
   }
 
   //----------------------------------------------------------------------------
@@ -2570,7 +2805,7 @@ export default class PanelManageGenotypeComponent extends Component {
     return fn;
   }
 
-  /**
+  /** Is given sampleName selected for block ?
    * @return true if sampleName is selected in dataset of block,
    * or valueNameIsNotSample(sampleName), i.e. sampleName is ref/alt/etc.
    */
@@ -2727,7 +2962,8 @@ export default class PanelManageGenotypeComponent extends Component {
     } else {
       const userSettings = this.args.userSettings;
       let
-      referenceBlock = this.axisBrush?.get('block'),
+      // originally just 1 brushed axis, and hence 1 referenceBlock
+      // referenceBlock = this.axisBrush?.get('block'),
       /** parallel to .gtDatasetIds.
        * expect : block.referenceBlock.id === referenceBlock.id
        * Based on : .brushedOrViewedVCFBlocksVisible()
@@ -2800,7 +3036,7 @@ export default class PanelManageGenotypeComponent extends Component {
              * Add features to : this.displayDataRows.
              */
             const nonVCF = this.nonVCFFeaturesWithinBrushData;
-            const displayDataRows = sampleGenotypes.rows;
+            const referenceBlockRows = sampleGenotypes.rows;
             /** Annotate rows with features from nonVCF.features which overlap them.
              * nonVCFFeaturesWithinBrushData() could return []{datasetId, features : [] },
              * and that datasetId could be passed to annotateRowsFromFeatures() with its features.
@@ -2812,7 +3048,19 @@ export default class PanelManageGenotypeComponent extends Component {
              * Earlier functionality instead displayed start and end position of
              * all of nonVCF.features, using rowsAddFeature(), until 54baad61.
              */
-            annotateRowsFromFeatures(displayDataRows, nonVCF.features, this.selectedFeaturesValuesFields);
+            for (const [referenceBlock, displayDataRows] of referenceBlockRows.entries()) {
+              annotateRowsFromFeatures(displayDataRows, nonVCF.features, this.selectedFeaturesValuesFields);
+            }
+            const
+            /** for each referenceBlock : a sparse array indexed by Position  */
+            sparseRows = Array.from(referenceBlockRows.values()),
+            /** sparseArray.values() fills out the array, whereas
+             * Object.values(sparseArray) does not. Similarly for .entries().
+             */
+            rowsArrays = sparseRows.map(a => Object.values(a)),
+            /** Array.prototype.concat === [].concat */
+            displayDataRows = [].concat.apply([], rowsArrays);
+
             const currentFeaturesValuesFields = featuresValuesFields(nonVCF.features);
             const
             datasetIds = nonVCF.features.mapBy('blockId.datasetId.id').uniq(),
@@ -3356,11 +3604,19 @@ export default class PanelManageGenotypeComponent extends Component {
   get headerTextP() {
     const
     fnName = 'headerText',
-    {samples, samplesOK} = this.samplesOK(false),
+    isBrAPI = this.lookupBlock?.hasTag('BrAPI') ||
+      (this.lookupBlock?.server?.serverType === 'BrAPI'),
+    /** not clear why passing limitSamples false for VCF (edit was 2023 'Mar  1 21:20') */
+    {samples, samplesOK} = this.samplesOK(isBrAPI),
     domainInteger = [0, 1],
-    /** this is .lookupDatasetId if ! isGerminate */
-    vcfDatasetId = this.lookupBlock?.get('datasetId.genotypeId'),
-    scope = this.lookupScope;
+    dialogMode = this.args.userSettings.dialogMode,
+    /** lookupBlock.datasetId.genotypeId is .lookupDatasetId if ! isGerminate */
+    vcfDatasetId = dialogMode ? dialogMode.datasetId :
+      this.lookupBlock?.get('datasetId.genotypeId'),
+    scope = this.lookupScope,
+    scopeOK = scope || (dialogMode?.component === 'genotype-search'),
+    /** VCF format, \t separated. sample names are appended. */
+    columnHeadersChrPosId = '#CHROM	POS	ID	';
     let textP;
     /** After a brush, this CP is re-evaluated, although the dependencies
      * compare === with the previous values.  Could memo-ize the value based on
@@ -3370,7 +3626,31 @@ export default class PanelManageGenotypeComponent extends Component {
      * lookupDatasetId; depends on whether result vcfExportText combines
      * brushedOrViewedVCFBlocksVisible into a single VCF.
      */
-    if (samplesOK && scope && vcfDatasetId) {
+
+    if (isBrAPI) {
+      const datasetId = vcfDatasetId; // === this.lookupDatasetId
+      /** BrAPI (and Germinate) construct the header from the samples list. */
+      let allSamples, text;
+      if (this.requestSamplesSelected) {
+        text = columnHeadersChrPosId + this.selectedSamples?.join('\t');
+      } else if (samples) {  // maybe check ?.length
+        text = columnHeadersChrPosId + samples.replaceAll('\n', '\t');
+      } else if ((allSamples = (datasetId && this.sampleCache?.sampleNames?.[datasetId]))) {
+        text = columnHeadersChrPosId + allSamples.replaceAll('\n', '\t');
+      } else if (this.samples) {
+        text = columnHeadersChrPosId + this.samples.join('\t');
+      } else {
+        // get samples
+        textP = this.lookupBlock?.server.brapiGenotypeSamples(datasetId).then(samples =>
+          columnHeadersChrPosId + samples /*.callSetDbIds*/ ?.join('\t')).then(headerText =>
+            this.headerText = headerText);
+      }
+      if (text) {
+        this.headerText = text;
+        textP = Promise.resolve(text);
+      }
+    } else
+    if (samplesOK && scopeOK && vcfDatasetId) {
       const
       requestFormat = this.requestFormat,
       userSettings = this.args.userSettings,
@@ -3380,6 +3660,14 @@ export default class PanelManageGenotypeComponent extends Component {
       /** requestOptions.linkageGroupName may not be required when getting headers. */
       requestOptions = {requestFormat, requestSamplesAll, headerOnly : true};
       addGerminateOptions(requestOptions, this.lookupBlock);
+      let searchScope = domainInteger;
+      if (! scope) {
+        const
+        apiServer = this.controls.apiServerSelectedOrPrimary,
+        dataset = apiServer.datasetsBlocks.findBy('id', vcfDatasetId),
+        vcfFiles = dataset?.[Symbol.for('vcfFiles')];
+        requestOptions.datasetVcfFile = vcfFiles?.[0];
+      }
       /** these params are not applicable when headerOnly : samples, domainInteger, rowLimit. */
       textP = vcfGenotypeLookup(
         this.auth, samples, domainInteger,
@@ -3388,7 +3676,11 @@ export default class PanelManageGenotypeComponent extends Component {
         (text) => {
           const
           isGerminate = resultIsGerminate(text);
-          this.headerText = isGerminate ? text.join('\t') : text;
+          /** for BrAPI, domain [0, 1] will return 0 results, and hence 0
+           * callSetDbIds, so use .samples */
+          this.headerText = (isBrAPI || resultIsBrapi(text)) ? columnHeadersChrPosId +
+            (text.callSetDbIds?.join('\t') || samples.replaceAll('\n', '\t') || '') :
+            isGerminate ? text.join('\t') : text;
           if (trace) {
             dLog(fnName, text);
           }
@@ -3396,6 +3688,8 @@ export default class PanelManageGenotypeComponent extends Component {
         })
         .catch(this.showError.bind(this, fnName));
       textP = toPromiseProxy(textP);
+    } else {
+      dLog(fnName, scope, dialogMode, samplesOK, scopeOK, vcfDatasetId);
     }
     return textP;
   }
@@ -3428,7 +3722,10 @@ export default class PanelManageGenotypeComponent extends Component {
       headerText = headerText.slice(0, headerText.length-1);
     }
     const
-    tableRows = this.insertChromColumn(vcfGenotypeText),
+    /** BrAPI headerTextP includes chrPosId[] columns, so don't call insertChromColumn().
+     * Probably the current result (headerText, vcfGenotypeText) is for .lookupBlock */
+    isBrAPI = this.lookupBlock?.hasTag('BrAPI'),
+    tableRows = isBrAPI ? vcfGenotypeText : this.insertChromColumn(vcfGenotypeText),
     combined = headerText.concat(tableRows);
     return combined;
   }
@@ -3616,6 +3913,22 @@ export default class PanelManageGenotypeComponent extends Component {
       this.mut_axisBrushBlockIndex(i);
     }
     this.setSelectedDataset(datasetId);
+  }
+
+  //----------------------------------------------------------------------------
+
+  /** Add class active to the <li> parent of <a> of .activeIdDatasets
+   * See comment in gtDatasetTabs().
+   */
+  datasetTabActiveClass() {
+    const
+    /** "a[href$='#tab-view-Datasets-<datasetId>']" */
+    selector = "a[href$='#" + this.activeIdDatasets + "']",
+    /** <a href="#tab-view-Datasets-<datasetId>" role="tab"> */
+    a0 = $(selector)[0],
+    /** <li class="nav-item active-detail"> */
+    li = a0?.parentElement;
+    li?.classList.add('active');
   }
 
   //----------------------------------------------------------------------------

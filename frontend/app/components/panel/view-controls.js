@@ -26,6 +26,8 @@ import { axisFontSizeApply } from '../../utils/draw/axis-draw';
 /*--------------------------------------------------------------------------*/
 
 const dLog = console.debug;
+const compName = 'components/panel/view-controls';	// originally draw-controls
+
 
 /** values for titleTextSize, font-size:  */
 const fontSizes = [
@@ -266,7 +268,7 @@ export default Component.extend({
   sbSizeThresholdText : "" + sbSizeThresholdInitial,
   sbSizeThresholdTextChanged(value) {
     /* {{input value=sbSizeThresholdText ... }} sets
-     * this.sbSizeThresholdText, and (action ...  value=target.value)
+     * this.sbSizeThresholdText, and (action ...  value="target.value")
      * passes the same value to this function.  */
     if (this.sbSizeThresholdText !== value) {
       dLog('sbSizeThresholdTextChanged', this.sbSizeThresholdText, value);
@@ -326,7 +328,7 @@ export default Component.extend({
   axisLayerModulusText : "" + axisLayerModulusInitial,
   axisLayerModulusTextChanged(value) {
     /* {{input value=axisLayerModulusText ... }} sets
-     * this.axisLayerModulusText, and (action ...  value=target.value)
+     * this.axisLayerModulusText, and (action ...  value="target.value")
      * passes the same value to this function.  */
     if (this.axisLayerModulusText !== value) {
       dLog('axisLayerModulusTextChanged', this.axisLayerModulusText, value);
@@ -490,15 +492,17 @@ export default Component.extend({
    */
   diamondOffset : 0,
 
-  /** Outside Axis Margin : Extra space outside the left and right-most axes.   */
-  extraOutsideMargin : 160,
+  /** Outside Axis Margin : Extra space outside the left and right-most axes.
+   * range [0, 500]. previous default 160.
+   */
+  extraOutsideMargin : 0,
 
   /*--------------------------------------------------------------------------*/
 
   didInsertElement() {
-    const fnName = "components/draw-controls didInsertElement()";
-    dLog(fnName, this.drawActions);
     this._super(...arguments);
+    const fnName = "didInsertElement()";
+    dLog(compName, fnName, this.drawActions);
 
     // console.log(fnName, 'controlsService.view', this.controlsService.get('view'));
     this.controlsService.set('view', this);
@@ -531,7 +535,7 @@ export default Component.extend({
       this.set('pathsViaStream', toBool(pathsViaStream));
   },
   willDestroyElement() {
-    dLog("components/draw-controls willDestroyElement()");
+    dLog(compName, "willDestroyElement()");
     this.drawActions.trigger("drawControlsLife", false);
 
     this._super.apply(this, arguments);
@@ -695,6 +699,8 @@ export default Component.extend({
     this.drawOptions.publishMode = ! checked;
     /** the checkbox is 'Show', so hide if ! checked. */
     svgContainer.classed("publishMode", ! checked);
+    // or add dependency 'oa.drawOptions.publishMode' to axesViewedEffect()
+    oa.axisApi.stacksView.draw();
   },
 
   axisFontSizeChanged(value) {

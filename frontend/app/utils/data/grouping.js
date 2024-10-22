@@ -69,11 +69,11 @@ function scopeOfBlock(block) {
 function blocksParentAndScope2(levelMeta, blocks) {
 
   let
-  nested = d3.nest()
+  nested = d3.group(
+    blocks,
     /* the key function will return undefined or null for datasets without parents, which will result in a key of 'undefined' or 'null'. */
-    .key(parentOfBlock)
-    .key(scopeOfBlock)
-    .entries(blocks);
+    parentOfBlock,
+    scopeOfBlock);
   let parentObjects = fromNestedParentAndScope(levelMeta, nested);
   if (trace_values > 1) {
     dLog('blocksParentAndScope2', nested, parentObjects);
@@ -83,7 +83,8 @@ function blocksParentAndScope2(levelMeta, blocks) {
 
 /** Convert a single-level d3.nested() to Object. */
 function fromNested(nested) {
-  let object = Object.fromEntries(nested.map((kv) => [kv.key, kv.values]));
+  /** kv is [key, values] */
+  let object = Object.fromEntries(Object.entries(nested).map((kv) => ([kv[0], kv[1]])));
 
 }
 /** Convert a multi-level d3.nested() to Object.
@@ -95,12 +96,12 @@ function fromNestedMulti(levelMeta, nested, childLabels) {
   childLabel = childLabels[0],
   /** for the next level down */
   childLabelsNext = childLabels.slice(1),
-  objects = nested.reduce((po, kv) => {
-    let values = kv.values;
+  objects = Object.entries(nested).reduce((po, kv) => {
+    const [key, values] = kv;
     if (values.length && values[0].key && values[0].values) {
       values = fromNestedMulti(levelMeta, values, childLabelsNext);
     }
-    po[kv.key] = values;
+    po[key] = values;
     levelMeta.set(values, childLabel);
     return po;
   }, {});

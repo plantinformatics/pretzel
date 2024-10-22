@@ -17,10 +17,6 @@ export default Component.extend({
     },
 
 
-    deleteFilterOrGroup : function () {
-      console.log('deleteFilterOrGroup', this);
-      this.sendAction('deleteFilterOrGroup', this);
-    },
     filterByCurrentScopes : function () {
       console.log('filterByCurrentScopes', this);
       this.filterByCurrentScopes();
@@ -34,7 +30,7 @@ export default Component.extend({
     console.log('filterByCurrentScopes', block_viewedScopes, pattern);
     // possibly only set pattern when block_viewedScopes.length > 0
     this.set('data.pattern', pattern);
-    this.sendAction('changed', this);
+    this.changed(this);
   }
 
 });

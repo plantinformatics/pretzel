@@ -19,14 +19,14 @@
    --}}
 
   {{#if @selectExpander}}
-    <span title={{hoverText}} class="truncate btn wide-border" style="flex: 1;"
-      {{on 'click' (fn @selectExpander nodeName values) }}
+    <span title={{this.hoverText}} class="truncate btn wide-border" style="flex: 1;"
+      {{on 'click' (fn @selectExpander this.nodeName this.values) }}
       style={{safe-style border-color=this.valuesColour}} >
-      {{nodeName}}
+      {{this.nodeName}}
     </span>
   {{else}}
-    <span title={{hoverText}} class="truncate" style="flex: 1;" >
-      {{nodeName}}
+    <span title={{this.hoverText}} class="truncate" style="flex: 1;" >
+      {{this.nodeName}}
     </span>
   {{/if}}
 

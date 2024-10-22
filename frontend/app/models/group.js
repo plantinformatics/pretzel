@@ -27,10 +27,10 @@ export default Model.extend({
 
   /** creator / owner / admin of the group */
   // @belongsTo('client') clientId;
-  clientId : belongsTo('client'),
+  clientId : belongsTo('client', {async: true, inverse: null/*'groupsOwn'*/}),
   /** members of the group */
-  clients: hasMany('client', { async: false }),
-  clientGroups: hasMany('client-group', { async: false }),
+  clients: hasMany('client', {async: false, inverse: null/*'groups'*/}),
+  clientGroups: hasMany('client-group', { async: false, inverse: 'groupId'}),
 
   // ---------------------------------------------------------------------------
 

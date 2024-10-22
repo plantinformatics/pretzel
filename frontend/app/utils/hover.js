@@ -1,3 +1,5 @@
+import { later } from '@ember/runloop';
+
 import { stacks } from './stacks';
 
 /* global Ember */
@@ -64,6 +66,7 @@ function configureHover(context, textFn)
 }
 
 function showHover(context, textFn, d, i, g) {
+  const fnName = 'showHover';
   // console.log("configureHover", location, this, this.outerHTML);
   let text = textFn.apply(this, [context, d, i, g]);
   let isHtml = text.startsWith('<div') || text.startsWith('<span');
@@ -76,40 +79,72 @@ function showHover(context, textFn, d, i, g) {
   if (node_.popover) {
     /** refn : node_modules/bootstrap/js/popover.js */
     let data    = node_.data('bs.popover');
+    if (trace) { dLog(fnName, data, text); }
     if (data) {
-      /* this seems to follow the doc, but doesn't change .content
+      /* if ! hoverNearElement, display the text in the popoverTarget instead of
+       * in a popover near the popoverTarget. */
+      if (! hoverNearElement) {
+        const html = isHtml ? text : '<p>' + text + '</p>';
+        node_.html(html);
+        /** Clear the text after 5secs. */
+        later(() => (node_.html() === html) && node_.html(''), 5000);
+      } else if (false) {
+        /* this seems to follow the doc; it displays but doesn't change .content.
+         * _getContent() uses data.config.content, refn :
+         * node_modules/bootstrap/js/src/{popover.js,tooltip.js}
+         * node_modules/bootstrap/dist/js/bootstrap.bundle.js
+         */
+        // data.setContent(text);
+        // dLog(fnName, '_getContent', data._getContent());
       node_
-        .popover('show')
-        .popover({content : text}); */
-      let options = node_.data('bs.popover').options;
-      options.content = text;
-      options.html = isHtml;
+        .popover({content : text, html : isHtml})
+        .popover('show');
+      }
+      else {
+        /** .config was .options in earlier version (bootstrap3) */
+        let options = data.config;
+        options.content = text;
+        options.html = isHtml;
+        // data.config.visible = true;  // displays OK without this
+        data.show();
+      }
     } else {
       /** https://getbootstrap.com/docs/3.4/javascript/#popovers */
       let options = {
         trigger : "manual",	// was : click hover
+        // animation enables .fade class, which currently makes the tooltip invisible.
+        animation: false,
+        // sticky and delay options may no longer be current - no apparent effect.
         sticky: true,
         delay: {show: 200, hide: 3000},
         container: config.container,
-        placement : hoverNearElement ? "auto right" : "left",
+        // popoverTarget is at right margin
+        placement : hoverNearElement ? "right" : "left",
         // comment re. title versus content in @see draw-map.js: configureHorizTickHover() 
         content : text
       };
       if (isHtml) {
         options.html = isHtml;
-      }
-      if (! hoverNearElement) {
+      } /* else {
+        options.content = '<p>' + options.content + '</p>';
+        options.html = true;
+      }*/
+      /* default template has changed, so instead of using a custom template without arrow, use css to hide .arrow. */
+      if (false && ! hoverNearElement) {
         // same as default, with arrow removed : <div class="arrow"></div>
         options.template = '<div class="popover no-border" role="tooltip"> <h3 class="popover-title"></h3><div class="popover-content"></div></div>';
         // ? options.modifiers = { arrow : {enabled : false}};
       }
       node_
         .popover(options);
+      data = node_.data('bs.popover');
       if (trace) {
-        dLog('showHover', text, context, textFn, d, i, g, node_.data('bs.popover'), node_.data('bs.popover').options);
+        dLog(fnName, text, context, textFn, d, i, g, data, data.options);
       }
+      data.config.visible = true;
+      data.show();
     }
-    node_.popover('show');
+    // node_.popover('show');
   }
 }
 function hideHover() {
@@ -117,6 +152,12 @@ function hideHover() {
   let node_ = config.hoverNearElement ? $(this) : $(config.popoverTarget);
   // for devel, comment this out to enable styling of popover in Web Inspector
   node_.popover('hide');
+  const data = node_.data('bs.popover');
+  if (data) {
+    data.config.visible = true;
+    data.hide();
+  }
+
   if (trace) {
     dLog('hideHover', node_);
   }
@@ -179,6 +220,7 @@ function  configureHorizTickHover_orig(location)
 //------------------------------------------------------------------------------
 
 export {
+  config,
   hoverConfigure,
   configureHover, configureHorizTickHover,
   configureHorizTickHover_orig,

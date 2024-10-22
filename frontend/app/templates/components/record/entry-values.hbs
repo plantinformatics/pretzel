@@ -1,106 +1,124 @@
 {{!-- log 'entry-values' values valueIsArray valueIsDatasetsArray valueIsBlocksArray valuesIsMap values_dataTypeName0 parentDone values_levelComponent values_dataTypeName 'name' name values.name (or name values.name) --}}
 
-{{#if valueIsDatasetsArray}}
+{{#if this.valueIsDatasetsArray}}
   {{!-- log 'entry-datasets' values --}}
   {{record/entry-datasets
-    loadBlock="loadBlock"
-    selectBlock=(action 'selectBlock')
-    selectedBlock=selectedBlock
-    selectDataset=(action 'selectDataset')
-    selectedDataset=selectedDataset
-    data=values}}
+    loadBlock=this.loadBlock
+    selectBlock=this.selectBlock
+    selectedBlock=this.selectedBlock
+    selectDataset=this.selectDataset
+    selectedDataset=this.selectedDataset
+    data=this.values}}
 
-{{else if valueIsBlocksArray }}   {{!-- type is blocks array --}}
+{{else if this.valueIsBlocksArray }}   {{!-- type is blocks array --}}
   {{!-- log 'entry-blocks' --}}
   {{record/entry-blocks
-    loadBlock="loadBlock"
-    data=values
-    selectBlock="selectBlock"
-    selectedBlock=selectedBlock
-    selectDataset=(action 'selectDataset')}}
+    loadBlock=this.loadBlock
+    data=this.values
+    selectBlock=this.selectBlock
+    selectedBlock=this.selectedBlock
+    selectDataset=this.selectDataset}}
 
-{{else if (or valuesModelName (and values_levelComponent (not-eq values_levelComponent 'record/entry-values') (not parentDone) ) ) }}
+{{else if (or this.valuesModelName (and this.values_levelComponent (not-eq this.values_levelComponent 'record/entry-values') (not this.parentDone) ) ) }}
   {{!-- log  'values' values 'levelComponent' values_levelComponent --}}
-  {{component values_levelComponent levelMeta=levelMeta name=(or name values.name values_dataName) values=values
-    data=values
+  {{component
+    this.values_levelComponent
+    levelMeta=this.levelMeta
+    name=(or this.name this.values.name this.values_dataName)
+    values=this.values
+    data=this.values
     valuesCase='parentDone'
     parentDone=true
-    controlOptions=controlOptions
-    loadBlock="loadBlock"
-    selectExpander=selectExpander
-    selectBlock="selectBlock"
-    selectedBlock=selectedBlock
-    selectDataset=(action 'selectDataset')
+    controlOptions=this.controlOptions
+    loadBlock=this.loadBlock
+    selectExpander=this.selectExpander
+    selectBlock=this.selectBlock
+    selectedBlock=this.selectedBlock
+    selectDataset=this.selectDataset
   }}
 
-{{else if valueIsArray}}
+{{else if this.valueIsArray}}
   {{!-- log 'valueIsArray' --}}
 
-  {{#each values as |value index|}}
+  {{#each this.values as |value index|}}
     {{!-- log  'value' value 'index' index 'levelComponent' values_levelComponent --}}
-    {{record/entry-values values=value levelMeta=levelMeta
-      parentName=name
+    {{record/entry-values
+      values=value
+      levelMeta=this.levelMeta
+      parentName=this.name
       valuesCase='valueIsArray'
-      controlOptions=controlOptions
-      loadBlock="loadBlock"
-      selectExpander=selectExpander
-      selectBlock="selectBlock"
-      selectedBlock=selectedBlock
-      selectDataset=(action 'selectDataset')}}
+      controlOptions=this.controlOptions
+      loadBlock=this.loadBlock
+      selectExpander=this.selectExpander
+      selectBlock=this.selectBlock
+      selectedBlock=this.selectedBlock
+      selectDataset=this.selectDataset
+    }}
   {{/each}}
 
-{{else if valuesIsMap}}
+{{else if this.valuesIsMap}}
   {{!-- log 'valuesIsMap:each' --}}
 
-  {{#each values as |key value|}}
+  {{#each this.values as |key value|}}
     {{#with (compute (action 'levelComponent' value)) as |subComponent|}}
       {{!-- log  'value' value 'key' key 'subComponent' subComponent --}}
-      {{component subComponent levelMeta=levelMeta name=key values=value
+      {{component
+        subComponent
+        levelMeta=this.levelMeta
+        name=key
+        values=value
         data=value
         valuesCase='valuesIsMap'
-        parentName=name
-        controlOptions=controlOptions
-        loadBlock="loadBlock"
-        selectBlock="selectBlock"
-        selectedBlock=selectedBlock
-        selectDataset=(action 'selectDataset')
+        parentName=this.name
+        controlOptions=this.controlOptions
+        loadBlock=this.loadBlock
+        selectBlock=this.selectBlock
+        selectedBlock=this.selectedBlock
+        selectDataset=this.selectDataset
       }}
     {{/with}}
   {{/each}}
 
-{{else if valuesIsOntologyTree}}
+{{else if this.valuesIsOntologyTree}}
   {{!-- log 'valuesIsOntologyTree:each' --}}
 
-  {{#each values.children as |value index|}}
+  {{#each this.values.children as |value index|}}
     {{!-- log  'value' value 'index' index 'levelComponent' values_levelComponent --}}
-    {{record/entry-values values=value levelMeta=levelMeta
+    {{record/entry-values
+      values=value
+      levelMeta=this.levelMeta
       name=(compute (action this.ontologyNameId value))
-      parentName=values.id
-      loadBlock="loadBlock"
-      controlOptions=controlOptions
-      selectExpander=selectExpander
-      selectBlock="selectBlock"
-      selectedBlock=selectedBlock
-      selectDataset=(action 'selectDataset')}}
+      parentName=this.values.id
+      loadBlock=this.loadBlock
+      controlOptions=this.controlOptions
+      selectExpander=this.selectExpander
+      selectBlock=this.selectBlock
+      selectedBlock=this.selectedBlock
+      selectDataset=this.selectDataset
+    }}
   {{/each}}
 
-{{else if valuesIsObject }}
+{{else if this.valuesIsObject }}
   {{!-- log 'each-in' --}}
 
-  {{#each keyValuesSorted as |keyValue|}}
+  {{#each this.keyValuesSorted as |keyValue|}}
    {{#let keyValue.key keyValue.value as |key value|}}
     {{#with (compute (action 'levelComponentEach' value)) as |subComponent|}}
       {{!-- log  'key' key 'value' value 'subComponent' subComponent --}}
-      {{component subComponent levelMeta=levelMeta name=(or value.name key) values=value
+      {{component
+        subComponent
+        levelMeta=this.levelMeta
+        name=(or value.name key)
+        values=value
         valuesCase='valuesIsObject'
         data=value
-        parentName=name
-        controlOptions=controlOptions
-        selectExpander=selectExpander
-        loadBlock="loadBlock"
-        selectBlock="selectBlock"
-        selectedBlock=selectedBlock
-        selectDataset=(action 'selectDataset')
+        parentName=this.name
+        controlOptions=this.controlOptions
+        selectExpander=this.selectExpander
+        loadBlock=this.loadBlock
+        selectBlock=this.selectBlock
+        selectedBlock=this.selectedBlock
+        selectDataset=this.selectDataset
       }}
     {{/with}}
    {{/let}}

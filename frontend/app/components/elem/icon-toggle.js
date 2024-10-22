@@ -15,13 +15,23 @@ import IconBase from './icon-base';
 * e.g. {{#elem/icon-toggle state=userSettings.genotype.hideControls }}
 * @param iconTrue name of icon to show when value is true
 * @param iconFalse   name of icon to show when value is false
+* @param changed optional. action to signal when state changes.
+* Called as changed(state).
+* example usage : entry-tab.hbs : {{#elem/icon-toggle ... changed=(action this.allActiveChanged)
 */
 export default IconBase.extend({
 
   click(event) {
     // console.log('click', event, this.get('state'));
     this.toggleProperty('state');
-    this.sendAction('changed', this.get('state'));
+    /** optional action to signal change of state
+     * The param will be in .attrs until this is changed to a Glimmer
+     * component, then it will be in .args
+     */
+    const changed = this.attrs?.changed || this.args?.changed;
+    if (changed) {
+      changed(this.get('state'));
+    }
   },
 
   /** name is used by icon-base to construct the icon name.

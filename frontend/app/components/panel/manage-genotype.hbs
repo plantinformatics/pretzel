@@ -1,5 +1,5 @@
 {{this.selectedSampleEffect}}
-
+{{will-destroy this.onWillDestroy}}
 
 {{#if this.showInputDialog}}
 
@@ -21,7 +21,7 @@
     {{!-- ----------------------------------------------------------------- --}}
     {{!-- tabTypeName is the text displayed on the tab for user identification of the contents, aka tabName.  --}}
 
-    <BsTab @customTabs={{true}} @onChange={{action this.onChangeTab}} @activeId={{this.activeId}} as |tab|>
+    <BsTab @customTabs={{true}} @fade={{false}} @onChange={{action this.onChangeTab}} @activeId={{this.activeId}} as |tab|>
       <BsNav @type="tabs" as |nav|>
         <ul class="nav nav-tabs li-active-extra counts">
 
@@ -77,7 +77,7 @@
 
               {{!-- --------------------------------------------------------- --}}
 
-              <BsTab @customTabs={{true}} @onChange={{action this.selectDataset}} @activeId={{this.activeIdDatasets}} as |tab|>
+              <BsTab @customTabs={{true}} @fade={{false}} @onChange={{action this.selectDataset}} @activeId={{this.activeIdDatasets}} as |tab|>
                 <BsNav @type="tabs" as |nav|>
                   <ul class="nav nav-tabs li-active-extra counts">
 
@@ -99,7 +99,7 @@
 
                   {{!-- --------------------------------------------------------- --}}
 
-                  {{log 'axisBrush' axisBrush}}
+                  {{log 'axisBrush' this.axisBrush}}
 
                   Server : 
                   {{this.apiServerSelectedOrPrimary.name}}
@@ -117,7 +117,7 @@
                           <th class="devel-visible">zoomCounter</th>
                         </tr>
 
-                      {{#each axisBrush.brushedAxes as |block| }}
+                      {{#each this.axisBrush.brushedAxes as |block| }}
 
                         <tr>
                           <td>
@@ -126,7 +126,7 @@
                             <div>{{block.axis.axis1d.referenceBlock.datasetId.id}}</div>
                           </td>
                           <td>{{block.block.scope}}</td>
-                          <td>{{brushedDomainRounded}}</td>
+                          <td>{{this.brushedDomainRounded}}</td>
                           <!-- ----------------------------- -->
                           <td class="devel-visible">{{blockId}}</td>
                           <td class="devel-visible">{{zoomCounter}}</td>
@@ -139,7 +139,7 @@
 
                     </div>
 
-                    <div>{{referenceDatasetName}}</div>
+                    <div>{{this.referenceDatasetName}}</div>
 
                     <div>
                       <label style="display:inline">Request Samples :
@@ -176,76 +176,11 @@
                       {{/if}}
 
                     </div>
-
-                    <div>
-                      <label>List of samples from VCF</label>
-                      {{#if this.vcfGenotypeSamplesText}}
-                        <span class="sample-count">( {{this.vcfGenotypeSamplesCount}} )</span>
-                      {{else}}
-                        <button type="button" onclick={{action this.vcfGenotypeSamples}} class="btn btn-info btn-xs">Get samples list</button>
-                      {{/if}}
-
-                      <div class="genotypeSampleFilter_textInput">
-                        <label class="" style="margin-right: 1em;">
-                          <i class="glyphicon glyphicon-filter"></i>
-                          Search / Filter
-                        </label>
-                        {{input id="sampleNameFilter" type="search" value=sampleNameFilter
-                          input=(action this.nameFilterChanged value="target.value")
-                          placeholder="Filter available samples by name" }}
-                          {{!-- maybe autocomplete="sample-name", but samples names are mostly numeric so it may be more of an impediment than a benefit for the user --}}
-
-                        <span>
-                          <input type="checkbox"
-                            style="margin-left: 3em;"
-                            checked={{@userSettings.samplesIntersection}}
-                            oninput={{pipe
-                              (action (mut @userSettings.samplesIntersection) value="target.checked")
-                                this.ensureSamples
-                               }}  >
-                          <label>Common</label>
-                          {{#ember-tooltip side="right" delay=500}}
-                            Select from samples which are common to the viewed VCF datasets
-                          {{/ember-tooltip}}
-                        </span>
-                        <div>
-                          {{this.filterErrorText}}
-                        </div>
-
-                      </div>
-
-                      {{ensureSamplesForDatasetTabEffect}}
-                      <div class="genotype-controls">
-
-                        <select style="height:100px" class="form-control" multiple onchange={{action this.selectSample}}>
-                          {{#each this.filteredSamples as |sampleChoice|}}
-                          <option value={{sampleChoice}} selected={{include this.selectedSamples sampleChoice}}>{{sampleChoice}}</option>
-                          {{/each}}
-                        </select>
-
-                      </div>
-                    </div>
-
-                    <div>
-                      <label>Selected samples to be requested in VCF Lookup</label>
-                      {{#if this.selectedCount}}
-                        <span class="sample-count">( {{selectedCount}} )</span>
-                      {{/if}}
-
-                      <div>
-                        <Textarea
-                          class="selectedSamplesInput"
-                          @value={{this.selectedSamplesText}}
-                          @input={{action this.sampleNameListInputKey value="target.value" }}
-                          @enter={{this.sampleNameListInput}}
-                          @insert-newline={{this.sampleNameListInput}}
-                          @escape-press={{this.sampleNameListInput}}
-                          placeholder="Sample Names"
-                          >
-                        </Textarea>
-                      </div>
-
-                    </div>
+                    {{!-- i.e. panel/genotype-samples --}}
+                    <Panel::GenotypeSamples @the={{this}} @userSettings={{@userSettings}}
+                      @showIntersectionCheckbox={{true}} >
+                      {{this.ensureSamplesForDatasetTabEffect}}
+                    </Panel::GenotypeSamples>
 
                   {{!-- --------------------------------------------------------------------- --}}
                   </div>
@@ -282,13 +217,13 @@
                           Format for request and display
                         {{/ember-tooltip}}
                         </label>
-                        {{radio-button value='CATG' groupValue=requestFormat
-                          changed=(action requestFormatChanged preventDefault=false)
+                        {{radio-button value='CATG' groupValue=this.requestFormat
+                          changed=(action this.requestFormatChanged preventDefault=false)
                         }}
                         ACGT &nbsp;&nbsp;
                         <span>
-                        {{radio-button value='Numerical' groupValue=requestFormat
-                          changed=(action requestFormatChanged preventDefault=false)
+                        {{radio-button value='Numerical' groupValue=this.requestFormat
+                          changed=(action this.requestFormatChanged preventDefault=false)
                         }}
                         012 &nbsp;&nbsp;
                         {{#ember-tooltip side="right" delay=500}}
@@ -400,8 +335,8 @@
 
               {{!-- --------------------------------------------------------------- --}}
 
-              {{#if lookupMessage}}
-                {{elem/panel-message warningMessage=lookupMessage}}
+              {{#if this.lookupMessage}}
+                {{elem/panel-message warningMessage=this.lookupMessage}}
               {{/if}}
 
               {{!-- --------------------------------------------------------------- --}}
@@ -409,7 +344,7 @@
               <div class="genotype">
                 {{#if this.vcfExportText.length}}
                   <button type="button" class="btn btn-info btn-xs">
-                    {{#component "ember-csv@file-anchor" data=this.vcfExportText fileName=this.vcfExportFileName}} VCF Download{{/component}}
+                    {{!-- #component "ember-csv@file-anchor" data=this.vcfExportText fileName=this.vcfExportFileName}} VCF Download{{/component --}}
                   </button>
                 {{/if}}
               </div>
@@ -430,8 +365,7 @@
               {{/if}}
               <div>
                 {{!-- style={{compute (action this.vcfGenotypeTextWidthStyle) --}}
-                <textarea class="vcfGenotypeText" >
-                  {{this.vcfGenotypeText}}</textarea>
+                <textarea class="vcfGenotypeText" >{{this.vcfGenotypeText}}</textarea>
               </div>
 
             {{/tab.pane}}
@@ -467,7 +401,7 @@
                   setSelected=this.setSelectedSampleFilter
                   as |tn|}}
 
-                  <BsTab @customTabs={{true}} @onChange={{action tn.onChangeTab}} @activeId={{tn.activeId}} as |tab|>
+                  <BsTab @customTabs={{true}} @fade={{false}} @onChange={{action tn.onChangeTab}} @activeId={{tn.activeId}} as |tab|>
                     <BsNav @type="tabs" as |nav|>
                       <ul class="nav nav-tabs li-active-extra counts">
 
@@ -540,7 +474,7 @@
                               <label style="margin-left: 1em;" >Variant Intervals</label>
                             </div>
                             <ul class="list-group borderless haplotypeFilters">
-                              {{#each blocksVariantInterval as |blockVi|}}
+                              {{#each this.blocksVariantInterval as |blockVi|}}
                                 <li class="list-group-item">
                                   {{blockVi.datasetId.id}}
                                 </li>
@@ -1034,7 +968,7 @@
 <div class="clear-both"></div>
 
 <style>
-  {{#each datasetsClasses as |datasetsClass|}}
+  {{#each this.datasetsClasses as |datasetsClass|}}
     {{concat ".col-Dataset-" datasetsClass.id}}
     {
       border-left : 5px solid {{datasetsClass.colour}};

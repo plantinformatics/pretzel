@@ -4,8 +4,8 @@ var nodeSass = require('node-sass');
 
 const EmberApp = require('ember-cli/lib/broccoli/ember-app');
 
-module.exports = function(defaults) {
-  var app = new EmberApp(defaults, {
+module.exports = function (defaults) {
+  const app = new EmberApp(defaults, {
     // Add options here
     browserify: {
       transform: [
@@ -31,10 +31,23 @@ module.exports = function(defaults) {
     },
 
     'ember-bootstrap': {
-      'bootstrapVersion': 3,
+      'bootstrapVersion': 4,
       'importBootstrapFont': false,
-      'importBootstrapCSS': false
-    }
+      'importBootstrapCSS': true,
+      /* added in app/templates/application.hbs : <div id="ember-bootstrap-wormhole"></div> */
+      insertEmberWormholeElementToDom : false,
+    },
+    webpack: {
+      stats: {
+        errorDetails: true,	// equivalent to --stats-error-details
+      },
+      /* This is suggested to help with 'npm link' for local worktrees, it
+       * didn't include the external package in vendor js, so 'npm pack' was
+       * used instead, for @plantinformatics/vcf-genotype-brapi.
+      resolve: {
+        symlinks: false
+      }, */
+    },
   });
 
   // Use `app.import` to add additional libraries to the generated
@@ -50,18 +63,33 @@ module.exports = function(defaults) {
   // please specify an object with the list of modules as keys
   // along with the exports of each module as its value.
   //
-  app.import('bower_components/d3/d3.js');
-  app.import('bower_components/d3-tip/d3-tip.js');
-  app.import('bower_components/handsontable/dist/handsontable.full.min.js');
-  app.import('bower_components/handsontable/dist/handsontable.full.min.css');
   app.import('vendor/js/divgrid/divgrid.js');
   app.import('node_modules/colresizable/colResizable-1.6.min.js');
-  app.import('node_modules/bootstrap/js/tooltip.js');
-  app.import('node_modules/bootstrap/js/popover.js');
-  app.import('node_modules/bootstrap/js/button.js');
-  app.import('node_modules/bootstrap/js/tab.js');
-  app.import('node_modules/bootstrap/js/dropdown.js');
+  // app.import('node_modules/popper.js/dist/popper.js');
+  app.import('node_modules/bootstrap/dist/js/bootstrap.bundle.js');
+  const bootstrapJs = 'node_modules/bootstrap/js/dist/'; // or src/
+  /*
+  app.import(bootstrapJs + 'tooltip.js');
+  app.import(bootstrapJs + 'popover.js');
+  app.import(bootstrapJs + 'button.js');
+  app.import(bootstrapJs + 'tab.js');
+  app.import(bootstrapJs + 'util.js');
+  app.import(bootstrapJs + 'dropdown.js');
+  */
   app.import('node_modules/numeric/lib/numeric.latest.js');
+  app.import('node_modules/@lix/d3-tip/index.js');  // src/
+  app.import('node_modules/dompurify/dist/purify.js');
+
+  /* Either import handsontable here, or
+   * via <link rel="stylesheet" > and <script > in app/index.html
+   */
+  const HoT = 'node_modules/handsontable/';
+  app.import(HoT + 'dist/handsontable.full.min.js');  // handsontable.js
+  app.import(HoT + 'dist/handsontable.full.css'); // handsontable.css
+
+  // app.import('node_modules/interval-bins/dist/interval-bins.js');
+  // app.import('node_modules/@plantinformatics/vcf-genotype-brapi/dist/vcf-genotype-brapi.js');
+
   app.import('node_modules/tsne-js/build/tsne.min.js', {
     outputFile : 'assets/web-workers/tsne.min.js'
   });

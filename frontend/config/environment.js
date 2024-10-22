@@ -1,3 +1,23 @@
+//------------------------------------------------------------------------------
+// gets : SyntaxError: Cannot use import statement outside a module
+// import { ensureTrailingString } from '../app/utils/string';
+// Copied from app/utils/string.js :
+// import { ensureTrailingString } from '../app/utils/string';
+/** Ensure that the given string ends with the given suffix, which may be a multi-char string.
+ * @param string
+ * @param suffix
+ * @desc
+ * Usage e.g. ensureTrailingString(apiHost, '/')
+ */
+function ensureTrailingString(string, suffix) {
+  if (! string.endsWith(suffix)) {
+    string += suffix;
+  }
+  return string;
+}
+
+//-------------------------------------------------------------------------------
+
 
 //------------------------------------------------------------------------------
 // Added
@@ -7,7 +27,7 @@
 
 'use strict';
 
-module.exports = function(environment) {
+module.exports = function (environment) {
   const env = process.env;
   const
   apiHost = process.env.API_URL || 'http://localhost:5000',
@@ -17,8 +37,10 @@ module.exports = function(environment) {
    * It is assumed that ROOT_URL has a leading and trailing '/'; it is '/' by default.
    * ROOT_URL and rootURL relate to the primary, and don't apply if apiHost is
    * not the primary server.
+   * Update - ROOT_URL may not have a trailing /, so append one here as required;
+   * similar in adapters/application.js : buildURL() and auth.js : _endpoint() : hostRootUrl
    */
-  rootURL = (process.env.ROOT_URL !== undefined) ? process.env.ROOT_URL : '/',
+  rootURL = (process.env.ROOT_URL !== undefined) ? ensureTrailingString(process.env.ROOT_URL, '/') : '/',
   /** Combine rootURL + apiNamespace.  This is used directly in URLs.
    * Usage : apiHost + rootURLNamespace + '/' + route
    * This could be '', otherwise it has a leading '/'.
@@ -27,15 +49,16 @@ module.exports = function(environment) {
   rootURLNamespace = rootURL + apiNamespace,
   apiHostRootURLNamespace = apiHost + rootURLNamespace;
 
-  var ENV = {
+  const ENV = {
     modulePrefix: 'pretzel-frontend',
-    environment: environment,
+    environment,
     apiHost,
     apiNamespace, // adding to the host for API calls
     rootURL,
     rootURLNamespace,
     apiHostRootURLNamespace,
-    locationType: 'auto',
+    // : Router location 'auto' is deprecated. Most users will want to set `locationType` to 'history' in config/environment.js for no change in behavior. See deprecation docs for details. [deprecation id: deprecate-auto-location]
+    locationType: 'history',	// was auto. template has 'history'
     handsOnTableLicenseKey: null,
 
     'ember-local-storage': {
@@ -51,20 +74,14 @@ module.exports = function(environment) {
       },
       EXTEND_PROTOTYPES: {
         // Prevent Ember Data from overriding Date.parse.
-        Date: false
-      }, 
-    },
-    'ember-simple-auth': {
-      /* these configuration values are moved to the routes :
-       *  authenticationRoute, routeAfterAuthentication, routeIfAlreadyAuthenticated
-       * as per : https://github.com/simplabs/ember-simple-auth/blob/master/guides/upgrade-to-v3.md
-       */
+        Date: false,
+      },
     },
 
     APP: {
       // Here you can pass flags/options to your application instance
       // when it is created
-    }
+    },
   };
 
   if (environment === 'development') {
@@ -118,6 +135,7 @@ module.exports = function(environment) {
    * https://handsontable.com/docs/7.4.2/tutorial-license-key.html
    */
   ENV.handsOnTableLicenseKey = process.env.handsOnTableLicenseKey;
+  console.log('config/environment', 'ENV.handsOnTableLicenseKey', process.env.handsOnTableLicenseKey);
 
 
   return ENV;

@@ -15,6 +15,7 @@ import { eltIdGpRef }  from '../utils/draw/axis';
 import AxisEvents from '../utils/draw/axis-events';
 import { stacks, xScaleExtend } from '../utils/stacks';
 import { dLog } from '../utils/common/log';
+import { compareDependencies } from '../utils/ember-devel';
 
 /* global d3 */
 
@@ -95,6 +96,11 @@ export default Component.extend(Evented, AxisEvents, {
   /** This is passed as trackBlocksR to axis-tracks.
    */
   trackBlocks : filter('dataBlocks.@each.isZoomedOut', function(block, index, array) {
+    // this does not occur during each mousewheel zoom step
+    if (false) {
+    const dependencies = ['dataBlocks', 'dataBlocks.0.isZoomedOut'];
+    compareDependencies(this, 'trackBlocks', dependencies);
+    }
     return ! block.get('isZoomedOut');
   }),
 
@@ -371,10 +377,43 @@ export default Component.extend(Evented, AxisEvents, {
 
   /*--------------------------------------------------------------------------*/
 
+  /* If used, willRender() is called in response to setDomain(), and during
+   * mousewheel zoom / pan .show() causes excessive rendering.
+   * Instead .show() is done in didInsertElement().
+
   willRender() {
+    this._super(...arguments);
     dLog('axis-2d willRender', this.get('axisID'));
+
+    const dependencies = [
+    'model',
+    'drawMap',
+      'drawMap.oa',
+      'axis1d',
+      'axis1d.axis.id',
+      'axis1d.extended',
+      'targetEltId',
+      'positionRightEdgeEffect',
+      'axisID',
+      'subComponents',
+      'subComponents.length',
+      'dataBlocks',
+      'childWidths',
+      'childWidths.centre',
+      'trackWidth',
+      'data',
+      'allocatedWidths',
+      'viewedChartable',
+      'resizeEffect',
+      'axisBlocks',
+      'blockService.viewedChartable',
+      'trackBlocks',
+    ];
+    compareDependencies(this, 'willRender', dependencies);
+
     this.show();
   },
+*/
   /** If .axis1d.extended, render the <g.axis-use> and sub-elements,
    * otherwise remove them.
    */
@@ -389,6 +428,11 @@ export default Component.extend(Evented, AxisEvents, {
     this._super(...arguments);
     dLog('axis-2d didInsertElement', this.get('axisID'));
 
+    /* As noted in willRender() comment, .show() call is moved here to minimise
+     * rendering during mousewheel zoom / pan.
+     * didInsertElement() is called when .is2d (.extended) changes.
+     */
+    this.show();
     this.getUseTask.perform(1 * SecondMs);
 
     later(() => this.dragResizeListen(), 1000);
@@ -428,6 +472,10 @@ export default Component.extend(Evented, AxisEvents, {
   /** receive notification of draw-map resize. */
   resized : function(prevSize, currentSize) {
     dLog("resized in components/axis-2d", this, prevSize, currentSize);
+    /* maybe positionRightEdge(); it is not otherwise done when window resizes, but width is not effected.
+    this.get('positionRightEdge').perform(); */
+    // update <path d=sLine > : edgeHeight
+    this.show();
   },
 
   /*--------------------------------------------------------------------------*/
@@ -675,6 +723,15 @@ export default Component.extend(Evented, AxisEvents, {
         p = axisUse.selectAll('g.axis-use > path')
           // .transition().duration(transitionEnable * 1000)
           .attr("transform",function(d) {return "translate(" + (width) + ",0)";});
+
+	/** An axis displaying a QTL dataset has <g.axis-use> (.is2d is true);
+	 * if it is then split (.extended becomes true)
+	 * axis-2d:didInsertElement() : show() is not called, so pick that up here.
+	 */
+	if (this.get('axis1d.extended') && ! p.size() ) {
+	  later(() => this.show());
+	}
+
         dLog('positionRightEdgeEffect', axisUse.node(), width, p.node());
       }
     }
@@ -811,7 +868,8 @@ export default Component.extend(Evented, AxisEvents, {
       later(() => axisUse.remove(), transitionEnable * 1000 + 100);
     }
 
-    this._super.apply(this, arguments);
+    // done by .willDestroyElement()
+    // this._super.apply(this, arguments);
   }
 
 });

@@ -144,7 +144,7 @@ function reduceIdChildrenTreeR(tree, parentKey, index, fn, result) {
  */
 function justUnmatched(value) {
   // could instead pass a flag to datasetFilter() to discard unmatched.
-  let result = value.hasOwnProperty('unmatched') && (d3.keys(value).length === 1);
+  let result = value.hasOwnProperty('unmatched') && (Object.keys(value).length === 1);
   return result;
 }
 
@@ -176,7 +176,7 @@ function logV(levelMeta, v) {
     console.log(
       v.constructor.modelName,
       v.get('name'),
-      v._internalModel.__data
+      v.id
     );
   }
   else if (typeof v === 'object') {
@@ -225,7 +225,9 @@ function leafCount(levelMeta, values) {
         (valueType == "Dataset") && 
           value.get &&
           value.get('isLoaded')) {
-        dLog('leafCount', valueType, value.get('id'), value.get('name'), value.get('blocks'));
+        if (trace_values) {
+          dLog('leafCount', valueType, value.get('id'), value.get('name'), value.get('blocks.length'), value.get('blocks'));
+        }
         count1 += value.get('blocks.length');
       }
       else {

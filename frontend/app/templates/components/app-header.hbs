@@ -3,70 +3,70 @@
     <div class="navbar" style="display: block;">
       <ul class="nav navbar-left">
         <li>
-          {{elem/logo-pretzel class="app-logo"}}
+          <Elem::LogoPretzel @class="app-logo" />
         </li>
-        {{#if auth}}
-          {{#if session.isAuthenticated}}
+        {{#if this.auth}}
+          {{#if this.session.isAuthenticated}}
             <li>
-              {{#link-to 'mapview' classNames='' tagName='a'}}
+              <LinkTo @route="mapview" @classNames="" @tagName="a">
                 Map Viewer
-              {{/link-to}}
+              </LinkTo>
             </li>
             <li>
-              {{#if parsedOptions.individual}}
-                {{#link-to 'matrixview' classNames='' tagName='a'}}
+              {{#if this.parsedOptions.individual}}
+                <LinkTo @route="matrixview" @classNames="" @tagName="a">
                   Individual Viewer
-                {{/link-to}}
+                </LinkTo>
               {{/if}}
             </li>
             <li>
-              {{#link-to 'change-password' classNames='' tagName='a'}}
-                Change Password {{elem/icon-base name="user"}}
-              {{/link-to}}
+              <LinkTo @route="change-password" @classNames="" @tagName="a">
+                Change Password <Elem::IconBase @name="user" />
+              </LinkTo>
             </li> 
             <li>
-              {{#link-to 'groups' classNames='' tagName='a'}}
-                Groups {{elem/icon-base name="tent"}}
-              {{/link-to}}
+              <LinkTo @route="groups" @classNames="" @tagName="a">
+                Groups <Elem::IconBase @name="tent" />
+              </LinkTo>
             </li> 
           {{/if}}
         {{else}}
           <li>
-            {{#link-to 'mapview' classNames='' tagName='a'}}
+            <LinkTo @route="mapview" @classNames="" @tagName="a">
               Map Viewer
-            {{/link-to}}
+            </LinkTo>
           </li>
         {{/if}}
       </ul>
       <ul class="nav navbar-right">
         <li>
           <a href='https://github.com/plantinformatics/pretzel/' target='_blank'>
-            v{{version }} released {{buildDateFormatted}} View on GitHub
+            v{{this.version }} released {{this.buildDateFormatted}} View on GitHub
           </a>
         </li>
-        {{#if auth}}
-          {{#if session.isAuthenticated}}
+        {{#if this.auth}}
+          {{#if this.session.isAuthenticated}}
             <li>
 	      {{!-- bootstrap reboot.scss now sets color color: inherit; for an
 		   <a> without attributes href or tabindex, so add a dummy
 		   tabindex to retain the default <a> colour. --}}
               <a {{action 'logout'}} class="" tabindex>
-                Logout {{elem/icon-base name="log-out"}}
+                Logout <Elem::IconBase @name="log-out" />
               </a>
             </li>
-            {{#if sessionAccount.account}}
-              <p class="navbar-text pull-right">Signed in as {{sessionAccount.account.name}}</p>
+            {{#if this.sessionAccount.account}}
+              <p class="navbar-text pull-right">Signed in as {{this.sessionAccount.account.name}}</p>
             {{/if}}
           {{else}}
             <li>
-              {{#link-to 'signup' classNames='' tagName='a'}}
-                Sign Up {{elem/icon-base name="edit"}}
-              {{/link-to}}
+              <LinkTo @route="signup" @classNames="" @tagName="a">
+                Sign Up <Elem::IconBase @name="edit" />
+              </LinkTo>
             </li>
             <li>
-              {{#link-to 'login' classNames='' tagName='a'}}
-                Log In {{elem/icon-base name="log-in"}}
-              {{/link-to}}
+              <LinkTo @route="login" @classNames="" @tagName="a">
+                Log In <Elem::IconBase @name="log-in" />
+              </LinkTo>
             </li>
           {{/if}}
         {{/if}}

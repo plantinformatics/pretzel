@@ -16,7 +16,9 @@ import {
  * Now using : github.com/html-next/ember-raf-scheduler
  */
 
-import { scheduler } from 'ember-raf-scheduler';
+// ember-raf-scheduler is not updated for Ember v4
+// import { scheduler } from 'ember-raf-scheduler';
+const scheduler = undefined;
 
 //------------------------------------------------------------------------------
 
@@ -190,17 +192,17 @@ function showAxisZoomResetButtons(svgContainer, zoom, resetZoom, brushedAxis1d) 
     .attr('class', (d,i) => zoomResetNames[i])
     .attr('x', (d,i) => i*55).attr('y', 20)
     .text(I);
-  g.on('mousedown', function () {
-    d3.event.stopPropagation();
+  g.on('mousedown', function (event) {
+    event.stopPropagation();
   });
   /** parallel with zoomResetNames[], [0] is Zoom and [1] is Reset. */
   g
     .selectAll('.Zoom')
-    .on('click', function () {
-      d3.event.stopPropagation();
+    .on('click', function (event) {
+      event.stopPropagation();
       const brushedDomain = brushedAxis1d.brushedDomain;
       if (brushedDomain) {
-        zoom(that, /*i*/undefined, /*g*/undefined, brushedDomain);
+        zoom(event, that, /*i*/undefined, /*g*/undefined, brushedDomain);
       }
       // zoomed = true; // not used.
 
@@ -418,9 +420,10 @@ function AxisBrushZoom(oa) {
    *
    * @param that  the brush g element.
    * The datum of `that` is the name/ID of the axis which owns the brushed axis.
+   * @param event event.sourceEvent is a MouseEventPrototype
    * 
    */
-  function brushHelper(that) {
+  function brushHelper(that, event) {
     const fnName = 'brushHelper';
     const axisApi = oa.axisApi;
     // Chromosome name, e.g. 32-1B
@@ -437,12 +440,17 @@ function AxisBrushZoom(oa) {
     //Remove old circles.
     axisFeatureCircles_selectAll().remove();
     let
-    brushRange = d3.event.selection,
+    brushRange = event.selection,
     /** d3.mouse() calls : function point(node, event) { .. point.x = event.clientX, point.y = event.clientY;
      * so don't call mouse if those are undefined.
+     * 
+     * event.type === 'end' and ! event.sourceEvent
+     *  when called via : resizeDrawing() -> showResize() -> axisBrushShowSelection() -> brushended() -> brushHelper()
      */
-    eventHasClientXY = (d3.event.clientX !== undefined) && (d3.event.clientX !== undefined),
-    mouse = brushRange && eventHasClientXY && d3.mouse(that);
+    sourceEvent  = event.sourceEvent,
+    eventHasClientXY = sourceEvent && (sourceEvent.clientX !== undefined) && (sourceEvent.clientX !== undefined),
+    /** used in trace only. */
+    mouse = brushRange && eventHasClientXY && d3.pointer(event);
     let brushSelection = d3.brushSelection(d3.select(that));
     const
     brush_ = that.__brush,
@@ -533,7 +541,7 @@ function AxisBrushZoom(oa) {
      * changing axis element data from axisName (blockId) to axis1d provides the
      * block reference.
      */
-    me.sendAction('selectBlock', axis1d.axis);
+    me.selectBlock(axis1d.axis);
 
   } // brushHelper
 
@@ -672,7 +680,7 @@ function AxisBrushZoom(oa) {
          * features, regardless of uniqueness of names.
          */
         let blockFeatures = block.get('features');  // was oa.z[block.axisName];
-        /*d3.keys()*/ blockFeatures.forEach(function(feature) {
+        blockFeatures.forEach(function(feature) {
           let f = feature.name;
           // let feature = blockFeatures[f];
           let value = feature?.value;
@@ -874,7 +882,7 @@ function AxisBrushZoom(oa) {
     axes.forEach(function(a) {
       let idName = axisEltId(a); // axis ids have "a" prefix
       let
-      domain = a.parent ? a.parent.domain : a.referenceDomain;
+      domain = a.referenceDomain;
       domain = maybeFlip(domain, a.flipped);
       a.setZoomed(false);
       a.y.domain(domain);
@@ -903,20 +911,24 @@ function AxisBrushZoom(oa) {
 
 
   let targetIdCount = 0;
-  function handleFeatureCircleMouseOver(d, i)
+  function handleFeatureCircleMouseOver(event, axis1d)
   {
     let
-    /** d is the axis chromosome id */
-    chrName = d,
     featureName = this.classList[0],
     hoverFeatures = featureName ? [featureName] : [];
     if (oa.drawOptions.showCircleHover)
     {
       /** related @see axisFeatureCircles_selectAll() */
       let
-      selector = "g.axis-outer#" + eltId(chrName) + " > circle." + CSS.escape(featureName),
+      axisS = selectAxisOuter(axis1d),
+      // selector = "g.axis-outer#" + eltId(chrName) + " > circle." + CSS.escape(featureName),
+      /** this is axisFeatureCircles_eltId(feature) */
+      featureEltId = this.id,
+      // featureId = featureEltId.replace('fc_',''),
+      // based on : axisFeatureCircles_selectOneInAxis(axisS, feature);
+      selector = "g > circle#" + featureEltId,
       targetId = "MC_" + ++targetIdCount;
-      console.log("handleFeatureCircleMouseOver", d, featureName, selector, targetId);
+      console.log("handleFeatureCircleMouseOver", axis1d.axis?.brushName, featureName, featureEltId, selector, targetId);
       if (false)
       {
         d3.select(selector)
@@ -927,7 +939,7 @@ function AxisBrushZoom(oa) {
         const pathInfo = PathInfo(oa);
         const toolTip = pathInfo.toolTip;
         toolTip.html('<span id="AxisCircleHoverTarget">AxisCircleHoverTarget</span>');
-        toolTip.show(d, i);
+        toolTip.show(this);
         targetId = "devel-visible";
       }
     }
@@ -937,7 +949,7 @@ function AxisBrushZoom(oa) {
       // me.set("axisFeatureCircleHover", true);
     });
   }
-  function handleFeatureCircleMouseOut(d, i)
+  function handleFeatureCircleMouseOut(event, i)
   {
     if (false) {
       debounce(
@@ -950,6 +962,7 @@ function AxisBrushZoom(oa) {
     {
       function hidePathHoverToolTip() {
         const
+        d = event.target.__data__,
         axis1d = d,
         oa = axis1d.drawMap.oa,
         pathInfo = PathInfo(oa);
@@ -971,32 +984,54 @@ function AxisBrushZoom(oa) {
    * Traverse selected Axes, matching only the axisName of the brushed axis.
    * Set the y domain of the axis, from the inverse mapping of the brush extent limits.
    * Remove the zoom button, redraw the axis, ticks, zoomPath. Move the brush.
+   * @param event event of button-click on Zoom/Reset, or mouse scroll on brush
    * @param that  the brush g element.
    * The datum of `that` is the axis-1d of the brushed axis.
    * @param brushedDomainClick  limits of the current brush, to which we are zooming
    * (brushedAxis1d.brushedDomain)
-   * defined when called via .Zoom .on('click' )
-   * undefined when called via .on('zoom' ), i.e. mousewheel zoom
+   * defined when called via .Zoom .on('click' ), i.e. event.type === 'click'
+   * undefined when called via .on('zoom' ), i.e. mousewheel zoom, event.type === 'zoom', isWheelEvent
    */
-  function zoom(that, i, g, brushedDomainClick) {
+  function zoom(event, that, i, g, brushedDomainClick) {
     const fnName = 'zoom';
     const trace_zoom = 0;
+    const thisZoom = this;
     const selectedAxes = oa.selectedAxes;
-    /** can be undefined in some cases. it is defined for WheelEvent - mousewheel zoom. */
-    let e = d3.event.sourceEvent;
-    let isWheelEvent = d3.event.sourceEvent instanceof WheelEvent;
+    /** can be undefined in some cases. it is defined for WheelEvent - mousewheel zoom.
+     * If event is a d3 wrapper event (event.type === 'zoom') then use event.sourceEvent
+     * as in wheelNewDomain() : let e = (event.type === 'zoom') ? event.sourceEvent : event,
+     */
+    let e = event.sourceEvent || event; // was d3.event.sourceEvent;
+    /** equivalent : event.type === 'zoom' */
+    let isWheelEvent = e instanceof WheelEvent;
     let timeStamp = e && e.timeStamp;
     me.set('axisZoom.zoomPan', {isWheelEvent, timeStamp});
     if (trace_zoom > 0 + isWheelEvent)
       console.log('zoom', that, brushedDomainClick, arguments, this);
-    let axis1d;
+    /** Both of these elements have datum axis-1d :
+     * <g class="brush">
+     *   <g clip-path="url(#axis-clip-<blockId>)"  >
+     */
+    let axisElt, axis1d;
+    if (! (that instanceof Element)) {
+      axis1d = that;
+    } else
     if (isWheelEvent) {
-      axis1d = arguments[0];
+      axisElt = e.target;
+      /** i.e. d3.select(axisElt).data()[0] */
+      axis1d = axisElt.__data__;
       // expect that brushedDomainClick === undefined;
       let w = e;
+      /* MouseEvent has .movement{X,Y}
+       *   refn : https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent
+       * WheelEvent has deltaX
+       *   https://developer.mozilla.org/en-US/docs/Web/API/WheelEvent
+       * (deprecated) mousewheel_event has wheelDelta{X,Y}
+       *   https://developer.mozilla.org/en-US/docs/Web/API/Element/mousewheel_event
+       */
       if (trace_zoom > 1) {
         dLog(
-          'WheelEvent', d3.event.sourceEvent, d3.event.transform, d3.event,
+          'WheelEvent', e, e.target.transform,
           '\nclient', w.clientX, w.clientY,
           'deltaY', w.deltaY,
           'layer', w.layerX, w.layerY,
@@ -1016,32 +1051,28 @@ function AxisBrushZoom(oa) {
        * . draw_flipRegion() will apply to it;
        * . it is not apparent to the user that they should clear it,
        * by clicking on axis, to remove class .faded.
-       */
       selectedAxes.addObject(axis1d);
+       */
     }
-    else if (e instanceof MouseEvent) {
-      console.log(
+    else /*if (e instanceof MouseEvent)*/ {
+      dLog(
         'MouseEvent', e);
-    }
-    else
-    {
-      axis1d = d3.select(that).data();
-      if (axis1d.length == 1)
-        axis1d = axis1d[0];
+      axisElt = that; // .parentElement also has __data__ === axis1d;
+      axis1d = axisElt.__data__;
     }
     const axisName = axis1d.axisName;
 
-    let t = oa.svgContainer; // .transition().duration(750);
+    let t = isWheelEvent ? undefined : oa.svgContainer; // .transition().duration(750);
     /** The response to mousewheel zoom is direct, no transition delay.  requestAnimationFrame() is used. */
     let tRaf = undefined; // or t.duration(10);
     /** true if the axis domain is changed. */
     let domainChanged = false;
 
     /* this uses .map() to find i such that selectedAxes[i] == axisName,
-     * and i is used to lookup the parallel array brushExtents[].
+     * and i was used to lookup the parallel array brushExtents[],
+     * now replaced by axis1d.brushedRegion.
      * #afterRelease, selectedAxes / brushExtents / brushedRegions can be
      * better integrated, simplifying this calc and others.
-     */
     const
     selectedAxes_i = 
       selectedAxes.reduce(function(result, p, i) {
@@ -1052,7 +1083,8 @@ function AxisBrushZoom(oa) {
       }, []);
     selectedAxes_i.forEach(function(p_i) {
       let [p, i] = p_i;
-      const axis1d = p;
+     */
+    {
       let y = axis1d.y, svgContainer = oa.svgContainer;
 
       let
@@ -1062,14 +1094,19 @@ function AxisBrushZoom(oa) {
       brushedDomain;
       ensureYscaleDomain(yp, axis1d);
 
-      if (d3.event.sourceEvent)  // if there is a mousewheel event
+      if (event?.type === 'click') {
+        domain = brushedDomain = brushedDomainClick;
+        dLog(fnName, axisName, yp.domain(), yp.range(), axis1d.brushedRegion, axis1d.portion, brushedDomain);
+      } else // isWheelEvent
+      if (event)  // if there is a mousewheel event
       {
         /** note the brushedDomain before the scale change, for updating the brush position */
         let brushExtent = axis1d.brushedRegion;
         if (brushExtent)
           brushedDomain = axisRange2Domain(axis1d, brushExtent);
 
-        domain = wheelNewDomain(axis1d, oa.axisApi, false);  // uses d3.event, d3.mouse()
+        // wheelNewDomain can handle d3 ZoomEvent, but uses the .sourceEvent
+        domain = wheelNewDomain(e, axis1d, oa.axisApi, false);
       } else if (axis1d.brushedRegion) {
         brushedDomain = axis1d.brushedRegion.map(function(ypx) { return yp.invert(ypx /* *axis1d.portion*/); });
         // brushedDomain = [yp.invert(brushExtents[i][0]), yp.invert(brushExtents[i][1])];
@@ -1094,11 +1131,13 @@ function AxisBrushZoom(oa) {
         zoomedOut = isEqual(domainAllS, domainFS);
 
         axis1d.setZoomed(! zoomedOut);
+        // overlap : axis-1d : domainChanged()->updateScaleDomain() -> updateDomain()
         y.domain(domain);
         axis1d.ys.domain(domain);
         // scale domain is signed. currently .zoomedDomain is not, so maybeFlip().
         axis1d.setDomain(maybeFlip(domain, axis1d.flipped));
 
+        if (scheduler) {
         /* was updatePaths true, but pathUpdate() is too long for RAF.
          * No transition required for RAF.
          */
@@ -1108,6 +1147,9 @@ function AxisBrushZoom(oa) {
           axis1d, tRaf, false,  // args
           me.get('controls.view.debounceTime')
         );
+        } else {
+          axisScaleChanged(axis1d, t, /*updatePaths*/false);
+        }
         let brushExtent = axis1d.brushedRegion;
         if (brushedDomainClick) {
           /* on Zoom button click, clear the brush selection, because we have
@@ -1116,7 +1158,11 @@ function AxisBrushZoom(oa) {
           d3.select(that).call(y.brush.move,null);
         }
         else if (brushExtent) {
-          let gBrush = d3.event.sourceEvent.target.parentElement;
+          let
+          /** <text class="Zoom" > */
+          target = (thisZoom.tagName === 'text') ? that : e.target,
+          /** <g class="brush">  */
+          gBrush = that.__brush ? that : target.parentElement;
           let newBrushExtent = brushedDomain.map(function (r) { return yp(r);});
           // in d3.js:move() .__brush is expected to be defined.
           const state = gBrush.__brush;
@@ -1128,7 +1174,7 @@ function AxisBrushZoom(oa) {
           }
         }
       }
-    });
+    };
 
 
     debounce(
@@ -1146,8 +1192,9 @@ function AxisBrushZoom(oa) {
 
   function axisScaleChangedRaf(axis1d, t, updatePaths) {
     const
+    fn = () => axisScaleChanged(axis1d, t, updatePaths),
     job = 
-      scheduler.schedule('affect', () => axisScaleChanged(axis1d, t, updatePaths));
+      scheduler ? scheduler.schedule('affect', fn) : fn();
   }
   /** @param axis1d
    * @param updatePaths true : also update foreground paths.
@@ -1172,9 +1219,9 @@ function AxisBrushZoom(oa) {
     }
   }
 
-  function brushended() {
+  function brushended(event, datum) {
     // console.log("brush event ended");
-    brushHelper(this);
+    brushHelper(this, event);
   }
 
   //----------------------------------------------------------------------------
@@ -1215,7 +1262,7 @@ function AxisBrushZoom(oa) {
       {
         console.log(oa.selectedAxes);
         selectedAxes.forEach(function(axis1d, i) {
-          // p is selectedAxes[i], including brushedMap === selectedAxes[0]
+          // axis1d is selectedAxes[i], including brushedMap === selectedAxes[0]
           limits = axis1d.brushedDomain;
           console.log('flipRegion', axis1d.axisName, i, brushedMap, limits, axis1d.brushedRegion);
           /* Generally for axis1d in selectedAxes[], axis1d.brushedRegion is

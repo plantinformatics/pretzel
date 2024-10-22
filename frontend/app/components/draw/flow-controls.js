@@ -34,15 +34,16 @@ export default Component.extend({
   },
 
   init() {
+    this._super.apply(this, arguments);
     // trigger flowsService to be injected into utils/draw/flow-controls before didRender() calls that library.
     let flowsService = this.get('flowsService');
     // this is done by flows-collate init(), but that occurs later
     flowsServiceInject(flowsService);
 
     console.log('components/draw/flow-controls init', arguments);
-    this._super.apply(this, arguments);
   },
   willRender() {
+    this._super.apply(this, arguments);
     let flowsService = this.get('flowsService');
     let options = this.get('parsedOptions'),
     uAlias = options && options.uAlias;

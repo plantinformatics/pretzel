@@ -2,6 +2,7 @@ import Controller from '@ember/controller';
 import { computed, action } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
+import { getOwner } from '@ember/application';
 
 // -----------------------------------------------------------------------------
 
@@ -17,7 +18,6 @@ export default class GroupController extends Controller {
   reset() {
     this.editingName = false;
   }
-
 
   @action
   changeGroupName(group, newName) {
@@ -42,6 +42,7 @@ export default class GroupController extends Controller {
   }
 
   /** model is group */
+  @alias('model') group;
   @alias('model.server') server;
 
   @action

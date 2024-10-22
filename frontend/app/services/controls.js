@@ -23,6 +23,17 @@ export default Service.extend(Evented, {
    */
   viewed2 : {},
 
+  //----------------------------------------------------------------------------
+  /** Classic Components can be found via :
+   * Ember.getOwner(component) .lookup('component:' + 'panel/manage-explorer')
+   * but Glimmer Components seem to be not registered, so that would have to be
+   * done.  registrationsByName provides a simple lookup mechanism for those
+   * Glimmer Components, e.g.  'component:panel/manage-genotype'
+   */
+  registrationsByName : { updateCount : 0},
+
+  //----------------------------------------------------------------------------
+
   /** @return the api server indicated by the tab currently selected
    * by the user (serverTabSelected), or primaryServer if tab not
    * changed.
@@ -34,7 +45,9 @@ export default Service.extend(Evented, {
     // factored from components/goto-feature-list.js:blocksUnique() . (taskGet getBlocksOfFeatures)
     let
     serverTabSelectedName = this.get('serverTabSelected'),
-    serverTabSelected = serverTabSelectedName && this.get('apiServers').lookupServerName(serverTabSelectedName),
+    // init() does addServer() of primary, so evaluate this even if ! serverTabSelectedName
+    apiServers = this.get('apiServers'),
+    serverTabSelected = serverTabSelectedName && apiServers.lookupServerName(serverTabSelectedName),
     apiServer = serverTabSelected || this.get('apiServers.primaryServer');
     return apiServer;
   }),

@@ -22,7 +22,7 @@ export default EntryBase.extend({
   actions : {
     loadBlock(block) {
       console.log('entry-block-add-button: loadBlock', block, arguments);
-      this.sendAction('loadBlock', block);
+      this.loadBlock(block);
       /** these 2 functions each determine if this button is within the explorer
        * Trait or Ontology tab, and only the corresponding function will take an
        * action. */

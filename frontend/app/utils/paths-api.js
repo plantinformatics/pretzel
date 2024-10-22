@@ -1,5 +1,7 @@
 
+/* lookup path-data on owner, so that it has owner, instead of :
 import PathData from '../components/draw/path-data';
+*/
 import { featureNameClass } from './draw/stacksAxes';
 
 /*----------------------------------------------------------------------------*/
@@ -83,7 +85,7 @@ function pathsOfFeature(store, pathsResultType, owner) {
       blocksFeatures[0].reduce(function (result, f0) {
         let result1 = blocksFeatures[1].reduce(function (result, f1) {
           let pair =
-            pathCreate(store, f0, f1, blocks[0], blocks[1]);
+            pathCreate(owner, store, f0, f1, blocks[0], blocks[1]);
           result.push(pair);
           return result;
         }, result);
@@ -95,7 +97,8 @@ function pathsOfFeature(store, pathsResultType, owner) {
 
 const trace_pc = 1;
 
-function pathCreate(store, feature0, feature1, block0, block1) {
+function pathCreate(owner, store, feature0, feature1, block0, block1) {
+  const PathData = owner.factoryFor('component:draw/path-data');
   let
     /** not used - same as feature{0,1}.blockId. */
     block0r = store.peekRecord('block', block0),
@@ -120,7 +123,7 @@ function pathCreate(store, feature0, feature1, block0, block1) {
     idText = locationPairKeyFn({ feature0, feature1}),
     r = store.peekRecord(modelName, idText);
     if (r)
-      dLog('pathCreate', feature0, feature1, block0, block1, r._internalModel.__attributes, r._internalModel.__data);
+      dLog('pathCreate', feature0, feature1, block0, block1, r.id);
     else if (false)
     {
       let data = {
@@ -139,7 +142,7 @@ function pathCreate(store, feature0, feature1, block0, block1) {
       };
       r = store.push({data});
       if (trace_pc)
-        dLog('pathCreate', r, r.get('id'), r._internalModel, r._internalModel.__data, store, data);
+        dLog('pathCreate', r, r.get('id'), r.id, store, data);
     }
     else {
       let inputProperties = {

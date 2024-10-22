@@ -1,22 +1,28 @@
 
 <li class="list-group-item list-group-item-info" >
-  {{#record/entry-expander nodeName=name
-      controlOptions=controlOptions
-      values=values
-      levelMeta=levelMeta
-      selectExpander=selectExpander}}
+  {{#record/entry-expander nodeName=this.name
+      controlOptions=this.controlOptions
+      values=this.values
+      levelMeta=this.levelMeta
+      selectExpander=this.selectExpander
+      selectBlock=this.selectBlock
+      selectDataset=this.selectDataset
+  }}
 
     {{!-- log 'entry-level' name values --}}
     <ul>
-      {{record/entry-values values=valuesFiltered levelMeta=levelMeta
-        name=name
+      {{record/entry-values
+        values=this.valuesFiltered
+        levelMeta=this.levelMeta
+        name=this.name
         parentDone=true
-        controlOptions=controlOptions
-        loadBlock="loadBlock"
-        selectExpander=selectExpander
-        selectBlock="selectBlock"
-        selectedBlock=selectedBlock
-        selectDataset="selectDataset"}}
+        controlOptions=this.controlOptions
+        loadBlock=this.loadBlock
+        selectExpander=this.selectExpander
+        selectBlock=this.selectBlock
+        selectedBlock=this.selectedBlock
+        selectDataset=this.selectDataset
+      }}
     </ul>
 
   {{/record/entry-expander}}

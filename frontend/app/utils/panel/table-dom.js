@@ -30,7 +30,9 @@ function tableYDimensions() {
     offsetHeight = tableDiv.offsetHeight,// : 830
     offsetTop = tableDiv.offsetTop; // : 104
     dim = {offsetTop, offsetHeight};
-    dLog(fname, dim, tableDiv);
+    if (trace) {
+      dLog(fname, dim, tableDiv);
+    }
   }
   return dim;
 }

@@ -922,7 +922,7 @@ function PathDataUtils(oa) {
     const controlsView = this.controlsView;
     const flows = oa.flows;
     if (controlsView?.get?.('pathJoinClient'))
-    d3.keys(flows).forEach(function(flowName) {
+    Object.keys(flows).forEach(function(flowName) {
       let flow = flows[flowName];
       if (flow.enabled)
         pathUpdate_(t, flow);

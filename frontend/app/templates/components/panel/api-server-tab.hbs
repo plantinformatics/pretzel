@@ -6,13 +6,13 @@
   <a href={{concat "#" tabId}}
    role="tab"
    class="apiServer"
-   style={{borderStyle}}
+   style={{this.borderStyle}}
    onclick={{action (pipe
      (action @tab.select tabId)
-     (action serverTabSelected apiServer.tabId apiServerName apiServer)
+     (action this.serverTabSelected this.apiServer.tabId this.apiServerName this.apiServer)
      ) }}
      >
-    {{apiServer.tabText}}
+    {{this.apiServer.tabText}}
   </a>
 
 </@nav.item>

@@ -3,6 +3,8 @@
 var env = (process.env.NODE_ENV || 'development');
 var isDevEnv = env === 'development' || env === 'test';
 
+/* global process */
+const database = process.env.DB_NAME || 'pretzel';
 // building up the config prior to exporting
 // allows for further properties to be added
 // using conditional expressions
@@ -14,8 +16,8 @@ var config = {
   "mongoDs": {
     "host": process.env.DB_HOST,
     "port": process.env.DB_PORT,
-    "database": process.env.DB_NAME || 'pretzel',
-    "authSource": "admin",
+    database,
+    "authSource": database, // "admin",
     "password": process.env.DB_PASS,
     "name": "mongoDs",
     "user": process.env.DB_USER,

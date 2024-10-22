@@ -1,13 +1,10 @@
 <ul>
-  {{#each dataFiltered as |block|}}
-    {{#record/entry-selectable node=block nodeName=block.name
-       extraClasses="d-inline-block"
-       selectedNode=selectedBlock
-       selectNode=(action 'selectBlockAndDataset')}}
+  {{#each this.dataFiltered as |block|}}
+    {{#record/entry-selectable node=block nodeName=block.name extraClasses="d-inline-block" selectedNode=this.selectedBlock selectNode=(action 'selectBlockAndDataset')}}
       {{!-- node (block) is passed to selectNode  --}}
 
       {{record/entry-block-add-button
-        loadBlock="loadBlock"
+        loadBlock=this.loadBlock
         entry=block }}
       <span title='{{block.name}}' >{{block.name}}</span>
 

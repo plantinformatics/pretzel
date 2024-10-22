@@ -19,10 +19,11 @@
   </div>
 </div>
 
-{{input
-    value=feature1
+<Input
+    @value={{this.feature1}}
     class="form-control"
-    placeholder="Marker/Gene Name / Location" }}
+    placeholder="Marker/Gene Name / Location" >
+  </Input>  
 
 <div>
   <input type="checkbox" 
@@ -31,11 +32,12 @@
          checked="checked"
   />
   <label>Interval</label>
-  {{input
-      type=hidden
-      value=feature2
+  <Input
+      type=this.hidden
+      @value={{this.feature2}}
       class="form-control"
-      placeholder="Marker/Gene Name / Location" }}
+      placeholder="Marker/Gene Name / Location" >
+  </Input>  
 
 
 </div>
@@ -51,17 +53,21 @@
 
 <button>Map
   {{#ember-popover  }}
-    {{goto-map mapList=mapsOfFeature }}
+    {{goto-map mapList=this.mapsOfFeature
+      selectBlock=this.selectBlock
+    }}
   {{/ember-popover }}
 </button>
 <div>
-  {{#each mapsOfFeature as |map|}}
+  {{#each this.mapsOfFeature as |map|}}
     {{ map.name }}
   {{/each}}
 </div>
 </div>
 
-{{goto-ensembl featureName=feature1 selectedFeatures=selectedFeatures
-  selectedBlock=selectedBlock
+{{goto-ensembl
+  featureName=this.feature1
+  selectedFeatures=this.selectedFeatures
+  selectedBlock=this.selectedBlock
 }}
 

@@ -32,7 +32,7 @@ import { task } from 'ember-concurrency';
 
 import { tab_explorer_prefix, text2EltId, keysLength } from '../../utils/explorer-tabId';
 import { parseOptions } from '../../utils/common/strings';
-import { thenOrNow } from '../../utils/common/promises';
+import { thenOrNow, contentOf } from '../../utils/common/promises';
 import { toPromiseProxy } from '../../utils/ember-devel';
 
 import {
@@ -122,8 +122,13 @@ export default ManageBase.extend({
     };
     // or bind(this, function ...);
   }),
+  didInsertElement() {
+    this._super(...arguments);
+    this.changeTab('explorer');
+  },
   willDestroyElement() {
     this.get('apiServers').off('receivedDatasets', this.receivedDatasetsFn);
+    this._super(...arguments);
   },
 
   urlOptions : computed('model.params.options', function () {
@@ -305,12 +310,18 @@ export default ManageBase.extend({
     treeP = this.get('treesForData'), // single-root : ontologyTree
     id2PnP = this.get('ontologyId2DatasetNodes'),
     promise = Promise.all([treeP, id2PnP]).then(([tree, id2Pn]) => {
+      /** undefined .levelMeta has been seen, when switching straight to /groups
+       * route as /mapview is still being computed and rendered */
+      if (! this.levelMeta) {
+        console.warn(fnName, 'levelMeta', this);
+      }
       let valueTree = blockFeatureOntologiesTreeEmbeddedFn(this.levelMeta, tree, id2Pn);
       /** valueTree is the root, e.g.  "CO_321:ROOT" : "Wheat traits", so count the children. */
       let keyLength = treesChildrenCount(valueTree);
       this.set('blockFeatureOntologiesTreeEmbeddedKeyLength', keyLength);  // perhaps rename both to keysLength.
       return valueTree;
-    });
+    })
+      .catch(error => { dLog(fnName, error.responseJSON.error || error); return Promise.resolve({}); });
     return promise;
   }),
 
@@ -776,9 +787,10 @@ export default ManageBase.extend({
 
   /** datasets with a .parent, i.e. containing child data blocks */
   withParent: filter('data', function(dataset, index, array) {
+    const fnName = 'withParent';
     let parent = dataset.get('parent.content');
     if (trace_dataTree > 2)
-      console.log('withParent', dataset._internalModel.__data, parent && parent._internalModel.__data);
+      dLog(fnName, dataset.id, parent && parent.id);
     return parent;
   }),
   /** Names of all datasets - just for trace / devel, not used. */
@@ -807,7 +819,8 @@ export default ManageBase.extend({
     function uniqParentsByName(array) {
       return array
     /* withParent : */ .filter(function(dataset, index, array) {
-      return dataset.get('parent.content');
+      // .content was required earlier, perhaps not now.
+      return contentOf(dataset.get('parent'));
     })
     /* child1 :*/ .uniqBy('parentName')  // parent.name
     /* parents :*/ .mapBy('parent');
@@ -893,14 +906,15 @@ export default ManageBase.extend({
    * @return true if dataset .displayName is not in .parentsSet
    */
   datasetFilterNotInParentsSet(dataset, index, array) {
+    const fnName = 'datasetFilterNotInParentsSet';
     let parentsSet = this.get('parentsSet'),
     name = dataset.get('displayName'),
     found = parentsSet.has(name);
     if (index === 0)
     {
-      console.log('dataWithoutParent1', array, parentsSet, dataset);
+      dLog('dataWithoutParent1', fnName, array, parentsSet, dataset);
     }
-    console.log(dataset._internalModel.__data, index, name, found);
+    dLog(fnName, dataset.id, index, name, found);
     return ! found;
   },
 
@@ -1442,22 +1456,32 @@ export default ManageBase.extend({
       /** f may be {unmatched: Array}, which can be skipped. */
       let p = f.get && f.get('parent.content');
       return p; }) : [],
-    /** can update this .nest() to d3.group() */
-    n = d3.nest()
     /* the key function will return undefined or null for datasets without parents, which will result in a key of 'undefined' or 'null'. */
-      .key(function(f) { let p = f.get && f.get('parent'); return p ? p.get('displayName') : f.get('parentName'); })
-      .entries(withParentOnly ? withParent : datasets);
-    /** this reduce is mapping an array  [{key, values}, ..] to a hash {key : value, .. } */
-    let grouped =
-      n.reduce(
+    key = function(f) { let p = f.get && f.get('parent'); return p ? p.get('displayName') : f.get('parentName'); },
+    entries = (withParentOnly ? withParent : datasets),
+    n = d3.group(entries, key);
+
+    /** originally used d3.nest() which produced an array [{key, values}, ..],
+     * whereas d3.group() returns {key : value, .. }, converted via .entries() to [[key, values], ..] .
+     * Since this .reduce() is mapping that result to a hash {key : value, .. },
+     * some simplification may be possible here.
+     *
+     * Object.entries(n) will not include the keys undefined or null, so to
+     * display the orphan datasets use n.entries() which does.
+     */
+    let grouped = Array.from(n.entries()).reduce(
+      /** Apply datasetsToBlocksByScope() to value or to the children of value
+       * if datasets in value are not children (i.e. ! key) */
         function (result, datasetsByParent) {
-          let key = datasetsByParent.key,
-          values = datasetsByParent.values;
+          const [key, values] = datasetsByParent;
           /** hash: [scope] -> [blocks]. */
           if (trace_dataTree > 1)
             console.log('datasetsByParent', datasetsByParent);
           // as commented in .key() function above.
-          if  ((key === 'undefined') || (key === 'null')) {
+          /* d3.nest() mapped keys to strings, which resulted in strings
+           * 'undefined' and 'null' for key here, whereas d3.group() preserves
+           * the original key values */
+          if  ((key === undefined) || (key === null)) {
             /* datasets without parent - no change atm, just convert the nest to hash.
              * but possibly move the children up to be parallel to the parents.
              * i.e. merge datasetsByParent.values into result.
@@ -1498,7 +1522,7 @@ export default ManageBase.extend({
           {
             /** key is parent name */
             result[key] =
-              me.datasetsToBlocksByScope(tabName, levelMeta, datasetsByParent.values);
+              me.datasetsToBlocksByScope(tabName, levelMeta, values);
           };
           return result;
         },
@@ -1538,7 +1562,7 @@ export default ManageBase.extend({
           else {
             blocks = filterBlocks(dataset);
           }
-          if (trace_dataTree > 1)
+          if (trace_dataTree > 2)
             dLog(name, levelMeta, 'levelMeta.set(', blocks, 'Blocks');
           levelMeta.set(blocks, 'Blocks');
           result2[name] = blocks;
@@ -1655,9 +1679,6 @@ export default ManageBase.extend({
     refreshAvailable() {
       this.refreshAvailable(); // See method function above
     },
-    deleteBlock(chr) {
-      this.sendAction('deleteBlock', chr.id);
-    },
     changeFilter: function(f) {
       this.set('filter', f)
     },
@@ -1674,8 +1695,9 @@ export default ManageBase.extend({
       });
     },
     onDelete(modelName, id) {
+      dLog('onDelete', modelName, id, this._debugContainerKey);
       this.refreshAvailable();
-      this.sendAction('onDelete', modelName, id);
+      this.onDelete(modelName, id);
     },
     /** The user has clicked + to add a block.
      * If the block's dataset has a .parentName and doesn't have a
@@ -1698,7 +1720,7 @@ export default ManageBase.extend({
           block.referenceBlockSameServer() ||
           block.chooseReferenceBlock() ) {
         // mapview : loadBlock() will view the reference if it is not viewed.
-        this.sendAction('loadBlock', block);
+        this.loadBlock(block);
       } else
         this.set('blockWithoutParentOnPrimary', block);
 
@@ -1712,7 +1734,7 @@ export default ManageBase.extend({
           if (referenceBlock) {
             dLog('loadBlock viewing', dataBlock.id, 'as its referenceBlock', referenceBlock.id, 'is viewed');
             this.set('blockWithoutParentOnPrimary', null);
-            this.sendAction('loadBlock', dataBlock);
+            this.loadBlock(dataBlock);
           }
         }
       });
@@ -1882,6 +1904,7 @@ export default ManageBase.extend({
      * is not currently destroyed when the left-panel tab is closed & re-opened,
      * so it is not currently required.
      willRender() {
+     this._super(...arguments);
      this.saveActiveId();
      },
   didRender() {

@@ -23,6 +23,7 @@ function getGroups(auth, own, server, apiServers) {
   store = server.store,
   apiName = own ? 'own' : 'in',
   config = groupApi[apiName],
+  /** result serializer.store is default store, !== store param  */
   serializer = store.serializerFor(config.primaryModelName),
   /** promise yielding an array of records */
   groupsPR = own ? getGroups2(auth, own, server, apiServers) :
@@ -32,8 +33,8 @@ function getGroups(auth, own, server, apiServers) {
        *    in : client-group, own : group
        */
       let cgrs = cgs.map((cg) => {
-        let j = serializer[config.normalizerName](cg),
-            jr = serializer.store.push(j);
+        let j = serializer[config.normalizerName](store, cg),
+            jr = /*serializer.*/store.push(j);
         return jr;
       });
       return cgrs;
@@ -85,7 +86,11 @@ function clientGroupsToGroups(cgs) {
 /**
  * @return a promise, yielding the record of the deleted ClientGroup, or
  * throwing a text error message derived from the API error.
- * @param clientGroup, clientGroupId.
+ * @param apiServers
+ * @param server	api-server
+ * @param clientGroup	Ember Data Object
+ * @param clientGroupId	DB Id
+ * @desc
  * Originally clientGroup was found from clientGroupId in controllers/group/edit.js;
  * Now, in both uses : clientGroupId is now clientGroup.id
  */

@@ -62,6 +62,7 @@ export default class DrawGraphAnnotationsComponent extends Component {
     // .renderOnce() will get cancelled so use .render().
     this.render();
     window.PretzelFrontend.graphAnnotations = null;
+    this._super(...arguments);
   }
 
   //----------------------------------------------------------------------------

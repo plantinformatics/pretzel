@@ -6,11 +6,11 @@
 
   <div class="panel-body">
     <div class="btn-group btn-group-justified" role="group" aria-label="...">
-      {{#each-in filterOptions as |key value|}}
+      {{#each-in this.filterOptions as |key value|}}
         <div class="btn-group" role="group">
           <button
               type="button"
-              class="btn {{if (compare key '===' filter) 'btn-info' 'btn-default'}}"
+              class="btn {{if (compare key '===' this.filter) 'btn-info' 'btn-default'}}"
               {{action "changeFilter" key preventDefault=false}}>
             {{elem/icon-base name=value.icon}} &nbsp;{{value.formal}}
 
@@ -21,48 +21,48 @@
   </div>
 
 
-{{#if serverTabSelected }}
-  <div>Destination Server: {{ serverTabSelected }} </div>
+{{#if this.serverTabSelected }}
+  <div>Destination Server: {{ this.serverTabSelected }} </div>
 {{/if}}
-{{#if errorMessage}}
+{{#if this.errorMessage}}
   <br>
   {{#elem/panel-form
     name="danger"
     heading="Error"}}
-    {{errorMessage}}
+    {{this.errorMessage}}
   {{/elem/panel-form}}
 {{/if}}
-{{#if successMessage}}
+{{#if this.successMessage}}
   <br>
   {{#elem/panel-form
     name="success"
     heading="Success"}}
-    {{successMessage}}
+    {{this.successMessage}}
   {{/elem/panel-form}}
 {{/if}}
-{{#if warningMessage}}
+{{#if this.warningMessage}}
   <br>
   {{#elem/panel-form
     name="warning"
     heading="Warning"}}
-    {{warningMessage}}
+    {{this.warningMessage}}
   {{/elem/panel-form}}
 {{/if}}
 
-{{#if (compare filter '===' 'fileDrop')}}
+{{#if (compare this.filter '===' 'fileDrop')}}
   {{panel/upload/file-drop-zone
-    refreshDatasets=refreshDatasets
+    refreshDatasets=this.refreshDatasets
     }}
-{{else if (compare filter '===' 'cell')}}
+{{else if (compare this.filter '===' 'cell')}}
   {{panel/upload/data-csv
-    datasets=datasets
-    refreshDatasets=refreshDatasets
-    viewDataset=viewDataset
-    active=active
+    datasets=this.datasets
+    refreshDatasets=this.refreshDatasets
+    viewDataset=this.viewDataset
+    active=this.active
   }}
-{{else if (compare filter '===' 'json')}}
+{{else if (compare this.filter '===' 'json')}}
   {{panel/upload/data-json
-    refreshDatasets=refreshDatasets
+    refreshDatasets=this.refreshDatasets
   }} 
 {{/if}}
 

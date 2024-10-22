@@ -1,6 +1,11 @@
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
 
+/**
+ * manage-base (ManageBase) is inherited by these Components :
+ *   manage-explorer manage-dataset manage-block manage-features
+ *   manage-search manage-view upload-data 
+ */
 export default Component.extend({
   store: service(),
   tagName: 'div',
@@ -9,17 +14,15 @@ export default Component.extend({
   classNames: ['panel-section'],
   // actions
   actions: {
-    setTab(panelSide, panelName) {
-      this.sendAction('setTab', panelSide, panelName);
-    },
+    /** mapview setTab is not passed to any instance of manage-base. */
     changeTab(tab) {
-      this.sendAction('changeTab', tab);
-    },
-    selectBlock(chr) {
-      this.sendAction('selectBlock', chr);
+      /** in left-panel.hbs changeTab is passed to manage-explorer and
+       * manage-view, but not other instances of manage-base.
+       */
+      this.changeTab?.(tab);
     },
     selectDataset(dataset) {
-      this.sendAction('selectDataset', dataset);
+      this.selectDataset(dataset);
     }
   },
 });

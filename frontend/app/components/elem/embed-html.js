@@ -71,6 +71,7 @@ export default Component.extend({
   landingPageContentFileName : alias('siteSpecificHtmlUrl'),
 
   willRender : function () {
+    this._super(...arguments);
     console.log('willRender', this.get('landingPageContentFileName'));
     /* This .remove() is probably not required now that the promise result is
      * inserted via {{await}} in the hbs.
@@ -127,6 +128,7 @@ export default Component.extend({
         imgs.attr('src', function (index, val) { return val.replace(/^/, path + '/'); });
       });
     });
+    promise = 
     promise.catch(
       function (/*jqXHR, statusText,*/ error) {
         let callbackContext = this,

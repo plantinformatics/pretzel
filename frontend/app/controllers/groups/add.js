@@ -46,12 +46,13 @@ export default Controller.extend({
     dLog(fnName, this.clientIdSession);
     {
       let store = this.get('apiServers.primaryServer.store');
+      const client = store.peekRecord('client', clientId);
       dLog(fnName, this.store, store);
 
       {
         var group = store.createRecord('group', {
           name: newGroupName,
-          clientId
+          clientId : client
         });
         let p = group.save();
         

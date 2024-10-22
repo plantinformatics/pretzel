@@ -1,4 +1,5 @@
 import { later as run_later } from '@ember/runloop';
+import { getOwner, setOwner } from '@ember/application';
 
 /*----------------------------------------------------------------------------*/
 /* Various utility functions for development / debugging of Ember objects. */
@@ -74,8 +75,10 @@ function getAttrOrCP(object, attrName) {
 
 /** Display Ember Data store Object field values.  for devel debug - this is not a public API.
  *  Before Ember V3 this was '_internalModel.__data'
+ *  In Ember V3 this was '_internalModel._recordData.__data'
+ *  In Ember V4 there is no apparent simple way to access record data, so just display .id :
  */
-const _internalModel_data = '_internalModel._recordData.__data';
+const _internalModel_data = 'id';
 
 //------------------------------------------------------------------------------
 
@@ -182,7 +185,9 @@ function arrayClear(array) {
 
 let objectDependenciesCache = new WeakMap();
 /** Compare the values of an object for CP dependencies.
- * Previous values are stored via a WeakMap, using object as key.
+ * Previous values are stored via a WeakMap, using object as key,
+ * so this only supports 1 compareDependencies() per object, i.e. 1 CP;
+ * that limit can be passed by using label as an additional level of key.
  * @param object Ember Object - this of the CP
  * @param label string to label the console.debug() output
  * @param dependencies array of strings which identify the dependencies
@@ -197,6 +202,57 @@ function compareDependencies(object, label, dependencies) {
   }
   objectDependenciesCache.set(object, current);
 }
+
+//------------------------------------------------------------------------------
+
+export { objectAttributeChanged };
+/** Record the name of an ember data object field attribute which has changed
+ * and should be included in subsequent PATCH to server REST API.
+ *
+ * There are some modules which could support this, but they don't appear to
+ * have been updated to Ember v4 :
+ *  https://github.com/ef4/ember-data-relationship-tracker
+ *  https://www.npmjs.com/package/ember-data-relationship-tracker
+ *  https://www.npmjs.com/package/ember-data-relationship-dirty-tracking
+ *  https://github.com/danielspaniel/ember-data-change-tracker
+ *  https://github.com/jpoiri/ember-dirtier
+ */
+function objectAttributeChanged(object, attributeName) {
+  const
+  key = Symbol.for('attributesToSave'),
+  array = object[key] || (object[key] = []);
+  array.push(attributeName);
+}
+
+//------------------------------------------------------------------------------
+
+export { setupControllerModelOwnerTarget };
+/** Used by routes to set up controller.model, controller.target, and owner of this.
+ * @param controller
+ * @param model
+ * @param this  route
+ * Usage : in class GroupsRoute extends Route { :   setupController = setupController;
+ */
+function setupControllerModelOwnerTarget(controller, model) {
+  this._super(controller, model);
+  const fnName = 'routes/' + this.fullRouteName + ':setupController';
+  dLog(fnName, 'model', model);
+  if (controller.model !== model) {
+    dLog(fnName, 'set model', model);
+    controller.set('model', model);
+  }
+  if (! getOwner(controller)) {
+    const container = getOwner(this);
+    setOwner(controller, container);
+    dLog(fnName, 'set controller owner', container, controller, this);
+  }
+  // this seems required atm - not clear why
+  if (! controller.target) {
+    dLog(fnName, 'set controller.target', this, this.routeName, controller, controller._debugContainerKey);
+    controller.target = this;
+  }
+}
+
 
 // -----------------------------------------------------------------------------
 

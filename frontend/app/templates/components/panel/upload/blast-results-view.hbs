@@ -1,33 +1,39 @@
-{{dataForTableEffect}}
-{{activeEffect}}
-{{viewFeaturesEffect}}
-{{narrowAxesToViewedEffect}}
+{{this.dataForTableEffect}}
+{{this.activeEffect}}
+{{this.viewFeaturesEffect}}
+{{this.narrowAxesToViewedEffect}}
 
 {{!-- --------------------------------------------------------------------- --}}
 
-{{#if statusMessage}}
-  <div>{{statusMessage}}</div>
+{{#if this.statusMessage}}
+  <div>{{this.statusMessage}}</div>
 {{/if}}
 
 {{!-- --------------------------------------------------------------------- --}}
 
-<div id={{search.tableId}} class="actual-row"  style={{this.containerStyle}}></div>
+<div id={{this.search.tableId}} class="actual-row"  style={{this.containerStyle}}></div>
 
 {{!-- --------------------------------------------------------------------- --}}
 
 {{#if 0}}
 <div>
-  {{input type="checkbox" name="viewAllResultAxesFlag" checked=viewAllResultAxesFlag
-  input=(action viewAllResultAxesChange)
- }}
+  <input
+    type="checkbox"
+    name="viewAllResultAxesFlag"
+    checked={{this.viewAllResultAxesFlag}}
+    oninput={{action this.viewAllResultAxesChange}}
+  />
   <label>View all axes with results</label>
 </div>
 {{/if}}
 
 <div>
-  {{input type="checkbox" name="viewFeaturesFlag" checked=viewFeaturesFlag
-  input=(action viewFeaturesChange)
- }}
+  <input
+    type="checkbox"
+    name="viewFeaturesFlag"
+    checked={{this.viewFeaturesFlag}}
+    oninput={{action this.viewFeaturesChange}}
+  />
   <label>Select / Deselect all</label>
 </div>
 
@@ -35,8 +41,8 @@
 <hr>
 
     {{elem/panel-message
-      successMessage=successMessage
-      warningMessage=warningMessage
-      errorMessage=errorMessage}}
+      successMessage=this.successMessage
+      warningMessage=this.warningMessage
+      errorMessage=this.errorMessage}}
 
 {{!-- --------------------------------------------------------------------- --}}

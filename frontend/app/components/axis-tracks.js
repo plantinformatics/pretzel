@@ -1,10 +1,12 @@
 import { isArray } from '@ember/array';
 import { throttle, next, later } from '@ember/runloop';
-import EmberObject, { computed } from '@ember/object';
+import EmberObject, { computed, get as Ember_get, set as Ember_set } from '@ember/object';
 import { alias, filter, filterBy } from '@ember/object/computed';
 import $ from 'jquery';
 import { inject as service } from '@ember/service';
 import { A } from '@ember/array';
+
+import { task } from 'ember-concurrency';
 
 import { isEqual } from 'lodash/lang';
 
@@ -14,7 +16,8 @@ import {
   eltWidthResizable,
   noShiftKeyfilter
 } from '../utils/domElements';
-import { configureHover } from '../utils/hover';
+import { config as hoverConfig, configureHover } from '../utils/hover';
+import { compareDependencies } from '../utils/ember-devel';
 import InAxis from './in-axis';
 import {
   eltId,
@@ -156,10 +159,11 @@ function  configureSubTrackHover(interval)
  */
 function configureClick(selected, featureData2Feature) {
   return function (selection) {
-    selection.on('click', function (d, i, g) { clickTrack.apply(this, [selected, featureData2Feature, d]);});
+    selection.on('click', function (event, d) { clickTrack.apply(this, [selected, featureData2Feature, d]);});
   };
 }
 function clickTrack(selected, featureData2Feature, featureData) {
+  /** this is <rect class="track" >.  featureData === this.__data__ */
   let feature = featureData2Feature.get(featureData);
   dLog('clickTrack', featureData, feature.id, feature);
   selected.clickFeature(feature);
@@ -698,9 +702,9 @@ export default InAxis.extend({
   },
 
   willDestroyElement() {
-    this._super(...arguments);
     console.log("components/axis-tracks willDestroyElement()");
     sharedProperties.axisTracks.removeObject(this);
+    this._super(...arguments);
   },
 
   didRender() {
@@ -798,7 +802,7 @@ export default InAxis.extend({
        * configureClick2()
        */
       if (! selection.empty() && ! selection.duration) {
-        selection.on('click', function (d, i, g) {
+        selection.on('click', function (event, d) {
           if (thisAt.controls.noGuiModeFilter()) {
             /* clickTrack() does not yet use element this. */
             clickTrack.apply(this, [thisAt.selected, thisAt.featureData2Feature, d]);
@@ -811,11 +815,14 @@ export default InAxis.extend({
   // ---------------------------------------------------------------------------
 
   /** @return the given location as string for display as hover text.
+   * @param event d3 mouseover { target: rect.track, ... }
    * @param d featureData, i.e. interval, based on feature.value
    * called via text = textFn(context, d);
+   * @param this <rect class="track" >
    */
-  hoverQtlHtmlFn : function (thisAt, location, d, i, g) {
-    /** `this` is DOM element : g[i]. thisAt is axis-tracks object.   */
+  hoverQtlHtmlFn : function (thisAt, location, event, d) {
+    /** `this` is DOM element : <rect class="track" >.
+     * thisAt is axis-tracks object.   */
     /** location is d.description */
     /** based on hoverTextFn(). */
     let feature = thisAt.featureData2Feature.get(d);
@@ -828,7 +835,12 @@ export default InAxis.extend({
         ontologyColour = ontology && feature?.get('ontologyColour');
     let text;
     if (feature && (traitName || ontology)) {
-      text = '<div class="featureHover html QTL highlightFeature toolTip">\n' +
+      /* class highlightFeature here is not related to :
+       * - components/draw/highlight-feature.js : highlightFeature_draw()
+       * - utils/panel/axis-table.js : highlightFeature()
+       */
+      const toolTipClasses = hoverConfig.hoverNearElement ? 'highlightFeature toolTip' : '';
+      text = `<div class="featureHover html QTL ${toolTipClasses}">\n` +
         `<div>${location}</div>\n`;
       if (traitName) {
         d3.select('body').style('--hoverTraitColour', traitColour_);
@@ -845,7 +857,7 @@ export default InAxis.extend({
       text = (location == "string") ? location :  "" + location;
     }
     /* if (trace > 1)*/ {
-      dLog('hoverQtlHtmlFn', text, location, d, thisAt, g[i]);
+      dLog('hoverQtlHtmlFn', text, location, d, thisAt, this);
     }
     return text;
   },
@@ -926,7 +938,7 @@ export default InAxis.extend({
     /* input data errors such as [undefined, undefined] in intervals passed to createIntervalTree() can cause
      * e.g. RangeError: Maximum call stack size exceeded in Array.sort().
      */
-    d3.keys(intervals).forEach(function (axisName) {
+    Object.keys(intervals).forEach(function (axisName) {
       //Build tree
       intervalTree[axisName] = createIntervalTree(intervals[axisName]);
     });
@@ -989,7 +1001,7 @@ export default InAxis.extend({
 
     /* if parent is un-viewed, this function may be called after axis is removed
      * from stacks. */
-    if (! axis1d || ! Ember.get(axis1d, 'is2d'))
+    if (! axis1d || ! Ember_get(axis1d, 'is2d'))
     {
       let gp = 
         // <g.axis-use> may already be gone.
@@ -1012,7 +1024,7 @@ export default InAxis.extend({
     dLog(gAxis.node());
     let layerModulus = thisAt.controlsView.axisLayerModulus;
     /** could skip the reference block blockIds[0]. */
-    let blockIds = d3.keys(tracks.intervalTree);
+    let blockIds = Object.keys(tracks.intervalTree);
     let
     /** For parseIntervals(), blockId is "1"; otherwise expect that blockId is a child of axisID.
         axisID = gAxis.node().parentElement.__data__, */
@@ -1150,7 +1162,7 @@ export default InAxis.extend({
       let feature = thisAt.featureData2Feature.get(d),
           value = feature.get('value');
       d = value;
-      let nonZeroInterval = Ember.isArray(d) && (d.length > 1) && (d[1] !== d[0]);
+      let nonZeroInterval = Array.isArray(d) && (d.length > 1) && (d[1] !== d[0]);
       /** if axis.zoomed then 0-height intervals are included, not filtered out.
        * In that case, need to give <rect> a height > 0.
        */
@@ -1473,7 +1485,12 @@ export default InAxis.extend({
         ra.call(thisAt.configureClick2());
       }
       rs.merge(ra)
-        .transition().duration(featureTrackTransitionTime)
+      /* Since the framework library update (feature/upgradeFrontend{,2}) this
+       * transition seems to cause axis track rectangles to have initially small
+       * width e.g. ~0.001.  Solving this is not a priority - this transition
+       * does not seem to have a big visual effect.
+       */
+        // .transition().duration(featureTrackTransitionTime)
         .attr('width', pathOrRect(undefined, width));
 
       function attributesForReplace(d, i, g) {
@@ -2101,7 +2118,7 @@ export default InAxis.extend({
     'trackBlocks.[]', 'trackBlocksR.0.featuresLength', 'trackBlocksR.0.features.[]',
     function () {
       let lengths = this.get('trackBlocks').map((block) => [block.axisName, block.block.get('featuresLength')]);
-      // similar : d3.keys(block.features())
+      // similar : Object.keys(block.features())
       console.log('blocksFeaturesLengths', lengths);
       return lengths;
     }),
@@ -2118,6 +2135,18 @@ export default InAxis.extend({
     'controlsViewed.visibleByOntology',
     'controlsViewed.showQTLsWithoutOntologies',
     function () {
+      const dependencies = [
+    'trackBlocksR.@each.visible',
+    'trackBlocksR.@each.featuresLength', 'trait.traits.@each.visible',
+    'trackBlocksR.@each.featuresCountsResultsFiltered',
+    'ontology.ontologyIsVisibleChangeCount',
+    'controlsViewed.visibleByTrait',
+    'controlsViewed.visibleByOntology',
+    'controlsViewed.showQTLsWithoutOntologies',
+        'trackBlocksR', 'ontology', 'controlsViewed',
+        'trait', 'trait.traits',
+      ];
+      compareDependencies(this, 'tracksTree', dependencies);
     let
     trait = this.get('trait'),
     ontology = this.get('ontology'),
@@ -2203,11 +2232,11 @@ export default InAxis.extend({
         blockFeatures[blockId] = features;
         return blockFeatures;
       }, {}),
-    intervalNames = d3.keys(intervals),
+    intervalNames = Object.keys(intervals),
     tracks = this.makeTree(intervals, intervalNames);
     /** may need to limit this to apply only for a significant change of zoomedDomain, e.g. zoomedDomainDebounced.  */
     if (clearLayers) {
-      d3.keys(intervals).forEach(function (axisName) {
+      Object.keys(intervals).forEach(function (axisName) {
         let ifs = intervals[axisName];
         // regionOfTree() will assign a layer to features with !f.layer
         ifs.forEach((f) => {if (f.layer) { f.layer = undefined; } });
@@ -2478,11 +2507,22 @@ export default InAxis.extend({
    * Using a task to wrap the transition will probably be a more maintainable
    * alternative (as in axis-ticks-selected.js : labelsTransitionPerform).
    */
+  slowDependenciesEffectDependencies : {axis1d : {}, controls : {}},
   slowDependenciesEffect : computed(
     'tracksTree',
     'axis1d.featureLength',
     'controls.genotypeSNPFilters',
     function() {
+      const d = this.slowDependenciesEffectDependencies;
+      ['tracksTree',
+    'axis1d.featureLength',
+    'controls.genotypeSNPFilters'].forEach(n => {
+      const v = this.get(n);
+      if (v !== Ember_get(d, n)) {
+        dLog('slowDependenciesEffect', n, v);
+        Ember_set(d, n, v);
+      }
+      });
       const axisTransitionTime = 750;
       later(() => (
         !this.isDestroyed && ! this.isDestroying &&
@@ -2507,6 +2547,9 @@ export default InAxis.extend({
      * CP the dependencies don't have the desired effect. */
     // 'sharedProperties.minQtlWidth',
     function() {
+      return this.showTrackBlocksTask.perform();
+    }),
+  showTrackBlocksTask : task(function *() {
       let tracks = this.get('tracksTree');
       let
       axis1d = this.get('axis1d'),
@@ -2523,15 +2566,17 @@ export default InAxis.extend({
          } else
       */
       if (isViewed) {
-        let blockIds = d3.keys(tracks.intervalTree);
+        let blockIds = Object.keys(tracks.intervalTree);
 
+        // layoutAndDrawTracks() can also be wrapped in a task.
         // intersect with axis zoom region;  layer the overlapping tracks; draw tracks.
         this.layoutAndDrawTracks.apply(this, [undefined, tracks]);
         featuresLength = blockIds.map((blockId) => [blockId, tracks.intervalTree[blockId].intervals.length]);
         console.log('showTrackBlocks() featuresLength', featuresLength);
       }
       return featuresLength;
-    }),
+    }).keepLatest(),
+
   adjustedWidth : alias('parentView.adjustedWidth'),
   /** Render changes related to component / window resize.
    */

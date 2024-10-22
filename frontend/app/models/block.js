@@ -21,7 +21,7 @@ import {
   intervalOverlap,
   intervalOverlapCoverage
 } from '../utils/interval-calcs';
-import { binEvenLengthRound } from '../utils/draw/interval-bins';
+import { binEvenLengthRound } from 'interval-bins';
 import { subInterval, overlapInterval } from '../utils/draw/zoomPanCalcs';
 import {
   featuresCountsResultsCheckOverlap,
@@ -40,6 +40,8 @@ import { fcsProperties } from '../utils/data-types';
 import { stacks } from '../utils/stacks';
 
 import { promiseText } from '../utils/ember-devel';
+import { compareDependencies } from '../utils/ember-devel';
+
 
 import BlockAxisView from '../utils/draw/block-axis-view';
 
@@ -79,11 +81,11 @@ export default Model.extend({
   urlOptions : alias('queryParams.urlOptions'),
 
 
-  datasetId: belongsTo('dataset'),
-  annotations: hasMany('annotation', { async: false }),
-  intervals: hasMany('interval', { async: false }),
+  datasetId: belongsTo('dataset', { async: true, inverse : null }),
+  annotations: hasMany('annotation', { async: false, inverse : null }),
+  intervals: hasMany('interval', { async: false, inverse : null }),
   // possibly async:true when !allInitially, if needed.
-  features: hasMany('feature', { async: false }),
+  features: hasMany('feature', {async: false, inverse : 'blockId'}),
   range: attr('array'),
   scope: attr('string'),
   name: attr('string'),
@@ -291,6 +293,17 @@ export default Model.extend({
     let isReference = this.isData || ! this.get('datasetId.parentName');
     return isReference;
   }),
+
+  //----------------------------------------------------------------------------
+
+  /** The zoomed-out domain.
+   */
+  domain : computed('range', 'limits', 'featuresDomain', function () {
+    const
+    domain = this.range || this.limits || this.featuresDomain;
+    return domain;
+  }),
+
   currentDomain : computed('zoomedDomain', 'referenceBlockOrSelf.range', 'featuresDomain', function () {
     let domain = this.get('zoomedDomain');
     if (! domain)  {
@@ -671,8 +684,12 @@ export default Model.extend({
     'datasetId', 'datasetId.parent.name', 'scope',
     'blockService.viewed.[]', 
     function () {
+      const fnName = 'referenceBlock';
       let 
         referenceBlock = this.viewedReferenceBlock() || this.referenceBlockSameServer();
+      if (this.hasTag('transient') || ! this.scope) {
+        dLog(fnName, this.brushName, this.scope, referenceBlock?.brushName, referenceBlock?.scope);
+      }
       return referenceBlock;
     }),
   /** Collate the potential referenceBlocks for this block, across all servers.
@@ -863,7 +880,7 @@ export default Model.extend({
               } else if ((block === undefined)) {
                 dLog(fnName, 'block undefined', datasetName, scope);
               } else if (scope !== block.get('scope')) {
-                dLog(fnName, 'not grouped by scope', block.get('id'), scope, block._internalModel.__data, datasetName);
+                dLog(fnName, 'not grouped by scope', block.get('id'), scope, block.brushName, datasetName);
               }
               /* viewedBlocksByReferenceAndScope() does not filter out
                * blocks[0], the reference block, even if it is not viewed, so
@@ -891,6 +908,7 @@ export default Model.extend({
    * @return reference block, or undefined
    */
   viewedReferenceBlock() {
+    const fnName = 'viewedReferenceBlock';
     let
     parentName = this.get('datasetId.parentName'),
     scope = this.get('scope');
@@ -903,7 +921,7 @@ export default Model.extend({
         if (referenceBlock.get('isCopy') && ! block.get('isCopy'))
           referenceBlock = block;
         else {
-          console.warn('viewedReferenceBlock', 'duplicate match', block.get('id'), block._internalModel.__data, parentName, scope);
+          console.warn(fnName, 'duplicate match', block.get('id'), block.brushName, parentName, scope);
         }
       } else
         referenceBlock = block;
@@ -948,7 +966,7 @@ export default Model.extend({
       dLog(fnName, 'synonomous reference viewed',
            referenceBlocks.map(blockInfo), datasetName, scope);
     }
-    function blockInfo(block) { return [block.id, block.store.name, block.get('_internalModel.__data')]; };
+    function blockInfo(block) { return [block.id, block.store.name, block.brushName]; };
     return referenceBlocks;
   },
 
@@ -1040,7 +1058,13 @@ export default Model.extend({
     'axis1d.axisBrushComp.block.brushedDomain.{0,1}',
     'axis1d.brushedDomain.{0,1}',
     function() {
-      let brushedDomain = this.get('axis1d.axisBrushComp.block.brushedDomain') ||
+      /** axis1d.brushedDomain uses scale to convert, whereas
+       * axisBrushObj.brushedDomain is direct, i.e. exact.
+       * axisBrushObj.block is the reference block (i.e. not recursive).
+       */
+      let brushedDomain =
+          this.get('axis1d.axisBrushObj.brushedDomain') ||
+          this.get('axis1d.axisBrushComp.block.brushedDomain') ||
           this.get('axis1d.brushedDomain');
       return brushedDomain;
     }),
@@ -1129,6 +1153,13 @@ export default Model.extend({
     '{zoomedDomainDebounced,zoomedDomainThrottled}.{0,1}',
     'limits',
     function () {
+      const dependencies = [
+    'featuresCountsResultsFiltered',
+    'featureCountInZoom',
+    'zoomedDomainDebounced.0', 'zoomedDomainThrottled.0',
+    'limits',];
+       compareDependencies(this, 'featuresCountIncludingZoom', dependencies);
+
       let
       count = this.get('axis1d.zoomed') ?
         (this.featuresCountsResultsFiltered.length ? this.get('featureCountInZoom') : undefined ) :
@@ -1202,8 +1233,13 @@ export default Model.extend({
   featureCountInZoom : computed('featuresCountsInZoom.[]', function () {
     let overlaps = this.get('featuresCountsInZoom') || [];
     let
-    domain = this.get('zoomedDomain'),
-    count = this.featureCountInInterval(overlaps, domain, 'Zoom');
+    count;
+    if (! this.axis1d?.zoomed) {
+      count = this.featureCount;
+    } else {
+      const domain = this.get('zoomedDomain');
+      count = this.featureCountInInterval(overlaps, domain, 'Zoom');
+    }
     return count;
   }),
   featureCountInBrush : computed('featuresCountsInBrush.[]', function () {
@@ -1355,7 +1391,7 @@ export default Model.extend({
       // based on similar in featureInRange().
       valueInInterval = this.controls.get('view.valueInInterval');
       /** filter by axisBrush .brushedDomain */
-      features = this.features.filter((f) => valueInInterval(f.value, interval));
+      features = this.features.filter((f) => f.value && valueInInterval(f.value, interval));
     } else {
       features = this.features.toArray();
     }
@@ -1471,6 +1507,15 @@ export default Model.extend({
     'featuresCountsResultsFiltered.[]',
     'featuresCountsThreshold',
     function () {
+      if (false) {
+      const dependencies = [
+    'featuresCountIncludingZoom',
+    'zoomedDomainDebounced.0',
+    'featuresCounts',
+    'featuresCountsResultsFiltered',
+    'featuresCountsThreshold',];
+      compareDependencies(this, 'isZoomedOut', dependencies);
+      }
     let
     count = this.get('featuresCountIncludingZoom'),
     featuresCountsThreshold = this.get('featuresCountsThreshold'),

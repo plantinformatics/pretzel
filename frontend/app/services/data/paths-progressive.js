@@ -1,7 +1,7 @@
 import { allSettled } from 'rsvp';
 import { throttle } from '@ember/runloop';
 import { alias } from '@ember/object/computed';
-import { get as Ember_get } from '@ember/object';
+import { get as Ember_get, set as Ember_set } from '@ember/object';
 import Service, { inject as service } from '@ember/service';
 import { getOwner, setOwner } from '@ember/application';
 
@@ -14,11 +14,17 @@ import { task, didCancel } from 'ember-concurrency';
 import { stacks, Stacked } from '../../utils/stacks';
 import AxisBrushObject from '../../utils/draw/axis-brush';
 import { storeFeature } from '../../utils/feature-lookup';
-import {
+//let vcfGenotypeBrapi = window["vcf-genotype-brapi"];
+import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
+//console.log('vcfGenotypeBrapi', vcfGenotypeBrapi);
+const /*import */{
+  setFrameworkFunctions,
   addGerminateOptions,
   vcfGenotypeLookup, addFeaturesJson,
   resultIsGerminate,
   addFeaturesGerminate,
+} = vcfGenotypeBrapi.vcfFeature; // from 'vcf-genotype-brapi';
+import {
   featuresSampleMAF,
 } from '../../utils/data/vcf-feature';
 import { updateDomain } from '../../utils/stacksLayout';
@@ -45,14 +51,14 @@ const dLog = console.debug;
 const blocksUpdateDomainEnabled = false;
 
 function verifyFeatureRecord(fr, f) {
-  let frd = fr._internalModel.__data || fr._internalModel .__recordData.__data,
+  let
   /** Handle some older data which has .range instead of .value */
-  frdv = frd ? frd.value || frd.range : fr.get('value'),
+  frdv = fr.range ?? fr.get('value'),
   fv = f.value || f.range;
   if ((typeof(frdv) == "number") || (frdv.length === undefined))
     frdv = [frdv];
-  if ((typeof(fv) == "number") || (frdv.length === undefined))
-    frdv = [fv];
+  if ((typeof(fv) == "number") || (fv.length === undefined))
+    fv = [fv];
   /** @return 1 if end of interval matches forward, -1 if reverse, 0 if not match. */
   function sameOrReverse(i) { return (frdv[i] === fv[i]) ? 1 : (frdv[i] === fv[1-i]) ? -1 : 0; }
   /** if sameValue is true then sameDirection is implied, so not tested. */
@@ -66,7 +72,7 @@ function verifyFeatureRecord(fr, f) {
   same = 
     (fr.id === f._id) &&
     direction && sameDirection &&
-    ((frd ? frd._name : fr.get('name')) === (f.name || f._name));
+    (fr.get('name') === (f.name || f._name));
   return same;
 }
 
@@ -81,14 +87,16 @@ export default Service.extend({
   apiServers : service(),
   controls : service(),
   selectedService : service('data/selected'),
+  headsUp : service('data/heads-up'),
 
   /** set up a block-adj object to hold results. */
   ensureBlockAdj(blockAdjId) {
+    const fnName = 'ensureBlockAdj';
     let store = this.get('store'),
     blockAdjIdText = blockAdjKeyFn(blockAdjId),
-    r = store.peekRecord('blockAdj', blockAdjIdText);
+    r = store.peekRecord('block-adj', blockAdjIdText);
     if (r)
-      dLog('ensureBlockAdj', blockAdjId, r._internalModel.__attributes, r._internalModel.__data);
+      dLog(fnName, blockAdjId, r.id);
     if (! r) {
       let ba = {
         type : 'block-adj',
@@ -106,12 +114,12 @@ export default Service.extend({
       r = store.push({data: ba});
       else {
       let
-      ban = store.normalize('blockAdj', ba);
+      ban = store.normalize('block-adj', ba);
       r = store.push(ban);
-        dLog('ensureBlockAdj', ban);
+        dLog(fnName, ban);
     }
       if (trace_pathsP)
-        dLog('ensureBlockAdj', r, r.get('blockAdjId'), r._internalModel, r._internalModel.__data, store, ba);
+        dLog(fnName, r, r.get('blockAdjId'), r.id, store, ba);
     }
     return r;
   },
@@ -304,7 +312,7 @@ export default Service.extend({
     if (fr) {
       let verifyOK = verifyFeatureRecord(fr, f);
       if (! verifyOK)
-        dLog('peekRecord feature', f._id, f, fr._internalModel.__data, fr);
+        dLog('peekRecord feature', f._id, f, fr.id, fr);
       c = fr;
     }
     else
@@ -335,7 +343,7 @@ export default Service.extend({
       let fName = f._name || (c.get('blockId.name') + ':' + f.value[0]);
       storeFeature(stacks.oa, flowsService, fName, c, blockId);
       if (trace_pathsP > 2)
-        dLog(c.get('id'), c._internalModel.__data);
+        dLog(c.get('id'), c.id);
     }
     return c;
   },
@@ -380,7 +388,7 @@ export default Service.extend({
       // update the paths{,Aliases}ResultLength -Debounced and -Throttled values
       exists.updatePathsResult(resultFieldName, pathsResult);
       if (trace_pathsP > 1 + pathsViaStream)
-        dLog(resultFieldName, pathsResult, exists, exists._internalModel.__attributes, exists._internalModel.__data);
+        dLog(resultFieldName, pathsResult, exists, exists.id);
     }
 
     return firstResult;
@@ -613,7 +621,7 @@ export default Service.extend({
       block.axis1d.axisBrushObj = r;
     }
     if (r && trace_pathsP)
-      dLog(fnName, block.id, r._internalModel.__attributes, r._internalModel.__data);
+      dLog(fnName, block.id, r.id);
     return r;
   },
 
@@ -643,11 +651,11 @@ export default Service.extend({
             dLog(fnName, 'taskInstance.catch', blockId, error);
             throw error;
           } else {
-            lastResult = t.get('lastSuccessful.value');
+            lastResult = t.lastSuccessful?.value;
             // .lastRunning seems to be always null.
             dLog(
               fnName, 'using lastSuccessful.value', lastResult || t.lastSuccessful, 
-              t.get('state'), t.numRunning, t.numQueued, t.lastRunning
+              t.state, t.numRunning, t.numQueued, t.lastRunning
             );
           }
           return lastResult;
@@ -777,6 +785,7 @@ export default Service.extend({
          * @return text */
         function receivedDataVCF(text) {
           if (text && block) {
+            setFrameworkFunctions({Ember_get, Ember_set});
             const
             /** not used because 0 samples.
              * not used by Germinate because value from HDF is not re-formatted.
@@ -842,6 +851,7 @@ export default Service.extend({
 
   vcfGenotypeLookup(block, paramAxis) {
     const
+    fnName = 'vcfGenotypeLookup',
     /** params for  */
     vcfDatasetId = block.get('datasetId.genotypeId'),
     domain = paramAxis.domain || block.get('axis1d.domain'),
@@ -853,7 +863,19 @@ export default Service.extend({
     requestFormat = 'CATG',
     genotypeSNPFilters = this.controls.genotypeSNPFilters,
     requestOptions = Object.assign({requestFormat}, genotypeSNPFilters);
+    let samples = [];
     addGerminateOptions(requestOptions, block);
+    /** VCF lookup does not require param samples, but Germinate and BrAPI require
+     * samples to be given.
+     */
+    if (block.hasTag('BrAPI')) {
+      const sampleNames = block.get('datasetId.sampleNames');
+      if (! sampleNames?.length) {
+        return Promise.resolve([]);
+      } else {
+        samples = [sampleNames[0]];
+      }
+    }
     const
     /* generally block.name and .scope are the same.
      * To handle vcf files with e.g. %CHROM 'chr1A' instead of '1A',
@@ -861,11 +883,29 @@ export default Service.extend({
      * vcfGenotypeLookup().
      */
     textP = vcfGenotypeLookup(
-      this.auth, /*samples*/[], domainInteger,
+      this.auth, samples, domainInteger,
       requestOptions, vcfDatasetId, block.name, rowLimit
     );
 
+    textP
+    /* can add .then(result => this.showText('')), possibly with a source label
+     * param so that error streams are independent. */
+      .catch(error => {
+        dLog(fnName, 'catch', error);
+        this.showText(error.responseJSON.error.message);
+      });
     return textP;
+  },
+
+
+  /** Display text for user messages / notifications.
+   * @param text
+   */
+  showText(text) {
+    // copied from components/draw/axis-1d.js : drawTicks() : showText()
+    if (! this.get('isDestroying') && ! this.get('headsUp.isDestroying')) {
+      this.set('headsUp.tipText', text);
+    }
   },
 
 

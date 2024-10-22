@@ -1,29 +1,29 @@
-{{#form/auth-base title="Sign Up" errorMessage=errorMessage}}
-  {{#if isRegistered}}
+{{#form/auth-base title="Sign Up" errorMessage=this.errorMessage}}
+  {{#if this.isRegistered}}
     {{#elem/panel-form
       name="success"
       heading="Success"}}
-      {{successMessage}}
+      {{this.successMessage}}
     {{/elem/panel-form}}
   {{else}}
     <form {{action 'submitForm' on='submit'}}>
       {{auth-input
         type='text'
-        value=email
+        value=this.email
         autocomplete="email"
         placeholder='Your Email Address'}}
       {{auth-input
         type='password'
-        value=password
+        value=this.password
         autocomplete="new-password"
         placeholder='Enter a New Password'}}
       {{auth-input
         type='text'
-        value=name
+        value=this.name
         placeholder='Enter your name'}}
       {{auth-input
         type='text'
-        value=institution
+        value=this.institution
         placeholder='Enter the name of your institution'}}
       {{!-- auth-input
         type='text'
@@ -34,7 +34,7 @@
         suggest-text="Already have an account?"
         link-name="login"
         link-pretty="Log In"}}
-      {{elem/button-submit loading=isProcessing}}
+      {{elem/button-submit loading=this.isProcessing}}
     </form>
   {{/if}}
 {{/form/auth-base}}

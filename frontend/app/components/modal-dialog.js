@@ -3,6 +3,9 @@ import Component from '@ember/component';
 
 import $ from 'jquery';
 
+/** Previously used in new-datasource-modal.hbs which changed in f5117533 to <BsModal >
+ * See header comment in components/ember-modal-dialog.js
+ */
 export default Component.extend({
   actions: {
     confirm: function() {

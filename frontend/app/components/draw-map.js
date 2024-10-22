@@ -324,11 +324,12 @@ export default Component.extend(Evented, {
   updateColouredFeatures: function(features) {
     console.log("updateColouredFeatures in components/draw-map.js");
     let self = this;
-    this.get('scroller').scrollVertical('#holder', {
-      duration : 1000,
-      // easing : 'linear', // default is swing
-      offset : -60
-    }).then(function () {
+    /** replaces : (ember-scroll-to) .scrollVertical('#holder', { ... offset : -60 });
+     * not tested
+     */
+    const holderTop = document.getElementById("myDiv").offsetTop;
+    window.scrollTo({ top: holderTop - 60, behavior: 'smooth'});
+    later(function () {
       /* Could invert this control by using the same PathClasses instance as is
        * used for .configurePathColour() which sets .colouredFeaturesChanged,
        * and could instead set an enable flag, and here call
@@ -337,7 +338,7 @@ export default Component.extend(Evented, {
       let colouredFeaturesChanged = self.get('colouredFeaturesChanged');
       if (colouredFeaturesChanged)
         colouredFeaturesChanged(features);
-    });
+    }, 1000);
   },
 
   draw_flipRegion : undefined,
@@ -381,8 +382,6 @@ export default Component.extend(Evented, {
 
   /*------------------------------------------------------------------------*/
   
-  scroller: service(),
-
   axes1d : computed( function () { return stacks.axes1d; }),
   /*
    * stacks.axes1d is [axisID] -> axis-1d.
@@ -404,6 +403,9 @@ export default Component.extend(Evented, {
 
   actions: {
 //-	?
+    /**
+     * @param this	draw-map
+     */
     updatedSelectedFeatures: function(selectedFeatures) {
       /* run once to handle multiple settings of selectedFeatures (panel/left-panel and draw/axis-1d)
        * selectedFeatures is good candidate for converting to a model, simplifying this.
@@ -414,7 +416,7 @@ export default Component.extend(Evented, {
         // console.log(featuresAsArray);
         console.log("updatedSelectedFeatures in draw-map component",
                     selectedFeatures, featuresAsArray.length);
-        this.sendAction('updatedSelectedFeatures', featuresAsArray);
+        this.updatedSelectedFeatures(featuresAsArray);
       }
     },
 
@@ -435,14 +437,15 @@ export default Component.extend(Evented, {
         });
     },
 
+    /** not used. compare mapview : addMap and loadBlock */
     addMap : function(mapName) {
       dLog("controller/draw-map", "addMap", mapName);
-      this.sendAction('addMap', mapName);
+      this.addMap(mapName);
     },
 
     removeBlock(block) {
-      dLog('removeBlock', block.id);
-      this.sendAction('removeBlock', block);
+      dLog('removeBlock', block.id || block);
+      this.removeBlock(block);
     },
 
 
@@ -515,7 +518,7 @@ export default Component.extend(Evented, {
       /* Cause the evaluation of stacks-view:axesP; also evaluates blockAdjIds,
        * and block-adj.hbs evaluates paths{,Aliases}ResultLength and hence
        * requests paths.  This dependency architecture will be made clearer.  */
-      this.get('flowsService.blockAdjs');
+      // this.get('flowsService.blockAdjs');
       this.draw(retHash, 'dataReceived');
     });
   },
@@ -544,7 +547,7 @@ export default Component.extend(Evented, {
     {
       myData = {};
     }
-    myDataKeys = d3.keys(myData);
+    myDataKeys = Object.keys(myData);
     dLog("draw()", myData, myDataKeys.length, source);
 
     // Draw functionality goes here.
@@ -709,7 +712,7 @@ export default Component.extend(Evented, {
     if (! oa.z)
       oa.blockFeatureLocation = oa.z = myData;
     else  // merge myData into oa.z
-      d3.keys(myData).forEach(function (blockId) {
+      Object.keys(myData).forEach(function (blockId) {
         if (! oa.z[blockId])
           oa.z[blockId] = myData[blockId];
       });
@@ -732,7 +735,7 @@ export default Component.extend(Evented, {
       // when tasks are complete, receiveChr() is called via blockService : receivedBlock
     }
     else
-      d3.keys(myData).forEach(function (axis) {
+      Object.keys(myData).forEach(function (axis) {
         /** axis is chr name */
         receiveChr(axis, myData[axis], source);
       });
@@ -780,7 +783,7 @@ export default Component.extend(Evented, {
         delete c.chrName;
         if (trace_stack)
           dLog("receiveChr", axis, cmName[axis]);
-        d3.keys(c).forEach(function(feature) {
+        Object.keys(c).forEach(function(feature) {
           if (! isOtherField[feature]) {
             let f = z[axis][feature];
             // alternate filter, suited to physical maps : f.location > 2000000
@@ -968,12 +971,19 @@ export default Component.extend(Evented, {
         (oa.selectedFeatures = this.get('selectedService.blocksFeatures'));
 
     /** planning to move selectedFeatures out to a separate class/component;
-     * these 2 functions would be actions on it. */
-    //Reset the selected Feature region, everytime an axis gets deleted
+     * these 2 functions would be actions on it.
+     *
+     * Reset the selected Feature region, everytime an axis gets deleted
+     * @param this axisApi
+     */
     function sendUpdatedSelectedFeatures()
     {
       if (oa.drawOptions.showSelectedFeatures)
-        me.send('updatedSelectedFeatures', selectedFeatures);
+        // verification
+        if (me !== this.drawMap) {
+          dLog('sendUpdatedSelectedFeatures', me, '!==', this.drawMap);
+        }
+        me.actions.updatedSelectedFeatures.apply(me, [selectedFeatures]);
     }
     //- moved to axes-1d.js : selectedFeatures_removeAxis(), selectedFeatures_removeBlock()
 
@@ -1062,25 +1072,27 @@ export default Component.extend(Evented, {
     //- moved to ../utils/draw/collate-paths.js : countPaths(), countPathsWithData()
 
     //User shortcut from the keybroad to manipulate the Axes
-    d3.select("#holder").on("keydown", function() {
-      if ((String.fromCharCode(d3.event.keyCode)) == "D") {
+    d3.select("#holder").on("keydown", function holderOnKeyDown(event) {
+      if ((String.fromCharCode(event.keyCode)) == "D") {
         console.log("Delete axis (not implemented)");
         // deleteAxis();
       }
-      else if ((String.fromCharCode(d3.event.keyCode)) == "Z") {
+      else if ((String.fromCharCode(event.keyCode)) == "Z") {
         zoomAxis();
       }
-      else if ((String.fromCharCode(d3.event.keyCode)) == "R") {
+      else if ((String.fromCharCode(event.keyCode)) == "R") {
         refreshAxis();
       }
-      else if ((String.fromCharCode(d3.event.keyCode)) == "A") {
+      else if ((String.fromCharCode(event.keyCode)) == "A") {
         /* replaced by tickOrPath === 'tick' or 'path' */
         oa.drawOptions.showAll = !oa.drawOptions.showAll;
         console.log("showAll", oa.drawOptions.showAll);
         refreshAxis();
       }
-      else if ((String.fromCharCode(d3.event.keyCode)) == " ") {
+      else if ((String.fromCharCode(event.keyCode)) == " ") {
         console.log("space");
+      } else {
+        dLog('holderOnKeyDown', event.keyCode);
       }
     });
 

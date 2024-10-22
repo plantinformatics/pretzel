@@ -34,10 +34,10 @@ export default Ember.Component.extend({
   classNames: ['axis-menu'],
 
   /** the parameter will likely change from blockS (stacks) to block. */
-  block : computed.alias('blockS.block'),
-  axis1d : computed.alias('blockS.axis'),
+  block : alias('blockS.block'),
+  axis1d : alias('blockS.axis'),
   /** blockId of blockS */
-  axisName : computed.alias('blockS.axisName'),
+  axisName : alias('blockS.axisName'),
   menuActions : computed( function () {
     const
     oa = stacks.oa,
@@ -181,7 +181,7 @@ export default Ember.Component.extend({
   dataBlockColour(blockS) {
     let
     block = blockS.block,
-    axis1d = this.axis1d,
+    axis1d = this.axis1d || block.axis1d,
     colour = axis1d.blockColourValue(block);
     return colour;
   },
@@ -244,8 +244,10 @@ export default Ember.Component.extend({
        * hide and show tooltip to position it relative to the target.
        */
       later(() => {
-        tooltip.hide();
-        tooltip.show();
+        if (! this.isDestroying) {
+          tooltip.hide();
+          tooltip.show();
+        }
       }, dragTransitionTime+50);
     }
   }),
