@@ -930,10 +930,16 @@ export default Component.extend({
       }
     } else
     if (columnName.startsWith('LD Block')) {
-    const ldBlock = this.haplotypeToggleRC(row, col);
-    if (ldBlock) {
-      later(() => this.table.render(), 1000);
-    }
+      /** row === -1 when user clicks in the column heading row.
+       * No action is taken in this case; could e.g. toggle LD Block sorting of
+       * sample columns.
+       */
+      if (row >= 0) {
+        const ldBlock = this.haplotypeToggleRC(row, col);
+        if (ldBlock) {
+          later(() => this.table.render(), 1000);
+        }
+      }
     } else if (
       this.datasetColumns.includes(columnName) &&
         (features = cellFeaturesWithDatasetTag(this.table, row, col, 'variantInterval'))
