@@ -319,8 +319,12 @@ export default Component.extend({
     return () => ! this.isDestroying && this.createOrUpdateTable();
   }),
 
+  get useHandsOnTable() {
+    return !!config.handsOnTableLicenseKey;
+  },
+
   createOrUpdateTable() {
-    if (! this.table) {
+    if (! this.table && this.useHandsOnTable) {
       this.createTable();
     }
     if (! this.noData) {
