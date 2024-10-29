@@ -1171,7 +1171,7 @@ export default Service.extend(Evented, {
    * blocks[0] is reserved for the reference block, so a new array is
    * [undefined], and blocks[0] is set by the caller.
    *
-   * @param map contains the datasetId:scope:blocks heirarchy.
+   * @param map contains the datasetId:scope:blocks hierarchy.
    * @param create added to indicate whether to create a map entry if it doesn't exist.
    * The 2nd pass of mapBlocksByReferenceAndScope() passes create===false - see
    * comment there.

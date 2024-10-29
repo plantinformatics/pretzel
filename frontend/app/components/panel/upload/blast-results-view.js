@@ -489,8 +489,8 @@ export default Component.extend({
       scopesForNames = this.get('blockNames').map(name => blocksByName[name]?.scope || name);
       let blocks = transient.blocksForSearch(
         datasetName,
-        this.blockScopes,
         this.get('blockNames'),
+        this.blockScopes,
         scopesForNames,
         namespace
       );
