@@ -2,6 +2,8 @@ import { computed } from '@ember/object';
 import Service, { inject as service } from '@ember/service';
 import { alias } from '@ember/object/computed';
 
+// import { isProxy, withoutProxies } from 'ember-proxy-util';
+
 import { _internalModel_data } from '../../utils/ember-devel';
 
 
@@ -107,6 +109,31 @@ export default Service.extend({
     let blocks = blockNames.map((name, i) =>
       this.pushBlockArgs(datasetId, name, scopesForNames[i], namespace));
     return blocks;
+  },
+
+  /** Resolve Proxy references from blocks[] to dataset.
+   * Currently :
+   *   models/block.js : datasetId : ... async: true
+   *   models/dataset.js : blocks: ... async: false
+   * which causes pushBlockArgs() to assign a Proxy of the identified dataset to
+   * blocks[] .datasetId.  This could be solved by combining pushBlockArgs()
+   * with pushDatasetArgs() and using a single pushPayload(), or by changing the
+   * above async settings, which is likely to have side effects so it can be
+   * done later.  This function implements another solution which is to replace
+   * the Proxy references with references to the actual ember-data store object.
+   */
+  datasetBlocksResolveProxies(dataset, blocks) {
+    const fnName = 'datasetBlocksResolveProxies';
+    blocks.forEach(block => {
+      /** may be Proxy of dataset, i.e. Proxy { <target>: {…}, <handler>: {…} } */
+      const dp = block.get('datasetId');
+      if (dp.content?.id) { // isProxy(dp)
+        const dc = dp.content; // withoutProxies(dp); // i.e. 
+        dLog(fnName, dp, dc, dc.blocks.length, block);
+        block.set('datasetId', dc);
+        dc.blocks.addObject(block);
+      }
+    });
   },
 
   /**

@@ -898,6 +898,16 @@ export default Service.extend(Evented, {
    * undefined and limits are requested for all blocks.
    */
   getBlocksLimits(blockId) {
+    /** don't call taskGetLimits for a transient block. */
+    const block = this.peekBlock(blockId);
+    if (block?.hasTag('transient')) {
+      // Limits of the parent / reference are applicable.
+      /** taskGetLimits() sets .featureLimits and .featureValueCount; perhaps
+       * calculate those here.
+       */
+      return Promise.resolve([]);
+    }
+
     const fnName = 'getBlocksLimits';
     let taskGet = this.get('taskGetLimits');
     console.log("getBlocksLimits", blockId);
@@ -923,6 +933,14 @@ export default Service.extend(Evented, {
 
 
   getBlocksSummary(blockIds) {
+    /** Filter out the transient blocks; set their .featureCount, and don't call
+     * taskGetSummary for them. */
+    const
+    blocks = blockIds.map(blockId => this.peekBlock(blockId)),
+    transientBlocks = Object.groupBy(blocks, block => block?.hasTag('transient'));
+    transientBlocks['true']?.forEach(block => block.set('featureCount', block.features.length));
+    blockIds = transientBlocks['false']?.map(block => block.id) ?? [];
+
     let taskGet = this.get('taskGetSummary');
     console.log("getBlocksSummary", blockIds);
       let p =  new Promise(function(resolve, reject){

@@ -416,7 +416,7 @@ export default Component.extend({
     return blocks;
   }),
   resultParentBlocksByName : computed('parentBlocks', 'blockNames.[]', function () {
-    const fnName = 'resultParentBlocks';
+    const fnName = 'resultParentBlocksByName';
 
     let blockNames = this.get('blockNames');
     const
@@ -494,6 +494,11 @@ export default Component.extend({
         scopesForNames,
         namespace
       );
+      transient.datasetBlocksResolveProxies(dataset, blocks);
+      this.dataset = dataset;	// for development
+      this.blocks = blocks;	//
+      this.get('viewDataset')(datasetName, active, blocks.mapBy('name'));
+
       /** change features[].blockId to match blocks[], which has dataset.id prefixed to make them distinct.  */
       let featuresU = features.map((f) => { let {blockId, ...rest} = f; rest.blockId = dataset.id + '-' + blockId; return rest; });
       /** When changing between 2 blast-results tabs, this function will be

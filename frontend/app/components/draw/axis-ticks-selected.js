@@ -18,12 +18,13 @@ const dLog = console.debug;
 const CompName = 'components/axis-ticks-selected';
 
 /*----------------------------------------------------------------------------*/
-/** @return true if feature's block is not viewed and its dataset
+/** @return true if feature's block's dataset
  * has tag transient.
  */
 function featureIsTransient(f) {
-  let isTransient = ! f.get('blockId.isViewed');
-  if (isTransient) {
+  /** transient blocks are viewed, after c739c7cd. */
+  let isTransient;
+  {
     let d = f.get('blockId.datasetId');
     d = d.get('content') || d;
     isTransient = d.hasTag('transient');
