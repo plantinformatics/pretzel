@@ -497,7 +497,8 @@ export default Component.extend({
       transient.datasetBlocksResolveProxies(dataset, blocks);
       this.dataset = dataset;	// for development
       this.blocks = blocks;	//
-      this.get('viewDataset')(datasetName, active, blocks.mapBy('name'));
+      run_later(() =>
+        this.get('viewDataset')(datasetName, active, blocks.mapBy('name')));
 
       /** change features[].blockId to match blocks[], which has dataset.id prefixed to make them distinct.  */
       let featuresU = features.map((f) => { let {blockId, ...rest} = f; rest.blockId = dataset.id + '-' + blockId; return rest; });

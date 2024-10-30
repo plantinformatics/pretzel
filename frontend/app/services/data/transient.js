@@ -94,12 +94,17 @@ export default Service.extend({
   },
 
   pushBlockArgs(datasetId, name, scope, namespace) {
+    const fnName = 'pushBlockArgs';
     let
     /** may need to pass search ID also; depends on whether distinct blocks should be used for each search result. */
     /** prefix _id with datasetId to make it unique enough.  May use UUID. */
     data = {_id : datasetId + '-' + name, scope, name, namespace, datasetId},
     store = this.get('store'),
     record = this.pushData(store, 'block', data);
+    if (record.scope !== data.scope) {
+      dLog(fnName, record.scope, data.scope);
+      record.scope = data.scope;
+    }
     return record;
   },
   /** Push into the (default) store blocks for the given datasetId and {name,scope,namespace}
