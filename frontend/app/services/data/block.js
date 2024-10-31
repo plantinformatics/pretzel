@@ -689,7 +689,15 @@ export default Service.extend(Evented, {
     let
       apiServers = this.get('apiServers'),
     store = apiServers.id2Store(blockId),
-    block = store && store.peekRecord('block', blockId);
+    block;
+    /** transient blocks are not present in id2Server[] (services/api-servers),
+     * so fall back to searching each server store. */
+    if (store) {
+      block = store && store.peekRecord('block', blockId);
+    } else {
+      block = Object.values(apiServers.servers).find(
+        apiServer => apiServer.store.peekRecord('block', blockId));
+    }
     return block;
   },
 

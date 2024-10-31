@@ -47,6 +47,13 @@ export default Component.extend(AxisEvents, {
   selected : service('data/selected'),
   controls : service(),
 
+  /** set up a component reference for use in the Web Inspector console */
+  develRefnSetup : on('init', function () {
+    // used in development only, in Web Inspector console.
+    if (window.PretzelFrontend) {
+      window.PretzelFrontend.axisTicksSelected = this;
+    }
+  }),
   
   resized : function(widthChanged, heightChanged, useTransition) {
     /* useTransition could be passed down to showTickLocations()

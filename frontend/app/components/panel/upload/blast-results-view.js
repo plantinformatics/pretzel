@@ -95,6 +95,11 @@ export default Component.extend({
   didReceiveAttrs() {
     this._super(...arguments);
 
+    // used in development only, in Web Inspector console.
+    if (window.PretzelFrontend) {
+      window.PretzelFrontend.blastResultsView = this;
+    }
+
     let promise = this.get('search.promise');
     if (promise) {
       promise.catch(() => {
@@ -497,8 +502,6 @@ export default Component.extend({
       transient.datasetBlocksResolveProxies(dataset, blocks);
       this.dataset = dataset;	// for development
       this.blocks = blocks;	//
-      run_later(() =>
-        this.get('viewDataset')(datasetName, active, blocks.mapBy('name')));
 
       /** change features[].blockId to match blocks[], which has dataset.id prefixed to make them distinct.  */
       let featuresU = features.map((f) => { let {blockId, ...rest} = f; rest.blockId = dataset.id + '-' + blockId; return rest; });
@@ -521,7 +524,10 @@ export default Component.extend({
         active,
         /* when switching tabs got : this.isDestroyed===true, this.viewRow and this.get('viewRow') undefined
          * but this.search.viewRow OK */
-        () => transient.showFeatures(dataset, blocks, featuresU, active, this.get('viewRow') || this.search.viewRow));
+        () => {
+          this.get('viewDataset')(datasetName, active, blocks.mapBy('name'));
+          transient.showFeatures(dataset, blocks, featuresU, active, this.get('viewRow') || this.search.viewRow);
+        });
     }
   },
 

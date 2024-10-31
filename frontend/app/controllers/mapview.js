@@ -302,8 +302,10 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
       let related = this.get('view').viewRelatedBlocks(block);
       // load related[] before block.
       related.push(block);
-      // or send('getSummaryAndData', block);
-      related.forEach((block) => this.actions.getSummaryAndData.apply(this, [block]));
+      if (! block.hasTag('transient')) {
+        // or send('getSummaryAndData', block);
+        related.forEach((block) => this.actions.getSummaryAndData.apply(this, [block]));
+      }
     },
     getSummaryAndData(block) {
       /* Before progressive loading this would load the data (features) of the block.
