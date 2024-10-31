@@ -88,6 +88,20 @@ export default Model.extend({
   features: hasMany('feature', {async: false, inverse : 'blockId'}),
   range: attr('array'),
   scope: attr('string'),
+  /** rename scope to _scope, so it can be wrapped by get/set scope.
+  scope: computed('_scope', {
+    get() {
+      // dLog('Getting scope:', this._scope);
+      return this._scope;
+    },
+    set(key, value) {
+      dLog('Setting scope:', value);
+      this.set('_scope', value);
+      return value;
+    }
+  }),
+  */
+
   name: attr('string'),
   namespace: attr('string'),
   featureType: attr(),

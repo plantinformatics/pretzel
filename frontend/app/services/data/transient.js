@@ -101,7 +101,9 @@ export default Service.extend({
     data = {_id : datasetId + '-' + name, scope, name, namespace, datasetId},
     store = this.get('store'),
     record = this.pushData(store, 'block', data);
-    if (record.scope !== data.scope) {
+    if (scope === undefined) {
+      console.warn(fnName, 'scope', scope);
+    } else if (record.scope !== data.scope) {
       dLog(fnName, record.scope, data.scope);
       record.scope = data.scope;
     }

@@ -5,6 +5,8 @@ import { later as run_later, bind } from '@ember/runloop';
 
 import { alias } from '@ember/object/computed';
 
+import { isEqual } from 'lodash/lang';
+
 import config from '../../../config/environment';
 import { nowOrLater } from '../../../utils/ember-devel';
 
@@ -243,7 +245,8 @@ export default Component.extend({
     /** based on dataFeatures - see comments there. */
     let names =
     data
-      .map((row) => /*chrName2Pretzel*/(row[c_chr]));
+      .map((row) => /*chrName2Pretzel*/(row[c_chr]))
+      .uniq();
     dLog('blockNames', names.length, names[0]);
     return names;
   }),
@@ -335,10 +338,14 @@ export default Component.extend({
     dLog(fnName, viewFeaturesFlag);
     this.viewFeaturesAll(viewFeaturesFlag);
   },
-  viewFeaturesEffect : computed('dataFeaturesForStore.[]', 'viewRow', 'active', function () {
-    // viewFeatures() uses the dependencies : dataFeaturesForStore, viewRow, active.
-    this.viewFeatures();
-  }),
+  viewFeaturesEffect : computed(
+    'dataFeaturesForStore.[]', 'viewRow', 'active',
+    /** update after the blastResults_ block is viewed */
+    'block.viewed.length',
+    function () {
+      // viewFeatures() uses the dependencies : dataFeaturesForStore, viewRow, active.
+      this.viewFeatures();
+    }),
   /** if .viewAllResultAxesFlag, narrowAxesToViewed()
    */
   narrowAxesToViewedEffect : computed(
@@ -397,7 +404,7 @@ export default Component.extend({
       (viewFlag) => toView[viewFlag] && this.get('viewDataset')(parentName, viewFlag, toView[viewFlag]));
   },
 
-  parentBlocks : computed('search.parent', function () {
+  parentBlocks : computed('search.parent', 'blockNames', function () {
     const fnName = 'parentBlocks';
     let parentName = this.get('search.parent');
     let
@@ -418,6 +425,7 @@ export default Component.extend({
     /** blockScopes is parallel to blockNames, and enables a mapping
      * from name (result) to scope (axis reference) */
     this.blockScopes = blockNames.map(name => blocks.findBy('name', name)?.scope);
+    dLog(fnName, blockNames, blocks, 'blockScopes', this.blockScopes);
     return blocks;
   }),
   resultParentBlocksByName : computed('parentBlocks', 'blockNames.[]', function () {
@@ -434,7 +442,7 @@ export default Component.extend({
     }
     return blocks;
   }),
-  /** View the blocks of the parent which are identifeid by .blockNames.
+  /** View the blocks of the parent which are identified by .blockNames.
    * @param viewFlag true/false for view/unview
    */
   viewParent(viewFlag) {
@@ -492,10 +500,21 @@ export default Component.extend({
       const
       blocksByName = this.get('resultParentBlocksByName'),
       scopesForNames = this.get('blockNames').map(name => blocksByName[name]?.scope || name);
+      /* from a quick look, blockScopes and scopesForNames are probably similar
+       * solutions to the same problem, from different branches, and likely the same.
+       * from these branches / commits :
+       *   blockScopes    : [feature/ongoingGenotype ade64e58] Load blast search results with block .scope matching reference
+       *   scopesForNames : [feature/upgradeFrontend 8c8d63c2] update axis drag, feature search results display
+       */
+      if (! isEqual(this.blockScopes, scopesForNames) ||
+          (this.blockScopes.length < this.get('blockNames.length')) ||
+          (scopesForNames.length < this.get('blockNames.length')) ) {
+        dLog(fnName, 'blockNames', this.get('blockNames'), 'blockScopes', this.blockScopes, 'scopesForNames', scopesForNames);
+      }
       let blocks = transient.blocksForSearch(
         datasetName,
         this.get('blockNames'),
-        this.blockScopes,
+        // this.blockScopes,
         scopesForNames,
         namespace
       );
@@ -526,7 +545,7 @@ export default Component.extend({
          * but this.search.viewRow OK */
         () => {
           this.get('viewDataset')(datasetName, active, blocks.mapBy('name'));
-          transient.showFeatures(dataset, blocks, featuresU, active, this.get('viewRow') || this.search.viewRow);
+          run_later(() => transient.showFeatures(dataset, blocks, featuresU, active, this.get('viewRow') || this.search.viewRow));
         });
     }
   },
