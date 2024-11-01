@@ -686,6 +686,9 @@ export default Service.extend(Evented, {
    */
   peekBlock(blockId)
   {
+    if ((blockId === undefined) || (blockId === null)) {
+      return undefined;
+    }
     let
       apiServers = this.get('apiServers'),
     store = apiServers.id2Store(blockId),
@@ -907,8 +910,7 @@ export default Service.extend(Evented, {
    */
   getBlocksLimits(blockId) {
     /** don't call taskGetLimits for a transient block. */
-    const block = this.peekBlock(blockId);
-    if (block?.hasTag('transient')) {
+    if (blockId && this.peekBlock(blockId)?.hasTag('transient')) {
       // Limits of the parent / reference are applicable.
       /** taskGetLimits() sets .featureLimits and .featureValueCount; perhaps
        * calculate those here.
