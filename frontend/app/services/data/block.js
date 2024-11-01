@@ -945,7 +945,8 @@ export default Service.extend(Evented, {
      * taskGetSummary for them. */
     const
     blocks = blockIds.map(blockId => this.peekBlock(blockId)),
-    transientBlocks = Object.groupBy(blocks, block => block?.hasTag('transient'));
+    /** result of hasTag() is true or falsey (undefined / 0 / false) */
+    transientBlocks = Object.groupBy(blocks, block => !!block?.hasTag('transient'));
     transientBlocks['true']?.forEach(block => block.set('featureCount', block.features.length));
     blockIds = transientBlocks['false']?.map(block => block.id) ?? [];
 
