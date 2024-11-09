@@ -634,7 +634,7 @@ export default Component.extend({
     /** related : cornerClones */
     topLeftDialog = $('#observational-table .ht_clone_top_left_corner .colHeader.cornerHeader')[0];
     // dLog(fnName, topLeftDialog);
-    Ember_set(this, 'tableApi.topLeftDialog', topLeftDialog);
+    later(() => Ember_set(this, 'tableApi.topLeftDialog', topLeftDialog));
     this.addComponentClass();
   },
 
