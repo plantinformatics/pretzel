@@ -1684,7 +1684,9 @@ export default Component.extend({
     let length_checker = $("#length_checker");
     length_checker.css('font-weight', 'bold');
     this.get('columnNames').forEach(function(col_name) {
-      let w = length_checker.text(col_name).width();
+      /** Just the sampleName is displayed, not datasetId. Similar in colHeaders, uses split(). */
+      const sampleName = columnName2SampleName(col_name);
+      let w = length_checker.text(sampleName).width();
       if (w > longest) {
         longest = w;
       }
