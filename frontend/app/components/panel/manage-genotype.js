@@ -878,7 +878,12 @@ export default class PanelManageGenotypeComponent extends Component {
   /** Side Effect : copy sampleFilters of another block if a new block is viewed.  */
   @computed('gtBlocks')
   get sampleFiltersCopyEffect() {
-    this.sampleFiltersCopy();
+    /** allow time for brushed features to be loaded.
+     * Later, we can update after additional features are loaded, and also
+     * sampleFiltersCopyType() is intended to map the selected features to the
+     * added block when called again subsequently.
+     */
+    later(() => ! this.isDestroying && this.sampleFiltersCopy(), 3000);
   }
   /** If a new VCF block is viewed, and it does not have [sampleFiltersSymbol]
    * copy this from another block.
@@ -887,6 +892,7 @@ export default class PanelManageGenotypeComponent extends Component {
   sampleFiltersCopy() {
     const fnName = 'sampleFiltersCopy';
     this.sampleFilterKeys.forEach(sampleFilterTypeName => this.sampleFiltersCopyType(sampleFilterTypeName));
+    dLog(fnName, this.sampleFiltersCheck());
 
     // update selectedSampleEffect
    later(() => {
@@ -917,7 +923,13 @@ export default class PanelManageGenotypeComponent extends Component {
         const
         sampleFilters = block[sampleFiltersSymbol],
         sampleFilter = sampleFilters?.[sampleFilterTypeName],
-        ok = sampleFilter?.length;
+        /** for sampleFilterTypeName 'feature' check if a feature is in this block.
+         * If the features' blocks !== block, then we want to do, below:
+         *   map from copyThis features to block.features ...
+         */
+        ok = sampleFilter?.length &&
+          ((sampleFilterTypeName !== 'feature') ||
+           sampleFilter.find(feature => contentOf(feature.get('blockId')) === block));
         return !!ok;
       }),
       newBlocks = filters['false'],
@@ -1185,6 +1197,26 @@ export default class PanelManageGenotypeComponent extends Component {
           [filterTypeName] : this.blockSampleFilters(ab.block, filterTypeName)}}));
     dLog(fnName, filterTypeName, axisBrushes, blocksF);
     return blocksF;
+  }
+  /** Surface the details of the selected SNPs, to check result of
+   * sampleFiltersCopyType().
+   * This is similar to blocksSampleFilters(), but has a different use.
+   */
+  sampleFiltersCheck() {
+    const
+    blocks = this.gtBlocks,
+    sampleFilters = blocks.map(block => {
+      const
+      sf = block[sampleFiltersSymbol],
+      features = this.blockSampleFilters(block, 'feature'),      
+      featuresDesc = features.map(feature => [
+        feature.get('blockId.brushName'),
+        feature.value_0,
+        feature[matchRefSymbol],
+      ]);
+      return featuresDesc;
+    });
+    return sampleFilters;
   }
   /** @return array of blocks and the features selected on them for filtering samples.
    */
