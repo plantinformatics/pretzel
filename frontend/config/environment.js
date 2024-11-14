@@ -66,6 +66,13 @@ module.exports = function (environment) {
       // keyDelimiter: '/' // will use / as a delimiter - the default is :
     },
 
+    'ember-simple-auth' : {
+      /** default is '', defined in ember-simple-auth/addon/configuration.js :  DEFAULTS
+       * rootURL : '',
+       */
+      routeAfterAuthentication : 'mapview',
+    },
+
 
     EmberENV: {
       FEATURES: {
