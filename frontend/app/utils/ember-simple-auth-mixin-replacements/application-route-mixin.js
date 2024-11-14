@@ -11,8 +11,12 @@ export default Mixin.create({
 
   init() {
     this._super(...arguments);
+    /** These settings are replicated by routes/application.js : init() and 
+     * ember-simple-auth/addon/services/session.js : _setupHandlers()
+     * The latter uses Configuration.{routeAfterAuthentication,rootURL} so that is sufficient.
+     */
     this.session.on('authenticationSucceeded', () => this.sessionAuthenticated());
-    this.session.on('invalidationSucceeded', () => this.session.handleInvalidation());
+    this.session.on('invalidationSucceeded', () => this.session.handleInvalidation('index'));
     this.session.on('authenticationRequested', () => this.session.triggerAuthentication('login'));
   },
 

@@ -13,7 +13,7 @@ export default Route.extend(/*ApplicationRouteMixin,*/ {
     this._super(...arguments);
     console.log(this, this.session, this.session.on);
     this.session.session.on('authenticationSucceeded', () => this.sessionAuthenticated());
-    this.session.session.on('invalidationSucceeded', () => this.session.handleInvalidation());
+    this.session.session.on('invalidationSucceeded', () => this.session.handleInvalidation('login'));
     // no this.session.triggerAuthentication, maybe this.session.session.requireAuthentication('login')
     this.session.session.on('authenticationRequested', () => this.session.triggerAuthentication('login'));
   },
