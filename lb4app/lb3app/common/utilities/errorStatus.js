@@ -7,7 +7,7 @@
  */
 exports.ErrorStatus = function(statusCode, text)
 {
-  let e = Error(text);
+  let e = new Error(text);
   e.statusCode = statusCode;
   return e;
 };
