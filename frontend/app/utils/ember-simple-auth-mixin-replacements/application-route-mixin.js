@@ -11,9 +11,13 @@ export default Mixin.create({
 
   init() {
     this._super(...arguments);
-    this.session.on('authenticationSucceeded', () => this.sessionAuthenticated());
-    this.session.on('invalidationSucceeded', () => this.session.handleInvalidation());
-    this.session.on('authenticationRequested', () => this.session.triggerAuthentication('login'));
+    /** Registrations for session.on authenticationSucceeded and
+     * invalidationSucceeded which were here until 83f6bda4 are already done by
+     * ember-simple-auth/addon/services/session.js : _setupHandlers(), which
+     * uses Configuration.{routeAfterAuthentication,rootURL}.
+     * That does not include authenticationRequested : triggerAuthentication(),
+     * which seems no longer applicable.
+     */
   },
 
   beforeModel() {

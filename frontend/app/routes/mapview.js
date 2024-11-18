@@ -66,6 +66,14 @@ let config = {
       this.get('auth').runtimeConfig().then((config) => {
         dLog('getHoTLicenseKey', config, ENV);
         ENV.handsOnTableLicenseKey = config.handsOnTableLicenseKey;
+        /** May also want to signify that the runtimeConfig has been received, e.g. 
+         *   ENV.runtimeConfigReceived = true;
+         * or ENV.runtimeConfig = config;
+         * This would allow delayed instantiation of some components which
+         * depend on that config.
+         * runtimeConfig might fit better within services/controls.js, instead
+         * of modifying ENV.
+         */
       });
     }
   },

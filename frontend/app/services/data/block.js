@@ -686,10 +686,21 @@ export default Service.extend(Evented, {
    */
   peekBlock(blockId)
   {
+    if ((blockId === undefined) || (blockId === null)) {
+      return undefined;
+    }
     let
       apiServers = this.get('apiServers'),
     store = apiServers.id2Store(blockId),
-    block = store && store.peekRecord('block', blockId);
+    block;
+    /** transient blocks are not present in id2Server[] (services/api-servers),
+     * so fall back to searching each server store. */
+    if (store) {
+      block = store && store.peekRecord('block', blockId);
+    } else {
+      block = Object.values(apiServers.servers).find(
+        apiServer => apiServer.store.peekRecord('block', blockId));
+    }
     return block;
   },
 
@@ -898,6 +909,15 @@ export default Service.extend(Evented, {
    * undefined and limits are requested for all blocks.
    */
   getBlocksLimits(blockId) {
+    /** don't call taskGetLimits for a transient block. */
+    if (blockId && this.peekBlock(blockId)?.hasTag('transient')) {
+      // Limits of the parent / reference are applicable.
+      /** taskGetLimits() sets .featureLimits and .featureValueCount; perhaps
+       * calculate those here.
+       */
+      return Promise.resolve([]);
+    }
+
     const fnName = 'getBlocksLimits';
     let taskGet = this.get('taskGetLimits');
     console.log("getBlocksLimits", blockId);
@@ -923,6 +943,15 @@ export default Service.extend(Evented, {
 
 
   getBlocksSummary(blockIds) {
+    /** Filter out the transient blocks; set their .featureCount, and don't call
+     * taskGetSummary for them. */
+    const
+    blocks = blockIds.map(blockId => this.peekBlock(blockId)),
+    /** result of hasTag() is true or falsey (undefined / 0 / false) */
+    transientBlocks = Object.groupBy(blocks, block => !!block?.hasTag('transient'));
+    transientBlocks['true']?.forEach(block => block.set('featureCount', block.features.length));
+    blockIds = transientBlocks['false']?.map(block => block.id) ?? [];
+
     let taskGet = this.get('taskGetSummary');
     console.log("getBlocksSummary", blockIds);
       let p =  new Promise(function(resolve, reject){
@@ -1171,7 +1200,7 @@ export default Service.extend(Evented, {
    * blocks[0] is reserved for the reference block, so a new array is
    * [undefined], and blocks[0] is set by the caller.
    *
-   * @param map contains the datasetId:scope:blocks heirarchy.
+   * @param map contains the datasetId:scope:blocks hierarchy.
    * @param create added to indicate whether to create a map entry if it doesn't exist.
    * The 2nd pass of mapBlocksByReferenceAndScope() passes create===false - see
    * comment there.

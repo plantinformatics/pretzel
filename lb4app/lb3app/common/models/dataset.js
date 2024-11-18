@@ -340,7 +340,8 @@ module.exports = function(Dataset) {
       } else {
         cb(null, status);
       }
-    });
+    })
+      .catch(err => { console.log(fnName, err.message); cb(err); });
   };
   /** Continuation of spreadsheetUploadInternal() - originally these 2 were a
    * single function, but split to enable additional (asynchronous)

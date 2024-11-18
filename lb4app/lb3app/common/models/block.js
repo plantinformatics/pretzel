@@ -1011,6 +1011,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     } else {
 
     let db = this.dataSource.connector;
+    let cbCalled = false;
     blockFeatures.blockValues(db, fieldName)
     .then((cursor) => cursor.toArray())
     .then(function(traits) {
@@ -1018,9 +1019,25 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
         console.log(fnName, cacheId, 'put', traits[0] || traits);
       }
       cache.put(cacheId, traits);
+      /** potentially cb() could throw, so set cbCalled to guard against calling
+       * cb() a second time in .catch().
+       * This cb() is returning a response with the given value; perhaps this is
+       * also trying to set headers ?
+       */
+      cbCalled = true;
       cb(null, traits);
     }).catch(function(err) {
-      cb(err);
+      if (cbCalled) {
+        console.log(fnName, cacheId, 'cb was already called, so not calling it again', err);
+      } else {
+        /** sometimes 'Callback was already called.' occurs here when client
+         * starts, so guard this with cbCalled.
+         * err was : 'Error: Cannot set headers after they are sent to the
+         * client', which has been seen new server is queried by existing
+         * client.
+         */
+        cb(err);
+      }
     });
     }
   };

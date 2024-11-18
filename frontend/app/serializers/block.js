@@ -40,6 +40,7 @@ export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
     annotations: { embedded: 'always' },
     intervals: { embedded: 'always' },
     features: { embedded: 'always' },
+    // _scope : 'scope',
     /** Rename Pretzel Block .meta to ._meta to avoid clash with ember-data object
      * .meta, as commented in ./dataset.js : attrs : _meta
      */

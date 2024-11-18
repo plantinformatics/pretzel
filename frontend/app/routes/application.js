@@ -12,10 +12,14 @@ export default Route.extend(/*ApplicationRouteMixin,*/ {
   init() {
     this._super(...arguments);
     console.log(this, this.session, this.session.on);
-    this.session.session.on('authenticationSucceeded', () => this.sessionAuthenticated());
-    this.session.session.on('invalidationSucceeded', () => this.session.handleInvalidation());
-    // no this.session.triggerAuthentication, maybe this.session.session.requireAuthentication('login')
-    this.session.session.on('authenticationRequested', () => this.session.triggerAuthentication('login'));
+    /** Same comment as in app/utils/ember-simple-auth-mixin-replacements/application-route-mixin.js :
+     * Registrations for session.on authenticationSucceeded and
+     * invalidationSucceeded which were here until 83f6bda4 are already done by
+     * ember-simple-auth/addon/services/session.js : _setupHandlers(), which
+     * uses Configuration.{routeAfterAuthentication,rootURL}.
+     * That does not include authenticationRequested : triggerAuthentication(),
+     * which seems no longer applicable.
+     */
   },
 
   async beforeModel() {
