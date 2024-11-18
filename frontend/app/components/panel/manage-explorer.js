@@ -321,7 +321,7 @@ export default ManageBase.extend({
       this.set('blockFeatureOntologiesTreeEmbeddedKeyLength', keyLength);  // perhaps rename both to keysLength.
       return valueTree;
     })
-      .catch(error => { dLog(fnName, error.responseJSON.error || error); return Promise.resolve({}); });
+      .catch(error => { dLog(fnName, error.responseJSON?.error || error); return Promise.resolve({}); });
     return promise;
   }),
 

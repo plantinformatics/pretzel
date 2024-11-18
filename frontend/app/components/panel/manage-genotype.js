@@ -899,7 +899,7 @@ export default class PanelManageGenotypeComponent extends Component {
       this.selectedSampleRefreshDisplay(/*sampleFilterTypeName*/undefined);
      // Repeat - will work out the requirements display to be refreshed.
       later(() => {
-        this.selectedSampleRefreshDisplay(/*sampleFilterTypeName*/undefined);
+        ! this.isDestroying && this.selectedSampleRefreshDisplay(/*sampleFilterTypeName*/undefined);
       }, 1000);
     });
   }
