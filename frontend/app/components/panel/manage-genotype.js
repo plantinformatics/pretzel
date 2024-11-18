@@ -805,18 +805,23 @@ export default class PanelManageGenotypeComponent extends Component {
     abBlocks.forEach((abBlock, i) => {
       const
       block = abBlock.block,
-      selected = block[sampleFiltersSymbol][filterTypeName],
-      blocksTypeFilters = 'blocks' + toTitleCase(filterTypeName) + 'Filters';
-      /** selected is equal to one of :
-       * this.blocksFeatureFilters[i].sampleFilters.feature
-       * this.blocksHaplotypeFilters[i].sampleFilters.haplotype
-       */
-      if (selected !== this[blocksTypeFilters][i].sampleFilters[filterTypeName]) {
-        dLog(fnName, abBlock, this[blocksTypeFilters][i], selected);
+      sampleFilters = block[sampleFiltersSymbol];
+      if (sampleFilters) {
+        const
+        selected = sampleFilters[filterTypeName],
+        blocksTypeFilters = 'blocks' + toTitleCase(filterTypeName) + 'Filters';
+        /** selected is equal to one of :
+         * this.blocksFeatureFilters[i].sampleFilters.feature
+         * this.blocksHaplotypeFilters[i].sampleFilters.haplotype
+         */
+        if (selected !== this[blocksTypeFilters][i].sampleFilters[filterTypeName]) {
+          dLog(fnName, abBlock, this[blocksTypeFilters][i], selected);
+        }
+        if (selected?.length) {
+          selected.removeAt(0, selected.length);
+        }
       }
-      if (selected.length) {
-        selected.removeAt(0, selected.length);
-      }
+
       const referenceSamples = block[referenceSamplesSymbol];
       if (referenceSamples) {
         arrayClear(referenceSamples);
@@ -838,7 +843,140 @@ export default class PanelManageGenotypeComponent extends Component {
       later(() => this.matrixView.table.render(), 2000);
     }
   }
-  
+
+  //----------------------------------------------------------------------------
+  /** Retain or reset selected SNPs when another dataset is added in Genotype Table.
+   * retain and reset are alternatives, and are implemented by gtBlockViewEffect
+   * and sampleFiltersCopyEffect respectively.
+   */
+
+  /** Retain previous value of .gtBlocks seen by gtBlockViewEffect to detect added blocks */
+  gtBlocksPrevious = null;
+  /** Side Effect : clear sampleFilters if a new VCF Genotype block is viewed.
+   */
+  @computed('gtBlocks')
+  get gtBlockViewEffect() {
+    const
+    fnName = 'gtBlockViewEffect',
+    blocks = this.gtBlocks,
+    gtBlocksPrevious = this.gtBlocksPrevious,
+    newBlocks = gtBlocksPrevious ? blocks.filter(block => ! gtBlocksPrevious.includes(block)) : blocks,
+    added = newBlocks.length;
+    this.gtBlocksPrevious = blocks;
+    if (added) {
+      dLog(fnName, newBlocks.mapBy('brushName'), blocks.mapBy('brushName'), gtBlocksPrevious?.mapBy('brushName'));
+      /* The Clear button calls sampleFiltersClear() and haplotypeFiltersApply()
+       * sampleFiltersClear() clears the filters for .sampleFilterTypeName, so
+       * set that and call Clear again.
+       */
+      this.sampleFiltersClear();
+      this.setSelectedSampleFilter('feature', /*i*/undefined);
+      this.sampleFiltersClear();
+      this.haplotypeFiltersApply();
+    }
+  }
+  /** Side Effect : copy sampleFilters of another block if a new block is viewed.  */
+  @computed('gtBlocks')
+  get sampleFiltersCopyEffect() {
+    /** allow time for brushed features to be loaded.
+     * Later, we can update after additional features are loaded, and also
+     * sampleFiltersCopyType() is intended to map the selected features to the
+     * added block when called again subsequently.
+     */
+    later(() => ! this.isDestroying && this.sampleFiltersCopy(), 3000);
+  }
+  /** If a new VCF block is viewed, and it does not have [sampleFiltersSymbol]
+   * copy this from another block.
+   * Copy each of the attributes, whose keys are sampleFilterKeys.
+   */
+  sampleFiltersCopy() {
+    const fnName = 'sampleFiltersCopy';
+    this.sampleFilterKeys.forEach(sampleFilterTypeName => this.sampleFiltersCopyType(sampleFilterTypeName));
+    dLog(fnName, this.sampleFiltersCheck());
+
+    // update selectedSampleEffect
+   later(() => {
+      this.selectedSampleRefreshDisplay(/*sampleFilterTypeName*/undefined);
+     // Repeat - will work out the requirements display to be refreshed.
+      later(() => {
+        this.selectedSampleRefreshDisplay(/*sampleFilterTypeName*/undefined);
+      }, 1000);
+    });
+  }
+  /** If a new VCF block is viewed, and it does not have [sampleFiltersSymbol]
+   * copy this from another block.
+   *
+   * This has been tested on the case where there is 1 block displayed with
+   * selected SNPs on the same referenceBlock as a block which is added / viewed.
+   * This handles what may be the most useful and common case, and suits a user
+   * story which is being documented, but will have to be
+   * re-thought in other contexts, e.g. if there are 2 blocks with
+   * [sampleFiltersSymbol] (currently chooses the first one), or if the selected
+   * SNPs are not in this block.
+   */
+  sampleFiltersCopyType(sampleFilterTypeName) {
+    const fnName = 'sampleFiltersCopyType';
+    {
+      const
+      blocks = this.gtBlocks,
+      filters = Object.groupBy(blocks, block => {
+        const
+        sampleFilters = block[sampleFiltersSymbol],
+        sampleFilter = sampleFilters?.[sampleFilterTypeName],
+        /** for sampleFilterTypeName 'feature' check if a feature is in this block.
+         * If the features' blocks !== block, then we want to do, below:
+         *   map from copyThis features to block.features ...
+         */
+        ok = sampleFilter?.length &&
+          ((sampleFilterTypeName !== 'feature') ||
+           sampleFilter.find(feature => contentOf(feature.get('blockId')) === block));
+        return !!ok;
+      }),
+      newBlocks = filters['false'],
+      haveFilters = filters['true'];
+      if (haveFilters && newBlocks) {
+        newBlocks.forEach(block => {
+          const
+          /** Only match SNPs on the same reference block.
+           * There could be multiple haveFilters on the same .referenceBlock;
+           * just using the first. */
+          copyThis = haveFilters?.find(b => b.referenceBlock === block.referenceBlock),
+          copyThisFilter = copyThis?.[sampleFiltersSymbol],
+          copy =
+            Object.entries(copyThisFilter).reduce((O, [k,v]) => {O[k] = v.slice(0); return O;}, {});
+          dLog(fnName, 'copyThisFilter', copyThisFilter, copyThis.brushName, copy);
+
+          /** map from copyThis features to block.features, matching SNP position, i.e. .value_0 */
+          copy.feature?.forEach((f, i) => {
+            const f2 = block.get('features').findBy('value_0', f.value_0);
+            dLog(fnName, i, f, f2);
+            if (f2) {
+              f2[matchRefSymbol] = f[matchRefSymbol];
+              copy.feature[i] = f2;
+            }
+            /* else could remove copy.features[i], or search again later after
+             * more features are loaded.  Could use API to request those features. */
+          });
+          block[sampleFiltersSymbol] = copy;
+          dLog(fnName, block);
+        });
+      }
+    }
+  }
+  /** Refresh display to show result of sampleFiltersCopy().
+   */
+  selectedSampleRefreshDisplay(sampleFilterTypeName) {
+    if (! sampleFilterTypeName) {
+      sampleFilterTypeName = this.args.userSettings.sampleFilterTypeName;
+    }
+    // There is probably some redundancy here which can be reduced.
+    this.sampleFiltersSet(sampleFilterTypeName);
+    this.datasetPositionFilterChangeCount++;
+    this.haplotypeFiltersApply();
+    /* referenceSamples are separate from sampleFilters - could have a
+     * separate dependency/count for sampleFilters. */
+    this.referenceSamplesCount++;
+  }
 
   /** Use Ember_set() to signal update of tracked properties and trigger re-render. */
   sampleFiltersSet(filterTypeName) {
@@ -1059,6 +1197,26 @@ export default class PanelManageGenotypeComponent extends Component {
           [filterTypeName] : this.blockSampleFilters(ab.block, filterTypeName)}}));
     dLog(fnName, filterTypeName, axisBrushes, blocksF);
     return blocksF;
+  }
+  /** Surface the details of the selected SNPs, to check result of
+   * sampleFiltersCopyType().
+   * This is similar to blocksSampleFilters(), but has a different use.
+   */
+  sampleFiltersCheck() {
+    const
+    blocks = this.gtBlocks,
+    sampleFilters = blocks.map(block => {
+      const
+      sf = block[sampleFiltersSymbol],
+      features = this.blockSampleFilters(block, 'feature'),      
+      featuresDesc = features.map(feature => [
+        feature.get('blockId.brushName'),
+        feature.value_0,
+        feature[matchRefSymbol],
+      ]);
+      return featuresDesc;
+    });
+    return sampleFilters;
   }
   /** @return array of blocks and the features selected on them for filtering samples.
    */
@@ -1543,11 +1701,22 @@ export default class PanelManageGenotypeComponent extends Component {
        */
       const lookupBlock = this.args.userSettings.lookupBlock;
       if (lookupBlock !== undefined) {
-        this.axisBrushBlockIndex = blocks.findIndex((abb) => abb.block === lookupBlock);
+        let axisBrushBlockIndex = blocks.findIndex((abb) => abb.block === lookupBlock);
+        /** .axisBrushBlockIndex may be -1, when data block is un-viewed while brushed.
+         * In this case, if there is another viewed block on the same axis, choose that,
+         * else if there are viewed blocks, choose the first one, because
+         * .axisBrushBlockIndex === -1 leads to .lookupBlock undefined, which
+         * gets undefined block in vcfGenotypeSamples().
+         */
+        if (axisBrushBlockIndex === -1) {
+          axisBrushBlockIndex = blocks.findIndex((abb) => abb.block.referenceBlock === lookupBlock.referenceBlock);
+        } else if (blocks.length) {
+          axisBrushBlockIndex = 0;
+        }
+        this.axisBrushBlockIndex = axisBrushBlockIndex;
         if (this.axisBrushBlockIndex === undefined) {
           this.args.userSettings.lookupBlock = undefined;
         }
-        /** .axisBrushBlockIndex maybe -1, when data block is un-viewed while brushed. */
         dLog(fnName, this.axisBrushBlockIndex, blocks[this.axisBrushBlockIndex]?.block.id, blocks, lookupBlock.id);
       } else if ((this.axisBrushBlockIndex === undefined) || (this.axisBrushBlockIndex > blocks.length-1)) {
         /* first value is selected. if only 1 value then select onchange action will not be called.  */

@@ -325,6 +325,9 @@ export default Component.extend({
     this._super(...arguments);
   },
 
+  get useHandsOnTable() {
+    return !!config.handsOnTableLicenseKey;
+  },
 
   didRender() {
     this._super(...arguments);
@@ -335,7 +338,7 @@ export default Component.extend({
       // flag that createTable() has started.
       this.set('table', null);
       later(() => {
-        if (! this.isDestroying) {
+        if (! this.isDestroying && this.useHandsOnTable) {
           this.createTable(this);
         }
       });

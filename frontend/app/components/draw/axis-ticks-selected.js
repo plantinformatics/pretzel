@@ -18,12 +18,13 @@ const dLog = console.debug;
 const CompName = 'components/axis-ticks-selected';
 
 /*----------------------------------------------------------------------------*/
-/** @return true if feature's block is not viewed and its dataset
+/** @return true if feature's block's dataset
  * has tag transient.
  */
 function featureIsTransient(f) {
-  let isTransient = ! f.get('blockId.isViewed');
-  if (isTransient) {
+  /** transient blocks are viewed, after c739c7cd. */
+  let isTransient;
+  {
     let d = f.get('blockId.datasetId');
     d = d.get('content') || d;
     isTransient = d.hasTag('transient');
@@ -46,6 +47,13 @@ export default Component.extend(AxisEvents, {
   selected : service('data/selected'),
   controls : service(),
 
+  /** set up a component reference for use in the Web Inspector console */
+  develRefnSetup : on('init', function () {
+    // used in development only, in Web Inspector console.
+    if (window.PretzelFrontend) {
+      window.PretzelFrontend.axisTicksSelected = this;
+    }
+  }),
   
   resized : function(widthChanged, heightChanged, useTransition) {
     /* useTransition could be passed down to showTickLocations()
@@ -107,6 +115,7 @@ export default Component.extend(AxisEvents, {
     'selected.shiftClickedFeatures.length',
     'selected.labelledFeatures.length',
     'selected.features.length',
+    'axis1d.blocks.length',
     function () {
       this.renderTicksThrottle();
     }),

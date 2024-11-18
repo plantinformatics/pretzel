@@ -302,8 +302,10 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
       let related = this.get('view').viewRelatedBlocks(block);
       // load related[] before block.
       related.push(block);
-      // or send('getSummaryAndData', block);
-      related.forEach((block) => this.actions.getSummaryAndData.apply(this, [block]));
+      if (! block.hasTag('transient')) {
+        // or send('getSummaryAndData', block);
+        related.forEach((block) => this.actions.getSummaryAndData.apply(this, [block]));
+      }
     },
     getSummaryAndData(block) {
       /* Before progressive loading this would load the data (features) of the block.
@@ -351,12 +353,12 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
         }
         // this.send('setTab', 'right', 'block');
 
-	/** Don't switch to the dataset tab if the Genotype Table is displayed */
-	const rightTab = this.get('layout.right.tab');
+        /** Don't switch to the dataset tab if the Genotype Table is displayed */
+        const rightTab = this.get('layout.right.tab');
         let queryParams = this.get('model.params');
         /* if the block tab in right panel is not displayed then select the block's dataset. */
         if ((rightTab !== "genotype") &&
-	    ! (queryParams.options && queryParams.parsedOptions.blockTab)) {
+            ! (queryParams.options && queryParams.parsedOptions.blockTab)) {
           this.send('selectDataset', block.datasetId);
         }
       }
@@ -386,10 +388,15 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
        * un-ergonomic to constantly switch to the dataset tab, closing the
        * features or paths table and losing the users' column width adjustments
        * etc.  This condition excepts that case.
+       *
+       * Also don't change to dataset tab if current tab is Genotype Table
+       * - it is distracting and unergonomic, probably not useful, and
+       * (currently) disrupts column/sample sorting by selected SNPS (sampleFilters)
        */
       let changed = this.get('selectedDataset.id') !== ds.get('id');
+      const tabIsGenotype = this.get('layout.right.tab') === "genotype";
       this.set('selectedDataset', ds);
-      if (changed) {
+      if (changed && ! tabIsGenotype) {
         this.send('setTab', 'right', 'dataset');
       }
     },

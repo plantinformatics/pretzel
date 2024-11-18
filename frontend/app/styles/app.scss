@@ -1852,7 +1852,13 @@ div.ht_clone_top_left_corner span.colHeader.cornerHeader {
 
 #observational-table td.featureIsFilter {
   border: 2px dashed green;
-  border-left-width : 23px !important;
+  /* In Firefox this shows solid top and bottom borders approx 4px;
+   * Chrome shows the whole cell to be green.  I think the motive for
+   * this was that cell click shows blue border, so it would be good
+   * if the .featureIsFilter border was visible over that.  Increasing
+   * border width increases cell size, affecting table geometry.
+   * Original edit was .A3 63037 2023 Sep 22 17:25. */
+  /* border-left-width : 23px !important; */
 }
 
 // -----------------------------------------------------------------------------
