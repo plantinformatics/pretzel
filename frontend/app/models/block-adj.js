@@ -608,7 +608,7 @@ export default Model.extend(Evented, {
         dLog('taskGetPaths cancelled');
         let 
           lastPerformed = this.get('lastPerformed');
-        if (lastPerformed.error)
+        if (lastPerformed?.error)
           dLog('taskGetPaths lastPerformed.error', lastPerformed.error);
       }
       /* close EventSource.
