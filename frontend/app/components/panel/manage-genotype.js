@@ -17,7 +17,7 @@ import createIntervalTree from 'interval-tree-1d';
 
 import NamesFilters from '../../utils/data/names-filters';
 import { toPromiseProxy, toArrayPromiseProxy, addObjectArrays, arrayClear } from '../../utils/ember-devel';
-import { thenOrNow, contentOf, pollCondition } from '../../utils/common/promises';
+import { thenOrNow, contentOf, pollCondition, promiseThrottle } from '../../utils/common/promises';
 import { responseTextParseHtml } from '../../utils/domElements';
 import { clipboard_writeText } from '../../utils/common/html';
 import { arrayChoose } from  '../../utils/common/arrays';
@@ -281,10 +281,11 @@ export default class PanelManageGenotypeComponent extends Component {
    * sampleNames should be stored for.
    * The dataset's name is this.lookupDatasetId, which is not necessarily unique
    * when using multiple servers - see datasetsForName().
+   * dataset.sampleNames is used in services/data/paths-progressive.js : vcfGenotypeLookup()
    */
   datasetStoreSampleNames(block, sampleNames) {
     const
-    dataset = block.get('datasetId');
+    dataset = contentOf(block.get('datasetId'));
     dataset.sampleNames = sampleNames;
   }
 
@@ -2043,6 +2044,7 @@ export default class PanelManageGenotypeComponent extends Component {
           if (vcfDataset.hasTag('BrAPI')) {
             vcfDataset.samples = t;
             t = t.mapBy('sampleName');
+            // instead use : sampleNames = t;
             this.datasetStoreSampleNames(vcfBlock, t);
           }
           let sampleNamesText, sampleNames;
@@ -2079,7 +2081,9 @@ export default class PanelManageGenotypeComponent extends Component {
     const
     fnName = 'vcfGenotypeSamples',
     vcfBlock = this.lookupBlock,
-    textP = this.vcfGenotypeSamplesDataset(vcfBlock);
+    dataset = contentOf(vcfBlock.get('datasetId')),
+    textPFn = () => this.vcfGenotypeSamplesDataset(vcfBlock),
+    textP = promiseThrottle(dataset, Symbol.for('samplesP'), 2 * 60 * 1000, textPFn);
     /* vcfGenotypeSamplesDataset() initialises .vcfGenotypeSamplesSelected in
      * this case; could move to here. */
 
@@ -2140,7 +2144,7 @@ export default class PanelManageGenotypeComponent extends Component {
      * related : .ensureSamples();
      */
     if (! this.vcfGenotypeSamplesText) {
-      dLog(fnName);
+      dLog(fnName, new Date().toISOString(), this.lookupBlock?.brushName);
       this.vcfGenotypeSamples();
     }
 
@@ -3775,6 +3779,7 @@ export default class PanelManageGenotypeComponent extends Component {
     fnName = 'headerText',
     isBrAPI = this.lookupBlock?.hasTag('BrAPI') ||
       (this.lookupBlock?.server?.serverType === 'BrAPI'),
+    isGerminate = this.lookupBlock?.hasTag('Germinate'),
     /** not clear why passing limitSamples false for VCF (edit was 2023 'Mar  1 21:20') */
     {samples, samplesOK} = this.samplesOK(isBrAPI),
     domainInteger = [0, 1],
@@ -3818,6 +3823,11 @@ export default class PanelManageGenotypeComponent extends Component {
         this.headerText = text;
         textP = Promise.resolve(text);
       }
+    } else if (isGerminate) {
+      /** short-cut the vcfGenotypeLookup() request below because Germinate is
+       * taking ~1min for it, and there is no benefit - the header is expected to
+       * be simply samples. */
+      textP = Promise.resolve(samples);
     } else
     if (samplesOK && scopeOK && vcfDatasetId) {
       const

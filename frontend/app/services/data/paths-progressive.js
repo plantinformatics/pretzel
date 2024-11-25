@@ -868,7 +868,7 @@ export default Service.extend({
     /** VCF lookup does not require param samples, but Germinate and BrAPI require
      * samples to be given.
      */
-    if (block.hasTag('BrAPI')) {
+    if (block.hasTag('BrAPI') || block.hasTag('Germinate')) {
       const sampleNames = block.get('datasetId.sampleNames');
       if (! sampleNames?.length) {
         return Promise.resolve([]);
@@ -892,7 +892,7 @@ export default Service.extend({
      * param so that error streams are independent. */
       .catch(error => {
         dLog(fnName, 'catch', error);
-        this.showText(error.responseJSON.error.message);
+        this.showText(error.responseJSON?.error?.message);
       });
     return textP;
   },
