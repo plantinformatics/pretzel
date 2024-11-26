@@ -326,7 +326,7 @@ function eltClassName(f)
    * elsewhere, but handle it here by converting f to a string.
    */
   let fString = (typeof(f) == 'string') ? f : '' + f;
-  fString = fString.replaceAll('.', '_');
+  fString = fString.replaceAll(/[\.:]/g, '_');
   let
   /** d3.selectAll() is not matching the result of CSS.escape() on marker names
    * starting with a digit. Prefixing with _ first works.  Then CSS.escape() can

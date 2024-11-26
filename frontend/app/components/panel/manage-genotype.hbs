@@ -838,12 +838,8 @@
     {{!-- ----------------------------------------------------------------- --}}
 
     {{#if this.vcfGenotypeLookupDomain}}
-      {{!-- disabled if ! All && no samples selected, or All && Common && no samples to select --}}
       <button type="button" onclick={{action this.vcfGenotypeLookup}}
-        disabled={{or
-          (and (not @userSettings.requestSamplesAll) (not this.vcfGenotypeSamplesSelected.length))
-          (and @userSettings.requestSamplesAll @userSettings.samplesIntersection (not this.samples.length))
-        }}
+        disabled={{this.vcfGenotypeLookupButtonDisabled}}
         class="btn btn-info">VCF Lookup</button>
     {{else}}
       {{#if this.urlOptions.gtIntervalLimit}}

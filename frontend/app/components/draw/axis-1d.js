@@ -1441,7 +1441,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     as.classed("extended", this.get('extended'));
   },
   buttonStateEffect : computed('brushed', 'zoomed', function () {
-    later(() => this.isDestroying && this.showZoomResetButtonState(), 200);
+    later(() => ! this.isDestroying && this.showZoomResetButtonState(), 200);
   }),
   showZoomResetButtonState() {
     let
