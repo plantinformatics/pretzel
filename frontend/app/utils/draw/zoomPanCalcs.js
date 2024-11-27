@@ -9,6 +9,7 @@ import { pick } from 'lodash/object';
 
 /* global d3 */
 /* global WheelEvent */
+/* global performance */
 
 //------------------------------------------------------------------------------
 
@@ -422,6 +423,7 @@ function ZoomFilter(oa) {
    * e.target.parentElement.parentElement.parentElement === this
    */
   function zoomFilter(e) {
+    const fnName = 'zoomFilter';
     /** e.target is <rect class="overlay" >
      * <g class="brush">
      *   <g clip-path="url(#axis-clip-<blockId>)" fill="none" pointer-events="none">
@@ -440,10 +442,24 @@ function ZoomFilter(oa) {
         dLog('zoom.filter shiftKey', this, arguments, e, d);
       }
 
-      let axisName = d,
+      /** element datum d is axis-1d  (it was axisName until e1683595) */
+      const
       axis = d;
 
-      include = wheelNewDomain(e, axis, oa.axisApi, true);
+      /** If rendering of the effect of progressive mouse-wheel zooming is not
+       * keeping up with the stream of WheelEvent-s, drop old events.  This
+       * avoids the GUI becoming unresponsive to user action due to a queue of
+       * unprocessed events.
+       */
+      const late = window.performance && (performance.now() - e.timeStamp) > 1000;
+      if (late) {
+        include = false;
+        if (trace_zoom > 1) {
+          dLog(fnName, 'drop late event', e, performance.now() - e.timeStamp);
+        }
+      } else {
+        include = wheelNewDomain(e, axis, oa.axisApi, true);
+      }
     }
     return include;
   }

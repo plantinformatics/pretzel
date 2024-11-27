@@ -1,0 +1,86 @@
+# NOTE refer to the accompanying '.env' file in this folder to access
+# environment variables which are passed through to docker-compose.yaml
+# at run time
+
+# NOTE this has been updated to the docker compose V2 format, this will not work with docker-compose
+
+name: pretzel-prod
+
+networks:
+  pretzel-prod:
+    driver: bridge
+
+services:
+  database: # mongo database
+    # MongoDb up to v5 has been tested OK
+    image: 9b5c4a4fdcb5 # 4.2.24.  library/mongo-4.2.24 # base image off dockerhub
+#    environment:
+#      - "MONGO_INITDB_ROOT_USERNAME=${DB_USER}"
+#      - "MONGO_INITDB_ROOT_PASSWORD=${DB_PASS}"
+    volumes:
+      - ${DATA_DIR}:/data/db
+    expose:
+      - "${MONGO_DEFAULT_PORT}"
+    networks:
+      - pretzel-prod
+
+  api: # node environment
+    depends_on:
+      - database
+      # Could have depends_on: blastserver, but it is not a critical dependency
+    build:
+      context: .
+      dockerfile: ./scripts/Dockerfile
+    image: plantinformaticscollaboration/pretzel:v3.1.0
+    command: node /app/lb3app/server/server.js
+    environment:
+      - "API_HOST=${API_HOST}"
+      - "API_PORT_EXT=${API_PORT_EXT}"
+      - "API_PORT_PROXY=${API_PORT_PROXY}"
+      - "hostIp=${hostIp}"
+      # Flask port is now internal to the compose network, so use fixed (default) 4000; 
+      # no need to configure via FLASK_PORT / BLASTSERVER_PORT.
+      - "FLASK_PORT=4000"       # ${BLASTSERVER_PORT}"
+      - "DB_HOST=database"
+      - "DB_PORT=${MONGO_DEFAULT_PORT}"
+      - "DB_NAME=${DB_NAME}"
+      - "DB_USER=${DB_USER}"
+      - "DB_PASS=${DB_PASS}"
+      - "EMAIL_HOST=${EMAIL_HOST}"
+      - "EMAIL_PORT=${EMAIL_PORT}"
+      - "EMAIL_USER=${EMAIL_USER}"
+      - "EMAIL_PASS=${EMAIL_PASS}"
+      - "EMAIL_FROM=${EMAIL_FROM}"
+      - "EMAIL_VERIFY=${EMAIL_VERIFY}"
+      - "EMAIL_ADMIN=${EMAIL_ADMIN}"
+      - "mntData=${mntData}"
+      - "handsOnTableLicenseKey=${handsOnTableLicenseKey}"
+    volumes:
+      # landingPage
+      - $landingPage:/app/client/landingPageContent
+      # blastVolume
+      - $mntData/blast:$mntData/blast
+      # vcfVolume
+      - $mntData/vcf:$mntData/vcf
+      - ${resultsCacheDir}:/app/node_modules/flat-cache/.cache
+
+    ports:
+      # match ext / int ports for loopback
+      - "${API_PORT_EXT}:${API_PORT_EXT}"
+    networks:
+      - pretzel-prod
+
+  blastserver: # Python Flask blastn server, based on a python image, used for DNA Sequence Search
+    image: plantinformaticscollaboration/blastserver:latest
+    environment:
+      - "FLASK_PORT=${BLASTSERVER_PORT}"
+    volumes:
+      # mntData=/mnt/data_blast
+      - $mntData/blast:/mnt/data/blast
+      # Enables scripts/blastn_cont.bash to run blastn via docker
+      - /usr/bin/docker:/usr/bin/docker
+      - /var/run/docker.sock:/var/run/docker.sock
+    expose:
+      - "4000"
+    networks:
+      - pretzel-prod

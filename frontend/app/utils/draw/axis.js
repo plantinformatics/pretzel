@@ -1,5 +1,10 @@
 import { breakPoint } from '../breakPoint';
 
+import {
+  eltClassName,
+} from '../domElements';
+
+
 /*----------------------------------------------------------------------------*/
 
 /*global d3 */
@@ -354,7 +359,7 @@ function moveOrAdd(d1, i, g) {
  */
 function axisFeatureCircles_eltId(feature) {
   let
-  id = 'fc_' + feature.id;
+  id = 'fc_' + eltClassName(feature.id);
   return id;
 }
 function axisFeatureCircles_selectAll() {

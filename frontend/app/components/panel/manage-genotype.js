@@ -8,6 +8,8 @@ import { tracked } from '@glimmer/tracking';
 import { later } from '@ember/runloop';
 import { A as Ember_A } from '@ember/array';
 
+import { task } from 'ember-concurrency';
+
 // see comment in vcfGenotypeLookupDataset()
 import { allSettled } from 'rsvp';
 
@@ -17,7 +19,7 @@ import createIntervalTree from 'interval-tree-1d';
 
 import NamesFilters from '../../utils/data/names-filters';
 import { toPromiseProxy, toArrayPromiseProxy, addObjectArrays, arrayClear } from '../../utils/ember-devel';
-import { thenOrNow, contentOf, pollCondition } from '../../utils/common/promises';
+import { thenOrNow, contentOf, pollCondition, promiseThrottle } from '../../utils/common/promises';
 import { responseTextParseHtml } from '../../utils/domElements';
 import { clipboard_writeText } from '../../utils/common/html';
 import { arrayChoose } from  '../../utils/common/arrays';
@@ -281,10 +283,11 @@ export default class PanelManageGenotypeComponent extends Component {
    * sampleNames should be stored for.
    * The dataset's name is this.lookupDatasetId, which is not necessarily unique
    * when using multiple servers - see datasetsForName().
+   * dataset.sampleNames is used in services/data/paths-progressive.js : vcfGenotypeLookup()
    */
   datasetStoreSampleNames(block, sampleNames) {
     const
-    dataset = block.get('datasetId');
+    dataset = contentOf(block.get('datasetId'));
     dataset.sampleNames = sampleNames;
   }
 
@@ -2043,6 +2046,7 @@ export default class PanelManageGenotypeComponent extends Component {
           if (vcfDataset.hasTag('BrAPI')) {
             vcfDataset.samples = t;
             t = t.mapBy('sampleName');
+            // instead use : sampleNames = t;
             this.datasetStoreSampleNames(vcfBlock, t);
           }
           let sampleNamesText, sampleNames;
@@ -2079,7 +2083,9 @@ export default class PanelManageGenotypeComponent extends Component {
     const
     fnName = 'vcfGenotypeSamples',
     vcfBlock = this.lookupBlock,
-    textP = this.vcfGenotypeSamplesDataset(vcfBlock);
+    dataset = contentOf(vcfBlock.get('datasetId')),
+    textPFn = () => this.vcfGenotypeSamplesDataset(vcfBlock),
+    textP = promiseThrottle(dataset, Symbol.for('samplesP'), 2 * 60 * 1000, textPFn);
     /* vcfGenotypeSamplesDataset() initialises .vcfGenotypeSamplesSelected in
      * this case; could move to here. */
 
@@ -2140,7 +2146,7 @@ export default class PanelManageGenotypeComponent extends Component {
      * related : .ensureSamples();
      */
     if (! this.vcfGenotypeSamplesText) {
-      dLog(fnName);
+      dLog(fnName, new Date().toISOString(), this.lookupBlock?.brushName);
       this.vcfGenotypeSamples();
     }
 
@@ -2284,13 +2290,43 @@ export default class PanelManageGenotypeComponent extends Component {
     return {samples, samplesOK : ok};
   }
 
+  /** Disable vcfGenotypeLookup button when samples are required and not
+   * selected, or previous button action is in process.
+   * @return disabled if ! All && no samples selected, or All && Common && no samples to select
+   * Also disabled if vcfGenotypeLookup button action is in process.
+   */
+  get vcfGenotypeLookupButtonDisabled() {
+    const
+    userSettings = this.args.userSettings,
+    disabled = 
+      ((! userSettings.requestSamplesAll) && (! this.vcfGenotypeSamplesSelected?.length)) ||
+      (userSettings.requestSamplesAll && userSettings.samplesIntersection && ! this.samples?.length) ||
+      this.vcfGenotypeLookupTask.isRunning;
+    return disabled;
+  }
+
+  /** if vcfGenotypeLookupTask is not running, perform it. */
+  vcfGenotypeLookup() {
+    if (! this.vcfGenotypeLookupTask.isRunning) {
+      this.vcfGenotypeLookupTaskInstance = this.vcfGenotypeLookupTask.perform();
+    }
+  }
+  /** Call vcfGenotypeLookupP() in a task - yield the result.
+   */
+  vcfGenotypeLookupTask = task({ drop: true }, async () => {
+    console.log('vcfGenotypeLookupTask');
+    let block = await this.vcfGenotypeLookupP();
+
+    return block;
+  });
   /** Lookup the genotype for the selected samples in the interval of, depending on autoLookup : 
    * . all visible brushed VCF blocks, or 
    * . the brushed block selected by the currently viewed Datasets tab.
    */
-  vcfGenotypeLookup() {
+  vcfGenotypeLookupP() {
     const
     fnName = 'vcfGenotypeLookup';
+    let promise;
     /** Germinate data is in Nucleotide format (CATG) and Alt / Ref is not
      * currently received from Germinate data / interface, so cannot determine
      * Numerical format (number of copies of Alt).  So request and display CATG.
@@ -2299,18 +2335,21 @@ export default class PanelManageGenotypeComponent extends Component {
       Ember_set(this, 'args.userSettings.requestFormat', 'CATG');
     }
     if (this.args.userSettings.autoLookup) {
-      this.vcfGenotypeLookupAllDatasets();
+      promise = Promise.all(this.vcfGenotypeLookupAllDatasets());
     } else {
-      this.vcfGenotypeLookupSelected();
+      promise = this.vcfGenotypeLookupSelected();
     }
+    return promise;
   }
 
   //----------------------------------------------------------------------------
 
   /** Lookup the genotype for the selected samples in the interval of the brushed block,
    * selected by the currently viewed Datasets tab.
+   * @return a promise, signalling completion, with response or failure, of the request
    */
   vcfGenotypeLookupSelected() {
+    let promise;
     const
     fnName = 'vcfGenotypeLookupSelected',
     /** this.axisBrush.block is currently the reference; lookup the data block. */
@@ -2330,12 +2369,15 @@ export default class PanelManageGenotypeComponent extends Component {
       let blockV = this.lookupBlock;
       const intersection = this.intersectionParamsSimple(vcfDatasetId);
 
-      this.vcfGenotypeLookupDataset(blockV, vcfDatasetId, intersection, scope, domainInteger, samples, samplesLimitEnable);
+      promise = this.vcfGenotypeLookupDataset(blockV, vcfDatasetId, intersection, scope, domainInteger, samples, samplesLimitEnable);
     }
+    return promise;
   }
   /** Request VCF genotype for brushed datasets which are visible
+   * @return an array of promises, signalling completion, with response or failure, of the requests
    */
   vcfGenotypeLookupAllDatasets() {
+    let promises;
     // related : notes in showSamplesWithinBrush() re. isZoomedOut(), .rowLimit.
     const
     visibleBlocks = this.brushedOrViewedVCFBlocksVisible,
@@ -2361,24 +2403,30 @@ export default class PanelManageGenotypeComponent extends Component {
       const
       flags = '' + (k+1), /*-n*/
       /** (visibleBlocks - requiredBlock) C k */
-      groups = arrayChoose(notSelf, k);
-      groups.forEach(group => {
+      groups = arrayChoose(notSelf, k),
+      groupsP =
+      groups.map(group => {
         /** group combined with requiredBlock */
         const selfAnd = group.concat([requiredBlock]);
-        this.vcfGenotypeLookupGroup(selfAnd, flags);
+        return this.vcfGenotypeLookupGroup(selfAnd, flags);
       });
+      promises = groupsP.flat();
     } else {
-      this.vcfGenotypeLookupGroup(blocks, /*flags*/undefined);
+      promises = this.vcfGenotypeLookupGroup(blocks, /*flags*/undefined);
     }
+    return promises;
   }
   /** Request genotype calls for blocks.
    * @param blocks
    * @param flags for intersection, bcftools isec.
    * Defined if choose, otherwise intersectionParamsSimple() is used.
+   * @return an array of promises, signalling completion, with response or failure, of the requests
    */
   vcfGenotypeLookupGroup(blocks, flags) {
+    const
+    promises =
     blocks
-      .forEach((blockV, i) => {
+      .map((blockV, i) => {
         const
         vcfDatasetId = blockV.get('datasetId.id'),
         vcfDatasetIdAPI = blockV.get('datasetId.genotypeId'),
@@ -2394,6 +2442,7 @@ export default class PanelManageGenotypeComponent extends Component {
         domain = blockV.get('brushedDomain'),
         /** as in vcfGenotypeLookupDomain() and brushedDomainRounded() */
         domainInteger = domain.map((d) => d.toFixed(0));
+        let promise;
         /* samplesOK() returns .samples '' if none are selected; passing
          * vcfGenotypeLookupDataset( samples==='' ) will get all samples, which
          * may be valid, but for now skip this dataset if ! .length.
@@ -2404,9 +2453,12 @@ export default class PanelManageGenotypeComponent extends Component {
             {datasetIds : blocks.mapBy('datasetId.genotypeId'), flags} :
           this.intersectionParamsSimple(vcfDatasetId);
 
+          promise = 
           this.vcfGenotypeLookupDataset(blockV, vcfDatasetIdAPI, intersection, scope, domainInteger, samples, samplesLimitEnable);
         }
+        return promise;
       });
+    return promises.filter(p => p);
   }
   /** Send API request for VCF genotype of the given vcfDatasetId.
    * If scope is defined it indicates which scope / chromosome of vcfDatasetId,
@@ -3775,6 +3827,7 @@ export default class PanelManageGenotypeComponent extends Component {
     fnName = 'headerText',
     isBrAPI = this.lookupBlock?.hasTag('BrAPI') ||
       (this.lookupBlock?.server?.serverType === 'BrAPI'),
+    isGerminate = this.lookupBlock?.hasTag('Germinate'),
     /** not clear why passing limitSamples false for VCF (edit was 2023 'Mar  1 21:20') */
     {samples, samplesOK} = this.samplesOK(isBrAPI),
     domainInteger = [0, 1],
@@ -3818,6 +3871,11 @@ export default class PanelManageGenotypeComponent extends Component {
         this.headerText = text;
         textP = Promise.resolve(text);
       }
+    } else if (isGerminate) {
+      /** short-cut the vcfGenotypeLookup() request below because Germinate is
+       * taking ~1min for it, and there is no benefit - the header is expected to
+       * be simply samples. */
+      textP = Promise.resolve(samples);
     } else
     if (samplesOK && scopeOK && vcfDatasetId) {
       const

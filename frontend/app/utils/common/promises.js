@@ -79,3 +79,30 @@ function pollCondition(initialWait, conditionFn, okFn) {
 }
 
 //------------------------------------------------------------------------------
+
+export { promiseThrottle }
+/** If there is not a recent promise object[symbol] then perform fnP and record
+ * the returned promise in object[symbol], along with the current time.  The
+ * param delay is used to measure whether a previous promise is recent.
+ *
+ * @param object
+ * @param symbol
+ * @param delay
+ * @param fnP	returns a promise
+ * @return the cached promise object[symbol].promise, or the result of fnP()
+ */
+function promiseThrottle(object, symbol, delay, fnP) {
+  const fnName = 'promiseThrottle';
+  let promise;
+  const previous = object[symbol], time = Date.now();
+  if (!previous || (previous.time + delay < time)) {
+    dLog(fnName,  previous && (previous.time - time), object.id);
+    promise = fnP();
+    object[symbol] = {time, promise};
+  } else {
+    promise = previous.promise;
+  }
+  return promise;
+}
+
+//------------------------------------------------------------------------------

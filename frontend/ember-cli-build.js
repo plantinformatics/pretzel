@@ -1,5 +1,7 @@
 'use strict';
 
+/* global require */
+
 var nodeSass = require('node-sass');
 
 const EmberApp = require('ember-cli/lib/broccoli/ember-app');
@@ -23,7 +25,17 @@ module.exports = function (defaults) {
     },
 
     babel: {
-      corejs : {compact: false}
+      corejs : {compact: false},
+
+      /* Some dependencies (ember-bootstrap, ember-power-select) are using
+       * ember-concurrency@3.1.1, so the following is not required yet; enable it for v4 */
+      // refn : http://ember-concurrency.com/docs/v4-upgrade/
+      plugins: [
+        // ... any other plugins
+        // require.resolve("ember-concurrency/async-arrow-task-transform"),
+
+        // NOTE: put any code coverage plugins last, after the transform.
+      ],
     },
 
     sassOptions: {
