@@ -41,7 +41,7 @@ function connectOpenAIApi() {
   let api;
   const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
   if (OPENAI_API_KEY) {
-    console.log('connectOpenAIApi', 'OPENAI_API_KEY', OPENAI_API_KEY.slice(-3));
+    console.log('connectOpenAIApi', 'OPENAI_API_KEY', '...', OPENAI_API_KEY.slice(-3));
     const configuration = new Configuration({
       apiKey: OPENAI_API_KEY,
     });
