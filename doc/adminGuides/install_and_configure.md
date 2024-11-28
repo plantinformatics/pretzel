@@ -139,4 +139,15 @@ docker tag $image $baseName:latest
 docker image inspect $image | jq '.[] | .RepoTags'
 ```
 
+Push the built image to dockerhub
+```
+app=pretzel
+baseName=plantinformaticscollaboration/$app
+# $PRETZEL_VERSION as defined above
+echo PRETZEL_VERSION=$PRETZEL_VERSION
+for tag in $PRETZEL_VERSION latest; do docker push $baseName:$tag; done
+```
+
+
+
 ---
