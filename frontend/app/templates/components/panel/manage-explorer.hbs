@@ -1,5 +1,7 @@
-{{form/api-servers
-  addNewDatasource=(action 'addNewDatasource')}}
+{{#if this.urlOptions.dataSources}}
+  {{form/api-servers
+    addNewDatasource=(action 'addNewDatasource')}}
+{{/if}}
 
 {{#elem/panel-container state="primary" as |panelContainer|}}
   {{#elem/panel-heading icon="folder-open" panelContainer=panelContainer}}
@@ -145,6 +147,7 @@
 
   <div> {{!-- start of tabs and tree  --}}
 
+  {{#if this.apiServers.multipleServersCP}}
   <BsTab @customTabs={{true}} @fade={{false}} as |tab|>
     <BsNav class="api-server-tabs"  @type="tabs" as |nav|>
       {{#each-in this.servers as |apiServerName apiServer| }}
@@ -152,6 +155,7 @@
       {{/each-in}}
     </BsNav>
   </BsTab>
+  {{/if}}
 
 
   <BsTab @customTabs={{true}} @fade={{false}} @onChange={{action this.onChangeTab}} @activeId={{this.activeId}} as |tab|>
