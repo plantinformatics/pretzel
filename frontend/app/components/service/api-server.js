@@ -285,8 +285,8 @@ const ApiServerAttributes = {
     // (allInitially ? '' : 'Summary')
     let getBlocksTask = blockService.get('getBlocksLimits');
 
-    /** Task Instance.  param blockIds is [] */
-    let getBlocksTI = getBlocksTask.apply(blockService, [[]]);
+    /** Task Instance.  param blockIds is undefined, i.e. default to all blocks */
+    let getBlocksTI = getBlocksTask.apply(blockService, []);
 
     return getBlocksTI;
   }),

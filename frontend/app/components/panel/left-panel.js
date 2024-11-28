@@ -14,6 +14,12 @@ export default Component.extend({
   attributeBindings: ['style:style'],
   view: 'mapview',
 
+  /** Determine if the 'Selected Server' <Panel::SelectedServer> should be displayed.
+   * There is no need to display it if the number of api servers is 1, i.e. only
+   * connected to the primary pretzel server.
+   */
+  multipleServers : alias('apiServers.multipleServersCP'),
+
   /** Return a list of datasets, with their included blocks, for the currently-selected
    * API server tab
    *

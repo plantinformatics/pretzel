@@ -53,6 +53,7 @@ export default Service.extend(Evented, {
 
   /** Map of servers, indexed by server .name */
   servers : EmberObject.create(),
+  // @tracked
   serversLength : 0,
   /** Map from block and dataset ids to their server.
    * Block and dataset ids could be mapped separately, but it is unlikely those
@@ -117,6 +118,18 @@ export default Service.extend(Evented, {
   get multipleServers() {
     return this.serversLength > 1;
   },
+  /** Identical to .multipleServers() which works OK in templates/group{,s}.hbs
+   * (perhaps because that is a route), but it doesn't update in panel/left-panel.hbs;
+   * this updates OK.  Possibly this won't be needed after the service and Component
+   * are converted from classic Ember Components to native classes.
+   *
+   * Copied from components/draw/axis-menu.js, which was based on an extract
+   * from axisTitleBlocksServers_tspan.js
+   */
+  multipleServersCP : computed('serversLength', function () {
+    return this.get('serversLength') > 1;
+  }),
+
 
   /** Add a new ApiServer.
    * Store it in this.servers, indexed by .name = .host_safe()
