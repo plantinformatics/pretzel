@@ -102,7 +102,6 @@
   },
   "dependencies": {
     "@ember/test-helpers": "^3.3.0",
-    "@facilecomm/ember-local-storage": "github:Facilecomm/ember-local-storage",
     "@plantinformatics/vcf-genotype-brapi": "^1.0.7",
     "@solgenomics/brapijs": "https://github.com/solgenomics/BrAPI-js.git",
     "@voll/ember-parachute": "^2.0.0",
