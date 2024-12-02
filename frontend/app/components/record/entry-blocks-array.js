@@ -1,6 +1,8 @@
 import { computed } from '@ember/object';
 import { inject as service } from '@ember/service';
 
+import { alphanum } from '@cablanchard/koelle-sort';
+
 import EntryBlocks from './entry-blocks';
 
 
@@ -17,6 +19,17 @@ export default EntryBlocks.extend({
     if (o.historyBlocks && (o.historyView !== 'Normal')) {
       data = data.filter((b) => this.get('viewHistory').blockViewed(b));
     }
+    /** As noted in entry-level.js : valuesFiltered() re. blocksFilterSortViewed(),
+     * it may be preferred to sort blocks by view / recent / favourites.
+     */
+    /** Current crops have single-digit chromosome numbers, so this would suffice :
+     *   .sortBy('name');
+     * but for a natural sort of multi-digit numbers in chromosome
+     * names, alphanum is used.
+     */
+    data = data
+      .sort((a,b) => alphanum(a.get('name'), b.get('name')) );
+
     return data;
   }),
 
