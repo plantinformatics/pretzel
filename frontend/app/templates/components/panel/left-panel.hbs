@@ -20,7 +20,11 @@
                 updateFeaturesInBlocks=this.updateFeaturesInBlocks
             }}
 
-            <Panel::SelectedServer/>
+            {{!-- There is no need to display SelectedServer if the number of
+                  api servers is 1, i.e. only connected to the primary pretzel server. --}}
+            {{#if this.multipleServers}}
+              <Panel::SelectedServer/>
+            {{/if}}
 
             {{panel/sequence-search
                 datasets=this.serverSelected_datasetsBlocks

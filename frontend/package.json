@@ -1,6 +1,6 @@
 {
   "name": "pretzel-frontend",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "description": "Frontend code for Pretzel",
   "repository": "",
   "license": "MIT",
@@ -102,7 +102,6 @@
   },
   "dependencies": {
     "@ember/test-helpers": "^3.3.0",
-    "@facilecomm/ember-local-storage": "github:Facilecomm/ember-local-storage",
     "@plantinformatics/vcf-genotype-brapi": "^1.0.7",
     "@solgenomics/brapijs": "https://github.com/solgenomics/BrAPI-js.git",
     "@voll/ember-parachute": "^2.0.0",
@@ -120,6 +119,7 @@
     "ember-composable-helpers": "^5.0.0",
     "ember-concurrency": "^3.1.1",
     "ember-jsoneditor": "git+https://git@github.com/plantinformatics/ember-jsoneditor.git",
+    "ember-local-storage": "^2.0.7",
     "ember-lodash": "^4.19.5",
     "ember-models-table": "^5.2.0",
     "ember-promise-helpers": "^2.0.0",

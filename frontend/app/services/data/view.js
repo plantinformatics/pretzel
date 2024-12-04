@@ -2,7 +2,7 @@ import Service, { inject as service } from '@ember/service';
 import { later } from '@ember/runloop';
 import { alias } from '@ember/object/computed';
 
-import { storageFor } from '@facilecomm/ember-local-storage';
+import { storageFor } from 'ember-local-storage';
 
 
 /*----------------------------------------------------------------------------*/
