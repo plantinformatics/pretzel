@@ -511,7 +511,7 @@ export default Model.extend(Evented, {
         if (! didCancel(error)) {
           dLog('call_taskGetPaths taskInstance.catch', blockAdjId, error);
           throw error; }
-        let lastResult = task.lastSuccessful.value;
+        let lastResult = task.lastSuccessful?.value;
         dLog('call_taskGetPaths', 'using lastSuccessful.value', lastResult, 
              task.state, task.numRunning, task.numQueued
             );

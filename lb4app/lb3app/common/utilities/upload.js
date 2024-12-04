@@ -312,7 +312,7 @@ exports.handleJson = function(msg, uploadParsed, cb) {
     // Common steps for both .json and .gz files after parsing
   (models, jsonMap, options, cb) => {
       if(!jsonMap.name){
-        cb(Error('Dataset JSON has no "name" field (required)'));
+        cb(ErrorStatus(400, 'Dataset JSON has no "name" field (required)'));
       } else {
         checkQtlThenUpload();
         // This check is not required because uploadParsedCb() is called after removeExisting.
@@ -328,7 +328,7 @@ exports.handleJson = function(msg, uploadParsed, cb) {
         })
         .catch((err) => {
           console.log(err);
-          cb(Error('Error checking dataset existence'));
+          cb(ErrorStatus(404, 'Error checking dataset existence'));
         });
       }
 
@@ -354,7 +354,7 @@ exports.handleJson = function(msg, uploadParsed, cb) {
       if (! jsonData) {
         let message = 'No upload data';
         console.log(message);
-        cb(Error(message));
+        cb(ErrorStatus(400, message));
       } else
       try {
         let jsonMap = JSON.parse(jsonData);
@@ -373,7 +373,7 @@ exports.handleJson = function(msg, uploadParsed, cb) {
           "Failed to parse JSON" +
           (message ? ':\n' + message : '') +
           (context ? '  in : \n' + context : '');
-        cb(Error(augmentedMessage));
+        cb(ErrorStatus(400, augmentedMessage));
       }
     };
 

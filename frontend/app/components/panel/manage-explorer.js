@@ -1957,6 +1957,22 @@ export default ManageBase.extend({
           console.log('didRender', id, c[0], t[0], a[0]);
     }
   },
+  /** After panel-container is closed and re-opened, a new BsTab is
+   * instantiated, and it defaults to the first tab.pane,
+   * i.e. tab-explorer-Trait, instead of using @activeId; this may improve in a
+   * later version of ember-bootstrap, for now : select 'All Datasets'.
+   * See : ember-bootstrap/addon/components/bs-tab.js
+   */
+  initialSelected(argA) {
+    const fnName = 'initialSelected';
+    const tab = argA[0];
+    this.bsTab = tab;
+    const initialSelectedSet = () => {
+      dLog(fnName, tab && [tab.activeId, tab.selectedId, tab.args]);
+      tab.select('tab-explorer-datasets');
+    };    
+    later(initialSelectedSet, 2.5 * 1000);
+  },
   /*
   willDestroyElement() {
     console.log('willDestroyElement', this);

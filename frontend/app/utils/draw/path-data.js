@@ -168,25 +168,27 @@ function PathDataUtils(oa) {
    * The purpose is to give the x positions which paths between the 2 axes
    * should terminate at, hence the name 'inside' - it is concerned with the
    * inside edges of the axes from the perspective of the space between them.
-   * @param ak1, ak2  axis IDs  (i.e. oa.axes[ak1] is Stacked, not Block)
+   * @param ax1, ax2  axis-1d of the axes to lookup
    * @param cached  true means use the "old" / cached positions o[ak], otherwise use the current scale x(ak).
    * @return 2 x-positions, in an array, in the given order (ak1, ak2).
    */
-  function inside(ak1, ak2, cached)
+  function inside(ax1, ax2, cached)
   {
     const
+    ak1 = ax1.axisName,
+    ak2 = ax2.axisName,
     o = oa.o,
     x = stacks.x;
     let xi = cached
       ? [o[ak1], o[ak2]]
-      : [x(ak1), x(ak2)],
-    /** true if ak1 is left of ak2 */
+      : [x(ax1), x(ax2)],
+    /** true if ax1 is left of ax2 */
     order = xi[0] < xi[1],
     /** If the rightmost axis is split it does not affect the endpoint, since its left side is the axis position.
      * This is the index of the left axis. */
     left = order ? 0 : 1,
-    akL = order ? ak1 : ak2,
-    aL = oa.axisApi.stacksView.axesByBlockId[akL].axis1d;    // draw_orig : oa.axes[akL];
+    aL = order ? ax1 : ax2,
+    akL = aL.axisName;
     if (aL.extended)
     {
       // console.log("inside", ak1, ak2, cached, xi, order, left, akL);
@@ -221,7 +223,7 @@ function PathDataUtils(oa) {
     axis1 = Stacked.getAxis(ak1),
     axis2 = Stacked.getAxis(ak2),
     /** x endpoints of the line;  if either axis is split then the side closer the other axis is used.  */
-    xi = inside(axis1.axisName, axis2.axisName, true);
+    xi = inside(axis1, axis2, true);
     let l;
     if (axis1.perpendicular && axis2.perpendicular)
     { /* maybe a circos plot :-) */ }
@@ -256,7 +258,7 @@ function PathDataUtils(oa) {
     vc = oa.vc,
     axis1 = Stacked.getAxis(ak1),
     axis2 = Stacked.getAxis(ak2),
-    xi = inside(axis1.axisName, axis2.axisName, false),
+    xi = inside(axis1, axis2, false),
     oak = xi, // o[ak1], o[ak2]],
     my = syntenyBlock_2Feature ?
         [featureY2(ak1, d[0]), featureY2(ak2, d[2])] :
@@ -724,13 +726,11 @@ function PathDataUtils(oa) {
   function featureY2(axisID, feature)
   {
     let
-    // axisID = feature.get('blockId'),
-    /** or .view.axisName */
-    parentName = Block.axisName_parent(axisID),
-    ysa = oa.ys[parentName],
+    axis1d = feature.get('blockId.axis'),
+    ysa = axis1d.get('ys'),
     v = feature.value,
     aky = v.map((location) => ysa(location)),
-    axisY = oa.stacks.blocks[axisID].yOffset();
+    axisY = axis1d.yOffset();
 
     return aky.map((y) => y + axisY);
   }
