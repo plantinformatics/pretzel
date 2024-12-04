@@ -1971,7 +1971,7 @@ export default ManageBase.extend({
       dLog(fnName, tab && [tab.activeId, tab.selectedId, tab.args]);
       tab.select('tab-explorer-datasets');
     };    
-    later(initialSelectedSet, 5 * 1000);
+    later(initialSelectedSet, 2.5 * 1000);
   },
   /*
   willDestroyElement() {
