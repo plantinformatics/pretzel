@@ -68,6 +68,14 @@
     <div style="display:none">{{this.datasetVcfFiles}}</div>
     <div class="clearfix"></div>
 
+    {{#if this.resultCounts.blocks}}
+      <label>Received :</label>
+      <ul style="list-style-type: none;">
+        <li>{{this.resultCounts.blocks}} Chromosomes</li>
+        <li>{{this.resultCounts.features}} SNPs</li>
+      </ul>
+    {{/if}}
+
   </div>
 
   {{#if this.lookupMessage}}

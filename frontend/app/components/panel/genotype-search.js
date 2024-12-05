@@ -20,6 +20,16 @@ const trace = 0;
 
 //------------------------------------------------------------------------------
 
+class ResultCounts {
+  @tracked 
+  blocks = 0;
+  @tracked 
+  features = 0;
+};
+
+
+//------------------------------------------------------------------------------
+
 export default class PanelGenotypeSearchComponent extends Component {
   @service() controls;
   @service('data/dataset') datasetService;
@@ -46,6 +56,9 @@ export default class PanelGenotypeSearchComponent extends Component {
 
   @tracked
   resultCount = 0;
+
+  @tracked
+  resultCounts = new ResultCounts();
 
   //----------------------------------------------------------------------------
 
@@ -291,11 +304,15 @@ export default class PanelGenotypeSearchComponent extends Component {
      */
     const manageGenotype = this.manageGenotype;
     /** vcfGenotypeSearchDisabled prevents call to vcfGenotypeSearch() if ! this.manageGenotype */
+    const userSettings = this.args.userSettings;
     /** Signify that manageGenotype component is operating under the control of
      * the genotype-search dialog / "automation wizard".
      */
     this.args.userSettings.dialogMode =
       {component : 'genotype-search', datasetId : this.selectedDatasetId};
+    const resultCounts = (userSettings.resultCounts = this.resultCounts);
+    resultCounts.blocks = 0;
+    resultCounts.features = 0;
 
     this.navigateGenotypeTable();
 
