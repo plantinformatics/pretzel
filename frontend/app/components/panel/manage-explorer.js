@@ -29,6 +29,7 @@ import { task } from 'ember-concurrency';
 
 /*----------------------------------------------------------------------------*/
 
+import config from 'pretzel-frontend/config/environment';
 
 import { tab_explorer_prefix, text2EltId, keysLength } from '../../utils/explorer-tabId';
 import { parseOptions } from '../../utils/common/strings';
@@ -131,6 +132,17 @@ export default ManageBase.extend({
     this._super(...arguments);
   },
 
+  /** @return an object containing any URL query parameters defined by ?options=
+   * Return undefined if ?options= is not given in the URL.
+   *
+   * @desc
+   * urlOptions has been factored to services/query-params.js, and that could be
+   * used here via alias, and also in :
+   *   components/draw/flow-controls.js
+   *   components/draw/link-path.js
+   *   controllers/application.js
+   *   routes/mapview.js
+   */
   urlOptions : computed('model.params.options', function () {
     let options_param = this.get('model.params.options'),
     options = options_param && parseOptions(options_param);
@@ -145,6 +157,17 @@ export default ManageBase.extend({
    * search cases better than the other.
    */
   enable_parentBeforeFilter : alias('urlOptions.parentBeforeFilter'),
+
+  /** Enable display of Datasources, i.e. Pretzel multiple-servers, Germinate, Gigwa.
+   */
+  showDataSources : computed('urlOptions', function () {
+    const
+    fnName = 'showDataSources',
+    dataSources = this.urlOptions?.dataSources,
+    show = dataSources ?? (config.environment === 'development');
+    dLog(fnName, show, dataSources, config.environment);
+    return show;
+  }),
 
   /*--------------------------------------------------------------------------*/
 
