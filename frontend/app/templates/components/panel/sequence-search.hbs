@@ -26,6 +26,23 @@
 
         <tab.pane @id="sequence-search-input" @title="Input : DNA Sequence">
 
+
+          <div style="margin-left: 0.5em;" class="margin-1em">
+              <label>Reference to search : </label>
+              <select 
+                id="parent" 
+                onchange={{action (mut this.selectedParent) value="target.value"}} 
+                disabled={{this.isProcessing}}
+                style="width: 100%"
+              >
+                <option value='' selected>None</option>
+                {{#each this.datasetsToSearch key="name" as |ds|}}
+                  <option value={{ds.id}}>{{ds.displayName}}</option>
+                {{/each}}
+              </select>
+          </div>
+
+
           <div style="float: right; margin-right: 1em;">
             <a>{{elem/icon-base name="arrow-left"  click=(action this.fromSelectedFeatures) }}</a>
             {{#ember-tooltip side="left" delay=500}}
@@ -87,22 +104,6 @@ AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" >
           {{/if}}
 
           <ul class="config-list">
-
-            <li class="list-group-item">
-              <label>Reference to search : </label>
-              <select 
-                id="parent" 
-                onchange={{action (mut this.selectedParent) value="target.value"}} 
-                disabled={{this.isProcessing}}
-                style="width: 100%"
-              >
-                <option value='' selected>None</option>
-                {{#each this.datasetsToSearch key="name" as |ds|}}
-                  <option value={{ds.id}}>{{ds.displayName}}</option>
-                {{/each}}
-              </select>
-            </li>
-
 
 
             <li class="list-group-item">
