@@ -603,7 +603,12 @@ export default Component.extend({
       p && p.then(() => {
         dLog('showTable then', this.get('data')?.length);
         // alternative : dataForTableEffect() could do this if ! table.
-        this.shownBsTab(); });
+        const resolved = (p.state() === "resolved") || (p.readyState == 4);
+        if (! resolved || this.data.length || p.responseJSON?.features?.length) {
+          this.shownBsTab();
+        }
+        // else don't show table if resolved and ! data.length
+      });
     } else
     // Ensure table is created when tab is shown
     if (! (table = this.get('table')) ||
