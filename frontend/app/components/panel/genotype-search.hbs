@@ -66,6 +66,9 @@
     >Search</button>
     {{!-- Effect: request the vcfFiles for the selected dataset --}}
     <div style="display:none">{{this.datasetVcfFiles}}</div>
+    {{#if this.vcfGenotypeSearchTask.isRunning}}
+      <div class="margin-1em">Loading ...</div>
+    {{/if}}
     <div class="clearfix"></div>
 
     {{#if this.resultCounts.blocks}}

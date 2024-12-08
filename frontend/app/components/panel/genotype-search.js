@@ -6,6 +6,8 @@ import { later } from '@ember/runloop';
 
 import { tracked } from '@glimmer/tracking';
 
+import { task } from 'ember-concurrency';
+
 //------------------------------------------------------------------------------
 
 import { statusToMatrix } from '../../utils/data/vcf-files';
@@ -251,12 +253,14 @@ export default class PanelGenotypeSearchComponent extends Component {
     disabled = 
       ! this.selectedSamplesText?.length ||
       ! this.selectedFeaturesText?.length ||
-      ! this.vcfFiles?.length;
+      ! this.vcfFiles?.length ||
+      this.vcfGenotypeSearchTask.isRunning;
     dLog(
       fnName, disabled,
       this.selectedSamplesText?.length,
       this.selectedFeaturesText?.length,
       this.vcfFiles?.length,
+      this.vcfGenotypeSearchTask.isRunning,
       !! this.manageGenotype);
     return disabled;
   }
@@ -295,9 +299,29 @@ export default class PanelGenotypeSearchComponent extends Component {
     return promise;
   }
 
-  @action
+
+  /** if vcfGenotypeSearchTask is not running, perform it. */
   vcfGenotypeSearch() {
-    const fnName = 'vcfGenotypeSearch';
+    if (! this.vcfGenotypeSearchTask.isRunning) {
+      this.vcfGenotypeSearchTaskInstance = this.vcfGenotypeSearchTask.perform();
+    }
+  }
+  /** Call vcfGenotypeSearchP() in a task - yield the result.
+   * This function and vcfGenotypeSearch() are based on the equivalent vcfGenotypeLookup in manage-genotype.js
+   */
+  vcfGenotypeSearchTask = task({ drop: true }, async () => {
+    console.log('vcfGenotypeSearchTask');
+    let block = await this.vcfGenotypeSearchP();
+
+    return block;
+  });
+
+  //------------------------------------------------------------------------------
+
+  @action
+  vcfGenotypeSearchP() {
+    const fnName = 'vcfGenotypeSearchP';
+    dLog(fnName, this.vcfGenotypeSearchTask.isRunning, 'vcfGenotypeSearchTask.isRunning');
     const snpNames = namesTrimUniq(this.selectedFeaturesText);
     const searchScope = {datasetVcfFiles : this.vcfFiles, snpNames};
     /** Called from vcfGenotypeSearchAfterNavigate() which ensures that this.manageGenotype?.isDestroying === false
@@ -351,6 +375,8 @@ export default class PanelGenotypeSearchComponent extends Component {
       dLog(fnName, 'resultCount', this.resultCount); }));
 
     dLog(fnName, searchScope, this.args.userSettings.dialogMode);
+
+    return resultP;
   }
 
   @action
