@@ -1676,6 +1676,11 @@ div#goto-feature > div
 {
   margin : 1em;
 }
+/* Space the <a>?</a> URL link away from text on its left.   */
+.margin-left-help {
+  margin-left: 3em;
+}
+
 
 .panel-collapse-button {
   padding:0 5px 0 5px;
