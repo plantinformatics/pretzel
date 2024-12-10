@@ -10,7 +10,7 @@ import { singularize, pluralize } from 'ember-inflector';
 
 import DS from 'ember-data';
 
-import EmberObject, { computed } from '@ember/object';
+import EmberObject, { computed, set as Ember_set, } from '@ember/object';
 import {
   filter,
   filterBy,
@@ -225,12 +225,15 @@ export default ManageBase.extend({
   /** user has clicked Normal/Recent/Favourites radio. */
   historyViewChanged(value) {
     dLog('historyViewChanged', value);
+    Ember_set(this.controlOptions, 'historyView', value);
   },
   historyBlocksChanged(value) {
     dLog('historyBlocksChanged', value);
+    Ember_set(this.controlOptions, 'historyBlocks', value);
   },
   showHierarchyChanged(value) {
     dLog('showHierarchyChanged', value);
+    Ember_set(this.controlOptions, 'showHierarchy', value);
   },
 
 

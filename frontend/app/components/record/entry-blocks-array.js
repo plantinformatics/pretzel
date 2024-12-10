@@ -19,6 +19,10 @@ export default EntryBlocks.extend({
     if (o.historyBlocks && (o.historyView !== 'Normal')) {
       data = data.filter((b) => this.get('viewHistory').blockViewed(b));
     }
+    /** if data is an Array Proxy, convert it to an Array to enable sort to work. */
+    if (! (data instanceof Array)) {
+     data = data.toArray();
+    }
     /** As noted in entry-level.js : valuesFiltered() re. blocksFilterSortViewed(),
      * it may be preferred to sort blocks by view / recent / favourites.
      */

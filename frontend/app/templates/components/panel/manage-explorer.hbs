@@ -54,7 +54,7 @@
           type="checkbox"
           name="this.controlOptions.historyBlocks"
           checked={{this.controlOptions.historyBlocks}}
-          oninput={{action this.historyBlocksChanged preventDefault=false}}
+          oninput={{action this.historyBlocksChanged value='target.checked' preventDefault=false}}
           id="checkbox-historyBlocks"
         />
         <label for="checkbox-historyBlocks">Viewed Chromosomes</label>
@@ -253,7 +253,7 @@
                 type="checkbox"
                 name="this.controlOptions.showHierarchy"
                 checked={{this.controlOptions.showHierarchy}}
-                oninput={{action this.showHierarchyChanged preventDefault=false}}
+                oninput={{action this.showHierarchyChanged value='target.checked' preventDefault=false}}
                 id="checkbox-showHierarchy"
               />
               <label for="checkbox-showHierarchy"><i class="glyphicon glyphicon-tree-conifer"></i></label>
