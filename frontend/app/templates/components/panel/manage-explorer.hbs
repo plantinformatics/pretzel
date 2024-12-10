@@ -13,6 +13,8 @@
   {{#if panelContainer.showComponent}}
 
     <li class="list-group-item">
+      {{#if this.urlOptions.historyFilters}}
+
       <label style="display:inline"></label>
       {{#radio-button
         value='Normal'
@@ -59,6 +61,8 @@
         />
         <label for="checkbox-historyBlocks">Viewed Chromosomes</label>
       </span>
+
+      {{/if}}
 
       <span style="margin-left : 10px; display: inline-block;">
         <label for="select-group-as-filter">Group</label>
