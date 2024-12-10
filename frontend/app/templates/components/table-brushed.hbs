@@ -9,6 +9,8 @@
     oninput={{action this.autoColumnWidthChanged value="target.checked"}}  >
   <label>Auto Column Width</label>
 
+  {{#if this.urlOptions.featuresEditable}}
+
   <input type="checkbox"
     style="margin-left: 3em;"
     checked={{this.editable}}
@@ -20,6 +22,9 @@
     checked={{this.saveToDatabase}}
     oninput={{action (mut this.saveToDatabase) value="target.checked"}}  >
   <label>Save To Database</label>
+
+  {{/if}}
+
 
 </div>
 <div style="clear:both"></div>
