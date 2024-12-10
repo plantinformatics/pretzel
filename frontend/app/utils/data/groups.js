@@ -150,7 +150,7 @@ export default class DataGroups extends EmberObject {
 /** select-group.hbs uses .id and .name.
  *  manage-dataset.js : datasetChangeGroup() uses .get('id')
  */
-const noGroup = EmberObject.create({id : 'noGroup', name : ''});
+const noGroup = EmberObject.create({id : 'noGroup', name : 'All'});
 
 // -----------------------------------------------------------------------------
 
