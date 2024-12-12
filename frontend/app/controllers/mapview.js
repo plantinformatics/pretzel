@@ -296,13 +296,18 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
     }
     , pathColourScale: true,
 
-    /** also load parent block */
+    /** load (or unload) this block, and its parent block if any.
+     * This function is now changed (after b0941e7b) to be a toggle,
+     * enabling +/- in the Dataset Explorer.
+     * The block's viewed state is toggled.
+     */
     loadBlock : function loadBlock(block) {
       dLog('loadBlock', block.brushName || block);
-      let related = this.get('view').viewRelatedBlocks(block);
-      // load related[] before block.
-      related.push(block);
-      if (! block.hasTag('transient')) {
+      const view = ! block.get('isViewed');
+      let related = this.get('view').viewRelatedBlocks(block, view);
+      if (view && ! block.hasTag('transient')) {
+        // related[] does not include block, so add it.
+        related.push(block);
         // or send('getSummaryAndData', block);
         related.forEach((block) => this.actions.getSummaryAndData.apply(this, [block]));
       }

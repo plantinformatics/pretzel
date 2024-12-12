@@ -23,14 +23,11 @@
   </div>
 {{else}}
   {{!-- log 'entry.isViewed' entry.id entry.isViewed --}}
-  {{#if this.entry.isViewed}}
-  {{else}}
     {{elem/button-base
       classSize='xs'
       classColour=this.classColour
-      icon='plus'
+      icon=this.entry.viewToggleIcon
       onClick=(action "loadBlock" this.entry)}}
-  {{/if}}
   {{this.entry.name}}
   {{#if this.entry.datasetId.editable }}
     {{#elem/dropdown-container

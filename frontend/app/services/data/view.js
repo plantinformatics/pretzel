@@ -68,20 +68,50 @@ export default Service.extend({
     return parent;
   },
 
+  /** Determine if there are un-related (data) blocks on the axis,
+   * i.e. excluding block and it's referenceBlock and parent block.
+   * @param block
+   * @param related block's referenceBlock and parent block
+   * @return true if there are other dataBlocks on axis
+   */
+  axisSiblings(block, related) {
+    const
+    axis1d = block.axis,
+    /** In the case of a QTL, referenceBlock is the parent Genetic Map, but it
+     * also appears in dataBlocks[], so exclude it via related. */
+    siblings = axis1d?.dataBlocks.filter(b => b !== block && ! related.includes(b));
+    return !! siblings?.length;
+  },
+
   /** The user has requested that block be viewed; also view its .referenceBlock
    * (if any) and .parentBlock (if different).
+   * @param view if true then view, else un-view
    * @return related blocks for which the caller (mapview : loadBlock)
    * should do useTask: getBlocksSummary(), ensureFeatureLimits(),
    */
-  viewRelatedBlocks(block) {
+  viewRelatedBlocks(block, view) {
     const fnName = 'viewRelatedBlocks';
+    /** Ordered : referenceBlock, parent block, block, because the block should
+     * not be viewed before its referenceBlock, so that the block can be added
+     * to the referenceBlock's axis.
+     * `related` could easily be ordered in the same way; it is used to request
+     * summary counts, and the order of requests doesn't matter.
+     */
     let toView = [];
     let related = [];
-    if (! block.get('isViewed')) {
-      toView.push(block);
-      /** record the viewed event in history */
-      this.setViewed(block);
-    }
+    const
+    push = view ? 'push' : 'unshift',
+    viewFn = block => {
+      if (view !== block.get('isViewed')) {
+        toView[push](block);
+        if (view) {
+          /** record the viewed event in history */
+          this.setViewed(block);
+        }
+      }
+    };
+
+    viewFn(block);
     let referenceBlock = block.get('referenceBlock');
     /** .referenceBlock is limited to viewed and SameServer,
      * whereas .referenceBlocks uses referenceBlocksAllServers() */
@@ -89,29 +119,46 @@ export default Service.extend({
       referenceBlock = block.referenceBlocks[0];
       dLog(fnName, 'referenceBlocks', block.referenceBlocks);
     }
-    if (referenceBlock && (referenceBlock !== block)) {
-      toView.push(referenceBlock);
-      related.push(referenceBlock);
-      this.setViewed(referenceBlock);
-    }
+
     /** Also view the parent, if that is different from the reference.
      * In this case block and referenceBlock are already covered,
      * so block.parentAndGP() is not required.
      */
     if (block.get('datasetId.parent.parent')) {
+      /** if unview, can use the parentBlock returned by unviewFor() */
       let parentBlock = block.get('parentBlock');
-      if (parentBlock && ! parentBlock.get('isViewed')) {
+      if (parentBlock) {
         related.push(parentBlock);
-        toView.push(parentBlock);
-        this.setViewedFor(block, parentBlock);
-        this.setViewed(parentBlock);
+        viewFn(parentBlock);
+        if (view) {
+          this.setViewedFor(block, parentBlock);
+        }
+      }
+      if (! view) {
+        /** Expect (parentBlock2 === parentBlock); possibly parentBlock or parentBlock2 could be undefined. */
+        const parentBlock2 = this.unviewFor(block);
+        if (parentBlock2 && (parentBlock2 !== parentBlock)) {
+          related.push(parentBlock2);
+          viewFn(parentBlock2);
+        }
       }
     }
-    if (toView.length) {
-      later(() => toView.forEach((block) => block.set('isViewed', true)));
+
+    if (referenceBlock && (referenceBlock !== block)) {
+      related.push(referenceBlock);
+      /** if unview, check there are no other datablocks on axis, before
+       * unviewing the axis referenceBlock
+       */
+      if (view || ! this.axisSiblings(block, related)) {
+        viewFn(referenceBlock);
+      }
     }
 
-    dLog(fnName, block.brushName, related, 'loadBlock');
+    if (toView.length) {
+      later(() => toView.forEach((block) => block.set('isViewed', view)));
+    }
+
+    dLog(fnName, view, block.brushName, related, 'loadBlock');
     return related;
   },
 
@@ -133,7 +180,7 @@ export default Service.extend({
     withoutAxis = this.block.viewed.filter(block => {
       const nonAxis = ! block.axis1d || ! block.axis1d.stack || (block.axis1d.stack.stackIndex() === -1);
       if (nonAxis) {
-        const related = this.viewRelatedBlocks(block);
+        const related = this.viewRelatedBlocks(block, true);
       }
       return nonAxis;
     });

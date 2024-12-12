@@ -1043,6 +1043,9 @@ export default Model.extend({
     dLog('viewedChildBlocks', viewedChildBlocks, childBlocks);
     return viewedChildBlocks;
   }),
+  /** Unview child blocks of this.
+   * Unview parent blocks of this which were viewed for this.
+   */
   unViewChildBlocks() {
     let viewedChildBlocks = this.get('viewedChildBlocks');
     if (viewedChildBlocks.length)
@@ -1054,6 +1057,12 @@ export default Model.extend({
     }
   },
 
+  /** @return icon name plus or minus to represent toggling the
+   * current value of this.isViewed */
+  viewToggleIcon : computed('isViewed', function () {
+    const iconName = this.isViewed ? 'minus' : 'plus';
+    return iconName;
+  }),
 
   /*--------------------------------------------------------------------------*/
 

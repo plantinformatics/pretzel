@@ -1,11 +1,8 @@
-{{#if this.entry.isViewed}}
-{{else}}
   {{elem/button-base
     classSize='xs'
     classColour='success'
-    icon='plus'
+    icon=this.entry.viewToggleIcon
     onClick=(action "loadBlock" this.entry)}}
-{{/if}}
 {{this.entry.datasetId.content.name}}
 {{this.entry.name}}
 {{if (compare this.entry.name '!==' this.entry.scope) this.entry.scope }}
