@@ -56,6 +56,7 @@ export default Service.extend({
   session: service('session'),
   apiServers : service(),
   controls : service(),
+  headsUp : service('data/heads-up'),
 
   //----------------------------------------------------------------------------
 
@@ -637,6 +638,13 @@ export default Service.extend({
       return vcfGenotypeP;
     }
 
+    const error = (XMLHttpRequest, textStatus, errorThrown) =>
+    {
+      dLog('auth _ajax error', XMLHttpRequest, textStatus, errorThrown);
+      // observed : textStatus : "error", errorThrown : ""
+      this.set('headsUp.tipText', textStatus);
+    };
+
     let config = {
       url,
       type: method,
@@ -644,8 +652,9 @@ export default Service.extend({
       headers: {
         accept: 'application/json',
       },
-      contentType: 'application/json'
-    }
+      contentType: 'application/json',
+      error,
+    };
 
     if (data) {
       config.data = data;
@@ -719,7 +728,17 @@ export default Service.extend({
 
     }
 
-    return $.ajax(config);
+    const promise = $.ajax(config);
+    promise.catch(error => {
+      dLog(fnName, error, route, dataIn, error.status, error.statusText, error.state?.());
+      if (error.statusText) {
+        const
+        text = 'API request to server : ' + route + ' : ' +
+          error.statusText + ' : ' + error.state?.() + ', ' + error.status;
+        this.set('headsUp.tipText', text);
+      }
+    });
+    return promise;
   },
 
   _accessToken(server) {

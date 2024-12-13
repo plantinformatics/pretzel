@@ -93,6 +93,7 @@ export default Component.extend({
    * which this function performs after this promise completes.
    */
   uploadData(data) {
+    const fnName = 'uploadData';
     let promise = 
     this.get('auth').uploadData(data, this.updateProgress.bind(this));
     promise
@@ -107,7 +108,15 @@ export default Component.extend({
         console.log(errobj);
         let errmsg = null;
         if (! errobj) {
-          errmsg = err.responseJSON || ('' + err);
+          if (err.responseJSON) {
+            errmsg = err.responseJSON;
+          } else if (err.statusText) {
+            errmsg = fnName + ' : ' + err.statusText + ' : ' + err.state?.() + ', ' + err.status;
+          } else {
+            /* i.e. err.toString(); if err is Object, this produces
+             * "[object Object]", which is not useful */
+            errmsg = '' + err;
+          }
         } else
         if (errobj.message) {
           errmsg = errobj.message;
