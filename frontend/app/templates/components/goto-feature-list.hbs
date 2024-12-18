@@ -41,7 +41,7 @@
       type="checkbox"
       name="matchAliases"
       checked={{this.matchAliases}}
-      oninput={{action this.matchAliasesChanged preventDefault=false}}
+      oninput={{action this.matchAliasesChanged value='target.checked' preventDefault=false}}
       id="checkbox-matchAliases"
     />
     <label for="checkbox-matchAliases">Match aliases</label>
@@ -68,17 +68,28 @@
    ⏰  U+023F0  ALARM CLOCK --}}
   {{#if this.loading }}
     <div class="pull-right" style="margin-right:2em;">
-      &#x23F0;
+      Searching ... &nbsp; &nbsp; &nbsp; &#x23F0;
     </div>
   {{/if}}
 
   {{!-- →	&#8594;	&rarr;	RIGHTWARDS ARROW --}}
 
   <div style="clear:both; margin-top : 4ex;">
-    {{#if this.blocksOfFeatures.length}}
-      <span class="badge">
-        {{this.blocksOfFeatures.length}}
-      </span>
+    {{#if this.taskGet.lastPerformed}}
+      {{#unless this.loading }}
+        <label>Received :</label>
+        <ul style="list-style-type: none;">
+          <li>{{this.blocksOfFeatures.length}} Features</li>
+          {{!-- if this.matchAliases the result shape is Features [],
+             otherwise { aliases: [...], features: [...] }
+             Using this.matchAliases in this if expression does not currently update,
+             but will probably work after converting this component from
+             Ember Component to a native class which extends glimmer Component  --}}
+          {{#if this.taskGet.lastPerformed.value.aliases }}
+            <li>{{this.aliases.length}} Aliases</li>
+          {{/if}}
+        </ul>
+      {{/unless}}
     {{/if}}
   </div>
 </div>

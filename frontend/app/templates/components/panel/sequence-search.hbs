@@ -3,6 +3,7 @@
   {{!--  https://fontawesome.com/icons/dna   Unicode  f471  <i class="fas fa-dna"></i> --}}
   {{#elem/panel-heading icon="search" panelContainer=panelContainer}}
     DNA Sequence Blast Search
+    <a class="margin-left-help" target="_blank" href="https://docs.plantinformatics.io/Basic-Functions/Search-tab/#dna-sequence-blast-search"><i class="glyphicon glyphicon-question-sign"></i></a>
   {{/elem/panel-heading}}
 
   {{#if panelContainer.showComponent}}
@@ -25,6 +26,24 @@
       <div class="tab-content">
 
         <tab.pane @id="sequence-search-input" @title="Input : DNA Sequence">
+
+
+          <div style="margin-left: 0.5em;" class="margin-1em">
+              <label>Reference to search : </label>
+              <a class="margin-left-help" target="_blank" href="https://docs.plantinformatics.io/Basic-Functions/Search-tab/#blast-search-inputs"><i class="glyphicon glyphicon-question-sign"></i></a>
+              <select 
+                id="parent" 
+                onchange={{action (mut this.selectedParent) value="target.value"}} 
+                disabled={{this.isProcessing}}
+                style="width: 100%"
+              >
+                <option value='' selected>None</option>
+                {{#each this.datasetsToSearch key="name" as |ds|}}
+                  <option value={{ds.id}}>{{ds.displayName}}</option>
+                {{/each}}
+              </select>
+          </div>
+
 
           <div style="float: right; margin-right: 1em;">
             <a>{{elem/icon-base name="arrow-left"  click=(action this.fromSelectedFeatures) }}</a>
@@ -86,24 +105,13 @@ AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" >
             warningMessage=this.nameWarning}}
           {{/if}}
 
+          <hr>
           <ul class="config-list">
 
             <li class="list-group-item">
-              <label>Reference to search : </label>
-              <select 
-                id="parent" 
-                onchange={{action (mut this.selectedParent) value="target.value"}} 
-                disabled={{this.isProcessing}}
-                style="width: 100%"
-              >
-                <option value='' selected>None</option>
-                {{#each this.datasetsToSearch key="name" as |ds|}}
-                  <option value={{ds.id}}>{{ds.displayName}}</option>
-                {{/each}}
-              </select>
+              <label>Optional Inputs</label>
+              <a class="margin-left-help" target="_blank" href="https://docs.plantinformatics.io/Basic-Functions/Search-tab/#optional-inputs"><i class="glyphicon glyphicon-question-sign"></i></a>
             </li>
-
-
 
             <li class="list-group-item">
               <div>

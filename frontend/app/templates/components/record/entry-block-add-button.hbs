@@ -1,7 +1,5 @@
-{{#unless this.entry.isViewed}}
   {{elem/button-base
     classSize='xs'
     classColour='success'
-    icon='plus'
+    icon=this.entry.viewToggleIcon
     onClick=(action "loadBlock" this.entry) }}
-{{/unless}}

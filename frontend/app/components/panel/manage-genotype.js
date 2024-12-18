@@ -2716,6 +2716,13 @@ export default class PanelManageGenotypeComponent extends Component {
           });
         }
 
+        /** displayed in genotype-search */
+        const resultCounts = userSettings.resultCounts;
+        if (resultCounts) {
+          resultCounts.blocks++;
+          resultCounts.features += added.createdFeatures.length;
+          dLog(fnName, resultCounts, 'createdFeatures.length', added.createdFeatures.length);
+        }
 
         const showOtherBlocks = true;
         if (showOtherBlocks) {

@@ -342,7 +342,9 @@ export default Component.extend({
     /** evaluate s.positions instead of .calculatePositions(), so that .portions is calculated first. */
     stacksView.stacks.forEach(function (s) { return s.positions; });
     stacksView.axes().forEach(function(axis1d) {
-      axisBrushZoom.axisScaleChanged(axis1d, t, false);
+      if (! axis1d.isDestroying) {
+        axisBrushZoom.axisScaleChanged(axis1d, t, false);
+      }
     });
   },
   /** recalculate stacks X position and show via transition

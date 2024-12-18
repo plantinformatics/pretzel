@@ -321,8 +321,8 @@ const ApiServerAttributes = {
   blocksAnnotateWithFCStatus(byBlockId) {
     const
     fnName = 'blocksAnnotateWithFCStatus';
-    dLog(fnName);
-    this.datasetsBlocks.forEach(dataset => dataset.blocks.forEach(block => {
+    dLog(fnName, this.datasetsBlocks?.length);
+    this.datasetsBlocks?.forEach(dataset => dataset.blocks.forEach(block => {
       block[Symbol.for('featuresCountsStatus')] = byBlockId[block.id];
     }));
   },

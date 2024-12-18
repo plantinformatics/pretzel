@@ -20,6 +20,7 @@ let config = {
   controlsService : service('controls'),
   auth: service('auth'),
   apiServers: service(),
+  headsUp : service('data/heads-up'),
 
   authenticationRoute: 'login',
 
@@ -84,9 +85,10 @@ let config = {
    *  viewedBlocks : allinitially ? (blockTasks : { id : task, ... }) : single task for getBlocksSummary().
    */
 
+  /** Get a list of available Datasets (maps, ...).
+   */
   model(paramsIn) {
-
-    // Get all available maps.
+    const fnName = 'model';
     let result;
 
     let me = this;
@@ -125,7 +127,11 @@ let config = {
       primaryServer = apiServers.get('primaryServer');
       datasetsTask =
         primaryServer.getDatasets()
-        .catch((err) => {dLog('model taskGetList', err, this); debugger; return []; });
+        .catch((err) => {
+          dLog(fnName, 'getDatasets', err, this);
+          this.set('headsUp.tipText', err);
+          return [];
+        });
     }
 
     // this.controllerFor(this.fullRouteName).setViewedOnly(params.mapsToView, true);

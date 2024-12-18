@@ -6,6 +6,8 @@ import { later } from '@ember/runloop';
 
 import { tracked } from '@glimmer/tracking';
 
+import { task } from 'ember-concurrency';
+
 //------------------------------------------------------------------------------
 
 import { statusToMatrix } from '../../utils/data/vcf-files';
@@ -17,6 +19,16 @@ import { namesTrim, namesTrimArrayUniq, namesTrimUniq } from '../../utils/string
 const dLog = console.debug;
 
 const trace = 0;
+
+//------------------------------------------------------------------------------
+
+class ResultCounts {
+  @tracked 
+  blocks = 0;
+  @tracked 
+  features = 0;
+};
+
 
 //------------------------------------------------------------------------------
 
@@ -47,6 +59,9 @@ export default class PanelGenotypeSearchComponent extends Component {
   @tracked
   resultCount = 0;
 
+  @tracked
+  resultCounts = new ResultCounts();
+
   //----------------------------------------------------------------------------
 
   constructor() {
@@ -63,12 +78,6 @@ export default class PanelGenotypeSearchComponent extends Component {
     }
   }
 
-  @action
-  didInsertElement_() {
-    // Showing the Genotype Table enables this.manageGenotype to be defined.
-    later(() => this.navigateGenotypeTable());
-  }
-
   //----------------------------------------------------------------------------
 
   @computed('controls.registrationsByName.component:panel/manage-genotype')
@@ -77,7 +86,7 @@ export default class PanelGenotypeSearchComponent extends Component {
   }
 
   /** manageGenotype.lookupMessage is not effective as a dependency */
-  @computed('resultCount')
+  @computed('resultCount', 'manageGenotype')
   get lookupMessage() {
     dLog('lookupMessage', this.resultCount, this.manageGenotype?.lookupMessage);
     return this.manageGenotype?.lookupMessage;
@@ -167,6 +176,7 @@ export default class PanelGenotypeSearchComponent extends Component {
     /** related : manage-genotype : vcfGenotypeSamples()
      */
     const fnName = 'ensureSamplesForSelectedDatasetEffect';
+    /** hbs checks that this.manageGenotype?.isDestroying === false */
     const sampleNames = this.manageGenotype.sampleCache.sampleNames[this.selectedDatasetId];
     if (! sampleNames && this.selectedDataset) {
       /** A block of .selectedDataset, choosing either the first viewed block or
@@ -223,6 +233,7 @@ export default class PanelGenotypeSearchComponent extends Component {
    */
   @computed('selectedSamplesText')
   get selectedSamples() {
+    /** Called from .setSamplesSelected() which ensures that this.manageGenotype?.isDestroying === false */
     const
     samples = ! this.selectedSamplesText ? [] :
       this.manageGenotype?.sampleNameListInputParse(namesTrim(this.selectedSamplesText));
@@ -242,12 +253,14 @@ export default class PanelGenotypeSearchComponent extends Component {
     disabled = 
       ! this.selectedSamplesText?.length ||
       ! this.selectedFeaturesText?.length ||
-      ! this.vcfFiles?.length;
+      ! this.vcfFiles?.length ||
+      this.vcfGenotypeSearchTask.isRunning;
     dLog(
       fnName, disabled,
       this.selectedSamplesText?.length,
       this.selectedFeaturesText?.length,
       this.vcfFiles?.length,
+      this.vcfGenotypeSearchTask.isRunning,
       !! this.manageGenotype);
     return disabled;
   }
@@ -257,6 +270,7 @@ export default class PanelGenotypeSearchComponent extends Component {
     this.navigateGenotypeTableP();
   }
   /** Navigate to show the Genotype Table (manage-genotype) in the right panel.
+   * Showing the Genotype Table enables this.manageGenotype to be defined.
    * @return promise yielding when manage-genotype is displayed
    */
   navigateGenotypeTableP() {
@@ -285,18 +299,44 @@ export default class PanelGenotypeSearchComponent extends Component {
     return promise;
   }
 
-  @action
+
+  /** if vcfGenotypeSearchTask is not running, perform it. */
   vcfGenotypeSearch() {
-    const fnName = 'vcfGenotypeSearch';
+    if (! this.vcfGenotypeSearchTask.isRunning) {
+      this.vcfGenotypeSearchTaskInstance = this.vcfGenotypeSearchTask.perform();
+    }
+  }
+  /** Call vcfGenotypeSearchP() in a task - yield the result.
+   * This function and vcfGenotypeSearch() are based on the equivalent vcfGenotypeLookup in manage-genotype.js
+   */
+  vcfGenotypeSearchTask = task({ drop: true }, async () => {
+    console.log('vcfGenotypeSearchTask');
+    let block = await this.vcfGenotypeSearchP();
+
+    return block;
+  });
+
+  //------------------------------------------------------------------------------
+
+  @action
+  vcfGenotypeSearchP() {
+    const fnName = 'vcfGenotypeSearchP';
+    dLog(fnName, this.vcfGenotypeSearchTask.isRunning, 'vcfGenotypeSearchTask.isRunning');
     const snpNames = namesTrimUniq(this.selectedFeaturesText);
     const searchScope = {datasetVcfFiles : this.vcfFiles, snpNames};
+    /** Called from vcfGenotypeSearchAfterNavigate() which ensures that this.manageGenotype?.isDestroying === false
+     */
     const manageGenotype = this.manageGenotype;
     /** vcfGenotypeSearchDisabled prevents call to vcfGenotypeSearch() if ! this.manageGenotype */
+    const userSettings = this.args.userSettings;
     /** Signify that manageGenotype component is operating under the control of
      * the genotype-search dialog / "automation wizard".
      */
     this.args.userSettings.dialogMode =
       {component : 'genotype-search', datasetId : this.selectedDatasetId};
+    const resultCounts = (userSettings.resultCounts = this.resultCounts);
+    resultCounts.blocks = 0;
+    resultCounts.features = 0;
 
     this.navigateGenotypeTable();
 
@@ -330,11 +370,13 @@ export default class PanelGenotypeSearchComponent extends Component {
      * use later().
      */
     resultP.finally(() => later(() => {
-      manageGenotype.args.userSettings.dialogMode = null;
+      this.args.userSettings.dialogMode = null;
       this.resultCount++;
       dLog(fnName, 'resultCount', this.resultCount); }));
 
-    dLog(fnName, searchScope, manageGenotype.args.userSettings.dialogMode);
+    dLog(fnName, searchScope, this.args.userSettings.dialogMode);
+
+    return resultP;
   }
 
   @action

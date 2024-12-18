@@ -53,6 +53,7 @@ export default Component.extend({
 
   matchAliasesChanged(value) {
     dLog('matchAliasesChanged', value, this.matchAliases);
+    this.matchAliases = value;
   },
 
 

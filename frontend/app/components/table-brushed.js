@@ -6,6 +6,7 @@ import { computed } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { later, bind } from '@ember/runloop';
 import { capitalize } from '@ember/string';
+import { alias } from '@ember/object/computed';
 
 
 import { featureEdit } from '../components/form/feature-edit';
@@ -235,6 +236,9 @@ export default Component.extend({
   ontology : service('data/ontology'),
   controls : service(),
   block : service('data/block'),
+  queryParams: service('query-params'),
+
+  urlOptions : alias('queryParams.urlOptions'),
 
   classNames : ['h-100'],
 

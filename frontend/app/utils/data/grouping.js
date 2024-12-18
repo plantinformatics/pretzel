@@ -69,14 +69,14 @@ function scopeOfBlock(block) {
 function blocksParentAndScope2(levelMeta, blocks) {
 
   let
-  nested = d3.group(
+  grouped = d3.group(
     blocks,
     /* the key function will return undefined or null for datasets without parents, which will result in a key of 'undefined' or 'null'. */
     parentOfBlock,
     scopeOfBlock);
-  let parentObjects = fromNestedParentAndScope(levelMeta, nested);
+  let parentObjects = fromGroupedParentAndScope(levelMeta, grouped);
   if (trace_values > 1) {
-    dLog('blocksParentAndScope2', nested, parentObjects);
+    dLog('blocksParentAndScope2', grouped, parentObjects);
   }
   return parentObjects;
 }
@@ -87,30 +87,33 @@ function fromNested(nested) {
   let object = Object.fromEntries(Object.entries(nested).map((kv) => ([kv[0], kv[1]])));
 
 }
-/** Convert a multi-level d3.nested() to Object.
+/** Convert a multi-level d3.group() to Object.
  * Label the values with childLabels : first level of child values are labelled
  * with childLabels[0], ....
  */
-function fromNestedMulti(levelMeta, nested, childLabels) {
-  let 
+function fromGroupedMulti(levelMeta, grouped, childLabels) {
+  const 
+  fnName = 'fromGroupedMulti',
   childLabel = childLabels[0],
   /** for the next level down */
   childLabelsNext = childLabels.slice(1),
-  objects = Object.entries(nested).reduce((po, kv) => {
-    const [key, values] = kv;
-    if (values.length && values[0].key && values[0].values) {
-      values = fromNestedMulti(levelMeta, values, childLabelsNext);
+  objects = grouped.entries().reduce((po, kv) => {
+    let [key, values] = kv;
+    if (values instanceof Map) {
+      values = fromGroupedMulti(levelMeta, values, childLabelsNext);
     }
     po[key] = values;
-    levelMeta.set(values, childLabel);
+    if (typeof values === 'object') {
+      levelMeta.set(values, childLabel);
+    }
     return po;
   }, {});
 
   return objects;
 }
 
-function fromNestedParentAndScope(levelMeta, nested) {
-  let parentObjects = fromNestedMulti(levelMeta, nested, ['Parent', 'Scope']);
+function fromGroupedParentAndScope(levelMeta, grouped) {
+  let parentObjects = fromGroupedMulti(levelMeta, grouped, ['Parent', 'Scope']);
   return parentObjects;
 }
 

@@ -1,10 +1,10 @@
-{{did-insert this.didInsertElement_}}
 
 <div  class="panel-section">
 
 {{#elem/panel-container state="primary" as |panelContainer|}}
   {{#elem/panel-heading icon="search" panelContainer=panelContainer}}
     VCF Genotype Search
+    <a class="margin-left-help" target="_blank" href="https://docs.plantinformatics.io/Basic-Functions/Search-tab/#vcf-genotype-search"><i class="glyphicon glyphicon-question-sign"></i></a>
   {{/elem/panel-heading}}
 
   {{#if panelContainer.showComponent}}
@@ -25,6 +25,7 @@
     </select>
 
   <label>Samples input :</label>
+  <a class="margin-left-help" target="_blank" href="https://docs.plantinformatics.io/Basic-Functions/Search-tab/#vcf-genotype-search-inputs"><i class="glyphicon glyphicon-question-sign"></i></a>
 
   {{#if this.manageGenotype}}
     {{#unless this.manageGenotype.isDestroying }}
@@ -43,6 +44,7 @@
 
 
   <label>Features input :</label>
+  <a class="margin-left-help" target="_blank" href="https://docs.plantinformatics.io/Basic-Functions/Search-tab/#vcf-genotype-search-inputs"><i class="glyphicon glyphicon-question-sign"></i></a>
 
   <div>
     <Textarea
@@ -67,7 +69,18 @@
     >Search</button>
     {{!-- Effect: request the vcfFiles for the selected dataset --}}
     <div style="display:none">{{this.datasetVcfFiles}}</div>
+    {{#if this.vcfGenotypeSearchTask.isRunning}}
+      <div class="margin-1em">Loading ...</div>
+    {{/if}}
     <div class="clearfix"></div>
+
+    {{#if this.resultCounts.blocks}}
+      <label>Received :</label>
+      <ul style="list-style-type: none;">
+        <li>{{this.resultCounts.blocks}} Chromosomes</li>
+        <li>{{this.resultCounts.features}} SNPs</li>
+      </ul>
+    {{/if}}
 
   </div>
 
