@@ -1083,6 +1083,9 @@ export default ManageBase.extend({
           };
           let resultValue, dataTypeName = valueGetType(me.levelMeta, value),
           isGrouping = dataTypeName === 'Groups';
+          if ((value instanceof Object) && ! Object.keys(value).length) {
+            resultValue = [];
+          } else
           if (isGrouping) {
             resultValue = mapHash(value, ps);
             /* resultValue has the same structure as the input value - Groups. */
@@ -1394,25 +1397,14 @@ export default ManageBase.extend({
       function (d) { return metaFilterFG(d, filterGroup); }
     : metaFilterDev,
     /** n is an array : [{key, values}, ..] */
-    n = d3.nest()
-      .key(metaFilter)
-      .entries(datasets || []),
-    /** parentAndScope() could be restructured as a key function, and used in d3-array.group(). */
-    /** reduce nest to a Map, processing values with parentAndScope() */
-    map2 = n.reduce(
-      function (map, nestEntry) {
-        let key = nestEntry.key,
-        value = nestEntry.values;
-        map.set(key, value);
-        return map; },
-      new Map()
-    );
+    map2 = d3.group(datasets || [], metaFilter),
+    n = Array.from(map2.entries());
     /** if isFilter, result is an array, otherwise a hash */
     let hash = {};
     /* if isFilter, the matched values are within map2.get(true); this is the whole result. */
     if (isFilter) {
       // in n and map2  the keys are already strings, i.e. 'true' and 'undefined'
-      let matched = map2.get('true');
+      let matched = map2.get(true);
       let filterMatched = this.get('filterMatched');
       if (isDataset) {
         filterMatched[tabName] = ! ! matched;
@@ -1420,7 +1412,7 @@ export default ManageBase.extend({
           console.log('filterMatched[', tabName, '] =', ! ! matched);
       }
       /** map the unmatched key : 'undefined' -> 'unmatched' */
-      let unmatched = map2.get('undefined');
+      let unmatched = map2.get(undefined);
       /* for isFilter, result is an array, except if !matched && unmatched && !ignoreFilter,
        * in which case unmatched is (currently) added, with key 'unmatched'.
        * The 'unmatched' is mostly a devel feature, for checking the result,
@@ -1442,10 +1434,12 @@ export default ManageBase.extend({
       }
     }
     // is grouping
-    else if ((n.length === 1) && (n[0].key === 'undefined'))
+    // n[0] is [key, value]
+    else if ((n.length === 1) && (n[0][0] === undefined))
     {
       /** if it is a grouping and nothing matches, then pass through unaltered. */
-      let datasets = n[0].values;   /* i.e. map2['undefined']  */
+      /** values;  i.e. map2.get(undefined) */
+      let datasets = n[0][1];
       this.levelMeta.set(datasets, 'Datasets');
       hash = datasets;  // result type is an array of datasets in this case, not a hash.
     }
@@ -1455,9 +1449,9 @@ export default ManageBase.extend({
       for (var [key, value] of map2) {
         if (trace_dataTree > 1)
           console.log(key, ' : ', value);
-        if ((key === 'undefined') && showUnmatched)
+        if ((key === undefined) && showUnmatched)
           key = 'unmatched';
-        if (key !== 'undefined') {
+        if (key !== undefined) {
           hash[key] = value;
           this.levelMeta.set(value, 'Group');
         }
@@ -1708,15 +1702,23 @@ export default ManageBase.extend({
     changeFilter: function(f) {
       this.set('filter', f)
     },
-    filterGroupsChanged : function(fg) {
+    /**
+     * @param fg filterGroup data object (currently in default Ember Store, will change to (Ember) Object)
+     * @param fgComp	instance of component:panel/filter-group
+     * fgComp.data === fg
+     * @param value	radio-button or checkbox value, e.g. radio-button filterOrGroup : 'filter' or 'group'
+     * @param this	instance of component:panel/manage-explorer
+     */
+    filterGroupsChanged : function(fg, fgComp, value) {
       /* note : fg === this.get('filterGroups.0')
        */
+      const index = this.get('filterGroups').indexOf(fg);
       if (trace_dataTree)
-        dLog('filterGroupsChanged', fg, this.get('filterGroups.0'), this.get('filterGroups.0'), this.get('filterGroups.0.isCaseSensitive'));
+        dLog('filterGroupsChanged', value, index, fg, fg.isCaseSensitive);
       // Wait for update of values of fg which are bound input elements.
       let me = this;
       later(function () {
-        dLog('filterGroupsChanged later', fg, me.get('filterGroups.0'), me.get('filterGroups.0'), me.get('filterGroups.0.isCaseSensitive'));
+        dLog('filterGroupsChanged later', value, index, fg, fg.isCaseSensitive);
         me.incrementProperty('filterGroupsChangeCounter');
       });
     },
