@@ -155,6 +155,10 @@ export default Record.extend({
     return blocks;
   }),
 
+  //----------------------------------------------------------------------------
+
+  cropName : alias('_meta.Crop'),
+
   /*--------------------------------------------------------------------------*/
 
   /** @return true if this dataset has the given tag.

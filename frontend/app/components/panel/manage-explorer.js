@@ -87,6 +87,13 @@ const dLog = console.debug;
 
 const selectorExplorer = 'div#left-panel-explorer';
 
+//------------------------------------------------------------------------------
+
+/** This represents no filter selection made in the Crop pull-down, i.e. All.
+ * select-group.hbs uses .id and .name.
+ */
+const noCrop = EmberObject.create({id : 'noCrop', name : 'All'});
+
 /*----------------------------------------------------------------------------*/
 
 
@@ -534,6 +541,23 @@ export default ManageBase.extend({
 
 
   //----------------------------------------------------------------------------
+  // copied from above, with group -> crop
+
+  /** defined if user has selected a crop to filter the datasets. */
+  cropFilterSelected : undefined,
+
+  /**
+   * @param selectedCrop  null or { id, name, ... } Ember Object
+   */
+  selectedCropChanged(selectedCrop) {
+    if (selectedCrop === noCrop) {
+      selectedCrop = null;
+    }
+    this.set('cropFilterSelected', selectedCrop);
+  },
+
+
+  //----------------------------------------------------------------------------
 
   promiseToTask : task(function * (promise) {
     // dLog('promiseToTask', promise, 'mapsTask');
@@ -610,8 +634,16 @@ export default ManageBase.extend({
     return combined;
   }),
   //----------------------------------------------------------------------------
+  /** Input : datasetsBlocks,
+   * optionally filtered by :
+   * - this.filter (private / owner), or
+   * - this.groupFilterSelected
+   * - this.cropFilterSelected
+   * - dataset.isVisible
+   */
   dataPre1: computed(
     'datasetsBlocks', 'datasetsBlocks.[]', 'filter', 'groupFilterSelected',
+    'cropFilterSelected',
     /* .groupsInIds is used as a proxy for
      * 'datasetsBlocks.@each.groupIsVisible', which would require significantly
      * greater computation. */
@@ -636,12 +668,22 @@ export default ManageBase.extend({
             (datasetsBlocks) => datasetsBlocks.filter((d) => {
               let ok = d.get('groupId.id') === this.groupFilterSelected.id; return ok; }));
         }
+        if (this.cropFilterSelected) {
+          availableMaps = thenOrNow(
+            availableMaps,
+            (datasetsBlocks) => datasetsBlocks.filter((d) => {
+              let ok = d.get('cropName') === this.cropFilterSelected.id; return ok; }));
+        }
         availableMaps = thenOrNow(
           availableMaps,
           (datasetsBlocks) => datasetsBlocks.filterBy('isVisible'));
         return availableMaps;
       }
     }),
+  /** Input : .dataPre1
+   * optionally filtered / sorted by :
+   * - this.historyView
+   */
   dataPreHistory : computed('dataPre1.[]', 'historyView', function () {
     let data = this.get('dataPre1');
     let match;
@@ -708,7 +750,11 @@ export default ManageBase.extend({
   dataPre2 : computed('dataPreHistory.[]', 'nameFilterArray', 'caseInsensitive', 'searchFilterAll', function () {
     return this.get('dataPreHistory');
   }),
-  dataPre: filter('dataPre2', function(dataset, index, array) {
+  /** Input : this.dataPre2
+   * optionally filtered by :
+   * - this.nameFilterArray
+   */
+  dataPostNameFilter: filter('dataPre2', function(dataset, index, array) {
     let
     nameFilter = this.get('nameFilter'),
     nameFilters = this.get('nameFilterArray'),
@@ -719,6 +765,7 @@ export default ManageBase.extend({
     }
     return match;
   }),
+
   /**
    * @return true if each / any of the name keys matches either the dataset or one of its blocks
    * @param dataset
@@ -731,6 +778,45 @@ export default ManageBase.extend({
       dataset, nameFilters, this.caseInsensitive, this.searchFilterAll, childNamesFn);
     return matchAll;
   },
+
+  cropField : '_meta.Crop',
+  dataPre: alias('dataPostNameFilter'),
+
+  //----------------------------------------------------------------------------
+  /* These 3 are based on withParent, child1, parents, parentNames,
+   * substituting parent → crop
+   */
+  /** datasets with a cropField. */
+  withCrop: filter('datasetsBlocks', function(dataset, index, array) {
+    const fnName = 'withCrop';
+    let crop = dataset.get(this.cropField);
+    if (trace_dataTree > 2)
+      dLog(fnName, dataset.id, crop);
+    return crop;
+  }),
+  /** result of uniqBy is a single dataset which refers to each (crop)
+   * dataset; just 1 child of each crop is in the result. */
+  child1Crop : uniqBy('withCrop', 'cropName'),
+  /** crops of child1Crop(), i.e. all the dataset crops, just once each.  */
+  cropNames : mapBy('child1Crop', 'cropName'),
+  /** same as .cropNames, but with {id, name} and noCrop prepended,
+      for use in select-group */
+  cropsForFilter : computed('child1Crop', function() {
+    const
+    datasets = this.get('child1Crop').map(function (dataset) {
+      const
+      name = dataset.cropName,
+      crop = {id : name, name};
+      return crop;
+    });
+    datasets.unshift(noGroup);
+    return datasets;
+  }),
+
+  //----------------------------------------------------------------------------
+
+
+
   /**
    * @return true if each / any of the name keys matches name
    * @param name  text name of e.g. Trait
