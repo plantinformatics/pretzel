@@ -94,6 +94,10 @@ const selectorExplorer = 'div#left-panel-explorer';
  */
 const noCrop = EmberObject.create({id : 'noCrop', name : 'All'});
 
+/** This represents no filter selection made in the Category pull-down, i.e. All.
+ */
+const noCategory = EmberObject.create({id : 'noCategory', name : 'All'});
+
 /*----------------------------------------------------------------------------*/
 
 
@@ -556,6 +560,34 @@ export default ManageBase.extend({
     this.set('cropFilterSelected', selectedCrop);
   },
 
+  //----------------------------------------------------------------------------
+  // copied from above, with crop -> category
+
+  /** defined if user has selected a category to filter the datasets. */
+  categoryFilterSelected : undefined,
+
+  /**
+   * @param selectedCategory  null or { id, name, ... } Ember Object
+   */
+  selectedCategoryChanged(selectedCategory) {
+    const fnName = 'selectedCategoryChanged';
+    if (selectedCategory === noCategory) {
+      this.set('categoryFilterSelected', null);
+    } else {
+      const
+      categories = this.categoryFilterSelected || this.set('categoryFilterSelected', []),
+      present = categories.find(c => c.id === selectedCategory.id);
+      /** use .pushObject() (or .removeObject) so that dataPre1() sees the
+       * change to its dependency categoryFilterSelected.length */
+      if (present) {
+        categories.removeObject(present);
+      } else {
+        categories.pushObject(selectedCategory);
+      }
+    }
+    dLog(fnName, selectedCategory, this.categoryFilterSelected);
+  },
+
 
   //----------------------------------------------------------------------------
 
@@ -644,6 +676,7 @@ export default ManageBase.extend({
   dataPre1: computed(
     'datasetsBlocks', 'datasetsBlocks.[]', 'filter', 'groupFilterSelected',
     'cropFilterSelected',
+    'categoryFilterSelected.length',
     /* .groupsInIds is used as a proxy for
      * 'datasetsBlocks.@each.groupIsVisible', which would require significantly
      * greater computation. */
@@ -666,13 +699,21 @@ export default ManageBase.extend({
           availableMaps = thenOrNow(
             availableMaps,
             (datasetsBlocks) => datasetsBlocks.filter((d) => {
-              let ok = d.get('groupId.id') === this.groupFilterSelected.id; return ok; }));
+              const ok = d.get('groupId.id') === this.groupFilterSelected.id; return ok; }));
         }
         if (this.cropFilterSelected) {
           availableMaps = thenOrNow(
             availableMaps,
             (datasetsBlocks) => datasetsBlocks.filter((d) => {
-              let ok = d.get('cropName') === this.cropFilterSelected.id; return ok; }));
+              const ok = d.get('cropName') === this.cropFilterSelected.id; return ok; }));
+        }
+        if (this.categoryFilterSelected) {
+          const categories = this.categoryFilterSelected.mapBy('id');
+          availableMaps = thenOrNow(
+            availableMaps,
+            (datasetsBlocks) => datasetsBlocks.filter((d) => {
+              /** currently .categories is [] when dataset has no ._meta.Categor{ies,y*} */
+              const ok = d.categories.any(c => categories.includes(c)); return ok; }));
         }
         availableMaps = thenOrNow(
           availableMaps,
@@ -809,10 +850,34 @@ export default ManageBase.extend({
       crop = {id : name, name};
       return crop;
     });
-    datasets.unshift(noGroup);
+    datasets.unshift(noCrop);
     return datasets;
   }),
 
+  //----------------------------------------------------------------------------
+
+  /** @return an array of the unique (string) values in datasetsBlocks[].categories
+   */
+  categoriesForFilter : computed('datasetsBlocks', function () {
+    /* This is roughly parallel to the combined functions of
+     * withCrop / child1Crop / cropsForFilter,
+     * with the added requirement that Dataset .categories is an array,
+     * whereas Dataset .cropName is a single string.
+     */
+    const
+    fnName = 'categoriesForFilter',
+    categorySet = this.datasetsBlocks?.reduce((set, dataset) => {
+      if (dataset.categories) {
+        dataset.categories.forEach(category => set.add(category));
+      }
+      return set;
+    }, new Set()),
+    categories = ! categorySet ? [] : Array.from(categorySet).map(name => ({id : name, name}));
+    // categories.unshift(noCategory);
+    dLog(fnName, categories, categorySet);
+    return categories;
+  }),
+  
   //----------------------------------------------------------------------------
 
 
