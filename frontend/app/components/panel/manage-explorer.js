@@ -571,8 +571,14 @@ export default ManageBase.extend({
    */
   selectedCategoryChanged(selectedCategory) {
     const fnName = 'selectedCategoryChanged';
+    /** this enables selection of multiple categories, via select-multiple (as
+     * in commit 86c9a340) or PowerSelectMultiple (stashed); currently using
+     * single selection via select-group */
+    const isMultiple = false;
     if (selectedCategory === noCategory) {
       this.set('categoryFilterSelected', null);
+    } else if (! isMultiple) {
+      this.set('categoryFilterSelected', selectedCategory);
     } else {
       const
       categories = this.categoryFilterSelected || this.set('categoryFilterSelected', []),
@@ -676,7 +682,7 @@ export default ManageBase.extend({
   dataPre1: computed(
     'datasetsBlocks', 'datasetsBlocks.[]', 'filter', 'groupFilterSelected',
     'cropFilterSelected',
-    'categoryFilterSelected.length',
+    'categoryFilterSelected',
     /* .groupsInIds is used as a proxy for
      * 'datasetsBlocks.@each.groupIsVisible', which would require significantly
      * greater computation. */
@@ -708,12 +714,12 @@ export default ManageBase.extend({
               const ok = d.get('cropName') === this.cropFilterSelected.id; return ok; }));
         }
         if (this.categoryFilterSelected) {
-          const categories = this.categoryFilterSelected.mapBy('id');
           availableMaps = thenOrNow(
             availableMaps,
             (datasetsBlocks) => datasetsBlocks.filter((d) => {
               /** currently .categories is [] when dataset has no ._meta.Categor{ies,y*} */
-              const ok = d.categories.any(c => categories.includes(c)); return ok; }));
+              const ok = d.categories.includes(this.categoryFilterSelected.id);
+              return ok; }));
         }
         availableMaps = thenOrNow(
           availableMaps,
@@ -873,7 +879,7 @@ export default ManageBase.extend({
       return set;
     }, new Set()),
     categories = ! categorySet ? [] : Array.from(categorySet).map(name => ({id : name, name}));
-    // categories.unshift(noCategory);
+    categories.unshift(noCategory);
     dLog(fnName, categories, categorySet);
     return categories;
   }),

@@ -87,7 +87,7 @@
       <span style="margin-left : 10px; display: inline-block;">
         <label for="select-category-as-filter">Category</label>
         <span id="select-category-as-filter">
-          {{form/select-multiple
+          {{form/select-group
             selectedValue=this.categoryFilterSelected
             values=this.categoriesForFilter
             selectedGroupChanged=(action this.selectedCategoryChanged) }}
