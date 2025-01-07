@@ -4,6 +4,8 @@ import { alias } from '@ember/object/computed';
 import $ from 'jquery';
 import Service, { inject as service } from '@ember/service';
 import { isEmpty, typeOf } from '@ember/utils';
+import { later } from '@ember/runloop';
+
 import { serverTypeIsBrAPI } from '../components/service/api-server';
 
 import {
@@ -640,9 +642,15 @@ export default Service.extend({
 
     const error = (XMLHttpRequest, textStatus, errorThrown) =>
     {
-      dLog('auth _ajax error', XMLHttpRequest, textStatus, errorThrown);
+      let text = textStatus;
+      const responseError = XMLHttpRequest.responseJSON?.error;
+      if (responseError) {
+        text += ', ' + (responseError.statusCode ?? '')
+          + ', ' + (responseError.message ?? '');
+      }
+      dLog('auth _ajax error', XMLHttpRequest, textStatus, errorThrown, text);
       // observed : textStatus : "error", errorThrown : ""
-      this.set('headsUp.tipText', textStatus);
+      this.set('headsUp.tipText', text);
     };
 
     let config = {
@@ -733,8 +741,12 @@ export default Service.extend({
       dLog(fnName, error, route, dataIn, error.status, error.statusText, error.state?.());
       if (error.statusText) {
         const
+        responseError = error.responseJSON?.error,
+        message = responseError?.message ?? '',
         text = 'API request to server : ' + route + ' : ' +
-          error.statusText + ' : ' + error.state?.() + ', ' + error.status;
+          error.statusText + ' : ' + error.state?.() + ', ' + error.status
+          + ', ' + message;
+        dLog(fnName, responseError.statusCode, responseError.message);
         this.set('headsUp.tipText', text);
       }
     });
