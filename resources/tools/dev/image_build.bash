@@ -19,6 +19,25 @@ echo $logDate;
 
 #-------------------------------------------------------------------------------
 
+# These vars are set by other functions; use pb_set() after creating a new shell
+# on the same day.
+pb_set() {
+  app=pretzel
+  baseName=plantinformaticscollaboration/$app
+  export PRETZEL_VERSION=v$logDate
+  image=$app:$PRETZEL_VERSION
+  LB=~/log/build/docker/$logDate
+  L=~/log/compose/$stage/$logDate
+  export PRETZEL_SERVER_IMAGE=$baseName:$PRETZEL_VERSION
+}
+
+# Show the environment variables set by pb_set() and other functions.
+pb_show() {
+  echo logDate=$logDate, image=$image, app=$app, PRETZEL_VERSION=$PRETZEL_VERSION, LB=$LB, L=$L, PRETZEL_SERVER_IMAGE=$PRETZEL_SERVER_IMAGE
+}
+
+#-------------------------------------------------------------------------------
+
 # from notes aws 'Fri Nov 29 08:38:18 AM AEDT 2024'
 
 # pretzel build : fetch
@@ -36,11 +55,20 @@ function pb_fetch() {
 
 # pretzel build of a feature branch : pull, build and label with date-stamp
 function pb_build_feature() {
-  cd $pretzel_build
-  git pull --ff-only || return
   app=pretzel
   export PRETZEL_VERSION=v$logDate
-  pb_build
+
+  cd $pretzel_build
+  HEAD_old=$(git rev-parse HEAD)
+  git pull --ff-only || return
+  HEAD_new=$(git rev-parse HEAD)
+  [ "$HEAD_old" = "$HEAD_new" ]
+  HEAD_unchanged=$?
+  # if unchanged is false (true is 0)
+  if [ "$HEAD_unchanged" -ne 0 ]
+  then
+    pb_build
+  fi
 }
 
 # pretzel build, assuming that git work-tree has the desired version checked out
@@ -86,6 +114,27 @@ function pb_build_feature_change() {
 
   # pb_build_feature does pull, which has no effect after above fetch & checkout
   pb_build_feature
+}
+
+#-------------------------------------------------------------------------------
+
+# for a feature branch, with datestamp tag, :latest is not required
+function pb_tag() {
+  docker tag $image $baseName:$PRETZEL_VERSION
+  docker image inspect $image | jq '.[] | .RepoTags'
+}
+
+#-------------------------------------------------------------------------------
+
+export Dc=~/pretzel-hosting/aws-instances/config/docker-compose
+stage=dev
+# or stage=prod
+
+L=~/log/compose/$stage/$logDate
+
+pb_compose_down_up() {
+  docker compose --progress=plain   --file $Dc/docker-compose.$stage.yaml  --env-file $Dc/pretzel.compose.$stage.env down
+  nohup docker compose --progress=plain   --file $Dc/docker-compose.$stage.yaml  --env-file $Dc/pretzel.compose.$stage.env  up > $L &
 }
 
 
