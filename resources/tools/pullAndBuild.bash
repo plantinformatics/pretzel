@@ -109,5 +109,11 @@ then
 	(fgrep $backend/package $LOG_GIT/$logDateTime && npm install) &&
 	npm run rebuild &&
 	[ -f ~/pretzel/nohup.out ] && backupPretzelNohup;
-	beServerLog)
+        if pgrep -f beServerLoop
+	then : ;
+	else 
+          source ~/scripts/beServerLoop.bash
+	  beServerLoopLog
+	fi
+    )
 fi
