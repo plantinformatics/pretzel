@@ -447,7 +447,7 @@ function checkVCFsAreInstalled(datasets, status) {
   checkPs = datasets.map(dataset => {
     console.log(fnName, dataset.name, dataset.tags);
     const
-    isVCF = dataset.tags.includes('VCF'),
+    isVCF = dataset.tags?.includes('VCF'),
     checkP = ! isVCF ? Promise.resolve(true) :
       vcfGenotypeFeaturesCountsStatusP(dataset.name)
       .then(vcfStatus => {

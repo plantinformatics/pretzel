@@ -27,6 +27,14 @@ const I = (x) => x;
 
 const blockRangeSymbol = Symbol.for('blockRange');
 
+/** Fields of Dataset.meta which are required.
+ * Currently a warning is generated if these fields are not present in the
+ * upload data; this may be upgraded to rejecting the dataset.
+ */
+const requiredFieldsMeta = [
+  'Crop',
+];
+
 //------------------------------------------------------------------------------
 
 function rowIsBlock(sheetType) {
@@ -297,6 +305,13 @@ function sheetToDataset(
   /** based on sub makeTemplates() */
   if (parentName) {
     dataset.parent = parentName;
+  }
+
+  /** Generate a warning if required fields are not present in the uploaded dataset. */
+  const missingFields = requiredFieldsMeta.filter(fieldName => (meta[fieldName] ?? undefined) === undefined);
+  if (missingFields.length) {
+    const warningText = 'These fields are expected to be present in Dataset.meta : ' + missingFields.join(', ');
+    dataset.warnings.push(warningText);
   }
 
   const
