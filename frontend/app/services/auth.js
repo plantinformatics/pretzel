@@ -69,6 +69,21 @@ export default Service.extend({
 
   //----------------------------------------------------------------------------
 
+  /** @return an indication of whether an error response from an API
+   * request (promise) will be displayed by the dialog which initiated
+   * the request.
+   * So far, just genotype-search displays these errors.
+   */
+  get apiErrorShownInDialog() {
+    const
+    userSettings = this.controls.userSettings,
+    isGenotypeSearch = userSettings?.genotype?.dialogMode?.component === 'genotype-search',
+    apiErrorShownInDialog = isGenotypeSearch;
+    return apiErrorShownInDialog;
+  },
+
+  //----------------------------------------------------------------------------
+
   /** Add increment to count for API apiName
    * Initialise count for apiName to 0 if undefined.
    * @param increment +/- integer
@@ -648,9 +663,12 @@ export default Service.extend({
         text += ', ' + (responseError.statusCode ?? '')
           + ', ' + (responseError.message ?? '');
       }
-      dLog('auth _ajax error', XMLHttpRequest, textStatus, errorThrown, text);
+      const apiErrorShownInDialog = this.apiErrorShownInDialog;
+      dLog('auth _ajax error', XMLHttpRequest, textStatus, errorThrown, text, apiErrorShownInDialog);
       // observed : textStatus : "error", errorThrown : ""
-      this.set('headsUp.tipText', text);
+      if (! apiErrorShownInDialog) {
+        this.set('headsUp.tipText', text);
+      }
     };
 
     let config = {
@@ -745,9 +763,12 @@ export default Service.extend({
         message = responseError?.message ?? '',
         text = 'API request to server : ' + route + ' : ' +
           error.statusText + ' : ' + error.state?.() + ', ' + error.status
-          + ', ' + message;
-        dLog(fnName, responseError.statusCode, responseError.message);
-        this.set('headsUp.tipText', text);
+          + ', ' + message,
+        apiErrorShownInDialog = this.apiErrorShownInDialog;
+        dLog(fnName, responseError.statusCode, responseError.message, apiErrorShownInDialog);
+        if (! apiErrorShownInDialog) {
+          this.set('headsUp.tipText', text);
+        }
       }
     });
     return promise;
