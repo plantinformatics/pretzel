@@ -72,13 +72,14 @@ export default Service.extend({
   /** @return an indication of whether an error response from an API
    * request (promise) will be displayed by the dialog which initiated
    * the request.
-   * So far, just genotype-search displays these errors.
+   * So far, just genotype-search displays these errors, and
+   * upload which sets userSettings.apiErrorShownInDialog.
    */
   get apiErrorShownInDialog() {
     const
     userSettings = this.controls.userSettings,
     isGenotypeSearch = userSettings?.genotype?.dialogMode?.component === 'genotype-search',
-    apiErrorShownInDialog = isGenotypeSearch;
+    apiErrorShownInDialog = userSettings.apiErrorShownInDialog || isGenotypeSearch;
     return apiErrorShownInDialog;
   },
 
@@ -146,8 +147,18 @@ export default Service.extend({
   },
 
   uploadData(data, onProgress) {
+    const fnName = 'uploadData';
     let server = this.get('apiServerSelectedOrPrimary');
-    return this._ajax('Datasets/upload', 'POST', JSON.stringify(data), true, onProgress, server);
+    const userSettings = this.controls.userSettings;
+    userSettings.apiErrorShownInDialog = true;
+    const promise = this._ajax('Datasets/upload', 'POST', JSON.stringify(data), true, onProgress, server);
+    const onFinally = () => later(() => userSettings.apiErrorShownInDialog = false);
+    /** if .finally() is used then subsequent promise.catch() does not fire, as if
+     * .finally() mutates the promise.  So use .then() instead.
+     */
+    // promise.finally(onFinally);
+    promise.then(onFinally, onFinally);
+    return promise;
   },
 
   tableUpload(data, onProgress) {

@@ -1,6 +1,8 @@
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
 
+const dLog = console.debug;
+
 export default Component.extend({
   session: service('session'),
   auth: service('auth'),
@@ -105,7 +107,7 @@ export default Component.extend({
         this.get('refreshDatasets')();
       }, (err, status) => {
         let errobj = err.responseJSON?.error;
-        console.log(errobj);
+        console.log(fnName, errobj);
         let errmsg = null;
         if (! errobj) {
           if (err.responseJSON) {
@@ -126,6 +128,7 @@ export default Component.extend({
           errmsg = errobj.name;
         }
         this.setError(errmsg);
+        this.setProperties({isProcessing: false});
         this.scrollToTop();
       });
     return promise;
