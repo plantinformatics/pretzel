@@ -175,7 +175,12 @@ export default ManageBase.extend({
     const
     fnName = 'showDataSources',
     dataSources = this.urlOptions?.dataSources,
-    show = dataSources ?? (config.environment === 'development');
+    /** defining options=dataSources redirects away from rootURL, so enable
+     * dataSources if rootURL is not /
+     */
+    show = dataSources ??
+      ((config.environment === 'development') ||
+       (config.rootURL === '/pretzelUpdate/'));
     dLog(fnName, show, dataSources, config.environment);
     return show;
   }),
