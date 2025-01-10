@@ -449,6 +449,17 @@ function sheetToObj(sheet, headerRenaming) {
         row[header] = excelSerialDate2JS(header, row[header]); });
        });
 
+  /** Recognise array values and parse them. */
+  rowObjects.forEach((row) => {
+    Object.entries(row).forEach(([key, value]) => {
+      const parsed = stringToArray(value);
+      if (parsed) {
+        row[key] = parsed;
+      }
+    });
+  });
+
+
   return {rowObjects, headerRow};
 }
 
@@ -785,6 +796,26 @@ function excelSerialDate2JS(fieldName, value) {
     value = new Date(Date.UTC(0, 0, /*excelSerialDate*/value - 1));
   }
   return value;
+}
+
+const arrayRegexp = /^\[.*\]$/;
+/** Parse an array represented in a string, in JSON format.
+ * e.g. Categories : ['Published', 'External'].
+ * @param value
+ * @return undefined if parse fails, otherwise array
+ */
+function stringToArray(value) {
+  const fnName = 'stringToArray';
+  let array;
+  if ((typeof value === 'string') && value.match(arrayRegexp)) {
+    try {
+      array = JSON.parse(value);
+      console.log(fnName, 'array value', array, value);
+    } catch (e) { // expect SyntaxError
+      console.log(fnName, 'value matches arrayRegexp but does not parse', e.message, value);
+    }
+  }
+  return array;
 }
 
 

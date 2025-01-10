@@ -501,11 +501,22 @@ function datasetSetMeta(rows, models, options) {
   Dataset = models.Dataset,
 
   /** array of promises, 1 per row / dataset */
-  updatePs = rows.map(row => {
+  updatePs = rows.map((row, rowIndex) => {
     const
+    datasetIdFieldName = 'Current dataset name',
     /** datasetId */
-    id = row['Current dataset name'];
-    delete row['Current dataset name'];
+    id = row[datasetIdFieldName];
+    delete row[datasetIdFieldName];
+
+    if (id === undefined) {
+      const
+      errorText = 
+        'Column "' + datasetIdFieldName +
+        '" is required in AddMetadata| worksheet. No value in row ' + rowIndex + ': ' + 
+        Object.entries(row).map(kv => kv.join(':')).join(", "),
+      error = ErrorStatus(404, errorText);
+      throw error;
+    }
 
     /** based on removeExisting(). */
     let clientIdString = gatherClientId(options);
