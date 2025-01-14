@@ -8,7 +8,8 @@
 #-------------------------------------------------------------------------------
 
 # These are required by each of the functions in this file
-export pretzel_build=~/pretzel/../pretzel_build
+unused_var=${pretzel_build:=~/pretzel/../pretzel_build}
+export pretzel_build
 export GIT_PAGER=cat
 export DOCKER_BUILDKIT=1
 # To build again on the same day, append a unique suffix, e.g.
@@ -76,7 +77,7 @@ function pb_build_feature() {
 function pb_build() {
   image=$app:$PRETZEL_VERSION
   LB=~/log/build/docker/$logDate
-  time nohup sudo docker build -t $image . > $LB
+  time nohup sudo docker build  ${build_arg_ROOT_URL[@]} -t $image . > $LB
 }
 # monitor this with :
 #  tail $LB
@@ -126,7 +127,8 @@ function pb_tag() {
 
 #-------------------------------------------------------------------------------
 
-export Dc=~/pretzel-hosting/aws-instances/config/docker-compose
+unused_var=${Dc:=~/pretzel-hosting/aws-instances/config/docker-compose}
+export Dc
 stage=dev
 # or stage=prod
 

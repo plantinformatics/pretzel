@@ -14,6 +14,11 @@ L=$LOG_CRON/$logDateTime
 
 #-------------------------------------------------------------------------------
 
+if [ -f ~/scripts/image_build.config.bash ]
+then
+  ls -gGd ~/scripts/image_build.config.bash
+  source ~/scripts/image_build.config.bash
+fi
 source ~/scripts/image_build.bash
 
 pb_build_feature > $L
