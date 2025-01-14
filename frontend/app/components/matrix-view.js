@@ -1958,7 +1958,7 @@ export default Component.extend({
     let table = this.get('table');
     let data = this.get('data');
     const gtPlainRender = this.urlOptions.gtPlainRender;
-    dLog('matrix-view', fnName, t, rows.length, rowHeaderWidth, 'colHeaderHeight', colHeaderHeight, tableHeight, table, data, this.blockSamples && 'vcf');
+    dLog('matrix-view', fnName, t, rows.length, rowHeaderWidth, 'colHeaderHeight', colHeaderHeight, tableHeight, /*table,*/ data, this.blockSamples && 'vcf');
     d3.select('body').style('--matrixViewColumnHeaderHeight', '' + colHeaderHeight + 'px');
 
     if (gtPlainRender & 0b10000) {
