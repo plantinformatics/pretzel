@@ -15,6 +15,9 @@ function datasetsReport(datasets, store) {
     'Owner',
     'Group',
   ],
+  /** displayName sometimes contains a comma, so wrap with "".  */
+  needsQuoting = columnIndex => columnHeaders[columnIndex] === 'displayName',
+  quoteIfNeeded = (string, columnIndex) => needsQuoting(columnIndex) ? '"' + string + '"' : string,
   datasetStrings = datasets
     .map(d =>
       [
@@ -24,7 +27,7 @@ function datasetsReport(datasets, store) {
         clientIdToEmail(d.clientId, store) || d.clientId,
         d.get('groupId.name'),
       ]
-        .map(string => string ?? '')
+        .map((string, columnIndex) => (string ?? false) ? quoteIfNeeded(string, columnIndex) : '')
         .join(',')
     ),
   csv = [columnHeaders.join(',')].concat(datasetStrings)
