@@ -76,7 +76,7 @@ function pb_build_feature() {
 function pb_build() {
   image=$app:$PRETZEL_VERSION
   LB=~/log/build/docker/$logDate
-  time nohup sudo docker build -t $image . > $LB  &
+  time nohup sudo docker build -t $image . > $LB
 }
 # monitor this with :
 #  tail $LB

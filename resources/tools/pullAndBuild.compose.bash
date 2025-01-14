@@ -9,12 +9,17 @@ logDateTime=$(date +'%Y%b%d_%H:%M')
 # format e.g. : logDateTime=2018Dec10_03:00
 echo logDateTime=$logDateTime
 
+LOG_CRON=~/log/build/docker/cron
+L=$LOG_CRON/$logDateTime
+
 #-------------------------------------------------------------------------------
 
 source ~/scripts/image_build.bash
 
-pb_build_feature
+pb_build_feature > $L
 # pb_set
+  baseName=plantinformaticscollaboration/$app
+
 
 export PRETZEL_SERVER_IMAGE=$baseName:$PRETZEL_VERSION
 
@@ -22,8 +27,8 @@ export PRETZEL_SERVER_IMAGE=$baseName:$PRETZEL_VERSION
 # if HEAD is changed (or HEAD_unchanged is undefined)
 if [ "$HEAD_unchanged" -ne 0 ]
 then
-  pb_tag
-  pb_compose_down_up
+  pb_tag >> $L
+  pb_compose_down_up >> $L
 fi
 
 #-------------------------------------------------------------------------------
