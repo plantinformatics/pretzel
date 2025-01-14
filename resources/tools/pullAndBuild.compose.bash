@@ -16,13 +16,19 @@ L=$LOG_CRON/$logDateTime
 
 if [ -f ~/scripts/image_build.config.bash ]
 then
-  ls -gGd ~/scripts/image_build.config.bash
   source ~/scripts/image_build.config.bash
 fi
 source ~/scripts/image_build.bash
 
 pb_build_feature > $L
+date
+# use these as alternative to pb_build_feature to build when there is no new commit.
+#set -x
 # pb_set
+#  cd $pretzel_build
+# pb_build
+#HEAD_unchanged=1
+
   baseName=plantinformaticscollaboration/$app
 
 
