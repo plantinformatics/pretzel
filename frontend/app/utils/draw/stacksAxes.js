@@ -95,8 +95,13 @@ function featureNameClass(name)
   /* Generally feature names have an alpha prefix, but some genetic maps use
    * the numeric form of the feature index. CSS class names need an alpha
    * prefix.
+   *
+   * Feature name is a string; spreadsheet-read.js : sheetToObj()
+   * converts rowObjects value to string if it is a number.
+   * It is easy to handle number here so this is done, but not
+   * expected to be required.
    */
-  if (name.match(/[0-9]/))
+  if ((typeof name === 'number') || name.match(/[0-9]/))
     name = featureEltIdPrefix + name;
   return name;
 }

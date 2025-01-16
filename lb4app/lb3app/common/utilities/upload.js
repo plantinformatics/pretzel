@@ -139,6 +139,7 @@ function uploadDatasetContent(dataset_id, blocks, models, options, cb) {
   let json_intervals = [];
   let json_features = [];
 
+  console.log(fnName, dataset_id, blocks.length);
     blocks.forEach(function(block) {
       if (block.__cachedRelations.annotations) {
         block.__cachedRelations.annotations.forEach(function(json_annotation) {
@@ -187,6 +188,8 @@ exports.uploadDatasetContent = uploadDatasetContent;
  * @return promise  (no value)
  */
 function insert_features_recursive(db, dataset_id, features_to_insert, ordered, cb) {
+  const fnName = 'insert_features_recursive';
+  console.log(fnName, dataset_id, features_to_insert.length, ordered);
   // no more features
   if (features_to_insert.length == 0) {
     /** this promise is only to satisfy the .catch() in uploadDatasetContent().

@@ -441,6 +441,24 @@ function sheetToObj(sheet, headerRenaming) {
   /** remove first (header) row */
     .filter((f, i) => i > 0)
   ;
+
+  /** .name field values are required to be strings.
+   * In some older Genetic Maps the markers may be identified by their number
+   * instead of a string name (e.g. early 90k or DArT-Seq). In this case the
+   * .name column values in the worksheet may be of type number, and
+   * XLSX.utils.sheet_to_json() above will convey the value as number.
+   * Recognise this case and convert the number to a string.
+   */
+  if (headerRow.includes('name')) {
+    const header = 'name';
+    rowObjects.forEach((row) => {
+      const value = row[header];
+      if (typeof value === 'number') {
+        row[header] = '' + value;
+      }
+    });
+  }
+
   /** Apply a heuristic to recognise MS Excel Serial Date values and convert
    * them to JavaScript Date. */
   headerRow.filter((header) => header.match(fieldNameDateRegexp))
@@ -448,6 +466,8 @@ function sheetToObj(sheet, headerRenaming) {
       rowObjects.forEach((row) => {
         row[header] = excelSerialDate2JS(header, row[header]); });
        });
+
+
 
   /** Recognise array values and parse them. */
   rowObjects.forEach((row) => {
@@ -1067,6 +1087,9 @@ function splitToStringArray(s) {
 
 /** if feature.values.flankingMarkers is a number, convert to a string in an array.
  * if it is a string, split into an array of strings.
+ * The resultant .values.flankingMarkers are strings or arrays of strings;
+ * the flanking marker may refer to the name of a marker in a Genetic Map, which
+ * may be a number represented as a string.
  * @param feature
  * @return feature, with possibly modified .flankingMarkers
  */
