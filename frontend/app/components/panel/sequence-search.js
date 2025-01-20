@@ -4,6 +4,8 @@ import { inject as service } from '@ember/service';
 import { observer, computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import { A as array_A } from '@ember/array';
+import { on } from '@ember/object/evented';
+
 import { task, didCancel } from 'ember-concurrency';
 
 import $ from 'jquery';
@@ -81,6 +83,14 @@ export default Component.extend({
     }
   },
 
+  /** set up a component reference for use in the Web Inspector console */
+  develRefnSetup : on('init', function () {
+    // used in development only, in Web Inspector console.
+    if (window.PretzelFrontend) {
+      window.PretzelFrontend.sequenceSearch = this;
+    }
+  }),  
+
   /*--------------------------------------------------------------------------*/
   /** copied from data-base.js; may factor or change the approach. */
   isProcessing: false,
@@ -152,32 +162,16 @@ export default Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
-  // actions
-  actions: {
-    /** called for single-character input to textarea; similar to
-     * actions.dnaSequenceInput() but that is only called for defined events
-     * (enter / escape), and actions.paste() (paste).
-     */
-    inputIsActive(event) {
-      // function name and use is copied from feature-list.
-      // dLog('inputIsActive', event?.target);
-      let text = event?.target?.value;
-      if (text) {
-        this.set('text', text);
-      }
-    },
-    paste: function(event) {
-      const fnName = 'paste';
-      /** text is "" at this time. */
-      /** this action function is called before jQuery val() is updated. */
-      later(() => {
-        /** paste has already affected event.target.value.
-         * event.originalEvent is now Restricted { };
-         * event.explicitOriginalTarget.value is defined, but not required.
-         */
-        let text = event.target.value;
-        dLog(fnName, event, text.length);
+  setText(text) {
+    this.set('text', text);
+  },
 
+  //----------------------------------------------------------------------------
+
+  /** Trim out newlines which are not required.
+   * Factored out of paste(), above. This is not an action.
+   */
+  formatText(text) {
         /** Between each '>marker-name' line, join the subsequent lines. */
         let lines = text.split('\n');
         let textOut = lines.reduce((linesOut, line, i) => {
@@ -189,24 +183,20 @@ export default Component.extend({
         }, []);
 
         text = textOut.join('');
-        this.set('text', text);
-        this.text2Area();
-        // this.dnaSequenceInput(/*text*/);
-      }, 500);
-    },
+    return text;
+  },
 
-    dnaSequenceInput(text, event) {
-      dLog("dnaSequenceInput", this, text.length, event.keyCode);
-      this.set('text', text);
-      // throttle(this.get('dnaSequenceInputBound'), 2000);
-    },
+  //----------------------------------------------------------------------------
 
+ // actions
+  actions: {
+ 
     clear() {
-      this.set('text', '');
-      this.text2Area();
+      this.setText('');
     },
 
     search() {
+      this.setText(this.formatText(this.text));
       if (this.checkInputs()) {
       let text = this.get('text');
         this.dnaSequenceInput(text);
@@ -218,11 +208,6 @@ export default Component.extend({
   text$ : computed(function () {
     return $('textarea', this.element);
   }),
-
-  /** Copy .text to the textarea. */
-  text2Area() {
-    this.get('text$').val(this.get('text'));
-  },
 
   fromSelectedFeatures() {
     const fnName = 'fromSelectedFeatures';
@@ -259,8 +244,7 @@ export default Component.extend({
             });
 
         let text = selectedFeaturesFasta.join('\n');
-        this.set('text', text);
-        this.get('text$').val(text);
+        this.setText(text);
 
         let warningMessage = this.checkTextInput(text);
         if (warningMessage) {
@@ -310,11 +294,19 @@ export default Component.extend({
     /** checkInputs() sets .nameWarning */
     return ! warningMessage && this.checkInputs();
   }),
-  searchButtonDisabled : computed('searching', 'inputsOK', 'isProcessing', function() {
-    return this.get('searching') || ! this.get('inputsOK') || this.get('isProcessing');
+  searchButtonDisabled : computed('searching', 'text', 'isProcessing', function() {
+    /** originally checked inputsOK instead of text. */
+    return this.get('searching') || ! this.get('text') || this.get('isProcessing');
   }),
 
-  /** throttle depends on constant function  */
+  /** Bind on this for use in throttle, which depends on having a constant function.
+   * This was used (until 1e7c0e9e when it was deferred to search) in
+   * actions.dnaSequenceInput() via
+   *   throttle(this.get('dnaSequenceInputBound'), 2000);
+   * as that action was called via enter / newline / escape in the textarea.
+   * The button which calls actions.search() ... this.dnaSequenceInput() is
+   * disabled while this.searching, so throttle is likely not needed now.
+   */
   dnaSequenceInputBound : computed(function() {
     return bind(this, this.dnaSequenceInput);
   }),
