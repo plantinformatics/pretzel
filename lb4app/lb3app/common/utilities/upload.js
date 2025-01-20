@@ -503,6 +503,11 @@ function datasetSetMeta(rows, models, options) {
   /* .observe() : models = ctx.Model.app.models, options = ctx.options */
   Dataset = models.Dataset,
 
+    /** based on removeExisting(). */
+  clientIdString = gatherClientId(options),
+  clientId = options.accessToken.userId,
+  log1 = console.log(fnName, options, clientIdString, clientId, typeof clientId),
+
   /** array of promises, 1 per row / dataset */
   updatePs = rows.map((row, rowIndex) => {
     const
@@ -521,10 +526,6 @@ function datasetSetMeta(rows, models, options) {
       throw error;
     }
 
-    /** based on removeExisting(). */
-    let clientIdString = gatherClientId(options);
-    let clientId = options.accessToken.userId;
-    console.log(fnName, options, clientIdString, clientId, typeof clientId);
     const
     updateP = 
       models.Dataset.findById(id, {}, { unfiltered: true } )
