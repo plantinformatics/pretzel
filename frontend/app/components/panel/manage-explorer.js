@@ -1910,7 +1910,7 @@ export default ManageBase.extend({
           block.referenceBlockSameServer() ||
           block.chooseReferenceBlock() ) {
         // mapview : loadBlock() will view the reference if it is not viewed.
-        this.loadBlock(block);
+        this.loadBlock(block, true);
       } else
         this.set('blockWithoutParentOnPrimary', block);
 
@@ -1924,7 +1924,7 @@ export default ManageBase.extend({
           if (referenceBlock) {
             dLog('loadBlock viewing', dataBlock.id, 'as its referenceBlock', referenceBlock.id, 'is viewed');
             this.set('blockWithoutParentOnPrimary', null);
-            this.loadBlock(dataBlock);
+            this.loadBlock(dataBlock, true);
           }
         }
       });

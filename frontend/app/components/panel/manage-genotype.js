@@ -2762,7 +2762,9 @@ export default class PanelManageGenotypeComponent extends Component {
     /* this works, but is already achieved by loadBlock() : viewRelatedBlocks(block)
      *  this.blockService.setViewed(block.id, true);
      */
-    this.args.loadBlock(block);
+    if (! block.isViewed) {
+      this.args.loadBlock(block, true);
+    }
     pollCondition(250, () => block.axis1d, () =>
       this.blockBrushDomain(block, featuresDomain));
   }
@@ -2774,7 +2776,13 @@ export default class PanelManageGenotypeComponent extends Component {
     } else {
       const referenceBlock = block.referenceBlock;
       this.blockService.pathsPro.ensureAxisBrush(referenceBlock);
-      later(() => this.blockSetBrushedDomain(block, featuresDomain), 2000);
+      later(() => {
+        if (! block.axis1d || block.axis1d.isDestroying) {
+          dLog(fnName, block.id, 'axis1d', block.axis1d);
+        } else {
+          this.blockSetBrushedDomain(block, featuresDomain);
+        }
+      }, 2000);
     }
   };
 

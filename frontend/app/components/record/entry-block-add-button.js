@@ -21,15 +21,20 @@ export default EntryBase.extend({
   /*--------------------------------------------------------------------------*/
   actions : {
     loadBlock(block) {
-      console.log('entry-block-add-button: loadBlock', block, arguments);
+      const viewed = block.isViewed;
+      console.log('entry-block-add-button: loadBlock', block, arguments, viewed);
       this.loadBlock(block);
-      /** these 2 functions each determine if this button is within the explorer
-       * Trait or Ontology tab, and only the corresponding function will take an
-       * action. */
-      this.setTraitVisible(block);
-      this.setOntologyVisible(block);
-      this.get('ontology').ensureVisibleOntologiesAreColoured();
-      later(() => this.get('ontology').ensureVisibleOntologiesAreColoured(), 3000);
+      /* loadBlock() is a toggle (since 137c3662); the following is required
+       * when block is becoming viewed. */
+      if (! viewed) {
+        /** these 2 functions each determine if this button is within the explorer
+         * Trait or Ontology tab, and only the corresponding function will take an
+         * action. */
+        this.setTraitVisible(block);
+        this.setOntologyVisible(block);
+        this.get('ontology').ensureVisibleOntologiesAreColoured();
+        later(() => this.get('ontology').ensureVisibleOntologiesAreColoured(), 3000);
+      }
     }
   }, // actions
   /*--------------------------------------------------------------------------*/

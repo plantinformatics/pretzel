@@ -154,7 +154,7 @@ export default class FormNaturalSearchComponent extends Component {
       blocks = datasets.map(dataset =>
         dataset?.dataset.blocks.findBy('name', chromosome))
         .filter(block => block);
-      later(() => blocks.forEach(block => this.args.loadBlock(block)));
+      later(() => blocks.forEach(block => this.args.loadBlock(block, true)));
     }
     /* or nameChr2Block() or this.datasetService.datasetsByName,
     dataset = datasets[datasetName]; */
