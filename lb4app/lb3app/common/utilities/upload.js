@@ -510,11 +510,20 @@ function datasetSetMeta(rows, models, options) {
 
   /** array of promises, 1 per row / dataset */
   updatePs = rows.map((row, rowIndex) => {
+    /** Extract the value of datasetId from the row, and remove it so
+     * the remainder of the row data can be added to meta. */
+    function removeId(fieldName) {
+      const value = row[fieldName];
+      if (value ?? false) {
+        delete row[fieldName];
+      }
+      return value;
+    }
+
     const
     datasetIdFieldName = 'Current dataset name',
     /** datasetId */
-    id = row[datasetIdFieldName];
-    delete row[datasetIdFieldName];
+    id = removeId(datasetIdFieldName) || removeId('id');
 
     if (id === undefined) {
       const
