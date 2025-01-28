@@ -1,4 +1,10 @@
 <div class="pull-right">
+  <button type="button" onclick={{action this.downloadCSVFile}}
+    class="btn btn-info btn-xs"
+    style="margin: 6px; padding: 1px 3px;" >
+    Download CSV file
+  </button>
+
   <input type="checkbox"
     checked={{this.stretchHorizontal}}
     oninput={{action this.stretchHorizontalChanged value="target.checked"}}  >

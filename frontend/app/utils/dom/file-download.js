@@ -1,3 +1,8 @@
+//------------------------------------------------------------------------------
+
+/* global Blob */
+
+//------------------------------------------------------------------------------
 
 export {fileDownloadAsCSV}
 /** Trigger a download of a CSV / TSV file containing the given CSV / TSV string
@@ -27,3 +32,35 @@ function fileDownloadAsCSV(filename, contents) {
   URL.revokeObjectURL(url);
   anchor.remove();
 }
+
+//------------------------------------------------------------------------------
+
+export { exportAsCSVFile }
+/**
+ * @param fileName
+ * @param data  array of features
+ * @param keyArray  keys for features
+ * @param columnHeaders mostly the same as keyArray, but e.g. feature table uses
+ * 'Block' instead of 'Chromosome'.
+ * @param quoteIfNeeded (value, columnIndex) => value or quoted string if value
+ * should be wrapped with quotes because it contains commas which would split
+ * the CSV columns
+ */
+function exportAsCSVFile(fileName, data, keyArray, columnHeaders, quoteIfNeeded) {
+
+  const
+  datasetStrings = data
+    .map(d =>
+      keyArray
+        .map(key => d[key])
+        .map((value, columnIndex) => (value ?? false) ? quoteIfNeeded(value, columnIndex) : '')
+        .join(',')
+    ),
+  csv = [columnHeaders.join(',')].concat(datasetStrings)
+    .join('\n');
+
+  fileDownloadAsCSV(fileName, csv);
+
+}
+
+//------------------------------------------------------------------------------
