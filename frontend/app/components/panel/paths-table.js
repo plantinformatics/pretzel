@@ -110,6 +110,11 @@ export default Component.extend({
   didInsertElement() {
     this._super(...arguments);
 
+    // used in development only, in Web Inspector console.
+    if (window.PretzelFrontend) {
+      window.PretzelFrontend.pathsTable = this;
+    }
+
     if (! this.get('useHandsOnTable')) {
       $(".contextual-data-table", this.element).colResizable({
         liveDrag:true,
@@ -164,7 +169,7 @@ export default Component.extend({
         visible = this.get('visible'),
       table = this.get('table');
 
-      dLog('manageHoTable', visible, table, this);
+      dLog('manageHoTable', visible, this.selectedBlock?.id);
       /* If the paths-table component was split into a calculation component and
        * a display component, then these 2 parts would go into the
        * didInsertElement() and willDestroyElement() of the display component.

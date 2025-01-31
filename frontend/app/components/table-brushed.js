@@ -11,6 +11,7 @@ import { alias } from '@ember/object/computed';
 
 import { featureEdit } from '../components/form/feature-edit';
 import { eltClassName } from '../utils/domElements';
+import { exportAsCSVFile } from '../utils/dom/file-download';
 import {
   // setRowAttributes,
   afterOnCellMouseOverClosure,
@@ -906,6 +907,51 @@ export default Component.extend({
         this.set(msgName, err);
       });
     return promise;
+  },
+
+  //----------------------------------------------------------------------------
+
+  /** Generate a CSV / TSV report of the datasets visible to this user, and
+   * export as a file download.
+   */
+  downloadCSVFile() {
+    const
+    fnName = 'downloadCSVFile',
+    /** displayed as 'Block', download as 'Block' also.
+     * data[*] contains .Chromosome
+     */
+    blockKey = 'Chromosome',
+    /** based on datasets-csv.js : datasetsReport();
+     * could factor to a function (data, keyArray, quoteIfNeeded) */
+    baseColumnHeaders = [
+      blockKey, 'Feature', 'Position',
+    ],
+    /** Block contains datasetId, which may contain a comma ?, so wrap with "".
+     * Also wrap array values, and comma-separate their elements; this
+     * is the expected upload format for flankingMarkers, which is the
+     * only array value expected.
+     */
+    needsQuoting = (value, columnIndex) =>
+    (baseColumnHeaders[columnIndex] === blockKey) ||
+      (typeof value === 'string' && value.includes(',')),
+    quoteIfNeeded = (value, columnIndex) =>
+    needsQuoting(value, columnIndex) ? '"' + value + '"' :
+      Array.isArray(value) ?  '"' + value.join(',') +  '"' :
+      value,
+
+    data = this.dataForHoTable,
+    /** result : S alias s.  d : row datum, k : cell key */
+    featureKeySet = data.reduce((S, d) =>
+      Object.keys(d).reduce((s, k) =>
+        s.add(k), S), new Set(baseColumnHeaders)),
+    featureKeyArray = Array.from(featureKeySet),
+    columnHeaders = featureKeyArray.slice();
+    if (columnHeaders[0] === blockKey) {
+      columnHeaders[0] = 'Block';
+    }
+
+    exportAsCSVFile('feature-table.csv', data, featureKeyArray, columnHeaders, quoteIfNeeded);
+
   },
 
 });

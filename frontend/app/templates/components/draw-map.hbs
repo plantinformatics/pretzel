@@ -7,7 +7,12 @@
   <!--<ul>
        <li>{{selectedMapset.name}}</li>
        </ul> -->
-  <div id="headsUp">{{this.headsUp.tipText}}</div>
+  <div id="headsUp">
+    {{#if this.headsUp.tipText}}
+        <button type="button" onclick={{action (mut this.headsUp.tipText) null}} >X</button>
+      <div>{{this.headsUp.tipText}}</div>
+    {{/if}}
+  </div>
 
 
   <div id="popoverTarget" style="position: absolute;"></div>

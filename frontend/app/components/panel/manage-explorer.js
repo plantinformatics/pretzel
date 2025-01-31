@@ -87,6 +87,17 @@ const dLog = console.debug;
 
 const selectorExplorer = 'div#left-panel-explorer';
 
+//------------------------------------------------------------------------------
+
+/** This represents no filter selection made in the Crop pull-down, i.e. All.
+ * select-group.hbs uses .id and .name.
+ */
+const noCrop = EmberObject.create({id : 'noCrop', name : 'All'});
+
+/** This represents no filter selection made in the Category pull-down, i.e. All.
+ */
+const noCategory = EmberObject.create({id : 'noCategory', name : 'All'});
+
 /*----------------------------------------------------------------------------*/
 
 
@@ -164,7 +175,12 @@ export default ManageBase.extend({
     const
     fnName = 'showDataSources',
     dataSources = this.urlOptions?.dataSources,
-    show = dataSources ?? (config.environment === 'development');
+    /** defining options=dataSources redirects away from rootURL, so enable
+     * dataSources if rootURL is not /
+     */
+    show = dataSources ??
+      ((config.environment === 'development') ||
+       (config.rootURL === '/pretzelUpdate/'));
     dLog(fnName, show, dataSources, config.environment);
     return show;
   }),
@@ -534,6 +550,57 @@ export default ManageBase.extend({
 
 
   //----------------------------------------------------------------------------
+  // copied from above, with group -> crop
+
+  /** defined if user has selected a crop to filter the datasets. */
+  cropFilterSelected : undefined,
+
+  /**
+   * @param selectedCrop  null or { id, name, ... } Ember Object
+   */
+  selectedCropChanged(selectedCrop) {
+    if (selectedCrop === noCrop) {
+      selectedCrop = null;
+    }
+    this.set('cropFilterSelected', selectedCrop);
+  },
+
+  //----------------------------------------------------------------------------
+  // copied from above, with crop -> category
+
+  /** defined if user has selected a category to filter the datasets. */
+  categoryFilterSelected : undefined,
+
+  /**
+   * @param selectedCategory  null or { id, name, ... } Ember Object
+   */
+  selectedCategoryChanged(selectedCategory) {
+    const fnName = 'selectedCategoryChanged';
+    /** this enables selection of multiple categories, via select-multiple (as
+     * in commit 86c9a340) or PowerSelectMultiple (stashed); currently using
+     * single selection via select-group */
+    const isMultiple = false;
+    if (selectedCategory === noCategory) {
+      this.set('categoryFilterSelected', null);
+    } else if (! isMultiple) {
+      this.set('categoryFilterSelected', selectedCategory);
+    } else {
+      const
+      categories = this.categoryFilterSelected || this.set('categoryFilterSelected', []),
+      present = categories.find(c => c.id === selectedCategory.id);
+      /** use .pushObject() (or .removeObject) so that dataPre1() sees the
+       * change to its dependency categoryFilterSelected.length */
+      if (present) {
+        categories.removeObject(present);
+      } else {
+        categories.pushObject(selectedCategory);
+      }
+    }
+    dLog(fnName, selectedCategory, this.categoryFilterSelected);
+  },
+
+
+  //----------------------------------------------------------------------------
 
   promiseToTask : task(function * (promise) {
     // dLog('promiseToTask', promise, 'mapsTask');
@@ -610,8 +677,17 @@ export default ManageBase.extend({
     return combined;
   }),
   //----------------------------------------------------------------------------
+  /** Input : datasetsBlocks,
+   * optionally filtered by :
+   * - this.filter (private / owner), or
+   * - this.groupFilterSelected
+   * - this.cropFilterSelected
+   * - dataset.isVisible
+   */
   dataPre1: computed(
     'datasetsBlocks', 'datasetsBlocks.[]', 'filter', 'groupFilterSelected',
+    'cropFilterSelected',
+    'categoryFilterSelected',
     /* .groupsInIds is used as a proxy for
      * 'datasetsBlocks.@each.groupIsVisible', which would require significantly
      * greater computation. */
@@ -634,7 +710,21 @@ export default ManageBase.extend({
           availableMaps = thenOrNow(
             availableMaps,
             (datasetsBlocks) => datasetsBlocks.filter((d) => {
-              let ok = d.get('groupId.id') === this.groupFilterSelected.id; return ok; }));
+              const ok = d.get('groupId.id') === this.groupFilterSelected.id; return ok; }));
+        }
+        if (this.cropFilterSelected) {
+          availableMaps = thenOrNow(
+            availableMaps,
+            (datasetsBlocks) => datasetsBlocks.filter((d) => {
+              const ok = d.get('cropName') === this.cropFilterSelected.id; return ok; }));
+        }
+        if (this.categoryFilterSelected) {
+          availableMaps = thenOrNow(
+            availableMaps,
+            (datasetsBlocks) => datasetsBlocks.filter((d) => {
+              /** currently .categories is [] when dataset has no ._meta.Categor{ies,y*} */
+              const ok = d.categories.includes(this.categoryFilterSelected.id);
+              return ok; }));
         }
         availableMaps = thenOrNow(
           availableMaps,
@@ -642,6 +732,10 @@ export default ManageBase.extend({
         return availableMaps;
       }
     }),
+  /** Input : .dataPre1
+   * optionally filtered / sorted by :
+   * - this.historyView
+   */
   dataPreHistory : computed('dataPre1.[]', 'historyView', function () {
     let data = this.get('dataPre1');
     let match;
@@ -708,7 +802,11 @@ export default ManageBase.extend({
   dataPre2 : computed('dataPreHistory.[]', 'nameFilterArray', 'caseInsensitive', 'searchFilterAll', function () {
     return this.get('dataPreHistory');
   }),
-  dataPre: filter('dataPre2', function(dataset, index, array) {
+  /** Input : this.dataPre2
+   * optionally filtered by :
+   * - this.nameFilterArray
+   */
+  dataPostNameFilter: filter('dataPre2', function(dataset, index, array) {
     let
     nameFilter = this.get('nameFilter'),
     nameFilters = this.get('nameFilterArray'),
@@ -719,6 +817,7 @@ export default ManageBase.extend({
     }
     return match;
   }),
+
   /**
    * @return true if each / any of the name keys matches either the dataset or one of its blocks
    * @param dataset
@@ -731,6 +830,69 @@ export default ManageBase.extend({
       dataset, nameFilters, this.caseInsensitive, this.searchFilterAll, childNamesFn);
     return matchAll;
   },
+
+  cropField : '_meta.Crop',
+  dataPre: alias('dataPostNameFilter'),
+
+  //----------------------------------------------------------------------------
+  /* These 3 are based on withParent, child1, parents, parentNames,
+   * substituting parent → crop
+   */
+  /** datasets with a cropField. */
+  withCrop: filter('datasetsBlocks', function(dataset, index, array) {
+    const fnName = 'withCrop';
+    let crop = dataset.get(this.cropField);
+    if (trace_dataTree > 2)
+      dLog(fnName, dataset.id, crop);
+    return crop;
+  }),
+  /** result of uniqBy is a single dataset which refers to each (crop)
+   * dataset; just 1 child of each crop is in the result. */
+  child1Crop : uniqBy('withCrop', 'cropName'),
+  /** crops of child1Crop(), i.e. all the dataset crops, just once each.  */
+  cropNames : mapBy('child1Crop', 'cropName'),
+  /** same as .cropNames, but with {id, name} and noCrop prepended,
+      for use in select-group */
+  cropsForFilter : computed('child1Crop', function() {
+    const
+    datasets = this.get('child1Crop').map(function (dataset) {
+      const
+      name = dataset.cropName,
+      crop = {id : name, name};
+      return crop;
+    });
+    datasets.unshift(noCrop);
+    return datasets;
+  }),
+
+  //----------------------------------------------------------------------------
+
+  /** @return an array of the unique (string) values in datasetsBlocks[].categories
+   */
+  categoriesForFilter : computed('datasetsBlocks', function () {
+    /* This is roughly parallel to the combined functions of
+     * withCrop / child1Crop / cropsForFilter,
+     * with the added requirement that Dataset .categories is an array,
+     * whereas Dataset .cropName is a single string.
+     */
+    const
+    fnName = 'categoriesForFilter',
+    categorySet = this.datasetsBlocks?.reduce((set, dataset) => {
+      if (dataset.categories) {
+        dataset.categories.forEach(category => set.add(category));
+      }
+      return set;
+    }, new Set()),
+    categories = ! categorySet ? [] : Array.from(categorySet).map(name => ({id : name, name}));
+    categories.unshift(noCategory);
+    dLog(fnName, categories, categorySet);
+    return categories;
+  }),
+  
+  //----------------------------------------------------------------------------
+
+
+
   /**
    * @return true if each / any of the name keys matches name
    * @param name  text name of e.g. Trait
@@ -1083,6 +1245,9 @@ export default ManageBase.extend({
           };
           let resultValue, dataTypeName = valueGetType(me.levelMeta, value),
           isGrouping = dataTypeName === 'Groups';
+          if ((value instanceof Object) && ! Object.keys(value).length) {
+            resultValue = [];
+          } else
           if (isGrouping) {
             resultValue = mapHash(value, ps);
             /* resultValue has the same structure as the input value - Groups. */
@@ -1394,25 +1559,14 @@ export default ManageBase.extend({
       function (d) { return metaFilterFG(d, filterGroup); }
     : metaFilterDev,
     /** n is an array : [{key, values}, ..] */
-    n = d3.nest()
-      .key(metaFilter)
-      .entries(datasets || []),
-    /** parentAndScope() could be restructured as a key function, and used in d3-array.group(). */
-    /** reduce nest to a Map, processing values with parentAndScope() */
-    map2 = n.reduce(
-      function (map, nestEntry) {
-        let key = nestEntry.key,
-        value = nestEntry.values;
-        map.set(key, value);
-        return map; },
-      new Map()
-    );
+    map2 = d3.group(datasets || [], metaFilter),
+    n = Array.from(map2.entries());
     /** if isFilter, result is an array, otherwise a hash */
     let hash = {};
     /* if isFilter, the matched values are within map2.get(true); this is the whole result. */
     if (isFilter) {
       // in n and map2  the keys are already strings, i.e. 'true' and 'undefined'
-      let matched = map2.get('true');
+      let matched = map2.get(true);
       let filterMatched = this.get('filterMatched');
       if (isDataset) {
         filterMatched[tabName] = ! ! matched;
@@ -1420,7 +1574,7 @@ export default ManageBase.extend({
           console.log('filterMatched[', tabName, '] =', ! ! matched);
       }
       /** map the unmatched key : 'undefined' -> 'unmatched' */
-      let unmatched = map2.get('undefined');
+      let unmatched = map2.get(undefined);
       /* for isFilter, result is an array, except if !matched && unmatched && !ignoreFilter,
        * in which case unmatched is (currently) added, with key 'unmatched'.
        * The 'unmatched' is mostly a devel feature, for checking the result,
@@ -1442,10 +1596,12 @@ export default ManageBase.extend({
       }
     }
     // is grouping
-    else if ((n.length === 1) && (n[0].key === 'undefined'))
+    // n[0] is [key, value]
+    else if ((n.length === 1) && (n[0][0] === undefined))
     {
       /** if it is a grouping and nothing matches, then pass through unaltered. */
-      let datasets = n[0].values;   /* i.e. map2['undefined']  */
+      /** values;  i.e. map2.get(undefined) */
+      let datasets = n[0][1];
       this.levelMeta.set(datasets, 'Datasets');
       hash = datasets;  // result type is an array of datasets in this case, not a hash.
     }
@@ -1455,9 +1611,9 @@ export default ManageBase.extend({
       for (var [key, value] of map2) {
         if (trace_dataTree > 1)
           console.log(key, ' : ', value);
-        if ((key === 'undefined') && showUnmatched)
+        if ((key === undefined) && showUnmatched)
           key = 'unmatched';
-        if (key !== 'undefined') {
+        if (key !== undefined) {
           hash[key] = value;
           this.levelMeta.set(value, 'Group');
         }
@@ -1708,15 +1864,23 @@ export default ManageBase.extend({
     changeFilter: function(f) {
       this.set('filter', f)
     },
-    filterGroupsChanged : function(fg) {
+    /**
+     * @param fg filterGroup data object (currently in default Ember Store, will change to (Ember) Object)
+     * @param fgComp	instance of component:panel/filter-group
+     * fgComp.data === fg
+     * @param value	radio-button or checkbox value, e.g. radio-button filterOrGroup : 'filter' or 'group'
+     * @param this	instance of component:panel/manage-explorer
+     */
+    filterGroupsChanged : function(fg, fgComp, value) {
       /* note : fg === this.get('filterGroups.0')
        */
+      const index = this.get('filterGroups').indexOf(fg);
       if (trace_dataTree)
-        dLog('filterGroupsChanged', fg, this.get('filterGroups.0'), this.get('filterGroups.0'), this.get('filterGroups.0.isCaseSensitive'));
+        dLog('filterGroupsChanged', value, index, fg, fg.isCaseSensitive);
       // Wait for update of values of fg which are bound input elements.
       let me = this;
       later(function () {
-        dLog('filterGroupsChanged later', fg, me.get('filterGroups.0'), me.get('filterGroups.0'), me.get('filterGroups.0.isCaseSensitive'));
+        dLog('filterGroupsChanged later', value, index, fg, fg.isCaseSensitive);
         me.incrementProperty('filterGroupsChangeCounter');
       });
     },
@@ -1746,7 +1910,7 @@ export default ManageBase.extend({
           block.referenceBlockSameServer() ||
           block.chooseReferenceBlock() ) {
         // mapview : loadBlock() will view the reference if it is not viewed.
-        this.loadBlock(block);
+        this.loadBlock(block, true);
       } else
         this.set('blockWithoutParentOnPrimary', block);
 
@@ -1760,7 +1924,7 @@ export default ManageBase.extend({
           if (referenceBlock) {
             dLog('loadBlock viewing', dataBlock.id, 'as its referenceBlock', referenceBlock.id, 'is viewed');
             this.set('blockWithoutParentOnPrimary', null);
-            this.loadBlock(dataBlock);
+            this.loadBlock(dataBlock, true);
           }
         }
       });

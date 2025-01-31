@@ -64,6 +64,12 @@
     <span>&nbsp; Search</span>
   {{/elem/button-base}}
 
+  <button type="button" onclick={{action this.clearResults}}
+    class="btn btn-info btn-xs pull-right" style="margin-right: 1em;">
+    Clear
+  </button>
+
+
   {{!-- The above (if loading 'disabled') is not effective, so display
    ⏰  U+023F0  ALARM CLOCK --}}
   {{#if this.loading }}
@@ -75,6 +81,7 @@
   {{!-- →	&#8594;	&rarr;	RIGHTWARDS ARROW --}}
 
   <div style="clear:both; margin-top : 4ex;">
+   {{#if this.showResult}}
     {{#if this.taskGet.lastPerformed}}
       {{#unless this.loading }}
         <label>Received :</label>
@@ -91,6 +98,7 @@
         </ul>
       {{/unless}}
     {{/if}}
+   {{/if}}
   </div>
 </div>
 

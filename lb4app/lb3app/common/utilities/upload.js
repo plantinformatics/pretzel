@@ -139,6 +139,7 @@ function uploadDatasetContent(dataset_id, blocks, models, options, cb) {
   let json_intervals = [];
   let json_features = [];
 
+  console.log(fnName, dataset_id, blocks.length);
     blocks.forEach(function(block) {
       if (block.__cachedRelations.annotations) {
         block.__cachedRelations.annotations.forEach(function(json_annotation) {
@@ -187,6 +188,8 @@ exports.uploadDatasetContent = uploadDatasetContent;
  * @return promise  (no value)
  */
 function insert_features_recursive(db, dataset_id, features_to_insert, ordered, cb) {
+  const fnName = 'insert_features_recursive';
+  console.log(fnName, dataset_id, features_to_insert.length, ordered);
   // no more features
   if (features_to_insert.length == 0) {
     /** this promise is only to satisfy the .catch() in uploadDatasetContent().
@@ -500,17 +503,38 @@ function datasetSetMeta(rows, models, options) {
   /* .observe() : models = ctx.Model.app.models, options = ctx.options */
   Dataset = models.Dataset,
 
-  /** array of promises, 1 per row / dataset */
-  updatePs = rows.map(row => {
-    const
-    /** datasetId */
-    id = row['Current dataset name'];
-    delete row['Current dataset name'];
-
     /** based on removeExisting(). */
-    let clientIdString = gatherClientId(options);
-    let clientId = options.accessToken.userId;
-    console.log(fnName, options, clientIdString, clientId, typeof clientId);
+  clientIdString = gatherClientId(options),
+  clientId = options.accessToken.userId,
+  log1 = console.log(fnName, options, clientIdString, clientId, typeof clientId),
+
+  /** array of promises, 1 per row / dataset */
+  updatePs = rows.map((row, rowIndex) => {
+    /** Extract the value of datasetId from the row, and remove it so
+     * the remainder of the row data can be added to meta. */
+    function removeId(fieldName) {
+      const value = row[fieldName];
+      if (value ?? false) {
+        delete row[fieldName];
+      }
+      return value;
+    }
+
+    const
+    datasetIdFieldName = 'Current dataset name',
+    /** datasetId */
+    id = removeId(datasetIdFieldName) || removeId('id');
+
+    if (id === undefined) {
+      const
+      errorText = 
+        'Column "' + datasetIdFieldName +
+        '" is required in AddMetadata| worksheet. No value in row ' + rowIndex + ': ' + 
+        Object.entries(row).map(kv => kv.join(':')).join(", "),
+      error = ErrorStatus(404, errorText);
+      throw error;
+    }
+
     const
     updateP = 
       models.Dataset.findById(id, {}, { unfiltered: true } )

@@ -27,7 +27,7 @@ export default Component.extend({
 
   addFilterOrGroup() {
     let data = this.get('data'),
-    filterGroup = this.get('store').createRecord('filter-Group');
+    filterGroup = this.get('store').createRecord('filter-group');
     data.pushObject(filterGroup);
   },
 

@@ -60,6 +60,8 @@ esac
 # Ensure scriptsDir is absolute, not relative to $serverDir
 case $scriptsDir in
   '') scriptsDir=$serverDir/lb3app/scripts ;;
+  # in local devel, scriptsDir is complete.
+  /home/*) ;;
   # relative to $serverDir
   /*) scriptsDir=$serverDir/$scriptsDir ;;
   *) ;;
@@ -472,8 +474,7 @@ ensureSNPList() {
   if [ ! -e "$vcfGzSNPList" ]
   then
     # only require information from cols 1-5, but VCF requires 1-9, i.e. including : QUAL FILTER INFO FORMAT
-    # Seems that 1 sample column is required, so request 1-10
-    zcat "$vcfGzSamples"  | cut -f1-10  | bgzip -c > "$vcfGzSNPList"
+    bcftools view --drop-genotypes --threads $(nproc) --output-type z  --output  "$vcfGzSNPList" "$vcfGzSamples"
   fi
   if [ ! -e "$vcfGzSNPList".csi ]
   then

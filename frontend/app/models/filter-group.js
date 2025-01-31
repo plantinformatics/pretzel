@@ -38,7 +38,7 @@ export default Model.extend({
   pattern : undefined,
 
   toString : function() {
-    console.log('FilterGroup : toString()', this);
+    // console.log('FilterGroup : toString()', this);
     let texts = fieldNames.map((n) => this[n] )
       .filter((v) => v !== undefined);
     return "FilterGroup:" + texts.join(',');

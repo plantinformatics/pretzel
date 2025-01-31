@@ -27,6 +27,14 @@ const I = (x) => x;
 
 const blockRangeSymbol = Symbol.for('blockRange');
 
+/** Fields of Dataset.meta which are required.
+ * Currently a warning is generated if these fields are not present in the
+ * upload data; this may be upgraded to rejecting the dataset.
+ */
+const requiredFieldsMeta = [
+  'Crop',
+];
+
 //------------------------------------------------------------------------------
 
 function rowIsBlock(sheetType) {
@@ -299,6 +307,13 @@ function sheetToDataset(
     dataset.parent = parentName;
   }
 
+  /** Generate a warning if required fields are not present in the uploaded dataset. */
+  const missingFields = requiredFieldsMeta.filter(fieldName => (meta[fieldName] ?? undefined) === undefined);
+  if (missingFields.length) {
+    const warningText = 'These fields are expected to be present in Dataset.meta : ' + missingFields.join(', ');
+    dataset.warnings.push(warningText);
+  }
+
   const
   { rowObjects, headerRow } = sheetToObj(sheet),
   features = rowObjects
@@ -426,6 +441,24 @@ function sheetToObj(sheet, headerRenaming) {
   /** remove first (header) row */
     .filter((f, i) => i > 0)
   ;
+
+  /** .name field values are required to be strings.
+   * In some older Genetic Maps the markers may be identified by their number
+   * instead of a string name (e.g. early 90k or DArT-Seq). In this case the
+   * .name column values in the worksheet may be of type number, and
+   * XLSX.utils.sheet_to_json() above will convey the value as number.
+   * Recognise this case and convert the number to a string.
+   */
+  if (headerRow.includes('name')) {
+    const header = 'name';
+    rowObjects.forEach((row) => {
+      const value = row[header];
+      if (typeof value === 'number') {
+        row[header] = '' + value;
+      }
+    });
+  }
+
   /** Apply a heuristic to recognise MS Excel Serial Date values and convert
    * them to JavaScript Date. */
   headerRow.filter((header) => header.match(fieldNameDateRegexp))
@@ -433,6 +466,19 @@ function sheetToObj(sheet, headerRenaming) {
       rowObjects.forEach((row) => {
         row[header] = excelSerialDate2JS(header, row[header]); });
        });
+
+
+
+  /** Recognise array values and parse them. */
+  rowObjects.forEach((row) => {
+    Object.entries(row).forEach(([key, value]) => {
+      const parsed = stringToArray(value);
+      if (parsed) {
+        row[key] = parsed;
+      }
+    });
+  });
+
 
   return {rowObjects, headerRow};
 }
@@ -772,6 +818,26 @@ function excelSerialDate2JS(fieldName, value) {
   return value;
 }
 
+const arrayRegexp = /^\[.*\]$/;
+/** Parse an array represented in a string, in JSON format.
+ * e.g. Categories : ['Published', 'External'].
+ * @param value
+ * @return undefined if parse fails, otherwise array
+ */
+function stringToArray(value) {
+  const fnName = 'stringToArray';
+  let array;
+  if ((typeof value === 'string') && value.match(arrayRegexp)) {
+    try {
+      array = JSON.parse(value);
+      console.log(fnName, 'array value', array, value);
+    } catch (e) { // expect SyntaxError
+      console.log(fnName, 'value matches arrayRegexp but does not parse', e.message, value);
+    }
+  }
+  return array;
+}
+
 
 /** Numeric cell values may present with an 18 digit mantissa instead of a few
  * digits, i.e. they need to be rounded.
@@ -1021,6 +1087,9 @@ function splitToStringArray(s) {
 
 /** if feature.values.flankingMarkers is a number, convert to a string in an array.
  * if it is a string, split into an array of strings.
+ * The resultant .values.flankingMarkers are strings or arrays of strings;
+ * the flanking marker may refer to the name of a marker in a Genetic Map, which
+ * may be a number represented as a string.
  * @param feature
  * @return feature, with possibly modified .flankingMarkers
  */

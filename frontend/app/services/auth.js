@@ -4,6 +4,8 @@ import { alias } from '@ember/object/computed';
 import $ from 'jquery';
 import Service, { inject as service } from '@ember/service';
 import { isEmpty, typeOf } from '@ember/utils';
+import { later } from '@ember/runloop';
+
 import { serverTypeIsBrAPI } from '../components/service/api-server';
 
 import {
@@ -64,6 +66,22 @@ export default Service.extend({
 
   /** indexed by API request name;  e.g. counts of current requests */
   apiStats : {},
+
+  //----------------------------------------------------------------------------
+
+  /** @return an indication of whether an error response from an API
+   * request (promise) will be displayed by the dialog which initiated
+   * the request.
+   * So far, just genotype-search displays these errors, and
+   * upload which sets userSettings.apiErrorShownInDialog.
+   */
+  get apiErrorShownInDialog() {
+    const
+    userSettings = this.controls.userSettings,
+    isGenotypeSearch = userSettings?.genotype?.dialogMode?.component === 'genotype-search',
+    apiErrorShownInDialog = userSettings.apiErrorShownInDialog || isGenotypeSearch;
+    return apiErrorShownInDialog;
+  },
 
   //----------------------------------------------------------------------------
 
@@ -129,8 +147,18 @@ export default Service.extend({
   },
 
   uploadData(data, onProgress) {
+    const fnName = 'uploadData';
     let server = this.get('apiServerSelectedOrPrimary');
-    return this._ajax('Datasets/upload', 'POST', JSON.stringify(data), true, onProgress, server);
+    const userSettings = this.controls.userSettings;
+    userSettings.apiErrorShownInDialog = true;
+    const promise = this._ajax('Datasets/upload', 'POST', JSON.stringify(data), true, onProgress, server);
+    const onFinally = () => later(() => userSettings.apiErrorShownInDialog = false);
+    /** if .finally() is used then subsequent promise.catch() does not fire, as if
+     * .finally() mutates the promise.  So use .then() instead.
+     */
+    // promise.finally(onFinally);
+    promise.then(onFinally, onFinally);
+    return promise;
   },
 
   tableUpload(data, onProgress) {
@@ -640,9 +668,18 @@ export default Service.extend({
 
     const error = (XMLHttpRequest, textStatus, errorThrown) =>
     {
-      dLog('auth _ajax error', XMLHttpRequest, textStatus, errorThrown);
+      let text = textStatus;
+      const responseError = XMLHttpRequest.responseJSON?.error;
+      if (responseError) {
+        text += ', ' + (responseError.statusCode ?? '')
+          + ', ' + (responseError.message ?? '');
+      }
+      const apiErrorShownInDialog = this.apiErrorShownInDialog;
+      dLog('auth _ajax error', XMLHttpRequest, textStatus, errorThrown, text, apiErrorShownInDialog);
       // observed : textStatus : "error", errorThrown : ""
-      this.set('headsUp.tipText', textStatus);
+      if (! apiErrorShownInDialog) {
+        this.set('headsUp.tipText', text);
+      }
     };
 
     let config = {
@@ -733,9 +770,16 @@ export default Service.extend({
       dLog(fnName, error, route, dataIn, error.status, error.statusText, error.state?.());
       if (error.statusText) {
         const
+        responseError = error.responseJSON?.error,
+        message = responseError?.message ?? '',
         text = 'API request to server : ' + route + ' : ' +
-          error.statusText + ' : ' + error.state?.() + ', ' + error.status;
-        this.set('headsUp.tipText', text);
+          error.statusText + ' : ' + error.state?.() + ', ' + error.status
+          + ', ' + message,
+        apiErrorShownInDialog = this.apiErrorShownInDialog;
+        dLog(fnName, responseError.statusCode, responseError.message, apiErrorShownInDialog);
+        if (! apiErrorShownInDialog) {
+          this.set('headsUp.tipText', text);
+        }
       }
     });
     return promise;

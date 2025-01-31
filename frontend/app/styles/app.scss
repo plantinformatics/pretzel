@@ -174,11 +174,20 @@ div.app-logo {
 }
 
 #headsUp {
+  /* Prevent text variation from affecting the vertical position of <svg>
+   * .FeatureMapViewer using position : absolute, which means that parent width
+   * is not available, so use an approximate width; */
   position : absolute;
+  width : 55%;
   /* left : 70px; */
   /* top : 50px; */
   margin-left : 10px;
   margin-top : 15px;
+
+  display: flex;
+}
+#headsUp > div {
+  margin-left: 1em;
 }
 
 /* -------------------------------------------------------------------------- */

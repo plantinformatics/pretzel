@@ -400,7 +400,7 @@ module.exports = function(Dataset) {
       datasetRemovedPs.forEach((datasetRemovedP, i) => {
         datasetRemovedP
         .catch((error) => cbCountDone(error))
-          .then(() => loadAfterDelete(datasets[i]));
+          .then(() => setTimeout(() => loadAfterDelete(datasets[i]), i * 3000));
       });
       // or : Promise.all(datasetRemovedPs.map(...)).then(() => aliasesToCb());
       if (! datasets.length) {
@@ -441,6 +441,8 @@ module.exports = function(Dataset) {
        * does loadAfterDeleteCb() : readFile() then uploadParsedTry() : JSON.parse().
        */
       function loadAfterDelete(datasetObj) {
+        const fnName = 'loadAfterDelete';
+        console.log(fnName, datasetObj.name);
         /** related : uploadParsedTry(), upload.uploadParsedCb() */
         /** Delay sending result until all datasets are complete. */
         function cbOneDataset(error, result) {
