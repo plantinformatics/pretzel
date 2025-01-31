@@ -95,6 +95,11 @@ for i in api database blastserver; do \
 docker logs pretzel-$stage-$i-1 >& ~/log/compose/$stage/$i.$logDate; done
 ```
 
+Observe Pretzel server containers created by Docker compose :
+```
+docker ps --filter="name=pretzel-$stage-api"
+```
+
 ---
 
 ### Preparing a custom Pretzel API server container image

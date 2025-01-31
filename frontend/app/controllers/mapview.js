@@ -299,11 +299,14 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
     /** load (or unload) this block, and its parent block if any.
      * This function is now changed (after b0941e7b) to be a toggle,
      * enabling +/- in the Dataset Explorer.
-     * The block's viewed state is toggled.
+     * If optional param viewOpt is provided, block.isViewed is set to that,
+     * otherwise the block's viewed state is toggled.
+     * @param block
+     * @param viewOpt	undefined or true | false
      */
-    loadBlock : function loadBlock(block) {
+    loadBlock : function loadBlock(block, viewOpt) {
       dLog('loadBlock', block.brushName || block);
-      const view = ! block.get('isViewed');
+      const view = viewOpt ?? ! block.get('isViewed');
       let related = this.get('view').viewRelatedBlocks(block, view);
       if (view && ! block.hasTag('transient')) {
         // related[] does not include block, so add it.
@@ -718,7 +721,7 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
         blockService.setViewed(blockIds, view);
       } else {
         let loadBlock = this.actions.loadBlock.bind(this);
-        blocksToChange.forEach((b) => loadBlock(b));
+        blocksToChange.forEach((b) => loadBlock(b, view));
       }
     } else {
       dLog('viewDataset', datasetName, 'not found', view);

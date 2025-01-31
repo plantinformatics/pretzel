@@ -19,6 +19,8 @@ export default Component.extend({
   serverTabSelected : alias('controls.serverTabSelected'),
 
   matchAliases : true,
+  /** Cleared by clearResults(), set by getBlocksOfFeatures(). */
+  showResult : true,
 
   /*----------------------------------------------------------------------------*/
   actions : {
@@ -42,6 +44,7 @@ export default Component.extend({
         : this.blocksUnique(selectedFeatureNames);
       if (activeFeatureList?.empty)
         this.set('blocksOfFeatures', blocksUnique);
+      this.set('showResult', true);
     },
 
     /** not used - the requirements shifted from setting the axis brushes from
@@ -232,6 +235,41 @@ export default Component.extend({
   }),
 
   brushFeatures() {
+  },
+
+  /** Clear the displayed search results.
+   */
+  clearResults() {
+    // This hides 'Received :'
+    this.set('showResult', false);
+
+    /* Not strictly required because showResult masks display of blocksOfFeatures and aliases. */
+    this.set('blocksOfFeatures', []);
+    this.set('aliases', []);
+
+    /*	Not effective
+    this.emptyObject(this.featuresAliases.search);
+    this.emptyObject(this.featuresAliases.result);
+    */
+    this.set('featuresAliases', {search : {}, result : {}});
+
+    /** Required to clear selected features display in the graph : triangles and labels. */
+    const features = [];
+    this.set('selected.features', features);
+    this.get('selected').featureSearchResult(features);
+  },
+
+  /** Empty the given array, i.e. mutate it.
+   * To enable clearResults() to update the display, may be achieved by
+   * upgrading this component to a native class and perhaps using tracked
+   * properties, instead of mutating the the results from blocksUnique() :
+   * blocksOfFeatures, aliases, featuresAliases,
+   */
+  emptyArray(array) {
+    for (let i = array.length; --i >= 0; ) { array.shiftObject();}
+  },
+  emptyObject(object) {
+    Object.keys(object).forEach(key => delete object[key]);
   }
 
 });

@@ -33,7 +33,7 @@
   <Input
     @value={{this.data.pattern}}
     class="form-control"
-    enter=(action this.changed this)
+    enter={{action this.changed this}}
     placeholder="string or regular expression" >
   </Input>  
   {{#elem/button-base
@@ -54,18 +54,28 @@
   <div class="filter-group-row" style="margin-top:1em">
     <label class="filter-group-col">Apply...</label>
     <span class="filter-group-2cols">
-      {{radio-button
-        value='filter'
-        groupValue=this.data.filterOrGroup
-        changed=(action this.changed this preventDefault=false)
-      }}
-      Filter &nbsp;&nbsp;
-      {{radio-button
-        value='group'
-        groupValue=this.data.filterOrGroup
-        changed=(action this.changed this preventDefault=false)
-      }}
-      Grouping
+      <RadioButton
+        @value='filter'
+        @groupValue=this.data.filterOrGroup
+        @changed={{action (queue
+          (action (mut this.data.filterOrGroup))
+          (action this.changed this)
+          ) preventDefault=false }}
+      >
+        Filter
+      </RadioButton>
+      &nbsp;&nbsp;
+      <RadioButton
+        @value='group'
+        @groupValue=this.data.filterOrGroup
+        @changed={{action (queue
+          (action (mut this.data.filterOrGroup))
+          (action this.changed this)
+          ) preventDefault=false}}
+      >
+        Grouping
+      </RadioButton>
+
     </span>
   </div>
 

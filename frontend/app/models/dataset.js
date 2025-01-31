@@ -155,6 +155,31 @@ export default Record.extend({
     return blocks;
   }),
 
+  //----------------------------------------------------------------------------
+
+  cropName : alias('_meta.Crop'),
+
+  /** @return the array ._meta.Categories or [], concatenated with any
+   * additional values matching ._meta.Category*
+   */
+  categories : computed( function categories () {
+    const fnName = 'categories';
+    let categories = this._meta?.Categories || [];
+    const
+    more = this._meta && Object.entries(this._meta)
+      .filter(([key, value]) => key.match(/^Category/i))
+      .map(([key, value]) => value);
+    /** Handle and log data errors such as ._meta.Categories not being an array. */
+    if (! Array.isArray(categories)) {
+      console.log(fnName, categories);
+      categories = typeof categories === 'string' ? [categories] : [];
+    }
+    if (more?.length) {
+      categories = categories.slice().concat(more);
+    }
+    return categories;
+  }),
+
   /*--------------------------------------------------------------------------*/
 
   /** @return true if this dataset has the given tag.

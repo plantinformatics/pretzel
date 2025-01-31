@@ -1,8 +1,9 @@
 {{!-- (queue (mut selectedValue) (action @selectedGroupChanged)) --}}
-  <select multiple={{@isMultiple}}
+  <select multiple
      onchange={{action this.selectedGroupChangedId value="target.value" preventDefault=false}}>
     {{#each @values as |optionValue|}}
-      <option value={{optionValue.id}} selected={{eq @selectedValue optionValue}}>{{optionValue.name}}</option>
+      {{!-- selected seems to be not used for multiple --}}
+      <option value={{optionValue.id}} selected={{action this.selected @selectedValue optionValue}}>{{optionValue.name}}</option>
     {{/each}}
   </select>
 

@@ -74,6 +74,26 @@
            </span>
       </span>
 
+      <span style="margin-left : 10px; display: inline-block;">
+        <label for="select-crop-as-filter">Crop</label>
+        <span id="select-crop-as-filter">
+          {{form/select-group
+            selectedValue=this.cropFilterSelected
+            values=(to-array-promise-proxy this.cropsForFilter)
+            selectedGroupChanged=(action this.selectedCropChanged) }}
+           </span>
+      </span>
+
+      <span style="margin-left : 10px; display: inline-block;">
+        <label for="select-category-as-filter">Category</label>
+        <span id="select-category-as-filter">
+          {{form/select-group
+            selectedValue=this.categoryFilterSelected
+            values=this.categoriesForFilter
+            selectedGroupChanged=(action this.selectedCategoryChanged) }}
+           </span>
+      </span>
+
 
     </li>
 
