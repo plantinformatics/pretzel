@@ -21,6 +21,7 @@ import NamesFilters from '../../utils/data/names-filters';
 import { toPromiseProxy, toArrayPromiseProxy, addObjectArrays, arrayClear } from '../../utils/ember-devel';
 import { thenOrNow, contentOf, pollCondition, promiseThrottle } from '../../utils/common/promises';
 import { responseTextParseHtml } from '../../utils/domElements';
+import { fileDownloadBlob, fileDownloadAsCSV, text2Gzip } from '../../utils/dom/file-download';
 import { clipboard_writeText } from '../../utils/common/html';
 import { arrayChoose } from  '../../utils/common/arrays';
 import { intervalSize } from '../../utils/interval-calcs';
@@ -183,6 +184,7 @@ function featureHasSamplesLoaded(feature) {
  * .replaceResults default: false
 
  * .showResultText default: false
+ * .compressVCF default : true
  * .showConfigureLookup default: false
  * .showSampleFilters default : false
 
@@ -474,6 +476,9 @@ export default class PanelManageGenotypeComponent extends Component {
 
     if (userSettings.showResultText === undefined) {
       userSettings.showResultText = false;
+    }
+    if (userSettings.compressVCF === undefined) {
+      userSettings.compressVCF = true;
     }
     if (userSettings.showConfigureLookup === undefined) {
       userSettings.showConfigureLookup = true;
@@ -3155,6 +3160,11 @@ export default class PanelManageGenotypeComponent extends Component {
   //----------------------------------------------------------------------------
 
 
+  /** 
+   * @return a file base name for VCF Download of displayed data of this.lookupBlock.
+   * The base name does not include the extension, because either
+   * '.vcf.txt' or '.vcf.gz' may be used
+   */
   @computed(
     'lookupDatasetId', 'lookupScope', 'vcfGenotypeLookupDomain',
     'vcfGenotypeSamplesSelected', 'requestFormat')
@@ -3168,8 +3178,7 @@ export default class PanelManageGenotypeComponent extends Component {
       '_' + scope +
       '_' + domainText +
       '_' + this.requestFormat +
-      '_' + samplesLength +
-      '.vcf' ;
+      '_' + samplesLength;
     return fileName;
   }
 
@@ -3952,6 +3961,27 @@ export default class PanelManageGenotypeComponent extends Component {
     }
     combinedP = toArrayPromiseProxy(combinedP);
     return combinedP;
+  }
+
+  /** Export as a user file download a VCF file constructed from .headerTextP,
+   * .vcfGenotypeText via combineHeader()
+   *
+   * The exported MIME Type used is 'text/csv' because 
+   * 'text/tsv'is would be interpreted as Vcard, refn 
+   * https://github.com/samtools/hts-specs/issues/407
+   * https://developer.mozilla.org/en-US/docs/Web/HTTP/MIME_types/Common_types
+   */
+  vcfExportTextToFile() {
+    this.vcfExportTextP.then(combined => {
+      const data = combined.join('\n');
+      if (this.args.userSettings.compressVCF) {
+        const blobP = text2Gzip(data, 'application/gzip');
+        blobP.then(blob => 
+          fileDownloadBlob(this.vcfExportFileName + '.vcf.gz', blob, 'application/gzip'));
+      } else {
+        fileDownloadAsCSV(this.vcfExportFileName + '.vcf.txt', data, 'text/plain');
+      }
+    });
   }
 
   combineHeader(headerText, vcfGenotypeText) {
