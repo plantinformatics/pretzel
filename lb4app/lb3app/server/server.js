@@ -33,6 +33,7 @@ envNames =
     'API_HOST',
     'API_URL',
     'API_PORT_EXT',
+    'DB_HOST',
     'DB_PORT_EXT',
     'DB_NAME',
     'EMAIL_FROM',
