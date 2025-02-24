@@ -22,10 +22,11 @@ const { childProcess, dataOutReplyClosure, dataOutReplyClosureLimit } = require(
 const { ArgsDebounce } = require('../utilities/debounce-args');
 const { ErrorStatus } = require('../utilities/errorStatus.js');
 
-let vcfGenotypeLookup, vcfGenotypeFeaturesCounts;
+let vcfGenotypeSamplesFiltered, vcfGenotypeLookup, vcfGenotypeFeaturesCounts;
 import('@plantinformatics/vcf-genotype-brapi/dist/vcf-genotype-brapi-node.mjs').then(vcfGenotypeBrapi => {
   const vcfGenotype = vcfGenotypeBrapi.default.vcfGenotype;
   console.log('vcfGenotypeBrapi', vcfGenotypeBrapi, 'vcfGenotype', vcfGenotype);
+  vcfGenotypeSamplesFiltered =  vcfGenotype.vcfGenotypeSamplesFiltered;
   vcfGenotypeLookup = vcfGenotype.vcfGenotypeLookup;
   vcfGenotypeFeaturesCounts = vcfGenotype.vcfGenotypeFeaturesCounts;
 });
@@ -1446,8 +1447,9 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
    * @param id  blockId.  block.scope === scope, and block.datasetId === datasetId
    * @param datasetId  name of parent or view dataset, or vcf directory name
    * @param scope e.g. '1A'; identifies the vcf file, i.e. datasetId/scope.vcf.gz
+   * @param filter optional filter e.g. haplotype
    */
-  Block.genotypeSamples = function(id, datasetId, scope, options, cb) {
+  Block.genotypeSamples = function(id, datasetId, scope, filter, options, cb) {
     const fnName = 'genotypeSamples';
     {
       this.blockDatasetLookup(id, options)
@@ -1455,7 +1457,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
 
       function samples([block, dataset]) {
         if (dataset.tags?.includes('VCF')) {
-          this.vcfGenotypeSamples(datasetId, scope, cb);
+          this.vcfGenotypeSamples(datasetId, scope, filter, cb);
         } else if (dataset.tags?.includes('Germinate')) {
           this.germinateGenotypeSamples(datasetId, scope, cb);
         } else {
@@ -1465,8 +1467,14 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     }
   };
 
-  Block.vcfGenotypeSamples = function(datasetId, scope, cb) {
+  Block.vcfGenotypeSamples = function(datasetId, scope, filter, cb) {
     const fnName = 'vcfGenotypeSamples';
+
+    if (filter) {
+      const promise = vcfGenotypeSamplesFiltered(datasetId, scope, filter);
+      promise.then(value => cb(null, value)).catch(cb);
+      return;
+    }
 
     childProcess(
       'vcfGenotypeLookup.bash',
@@ -1488,6 +1496,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       {arg: 'id', type: 'string', required: true},
       {arg: 'datasetId', type: 'string', required: true},
       {arg: 'scope', type: 'string', required: true},
+      {arg: 'filter', type: 'object', required: false},
       {arg: 'options', type: 'object', http: 'optionsFromRequest'},
     ],
     http: {verb: 'get'},

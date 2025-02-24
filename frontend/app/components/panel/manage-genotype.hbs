@@ -163,6 +163,30 @@
                         {{/ember-tooltip}}
                       </span>
 
+                      <span>
+                        <input type="checkbox"
+                          style="margin-left: 3em;"
+                          checked={{@userSettings.filterSamplesByHaplotype}}
+                          oninput={{pipe (action (mut @userSettings.filterSamplesByHaplotype) value="target.checked")
+                            this.ensureSamples }}  >
+                        <label>Filtered by SNPs</label>
+                        {{#ember-tooltip side="left" delay=500}}
+                          Show samples selected by SNP filters
+                        {{/ember-tooltip}}
+                      </span>
+                      <span>
+                        {{#if this.snpsInBrushedDomain}}
+                          <span class="badge">{{this.snpsInBrushedDomain.length}}</span>
+                        {{/if}}
+                        {{#ember-tooltip side="left" delay=500}}
+                          {{#each this.snpsInBrushedDomain as |feature|}}
+                            <div>{{feature.value_0}} &nbsp; : &nbsp; {{feature.matchRefNumeric}}</div>
+                          {{/each}}
+                          of {{this.featureFiltersCount}}
+                        {{/ember-tooltip}}
+                      </span>
+
+
                       {{#if @userSettings.showSampleFilters}}
                       <span>
                         <input type="checkbox"
@@ -170,9 +194,9 @@
                           checked={{@userSettings.requestSamplesFiltered}}
                           oninput={{pipe (action (mut @userSettings.requestSamplesFiltered) value="target.checked")
                             this.ensureSamples }}  >
-                        <label>Filtered</label>
+                        <label>Use Filtered Samples</label>
                         {{#ember-tooltip side="right" delay=500}}
-                          Request genotype of samples selected by LD Block / tSNP filters
+                          Request genotype of samples selected by LD Block / tSNP filters in loaded data
                         {{/ember-tooltip}}
                       </span>
                       {{/if}}
@@ -533,7 +557,9 @@
                                     {{#each blockFF.sampleFilters.feature as |feature|}}
                                       <li class="list-group-item">
                                         <div>
-                                          {{feature.value_0}} &nbsp; {{feature.values.ref}}/{{feature.values.alt}}
+                                          {{feature.value_0}}
+                                          &nbsp; {{feature.values.ref}}/{{feature.values.alt}}
+                                          &nbsp; : &nbsp; {{feature.matchRefNumeric}}
                                         </div>
                                       </li>
                                     {{/each}}

@@ -25,7 +25,7 @@ import { fileDownloadBlob, fileDownloadAsCSV, text2Gzip } from '../../utils/dom/
 import { clipboard_writeText } from '../../utils/common/html';
 import { arrayChoose } from  '../../utils/common/arrays';
 import { intervalSize } from '../../utils/interval-calcs';
-import { overlapInterval } from '../../utils/draw/zoomPanCalcs';
+import { inRange, overlapInterval } from '../../utils/draw/zoomPanCalcs';
 import { featuresIntervalsForTree } from '../../utils/data/features';
 // let vcfGenotypeBrapi = window["vcf-genotype-brapi"];
 import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
@@ -226,6 +226,8 @@ function featureHasSamplesLoaded(feature) {
  *   All samples in VCF, or selected by user from list.
  * .requestSamplesFiltered boolean, default : false
  *   The samples indicated by requestSamplesAll can be optionally filtered before request.
+ * .filterSamplesByHaplotype  boolean, default : false
+ *   Show samples selected by SNP filters
  *
  * @see userSettingsDefaults()
  *------------------------------------------------------------------------------
@@ -539,6 +541,10 @@ export default class PanelManageGenotypeComponent extends Component {
 
     if (userSettings.requestSamplesFiltered === undefined) {
       userSettings.requestSamplesFiltered = false;
+    }
+
+    if (userSettings.filterSamplesByHaplotype === undefined) {
+      userSettings.filterSamplesByHaplotype = false;
     }
 
     if (userSettings.showNonVCFFeatureNames === undefined) {
@@ -2018,6 +2024,21 @@ export default class PanelManageGenotypeComponent extends Component {
     return domainInteger;
   }
 
+  /** @return array of features in .blocksFeatureFilters which are in .brushedDomain
+   */
+  selectedSNPsInBrushedDomain(vcfBlock) {
+    const
+    features = this.blocksFeatureFilters.findBy('block', vcfBlock)?.sampleFilters.feature
+      .filter(f => inRange(f.value_0, vcfBlock.brushedDomain));
+    return features;
+  }
+
+  @computed('lookupBlock.brushedDomain', 'featureFiltersCount')
+  get snpsInBrushedDomain() {
+    const features = this.selectedSNPsInBrushedDomain(this.lookupBlock);
+    return features;
+  }
+
   // ---------------------------------------------------------------------------
 
   /** Request the list of samples of vcfBlock.
@@ -2033,13 +2054,24 @@ export default class PanelManageGenotypeComponent extends Component {
     vcfDatasetId = vcfBlock?.get('datasetId.id'),
     vcfDatasetIdAPI = vcfBlock?.get('datasetId.genotypeId'),
     /** as in .lookupScope */
-    scope = vcfBlock.get('name');
+    scope = vcfBlock.get('name'),
+    /** Of the 3 ways to select SNPs for sample sorting / filtering :
+     *  - .blocksHaplotypeFilters sampleFilters.haplotype
+     *  - .blocksVariantIntervalFilters sampleFilters.variantInterval
+     *  - .blocksFeatureFilters .sampleFilters .feature []
+     * the latter is the current focus and is handled here.
+     * The other 2 also select SNPs so those features can be utilised here.
+     */
+    filterByHaplotype = ! this.args.userSettings.filterSamplesByHaplotype ? undefined :
+      {features : this.selectedSNPsInBrushedDomain(vcfBlock)
+       .map(f => ({position : f.value_0,  matchRef : f[Symbol.for('matchRef')]}))};
+
     let textP;
     if (scope && vcfDatasetIdAPI)   {
       this.lookupMessage = null;
 
       textP = this.auth.genotypeSamples(
-        vcfBlock, vcfDatasetIdAPI, scope,
+        vcfBlock, vcfDatasetIdAPI, scope, filterByHaplotype,
         {} );
       textP.then(
         (text) => {
@@ -2065,8 +2097,16 @@ export default class PanelManageGenotypeComponent extends Component {
              * removed; it is not a concern for the mapping. */
             sampleNames = t.trim().split('\n');
           }
-          this.sampleCache.sampleNames[vcfDatasetId] = sampleNamesText;
-          this.datasetStoreSampleNames(vcfBlock, sampleNames);
+          if (! filterByHaplotype) {
+            this.sampleCache.sampleNames[vcfDatasetId] = sampleNamesText;
+            this.datasetStoreSampleNames(vcfBlock, sampleNames);
+          } else if (this.selectedSamplesText) {
+            this.selectedSamples = this.selectedSamplesText
+              .split('\n')
+              .filter(sample => sampleNames.includes(sample));
+            this.selectedSamplesText = this.selectedSamples
+              .join('\n');
+          }
           this.mapSamplesToBlock(sampleNames, vcfBlock);
           if ((vcfDatasetId === this.lookupDatasetId) &&
               (this.vcfGenotypeSamplesSelected === undefined)) {
@@ -2090,7 +2130,10 @@ export default class PanelManageGenotypeComponent extends Component {
     vcfBlock = this.lookupBlock,
     dataset = contentOf(vcfBlock.get('datasetId')),
     textPFn = () => this.vcfGenotypeSamplesDataset(vcfBlock),
-    textP = promiseThrottle(dataset, Symbol.for('samplesP'), 2 * 60 * 1000, textPFn);
+    /** The addition of .filterSamplesByHaplotype means result can change,
+     * so throttle is not applicable. */
+    delaySecs = this.args.userSettings.filterSamplesByHaplotype ? 5 : 2 * 60,
+    textP = promiseThrottle(dataset, Symbol.for('samplesP'), delaySecs * 1000, textPFn);
     /* vcfGenotypeSamplesDataset() initialises .vcfGenotypeSamplesSelected in
      * this case; could move to here. */
 
@@ -2140,7 +2183,7 @@ export default class PanelManageGenotypeComponent extends Component {
   /** When a dataset tab in the control dialog is displayed, request samples for
    * the dataset if not already done.  
    */
-  @computed('lookupDatasetId')
+  @computed('lookupDatasetId', 'args.userSettings.filterSamplesByHaplotype')
   get ensureSamplesForDatasetTabEffect() {
     const fnName = 'ensureSamplesForDatasetTabEffect';
     /** Originally vcfGenotypeSamples() was manually triggered by user click;
@@ -2150,7 +2193,7 @@ export default class PanelManageGenotypeComponent extends Component {
      * clicks.
      * related : .ensureSamples();
      */
-    if (! this.vcfGenotypeSamplesText) {
+    if (! this.vcfGenotypeSamplesText || this.args.userSettings.filterSamplesByHaplotype) {
       dLog(fnName, new Date().toISOString(), this.lookupBlock?.brushName);
       this.vcfGenotypeSamples();
     }
