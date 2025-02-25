@@ -440,7 +440,8 @@ function bcftoolsCommand() {
     then
       2>&$F_ERR "$bcftools" query "$vcfGz" "${regionParams[@]}" "${preArgs[@]}" "${paramsForQuery[@]}" "${snpNamesInclude[@]}" \
                 -f '[%SAMPLE\t%GT\n]' \
-        | grep $'\t'"$gtMatch"
+        | (grep $'\t'"$gtMatch"'$' || true)
+      # grep returns status 1 if there are no matches.  Ignore that and return 0 (true).
   else
     >> $serverDir/$logFile echo \#vcfGz ${#vcfGz}
     # Perhaps this check should be on ${#vcfGzs[@]}, but that is equal - seems it must be 0 at this point ?

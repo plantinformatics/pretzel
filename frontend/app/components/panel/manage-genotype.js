@@ -1534,11 +1534,19 @@ export default class PanelManageGenotypeComponent extends Component {
     'vcfGenotypeSamplesText',
     'args.userSettings.samplesIntersection',
     'sampleNameFilter',
+    /** These 4 dependencies relate to filterSamplesByHaplotype;
+     * possibly split this out as a separate CP samplesFilteredByHaplotype */
+    'args.userSettings.filterSamplesByHaplotype',
+    'snpsInBrushedDomain.length',
+    /** update when new results in sampleCache.filteredByGenotype */
+    'sampleCache.filteredByGenotypeCount',
+    'lookupDatasetId',
   )
   get samples() {
     const
     samples = this.args.userSettings.samplesIntersection ?
       this.sampleNamesIntersection :
+      this.args.userSettings.filterSamplesByHaplotype ? this.sampleCache.filteredByGenotype[this.lookupDatasetId] :
       this.samplesFromText(this.vcfGenotypeSamplesText);
     return samples;
   }
@@ -2100,12 +2108,25 @@ export default class PanelManageGenotypeComponent extends Component {
           if (! filterByHaplotype) {
             this.sampleCache.sampleNames[vcfDatasetId] = sampleNamesText;
             this.datasetStoreSampleNames(vcfBlock, sampleNames);
-          } else if (this.selectedSamplesText) {
-            this.selectedSamples = this.selectedSamplesText
-              .split('\n')
-              .filter(sample => sampleNames.includes(sample));
-            this.selectedSamplesText = this.selectedSamples
-              .join('\n');
+          } else {
+            /** If filterSelectedSamples, this case filters the selected samples
+             * (.selectedSamples and .selectedSamplesText) to exclude samples
+             * not in the query result sampleNames.  This seems to make sense
+             * and be ergononomic, but it probably depends on use case - perhaps
+             * users will want to hang on to selected samples which are filtered
+             * out but are of interest for them.  Not filtering here would
+             * enable them to collate the union of a series of queries.
+             */
+            if (this.selectedSamplesText && this.urlOptions.filterSelectedSamples) {
+              this.selectedSamples = this.selectedSamplesText
+                .split('\n')
+                .filter(sample => sampleNames.includes(sample));
+              this.selectedSamplesText = this.selectedSamples
+                .join('\n');
+            }
+            /** The list of available samples is filtered.  */
+            this.sampleCache.filteredByGenotype[this.lookupDatasetId] = sampleNames;
+            this.sampleCache.incrementProperty('filteredByGenotypeCount');
           }
           this.mapSamplesToBlock(sampleNames, vcfBlock);
           if ((vcfDatasetId === this.lookupDatasetId) &&
