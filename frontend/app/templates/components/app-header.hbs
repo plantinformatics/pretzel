@@ -40,8 +40,13 @@
       </ul>
       <ul class="nav navbar-right">
         <li>
-          <a href='https://github.com/plantinformatics/pretzel/' target='_blank'>
-            v{{this.version }} released {{this.buildDateFormatted}} View on GitHub
+          <a href='https://github.com/plantinformatics/pretzel/releases' target='_blank'
+             style="display: inline flow-root list-item;" >
+            v{{this.version }} {{this.buildDateFormatted}}
+          </a>
+          <a href='https://docs.plantinformatics.io' target='_blank'
+             style="display: inline flow-root list-item;" >
+            Documentation
           </a>
         </li>
         {{#if this.auth}}
