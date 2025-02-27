@@ -6,6 +6,18 @@
     <button type="button" onclick={{this.vcfGenotypeSamples}} class="btn btn-info btn-xs">Get samples list</button>
   {{/if}}
 
+  <span>
+    <input type="checkbox"
+      style="margin-left: 3em;"
+      checked={{@userSettings.filterSamplesByHaplotype}}
+      oninput={{pipe (action (mut @userSettings.filterSamplesByHaplotype) value="target.checked")
+        this.ensureSamples }}  >
+    <label>Filtered by SNPs</label>
+    {{#ember-tooltip side="left" delay=500}}
+      Show samples selected by SNP filters
+    {{/ember-tooltip}}
+  </span>
+
   <div class="genotypeSampleFilter_textInput">
     <label class="" style="margin-right: 1em;">
       <i class="glyphicon glyphicon-filter"></i>

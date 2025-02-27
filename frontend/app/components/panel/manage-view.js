@@ -1,5 +1,6 @@
 import { computed } from '@ember/object';
 import { inject as service } from '@ember/service';
+import { alias } from '@ember/object/computed';
 
 import { text2EltId, keysLength } from '../../utils/explorer-tabId';
 
@@ -21,7 +22,9 @@ export default ManageBase.extend({
   block : service('data/block'),
   ontology : service('data/ontology'),
 
+  queryParams: service('query-params'),
 
+  urlOptions : alias('queryParams.urlOptions'),
 
   showChartOptions : false,
 

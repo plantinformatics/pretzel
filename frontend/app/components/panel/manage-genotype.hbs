@@ -103,10 +103,14 @@
 
                   {{log 'axisBrush' this.axisBrush}}
 
+                  {{#if this.urlOptions.dataSources}}
                   Server : 
                   {{this.apiServerSelectedOrPrimary.name}}
+                  {{/if}}
 
                   <div class="genotype">
+
+                    {{#if this.urlOptions.advanced}}
                     <div class="axis-brushes">
 
                       <table>
@@ -141,6 +145,9 @@
 
                     <div>{{this.referenceDatasetName}}</div>
 
+                    {{/if}}     {{!-- this.urlOptions.advanced --}}
+
+                    {{#if this.urlOptions.advanced}}
                     <div>
                       <label style="display:inline">Request Samples :
                         {{#ember-tooltip side="right" delay=500}}
@@ -161,17 +168,6 @@
                         {{/ember-tooltip}}
                       </span>
 
-                      <span>
-                        <input type="checkbox"
-                          style="margin-left: 3em;"
-                          checked={{@userSettings.filterSamplesByHaplotype}}
-                          oninput={{pipe (action (mut @userSettings.filterSamplesByHaplotype) value="target.checked")
-                            this.ensureSamples }}  >
-                        <label>Filtered by SNPs</label>
-                        {{#ember-tooltip side="left" delay=500}}
-                          Show samples selected by SNP filters
-                        {{/ember-tooltip}}
-                      </span>
                       <span>
                         {{#if this.snpsInBrushedDomain}}
                           <span class="badge">{{this.snpsInBrushedDomain.length}}</span>
@@ -200,6 +196,8 @@
                       {{/if}}
 
                     </div>
+                    {{/if}}     {{!-- this.urlOptions.advanced --}}
+
                     {{!-- i.e. panel/genotype-samples --}}
                     <Panel::GenotypeSamples @the={{this}} @userSettings={{@userSettings}}
                       @showIntersectionCheckbox={{true}} >

@@ -2,6 +2,9 @@ import EmberObject, { computed } from '@ember/object';
 import Evented from '@ember/object/evented';
 import Service from '@ember/service';
 
+import config from 'pretzel-frontend/config/environment';
+
+
 // const { inject: { service } } = Ember;
 
 // import { queryParam } from 'ember-query-params-service';
@@ -10,7 +13,9 @@ import { parseOptions } from '../utils/common/strings';
 
 /* global d3 */
 
+const dLog = console.debug;
 
+//------------------------------------------------------------------------------
 
 export default Service.extend(Evented, {
   // block: service('data/block'),
@@ -37,6 +42,7 @@ export default Service.extend(Evented, {
     }
     else
       options = {};
+
     /* splitAxes1 is now enabled by default. */
     if (! options.hasOwnProperty('splitAxes1'))
       options.splitAxes1 = true;
@@ -47,6 +53,10 @@ export default Service.extend(Evented, {
     if (! options.hasOwnProperty('Germinate'))
       options.Germinate = true;
     
+    if (! options.hasOwnProperty('dataSources')) {
+      options.dataSources = this.showDataSources();
+    }
+
     return options;
   }),
   urlOptionsEffect: computed('urlOptions', function () {
@@ -74,5 +84,23 @@ export default Service.extend(Evented, {
   },
 
   /*--------------------------------------------------------------------------*/
+
+  /** Enable display of Datasources, i.e. Pretzel multiple-servers, Germinate, Gigwa.
+   * This is the default value which is used if options.dataSources is not given.
+   */
+  showDataSources() {
+    const
+    fnName = 'showDataSources',
+    /** defining options=dataSources redirects away from rootURL, so enable
+     * dataSources if rootURL is not /
+     */
+    show =
+      ((config.environment === 'development') ||
+       (config.rootURL === '/pretzelUpdate/'));
+    dLog(fnName, show, config.environment, config.rootURL);
+    return show;
+  },
+
+  //----------------------------------------------------------------------------
 
 });

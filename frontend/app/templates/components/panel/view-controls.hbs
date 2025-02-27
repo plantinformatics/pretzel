@@ -43,6 +43,8 @@
       </div>
     </li>
 
+    {{#if this.urlOptions.advanced}}
+
     <li class="list-group-item">
       <div>
         {{#ember-tooltip side="bottom-start"  delay=500}}
@@ -109,6 +111,7 @@
       </div>
 
     </li>
+    {{/if}}     {{!-- this.urlOptions.advanced       --}}
 
     <li class="list-group-item">
       <div>
@@ -144,7 +147,7 @@
     </li>
 
 
-
+    {{#if this.urlOptions.dataSources}}
     <li class="list-group-item">
       {{#ember-tooltip side="bottom-start"  delay=500}}
         For a paths request which joins datasets from 2 different servers, the join can be calculated remotely in a server, or locally using the loaded data.
@@ -159,6 +162,7 @@
         <label>Server</label>
       </span>
     </li>
+    {{/if}}
 
     <li class="list-group-item">
       {{#ember-tooltip side="bottom-start"  delay=500}}
@@ -496,6 +500,7 @@
 
     </li>
 
+    {{#if this.urlOptions.advanced}}
     <li class="list-group-item">
       {{#ember-tooltip side="bottom-start"  delay=500}}
         Synteny Blocks whose size is below this threshold are not displayed.
@@ -550,6 +555,7 @@
       </div>
 
     </li>
+    {{/if}}
 
   </ul>
   {{/if}} {{!-- showComponent --}}

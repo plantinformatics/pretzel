@@ -79,6 +79,9 @@ export default Component.extend({
 
   controlsService : service('controls'),
   feed: service(),
+  queryParams: service('query-params'),
+
+  urlOptions : alias('queryParams.urlOptions'),
 
   /*--------------------------------------------------------------------------*/
 
