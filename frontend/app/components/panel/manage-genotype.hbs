@@ -119,21 +119,19 @@
                           <th class="devel-visible">zoomCounter</th>
                         </tr>
 
-                      {{#each this.axisBrush.brushedAxes as |block| }}
-
+                      {{#each this.axisBrushService.brushedAxes as |axisBrush| }}
+                      {{#let axisBrush.block as |block| }}
                         <tr>
-                          <td>
-                            {{!-- datasetName --}}
-                            <div>{{block.axis.referenceBlock.datasetId.id}}</div>
-                            <div>{{block.axis.axis1d.referenceBlock.datasetId.id}}</div>
-                          </td>
-                          <td>{{block.block.scope}}</td>
+                          <td>{{block.axis.referenceBlock.datasetId.id}}</td>
+                          <td>{{block.scope}}</td>
+                          {{!-- add a helper to map block.brushedDomain via : domain.map((d) => d.toFixed(2)); --}}
                           <td>{{this.brushedDomainRounded}}</td>
                           <!-- ----------------------------- -->
                           <td class="devel-visible">{{blockId}}</td>
-                          <td class="devel-visible">{{zoomCounter}}</td>
-                          <td style="display:none;"> {{features.length}} <!-- for features request. --></td>
+                          <td class="devel-visible">{{axisBrush.zoomCounter}}</td>
+                          <td style="display:none;"> {{block.features.length}} <!-- for features request. --></td>
                         </tr>
+                      {{/let}}
 
                       {{/each}}
 
