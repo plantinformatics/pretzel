@@ -3,7 +3,7 @@
   {{!--  https://fontawesome.com/icons/dna   Unicode  f471  <i class="fas fa-dna"></i> --}}
   {{#elem/panel-heading icon="search" panelContainer=panelContainer}}
     DNA Sequence Blast Search
-    <a class="margin-left-help" target="_blank" href="https://docs.plantinformatics.io/Basic-Functions/Search-tab/#dna-sequence-blast-search"><i class="glyphicon glyphicon-question-sign"></i></a>
+    <a class="margin-left-help" target="_blank" href="https://docs.plantinformatics.io/Basic-Functions/Search-tab/#dna-sequence-blast-search"><i class="glyphicon glyphicon-question-sign" style="color: white;"></i></a>
   {{/elem/panel-heading}}
 
   {{#if panelContainer.showComponent}}
@@ -19,7 +19,13 @@
           <button onclick={{action this.closeResultTab search.tabId}} style="float: right; position: relative; top: -12px; right: -14px; margin-left: -8px;" class="close" type="button">x</button>
           {{elem/icon-base name="arrow-right"}} Blast Output ({{search.timeId}})
           </a></nav.item>
+
         {{/each}}
+
+        <nav.item>
+          <a class="help-icon" target="_blank" href="https://docs.plantinformatics.io/Basic-Functions/Search-tab/#view-results_2"><i class="glyphicon glyphicon-question-sign"></i></a>
+        </nav.item>
+
 
       </BsNav>
 
