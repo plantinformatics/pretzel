@@ -20,7 +20,8 @@ then
 fi
 source ~/scripts/image_build.bash
 
-pb_build_feature > $L
+# pb_build does : > $L
+pb_build_feature
 date
 # use these as alternative to pb_build_feature to build when there is no new commit.
 #set -x
