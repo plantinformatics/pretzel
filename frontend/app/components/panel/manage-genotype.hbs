@@ -124,8 +124,8 @@
                         <tr>
                           <td>{{block.axis.referenceBlock.datasetId.id}}</td>
                           <td>{{block.scope}}</td>
-                          {{!-- add a helper to map block.brushedDomain via : domain.map((d) => d.toFixed(2)); --}}
-                          <td>{{this.brushedDomainRounded}}</td>
+                          {{!-- block.brushedDomain is equivalent --}}
+                          <td>{{domainRounded axisBrush.brushedDomain 0}}</td>
                           <!-- ----------------------------- -->
                           <td class="devel-visible">{{blockId}}</td>
                           <td class="devel-visible">{{axisBrush.zoomCounter}}</td>
