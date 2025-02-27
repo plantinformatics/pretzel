@@ -10,7 +10,7 @@ export default class DataVcfGenotypeService extends Service {
 
   //----------------------------------------------------------------------------
 
-  /** Arrays of sample names, per dataset. indexed by VCF datasetId
+  /** Arrays of sample names, per dataset. indexed by VCF blockId
    * This caches the result of vcfGenotypeSamplesDataset() when filterByHaplotype.
    */
   filteredByGenotype = {};

@@ -1540,13 +1540,13 @@ export default class PanelManageGenotypeComponent extends Component {
     'snpsInBrushedDomain.length',
     /** update when new results in sampleCache.filteredByGenotype */
     'sampleCache.filteredByGenotypeCount',
-    'lookupDatasetId',
+    'lookupBlock',
   )
   get samples() {
     const
     samples = this.args.userSettings.samplesIntersection ?
       this.sampleNamesIntersection :
-      this.args.userSettings.filterSamplesByHaplotype ? this.sampleCache.filteredByGenotype[this.lookupDatasetId] :
+      this.args.userSettings.filterSamplesByHaplotype ? this.sampleCache.filteredByGenotype[this.lookupBlock.id] :
       this.samplesFromText(this.vcfGenotypeSamplesText);
     return samples;
   }
@@ -2125,7 +2125,7 @@ export default class PanelManageGenotypeComponent extends Component {
                 .join('\n');
             }
             /** The list of available samples is filtered.  */
-            this.sampleCache.filteredByGenotype[this.lookupDatasetId] = sampleNames;
+            this.sampleCache.filteredByGenotype[vcfBlock.id] = sampleNames;
             this.sampleCache.incrementProperty('filteredByGenotypeCount');
           }
           this.mapSamplesToBlock(sampleNames, vcfBlock);
@@ -2162,15 +2162,20 @@ export default class PanelManageGenotypeComponent extends Component {
   }
 
   /** Request vcfGenotypeSamples for vcf blocks for which
-   * vcfGenotypeSamplesText() is not defined.
+   * vcfGenotypeSamplesText() is not defined,
+   * or for which filteredSamples are required and not yet defined.
    */
   vcfGenotypeSamplesAllDatasets() {
-    let vcfDatasetId;
     // i.e. gtBlocks
     this.brushedOrViewedVCFBlocksVisible
-      .filter(vcfBlock => 
-        ((vcfDatasetId = vcfBlock?.get('datasetId.id')) &&
-         ! this.sampleCache.sampleNames[vcfDatasetId]))
+      .filter(vcfBlock => {
+        const
+        vcfDatasetId = vcfBlock?.get('datasetId.id'),
+        requestSamples = this.args.userSettings.filterSamplesByHaplotype ?
+          this.sampleCache.filteredByGenotype[vcfBlock.id] :
+          (vcfDatasetId && ! this.sampleCache.sampleNames[vcfDatasetId]);
+        return requestSamples;
+      })
       .forEach(vcfBlock =>
         // returns promise
         this.vcfGenotypeSamplesDataset(vcfBlock));
