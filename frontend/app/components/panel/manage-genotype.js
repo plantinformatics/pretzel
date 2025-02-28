@@ -10,6 +10,8 @@ import { A as Ember_A } from '@ember/array';
 
 import { task } from 'ember-concurrency';
 
+import config from 'pretzel-frontend/config/environment';
+
 // see comment in vcfGenotypeLookupDataset()
 import { allSettled } from 'rsvp';
 
@@ -314,6 +316,9 @@ export default class PanelManageGenotypeComponent extends Component {
     }
     (this.vcfGenotypeSamplesSelectedAll || this.args.userSettings.vcfGenotypeSamplesSelected)[this.lookupDatasetId] = selected;
   }
+
+  @tracked
+  sampleNameFilter = null;
 
   @tracked
   displayData = Ember_A();
@@ -2105,6 +2110,26 @@ export default class PanelManageGenotypeComponent extends Component {
              * removed; it is not a concern for the mapping. */
             sampleNames = t.trim().split('\n');
           }
+
+          if ((sampleNames?.length > 1e4) &&
+              ! this.sampleNameFilter &&
+              (config.environment === 'development') && 
+              navigator.userAgent.startsWith('Mozilla/')) {
+            /** Mozilla is currently slow in displaying 30k sample names, so in
+             * development limit the length of .filteredSamples, displayed in
+             * genotype-samples.hbs <select>
+             */
+            /* Tried : set up an initial filter.
+             * This doesn't apply the filter promptly enough
+            this.sampleNameFilter = '111';
+            this.nameFilterChanged(this.sampleNameFilter);
+            * So instead slice the array.
+            */
+            sampleNames = sampleNames.slice(0, 1e3);
+            sampleNamesText = sampleNames.join('\n');
+            dLog(fnName, 'limit sampleNames to', sampleNames.length);
+          }
+
           if (! filterByHaplotype) {
             this.sampleCache.sampleNames[vcfDatasetId] = sampleNamesText;
             this.datasetStoreSampleNames(vcfBlock, sampleNames);
