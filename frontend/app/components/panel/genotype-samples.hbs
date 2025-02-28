@@ -19,6 +19,10 @@
   </span>
 
   <div class="genotypeSampleFilter_textInput">
+    <div>
+      <EmberTooltip side="right" delay=500>
+        <span>Filter available samples by name</span>
+      </EmberTooltip>
     <label class="" style="margin-right: 1em;">
       <i class="glyphicon glyphicon-filter"></i>
       Search / Filter
@@ -27,6 +31,7 @@
       oninput={{this.nameFilterChanged}}
       placeholder="Filter available samples by name" />
       {{!-- maybe autocomplete="sample-name", but samples names are mostly numeric so it may be more of an impediment than a benefit for the user --}}
+    </div>
 
     {{#if @showIntersectionCheckbox}}
     <span>
@@ -68,6 +73,9 @@
   {{/if}}
 
   <div>
+    <EmberTooltip side="right" delay=500>
+      <span>Edit the list of Selected samples to be requested in VCF Lookup.</span>
+    </EmberTooltip>
     <Textarea
       class="selectedSamplesInput"
       @value={{@the.selectedSamplesText}}

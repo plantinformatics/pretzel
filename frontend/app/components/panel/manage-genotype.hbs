@@ -273,6 +273,9 @@
                       </li>
 
                       <li>
+                        <EmberTooltip side="right" delay=500>
+                          <span>Enable VCF Lookup to clear existing data with the received genotype results.</span>
+                        </EmberTooltip>
                         <input type="checkbox"
                           style="margin-left: 3em;"
                           checked={{@userSettings.replaceResults}}
@@ -364,6 +367,10 @@
               {{!-- --------------------------------------------------------------- --}}
 
               <div class="genotype">
+                <EmberTooltip side="right" delay=500>
+                  <span>Download the displayed data in a file, either .vcf or .vcf.gz</span>
+                </EmberTooltip>
+
                 {{#if this.vcfExportText.length}}
                   <button type="button" class="btn btn-info btn-xs"
                     onclick={{action this.vcfExportTextToFile}} >
@@ -725,6 +732,10 @@
                   <li>
 
                     <div style="display : inline-block;">
+                      <EmberTooltip side="right" delay=500>
+                        <span>Filter SNPs by this MAF Threshold.
+The toggle enables filtering out SNPs with MAF above or below this threshold.</span>
+                      </EmberTooltip>
                       <Elem::InputRangeText
                         @labelText="SNP MAF Threshold : "
                         @allowZero=true
@@ -748,6 +759,9 @@
                     </div>
 
                     <div style="display : inline-block;">
+                      <EmberTooltip side="right" delay=500>
+                        <span>Filter Samples by Call Rate.</span>
+                      </EmberTooltip>
                       <Elem::InputRangeText
                         @labelText="Sample Call Rate : "
                         @allowZero=true
@@ -760,6 +774,9 @@
 
 
                     <div style="display : inline-block;">
+                      <EmberTooltip side="right" delay=500>
+                        <span>Filter SNPs by Call Rate.</span>
+                      </EmberTooltip>
                       <Elem::InputRangeText
                         @labelText="SNP Call Rate : "
                         @allowZero=true
@@ -812,6 +829,10 @@
                 {{!---------------------------------------------------------------------}}
 
                 <div class="gtDatasetIdsToFilter">
+                  <EmberTooltip side="right" delay=500>
+                    <span>Select the Datasets to which the above SNP and Samples MAF and Call Rate filters are applied.</span>
+                  </EmberTooltip>
+
                   <label>Datasets to filter</label>
 
                   {{!-- based on similar <select> for selectedFeaturesValuesFieldsForDataset /
@@ -831,6 +852,9 @@
 
                 <ul class="list-group borderless view-controls">
                   <li>
+                    <EmberTooltip side="right" delay=500>
+                      <span>Show LD Blocks colour on the SNP rectangles shown in Axis Tracks, for datasets which define the tagged SNP set value tSNP</span>
+                    </EmberTooltip>
                     <input type="checkbox"
                       checked={{@userSettings.showAxisLDBlocks}}
                       oninput={{action (mut @userSettings.showAxisLDBlocks) value="target.checked"}}  >
@@ -838,6 +862,10 @@
                   </li>
 
                   <li>
+                    <EmberTooltip side="right" delay=500>
+                      <span>Show alignment paths between the Genotype Table and the adjacent axis.
+While scrolling through the Genotype Table this updates to show where the currently viewed page is within the axis.</span>
+                    </EmberTooltip>
                     <input type="checkbox"
                       checked={{@userSettings.showTablePositionAlignment}}
                       oninput={{action (mut @userSettings.showTablePositionAlignment) value="target.checked"}}  >
@@ -845,6 +873,9 @@
                   </li>
 
                   <li>
+                    <EmberTooltip side="right" delay=500>
+                      <span>Copy the displayed contents of the Genotype Table to the clipboard, enabling it to be pasted into a spreadsheet.</span>
+                    </EmberTooltip>
                     <BsButton @type="info" @onClick={{this.copyTableToClipboard}} class="margin-top">Copy table to clipboard</BsButton>
                   </li>
 
@@ -868,6 +899,9 @@
     {{!-- ----------------------------------------------------------------- --}}
 
     {{#if this.vcfGenotypeLookupDomain}}
+      <EmberTooltip side="right" delay=500>
+        <span>Request the Genotypes as configured by Selected Samples and the brushed axis region</span>
+      </EmberTooltip>
       <button type="button" onclick={{action this.vcfGenotypeLookup}}
         disabled={{this.vcfGenotypeLookupButtonDisabled}}
         class="btn btn-info">VCF Lookup</button>
