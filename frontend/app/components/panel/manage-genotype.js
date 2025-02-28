@@ -4278,8 +4278,10 @@ export default class PanelManageGenotypeComponent extends Component {
    * i.e. this.sampleFilterTypes[name].name === name
    */
   sampleFilterTypes = {
+    /** enable these 2 if this.urlOptions.advanced
     variantInterval : {text : 'Variant Intervals'},
     haplotype :       {text : 'LD Blocks'},
+    */
     feature :         {text : 'Features'},
   };
   @computed
@@ -4290,8 +4292,9 @@ export default class PanelManageGenotypeComponent extends Component {
   get sampleFilterTabNames() {
     return Object.keys(this.sampleFilterTypes);
   }
-  sampleFilterTabs = ['Variant Intervals', 'LD Blocks', 'Features'];
-  sampleFilterKeys = ['variantInterval', 'haplotype', 'feature'];
+  /** Enable Variant Intervals and LD Blocks if this.urlOptions.advanced */
+  sampleFilterTabs = [/*'Variant Intervals', 'LD Blocks',*/ 'Features'];
+  sampleFilterKeys = [/*'variantInterval', 'haplotype',*/ 'feature'];
 
   /** Map from sampleFilterTabs to a filterTypeName which can be used in a variable name or
    * array index, e.g. haplotypeFiltersCount, featureFiltersCount

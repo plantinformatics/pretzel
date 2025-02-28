@@ -272,6 +272,7 @@
 
                       </li>
 
+                      {{#if this.urlOptions.advanced}}
                       <li>
                         <EmberTooltip side="right" delay=500>
                           <span>Enable VCF Lookup to clear existing data with the received genotype results.</span>
@@ -282,6 +283,7 @@
                           oninput={{action (mut @userSettings.replaceResults) value="target.checked"}}  >
                         <label>Replace previous results.</label>
                       </li>
+                      {{/if}}	{{!-- this.urlOptions.advanced --}}
 
                       <li class="list-group-item horiz-2">
                         {{#if this.urlOptions.gtIntervalLimit}}
@@ -462,6 +464,8 @@
                     <div class="tab-content">
 
 
+                      {{#if this.urlOptions.advanced}}
+
                       {{!-- ----------------------------------------------- --}}
                       {{#let 'haplotype' as |tabTypeName|}}
                         {{#let (compute (action tn.tabName2Id tabTypeName)) as |tabId|}}
@@ -542,6 +546,9 @@
                           {{/tab.pane}}
                         {{/let}}
                       {{/let}}
+
+                      {{/if}}	{{!-- this.urlOptions.advanced --}}
+
                       {{!-- ----------------------------------------------- --}}
                       {{#let 'feature' as |tabTypeName|}}
                         {{#let (compute (action tn.tabName2Id tabTypeName)) as |tabId|}}
@@ -851,6 +858,7 @@ The toggle enables filtering out SNPs with MAF above or below this threshold.</s
 
 
                 <ul class="list-group borderless view-controls">
+                  {{#if this.urlOptions.advanced}}
                   <li>
                     <EmberTooltip side="right" delay=500>
                       <span>Show LD Blocks colour on the SNP rectangles shown in Axis Tracks, for datasets which define the tagged SNP set value tSNP</span>
@@ -871,6 +879,7 @@ While scrolling through the Genotype Table this updates to show where the curren
                       oninput={{action (mut @userSettings.showTablePositionAlignment) value="target.checked"}}  >
                     <label>Show table position alignment to axis</label>
                   </li>
+                  {{/if}}	{{!-- this.urlOptions.advanced --}}
 
                   <li>
                     <EmberTooltip side="right" delay=500>
@@ -898,6 +907,7 @@ While scrolling through the Genotype Table this updates to show where the curren
 
     {{!-- ----------------------------------------------------------------- --}}
 
+    <div>
     {{#if this.vcfGenotypeLookupDomain}}
       <EmberTooltip side="right" delay=500>
         <span>Request the Genotypes as configured by Selected Samples and the brushed axis region</span>
@@ -910,6 +920,7 @@ While scrolling through the Genotype Table this updates to show where the curren
         <span>VCF Lookup Region limit is {{this.intervalLimit}}Mb</span>
       {{/if}}
     {{/if}}
+    </div>
 
     {{!-----------------------------------------------------------------------}}
 
@@ -997,12 +1008,17 @@ While scrolling through the Genotype Table this updates to show where the curren
         {{log 'dataScope' this.dataScope}}
       </div>
       {{#if this.vcfGenotypeLookupDomain}}
+        <div>
+        <EmberTooltip side="right" delay=500>
+          <span>Request the Genotypes as configured by Selected Samples and the brushed axis region</span>
+        </EmberTooltip>
         <button type="button" onclick={{action this.vcfGenotypeLookup}}
           disabled={{or
             (and (not @userSettings.requestSamplesAll) (not this.vcfGenotypeSamplesSelected.length))
             (and @userSettings.requestSamplesAll @userSettings.samplesIntersection (not this.samples.length))
           }}
           class="btn btn-info">VCF Lookup</button>
+        </div>
       {{/if}}
 
       <div>
