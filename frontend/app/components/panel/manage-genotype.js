@@ -318,9 +318,6 @@ export default class PanelManageGenotypeComponent extends Component {
   }
 
   @tracked
-  sampleNameFilter = null;
-
-  @tracked
   displayData = Ember_A();
   /** data for matrix-view displayDataRows,
    * [feature position][sample name]{name, value, Symbol feature }

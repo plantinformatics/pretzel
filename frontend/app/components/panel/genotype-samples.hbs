@@ -1,7 +1,9 @@
 <div>
   <label>List of samples from VCF</label>
   {{#if @the.vcfGenotypeSamplesText}}
-    <span class="sample-count">( {{@the.vcfGenotypeSamplesCount}} )</span>
+    <span class="sample-count">(
+      {{#if @userSettings.filterSamplesByHaplotype }} Filtered {{else}} Total {{/if}} :
+      {{@the.vcfGenotypeSamplesCount}} )</span>
   {{else}}
     <button type="button" onclick={{this.vcfGenotypeSamples}} class="btn btn-info btn-xs">Get samples list</button>
   {{/if}}
@@ -31,7 +33,12 @@
       oninput={{this.nameFilterChanged}}
       placeholder="Filter available samples by name" />
       {{!-- maybe autocomplete="sample-name", but samples names are mostly numeric so it may be more of an impediment than a benefit for the user --}}
+
+      {{#if @the.namesFilters.nameFilterArray.length}}
+        <span class="margin-left-help">( {{@the.filteredSamples.length}} )</span>
+      {{/if}}
     </div>
+
 
     {{#if @showIntersectionCheckbox}}
     <span>
