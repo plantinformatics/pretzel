@@ -1658,6 +1658,7 @@ div#goto-feature > div
   justify-content: center;
   align-items: center;
   align-content: center;
+  min-width : 15em;
 }
 
 
@@ -1815,6 +1816,7 @@ div.ht_clone_top_left_corner span.colHeader.cornerHeader {
   z-index: 181;
   padding-left: 12px;
 }
+
 
 /** when viewing matrix-view as plain text, clip the rgb() in the block column to avoid row height calculation. */
 #observational-table table.htCore > tbody > tr > td {
