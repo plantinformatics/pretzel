@@ -1044,9 +1044,15 @@ export default Component.extend({
   // ---------------------------------------------------------------------------
 
   afterOnCellMouseDown(event, coords, td) {
+    const fnName = 'afterOnCellMouseDown';
     let block;
-    if ((coords.col == -1) || (coords.col < this.colSample0)) {
-      // no column or column does not identify a block
+    if (! this.blockSamples) {
+      // Condition for selectBlock().
+      if ((coords.col == -1) || (coords.col < this.colSample0)) {
+        // no column or column does not identify a block
+      }
+    } else if (! this.urlOptions.advanced) {
+      dLog(fnName, coords, this.colSample0, this.blockSamples);
     } else if ((coords.row >= 0) && this.blockSamples) {
       let feature = this.getRowAttribute(this.table, coords.row, coords.col);
       /* no feature when select on column header.
@@ -1072,6 +1078,8 @@ export default Component.extend({
       // ! this.blockSamples, so get .columns from .displayData
       block = this.get('columns')[col_name];
       }
+    } else {
+      dLog(fnName, coords, this.colSample0, this.blockSamples);
     }
     /* selectBlock() causes a switch to the Dataset tab, which is not desired
      * when using the genotype tab.
@@ -1476,7 +1484,11 @@ export default Component.extend({
   colSample0 : 2,
   columnNames : computed('columns', 'columnNamesParam', function() {
     const columnNames = this.columnNamesParam || Object.keys(this.get('columns'));
-    this.set('colSample0', this.blockSamples ? columnNames.indexOf('Alt') + 1 : 0);
+    /** To enable references to dataset e.g. Symbol(dataset),
+     * Alt columnNames may be String('Alt'), which .indexOf('Alt') no longer
+     * finds (in Chrome; it still works in Firefox), so use .findIndex( == ).
+     */
+    this.set('colSample0', this.blockSamples ? columnNames.findIndex(c => c == 'Alt') + 1 : 0);
     dLog('columnNames', columnNames, this.colSample0);
     return columnNames;
   }),
