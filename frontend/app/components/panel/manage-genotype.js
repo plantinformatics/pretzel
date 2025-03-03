@@ -145,6 +145,18 @@ class SampleFiltersCount extends EmberObject {
 /** copied from matrix-view.js to enable build-time code deletion;  see comment there. */
 const sampleFilterTypeNameModal = false;
 
+//--------------------------------------
+
+/** Display dummy column headings when the table is empty.
+ */
+const emptyTableColumns = [
+  'Chr',
+  'Position',
+  'Name',
+  'Ref',
+  'Alt',
+];
+
 //------------------------------------------------------------------------------
 
 /**
@@ -3456,13 +3468,13 @@ export default class PanelManageGenotypeComponent extends Component {
             setProperties(this, {
               displayData : null,
               displayDataRows,
-              'args.summaryData.rowCount' : displayDataRows.length,
               gtDatasetColumns : gtDatasetIds,
               datasetColumns,
               extraDatasetColumns,
               currentFeaturesValuesFields,
               columnNames,
             });
+            later(() => Ember_set(this, 'args.summaryData.rowCount', displayDataRows.length));
 
           } else {
             let sampleNames;
@@ -3492,12 +3504,12 @@ export default class PanelManageGenotypeComponent extends Component {
             setProperties(this, {
               displayData,
               displayDataRows : null,
-              'args.summaryData.rowCount' : displayData.length,
               columnNames : null,
               gtDatasetColumns : gtDatasetIds,
               datasetColumns : null,
               extraDatasetColumns : null,
             });
+            later(() => Ember_set(this, 'args.summaryData.rowCount', displayData.length));
           }
         }
       }
@@ -3514,7 +3526,7 @@ export default class PanelManageGenotypeComponent extends Component {
       datasetColumns : [],
       extraDatasetColumns : [],
       currentFeaturesValuesFields : [],
-      columnNames : [],
+      columnNames : emptyTableColumns,
     });
 
   }

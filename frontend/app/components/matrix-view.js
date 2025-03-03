@@ -1691,7 +1691,8 @@ export default Component.extend({
         longest = w;
       }
     });
-    const height = longest !== 0 ? longest + 20 : longest;
+    /** Add 20 for left and right margins (i.e. top and bottom). */
+    const height = longest !== 0 ? longest + 20 + 20 : longest;
     dLog('colHeaderHeight', height, longest, this.userSettings.columnHeaderHeight);
     return height;
   }),
@@ -1996,8 +1997,11 @@ export default Component.extend({
           // this can be enabled as an alternative to progressiveRowMergeInBatch().
           settings.data = data;
         }
+        /** If table is empty, settings.columnHeaderHeight is also required when
+         * ! fullPage, so the assignment has been moved out of the following
+         * conditional expression.  */
+        settings.columnHeaderHeight = colHeaderHeight;
         if (this.fullPage) {
-          settings.columnHeaderHeight = colHeaderHeight;
         } else {
           let nRows = rows.length;
           settings.height = tableHeight; // nRows2HeightEx(nRows) + 'ex';
