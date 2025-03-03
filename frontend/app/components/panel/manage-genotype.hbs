@@ -914,18 +914,19 @@ While scrolling through the Genotype Table this updates to show where the curren
     {{!-- ----------------------------------------------------------------- --}}
 
     <div>
-    {{#if this.vcfGenotypeLookupDomain}}
       <EmberTooltip side="right" delay=500>
         <span>Request the Genotypes as configured by Selected Samples and the brushed axis region</span>
       </EmberTooltip>
       <button type="button" onclick={{action this.vcfGenotypeLookup}}
-        disabled={{this.vcfGenotypeLookupButtonDisabled}}
+        disabled={{or
+          (not this.vcfGenotypeLookupDomain)
+          this.vcfGenotypeLookupButtonDisabled}}
         class="btn btn-info">VCF Lookup</button>
-    {{else}}
+    {{#unless this.vcfGenotypeLookupDomain}}
       {{#if this.urlOptions.gtIntervalLimit}}
         <span>VCF Lookup Region limit is {{this.intervalLimit}}Mb</span>
       {{/if}}
-    {{/if}}
+    {{/unless}}
     </div>
 
     {{!-----------------------------------------------------------------------}}
@@ -1004,10 +1005,10 @@ While scrolling through the Genotype Table this updates to show where the curren
     <div id="topLeftDialog">
 
       <span>
-      <a class="help-icon" target="_blank" href="https://docs.plantinformatics.io/"><i class="glyphicon glyphicon-question-sign"></i></a>
-      <EmberTooltip side="right" delay=500 class="genotype-tooltip" innerClass="genotype-tooltip">
-        <span>Select Samples / Accessions in the Genotype Table control dialog, and select a region of an axis with a VCF dataset to enable 'VCF Lookup'</span>
-      </EmberTooltip>
+        <a class="help-icon" target="_blank" href="https://docs.plantinformatics.io/"><i class="glyphicon glyphicon-question-sign"></i></a>
+        <EmberTooltip side="right" delay=500>
+          <span>Select Samples / Accessions in the Genotype Table control dialog, and select a region of an axis with a VCF dataset to enable 'VCF Lookup'</span>
+        </EmberTooltip>
       </span>
 
       {{!-- these are copied from main dialog --}}
@@ -1017,19 +1018,18 @@ While scrolling through the Genotype Table this updates to show where the curren
         {{log 'dataScope' this.dataScope}}
       </div>
       {{/if}}	{{!-- this.urlOptions.advanced --}}
-      {{#if this.vcfGenotypeLookupDomain}}
-        <div>
+      <div>
         <EmberTooltip side="right" delay=500>
           <span>Request the Genotypes as configured by Selected Samples and the brushed axis region</span>
         </EmberTooltip>
         <button type="button" onclick={{action this.vcfGenotypeLookup}}
           disabled={{or
+            (not this.vcfGenotypeLookupDomain)
             (and (not @userSettings.requestSamplesAll) (not this.vcfGenotypeSamplesSelected.length))
             (and @userSettings.requestSamplesAll @userSettings.samplesIntersection (not this.samples.length))
           }}
           class="btn btn-info">VCF Lookup</button>
-        </div>
-      {{/if}}
+      </div>
 
       {{#if this.urlOptions.advanced}}
       <div>
