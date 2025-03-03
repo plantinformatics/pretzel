@@ -556,7 +556,6 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
       .classed('tablesPanelRight', this.get('tablesPanelRight'));
   },
 
-
   controls : EmberObject.create({
     // .view becomes a reference to components/panel/view-controls
     view : {  },
@@ -578,6 +577,11 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
   selectedFeatures : alias('selectedService.selectedFeatures'),
   /** counts of selected paths, from paths-table; shown in tab. */
   pathsTableSummary : {},
+  /** Summary info from child components :
+   * manageGenotype : { rowCount }  get rowCount of Genotype Table
+   * This can also absorb pathsTableSummary.
+   */
+  summaryData : { manageGenotype : {rowCount : 0}},
 
   /** bundle of references  (object attributes) */
   oa : {axisApi : {}, stacks},

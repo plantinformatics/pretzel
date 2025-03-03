@@ -582,6 +582,11 @@ export default class PanelManageGenotypeComponent extends Component {
   @action
   onWillDestroy() {
     this.registerByName(null);
+    /** When the user views a tab other than Genotype Table, i.e. Dataset,
+     * Features Table or Paths Table, this component is destroyed.
+     * .rowCount can't be ascertained then, so display ''.
+     */
+    Ember_set(this, 'args.summaryData.rowCount', '');
   }
 
 
@@ -3451,6 +3456,7 @@ export default class PanelManageGenotypeComponent extends Component {
             setProperties(this, {
               displayData : null,
               displayDataRows,
+              'args.summaryData.rowCount' : displayDataRows.length,
               gtDatasetColumns : gtDatasetIds,
               datasetColumns,
               extraDatasetColumns,
@@ -3486,6 +3492,7 @@ export default class PanelManageGenotypeComponent extends Component {
             setProperties(this, {
               displayData,
               displayDataRows : null,
+              'args.summaryData.rowCount' : displayData.length,
               columnNames : null,
               gtDatasetColumns : gtDatasetIds,
               datasetColumns : null,
@@ -3502,6 +3509,7 @@ export default class PanelManageGenotypeComponent extends Component {
     setProperties(this, {
       displayData : gtMergeRows ? null : [],
       displayDataRows : gtMergeRows ? [] : null,
+      'args.summaryData.rowCount' : 0,
       gtDatasetColumns : [],
       datasetColumns : [],
       extraDatasetColumns : [],
