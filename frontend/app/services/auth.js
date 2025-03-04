@@ -454,16 +454,17 @@ export default Service.extend({
   },
 
 
-  /** Request DNA sequence lookup (Blast).
+  /** Request sample names from a Genotype dataset.
    * apiServer is derived from block.id (could also use datasetId).
    * @param block
    * @param datasetId of parent / reference of the blast db which is to be searched
    * @param scope chromosome
-   * @param options not used yet, may be for streaming result
+   * @param filter	optional sample filter 
+   *  { features : [{position, matchRef}, ... ]}
    */
-  genotypeSamples(block, datasetId, scope, options) {
-    dLog('services/auth genotypeSamples', datasetId, scope, options);
-    const params = {id : block.id, datasetId, scope, options};
+  genotypeSamples(block, datasetId, scope, filter) {
+    dLog('services/auth genotypeSamples', datasetId, scope, filter);
+    const params = {id : block.id, datasetId, scope, filter};
     return this._ajax('Blocks/genotypeSamples', 'GET', params, true);
   },
 

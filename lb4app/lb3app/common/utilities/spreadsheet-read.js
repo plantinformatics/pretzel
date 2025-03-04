@@ -459,6 +459,17 @@ function sheetToObj(sheet, headerRenaming) {
     });
   }
 
+  /** Discard comment columns, i.e. those with column header starting with '#' */
+  if (headerRow.includes('__comment__')) {
+    const header = '__comment__';
+    rowObjects.forEach((row) => {
+      if (row[header] !== undefined) {
+        delete row[header];
+      }
+    });
+  }
+
+
   /** Apply a heuristic to recognise MS Excel Serial Date values and convert
    * them to JavaScript Date. */
   headerRow.filter((header) => header.match(fieldNameDateRegexp))
@@ -1149,9 +1160,10 @@ function featureAttributes(feature) {
    *
    * Column names not matching the core values (pos, end, Chromosome, name, parentName)
    * are placed in feature.values{}
+   * This is already done in sheetToObj() :
    * Discard __comment__ columns, i.e. column header starting with '#'.
    */
-  {pos, end, Chromosome, name, parentName, __comment__, ...values} = feature,
+  {pos, end, Chromosome, name, parentName, ...values} = feature,
   value = [];
   if (pos !== undefined) {
     pos = roundNumber(pos, true);

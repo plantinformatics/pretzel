@@ -60,6 +60,22 @@ module.exports = function (defaults) {
         symlinks: false
       }, */
     },
+
+    /** The following attempts to add crossorigin="anonymous" to the script tag
+     * which includes chunk.*.js
+     * The configuration is documented in 
+     *   https://cli.emberjs.com/release/advanced-use/asset-compilation/
+     *   https://github.com/jonathanKingston/ember-cli-sri
+     *   https://github.com/jonathanKingston/broccoli-sri-hash
+     * refn :
+     *   http://www.w3.org/TR/SRI	Subresource Integrity (SRI)
+     *   https://developer.mozilla.org/en-US/docs/Web/Security/Subresource_Integrity
+     */
+    SRI: {
+      enabled: true,	// probably not needed; fingerprinting is on by default
+      crossorigin: 'anonymous'
+    },
+
   });
 
   // Use `app.import` to add additional libraries to the generated

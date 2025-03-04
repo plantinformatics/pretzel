@@ -190,6 +190,9 @@ fi
       -snpsStart) inSnps='1';;
       -snpsEnd)   inSnps=;;
 
+      GT=*)
+        gtMatch=$(echo "$argVal" | sed s/GT=//)
+        ;;
       *)
         if [ -n "$inQuery" ] ;
         then paramsForQuery+=("$argVal");
@@ -206,6 +209,7 @@ fi
        paramsForQuery="${paramsForQuery[@]}",	\
        snpNames="${snpNames[@]}",	\
        regionParams="${regionParams[@]}",	\
+       gtMatch="$argVal",      \
        preArgs="${preArgs[@]}"  >> $logFile
 
 set -x
@@ -432,6 +436,12 @@ function bcftoolsCommand() {
                 "$vcfGz"
     fi
     fi
+  elif [ "$command" = filter_samples ]
+    then
+      2>&$F_ERR "$bcftools" query "$vcfGz" "${regionParams[@]}" "${preArgs[@]}" "${paramsForQuery[@]}" "${snpNamesInclude[@]}" \
+                -f '[%SAMPLE\t%GT\n]' \
+        | (grep $'\t'"$gtMatch"'$' || true)
+      # grep returns status 1 if there are no matches.  Ignore that and return 0 (true).
   else
     >> $serverDir/$logFile echo \#vcfGz ${#vcfGz}
     # Perhaps this check should be on ${#vcfGzs[@]}, but that is equal - seems it must be 0 at this point ?

@@ -129,7 +129,7 @@
            side="right"
            key="genotype"
            state=this.layout.right.tab onClick=(action "setTab") }}
-          {{elem/icon-base name="barcode"}}&nbsp; Genotypes <span class="badge"></span>
+          {{elem/icon-base name="barcode"}}&nbsp; Genotypes <span class="badge">{{this.summaryData.manageGenotype.rowCount}}</span>
 
           {{#if this.enableGenotypeControlsDialog}}
             <span style="margin:1em; width: 20%;">
@@ -188,6 +188,7 @@
             updatedSelectedFeatures=(action this.actions.updateSelectedFeatures)
             userSettings=this.userSettings.genotype
             loadBlock=(action this.actions.loadBlock)
+            summaryData=this.summaryData.manageGenotype
             }}
 
         {{else if (and (compare this.layout.right.tab '===' 'settings') this.model.params.parsedOptions.advSettings)}}
