@@ -528,12 +528,13 @@ export default Component.extend({
     });
     return data;
   }),
-  createTable: function() {
-    var that = this;
-    dLog("createTable", this);
-
-    let tableDiv = $("#table-brushed")[0];
-    dLog("tableDiv", tableDiv);
+    /**
+     * @return table column configuration :
+     *   columns
+     *   colHeaders
+     *   colWidths, or modifyColWidth if autoColumnWidth
+     */
+  dataColumns() {
     let
     columns = [
           {
@@ -583,6 +584,24 @@ export default Component.extend({
     addColumns(this.get('extraColumns'), this.get('extraColumnsHeaders'), this.get('extraColumnsWidths'));
     this.set('columnNames', columns.mapBy('data'));
     this.set('colWidthsSaved', colWidths);
+    const columnInfo = {
+      columns,
+      colHeaders,
+    };
+    if (this.autoColumnWidth) {
+      columnInfo.modifyColWidth = bind(this, this.modifyColWidth);
+    } else {
+      columnInfo.colWidths = colWidths;
+    }
+
+    return columnInfo;
+  },
+  createTable: function() {
+    var that = this;
+    dLog("createTable", this);
+
+    let tableDiv = $("#table-brushed")[0];
+    dLog("tableDiv", tableDiv);
 
     let me = this;
     function afterSelection(row, col) {
@@ -600,8 +619,6 @@ export default Component.extend({
         data: data || [['', '', '']],
         minRows: 1,
         rowHeaders: true,
-        columns,
-        colHeaders,
         headerTooltips: true,
         height: '100%',
         manualRowResize: true,
@@ -627,11 +644,8 @@ export default Component.extend({
         outsideClickDeselects: false,
         stretchH : this.stretchHText,
       };
-      if (this.autoColumnWidth) {
-        tableConfig.modifyColWidth = bind(this, this.modifyColWidth);
-      } else {
-        tableConfig.colWidths = colWidths;
-      }
+      Object.assign(tableConfig, this.dataColumns());
+
       var table = new Handsontable(tableDiv, tableConfig);
       that.set('table', table);
       this.setRowAttributes(table, this.data);
@@ -727,7 +741,22 @@ export default Component.extend({
         dLog("table-brushed.js", "onSelectionChange", table, data.length);
       me.send('showData', data);
       this.set('loadingData', true);
-      table.updateSettings({data:data});
+      let dataColumns = this.dataColumns();
+      /* Column changes may slow response, so only change settings when the
+       * columns have actually changed.
+       * dataColumns contains a bound function, .modifyColWidth, so
+       * isEqual(dataColumns, previous dataColumns) would be always false.
+       * Hence using a length comparison, which could potentially give a false
+       * negative if e.g. 2 columns are swapped - not likely enough to worry about.
+       */
+      const len = dataColumns.columns?.length;
+      if (len === this.dataColumnsLenPrevious) {
+        dataColumns = {};
+      } else {
+        this.dataColumnsLenPrevious = len;
+      }
+      dataColumns.data = data;
+      table.updateSettings(dataColumns);
       this.set('loadingData', false);
       this.setRowAttributes(table, this.data);
     }

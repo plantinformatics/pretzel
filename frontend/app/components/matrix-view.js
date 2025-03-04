@@ -47,6 +47,7 @@ import { toTitleCase } from '../utils/string';
 import { thenOrNow } from '../utils/common/promises';
 import { tableRowMerge } from '../utils/draw/progressive-table';
 import { eltWidthResizable, noKeyfilter } from '../utils/domElements';
+import { afterGetColHeader } from '../utils/dom/handsontable-header-resizer';
 import { toggleString, sparseArrayFirstIndex } from '../utils/common/arrays';
 import { toggleMember } from '../utils/common/sets';
 import { toggleObject } from '../utils/ember-devel';
@@ -521,6 +522,7 @@ export default Component.extend({
       outsideClickDeselects: true,
       afterOnCellMouseDown: bind(this, this.afterOnCellMouseDown),
       afterOnCellMouseOver,
+      afterGetColHeader,  // Column header height resizer
       beforeCopy: bind(this, this.beforeCopy),
       headerTooltips: {
         rows: false,
@@ -571,7 +573,6 @@ export default Component.extend({
       table.addHook('afterRender', this.afterRender.bind(this));
     }
 
-    this.dragResizeListen();
     this.afterScrollVertically_tablePosition();
     this.table.batchRender(bind(this, this.setRowAttributes));
     // initialise services/dom
@@ -1044,9 +1045,15 @@ export default Component.extend({
   // ---------------------------------------------------------------------------
 
   afterOnCellMouseDown(event, coords, td) {
+    const fnName = 'afterOnCellMouseDown';
     let block;
-    if ((coords.col == -1) || (coords.col < this.colSample0)) {
-      // no column or column does not identify a block
+    if (! this.blockSamples) {
+      // Condition for selectBlock().
+      if ((coords.col == -1) || (coords.col < this.colSample0)) {
+        // no column or column does not identify a block
+      }
+    } else if (! this.urlOptions.advanced) {
+      dLog(fnName, coords, this.colSample0, this.blockSamples);
     } else if ((coords.row >= 0) && this.blockSamples) {
       let feature = this.getRowAttribute(this.table, coords.row, coords.col);
       /* no feature when select on column header.
@@ -1072,6 +1079,8 @@ export default Component.extend({
       // ! this.blockSamples, so get .columns from .displayData
       block = this.get('columns')[col_name];
       }
+    } else {
+      dLog(fnName, coords, this.colSample0, this.blockSamples);
     }
     /* selectBlock() causes a switch to the Dataset tab, which is not desired
      * when using the genotype tab.
@@ -1476,7 +1485,11 @@ export default Component.extend({
   colSample0 : 2,
   columnNames : computed('columns', 'columnNamesParam', function() {
     const columnNames = this.columnNamesParam || Object.keys(this.get('columns'));
-    this.set('colSample0', this.blockSamples ? columnNames.indexOf('Alt') + 1 : 0);
+    /** To enable references to dataset e.g. Symbol(dataset),
+     * Alt columnNames may be String('Alt'), which .indexOf('Alt') no longer
+     * finds (in Chrome; it still works in Firefox), so use .findIndex( == ).
+     */
+    this.set('colSample0', this.blockSamples ? columnNames.findIndex(c => c == 'Alt') + 1 : 0);
     dLog('columnNames', columnNames, this.colSample0);
     return columnNames;
   }),
@@ -1691,7 +1704,8 @@ export default Component.extend({
         longest = w;
       }
     });
-    const height = longest !== 0 ? longest + 20 : longest;
+    /** Add 20 for left and right margins (i.e. top and bottom). */
+    const height = longest !== 0 ? longest + 20 + 20 : longest;
     dLog('colHeaderHeight', height, longest, this.userSettings.columnHeaderHeight);
     return height;
   }),
@@ -1959,7 +1973,8 @@ export default Component.extend({
     let data = this.get('data');
     const gtPlainRender = this.urlOptions.gtPlainRender;
     dLog('matrix-view', fnName, t, rows.length, rowHeaderWidth, 'colHeaderHeight', colHeaderHeight, tableHeight, /*table,*/ data, this.blockSamples && 'vcf');
-    d3.select('body').style('--matrixViewColumnHeaderHeight', '' + colHeaderHeight + 'px');
+    // d3.select('body').style('--matrixViewColumnHeaderHeight', '' + colHeaderHeight + 'px');
+    this.setColumnHeaderHeight(colHeaderHeight);
 
     if (gtPlainRender & 0b10000) {
       this.hideColumns();
@@ -1996,8 +2011,14 @@ export default Component.extend({
           // this can be enabled as an alternative to progressiveRowMergeInBatch().
           settings.data = data;
         }
+        /** If table is empty, settings.columnHeaderHeight is also required when
+         * ! fullPage, so the assignment has been moved out of the following
+         * conditional expression.
+         * Setting it here is probably not critical because it is also set in
+         * updateTable() and in utils/dom/handsontable-header-resizer.js : resize().
+         */
+        settings.columnHeaderHeight = colHeaderHeight;
         if (this.fullPage) {
-          settings.columnHeaderHeight = colHeaderHeight;
         } else {
           let nRows = rows.length;
           settings.height = tableHeight; // nRows2HeightEx(nRows) + 'ex';
@@ -2272,8 +2293,11 @@ export default Component.extend({
      * columnHeaderHeight
      */
     Ember_set(this.userSettings, 'columnHeaderHeight', columnHeaderHeight);
-    const body = d3.select('body');
-    body.style('--matrixViewColumnHeaderHeight', columnHeaderHeight + 'px');
+
+    document.querySelectorAll(".handsontable thead th").forEach((th) => {
+      th.style.height = `${columnHeaderHeight}px`;
+    });
+
     const
     table = this.get('table'),
     settings = {

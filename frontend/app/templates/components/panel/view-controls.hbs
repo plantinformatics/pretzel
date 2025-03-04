@@ -7,6 +7,9 @@
     <li class="list-group-item">
       <div class="btn-group btn-group-sm btn-group-justified">
         <div class="btn-group ff-alpha">
+          {{#ember-tooltip side="bottom-start"  delay=500}}
+            Clear the colours assigned to scaffolds.
+          {{/ember-tooltip}}
           {{#elem/button-base
              icon="adjust"
              classColour="primary"
@@ -15,6 +18,10 @@
           {{/elem/button-base}}
         </div>
         <div class="btn-group">
+          {{#ember-tooltip side="bottom-start"  delay=500}}
+            Flip the brushed region of the axis - i.e. flip the displayed position of the features.
+            This does not update the database.
+          {{/ember-tooltip}}
           {{#elem/button-base
              icon="random"
              classColour="primary"
@@ -23,6 +30,9 @@
           {{/elem/button-base}}
         </div>
         <div class="btn-group">
+          {{#ember-tooltip side="bottom-start"  delay=500}}
+            Reset the zoom level of all axes, to the zoomed-out position.
+          {{/ember-tooltip}}
           {{#elem/button-base
              icon="resize-full"
              classColour="primary"
@@ -33,8 +43,14 @@
       </div>
     </li>
 
+    {{#if this.urlOptions.advanced}}
+
     <li class="list-group-item">
       <div>
+        {{#ember-tooltip side="bottom-start"  delay=500}}
+          Requests for alignments "paths" or features may be limited by either density in the display or total number requested.
+        {{/ember-tooltip}}
+
         <ul class="nav nav-tabs li-active-extra">
           <!-- To change the initial active tab, change .active class of both .active-detail and .tab-pane; change also .in class of the latter.
                also change send(pathTabActive ) in didInsertElement()
@@ -76,6 +92,10 @@
 
     </li>
     <li class="list-group-item">
+      {{#ember-tooltip side="bottom-start"  delay=500}}
+        Limit of the number of paths or features requested.
+      {{/ember-tooltip}}
+
       <div>
         {{input type="checkbox" checked=this.pathsViaStream class="toggle"}}
         <label>Path Stream</label>
@@ -91,11 +111,15 @@
       </div>
 
     </li>
+    {{/if}}     {{!-- this.urlOptions.advanced       --}}
 
     <li class="list-group-item">
       <div>
         <label>Binned Feature Counts</label>
         <div class="sub-label"> Number of Bins : <span>{{ this.featuresCountsNBins }}</span></div>
+        {{#ember-tooltip side="bottom-start"  delay=500}}
+          Number of bins which will be requested for the histogram of feature counts.
+        {{/ember-tooltip}}
       </div>
       <div>
         <input type="range" 
@@ -107,6 +131,9 @@
       </div>
 
       <div>
+        {{#ember-tooltip side="bottom-start"  delay=500}}
+          Threshold at which display will transition from display of a histogram of feature counts, to display of individual features.
+        {{/ember-tooltip}}
         <span class="sub-label"> Threshold : <span>{{ this.featuresCountsThreshold }}</span></span>
       </div>
       <div>
@@ -120,8 +147,11 @@
     </li>
 
 
-
+    {{#if this.urlOptions.dataSources}}
     <li class="list-group-item">
+      {{#ember-tooltip side="bottom-start"  delay=500}}
+        For a paths request which joins datasets from 2 different servers, the join can be calculated remotely in a server, or locally using the loaded data.
+      {{/ember-tooltip}}
       <label>Distributed Join</label>
       <span class="filter-group-col">
         {{input type="checkbox" name="pathJoinClient" checked=this.pathJoinClient }}
@@ -132,8 +162,13 @@
         <label>Server</label>
       </span>
     </li>
+    {{/if}}
 
     <li class="list-group-item">
+      {{#ember-tooltip side="bottom-start"  delay=500}}
+        Display the feature counts histogram as either a bar chart or line.
+        This applies to other charts / curves displayed within a split axis.
+      {{/ember-tooltip}}
       <span class="filter-group-col">
         {{input type="checkbox" name="modeBarLine" checked=this.chartBarLine }}
         <label>Chart Bar / Line</label>
@@ -141,6 +176,9 @@
     </li>
 
     <li class="list-group-item">
+      {{#ember-tooltip side="bottom-start"  delay=500}}
+        Enable information about features connected / aligned by a path to be displayed when the cursor hovers on a path.
+      {{/ember-tooltip}}
       <input type="checkbox" 
         checked={{this.drawOptions.showPathHover}}
         oninput={{action (mut this.drawOptions.showPathHover) value="target.checked"}} 
@@ -148,6 +186,10 @@
       <label>Path Hover info</label>
     </li>
     <li class="list-group-item">
+      {{#ember-tooltip side="bottom-start"  delay=500}}
+        Update the display of the paths connected to an axis when it is being dragged.
+        This can be disabled if the animation is slow or distracting.
+      {{/ember-tooltip}}
       <input type="checkbox" 
         checked={{this.drawOptions.continuousPathUpdate}}
         oninput={{action this.continuousPathUpdateChanged value="target.checked"}}
@@ -157,12 +199,19 @@
 
     <li class="list-group-item  horiz-2">
       <div>
+        {{#ember-tooltip side="bottom-start"  delay=500}}
+          Show text relating to an axis.
+          This may be switched off when preparing a diagram for publication.
+        {{/ember-tooltip}}
         <input type="checkbox"
           checked="checked"
           oninput={{action this.hideAxisTextClass}}  >
         <label>Show Axis Text</label>
       </div>
       <div>
+        {{#ember-tooltip side="bottom-start"  delay=500}}
+          Omit the dataset name in the axis title and show only the chromosome name.
+        {{/ember-tooltip}}
         <input type="checkbox"
           checked={{this.axisTitleChrOnly}}
           oninput={{action (mut this.axisTitleChrOnly) value="target.checked"}}  >
@@ -171,6 +220,9 @@
     </li>
 
     <li class="list-group-item">
+      {{#ember-tooltip side="bottom-start"  delay=500}}
+        Position the axis ticks text of the right-most axis on the right side (i.e. the outer side).
+      {{/ember-tooltip}}
       <input type="checkbox"
         checked="checked"
         oninput={{action (mut this.axisTicksOutside) value="target.checked"}}  >
@@ -178,6 +230,9 @@
     </li>
 
     <li class="list-group-item">
+      {{#ember-tooltip side="bottom-start"  delay=500}}
+        Display of the Zoom/Reset buttons shown below an axis may be omitted for a publication diagram.
+      {{/ember-tooltip}}
       <input type="checkbox" 
         checked={{not this.drawOptions.publishMode}}
         oninput={{action this.publishModeChanged value="target.checked"}}
@@ -186,6 +241,9 @@
     </li>
 
     <li class="list-group-item">
+      {{#ember-tooltip side="bottom-start"  delay=500}}
+        The calculation of whether feature intervals overlap the displayed axis region can include features which overlap or contain the displayed region.
+      {{/ember-tooltip}}
       <label>Show Features which</label>
       <span class="filter-group-col">
         <input
@@ -209,6 +267,9 @@
     </li>
 
     <li class="list-group-item">
+      {{#ember-tooltip side="bottom-start"  delay=500}}
+        When the feature at one end of a path is within its displayed axis region and the other end is not, the end which is in view can be shown as a tick, or the path can be shown going out of scope, or neither.
+      {{/ember-tooltip}}
       <label style="display:inline">When only 1 end of alignment path is within zoom, show :</label>
       {{radio-button
         value='tick'
@@ -243,6 +304,9 @@
     </li>
     <li class="list-group-item horiz-2">
       <div>
+      {{#ember-tooltip side="bottom-start"  delay=500}}
+        Threshold for filtering out paths which are not colinear with the average of their neighbours.
+      {{/ember-tooltip}}
       <span class="filter-group-col">
         {{input type="checkbox" name="pathGradientUpper" checked=this.pathGradientUpper }}
         {{#ember-tooltip side="right" delay=500}}
@@ -274,6 +338,9 @@
     </li>
 
     <li class="list-group-item">
+      {{#ember-tooltip side="bottom-start"  delay=500}}
+        Control the drawing opacity of paths.
+      {{/ember-tooltip}}
       <label>Path Opacity</label>
       <input type="range" 
        oninput={{action this.pathOpacityInput}}
@@ -282,6 +349,9 @@
       />
     </li>
     <li class="list-group-item">
+      {{#ember-tooltip side="bottom-start"  delay=500}}
+        The width of the path lines.
+      {{/ember-tooltip}}
       <label>Path Width</label>
       <input type="range" 
        oninput={{action this.pathWidthInput}}
@@ -292,6 +362,9 @@
 
     <li class="list-group-item">
       <div>
+        {{#ember-tooltip side="bottom-start"  delay=500}}
+          Adjust the left and right margins of the graph.
+        {{/ember-tooltip}}
         <label title="Extra space outside the left and right-most axes">Outside Axis Margin</label>
         <input type="range"
          value={{this.extraOutsideMargin}}
@@ -305,6 +378,9 @@
 
     <li class="list-group-item horiz-2">
       <div>
+        {{#ember-tooltip side="bottom-start"  delay=500}}
+          The width of the axis lines.
+        {{/ember-tooltip}}
         <label>Axis Width</label>
         <input type="range"
          value=10
@@ -313,6 +389,9 @@
         />
       </div>
       <div>
+        {{#ember-tooltip side="bottom-start"  delay=500}}
+          The number of ticks which are shown on each axis.
+        {{/ember-tooltip}}
         <label># Ticks</label>
         <span class="sub-label">{{ this.axisTicks }}</span>
         <input type="range"
@@ -325,6 +404,9 @@
 
     <li class="list-group-item horiz-2">
       <div>
+        {{#ember-tooltip side="bottom-start"  delay=500}}
+          The size of diamonds which are drawn to represent QTLs when they are too small to be shown as a vertical rectangle.
+        {{/ember-tooltip}}
         <label>QTL : Diamond Size</label>
         <input type="range"
          value=20
@@ -333,6 +415,9 @@
         />
       </div>
       <div>
+        {{#ember-tooltip side="bottom-start"  delay=500}}
+          The horizontal offset of a QTL diamond from its axis.
+        {{/ember-tooltip}}
         <label>Offset</label>
         <input type="range"
          value=0
@@ -346,6 +431,9 @@
     <li class="list-group-item horiz-2">
     
       <div>
+        {{#ember-tooltip side="bottom-start"  delay=500}}
+          The size of text in the graph.
+        {{/ember-tooltip}}
         <label>Graph Text Size</label>
         <span class="sub-label" style="margin-left: 7px;">{{ this.titleTextSize }}</span>
       <input type="range"
@@ -356,6 +444,9 @@
       </div>
 
       <div>
+        {{#ember-tooltip side="bottom-start"  delay=500}}
+          The size of the axis ticks text.
+        {{/ember-tooltip}}
         <label>Ticks Text Size</label>
         <span class="sub-label">{{ this.axisFontSize }}</span>
         <input type="range"
@@ -372,6 +463,10 @@
     <li class="list-group-item horiz-2">
 
       <div>
+        {{#ember-tooltip side="bottom-start"  delay=500}}
+          When not coloured by the Trait or Ontology tabs, QTLs are displayed as black.
+          This control adjust the opacity of these black QTLs.
+        {{/ember-tooltip}}
         <label>QTL : Black Opacity</label>
         <input type="range"
          value=16
@@ -381,6 +476,9 @@
       </div>
 
       <div>
+        {{#ember-tooltip side="bottom-start"  delay=500}}
+          The maximum number of QTLs which will be stacked horizontally, when they have overlapping positions.
+        {{/ember-tooltip}}
         <div>
           <label>QTL layer maximum</label>
           <span class="sub-label">
@@ -402,7 +500,11 @@
 
     </li>
 
+    {{#if this.urlOptions.advanced}}
     <li class="list-group-item">
+      {{#ember-tooltip side="bottom-start"  delay=500}}
+        Synteny Blocks whose size is below this threshold are not displayed.
+      {{/ember-tooltip}}
       <div>
         <label>Synteny Block Size Threshold</label>
         <span class="sub-label">
@@ -423,6 +525,9 @@
     </li>
 
     <li class="list-group-item">
+      {{#ember-tooltip side="bottom-start"  delay=500}}
+        Adjust the times for debounce and throttle of graph display updates to suit your visual preference, and to maintain performance on slower computers.
+      {{/ember-tooltip}}
       <div>
         <label style="float:right">Times (ms)</label>
         <span class="sub-label"> Debounce : <span>{{ this.debounceTime }}</span></span>
@@ -450,6 +555,7 @@
       </div>
 
     </li>
+    {{/if}}
 
   </ul>
   {{/if}} {{!-- showComponent --}}

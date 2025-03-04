@@ -25,7 +25,19 @@ const { GffParse } = require('../utilities/gff_read');
 const { loadAliases } = require('../utilities/load-aliases');
 const { cacheClearBlocks } = require('../utilities/localise-blocks');
 const { cacheblocksFeaturesCounts } = require('../utilities/block-features');
-const { vcfGenotypeFeaturesCountsStatus, checkVCFsAreInstalled } = require('../utilities/vcf-genotype');
+
+// replacing require with import from package
+// const { vcfGenotypeFeaturesCountsStatus, checkVCFsAreInstalled } = require('../utilities/vcf-genotype');
+let vcfGenotypeFeaturesCountsStatus, checkVCFsAreInstalled;
+// Copied from ./block.js; after backend node upgrade these can be updated.
+import('@plantinformatics/vcf-genotype-brapi/dist/vcf-genotype-brapi-node.mjs').then(vcfGenotypeBrapi => {
+  const vcfGenotype = vcfGenotypeBrapi.default.vcfGenotype;
+  console.log('vcfGenotypeBrapi', vcfGenotypeBrapi, 'vcfGenotype', vcfGenotype);
+  vcfGenotypeFeaturesCountsStatus = vcfGenotype.vcfGenotypeFeaturesCountsStatus;
+  checkVCFsAreInstalled = vcfGenotype.checkVCFsAreInstalled;
+});
+//; //require('../utilities/vcf-genotype');
+
 const { ErrorStatus } = require('../utilities/errorStatus.js');
 const { objectLookup } = require('../utilities/mongoDB-driver-lib');
 const { ensureItem, query, datasetIdGetVector } = require('../utilities/vectra-search.js');

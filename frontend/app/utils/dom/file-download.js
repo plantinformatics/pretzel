@@ -1,22 +1,28 @@
 //------------------------------------------------------------------------------
 
 /* global Blob */
+/* global removeEventListener */
+/* global document */
+/* global URL */
+/* global CompressionStream */
+/* global Response */
 
 //------------------------------------------------------------------------------
 
-export {fileDownloadAsCSV}
-/** Trigger a download of a CSV / TSV file containing the given CSV / TSV string
+export {fileDownloadBlob, fileDownloadAsCSV}
+/** Trigger a download of a file containing the given data blob.
  *
- * Based on a post on discuss.emberjs.com by skaterdav85, May 2018 :
+ * fileDownloadBlob() and fileDownloadAsCSV() are partly based on a post on discuss.emberjs.com by skaterdav85, May 2018 :
  * https://discuss.emberjs.com/t/whats-the-best-strategy-for-letting-users-download-ember-data-returns-as-csvs/14767/2
+ *
+ * @param filename  string
+ * @param blob
  */
-function fileDownloadAsCSV(filename, contents) {
+function fileDownloadBlob(filename, blob) {
   const { document, URL, removeEventListener } = window;
   const anchor = document.createElement('a');
   anchor.download = filename;
-  const url = anchor.href = URL.createObjectURL(new Blob([contents], {
-    type: 'text/csv'
-  }));
+  const url = anchor.href = URL.createObjectURL(blob);
 
   //----------------------------------------------------------------------------
 
@@ -31,6 +37,16 @@ function fileDownloadAsCSV(filename, contents) {
   anchor.click();
   URL.revokeObjectURL(url);
   anchor.remove();
+
+}
+/** Trigger a download of a CSV / TSV file containing the given CSV / TSV string
+ *
+ * @param filename  string
+ * @param type  default is 'text/csv'
+ */
+function fileDownloadAsCSV(filename, contents, type = 'text/csv') {
+  const blob = new Blob([contents], { type });
+  fileDownloadBlob(filename, blob);
 }
 
 //------------------------------------------------------------------------------
@@ -64,3 +80,18 @@ function exportAsCSVFile(fileName, data, keyArray, columnHeaders, quoteIfNeeded)
 }
 
 //------------------------------------------------------------------------------
+
+export { text2Gzip }
+/** Compress the given string, and return content for a .gz file download
+ * @return promise yielding a blob, of gzip data
+ */
+function text2Gzip(contents, type = 'text/csv') {
+  const
+  stream = new CompressionStream("gzip"),
+  blob = new Blob([contents], { type  }),
+  compressedStream = blob.stream().pipeThrough(stream),
+  promise = new Response(compressedStream).blob();
+
+  return promise;
+
+}

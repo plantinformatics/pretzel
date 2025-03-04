@@ -12,6 +12,9 @@ import { traitColour } from '../utils/draw/axis';
 
 const dLog = console.debug;
 
+const matchRefSymbol = Symbol.for('matchRef');
+
+//------------------------------------------------------------------------------
 
 export default Model.extend({
   ontology : service('data/ontology'),
@@ -154,6 +157,15 @@ export default Model.extend({
     }
     return count;
   }),
+
+  //----------------------------------------------------------------------------
+
+  /** @return  [matchRefSymbol] in numeric form, i.e. 0 for Ref and 2 for Alt, '' for undefined.  */
+  get matchRefNumeric() {
+    const numeric = (this[matchRefSymbol] === undefined) ? '' :
+          this[matchRefSymbol] ? '0' : '2';
+    return numeric;
+  }
 
   //----------------------------------------------------------------------------
 

@@ -8,7 +8,7 @@ Progressive loading of paths via aliases relies on the indices of the Alias coll
 ```
 mongo --quiet admin
 db.Feature.getIndexes()
-db.Feature.createIndex({"value.0":1},{ partialFilterExpression: {"value.1": {$type: 'number'}} } )
+db.Feature.createIndex({blockId:1, value_0:1})
 db.Feature.createIndex({blockId:1} )
 
 db.Alias.getIndexes()

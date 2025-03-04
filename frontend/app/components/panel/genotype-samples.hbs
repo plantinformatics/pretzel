@@ -1,12 +1,30 @@
 <div>
   <label>List of samples from VCF</label>
   {{#if @the.vcfGenotypeSamplesText}}
-    <span class="sample-count">( {{@the.vcfGenotypeSamplesCount}} )</span>
+    <span class="sample-count">(
+      {{#if @userSettings.filterSamplesByHaplotype }} Filtered {{else}} Total {{/if}} :
+      {{@the.vcfGenotypeSamplesCount}} )</span>
   {{else}}
     <button type="button" onclick={{this.vcfGenotypeSamples}} class="btn btn-info btn-xs">Get samples list</button>
   {{/if}}
 
+  <span>
+    <input type="checkbox"
+      style="margin-left: 3em;"
+      checked={{@userSettings.filterSamplesByHaplotype}}
+      oninput={{pipe (action (mut @userSettings.filterSamplesByHaplotype) value="target.checked")
+        this.ensureSamples }}  >
+    <label>Filtered by SNPs</label>
+    {{#ember-tooltip side="left" delay=500}}
+      Show samples selected by SNP filters
+    {{/ember-tooltip}}
+  </span>
+
   <div class="genotypeSampleFilter_textInput">
+    <div>
+      <EmberTooltip side="right" delay=500>
+        <span>Filter available samples by name</span>
+      </EmberTooltip>
     <label class="" style="margin-right: 1em;">
       <i class="glyphicon glyphicon-filter"></i>
       Search / Filter
@@ -15,6 +33,12 @@
       oninput={{this.nameFilterChanged}}
       placeholder="Filter available samples by name" />
       {{!-- maybe autocomplete="sample-name", but samples names are mostly numeric so it may be more of an impediment than a benefit for the user --}}
+
+      {{#if @the.namesFilters.nameFilterArray.length}}
+        <span class="margin-left-help">( {{@the.filteredSamples.length}} )</span>
+      {{/if}}
+    </div>
+
 
     {{#if @showIntersectionCheckbox}}
     <span>
@@ -56,6 +80,9 @@
   {{/if}}
 
   <div>
+    <EmberTooltip side="right" delay=500>
+      <span>Edit the list of Selected samples to be requested in VCF Lookup.</span>
+    </EmberTooltip>
     <Textarea
       class="selectedSamplesInput"
       @value={{@the.selectedSamplesText}}
