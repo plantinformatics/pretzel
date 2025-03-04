@@ -231,7 +231,7 @@ div.app-logo {
 .resizer.vertical:not(.inFO):not(.no-resizer-icon)::after
 {
   right : inherit;
-  bottom: calc(50px - var(--matrixViewColumnHeaderHeight));
+  // bottom: calc(50px - var(--matrixViewColumnHeaderHeight));
   /** ↧ Downwards Arrow from Bar.   https://symbl.cc/en/21A7/ */
   content: "\21A7";
 }
@@ -1725,6 +1725,26 @@ div#goto-feature > div
 {
   /* border : solid green 1px; */
 }
+/** for afterGetColHeader() utils/dom/handsontable-header-resizer.js */
+.resize-handle {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  // width: 100%;
+  // height: 5px;
+  cursor: ns-resize;
+  // background: rgba(0, 0, 0, 0.1);
+  // border : solid 1px green;
+  font-size: x-large;
+  display: contents;
+}
+.resize-handle:hover {
+  // background: rgba(0, 0, 0, 0.3);
+}
+#observational-table .handsontable .htCore > thead > tr > th {
+  vertical-align: bottom;
+}
+
 
 #observational-table {
   /* flex: 1; */
@@ -1751,7 +1771,7 @@ div#goto-feature > div
 #observational-table .head
 {
   /* used --matrixViewColumnHeaderHeight * 0.84, and the threshold was at 250px, so 250px * (1 - .84) -> 40px */
-  margin-top: calc(var(--matrixViewColumnHeaderHeight) - 40px);
+  // margin-top: calc(var(--matrixViewColumnHeaderHeight) - 40px);
   margin-left: 7px;
   transform-origin: left;
   transform: rotate(-90deg);

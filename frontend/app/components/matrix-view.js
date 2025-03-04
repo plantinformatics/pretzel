@@ -47,6 +47,7 @@ import { toTitleCase } from '../utils/string';
 import { thenOrNow } from '../utils/common/promises';
 import { tableRowMerge } from '../utils/draw/progressive-table';
 import { eltWidthResizable, noKeyfilter } from '../utils/domElements';
+import { afterGetColHeader } from '../utils/dom/handsontable-header-resizer';
 import { toggleString, sparseArrayFirstIndex } from '../utils/common/arrays';
 import { toggleMember } from '../utils/common/sets';
 import { toggleObject } from '../utils/ember-devel';
@@ -521,6 +522,7 @@ export default Component.extend({
       outsideClickDeselects: true,
       afterOnCellMouseDown: bind(this, this.afterOnCellMouseDown),
       afterOnCellMouseOver,
+      afterGetColHeader,  // Column header height resizer
       beforeCopy: bind(this, this.beforeCopy),
       headerTooltips: {
         rows: false,
@@ -571,7 +573,6 @@ export default Component.extend({
       table.addHook('afterRender', this.afterRender.bind(this));
     }
 
-    this.dragResizeListen();
     this.afterScrollVertically_tablePosition();
     this.table.batchRender(bind(this, this.setRowAttributes));
     // initialise services/dom
@@ -1972,7 +1973,8 @@ export default Component.extend({
     let data = this.get('data');
     const gtPlainRender = this.urlOptions.gtPlainRender;
     dLog('matrix-view', fnName, t, rows.length, rowHeaderWidth, 'colHeaderHeight', colHeaderHeight, tableHeight, /*table,*/ data, this.blockSamples && 'vcf');
-    d3.select('body').style('--matrixViewColumnHeaderHeight', '' + colHeaderHeight + 'px');
+    // d3.select('body').style('--matrixViewColumnHeaderHeight', '' + colHeaderHeight + 'px');
+    this.setColumnHeaderHeight(colHeaderHeight);
 
     if (gtPlainRender & 0b10000) {
       this.hideColumns();
@@ -2011,7 +2013,10 @@ export default Component.extend({
         }
         /** If table is empty, settings.columnHeaderHeight is also required when
          * ! fullPage, so the assignment has been moved out of the following
-         * conditional expression.  */
+         * conditional expression.
+         * Setting it here is probably not critical because it is also set in
+         * updateTable() and in utils/dom/handsontable-header-resizer.js : resize().
+         */
         settings.columnHeaderHeight = colHeaderHeight;
         if (this.fullPage) {
         } else {
@@ -2288,8 +2293,11 @@ export default Component.extend({
      * columnHeaderHeight
      */
     Ember_set(this.userSettings, 'columnHeaderHeight', columnHeaderHeight);
-    const body = d3.select('body');
-    body.style('--matrixViewColumnHeaderHeight', columnHeaderHeight + 'px');
+
+    document.querySelectorAll(".handsontable thead th").forEach((th) => {
+      th.style.height = `${columnHeaderHeight}px`;
+    });
+
     const
     table = this.get('table'),
     settings = {
