@@ -1678,7 +1678,9 @@ export default Component.extend({
    */
   rowHeaderWidth: computed('rows', function() {
     let rows = this.get('rows');
-    let longest_row = 0;
+    /** If no rows, provide a minimum width to prevent right-clipping of
+     * columnHeaderHeight resizer .resize-handle - afterGetColHeader() */
+    let longest_row = rows.length ? 0 : 10;
     let length_checker = $("#length_checker");
     rows.forEach(function(r) {
       let w = length_checker.text(r).width();
