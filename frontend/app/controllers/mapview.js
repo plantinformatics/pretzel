@@ -57,6 +57,9 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
   controlsService : service('controls'),
   queryParamsService : service('query-params'),
   router: service(),
+  /** used in hbs for .brushedAxes. */
+  axisBrush: service('data/axis-brush'),
+
 
 
   //----------------------------------------------------------------------------

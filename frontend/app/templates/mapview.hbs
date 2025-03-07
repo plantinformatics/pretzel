@@ -211,6 +211,14 @@
           selectedBlock=this.selectedBlock
           updatePathsCount=(action this.actions.updatePathsCount)}}
 
+      </div>    <!-- right-panel-content -->
+
+      <div style="display:none;">
+        {{!-- copied from panel/axis-brushes and draw/axis-brush which only exists in dataset tab --}}
+        {{#each this.axisBrush.brushedAxes as |brushedAxis| }}
+        <!-- evaluate .features for getBlockFeaturesInterval(). the value is not significant and not displayed  -->
+          <div> {{brushedAxis.features._result.0.value.length}} <!-- for features request. --></div>
+        {{/each}}
       </div>
 
     </div>

@@ -709,6 +709,7 @@ export default Service.extend({
      * featuresForAxis(); in this case : axisBrush is null; don't set
      * paramAxis.domain. */
     brushedDomain = axisBrush && axisBrush.brushedDomain,
+    /** brushedDomain takes priority over the zoomed domain paramAxis.domain */
     paramAxis = intervalParams.axes[0];
     const
     nSamples = controlsView.pathsDensityParams.nSamples,
@@ -727,7 +728,7 @@ export default Service.extend({
     }
     else if (brushedDomain)
       paramAxis.domain = brushedDomain;
-    if (! paramAxis.zoomed && paramAxis.domain) {
+    else if (! paramAxis.zoomed && paramAxis.domain) {
       /** QTL features are loaded initially when viewed, and the axis may be not
        * yet be constructed; it is not required because zoomed=false, and the
        * domain is not sent.
