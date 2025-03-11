@@ -3511,6 +3511,11 @@ export default class PanelManageGenotypeComponent extends Component {
             });
             later(() => Ember_set(this, 'args.summaryData.rowCount', displayData.length));
           }
+        } else {  // ! featuresArrays.length
+          setProperties(this, {
+            columnNames : emptyTableColumns,
+            gtDatasetColumns : [],  // used by e.g. positionFilterClass().
+          });
         }
       }
     }
@@ -3530,6 +3535,14 @@ export default class PanelManageGenotypeComponent extends Component {
     });
 
   }
+
+  /** @return the length of the data array displayed in the table
+   */
+  get dataRowsLength() {
+    const length = this.displayData?.length || this.displayDataRows?.length;
+    return length;
+  }
+
   /** A filterFn for featureSampleNames() : omit Ref & Alt.
    * Used in showSamplesWithinBrush() to omit Ref & Alt
    * from sampleNames because vcfFeatures2MatrixView() prepends

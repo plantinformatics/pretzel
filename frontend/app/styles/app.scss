@@ -2324,6 +2324,11 @@ div.metaeditor-panel div.jsoneditor-tree button.jsoneditor-contextmenu-button {
   border-collapse: initial;
   border-spacing: 1em;
 }
+/** for components/form/brushed-block-info */
+.brushed-block-info table {
+  border-collapse: initial;
+  border-spacing: 0.5em;
+}
 
 .select-wrap {
   /* this prevents the left border of <select> and <textarea> being

@@ -1,0 +1,40 @@
+<div class="brushed-block-info">
+
+  <div><label>VCF Blocks</label></div>
+
+  {{!-- evaluation of .brushCount may be needed to enable initial update of brushedVCFFeaturesCounts --}}
+  <span style="display:none">{{this.blockService.axisBrush.brushCount}}:</span>
+
+  <div style="height: 3ex;"></div>
+
+  {{!-- based on draw/axis-brush.hbs --}}
+  <table>
+    <tr>
+      <th colspan="2">Estimated Features in</th>
+      <th></th>
+    </tr>
+    <tr>
+      <th>Brush</th>
+      <th>Zoom</th>
+      <th>Dataset</th>
+      <th>Scope</th>
+    </tr>
+
+    {{#each this.blockService.viewedVCFBlocks as |block|}}
+      <tr>
+        <td>
+          {{#if block.brushedDomain}}
+            {{domainRounded block.featuresCountIncludingBrush}}
+          {{/if}}
+        </td>
+        <td>{{domainRounded block.featuresCountIncludingZoom}}</td>
+        <td>{{block.datasetId.shortNameOrName}}</td>
+        <td>{{block.name}}</td>
+      </tr>
+    {{/each}}
+
+  </table>
+
+</div>
+
+{{yield}}
