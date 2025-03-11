@@ -67,6 +67,11 @@ function numberOk(x) {
 
 const trace = 1;
 
+/**
+  @module models/block.js
+  @extends Model
+  @public
+*/
 export default Model.extend({
   pathsP : service('data/paths-progressive'), // for getBlockFeaturesInterval()
   blockService : service('data/block'),
