@@ -74,8 +74,12 @@ function filterMap(map, mapFilterFn) {
 /*----------------------------------------------------------------------------*/
 
 
+/**
+  @class services/data/block.js
+  @extends Service
+  @public
 
-/** Augment the store blocks with features to support mapview.
+ * Augment the store blocks with features to support mapview.
  * In particular, add an `isViewed` attribute to blocks, which indicates that
  * the block is viewed in the mapview.
  *

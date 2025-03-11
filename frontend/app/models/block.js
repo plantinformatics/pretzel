@@ -68,7 +68,7 @@ function numberOk(x) {
 const trace = 1;
 
 /**
-  @module models/block.js
+  @class models/block.js
   @extends Model
   @public
 */
