@@ -1691,6 +1691,12 @@ div#goto-feature > div
   margin-left: 3em;
 }
 
+a.panel-heading-help {
+  margin-left: 3em;
+}
+a.panel-heading-help > i {
+  color: white;
+}
 
 .panel-collapse-button {
   padding:0 5px 0 5px;
