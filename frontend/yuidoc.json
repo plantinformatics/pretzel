@@ -1,0 +1,18 @@
+{
+  "name": "pretzel-frontend",
+  "description": "Frontend code for Pretzel",
+  "version": "3.6.0",
+  "options": {
+		"//comment enabledEnvironments" : "Not enabled in production because this is development documentation for the app",
+    "enabledEnvironments": ["development"],
+    "paths": [
+      "app"
+    ],
+    "exclude": "vendor",
+    "outdir": "docs",
+    "linkNatives": true,
+    "quiet": true,
+    "parseOnly": false,
+    "lint": false
+  }
+}
