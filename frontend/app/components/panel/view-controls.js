@@ -63,6 +63,13 @@ const axisLayerModulusMax = 1000;
 /** can be replaced by Math.clamp() when that is available
  * refn : https://stackoverflow.com/questions/11409895/whats-the-most-elegant-way-to-cap-a-number-to-a-segment
  */
+/**
+ * Clamps a number between a lower and upper bound.
+ * @param {number} x - The number to clamp.
+ * @param {number} lower - The lower bound.
+ * @param {number} upper - The upper bound.
+ * @returns {number} - The clamped value.
+ */
 function Math_clamp(x, lower, upper) {
   return Math.max(lower, Math.min(x, upper) );
 }
@@ -147,11 +154,18 @@ export default Component.extend({
    * or toggle, a transition is used.
    */
   sliderChangeTime : undefined,
+  /**
+   * Updates the time of the last slider change to the current time.
+   */
   aSliderHasChanged() {
     let
     documentTimeline = new (DocumentTimeline || window.DocumentTimeline)();
     this.set('sliderChangeTime', documentTimeline.currentTime);
   },
+  /**
+   * Calculates the time since the last slider change.
+   * @returns {number|undefined} - The time in milliseconds since the last slider change, or undefined if not set.
+   */
   get timeSinceASliderHasChanged() {
     let
     documentTimeline = new (DocumentTimeline || window.DocumentTimeline)(),
@@ -547,6 +561,10 @@ export default Component.extend({
   },
 
   actions : {
+    /**
+     * Sets the active tab for path controls.
+     * @param {string} tabName - The name of the tab to activate.
+     */
     pathTabActive : function(tabName) {
       let active;
       active = tabName === 'density';
@@ -558,15 +576,24 @@ export default Component.extend({
       this.set('pathSampleActive', active);
     },
 
+    /**
+     * Triggers the flip region action.
+     */
     flipRegion : function () {
       this.get('feed').trigger('flipRegion', undefined);
     },
 
+    /**
+     * Triggers the action to clear scaffold colours.
+     */
     clearScaffoldColours  : function () {
       dLog("clearScaffoldColours", "selected-markers.js");
       this.get('feed').trigger('clearScaffoldColours');
     },
 
+    /**
+     * Triggers the action to reset zoom levels.
+     */
     resetZooms : function () {
       this.get('feed').trigger('resetZooms');
     },
