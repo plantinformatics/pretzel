@@ -164,7 +164,7 @@ export default Component.extend({
   },
   /**
    * Calculates the time since the last slider change.
-   * @returns {number|undefined} - The time in milliseconds since the last slider change, or undefined if not set.
+   * @returns {number|undefined} - The time in milliseconds since the last slider change, or undefined if .sliderChangeTime is not set.
    */
   get timeSinceASliderHasChanged() {
     let
@@ -311,6 +311,9 @@ export default Component.extend({
       this.updateSyntenyBlocksPosition();
     }
   },
+  /** oninput callback for slider : <input type="range" .sbSizeThresholdLinear >
+   * @param {number} linear slider value adjusted by user action
+   */
   sbSizeThresholdLinearChanged(linear) {
     /**
      * (comment from updateSbSizeThresh() )
@@ -343,6 +346,9 @@ export default Component.extend({
   axisLayerModulus : axisLayerModulusInitial,
   axisLayerModulusLinear : expRangeInitial(axisLayerModulusInitial, expRangeBase(50, axisLayerModulusMax)),
   axisLayerModulusText : "" + axisLayerModulusInitial,
+  /** enter callback for {{input ... type="text" ... .axisLayerModulusText }}
+   * @param {string} value
+   */
   axisLayerModulusTextChanged(value) {
     /* {{input value=axisLayerModulusText ... }} sets
      * this.axisLayerModulusText, and (action ...  value="target.value")
@@ -363,6 +369,9 @@ export default Component.extend({
       this.updateSyntenyBlocksPosition();
     }
   },
+  /** oninput callback for slider : <input type="range" ... .axisLayerModulusLinear >
+   * @param {number} linear slider value adjusted by user action
+   */
   axisLayerModulusLinearChanged(linear) {
     let value = Math.round(expRange(+linear, 50, axisLayerModulusMax));
     // dLog('axisLayerModulusLinearChanged', linear, value);
@@ -391,6 +400,9 @@ export default Component.extend({
    */
   pathSample : expRangeInitial(400, expRangeBase(100, 10000)),
 
+  /** If .pathDensity is active / enabled, use it to calculate the effective value of pathDensity.
+   * @return density false if  ! .pathDensityActive, otherwise the portion of paths to request and display.
+   */
   pathControlActiveDensity : computed('pathDensityActive', 'pathDensity', function () {
     const
     active = this.get('pathDensityActive'),
@@ -413,6 +425,9 @@ export default Component.extend({
     return density;
   }),
 
+  /** If .pathSample is active / enabled, use it to calculate the effective value of pathSample.
+   * @return sample false if  ! .pathSampleActive, otherwise the number of paths to request and display.
+   */
   pathControlActiveSample : computed('pathSampleActive', 'pathSample', function () {
     const
     active = this.get('pathSampleActive'),
@@ -541,6 +556,7 @@ export default Component.extend({
      */
     setCssVariable ('--axisWidth', isFirefox() ? '2px' : 'inherit');
   },
+
   readParsedOptions() {
     /** this can be passed in from model.params.parsedOptions and then access pathsViaStream as 
      * this.get('parsedOptions.pathsViaStream');
@@ -553,6 +569,7 @@ export default Component.extend({
     if (pathsViaStream !== undefined)
       this.set('pathsViaStream', toBool(pathsViaStream));
   },
+
   willDestroyElement() {
     dLog(compName, "willDestroyElement()");
     this.drawActions.trigger("drawControlsLife", false);
