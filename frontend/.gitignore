@@ -3,6 +3,8 @@
 # compiled output
 /dist/
 /tmp/
+# Generated documentation, from yuidoc
+docs/
 
 # dependencies
 /bower_components/

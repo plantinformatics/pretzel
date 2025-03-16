@@ -49,7 +49,7 @@ const fontSizes = [
  *
  * isFirefox() is from :
  * https://github.com/astronomersiva/ember-display-in-browser/blob/master/addon/utils/browser-checks.js
-*/
+ */
 // Firefox 1.0+
 export const isFirefox = () => typeof InstallTrigger !== 'undefined';
 
@@ -93,7 +93,7 @@ export default Component.extend({
    * paths are calculated in the backend if both blocks of block-adj are from
    * the same server;  otherwise they may be calculated in the frontend (client)
    * and / or in the backend via localiseBlocks().
-  */
+   */
   pathJoinClient : false,
   pathJoinRemote : true,
 
@@ -168,11 +168,11 @@ export default Component.extend({
   pathGradientUpper : true,
   pathGradient : computed('pathGradientInt', function () {
     let
-     pathGradient = +this.get('pathGradientInt'),
-        gradient = (pathGradient / 100);
+    pathGradient = +this.get('pathGradientInt'),
+    gradient = (pathGradient / 100);
     // dLog('pathControlGradient', pathGradient, gradient);
     return gradient;
-   }),
+  }),
 
   /*--------------------------------------------------------------------------*/
 
@@ -378,12 +378,14 @@ export default Component.extend({
   pathSample : expRangeInitial(400, expRangeBase(100, 10000)),
 
   pathControlActiveDensity : computed('pathDensityActive', 'pathDensity', function () {
-    let active = this.get('pathDensityActive'),
-     pathDensity = +this.get('pathDensity'),
-      density = active && expRange(pathDensity, 100/2, 1000);
+    const
+    active = this.get('pathDensityActive'),
+    pathDensity = +this.get('pathDensity');
+    let density = active && expRange(pathDensity, 100/2, 1000);
     if (density) {
-      let digits = Math.log10(density),
-      decimals =  (digits > 2) ? 0 : ((digits > 1) ? 1 : 2);
+      const
+      digits = Math.log10(density),
+      decimals = (digits > 2) ? 0 : ((digits > 1) ? 1 : 2);
       density = +density.toFixed(decimals);
     }
     let value = inputRangeValue('range-pathDensity');
@@ -395,12 +397,13 @@ export default Component.extend({
 
     dLog('pathControlActiveDensity', pathDensity, density);
     return density;
-   }),
+  }),
 
   pathControlActiveSample : computed('pathSampleActive', 'pathSample', function () {
-    let active = this.get('pathSampleActive'),
-     pathSample = +this.get('pathSample'),
-     sample = active && expRange(pathSample, 100, 10000);
+    const
+    active = this.get('pathSampleActive'),
+    pathSample = +this.get('pathSample');
+    let sample = active && expRange(pathSample, 100, 10000);
     if (sample) {
       sample = Math.round(sample);
     }
@@ -412,7 +415,7 @@ export default Component.extend({
     });
     dLog('pathControlActiveSample', pathSample, sample);
     return sample;
-   }),
+  }),
 
   /** ditto, 
    * controls.view.pathControlActiveNFeatures
@@ -424,15 +427,16 @@ export default Component.extend({
      * pathsViaStream, or perhaps it will be a limit applicable also to other
      * (non-streaming) request modes.
      */
-    let active = this.get('pathsViaStream'),
-     pathNFeatures = +this.get('pathNFeatures'),
-     nFeatures = active && expRange(pathNFeatures, 100, 10000);
+    const
+    active = this.get('pathsViaStream'),
+    pathNFeatures = +this.get('pathNFeatures');
+    let nFeatures = active && expRange(pathNFeatures, 100, 10000);
     if (nFeatures) {
       nFeatures = Math.round(nFeatures);
     }
     dLog('pathControlNFeatures', pathNFeatures, nFeatures);
     return nFeatures;
-   }),
+  }),
 
   pathsDensityParams : computed(
     'pathControlActiveSample', 'pathControlActiveDensity', 'pathControlNFeatures',
@@ -457,15 +461,14 @@ export default Component.extend({
   featuresCountsNBinsLinear : expRangeInitial(100, expRangeBase(100, 500)),
 
   featuresCountsNBins : computed('featuresCountsNBinsLinear', function () {
-    let
-     thresholdLinear = +this.get('featuresCountsNBinsLinear'),
-     threshold = expRange(thresholdLinear, 100, 500);
+    const thresholdLinear = +this.get('featuresCountsNBinsLinear');
+    let threshold = expRange(thresholdLinear, 100, 500);
     if (threshold) {
       threshold = Math.round(threshold);
     }
     dLog('featuresCountsNBins', thresholdLinear, threshold);
     return threshold;
-   }),
+  }),
 
   featuresCountsThresholdLinear : expRangeInitial(500, expRangeBase(100, 10000)),
 
@@ -474,15 +477,14 @@ export default Component.extend({
    *  - if  (count > featuresCountsThreshold) show featuresCounts (axis-charts)
    */
   featuresCountsThreshold : computed('featuresCountsThresholdLinear', function () {
-    let
-     thresholdLinear = +this.get('featuresCountsThresholdLinear'),
-     threshold = expRange(thresholdLinear, 100, 10000);
+    const thresholdLinear = +this.get('featuresCountsThresholdLinear');
+    let threshold = expRange(thresholdLinear, 100, 10000);
     if (threshold) {
       threshold = Math.round(threshold);
     }
     dLog('featuresCountsThreshold', thresholdLinear, threshold);
     return threshold;
-   }),
+  }),
 
   /*--------------------------------------------------------------------------*/
 
@@ -533,7 +535,7 @@ export default Component.extend({
 
     /** default to true if not given as URL query param e.g. options=pathsViaStream=false  */
     let pathsViaStream = parsedOptions && parsedOptions.pathsViaStream;
-      // this.get('parsedOptions.pathsViaStream');
+    // this.get('parsedOptions.pathsViaStream');
     if (pathsViaStream !== undefined)
       this.set('pathsViaStream', toBool(pathsViaStream));
   },
@@ -623,7 +625,7 @@ export default Component.extend({
      * event.target.value is a string; convert to a number.
      */
     let value = +event.target.value;
-     dLog('qtlUncolouredOpacityInput', value, event.target.value);
+    dLog('qtlUncolouredOpacityInput', value, event.target.value);
     this.set('qtlUncolouredOpacity', value);
   },
   titleTextSizeInput(event) {
@@ -650,7 +652,7 @@ export default Component.extend({
      * event.target.value is a string; convert to a number.
      */
     let value = +event.target.value;
-     dLog('pathNeighboursInput', value, event.target.value);
+    dLog('pathNeighboursInput', value, event.target.value);
     this.set('pathNeighbours', value);
   },
 
