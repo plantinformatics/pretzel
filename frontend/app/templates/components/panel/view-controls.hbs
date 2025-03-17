@@ -6,11 +6,12 @@
 --}}
 {{#elem/panel-container state="primary" as |panelContainer|}}
   {{#elem/panel-heading icon="option-vertical" panelContainer=panelContainer}}
-    Selected Axis Options
+    Axis Display Options
     <a class="panel-heading-help" target="_blank" href="https://docs.plantinformatics.io/Basic-Functions/View-tab/"><i class="glyphicon glyphicon-question-sign"></i></a>
   {{/elem/panel-heading}}
   {{#if panelContainer.showComponent}}
   <ul class="list-group view-controls">
+    {{#if this.urlOptions.advanced}}
     <li class="list-group-item">
       <div class="btn-group btn-group-sm btn-group-justified">
         <div class="btn-group ff-alpha">
@@ -49,6 +50,7 @@
         </div>
       </div>
     </li>
+    {{/if}}
 
     {{#if this.urlOptions.advanced}}
 
@@ -119,11 +121,87 @@
 
     </li>
     {{/if}}     {{!-- this.urlOptions.advanced       --}}
+    <li class="list-group-item">
+      <div>
+        <h3>Axis Controls</h3>
+      </div>
+    </li>
+    <li class="list-group-item">
+      <div>
+        {{#ember-tooltip side="bottom-start"  delay=500}}
+          Adjust the left and right margins of the graph.
+        {{/ember-tooltip}}
+        <label title="Extra space outside the left and right-most axes">Outside Axis Margin</label>
+        <input type="range"
+         value={{this.extraOutsideMargin}}
+         oninput={{action (pipe
+           (action (mut this.extraOutsideMargin) value="target.value")
+           (action this.aSliderHasChanged ) )}}
+         min="0" max="500"
+        />
+      </div>
+    </li>
 
+    <li class="list-group-item horiz-2">
+      <div>
+        {{#ember-tooltip side="bottom-start"  delay=500}}
+          The width of the axis lines.
+        {{/ember-tooltip}}
+        <label>Axis Width</label>
+        <input type="range"
+         value=10
+         oninput={{action this.axisWidthInput}}
+         min="0" max="100"
+        />
+      </div>
+      <div>
+        {{#ember-tooltip side="bottom-start"  delay=500}}
+          The number of ticks which are shown on each axis.
+        {{/ember-tooltip}}
+        <label># Ticks</label>
+        <span class="sub-label">{{ this.axisTicks }}</span>
+        <input type="range"
+         value=10
+         oninput={{action (mut this.axisTicks) value="target.value" }}
+         min="0" max="35"
+        />
+      </div>
+    </li>
+
+    <li class="list-group-item horiz-2">
+    
+      <div>
+        {{#ember-tooltip side="bottom-start"  delay=500}}
+          The size of text in the graph.
+        {{/ember-tooltip}}
+        <label>Axis Heading Size</label>
+        <span class="sub-label" style="margin-left: 7px;"></span>
+      <input type="range"
+       value=4
+       oninput={{action this.titleTextSizeInput}}
+       min="0" max="9"
+      />
+      </div>
+
+      <div>
+        {{#ember-tooltip side="bottom-start"  delay=500}}
+          The size of the axis ticks text.
+        {{/ember-tooltip}}
+        <label>Ticks Text Size</label>
+        <input type="range"
+         value=10
+         oninput={{action (pipe
+           (action (mut this.axisFontSize) value="target.value")
+           (action this.axisFontSizeChanged ) )}}
+         min="0" max="35"
+        />
+      </div>
+
+    </li>
     <li class="list-group-item">
       <div>
         <label>Binned Feature Counts</label>
-        <div class="sub-label"> Number of Bins : <span>{{ this.featuresCountsNBins }}</span></div>
+        <div> Number of Bins : <span>{{ this.featuresCountsNBins }}</span></div>
         {{#ember-tooltip side="bottom-start"  delay=500}}
           Number of bins which will be requested for the histogram of feature counts.
         {{/ember-tooltip}}
@@ -141,7 +219,7 @@
         {{#ember-tooltip side="bottom-start"  delay=500}}
           Threshold at which display will transition from display of a histogram of feature counts, to display of individual features.
         {{/ember-tooltip}}
-        <span class="sub-label"> Threshold : <span>{{ this.featuresCountsThreshold }}</span></span>
+        <span> Threshold : <span>{{ this.featuresCountsThreshold }}</span></span>
       </div>
       <div>
         <input type="range" 
@@ -151,57 +229,6 @@
          min="0" max="100"
         />
       </div>
-    </li>
-
-
-    {{#if this.urlOptions.dataSources}}
-    <li class="list-group-item">
-      {{#ember-tooltip side="bottom-start"  delay=500}}
-        For a paths request which joins datasets from 2 different servers, the join can be calculated remotely in a server, or locally using the loaded data.
-      {{/ember-tooltip}}
-      <label>Distributed Join</label>
-      <span class="filter-group-col">
-        {{input type="checkbox" name="pathJoinClient" checked=this.pathJoinClient }}
-        <label>Client</label>
-      </span>
-      <span class="filter-group-col">
-        {{input type="checkbox" name="pathJoinRemote" checked=this.pathJoinRemote }}
-        <label>Server</label>
-      </span>
-    </li>
-    {{/if}}
-
-    <li class="list-group-item">
-      {{#ember-tooltip side="bottom-start"  delay=500}}
-        Display the feature counts histogram as either a bar chart or line.
-        This applies to other charts / curves displayed within a split axis.
-      {{/ember-tooltip}}
-      <span class="filter-group-col">
-        {{input type="checkbox" name="modeBarLine" checked=this.chartBarLine }}
-        <label>Chart Bar / Line</label>
-      </span>
-    </li>
-
-    <li class="list-group-item">
-      {{#ember-tooltip side="bottom-start"  delay=500}}
-        Enable information about features connected / aligned by a path to be displayed when the cursor hovers on a path.
-      {{/ember-tooltip}}
-      <input type="checkbox" 
-        checked={{this.drawOptions.showPathHover}}
-        oninput={{action (mut this.drawOptions.showPathHover) value="target.checked"}} 
-      />
-      <label>Path Hover info</label>
-    </li>
-    <li class="list-group-item">
-      {{#ember-tooltip side="bottom-start"  delay=500}}
-        Update the display of the paths connected to an axis when it is being dragged.
-        This can be disabled if the animation is slow or distracting.
-      {{/ember-tooltip}}
-      <input type="checkbox" 
-        checked={{this.drawOptions.continuousPathUpdate}}
-        oninput={{action this.continuousPathUpdateChanged value="target.checked"}}
-      />
-      <label>Path update during drag</label>
     </li>
 
     <li class="list-group-item  horiz-2">
@@ -246,7 +273,39 @@
       />
       <label>Show Zoom/Reset buttons</label>
     </li>
+    <li class="list-group-item">
+      <div>
+        <h3>Misc Options</h3>
+      </div>
+    </li>
 
+    <li class="list-group-item">
+      {{#ember-tooltip side="bottom-start"  delay=500}}
+        Display the feature counts histogram as either a bar chart or line.
+        This applies to other charts / curves displayed within a split axis.
+      {{/ember-tooltip}}
+      <span class="filter-group-col">
+        {{input type="checkbox" name="modeBarLine" checked=this.chartBarLine }}
+        <label>Chart Bar / Line</label>
+      </span>
+    </li>
+    
+    {{#if this.urlOptions.dataSources}}
+    <li class="list-group-item">
+      {{#ember-tooltip side="bottom-start"  delay=500}}
+        For a paths request which joins datasets from 2 different servers, the join can be calculated remotely in a server, or locally using the loaded data.
+      {{/ember-tooltip}}
+      <label>Distributed Join</label>
+      <span class="filter-group-col">
+        {{input type="checkbox" name="pathJoinClient" checked=this.pathJoinClient }}
+        <label>Client</label>
+      </span>
+      <span class="filter-group-col">
+        {{input type="checkbox" name="pathJoinRemote" checked=this.pathJoinRemote }}
+        <label>Server</label>
+      </span>
+    </li>
+    {{/if}}
     <li class="list-group-item">
       {{#ember-tooltip side="bottom-start"  delay=500}}
         The calculation of whether feature intervals overlap the displayed axis region can include features which overlap or contain the displayed region.
@@ -309,6 +368,11 @@
         List Selected Features in the Feature table in right panel.
       {{/ember-tooltip}}
     </li>
+    <li class="list-group-item">
+      <div>
+        <h3>Path Controls</h3>
+      </div>
+    </li>
     <li class="list-group-item horiz-2">
       <div>
       {{#ember-tooltip side="bottom-start"  delay=500}}
@@ -368,47 +432,31 @@
     </li>
 
     <li class="list-group-item">
+      {{#ember-tooltip side="bottom-start"  delay=500}}
+        Enable information about features connected / aligned by a path to be displayed when the cursor hovers on a path.
+      {{/ember-tooltip}}
+      <input type="checkbox" 
+        checked={{this.drawOptions.showPathHover}}
+        oninput={{action (mut this.drawOptions.showPathHover) value="target.checked"}} 
+      />
+      <label>Path Hover info</label>
+    </li>
+    <li class="list-group-item">
+      {{#ember-tooltip side="bottom-start"  delay=500}}
+        Update the display of the paths connected to an axis when it is being dragged.
+        This can be disabled if the animation is slow or distracting.
+      {{/ember-tooltip}}
+      <input type="checkbox" 
+        checked={{this.drawOptions.continuousPathUpdate}}
+        oninput={{action this.continuousPathUpdateChanged value="target.checked"}}
+      />
+      <label>Path update during drag</label>
+    </li>
+        <li class="list-group-item">
       <div>
-        {{#ember-tooltip side="bottom-start"  delay=500}}
-          Adjust the left and right margins of the graph.
-        {{/ember-tooltip}}
-        <label title="Extra space outside the left and right-most axes">Outside Axis Margin</label>
-        <input type="range"
-         value={{this.extraOutsideMargin}}
-         oninput={{action (pipe
-           (action (mut this.extraOutsideMargin) value="target.value")
-           (action this.aSliderHasChanged ) )}}
-         min="0" max="500"
-        />
+        <h3>QTL Controls</h3>
       </div>
     </li>
-
-    <li class="list-group-item horiz-2">
-      <div>
-        {{#ember-tooltip side="bottom-start"  delay=500}}
-          The width of the axis lines.
-        {{/ember-tooltip}}
-        <label>Axis Width</label>
-        <input type="range"
-         value=10
-         oninput={{action this.axisWidthInput}}
-         min="0" max="100"
-        />
-      </div>
-      <div>
-        {{#ember-tooltip side="bottom-start"  delay=500}}
-          The number of ticks which are shown on each axis.
-        {{/ember-tooltip}}
-        <label># Ticks</label>
-        <span class="sub-label">{{ this.axisTicks }}</span>
-        <input type="range"
-         value=10
-         oninput={{action (mut this.axisTicks) value="target.value" }}
-         min="0" max="35"
-        />
-      </div>
-    </li>
-
     <li class="list-group-item horiz-2">
       <div>
         {{#ember-tooltip side="bottom-start"  delay=500}}
@@ -432,39 +480,6 @@
          min="-100" max="50"
         />
       </div>
-    </li>
-
-
-    <li class="list-group-item horiz-2">
-    
-      <div>
-        {{#ember-tooltip side="bottom-start"  delay=500}}
-          The size of text in the graph.
-        {{/ember-tooltip}}
-        <label>Graph Text Size</label>
-        <span class="sub-label" style="margin-left: 7px;">{{ this.titleTextSize }}</span>
-      <input type="range"
-       value=4
-       oninput={{action this.titleTextSizeInput}}
-       min="0" max="9"
-      />
-      </div>
-
-      <div>
-        {{#ember-tooltip side="bottom-start"  delay=500}}
-          The size of the axis ticks text.
-        {{/ember-tooltip}}
-        <label>Ticks Text Size</label>
-        <span class="sub-label">{{ this.axisFontSize }}</span>
-        <input type="range"
-         value=10
-         oninput={{action (pipe
-           (action (mut this.axisFontSize) value="target.value")
-           (action this.axisFontSizeChanged ) )}}
-         min="0" max="35"
-        />
-      </div>
-
     </li>
 
     <li class="list-group-item horiz-2">
