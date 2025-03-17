@@ -40,18 +40,17 @@ const fontSizes = [
 /*--------------------------------------------------------------------------*/
 
 /** On Firefox, an axis vertical bar <path> is sometimes invisible if
- * stroke-width is 1px; this may be caused by scaling caused by the
+ * stroke-width is <1px; this may be caused by scaling caused by the
  * viewbox.
- * A solution is to set stroke-width 2px, via initial --axisWidth value.
+ * Chrome displays the axis OK down to --axisWidth:​ 0.1, and it disappears at
+ * --axisWidth:​ 0.0 as expected.
+ * A solution is to have a minimum stroke-width 1px, via --axisWidth value.
  * Since this is seen on Firefox but not Chrome, and may be solved
- * later by a browser change, it is currently handled by setting
- * stroke-width 2px only if isFirefox().
- *
- * isFirefox() is from :
- * https://github.com/astronomersiva/ember-display-in-browser/blob/master/addon/utils/browser-checks.js
+ * later by a browser change, it is currently handled by limiting axisWidth
+ * only if isFirefox().
+ * Tested 2025Mar17 : --axisWidth: 0.9; is visible, and 0.8 is not visible.
  */
-// Firefox 1.0+
-export const isFirefox = () => typeof InstallTrigger !== 'undefined';
+export const isFirefox = () => navigator.userAgent.startsWith('Mozilla/');
 
 const sbSizeThresholdInitial = 20;
 const sbSizeThresholdMax = 1e9;
@@ -551,10 +550,9 @@ export default Component.extend({
     this.readParsedOptions();
     this.set('controls.view', this);
 
-    /* inherit browser default (1px) as an initial default, except for
-     * Firefox, as commented above.
+    /* inherit browser default (1px) as an initial default.
      */
-    setCssVariable ('--axisWidth', isFirefox() ? '2px' : 'inherit');
+    setCssVariable ('--axisWidth', 'inherit');
   },
 
   readParsedOptions() {
@@ -641,6 +639,10 @@ export default Component.extend({
     /** input range is [0,100];  desired output values are [0, 10].  */
     const factor = 100 / 10;
     let value = event.target.value / factor;
+    /** allow value = 0, which makes the axis disappear. */
+    if ((value != 0) && (value < 1) && isFirefox ) {
+      value = 1;
+    }
     // dLog('axisWidthInput', varName, value, event.target.value);
     setCssVariable(varName, value);
     // not used.
