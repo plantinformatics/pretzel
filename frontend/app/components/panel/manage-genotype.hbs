@@ -383,18 +383,6 @@
                   <span>Download the displayed data in a file, either .vcf or .vcf.gz</span>
                 </EmberTooltip>
 
-                {{#if this.vcfExportText.length}}
-                  <button type="button" class="btn btn-info btn-xs"
-                    onclick={{action this.vcfExportTextToFile}} >
-                    VCF Download
-                  </button>
-                {{/if}}
-
-                <input type="checkbox"
-                  style="margin-left: 3em;"
-                  checked={{@userSettings.compressVCF}}
-                  oninput={{action (mut @userSettings.compressVCF) value="target.checked"}}  >
-                <label>.vcf.gz</label>
               </div>
 
 
@@ -416,6 +404,22 @@
                 {{!-- style={{compute (action this.vcfGenotypeTextWidthStyle) --}}
                 <textarea class="vcfGenotypeText" >{{this.vcfGenotypeText}}</textarea>
               </div>
+
+              {{#if this.vcfExportText.length}}
+                <button type="button" class="btn btn-info btn-xs"
+                  onclick={{action this.vcfExportTextToFile}} >
+                  VCF Download
+                </button>
+
+                <input type="checkbox"
+                  style="margin-left: 3em;"
+                  checked={{@userSettings.compressVCF}}
+                  oninput={{action (mut @userSettings.compressVCF) value="target.checked"}}  >
+                <label>Compressed</label>
+
+              {{/if}}
+
+              <div style="margin-bottom:2em"></div>
 
             {{/tab.pane}}
           {{/let}}
