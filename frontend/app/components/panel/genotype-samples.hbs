@@ -37,6 +37,8 @@
     </div>
 
 
+    {{#if this.urlOptions.advanced}}
+
     {{#if @showIntersectionCheckbox}}
     <span>
       <input type="checkbox"
@@ -52,6 +54,8 @@
       {{/ember-tooltip}}
     </span>
     {{/if}}
+
+    {{/if}}	{{!-- this.urlOptions.advanced --}}
 
     <div>
       {{@the.filterErrorText}}
