@@ -6,7 +6,7 @@
 --}}
 {{#elem/panel-container state="primary" as |panelContainer|}}
   {{#elem/panel-heading icon="option-vertical" panelContainer=panelContainer}}
-    Axis Display Options
+    View Display Options
     <a class="panel-heading-help" target="_blank" href="https://docs.plantinformatics.io/Basic-Functions/View-tab/"><i class="glyphicon glyphicon-question-sign"></i></a>
   {{/elem/panel-heading}}
   {{#if panelContainer.showComponent}}
@@ -230,6 +230,17 @@
         />
       </div>
     </li>
+    
+    <li class="list-group-item">
+      {{#ember-tooltip side="bottom-start"  delay=500}}
+        Display the feature counts histogram as either a bar chart or line.
+        This applies to other charts / curves displayed within a split axis.
+      {{/ember-tooltip}}
+      <span class="filter-group-col">
+        {{input type="checkbox" name="modeBarLine" checked=this.chartBarLine }}
+        <label>Chart Bar / Line</label>
+      </span>
+    </li>
 
     <li class="list-group-item  horiz-2">
       <div>
@@ -273,22 +284,6 @@
       />
       <label>Show Zoom/Reset buttons</label>
     </li>
-    <li class="list-group-item">
-      <div>
-        <h3>Misc Options</h3>
-      </div>
-    </li>
-
-    <li class="list-group-item">
-      {{#ember-tooltip side="bottom-start"  delay=500}}
-        Display the feature counts histogram as either a bar chart or line.
-        This applies to other charts / curves displayed within a split axis.
-      {{/ember-tooltip}}
-      <span class="filter-group-col">
-        {{input type="checkbox" name="modeBarLine" checked=this.chartBarLine }}
-        <label>Chart Bar / Line</label>
-      </span>
-    </li>
     
     {{#if this.urlOptions.dataSources}}
     <li class="list-group-item">
@@ -306,6 +301,7 @@
       </span>
     </li>
     {{/if}}
+    {{#if this.urlOptions.advanced}}
     <li class="list-group-item">
       {{#ember-tooltip side="bottom-start"  delay=500}}
         The calculation of whether feature intervals overlap the displayed axis region can include features which overlap or contain the displayed region.
@@ -331,7 +327,7 @@
       </span>
       <label>the zoom or brush scope.</label>
     </li>
-
+    
     <li class="list-group-item">
       {{#ember-tooltip side="bottom-start"  delay=500}}
         When the feature at one end of a path is within its displayed axis region and the other end is not, the end which is in view can be shown as a tick, or the path can be shown going out of scope, or neither.
@@ -355,9 +351,9 @@
         changed=(action this.tickOrPathChanged preventDefault=false)
       }}
       nothing
-
+      
     </li>
-
+    
     <li class="list-group-item">
       <input type="checkbox" 
        checked={{this.drawOptions.showSelectedFeatures}}
@@ -368,11 +364,37 @@
         List Selected Features in the Feature table in right panel.
       {{/ember-tooltip}}
     </li>
+    {{/if}}
+
     <li class="list-group-item">
       <div>
         <h3>Path Controls</h3>
       </div>
     </li>
+    
+    <li class="list-group-item">
+      {{#ember-tooltip side="bottom-start"  delay=500}}
+        Control the drawing opacity of paths.
+      {{/ember-tooltip}}
+      <label>Path Opacity</label>
+      <input type="range" 
+       oninput={{action this.pathOpacityInput}}
+       min="0" max="100"
+       value="100"
+      />
+    </li>
+    <li class="list-group-item">
+      {{#ember-tooltip side="bottom-start"  delay=500}}
+        The width of the path lines.
+      {{/ember-tooltip}}
+      <label>Path Width</label>
+      <input type="range" 
+       oninput={{action this.pathWidthInput}}
+       min="0" max="300"
+       value="75"
+      />
+    </li>
+    {{#if this.urlOptions.advanced}}
     <li class="list-group-item horiz-2">
       <div>
       {{#ember-tooltip side="bottom-start"  delay=500}}
@@ -407,30 +429,6 @@
         />
       </div>
     </li>
-
-    <li class="list-group-item">
-      {{#ember-tooltip side="bottom-start"  delay=500}}
-        Control the drawing opacity of paths.
-      {{/ember-tooltip}}
-      <label>Path Opacity</label>
-      <input type="range" 
-       oninput={{action this.pathOpacityInput}}
-       min="0" max="100"
-       value="100"
-      />
-    </li>
-    <li class="list-group-item">
-      {{#ember-tooltip side="bottom-start"  delay=500}}
-        The width of the path lines.
-      {{/ember-tooltip}}
-      <label>Path Width</label>
-      <input type="range" 
-       oninput={{action this.pathWidthInput}}
-       min="0" max="300"
-       value="75"
-      />
-    </li>
-
     <li class="list-group-item">
       {{#ember-tooltip side="bottom-start"  delay=500}}
         Enable information about features connected / aligned by a path to be displayed when the cursor hovers on a path.
@@ -452,7 +450,8 @@
       />
       <label>Path update during drag</label>
     </li>
-        <li class="list-group-item">
+    {{/if}}
+    <li class="list-group-item">
       <div>
         <h3>QTL Controls</h3>
       </div>
