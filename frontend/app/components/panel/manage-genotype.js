@@ -2102,11 +2102,11 @@ export default class PanelManageGenotypeComponent extends Component {
         {} );
       textP.then(
         (text) => {
-          let t = text?.text || text;
+          let t = text?.text ?? text;
           /** Germinate result may be received by frontend or server. */
           const isGerminate = resultIsGerminate(t);
           /** trace 5 samples or 60 chars of text */
-          dLog(fnName, t?.length || Object.keys(text), t?.slice(0, isGerminate ? 5 : 60));
+          dLog(fnName, t?.length ?? Object.keys(text), t?.slice(0, isGerminate ? 5 : 60));
           if (vcfDataset.hasTag('BrAPI')) {
             vcfDataset.samples = t;
             t = t.mapBy('sampleName');
@@ -2122,7 +2122,7 @@ export default class PanelManageGenotypeComponent extends Component {
             sampleNamesText = t;
             /** trim off trailing newline; other non-sample column info could be
              * removed; it is not a concern for the mapping. */
-            sampleNames = t.trim().split('\n');
+            sampleNames = (t === '') ? [] : t.trim().split('\n');
           }
 
           if ((sampleNames?.length > 1e4) &&

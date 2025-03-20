@@ -13,7 +13,7 @@
       style="margin-left: 3em;"
       checked={{@userSettings.filterSamplesByHaplotype}}
       oninput={{pipe (action (mut @userSettings.filterSamplesByHaplotype) value="target.checked")
-        this.ensureSamples }}  >
+        @the.ensureSamples }}  >
     <label>Filtered by SNPs</label>
     {{#ember-tooltip side="left" delay=500}}
       Show samples selected by SNP filters
