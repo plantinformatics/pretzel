@@ -2055,6 +2055,15 @@ div#left-panel-feature-search > div > div > div > ul > li > div > button
 {
     float : left;
 }
+/* Enable scroll-down to reach the bottom of the view-controls panel. */
+#left-panel-view > .panel-section > .ember-view > .panel {
+  padding-bottom: 30px;
+}
+/* prevent {{input .axisLayerModulusText}} from going beyond right margin.
+* there are 2 {{input}}s in view-controls */
+#left-panel-view .view-controls .ember-text-field {
+  max-width : 100%;
+}
 /*------------------------------------*/
 /* view-controls : text sub-label (div or span)  */
 div.genotype ul.view-controls > li > input,
