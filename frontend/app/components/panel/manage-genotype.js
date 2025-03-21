@@ -2091,7 +2091,15 @@ export default class PanelManageGenotypeComponent extends Component {
      */
     filterByHaplotype = ! this.args.userSettings.filterSamplesByHaplotype ? undefined :
       {features : this.selectedSNPsInBrushedDomain(vcfBlock)
-       .map(f => ({position : f.value_0,  matchRef : f[Symbol.for('matchRef')]}))};
+       .map(f => ({position : f.value_0,  matchRef : f[Symbol.for('matchRef')]}))},
+    filterDescription = filterByHaplotype ? filterByHaplotype.features.map(
+      h => '' + h.position + ':' + (h.matchRef ? 'Ref' : 'Alt')).join(' ') : '',
+    requestDescription = "Fetching accessions for " + vcfBlock.brushName + ' ' + filterDescription;
+    /** There may be multiple concurrent samples requests, so this could be an
+     * array, but the requirement is simply to show to the user when there is a
+     * samples request in process, as the request may take seconds.
+     */
+    later(() => Ember_set(this, 'samplesRequestDescription', requestDescription));
 
     let textP;
     if (scope && vcfDatasetIdAPI)   {
@@ -2102,6 +2110,7 @@ export default class PanelManageGenotypeComponent extends Component {
         {} );
       textP.then(
         (text) => {
+          later(() => Ember_set(this, 'samplesRequestDescription', ''));
           let t = text?.text ?? text;
           /** Germinate result may be received by frontend or server. */
           const isGerminate = resultIsGerminate(t);
