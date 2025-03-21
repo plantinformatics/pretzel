@@ -1682,6 +1682,16 @@ div#goto-feature > div
 
 /* -------------------------------------------------------------------------- */
 
+/* For use for <button> <i class="glyphicon glyphicon-copy">
+ * in genotype-samples.hbs copyFilteredSamplesToClipboard, use a longer selector path
+ * for greater specificity, to override .btn padding.
+ */
+.padding-thin,
+div > button.ember-tooltip-target.padding-thin
+{
+  padding: 1px 3px 1px 1px;
+}
+
 .margin-1em
 {
   margin : 1em;

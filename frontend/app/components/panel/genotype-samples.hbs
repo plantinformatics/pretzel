@@ -8,19 +8,29 @@
     <button type="button" onclick={{this.vcfGenotypeSamples}} class="btn btn-info btn-xs">Get samples list</button>
   {{/if}}
 
+  {{#if @the.vcfGenotypeSamplesCount}}
+    <button type="button" class="btn btn-info btn-xs padding-thin" style="margin-left:0.8em" {{on 'click' (action this.copyFilteredSamplesToClipboard) }}>
+      <i class="glyphicon glyphicon-copy"></i>
+      {{#ember-tooltip side="left" delay=500}}
+        Copy filtered samples to clipboard
+      {{/ember-tooltip}}
+    </button>
+  {{/if}}
+
   <span>
     <input type="checkbox"
       style="margin-left: 3em;"
       checked={{@userSettings.filterSamplesByHaplotype}}
       oninput={{pipe (action (mut @userSettings.filterSamplesByHaplotype) value="target.checked")
         @the.ensureSamples }}  >
-    <label>Filtered by SNPs</label>
-    {{#ember-tooltip side="left" delay=500}}
+    <label>Filter by defined Haplotype</label>
+    {{#ember-tooltip side="left" delay=1500}}
       Show samples selected by SNP filters
     {{/ember-tooltip}}
   </span>
 
   <div style="min-height:1ex">{{@the.samplesRequestDescription}}</div>
+
 
   <div class="genotypeSampleFilter_textInput">
     <div>
