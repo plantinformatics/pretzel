@@ -27,10 +27,11 @@ function drawGeneticMap(svg, markerData, qtlData, chromosomeName) {
     svg = svg
         .append("g");
 
-    // Scale for marker positions
-    const yScale = d3.scaleLinear()
-        .domain(d3.extent(markerData, d => d.position))
-        .range([0, height]);
+    // Scale for even spacing of markers along the axis
+    const yScale = d3.scalePoint()
+        .domain(markerData.map(d => d.name))
+        .range([0, height])
+        .padding(0.5);
 
     // Draw chromosome axis
     svg.append("line")
@@ -41,21 +42,44 @@ function drawGeneticMap(svg, markerData, qtlData, chromosomeName) {
         .attr("stroke", "black")
         .attr("stroke-width", 3);
 
-    // Draw markers
-    svg.selectAll(".marker")
+    // Draw marker position text on the left-hand side
+    svg.selectAll(".marker-position")
         .data(markerData)
-        .enter().append("circle")
-        .attr("cx", width / 2)
-        .attr("cy", d => yScale(d.position))
-        .attr("r", 4)
-        .attr("fill", "black");
+        .enter().append("text")
+        .attr("x", width / 2 - 30)
+        .attr("y", d => yScale(d.name) + 5)
+        .text(d => d.position)
+        .attr("font-size", "12px")
+        .attr("text-anchor", "end");
+
+    // Draw marker connectors (LHS)
+    svg.selectAll(".marker-line-left")
+        .data(markerData)
+        .enter().append("line")
+        .attr("x1", width / 2 - 25)
+        .attr("x2", width / 2 - 5)
+        .attr("y1", d => yScale(d.name))
+        .attr("y2", d => yScale(d.name))
+        .attr("stroke", "black")
+        .attr("stroke-width", 1);
+
+    // Draw marker connectors (RHS)
+    svg.selectAll(".marker-line-right")
+        .data(markerData)
+        .enter().append("line")
+        .attr("x1", width / 2 + 5)
+        .attr("x2", width / 2 + 25)
+        .attr("y1", d => yScale(d.name))
+        .attr("y2", d => yScale(d.name))
+        .attr("stroke", "black")
+        .attr("stroke-width", 1);
 
     // Draw marker labels
     svg.selectAll(".marker-label")
         .data(markerData)
         .enter().append("text")
-        .attr("x", width / 2 + 10)
-        .attr("y", d => yScale(d.position) + 5)
+        .attr("x", width / 2 + 30)
+        .attr("y", d => yScale(d.name) + 5)
         .text(d => d.name)
         .attr("font-size", "12px");
 
@@ -64,23 +88,23 @@ function drawGeneticMap(svg, markerData, qtlData, chromosomeName) {
         .data(qtlData)
         .enter().append("rect")
         .attr("x", width / 2 - 10)
-        .attr("y", d => yScale(d.startPosition))
+        .attr("y", d => yScale(d.startMarker))
         .attr("width", 20)
-        .attr("height", d => yScale(d.endPosition) - yScale(d.startPosition))
+        .attr("height", d => yScale(d.endMarker) - yScale(d.startMarker))
         .attr("fill", d => d.color === "Red" ? "#e1321f" : "#2f2c57")
         .attr("opacity", 0.6);
 
-    // QTL Labels
+    // QTL Labels with improved transform
     svg.selectAll(".qtl-label")
         .data(qtlData)
         .enter().append("text")
-        .attr("x", width / 2 + 50)
-        .attr("y", d => (yScale(d.startPosition) + yScale(d.endPosition)) / 2)
+        .attr("x", 0)
+        .attr("y", 0)
+        .attr("transform", d => `rotate(-90) translate(-${(yScale(d.startMarker) + yScale(d.endMarker)) / 2}, ${width / 2 + 50})`)
         .text(d => d.name)
         .attr("fill", d => d.color === "Red" ? "#e1321f" : "#2f2c57")
         .attr("font-size", "14px")
         .attr("font-weight", "bold")
-        .attr("transform", "rotate(-90)")
         .attr("text-anchor", "middle");
 
     // Chromosome name
