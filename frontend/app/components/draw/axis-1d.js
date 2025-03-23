@@ -1267,10 +1267,11 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     block = viewedBlocks[0];
     if (block.features.length && (block.datasetId.id === 'Jun_Wei_022-03677')) {
       const
-      markerData = block.features.map(f => ({name : f.name, position : f.value_0 ?? f.value[0]})),
+      markerData = block.features.map(f => ({name : f.name, position : f.value_0 ?? f.value[0]}))
+        .sortBy('position'),
     qtlData = [
-      {name : 'QKL.cas-2D.1', color : "Red", startPosition : markerData[7].position, endPosition : markerData[8].position},
-      {name : 'QMGR.cas-2DS.2', color : "Blue", startPosition : markerData[10].position, endPosition : markerData[11].position}],
+      {name : 'QKL.cas-2D.1', color : "Red", layer : 1, startPosition : markerData[7].position, endPosition : markerData[8].position},
+      {name : 'QMGR.cas-2DS.2', color : "Blue", layer : 2, startPosition : markerData[10].position, endPosition : markerData[11].position}],
     chromosomeName = block.name;
 
     drawGeneticMap(svg, markerData, qtlData, chromosomeName);
