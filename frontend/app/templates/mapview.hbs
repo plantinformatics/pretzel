@@ -129,7 +129,11 @@
            side="right"
            key="genotype"
            state=this.layout.right.tab onClick=(action "setTab") }}
-          {{elem/icon-base name="barcode"}}&nbsp; Genotypes <span class="badge">{{this.summaryData.manageGenotype.rowCount}}</span>
+          {{!-- Instead of displaying the table row count, this now displays a SNP count  --}}
+          {{elem/icon-base name="barcode"}}&nbsp; Genotypes 
+          {{#if this.genotypeFeatureCount}}
+            <span class="badge">{{this.genotypeFeatureCount}}</span>
+          {{/if}}
 
           {{#if this.enableGenotypeControlsDialog}}
             <span style="margin:1em; width: 20%;">

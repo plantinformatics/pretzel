@@ -449,6 +449,9 @@ export default class PanelManageGenotypeComponent extends Component {
       window.PretzelFrontend.manageGenotype = this;
     }
     this.registerByName(this);
+    // used for display of brushedVCFFeaturesCount in nav tab
+    Ember_set(this, 'args.summaryData.proxy', this);
+
 
     this.namesFilters = new NamesFilters();
     Object.entries(this.sampleFilterTypes).forEach(
@@ -599,6 +602,7 @@ export default class PanelManageGenotypeComponent extends Component {
      * .rowCount can't be ascertained then, so display ''.
      */
     Ember_set(this, 'args.summaryData.rowCount', '');
+    Ember_set(this, 'args.summaryData.proxy', null);
   }
 
 
@@ -1171,7 +1175,7 @@ export default class PanelManageGenotypeComponent extends Component {
    */
   requestFormatChanged(value) {
     dLog('requestFormatChanged', value);
-    this.args.userSettings.requestFormat = value;
+    Ember_set(this, 'args.userSettings.requestFormat', value);
   }
 
   //----------------------------------------------------------------------------
@@ -1729,6 +1733,29 @@ export default class PanelManageGenotypeComponent extends Component {
     dLog(fnName, axisBrushes, blocks, this.blockService.viewed.length, this.blockService.params.mapsToView);
     return blocks;
   }
+  /** @return number of loaded features in brushes of viewed VCF blocks.
+   * @desc
+   * This is displayed by mapview in Genotypes nav tab badge.
+   */
+  @computed(
+    'brushedVCFBlocks', 'auth.apiStats.vcfGenotypeLookup',
+    /* This dependency watches only 5 brushes; if more are required an
+     * alternative is a count of vcfGenotypeLookup results received */
+    'brushedVCFBlocks.{0,1,2,3,4}.block.features.length')
+  get brushedVCFFeaturesCount() {
+    const
+    count = this.brushedVCFBlocks.mapBy('block.featuresInBrushOrZoom')
+      .mapBy('length')
+      .reduce((sum, length) => sum += length, 0);
+
+    /* If this Computed Property was constantly exposed / evaluated, it could be
+     * used to set args.summaryData.rowCount, instead of being accessed via
+     * summaryData.proxy, e.g. via
+    later(() => Ember_set(this, 'args.summaryData.rowCount', count));
+    */
+    return count;
+  }
+
   /** Set .axisBrushBlockIndex from userSettings.lookupBlock, with the
    * constraint that it is within the blocks in the dataset selector in the
    * samples dialog.
@@ -3483,7 +3510,11 @@ export default class PanelManageGenotypeComponent extends Component {
               currentFeaturesValuesFields,
               columnNames,
             });
-            later(() => Ember_set(this, 'args.summaryData.rowCount', displayDataRows.length));
+            /* The count of all SNPs in brushed datasets will be displayed in
+             * the nav tab badge, instead of the row count, which is what this
+             * provides :
+             later(() => Ember_set(this, 'args.summaryData.rowCount', displayDataRows.length));
+            */
 
           } else {
             let sampleNames;
@@ -3518,7 +3549,9 @@ export default class PanelManageGenotypeComponent extends Component {
               datasetColumns : null,
               extraDatasetColumns : null,
             });
-            later(() => Ember_set(this, 'args.summaryData.rowCount', displayData.length));
+            /* See earlier comment re. summaryData.rowCount
+             * later(() => Ember_set(this, 'args.summaryData.rowCount', displayData.length));
+             */
           }
         } else {  // ! featuresArrays.length
           setProperties(this, {
