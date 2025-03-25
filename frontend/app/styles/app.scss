@@ -2205,6 +2205,11 @@ body > div.ember-popover {
   flex-direction : column;
   justify-content : flex-start;
 }
+/* actions panel above genotype table; flex places it at left. */
+.right-panel-genotype
+{
+  display : block;
+}
 #right-panel-content:not(.right-panel-genotype)
 {
   flex-grow : 1;
@@ -2216,6 +2221,16 @@ body > div.ember-popover {
   flex-basis : calc(100% - 220px);
   max-height : calc(100% - 220px);
 }
+
+.right-panel-genotype > div.panel-primary > div.panel-body
+{
+  display : flex;
+}
+.right-panel-genotype > div.panel-primary > div.panel-body > div
+{
+  flex-grow : 1;
+}
+
 
 body.tablesPanelRight .dataset-description > h4 {
   max-width : 300px;

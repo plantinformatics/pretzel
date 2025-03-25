@@ -1,7 +1,11 @@
+{{!-- --------------------------------------------------------------------- --}}
+
 {{this.selectedSampleEffect}}
 {{this.sampleFiltersCopyEffect}}
 {{!-- this.gtBlockViewEffect --}}
 {{will-destroy this.onWillDestroy}}
+
+{{!-- --------------------------------------------------------------------- --}}
 
 {{#if this.showInputDialog}}
 
@@ -938,7 +942,7 @@ While scrolling through the Genotype Table this updates to show where the curren
 
 
   {{/ember-modal-dialog}}
-{{/if}}
+{{/if}} {{!-- if this.showInputDialog --}}
 
 {{!-- --------------------------------------------------------------------- --}}
 
@@ -971,7 +975,7 @@ While scrolling through the Genotype Table this updates to show where the curren
   </div>
 
   {{/ember-modal-dialog}}
-{{/if}}
+{{/if}} {{!-- if this.featureColumnDialogDataset --}}
 
 {{!-- --------------------------------------------------------------------- --}}
 
@@ -995,19 +999,19 @@ While scrolling through the Genotype Table this updates to show where the curren
     />
 
   {{/ember-modal-dialog}}
-{{/if}}
+{{/if}} {{!-- if this.intersectionDialogDataset --}}
 
 {{!-- --------------------------------------------------------------------- --}}
 
-{{#if this.tableApi.topLeftDialog}}
-  {{log 'topLeftDialog' this.tableApi.topLeftDialog}}
-  {{!-- #ember-wormhole destinationElement=this.tableApi.topLeftDialog --}}
+{{!-- --------------------------------------------------------------------- --}}
 
-  {{#ember-tether
-    tetherTarget=this.tableApi.topLeftDialog
-  }}
+{{#elem/panel-container state="primary" as |panelContainer|}}
+  {{#elem/panel-heading icon="filter" panelContainer=panelContainer}}
+    Actions
+  {{/elem/panel-heading}}
+  {{#if panelContainer.showComponent}}
 
-    <div id="topLeftDialog">
+  <div class="panel-body">
 
       {{!-- these are copied from main dialog --}}
       {{#if this.urlOptions.advanced}}
@@ -1031,6 +1035,15 @@ While scrolling through the Genotype Table this updates to show where the curren
           class="btn btn-info">VCF Lookup</button>
       </div>
       {{/if}}	{{!-- this.dataRowsLength --}}
+
+
+      {{#if this.vcfExportText.length}}
+        <button type="button" class="btn btn-info btn-xs"
+          onclick={{action this.vcfExportTextToFile}} >
+          VCF Download
+        </button>
+      {{/if}}
+
 
       {{#if this.urlOptions.advanced}}
       <div>
@@ -1063,12 +1076,11 @@ While scrolling through the Genotype Table this updates to show where the curren
       {{!---------------------------------------------------------------------}}
       
 
-    </div>      <!-- topLeftDialog -->
+  </div>
 
-  {{/ember-tether}}
+  {{/if}} {{!-- showComponent --}}
+{{/elem/panel-container}}
 
-  {{!-- /ember-wormhole --}}
-{{/if}}
 
 {{!-- --------------------------------------------------------------------- --}}
 
