@@ -17,9 +17,8 @@
     </button>
   {{/if}}
 
-  <span>
+  <div>
     <input type="checkbox"
-      style="margin-left: 3em;"
       checked={{@userSettings.filterSamplesByHaplotype}}
       oninput={{pipe (action (mut @userSettings.filterSamplesByHaplotype) value="target.checked")
         @the.ensureSamples }}  >
@@ -27,7 +26,7 @@
     {{#ember-tooltip side="left" delay=1500}}
       Show samples selected by SNP filters
     {{/ember-tooltip}}
-  </span>
+  </div>
 
   <div style="min-height:1ex">{{@the.samplesRequestDescription}}</div>
 
@@ -36,7 +35,7 @@
     <div>
     <label class="" style="margin-right: 1em;">
       <i class="glyphicon glyphicon-filter"></i>
-      Search / Filter
+      Filter by Name
     </label>
     <input id="sampleNameFilter" type="search" value={{@the.sampleNameFilter}}
       oninput={{this.nameFilterChanged}}

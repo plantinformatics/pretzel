@@ -2524,6 +2524,8 @@ div.genotype label
 .sample-count
 {
   margin-left : 1em;
+  min-width : 7em;
+  display : inline-block;
 }
 .genotype-controls {
   display: flex;
