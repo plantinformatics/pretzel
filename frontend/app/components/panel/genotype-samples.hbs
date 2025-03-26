@@ -39,6 +39,7 @@
     </label>
     <input id="sampleNameFilter" type="search" value={{@the.sampleNameFilter}}
       oninput={{this.nameFilterChanged}}
+      style="min-width: 16em;"
       placeholder="Filter available samples by name" />
       {{!-- maybe autocomplete="sample-name", but samples names are mostly numeric so it may be more of an impediment than a benefit for the user --}}
 

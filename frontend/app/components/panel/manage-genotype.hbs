@@ -1062,10 +1062,17 @@ While scrolling through the Genotype Table this updates to show where the curren
 
       {{!---------------------------------------------------------------------}}
 
+  </div>
+
+  {{/if}} {{!-- showComponent --}}
+{{/elem/panel-container}}
+
+
+{{!-- --------------------------------------------------------------------- --}}
+
+
       <div class="gtMiddle">
         {{#unless this.dataRowsLength}}
-          <!-- vertical space to place following content below the table dummy header -->
-          <div style="height: 40vh;"></div>
           <Form::BrushedBlockInfo />
           <div style="height: 8ex;"></div>
           <label>Select a smaller region or zoom in closer to summarise.</label>
@@ -1073,13 +1080,9 @@ While scrolling through the Genotype Table this updates to show where the curren
 
       </div>
 
-      {{!---------------------------------------------------------------------}}
-      
 
-  </div>
+{{!-- --------------------------------------------------------------------- --}}
 
-  {{/if}} {{!-- showComponent --}}
-{{/elem/panel-container}}
 
 
 {{!-- --------------------------------------------------------------------- --}}
