@@ -1070,12 +1070,19 @@ While scrolling through the Genotype Table this updates to show where the curren
 
 {{!-- --------------------------------------------------------------------- --}}
 
-
       <div class="gtMiddle">
         {{#unless this.dataRowsLength}}
-          <Form::BrushedBlockInfo />
-          <div style="height: 8ex;"></div>
-          <label>Select a smaller region or zoom in closer to summarise.</label>
+          {{#if this.urlOptions.advanced}}
+            <Form::BrushedBlockInfo />
+            <div style="height: 8ex;"></div>
+          {{/if}}	{{!-- this.urlOptions.advanced --}}
+          {{#if this.brushedVCFBlocks.length}}
+            <label>Select a smaller region or zoom in closer to summarise.</label>
+          {{else if this.viewedVCFBlocks.length}}
+            <label>Select a region of the axis to show SNPs in the Genotype Table.</label>
+          {{else}}
+            <label>Load a genotype dataset to visualise it in this tab.</label>
+          {{/if}}
         {{/unless}}
 
       </div>
