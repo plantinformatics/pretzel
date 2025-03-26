@@ -451,7 +451,7 @@ export default Component.extend({
     matrixViewHeight = matrixViewElt.clientHeight,
     rightPanel = $('#right-panel-content.right-panel-genotype')[0],
     // this.colHeaderHeight + 80
-    height = '' + (rightPanel.clientHeight - 45) + 'px';
+    height = '' + (rightPanel.clientHeight - 150) + 'px';
     if (matrixViewHeight !== rightPanel.clientHeight) {
       dLog(fnName, matrixViewHeight, '!==', rightPanel.clientHeight, matrixViewElt, rightPanel);
     }
