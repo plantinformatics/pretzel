@@ -554,7 +554,7 @@ export default Component.extend({
     if (this.urlOptions.gtSelectColumn) {
       settings.afterSelection = bind(this, this.afterSelection);
     } else {
-      settings.afterSelection = bind(this, this.afterSelectionHaplotype);
+      // settings.afterSelection = bind(this, this.afterSelectionHaplotype);
     }
     let table = new Handsontable(tableDiv, settings);
 
@@ -914,17 +914,25 @@ export default Component.extend({
    * for Ref / Alt columns it toggles the feature sample filter : featureToggleRC().
    * for 'LD Block' column it toggles the LD Block filter : haplotypeToggleRC().
    * For non-VCF column header (.datasetColumns), it shows a dialog to select additional feature fields
+   *
+   * This was afterSelectionHaplotype(); renamed to handleCellClick() and called
+   * from afterOnCellMouseDown() because afterSelectionHaplotype() may be called
+   * twice for one click, which is not suitable for toggle functions, as many of
+   * the functions called here are.  afterOnCellMouseDown() is called once per
+   * click.
    */
-  afterSelectionHaplotype(row, col) {
+  handleCellClick(row, col) {
     const
-    fnName = 'afterSelectionHaplotype',
+    fnName = 'handleCellClick',
     columnName = this.columnNames[col];
+    let handled = true;
     let value, feature, features, tags;
     /** .sampleFilterTypeName is set via tab change in Controls tab. */
     const sampleFilterTypeName = this.userSettings.sampleFilterTypeName;
     dLog(fnName, row, col);
     if (col === -1) {
       /** Ctrl-A Select-All causes row===-1 and col===-1 */
+      handled = false;
     } else if (
       (row >= 0) &&
         (! sampleFilterTypeNameModal || (sampleFilterTypeName === 'feature')) && 
@@ -998,6 +1006,7 @@ export default Component.extend({
       }
       later(() => this.table.deselectCell());
     }
+    return handled;
   },
 
   /**
@@ -1052,6 +1061,7 @@ export default Component.extend({
       if ((coords.col == -1) || (coords.col < this.colSample0)) {
         // no column or column does not identify a block
       }
+    } else if (this.handleCellClick(coords.row, coords.col)) {
     } else if (! this.urlOptions.advanced) {
       dLog(fnName, coords, this.colSample0, this.blockSamples);
     } else if ((coords.row >= 0) && this.blockSamples) {
@@ -1624,7 +1634,7 @@ export default Component.extend({
         options.className = this.columnNameToClasses(name);
 
         if (name.startsWith('LD Block')) {
-          options.afterSelection = bind(this, this.afterSelectionHaplotype);
+          // options.afterSelection = bind(this, this.afterSelectionHaplotype);
         }
         return options;
       });

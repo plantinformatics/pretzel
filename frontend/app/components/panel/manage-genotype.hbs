@@ -583,7 +583,7 @@
                             <ul class="list-group borderless featureFilters">
                               {{#each this.blocksFeatureFilters as |blockFF|}}
                                 <li class="list-group-item">
-                                  <div>{{blockFF.block.datasetId.id}}</div>
+                                  <div>{{blockFF.block.datasetId.id}} : {{blockFF.block.name}}</div>
                                   <ul class="list-group">
                                     {{#each blockFF.sampleFilters.feature as |feature|}}
                                       <li class="list-group-item">
@@ -1097,6 +1097,18 @@ While scrolling through the Genotype Table this updates to show where the curren
 
 {{!-- --------------------------------------------------------------------- --}}
 
+
+<div class="brushedVCFBlocks devel-visible">
+  {{#each this.brushedVCFBlocks as |aBlock|}}
+  <div>
+    <span>{{call (fn this.blockSetup aBlock.block) }}</span>
+    <span>{{aBlock.block.brushName}}</span>
+    <span>{{aBlock.block.genotypeSamplesFilteredByHaplotypes.length}} : {{aBlock.block.genotypeSamplesFilteredByHaplotypes}}</span>
+  </div>
+  {{/each}}
+  vcfGenotypeSamplesCount={{this.vcfGenotypeSamplesCount}},
+  filteredByGenotypeCount={{this.sampleCache.filteredByGenotypeCount}}
+</div>
 
 
 {{!-- --------------------------------------------------------------------- --}}

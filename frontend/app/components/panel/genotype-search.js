@@ -175,6 +175,7 @@ export default class PanelGenotypeSearchComponent extends Component {
    * selectedSNPsInBrushedDomain() are included in the samples search request.
    * Related : .snpsInBrushedDomain, which is updated when
    * .featureFiltersCount changes.
+   * Possibly depend on receivedNamesCount instead of featureFiltersCount.
    */
   @computed('selectedDatasetId', 'manageGenotype.featureFiltersCount')
   get ensureSamplesForSelectedDatasetEffect() {
@@ -186,10 +187,14 @@ export default class PanelGenotypeSearchComponent extends Component {
     const
     manageGenotype = this.manageGenotype,
     filterSamplesByHaplotype = this.args.userSettings.filterSamplesByHaplotype;
-    // may move this case to manage-genotype.js, and have a parallel Effect there.
+    /* The case handling the filterSamplesByHaplotype is moved to
+     * manage-genotype.js, and have a parallel Effect there, per brushed block.
+     * specifically : brushedVCFBlocks evaluates
+     * block.genotypeSamplesFilteredByHaplotypes() ->
+     * vcfGenotypeSamplesDataset().
+     */
     if (filterSamplesByHaplotype) {
-      datasetId = this.manageGenotype.lookupDatasetId;
-      vcfBlock = manageGenotype.lookupBlock;
+      return;
     } else if (this.selectedDatasetId) {
       datasetId = this.selectedDatasetId;
       /** A block of .selectedDataset, choosing either the first viewed block or
@@ -200,10 +205,10 @@ export default class PanelGenotypeSearchComponent extends Component {
      * filtering haplotypes (i.e. SNPs + genotype values) :
      * selectedSNPsInBrushedDomain().
      * Depending on performance, we might extend
-     * sampleCache.sampleNames[datasetId] with [filterByHaplotype] where
+     * sampleCache.sampleNames[datasetId] with [block.scope][filterByHaplotype] where
      * filterByHaplotype is as defined in vcfGenotypeSamplesDataset().
     */
-    const sampleNames = ! filterSamplesByHaplotype &&
+    const sampleNames =
           this.manageGenotype.sampleCache.sampleNames[datasetId];
     if (! sampleNames && datasetId) {
       dLog(fnName, vcfBlock.brushName);
