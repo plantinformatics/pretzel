@@ -406,19 +406,25 @@
                 <textarea class="vcfGenotypeText" >{{this.vcfGenotypeText}}</textarea>
               </div>
 
-              {{#if this.vcfExportText.length}}
+              <div>
+                <EmberTooltip side="right" delay=500>
+                  <span>Download the last received VCF genotype results as a VCF file</span>
+                </EmberTooltip>
                 <button type="button" class="btn btn-info btn-xs"
-                  onclick={{action this.vcfExportTextToFile}} >
+                  onclick={{action this.vcfExportTextToFile}}
+                  disabled={{not this.vcfExportText.length}} >
                   VCF Download
                 </button>
 
+                {{#if this.vcfExportText.length}}
                 <input type="checkbox"
                   style="margin-left: 3em;"
                   checked={{@userSettings.compressVCF}}
                   oninput={{action (mut @userSettings.compressVCF) value="target.checked"}}  >
                 <label>Compressed</label>
+                {{/if}}
+              </div>
 
-              {{/if}}
 
               <div style="margin-bottom:2em"></div>
 
@@ -1021,7 +1027,6 @@ While scrolling through the Genotype Table this updates to show where the curren
       </div>
       {{/if}}	{{!-- this.urlOptions.advanced --}}
 
-      {{#if this.dataRowsLength}}
       <div>
         <EmberTooltip side="right" delay=500>
           <span>Request the Genotypes as configured by Selected Samples and the brushed axis region</span>
@@ -1034,15 +1039,17 @@ While scrolling through the Genotype Table this updates to show where the curren
           }}
           class="btn btn-info">VCF Lookup</button>
       </div>
-      {{/if}}	{{!-- this.dataRowsLength --}}
 
-
-      {{#if this.vcfExportText.length}}
+      <div>
+        <EmberTooltip side="right" delay=500>
+          <span>Download the last received VCF genotype results as a VCF file</span>
+        </EmberTooltip>
         <button type="button" class="btn btn-info btn-xs"
-          onclick={{action this.vcfExportTextToFile}} >
+          onclick={{action this.vcfExportTextToFile}}
+          disabled={{not this.vcfExportText.length}} >
           VCF Download
         </button>
-      {{/if}}
+      </div>
 
 
       {{#if this.urlOptions.advanced}}
