@@ -1051,6 +1051,24 @@ While scrolling through the Genotype Table this updates to show where the curren
         </button>
       </div>
 
+      {{#if this.args.userSettings.filterSamplesByHaplotype}}
+        <div>
+          <EmberTooltip side="bottom" delay=500
+            @tooltipClass="min-width-wide"
+            @innerClass="min-width-wide__inner" >
+            <label>Count of intersection of Samples of chromosomes filtered by defined Haplotype</label>
+            <div>
+              {{#each this.brushedVCFBlocks as |aBlock|}}
+              <div>
+                <span>{{aBlock.block.brushName}}</span>
+                <span>&nbsp;: {{aBlock.block.genotypeSamplesFilteredByHaplotypes.length}}</span>
+              </div>
+              {{/each}}
+            </div>
+          </EmberTooltip>
+          {{this.vcfGenotypeSamplesCount}}
+        </div>
+      {{/if}}
 
       {{#if this.urlOptions.advanced}}
       <div>

@@ -2600,7 +2600,12 @@ div.genotype .ember-tooltip
   max-width: 30em;
 }
 
-
+//  .ember-tooltip-inner
+.min-width-wide,
+.min-width-wide__inner
+{
+  min-width : 50em;
+}
 
 /* -------------------------------------------------------------------------- */
 
