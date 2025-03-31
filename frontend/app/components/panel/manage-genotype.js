@@ -2197,7 +2197,7 @@ export default class PanelManageGenotypeComponent extends Component {
     filterByHaplotype = ! this.args.userSettings.filterSamplesByHaplotype ? undefined :
       this.selectedSNPsInBrushedDomain(vcfBlock);
     dLog(fnName, vcfBlock.name, filterByHaplotype, 'FilteredSamples');
-    if (filterByHaplotype?.length) {
+    if (filterByHaplotype?.length && ! this.blockFilteredSamplesGet(vcfBlock)) {
       this.vcfGenotypeSamplesDataset(vcfBlock);
     } else if (this.args.userSettings.filterSamplesByHaplotype) {
       // trigger update of samples(); the unfiltered samples are already in cache
