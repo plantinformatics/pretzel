@@ -1051,7 +1051,7 @@ While scrolling through the Genotype Table this updates to show where the curren
         </button>
       </div>
 
-      {{#if this.args.userSettings.filterSamplesByHaplotype}}
+      {{#if (and this.urlOptions.advanced this.args.userSettings.filterSamplesByHaplotype )}}
         <div>
           <EmberTooltip side="bottom" delay=500
             @tooltipClass="min-width-wide"
