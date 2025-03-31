@@ -20,6 +20,9 @@ then
 fi
 source ~/scripts/image_build.bash
 
+# HEAD_unchanged should be defined by pb_build_feature, but an error from cron suggests it was not : line 39: [: : integer expression expected
+HEAD_unchanged=1
+
 # pb_build does : > $L
 pb_build_feature
 date

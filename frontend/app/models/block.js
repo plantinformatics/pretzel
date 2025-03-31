@@ -67,7 +67,16 @@ function numberOk(x) {
 
 const trace = 1;
 
+/**
+  @class models/block.js
+  @extends Model
+  @public
+*/
 export default Model.extend({
+  /**
+   * @property {Service} pathsP
+   * @description Service for progressive path data
+   */
   pathsP : service('data/paths-progressive'), // for getBlockFeaturesInterval()
   blockService : service('data/block'),
   trait : service('data/trait'),
@@ -149,6 +158,10 @@ export default Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /**
+   * Initializes the block model.
+   * @method init
+   */
   init() {
     this._super(...arguments);
 
@@ -506,6 +519,10 @@ export default Model.extend({
   /** get featureLimits if not already received.  After upload the block won't have
    * .featureLimits until requested
    */
+  /**
+   * Ensures feature limits are set for the block.
+   * @method ensureFeatureLimits
+   */
   ensureFeatureLimits() {
     if (this.hasTag('Germinate')) {
       /* limits of linkageGroup are not available, except via callsets calls -
@@ -561,6 +578,11 @@ export default Model.extend({
     return blockLimits;
   }).drop(),
 
+  /**
+   * Retrieves the limits for the block.
+   * @method getLimits
+   * @return {Promise} Promise resolving to block limits
+   */
   getLimits: function () {
     let blockId = this.get('id');
     dLog("block getLimits", blockId);
@@ -580,6 +602,10 @@ export default Model.extend({
 
   /** generate a text name for the block, to be displayed - it should be
    * user-readable and uniquely identify the block.
+   */
+  /**
+   * Computes the dataset name and scope.
+   * @property {String} datasetNameAndScope
    */
   datasetNameAndScope : computed('datasetId.id', 'scope', function () {
     /** This is currently the name format which is used in
@@ -1104,6 +1130,10 @@ export default Model.extend({
    *  featuresCountIncluding{Brush,Zoom}
    *  featuresCounts{InBrush,InZoom,OverlappingInterval,ResultsSearch,ResultsMergeOrAppend} .
    * featuresCountsResultsMergeOrAppend() writes to the source value : .featuresCountsResults
+   */
+  /**
+   * Filters the features counts results based on genotype SNP filters.
+   * @property {Array} featuresCountsResultsFiltered
    */
   featuresCountsResultsFiltered : computed('featuresCountsResults.[]', 'controls.genotypeSNPFilters', function () {
     const fnName = 'featuresCountsResultsFiltered';
@@ -2100,6 +2130,11 @@ export default Model.extend({
    * either merging it with an existing result which overlaps the
    * domain and has the same binSize, or otherwise append.
    * @param fcResult
+   */
+  /**
+   * Merges or appends the features counts result to the existing results.
+   * @method featuresCountsResultsMergeOrAppend
+   * @param {Object} fcResult - The features counts result to merge or append
    */
   featuresCountsResultsMergeOrAppend(fcResult) {
     featuresCountsResultsTidy(fcResult);

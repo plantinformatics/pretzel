@@ -74,8 +74,12 @@ function filterMap(map, mapFilterFn) {
 /*----------------------------------------------------------------------------*/
 
 
+/**
+  @class services/data/block.js
+  @extends Service
+  @public
 
-/** Augment the store blocks with features to support mapview.
+ * Augment the store blocks with features to support mapview.
  * In particular, add an `isViewed` attribute to blocks, which indicates that
  * the block is viewed in the mapview.
  *
@@ -93,6 +97,7 @@ export default Service.extend(Evented, {
   flowsService: service('data/flows-collate'),
   queryParams: service('query-params'),
   controls : service(),
+  axisBrush: service('data/axis-brush'),
 
   params : alias('queryParams.params'),
   /** params.options is the value passed to &options=
@@ -1146,6 +1151,15 @@ export default Service.extend(Evented, {
     vcfBlocks = this.viewed.filter(
       (b) => b.get('isVCF'));
     dLog(fnName, vcfBlocks, this.viewed.length, this.params.mapsToView);
+    return vcfBlocks;
+  }),
+
+  /** Estimates of the count of brushed SNPs of viewed VCFs, using block.featuresCountIncludingBrush
+   */
+  brushedVCFFeaturesCounts : computed('viewedVCFBlocks', 'axisBrush.brushCount', function() {
+    const
+    fnName = 'brushedVCFFeaturesCounts',
+    vcfBlocks = this.viewedVCFBlocks.mapBy('featuresCountIncludingBrush');
     return vcfBlocks;
   }),
 

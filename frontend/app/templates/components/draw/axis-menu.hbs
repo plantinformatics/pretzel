@@ -13,18 +13,13 @@
        {{!-- Unicode values of icons are noted in comment appended to axis-menu.js --}}
       <button onClick={{action "deleteMap"}}>╳</button>
 
-      <a class="help-icon" target="_blank" href="https://docs.plantinformatics.io/Basic-Functions/Adding-and-removing-datasets-from-the-view/"><i class="glyphicon glyphicon-question-sign"></i></a>
-      <a class="help-icon" target="_blank" href="https://docs.plantinformatics.io/Axis-Title-menu-layout/#removing-datasets-from-visualization"><i class="glyphicon glyphicon-question-sign"></i></a>
-
       <button onClick={{action "flipAxis"}}>⇅</button>
-      <a class="help-icon" target="_blank" href="https://docs.plantinformatics.io/Basic-Functions/Axis-flip-orientation/"><i class="glyphicon glyphicon-question-sign"></i></a>
-      <a class="help-icon" target="_blank" href="https://docs.plantinformatics.io/Basic-Functions/Axis-Title-menu-layout/#flip-axis"><i class="glyphicon glyphicon-question-sign"></i></a>
 
       {{#if this.urlOptions.dotPlot}}
         <button onClick={{action "perpendicularAxis"}}>↷</button>
       {{/if}}
       <button onClick={{action "extendMap"}}>⇲</button>
-      <a class="help-icon" target="_blank" href="https://docs.plantinformatics.io/Axis-Title-menu-layout/#split-axis"><i class="glyphicon glyphicon-question-sign"></i></a>
+      <a class="help-icon" target="_blank" href="https://docs.plantinformatics.io/Basic-Functions/Axis-Title-menu-layout/"><i class="glyphicon glyphicon-question-sign"></i></a>
   </div>
 
 
@@ -34,7 +29,7 @@
       onClick={{action (pipe (toggle "editingShortName" this) (action this.editedShortName) )  }}>
       <i class="glyphicon glyphicon-pencil"></i>
     </button>
-    <a class="help-icon" target="_blank" href="https://docs.plantinformatics.io/Axis-Title-menu-layout/#rename-axis-title"><i class="glyphicon glyphicon-question-sign"></i></a>
+
     {{this.block.datasetId.name}} : {{this.block.name}}
   </div>
 

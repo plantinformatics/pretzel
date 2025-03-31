@@ -8,29 +8,38 @@
     <button type="button" onclick={{this.vcfGenotypeSamples}} class="btn btn-info btn-xs">Get samples list</button>
   {{/if}}
 
-  <span>
+  {{#if @the.vcfGenotypeSamplesCount}}
+    <button type="button" class="btn btn-info btn-xs padding-thin" style="margin-left:0.8em" {{on 'click' (action this.copyFilteredSamplesToClipboard) }}>
+      <i class="glyphicon glyphicon-copy"></i>
+      {{#ember-tooltip side="left" delay=500}}
+        Copy filtered samples to clipboard
+      {{/ember-tooltip}}
+    </button>
+  {{/if}}
+
+  <div>
     <input type="checkbox"
-      style="margin-left: 3em;"
       checked={{@userSettings.filterSamplesByHaplotype}}
       oninput={{pipe (action (mut @userSettings.filterSamplesByHaplotype) value="target.checked")
-        this.ensureSamples }}  >
-    <label>Filtered by SNPs</label>
-    {{#ember-tooltip side="left" delay=500}}
+        @the.ensureSamples }}  >
+    <label>Filter by defined Haplotype</label>
+    {{#ember-tooltip side="left" delay=1500}}
       Show samples selected by SNP filters
     {{/ember-tooltip}}
-  </span>
+  </div>
+
+  <div style="min-height:1ex">{{@the.samplesRequestDescription}}</div>
+
 
   <div class="genotypeSampleFilter_textInput">
     <div>
-      <EmberTooltip side="right" delay=500>
-        <span>Filter available samples by name</span>
-      </EmberTooltip>
     <label class="" style="margin-right: 1em;">
       <i class="glyphicon glyphicon-filter"></i>
-      Search / Filter
+      Filter by Name
     </label>
     <input id="sampleNameFilter" type="search" value={{@the.sampleNameFilter}}
       oninput={{this.nameFilterChanged}}
+      style="min-width: 16em;"
       placeholder="Filter available samples by name" />
       {{!-- maybe autocomplete="sample-name", but samples names are mostly numeric so it may be more of an impediment than a benefit for the user --}}
 
@@ -39,6 +48,8 @@
       {{/if}}
     </div>
 
+
+    {{#if this.urlOptions.advanced}}
 
     {{#if @showIntersectionCheckbox}}
     <span>
@@ -55,6 +66,8 @@
       {{/ember-tooltip}}
     </span>
     {{/if}}
+
+    {{/if}}	{{!-- this.urlOptions.advanced --}}
 
     <div>
       {{@the.filterErrorText}}

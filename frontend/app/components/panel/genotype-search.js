@@ -171,17 +171,46 @@ export default class PanelGenotypeSearchComponent extends Component {
     return filesP;
   }
 
-  @computed('selectedDatasetId')
+  /**
+   * selectedSNPsInBrushedDomain() are included in the samples search request.
+   * Related : .snpsInBrushedDomain, which is updated when
+   * .featureFiltersCount changes.
+   * Possibly depend on receivedNamesCount instead of featureFiltersCount.
+   */
+  @computed('selectedDatasetId', 'manageGenotype.featureFiltersCount')
   get ensureSamplesForSelectedDatasetEffect() {
     /** related : manage-genotype : vcfGenotypeSamples()
      */
     const fnName = 'ensureSamplesForSelectedDatasetEffect';
+    let datasetId, vcfBlock;
     /** hbs checks that this.manageGenotype?.isDestroying === false */
-    const sampleNames = this.manageGenotype.sampleCache.sampleNames[this.selectedDatasetId];
-    if (! sampleNames && this.selectedDataset) {
+    const
+    manageGenotype = this.manageGenotype,
+    filterSamplesByHaplotype = this.args.userSettings.filterSamplesByHaplotype;
+    /* The case handling the filterSamplesByHaplotype is moved to
+     * manage-genotype.js, and have a parallel Effect there, per brushed block.
+     * specifically : brushedVCFBlocks evaluates
+     * block.genotypeSamplesFilteredByHaplotypes() ->
+     * vcfGenotypeSamplesDataset().
+     */
+    if (filterSamplesByHaplotype) {
+      return;
+    } else if (this.selectedDatasetId) {
+      datasetId = this.selectedDatasetId;
       /** A block of .selectedDataset, choosing either the first viewed block or
        * the first block. */
-      const vcfBlock = this.selectedDataset.get('aBlock');
+      vcfBlock = this.selectedDataset.get('aBlock');
+    }
+    /** If filterSamplesByHaplotype, the result sampleNames also depends on the
+     * filtering haplotypes (i.e. SNPs + genotype values) :
+     * selectedSNPsInBrushedDomain().
+     * Depending on performance, we might extend
+     * sampleCache.sampleNames[datasetId] with [block.scope][filterByHaplotype] where
+     * filterByHaplotype is as defined in vcfGenotypeSamplesDataset().
+    */
+    const sampleNames =
+          this.manageGenotype.sampleCache.sampleNames[datasetId];
+    if (! sampleNames && datasetId) {
       dLog(fnName, vcfBlock.brushName);
       if (vcfBlock) {
         const textP = this.manageGenotype.vcfGenotypeSamplesDataset(vcfBlock);

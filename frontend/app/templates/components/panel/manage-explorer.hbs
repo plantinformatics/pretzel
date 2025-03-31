@@ -8,6 +8,7 @@
     Datasets
     {{elem/button-refresh
       onClick=(action 'refreshAvailable')}}
+      <a class="panel-heading-help" target="_blank" href="https://docs.plantinformatics.io/Basic-Functions/Explore-tab/"><i class="glyphicon glyphicon-question-sign"></i></a>
   {{/elem/panel-heading}}
 
   {{#if panelContainer.showComponent}}
@@ -130,8 +131,6 @@
       />
   </div>
 
-  <a class="help-icon" target="_blank" href="https://docs.plantinformatics.io/Basic-Functions/Search-and-filter-datasets/"><i class="glyphicon glyphicon-question-sign"></i></a>
-
   <div class="button-row">
     <label>Case</label>
     <span class="longer">
@@ -241,10 +240,6 @@
       {{/if}}
       <nav.item class="active-detail" @active={{bs-eq tab.activeId "tab-explorer-datasets"}}><a href="#tab-explorer-datasets" role="tab" onclick={{action tab.select "tab-explorer-datasets"}}>All Datasets</a>
         <div>{{this.data.length}}</div>
-      </nav.item>
-
-      <nav.item>
-        <a class="help-icon" target="_blank" href="https://docs.plantinformatics.io/Basic-Functions/Adding-and-removing-datasets-from-the-view/"><i class="glyphicon glyphicon-question-sign"></i></a>
       </nav.item>
 
     </BsNav>

@@ -1,7 +1,11 @@
+{{!-- --------------------------------------------------------------------- --}}
+
 {{this.selectedSampleEffect}}
 {{this.sampleFiltersCopyEffect}}
 {{!-- this.gtBlockViewEffect --}}
 {{will-destroy this.onWillDestroy}}
+
+{{!-- --------------------------------------------------------------------- --}}
 
 {{#if this.showInputDialog}}
 
@@ -206,7 +210,7 @@
 
                     {{!-- i.e. panel/genotype-samples --}}
                     <Panel::GenotypeSamples @the={{this}} @userSettings={{@userSettings}}
-                      @showIntersectionCheckbox={{true}} >
+                      @showIntersectionCheckbox={{this.brushedOrViewedVCFBlocks.length}} >
                       {{this.ensureSamplesForDatasetTabEffect}}
                     </Panel::GenotypeSamples>
 
@@ -360,8 +364,9 @@
                       <div>{{object-at 1 this.vcfGenotypeLookupDomain}}</div>
                     </div>
                   </div>
-
                 </div>
+                <div style="margin-left: 5em;"><label style="margin-top:0px; margin-right:1.5em">Brushed Features</label><span>{{this.brushedVCFFeaturesCount}}</span></div>
+
                 {{/if}}
 
               </div>
@@ -379,18 +384,6 @@
                   <span>Download the displayed data in a file, either .vcf or .vcf.gz</span>
                 </EmberTooltip>
 
-                {{#if this.vcfExportText.length}}
-                  <button type="button" class="btn btn-info btn-xs"
-                    onclick={{action this.vcfExportTextToFile}} >
-                    VCF Download
-                  </button>
-                {{/if}}
-
-                <input type="checkbox"
-                  style="margin-left: 3em;"
-                  checked={{@userSettings.compressVCF}}
-                  oninput={{action (mut @userSettings.compressVCF) value="target.checked"}}  >
-                <label>.vcf.gz</label>
               </div>
 
 
@@ -412,6 +405,28 @@
                 {{!-- style={{compute (action this.vcfGenotypeTextWidthStyle) --}}
                 <textarea class="vcfGenotypeText" >{{this.vcfGenotypeText}}</textarea>
               </div>
+
+              <div>
+                <EmberTooltip side="right" delay=500>
+                  <span>Download the last received VCF genotype results as a VCF file</span>
+                </EmberTooltip>
+                <button type="button" class="btn btn-info btn-xs"
+                  onclick={{action this.vcfExportTextToFile}}
+                  disabled={{not this.vcfExportText.length}} >
+                  VCF Download
+                </button>
+
+                {{#if this.vcfExportText.length}}
+                <input type="checkbox"
+                  style="margin-left: 3em;"
+                  checked={{@userSettings.compressVCF}}
+                  oninput={{action (mut @userSettings.compressVCF) value="target.checked"}}  >
+                <label>Compressed</label>
+                {{/if}}
+              </div>
+
+
+              <div style="margin-bottom:2em"></div>
 
             {{/tab.pane}}
           {{/let}}
@@ -568,7 +583,7 @@
                             <ul class="list-group borderless featureFilters">
                               {{#each this.blocksFeatureFilters as |blockFF|}}
                                 <li class="list-group-item">
-                                  <div>{{blockFF.block.datasetId.id}}</div>
+                                  <div>{{blockFF.block.datasetId.id}} : {{blockFF.block.name}}</div>
                                   <ul class="list-group">
                                     {{#each blockFF.sampleFilters.feature as |feature|}}
                                       <li class="list-group-item">
@@ -933,7 +948,7 @@ While scrolling through the Genotype Table this updates to show where the curren
 
 
   {{/ember-modal-dialog}}
-{{/if}}
+{{/if}} {{!-- if this.showInputDialog --}}
 
 {{!-- --------------------------------------------------------------------- --}}
 
@@ -966,7 +981,7 @@ While scrolling through the Genotype Table this updates to show where the curren
   </div>
 
   {{/ember-modal-dialog}}
-{{/if}}
+{{/if}} {{!-- if this.featureColumnDialogDataset --}}
 
 {{!-- --------------------------------------------------------------------- --}}
 
@@ -990,26 +1005,19 @@ While scrolling through the Genotype Table this updates to show where the curren
     />
 
   {{/ember-modal-dialog}}
-{{/if}}
+{{/if}} {{!-- if this.intersectionDialogDataset --}}
 
 {{!-- --------------------------------------------------------------------- --}}
 
-{{#if this.tableApi.topLeftDialog}}
-  {{log 'topLeftDialog' this.tableApi.topLeftDialog}}
-  {{!-- #ember-wormhole destinationElement=this.tableApi.topLeftDialog --}}
+{{!-- --------------------------------------------------------------------- --}}
 
-  {{#ember-tether
-    tetherTarget=this.tableApi.topLeftDialog
-  }}
+{{#elem/panel-container state="primary" as |panelContainer|}}
+  {{#elem/panel-heading icon="filter" panelContainer=panelContainer}}
+    Actions
+  {{/elem/panel-heading}}
+  {{#if panelContainer.showComponent}}
 
-    <div id="topLeftDialog">
-
-      <span>
-        <a class="help-icon" target="_blank" href="https://docs.plantinformatics.io/"><i class="glyphicon glyphicon-question-sign"></i></a>
-        <EmberTooltip side="right" delay=500>
-          <span>Select Samples / Accessions in the Genotype Table control dialog, and select a region of an axis with a VCF dataset to enable 'VCF Lookup'</span>
-        </EmberTooltip>
-      </span>
+  <div class="panel-body">
 
       {{!-- these are copied from main dialog --}}
       {{#if this.urlOptions.advanced}}
@@ -1018,6 +1026,7 @@ While scrolling through the Genotype Table this updates to show where the curren
         {{log 'dataScope' this.dataScope}}
       </div>
       {{/if}}	{{!-- this.urlOptions.advanced --}}
+
       <div>
         <EmberTooltip side="right" delay=500>
           <span>Request the Genotypes as configured by Selected Samples and the brushed axis region</span>
@@ -1030,6 +1039,36 @@ While scrolling through the Genotype Table this updates to show where the curren
           }}
           class="btn btn-info">VCF Lookup</button>
       </div>
+
+      <div>
+        <EmberTooltip side="right" delay=500>
+          <span>Download the last received VCF genotype results as a VCF file</span>
+        </EmberTooltip>
+        <button type="button" class="btn btn-info btn-xs"
+          onclick={{action this.vcfExportTextToFile}}
+          disabled={{not this.vcfExportText.length}} >
+          VCF Download
+        </button>
+      </div>
+
+      {{#if (and this.urlOptions.advanced this.args.userSettings.filterSamplesByHaplotype )}}
+        <div>
+          <EmberTooltip side="bottom" delay=500
+            @tooltipClass="min-width-wide"
+            @innerClass="min-width-wide__inner" >
+            <label>Count of intersection of Samples of chromosomes filtered by defined Haplotype</label>
+            <div>
+              {{#each this.brushedVCFBlocks as |aBlock|}}
+              <div>
+                <span>{{aBlock.block.brushName}}</span>
+                <span>&nbsp;: {{aBlock.block.genotypeSamplesFilteredByHaplotypes.length}}</span>
+              </div>
+              {{/each}}
+            </div>
+          </EmberTooltip>
+          {{this.vcfGenotypeSamplesCount}}
+        </div>
+      {{/if}}
 
       {{#if this.urlOptions.advanced}}
       <div>
@@ -1046,12 +1085,49 @@ While scrolling through the Genotype Table this updates to show where the curren
       </div>
       {{/if}}	{{!-- this.urlOptions.advanced --}}
 
-    </div>
+      {{!---------------------------------------------------------------------}}
 
-  {{/ember-tether}}
+  </div>
 
-  {{!-- /ember-wormhole --}}
-{{/if}}
+  {{/if}} {{!-- showComponent --}}
+{{/elem/panel-container}}
+
+
+{{!-- --------------------------------------------------------------------- --}}
+
+      <div class="gtMiddle">
+        {{#unless this.dataRowsLength}}
+          {{#if this.urlOptions.advanced}}
+            <Form::BrushedBlockInfo />
+            <div style="height: 8ex;"></div>
+          {{/if}}	{{!-- this.urlOptions.advanced --}}
+          {{#if this.brushedVCFBlocks.length}}
+            <label>Select a smaller region or zoom in closer to summarise.</label>
+          {{else if this.viewedVCFBlocks.length}}
+            <label>Select a region of the axis to show SNPs in the Genotype Table.</label>
+          {{else}}
+            <label>Load a genotype dataset to visualise it in this tab.</label>
+          {{/if}}
+        {{/unless}}
+
+      </div>
+
+
+{{!-- --------------------------------------------------------------------- --}}
+
+
+<div class="brushedVCFBlocks devel-visible">
+  {{#each this.brushedVCFBlocks as |aBlock|}}
+  <div>
+    <span>{{call (fn this.blockSetup aBlock.block) }}</span>
+    <span>{{aBlock.block.brushName}}</span>
+    <span>{{aBlock.block.genotypeSamplesFilteredByHaplotypes.length}} : {{aBlock.block.genotypeSamplesFilteredByHaplotypes}}</span>
+  </div>
+  {{/each}}
+  vcfGenotypeSamplesCount={{this.vcfGenotypeSamplesCount}},
+  filteredByGenotypeCount={{this.sampleCache.filteredByGenotypeCount}}
+</div>
+
 
 {{!-- --------------------------------------------------------------------- --}}
 
