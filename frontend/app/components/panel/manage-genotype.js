@@ -2199,6 +2199,9 @@ export default class PanelManageGenotypeComponent extends Component {
     dLog(fnName, vcfBlock.name, filterByHaplotype, 'FilteredSamples');
     if (filterByHaplotype?.length) {
       this.vcfGenotypeSamplesDataset(vcfBlock);
+    } else if (this.args.userSettings.filterSamplesByHaplotype) {
+      // trigger update of samples(); the unfiltered samples are already in cache
+      this.sampleCache.incrementProperty('filteredByGenotypeCount');
     }
     return filterByHaplotype;
   }
@@ -2276,7 +2279,7 @@ export default class PanelManageGenotypeComponent extends Component {
 
           if ((sampleNames?.length > 1e4) &&
               ! this.sampleNameFilter &&
-              (config.environment === 'development') && 
+              // (config.environment === 'development') && 
               navigator.userAgent.startsWith('Mozilla/')) {
             /** Mozilla is currently slow in displaying 30k sample names, so in
              * development limit the length of .filteredSamples, displayed in
@@ -2288,7 +2291,7 @@ export default class PanelManageGenotypeComponent extends Component {
             this.nameFilterChanged(this.sampleNameFilter);
             * So instead slice the array.
             */
-            sampleNames = sampleNames.slice(0, 1e3);
+            sampleNames = sampleNames.slice(0, 2e3);
             sampleNamesText = sampleNames.join('\n');
             dLog(fnName, 'limit sampleNames to', sampleNames.length);
           }
