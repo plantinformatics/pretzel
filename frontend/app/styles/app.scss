@@ -1682,6 +1682,16 @@ div#goto-feature > div
 
 /* -------------------------------------------------------------------------- */
 
+/* For use for <button> <i class="glyphicon glyphicon-copy">
+ * in genotype-samples.hbs copyFilteredSamplesToClipboard, use a longer selector path
+ * for greater specificity, to override .btn padding.
+ */
+.padding-thin,
+div > button.ember-tooltip-target.padding-thin
+{
+  padding: 1px 3px 1px 1px;
+}
+
 .margin-1em
 {
   margin : 1em;
@@ -1691,6 +1701,12 @@ div#goto-feature > div
   margin-left: 3em;
 }
 
+a.panel-heading-help {
+  margin-left: 3em;
+}
+a.panel-heading-help > i {
+  color: white;
+}
 
 .panel-collapse-button {
   padding:0 5px 0 5px;
@@ -2049,6 +2065,15 @@ div#left-panel-feature-search > div > div > div > ul > li > div > button
 {
     float : left;
 }
+/* Enable scroll-down to reach the bottom of the view-controls panel. */
+#left-panel-view > .panel-section > .ember-view > .panel {
+  padding-bottom: 30px;
+}
+/* prevent {{input .axisLayerModulusText}} from going beyond right margin.
+* there are 2 {{input}}s in view-controls */
+#left-panel-view .view-controls .ember-text-field {
+  max-width : 100%;
+}
 /*------------------------------------*/
 /* view-controls : text sub-label (div or span)  */
 div.genotype ul.view-controls > li > input,
@@ -2180,6 +2205,11 @@ body > div.ember-popover {
   flex-direction : column;
   justify-content : flex-start;
 }
+/* actions panel above genotype table; flex places it at left. */
+.right-panel-genotype
+{
+  display : block;
+}
 #right-panel-content:not(.right-panel-genotype)
 {
   flex-grow : 1;
@@ -2191,6 +2221,16 @@ body > div.ember-popover {
   flex-basis : calc(100% - 220px);
   max-height : calc(100% - 220px);
 }
+
+.right-panel-genotype > div.panel-primary > div.panel-body
+{
+  display : flex;
+}
+.right-panel-genotype > div.panel-primary > div.panel-body > div
+{
+  flex-grow : 1;
+}
+
 
 body.tablesPanelRight .dataset-description > h4 {
   max-width : 300px;
@@ -2323,6 +2363,11 @@ div.metaeditor-panel div.jsoneditor-tree button.jsoneditor-contextmenu-button {
 .axis-brushes table {
   border-collapse: initial;
   border-spacing: 1em;
+}
+/** for components/form/brushed-block-info */
+.brushed-block-info table {
+  border-collapse: initial;
+  border-spacing: 0.5em;
 }
 
 .select-wrap {
@@ -2494,6 +2539,8 @@ div.genotype label
 .sample-count
 {
   margin-left : 1em;
+  min-width : 7em;
+  display : inline-block;
 }
 .genotype-controls {
   display: flex;
@@ -2553,7 +2600,12 @@ div.genotype .ember-tooltip
   max-width: 30em;
 }
 
-
+//  .ember-tooltip-inner
+.min-width-wide,
+.min-width-wide__inner
+{
+  min-width : 50em;
+}
 
 /* -------------------------------------------------------------------------- */
 

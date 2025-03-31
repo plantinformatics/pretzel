@@ -57,6 +57,9 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
   controlsService : service('controls'),
   queryParamsService : service('query-params'),
   router: service(),
+  /** used in hbs for .brushedAxes. */
+  axisBrush: service('data/axis-brush'),
+
 
 
   //----------------------------------------------------------------------------
@@ -581,7 +584,8 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
    * manageGenotype : { rowCount }  get rowCount of Genotype Table
    * This can also absorb pathsTableSummary.
    */
-  summaryData : { manageGenotype : {rowCount : 0}},
+  summaryData : { manageGenotype : {rowCount : 0, proxy : null}},
+  genotypeFeatureCount : alias('summaryData.manageGenotype.proxy.brushedVCFFeaturesCount'),
 
   /** bundle of references  (object attributes) */
   oa : {axisApi : {}, stacks},

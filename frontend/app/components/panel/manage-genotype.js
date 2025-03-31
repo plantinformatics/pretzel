@@ -1,7 +1,7 @@
 // {{!-- check : selectSampleFilter activeSampleFilter tabName2IdDatasets selectedCount activeIdDatasets --}}
 
 import Component from '@glimmer/component';
-import EmberObject, { computed, action, get as Ember_get, set as Ember_set, setProperties } from '@ember/object';
+import EmberObject, { computed, action, get as Ember_get, set as Ember_set, setProperties, defineProperty } from '@ember/object';
 import { alias, reads } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
@@ -449,6 +449,9 @@ export default class PanelManageGenotypeComponent extends Component {
       window.PretzelFrontend.manageGenotype = this;
     }
     this.registerByName(this);
+    // used for display of brushedVCFFeaturesCount in nav tab
+    Ember_set(this, 'args.summaryData.proxy', this);
+
 
     this.namesFilters = new NamesFilters();
     Object.entries(this.sampleFilterTypes).forEach(
@@ -599,6 +602,7 @@ export default class PanelManageGenotypeComponent extends Component {
      * .rowCount can't be ascertained then, so display ''.
      */
     Ember_set(this, 'args.summaryData.rowCount', '');
+    Ember_set(this, 'args.summaryData.proxy', null);
   }
 
 
@@ -974,7 +978,9 @@ export default class PanelManageGenotypeComponent extends Component {
            * There could be multiple haveFilters on the same .referenceBlock;
            * just using the first. */
           copyThis = haveFilters?.find(b => b.referenceBlock === block.referenceBlock),
-          copyThisFilter = copyThis?.[sampleFiltersSymbol],
+          copyThisFilter = copyThis?.[sampleFiltersSymbol];
+          if (copyThisFilter) {
+          const
           copy =
             Object.entries(copyThisFilter).reduce((O, [k,v]) => {O[k] = v.slice(0); return O;}, {});
           dLog(fnName, 'copyThisFilter', copyThisFilter, copyThis.brushName, copy);
@@ -991,6 +997,7 @@ export default class PanelManageGenotypeComponent extends Component {
              * more features are loaded.  Could use API to request those features. */
           });
           block[sampleFiltersSymbol] = copy;
+          } // if (copyThisFilter)
           dLog(fnName, block);
         });
       }
@@ -1109,6 +1116,11 @@ export default class PanelManageGenotypeComponent extends Component {
    * need to be per-block - can be per axis-brush.
    */
 
+
+  /** User has clicked Alt or Ref of a SNP - toggle the selection of that
+   * SNP+genotype for sample sorting and filtering.
+   * Called from afterSelectionHaplotype() -> featureToggleRC() in matrix-view.js
+   */
   @action
   featureToggle(feature, columnName) {
     const
@@ -1133,6 +1145,8 @@ export default class PanelManageGenotypeComponent extends Component {
       feature[matchRefSymbol] = matchRefNew;
     }
 
+    // this.blockSetup(block.content);
+    block.set('selectedSNPCount.' + filterTypeName, filters.length);
     this.ensureSamplesThenRender(filterTypeName);
   }
 
@@ -1171,7 +1185,7 @@ export default class PanelManageGenotypeComponent extends Component {
    */
   requestFormatChanged(value) {
     dLog('requestFormatChanged', value);
-    this.args.userSettings.requestFormat = value;
+    Ember_set(this, 'args.userSettings.requestFormat', value);
   }
 
   //----------------------------------------------------------------------------
@@ -1535,6 +1549,64 @@ export default class PanelManageGenotypeComponent extends Component {
     return {names, selected};
   }
 
+  /** If the current brushed domain does not include selected SNPs, return null,
+   * otherwise lookup the cached samples filtered for those SNPs.
+   * If that value is not cached the result is `undefined`.
+   */
+  blockFilteredSamplesGet(vcfBlock) {
+    const
+    fnName = 'blockFilteredSamplesGet',
+    selectedSNPs = this.selectedSNPsInBrushedDomain(vcfBlock);
+    let sampleNames;
+    if (selectedSNPs?.length) {
+      const
+      filterDescription = this.selectedSNPsToKey(selectedSNPs),
+      cacheFiltered = this.sampleCache.filteredByGenotype,
+      blockFiltered = cacheFiltered[vcfBlock.id];
+      sampleNames = blockFiltered?.[filterDescription];
+      dLog(fnName, vcfBlock.name, sampleNames?.length, filterDescription, selectedSNPs, vcfBlock.brushName);
+    } else {
+      sampleNames = null;
+    }
+    return sampleNames;
+  }
+
+  /** If there are selected SNPs defined in the brushed domains on multiple
+   * brushed blocks of this dataset, intersect the filtered samples of each
+   * block.
+   * If there are no such selected SNPs, default to the full list of
+   * samples of this dataset.
+   * @return array of sample names
+   */
+  datasetFilteredSamplesGet(datasetId) {
+    const
+    blocks = this.brushedVCFBlocks.filter(ab => ab.block.get('datasetId.id') == datasetId),
+    /** For any blocks which are filtered by selected SNPs, intersect them
+     * ! intersection indicates the dataset samples should not be reduced.
+     */
+    sampleNamesSet = blocks.reduce((intersection, aBlock, i) => {
+      /** samples is undefined if the result is not yet received. */
+      const samples = this.blockFilteredSamplesGet(aBlock.block);
+      if (i === 0) {
+        // if samples === undefined perhaps []
+        if (samples) {
+          intersection = new Set(samples);
+        }
+      } else if (samples) {
+        const set = new Set(samples);
+        intersection = intersection ? intersection.intersection(set) : set;
+      }
+      return intersection;
+    }, undefined),
+
+    /** If ! sampleNamesSet, default to all samples of datasetId.
+     * empty Set -> return []
+     */
+    sampleNames = sampleNamesSet ? Array.from(sampleNamesSet) : 
+      this.sampleCache.sampleNames[datasetId]?.trim().split('\n');
+    return sampleNames;
+  }
+
   /** @return sample names in .vcfGenotypeSamplesText
    */
   samplesFromText(text) {
@@ -1549,6 +1621,10 @@ export default class PanelManageGenotypeComponent extends Component {
  
     return samples;
   }
+  /** If userSettings.samplesIntersection return .sampleNamesIntersection, otherwise 
+   * the samples of lookupDatasetId, filtered if .filterSamplesByHaplotype
+   * @return Array. The result is defined.
+   */
   @computed(
     'vcfGenotypeSamplesText',
     'args.userSettings.samplesIntersection',
@@ -1560,13 +1636,19 @@ export default class PanelManageGenotypeComponent extends Component {
     /** update when new results in sampleCache.filteredByGenotype */
     'sampleCache.filteredByGenotypeCount',
     'lookupBlock',
+    'receivedNamesCount',
   )
   get samples() {
     const
+    /** Return [] if the value is undefined :
+     * - datasetFilteredSamplesGet() may return undefined
+     * - .vcfGenotypeSamplesText may be undefined, in which case
+     * samplesFromText(.vcfGenotypeSamplesText) returns undefined
+     */
     samples = this.args.userSettings.samplesIntersection ?
       this.sampleNamesIntersection :
-      this.args.userSettings.filterSamplesByHaplotype ? this.sampleCache.filteredByGenotype[this.lookupBlock.id] :
-      this.samplesFromText(this.vcfGenotypeSamplesText);
+      (this.args.userSettings.filterSamplesByHaplotype ? this.datasetFilteredSamplesGet(this.lookupDatasetId) :
+       this.samplesFromText(this.vcfGenotypeSamplesText)) || [];
     return samples;
   }
 
@@ -1729,6 +1811,29 @@ export default class PanelManageGenotypeComponent extends Component {
     dLog(fnName, axisBrushes, blocks, this.blockService.viewed.length, this.blockService.params.mapsToView);
     return blocks;
   }
+  /** @return number of loaded features in brushes of viewed VCF blocks.
+   * @desc
+   * This is displayed by mapview in Genotypes nav tab badge.
+   */
+  @computed(
+    'brushedVCFBlocks', 'auth.apiStats.vcfGenotypeLookup',
+    /* This dependency watches only 5 brushes; if more are required an
+     * alternative is a count of vcfGenotypeLookup results received */
+    'brushedVCFBlocks.{0,1,2,3,4}.block.features.length')
+  get brushedVCFFeaturesCount() {
+    const
+    count = this.brushedVCFBlocks.mapBy('block.featuresInBrushOrZoom')
+      .mapBy('length')
+      .reduce((sum, length) => sum += length, 0);
+
+    /* If this Computed Property was constantly exposed / evaluated, it could be
+     * used to set args.summaryData.rowCount, instead of being accessed via
+     * summaryData.proxy, e.g. via
+    later(() => Ember_set(this, 'args.summaryData.rowCount', count));
+    */
+    return count;
+  }
+
   /** Set .axisBrushBlockIndex from userSettings.lookupBlock, with the
    * constraint that it is within the blocks in the dataset selector in the
    * samples dialog.
@@ -2054,16 +2159,51 @@ export default class PanelManageGenotypeComponent extends Component {
   /** @return array of features in .blocksFeatureFilters which are in .brushedDomain
    */
   selectedSNPsInBrushedDomain(vcfBlock) {
+    if (! vcfBlock.brushedDomain) {
+      return [];
+    }
     const
     features = this.blocksFeatureFilters.findBy('block', vcfBlock)?.sampleFilters.feature
       .filter(f => inRange(f.value_0, vcfBlock.brushedDomain));
     return features;
   }
 
+  /** Construct a text key from the result of this.selectedSNPsInBrushedDomain(vcfBlock)
+   * The format is the same as filterDescription in vcfGenotypeSamplesDataset().
+   */
+  selectedSNPsToKey(selectedSNPs) {
+    const
+    features = selectedSNPs
+      // sort enables filterDescription to be cache key
+      .sortBy('value_0')
+      .map(f => ({position : f.value_0,  matchRef : f[Symbol.for('matchRef')]})),
+    filterDescription = features.map(
+      h => '' + h.position + ':' + (h.matchRef ? 'Ref' : 'Alt')).join(' ');
+    return filterDescription;
+  }
+
   @computed('lookupBlock.brushedDomain', 'featureFiltersCount')
   get snpsInBrushedDomain() {
     const features = this.selectedSNPsInBrushedDomain(this.lookupBlock);
     return features;
+  }
+
+  /** Get samples for dataset for this chromosome / VCF Block, filtered by
+   * selected SNPs + genotype values, i.e. haplotypes.
+   */
+  genotypeSamplesFilteredByHaplotypes(vcfBlock) {
+    const
+    fnName = 'genotypeSamplesFilteredByHaplotypes',
+    filterByHaplotype = ! this.args.userSettings.filterSamplesByHaplotype ? undefined :
+      this.selectedSNPsInBrushedDomain(vcfBlock);
+    dLog(fnName, vcfBlock.name, filterByHaplotype, 'FilteredSamples');
+    if (filterByHaplotype?.length && ! this.blockFilteredSamplesGet(vcfBlock)) {
+      this.vcfGenotypeSamplesDataset(vcfBlock);
+    } else if (this.args.userSettings.filterSamplesByHaplotype) {
+      // trigger update of samples(); the unfiltered samples are already in cache
+      this.sampleCache.incrementProperty('filteredByGenotypeCount');
+    }
+    return filterByHaplotype;
   }
 
   // ---------------------------------------------------------------------------
@@ -2091,7 +2231,18 @@ export default class PanelManageGenotypeComponent extends Component {
      */
     filterByHaplotype = ! this.args.userSettings.filterSamplesByHaplotype ? undefined :
       {features : this.selectedSNPsInBrushedDomain(vcfBlock)
-       .map(f => ({position : f.value_0,  matchRef : f[Symbol.for('matchRef')]}))};
+       // This matches selectedSNPsToKey().
+       // sort enables filterDescription to be cache key
+       .sortBy('value_0')
+       .map(f => ({position : f.value_0,  matchRef : f[Symbol.for('matchRef')]}))},
+    filterDescription = filterByHaplotype ? filterByHaplotype.features.map(
+      h => '' + h.position + ':' + (h.matchRef ? 'Ref' : 'Alt')).join(' ') : '',
+    requestDescription = "Fetching accessions for " + vcfBlock.brushName + ' ' + filterDescription;
+    /** There may be multiple concurrent samples requests, so this could be an
+     * array, but the requirement is simply to show to the user when there is a
+     * samples request in process, as the request may take seconds.
+     */
+    later(() => Ember_set(this, 'samplesRequestDescription', requestDescription));
 
     let textP;
     if (scope && vcfDatasetIdAPI)   {
@@ -2102,11 +2253,12 @@ export default class PanelManageGenotypeComponent extends Component {
         {} );
       textP.then(
         (text) => {
-          let t = text?.text || text;
+          later(() => Ember_set(this, 'samplesRequestDescription', ''));
+          let t = text?.text ?? text;
           /** Germinate result may be received by frontend or server. */
           const isGerminate = resultIsGerminate(t);
           /** trace 5 samples or 60 chars of text */
-          dLog(fnName, t?.length || Object.keys(text), t?.slice(0, isGerminate ? 5 : 60));
+          dLog(fnName, t?.length ?? Object.keys(text), t?.slice(0, isGerminate ? 5 : 60));
           if (vcfDataset.hasTag('BrAPI')) {
             vcfDataset.samples = t;
             t = t.mapBy('sampleName');
@@ -2122,14 +2274,14 @@ export default class PanelManageGenotypeComponent extends Component {
             sampleNamesText = t;
             /** trim off trailing newline; other non-sample column info could be
              * removed; it is not a concern for the mapping. */
-            sampleNames = t.trim().split('\n');
+            sampleNames = (t === '') ? [] : t.trim().split('\n');
           }
 
           if ((sampleNames?.length > 1e4) &&
               ! this.sampleNameFilter &&
-              (config.environment === 'development') && 
-              navigator.userAgent.startsWith('Mozilla/')) {
-            /** Mozilla is currently slow in displaying 30k sample names, so in
+              ((config.environment === 'development') || this.urlOptions.advanced) && 
+              navigator.userAgent.includes(' Firefox/')) {
+            /** Firefox is currently slow in displaying 30k sample names, so in
              * development limit the length of .filteredSamples, displayed in
              * genotype-samples.hbs <select>
              */
@@ -2139,7 +2291,7 @@ export default class PanelManageGenotypeComponent extends Component {
             this.nameFilterChanged(this.sampleNameFilter);
             * So instead slice the array.
             */
-            sampleNames = sampleNames.slice(0, 1e3);
+            sampleNames = sampleNames.slice(0, 2e3);
             sampleNamesText = sampleNames.join('\n');
             dLog(fnName, 'limit sampleNames to', sampleNames.length);
           }
@@ -2164,7 +2316,12 @@ export default class PanelManageGenotypeComponent extends Component {
                 .join('\n');
             }
             /** The list of available samples is filtered.  */
-            this.sampleCache.filteredByGenotype[vcfBlock.id] = sampleNames;
+            const
+            cacheFiltered = this.sampleCache.filteredByGenotype,
+            blockFiltered = cacheFiltered[vcfBlock.id] || (cacheFiltered[vcfBlock.id] = {});
+            blockFiltered[filterDescription] = sampleNames;
+            // vcfBlock.filteredSamples = sampleNames;
+            // may need to a count to signal dataset update
             this.sampleCache.incrementProperty('filteredByGenotypeCount');
           }
           this.mapSamplesToBlock(sampleNames, vcfBlock);
@@ -2208,11 +2365,22 @@ export default class PanelManageGenotypeComponent extends Component {
     // i.e. gtBlocks
     this.brushedOrViewedVCFBlocksVisible
       .filter(vcfBlock => {
+        let filteredSamples;
         const
         vcfDatasetId = vcfBlock?.get('datasetId.id'),
+        datasetSamples = (vcfDatasetId && ! this.sampleCache.sampleNames[vcfDatasetId]),
+        samples =
         requestSamples = this.args.userSettings.filterSamplesByHaplotype ?
-          this.sampleCache.filteredByGenotype[vcfBlock.id] :
-          (vcfDatasetId && ! this.sampleCache.sampleNames[vcfDatasetId]);
+          /* .blockFilteredSamplesGet(vcfBlock) is effectively : this.sampleCache.filteredByGenotype[vcfBlock.id][selected SNPs + genotype values]
+           * i.e. the cache key includes the current (user-defined) haplotype
+           *
+           * If the result is null (there are no selected SNPs in brushed
+           * domain) use datasetSamples.  Otherwise the result will be undefined
+           * if it is not cached.
+           */
+        (((filteredSamples = this.blockFilteredSamplesGet(vcfBlock)) === null) ? datasetSamples : filteredSamples) :
+          datasetSamples,
+        requestSamples = ! samples;
         return requestSamples;
       })
       .forEach(vcfBlock =>
@@ -2314,6 +2482,29 @@ export default class PanelManageGenotypeComponent extends Component {
     return blocks;
   }
 
+  //----------------------------------------------------------------------------
+
+  /** This is called for brushed VCF blocks.
+   * Add a Computed Property genotypeSamplesFilteredByHaplotypes to the block,
+   * and assign an attribute selectedSNPCount: {}.
+   */
+  @action
+  blockSetup(vcfBlock) {
+    const fnName = 'blockSetup';
+    if (! vcfBlock.hasOwnProperty('genotypeSamplesFilteredByHaplotypes')) {
+      dLog(fnName, vcfBlock.brushName);
+      const
+      /** This can also depend on the other 2 filterTypeName-s : variantInterval, haplotype. */
+      cp = computed('selectedSNPCount.feature',
+        () => this.genotypeSamplesFilteredByHaplotypes(vcfBlock));
+      defineProperty(vcfBlock, 'genotypeSamplesFilteredByHaplotypes', cp);
+
+      /** Counts of selected SNPs. indexed by filterTypeName, i.e. contents are
+       * {variantInterval, haplotype, feature} */
+      vcfBlock.set('selectedSNPCount', {});
+    }
+
+  }
 
   // ---------------------------------------------------------------------------
 
@@ -3474,7 +3665,11 @@ export default class PanelManageGenotypeComponent extends Component {
               currentFeaturesValuesFields,
               columnNames,
             });
-            later(() => Ember_set(this, 'args.summaryData.rowCount', displayDataRows.length));
+            /* The count of all SNPs in brushed datasets will be displayed in
+             * the nav tab badge, instead of the row count, which is what this
+             * provides :
+             later(() => Ember_set(this, 'args.summaryData.rowCount', displayDataRows.length));
+            */
 
           } else {
             let sampleNames;
@@ -3509,8 +3704,15 @@ export default class PanelManageGenotypeComponent extends Component {
               datasetColumns : null,
               extraDatasetColumns : null,
             });
-            later(() => Ember_set(this, 'args.summaryData.rowCount', displayData.length));
+            /* See earlier comment re. summaryData.rowCount
+             * later(() => Ember_set(this, 'args.summaryData.rowCount', displayData.length));
+             */
           }
+        } else {  // ! featuresArrays.length
+          setProperties(this, {
+            columnNames : emptyTableColumns,
+            gtDatasetColumns : [],  // used by e.g. positionFilterClass().
+          });
         }
       }
     }
@@ -3530,6 +3732,14 @@ export default class PanelManageGenotypeComponent extends Component {
     });
 
   }
+
+  /** @return the length of the data array displayed in the table
+   */
+  get dataRowsLength() {
+    const length = this.displayData?.length || this.displayDataRows?.length;
+    return length;
+  }
+
   /** A filterFn for featureSampleNames() : omit Ref & Alt.
    * Used in showSamplesWithinBrush() to omit Ref & Alt
    * from sampleNames because vcfFeatures2MatrixView() prepends

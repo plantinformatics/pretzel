@@ -67,6 +67,7 @@ import { inRange } from '../../utils/draw/zoomPanCalcs';
 import { updateDomain } from '../../utils/stacksLayout';
 import { FeatureTicks, FeatureTick_className, blockTickEltId } from '../../utils/draw/feature-ticks';
 import AxisDraw from '../../utils/draw/axis-draw';
+import { drawGeneticMap } from '../../utils/draw/axis-genetic-map';
 
 /* global d3 */
 /* global require */
@@ -1238,7 +1239,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     return this.axis.limits && this.y;
   },
   drawTicksEffect : computed('controlsView.axisTicks', function () {
-    later(() => this.yScaleIsDefined && this.drawTicks());
+    later(() => this.yScaleIsDefined && (this.drawTicks(), this.drawGeneticMap()));
   }),
   axisDraw : computed( function () {
     return new AxisDraw(/*oa*/null, this, /*stacks*/null, this.stacksView);
@@ -1258,6 +1259,24 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     // draw_orig
     return count;
   }),
+
+  drawGeneticMap() {
+    const
+    svg = this.oa.svgContainer,
+    viewedBlocks = this.get('viewedBlocks'),
+    block = viewedBlocks[0];
+    if (block.features.length && (block.datasetId.id === 'Jun_Wei_022-03677')) {
+      const
+      markerData = block.features.map(f => ({name : f.name, position : f.value_0 ?? f.value[0]}))
+        .sortBy('position'),
+    qtlData = [
+      {name : 'QKL.cas-2D.1', color : "Red", layer : 1, startPosition : markerData[7].position, endPosition : markerData[8].position},
+      {name : 'QMGR.cas-2DS.2', color : "Blue", layer : 2, startPosition : markerData[10].position, endPosition : markerData[11].position}],
+    chromosomeName = block.name;
+
+    drawGeneticMap(svg, markerData, qtlData, chromosomeName);
+    }
+  },
 
   extendedEffect : computed('extended', function () {
     const

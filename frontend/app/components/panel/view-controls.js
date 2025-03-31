@@ -40,18 +40,17 @@ const fontSizes = [
 /*--------------------------------------------------------------------------*/
 
 /** On Firefox, an axis vertical bar <path> is sometimes invisible if
- * stroke-width is 1px; this may be caused by scaling caused by the
+ * stroke-width is <1px; this may be caused by scaling caused by the
  * viewbox.
- * A solution is to set stroke-width 2px, via initial --axisWidth value.
+ * Chrome displays the axis OK down to --axisWidth:​ 0.1, and it disappears at
+ * --axisWidth:​ 0.0 as expected.
+ * A solution is to have a minimum stroke-width 1px, via --axisWidth value.
  * Since this is seen on Firefox but not Chrome, and may be solved
- * later by a browser change, it is currently handled by setting
- * stroke-width 2px only if isFirefox().
- *
- * isFirefox() is from :
- * https://github.com/astronomersiva/ember-display-in-browser/blob/master/addon/utils/browser-checks.js
-*/
-// Firefox 1.0+
-export const isFirefox = () => typeof InstallTrigger !== 'undefined';
+ * later by a browser change, it is currently handled by limiting axisWidth
+ * only if isFirefox().
+ * Tested 2025Mar17 : --axisWidth: 0.9; is visible, and 0.8 is not visible.
+ */
+export const isFirefox = () => navigator.userAgent.startsWith('Mozilla/');
 
 const sbSizeThresholdInitial = 20;
 const sbSizeThresholdMax = 1e9;
@@ -62,6 +61,13 @@ const axisLayerModulusMax = 1000;
 
 /** can be replaced by Math.clamp() when that is available
  * refn : https://stackoverflow.com/questions/11409895/whats-the-most-elegant-way-to-cap-a-number-to-a-segment
+ */
+/**
+ * Clamps a number between a lower and upper bound.
+ * @param {number} x - The number to clamp.
+ * @param {number} lower - The lower bound.
+ * @param {number} upper - The upper bound.
+ * @returns {number} - The clamped value.
  */
 function Math_clamp(x, lower, upper) {
   return Math.max(lower, Math.min(x, upper) );
@@ -93,7 +99,7 @@ export default Component.extend({
    * paths are calculated in the backend if both blocks of block-adj are from
    * the same server;  otherwise they may be calculated in the frontend (client)
    * and / or in the backend via localiseBlocks().
-  */
+   */
   pathJoinClient : false,
   pathJoinRemote : true,
 
@@ -147,11 +153,18 @@ export default Component.extend({
    * or toggle, a transition is used.
    */
   sliderChangeTime : undefined,
+  /**
+   * Updates the time of the last slider change to the current time.
+   */
   aSliderHasChanged() {
     let
     documentTimeline = new (DocumentTimeline || window.DocumentTimeline)();
     this.set('sliderChangeTime', documentTimeline.currentTime);
   },
+  /**
+   * Calculates the time since the last slider change.
+   * @returns {number|undefined} - The time in milliseconds since the last slider change, or undefined if .sliderChangeTime is not set.
+   */
   get timeSinceASliderHasChanged() {
     let
     documentTimeline = new (DocumentTimeline || window.DocumentTimeline)(),
@@ -168,11 +181,11 @@ export default Component.extend({
   pathGradientUpper : true,
   pathGradient : computed('pathGradientInt', function () {
     let
-     pathGradient = +this.get('pathGradientInt'),
-        gradient = (pathGradient / 100);
+    pathGradient = +this.get('pathGradientInt'),
+    gradient = (pathGradient / 100);
     // dLog('pathControlGradient', pathGradient, gradient);
     return gradient;
-   }),
+  }),
 
   /*--------------------------------------------------------------------------*/
 
@@ -297,6 +310,9 @@ export default Component.extend({
       this.updateSyntenyBlocksPosition();
     }
   },
+  /** oninput callback for slider : <input type="range" .sbSizeThresholdLinear >
+   * @param {number} linear slider value adjusted by user action
+   */
   sbSizeThresholdLinearChanged(linear) {
     /**
      * (comment from updateSbSizeThresh() )
@@ -329,6 +345,9 @@ export default Component.extend({
   axisLayerModulus : axisLayerModulusInitial,
   axisLayerModulusLinear : expRangeInitial(axisLayerModulusInitial, expRangeBase(50, axisLayerModulusMax)),
   axisLayerModulusText : "" + axisLayerModulusInitial,
+  /** enter callback for {{input ... type="text" ... .axisLayerModulusText }}
+   * @param {string} value
+   */
   axisLayerModulusTextChanged(value) {
     /* {{input value=axisLayerModulusText ... }} sets
      * this.axisLayerModulusText, and (action ...  value="target.value")
@@ -349,6 +368,9 @@ export default Component.extend({
       this.updateSyntenyBlocksPosition();
     }
   },
+  /** oninput callback for slider : <input type="range" ... .axisLayerModulusLinear >
+   * @param {number} linear slider value adjusted by user action
+   */
   axisLayerModulusLinearChanged(linear) {
     let value = Math.round(expRange(+linear, 50, axisLayerModulusMax));
     // dLog('axisLayerModulusLinearChanged', linear, value);
@@ -377,13 +399,18 @@ export default Component.extend({
    */
   pathSample : expRangeInitial(400, expRangeBase(100, 10000)),
 
+  /** If .pathDensity is active / enabled, use it to calculate the effective value of pathDensity.
+   * @return density false if  ! .pathDensityActive, otherwise the portion of paths to request and display.
+   */
   pathControlActiveDensity : computed('pathDensityActive', 'pathDensity', function () {
-    let active = this.get('pathDensityActive'),
-     pathDensity = +this.get('pathDensity'),
-      density = active && expRange(pathDensity, 100/2, 1000);
+    const
+    active = this.get('pathDensityActive'),
+    pathDensity = +this.get('pathDensity');
+    let density = active && expRange(pathDensity, 100/2, 1000);
     if (density) {
-      let digits = Math.log10(density),
-      decimals =  (digits > 2) ? 0 : ((digits > 1) ? 1 : 2);
+      const
+      digits = Math.log10(density),
+      decimals = (digits > 2) ? 0 : ((digits > 1) ? 1 : 2);
       density = +density.toFixed(decimals);
     }
     let value = inputRangeValue('range-pathDensity');
@@ -395,12 +422,16 @@ export default Component.extend({
 
     dLog('pathControlActiveDensity', pathDensity, density);
     return density;
-   }),
+  }),
 
+  /** If .pathSample is active / enabled, use it to calculate the effective value of pathSample.
+   * @return sample false if  ! .pathSampleActive, otherwise the number of paths to request and display.
+   */
   pathControlActiveSample : computed('pathSampleActive', 'pathSample', function () {
-    let active = this.get('pathSampleActive'),
-     pathSample = +this.get('pathSample'),
-     sample = active && expRange(pathSample, 100, 10000);
+    const
+    active = this.get('pathSampleActive'),
+    pathSample = +this.get('pathSample');
+    let sample = active && expRange(pathSample, 100, 10000);
     if (sample) {
       sample = Math.round(sample);
     }
@@ -412,7 +443,7 @@ export default Component.extend({
     });
     dLog('pathControlActiveSample', pathSample, sample);
     return sample;
-   }),
+  }),
 
   /** ditto, 
    * controls.view.pathControlActiveNFeatures
@@ -424,15 +455,16 @@ export default Component.extend({
      * pathsViaStream, or perhaps it will be a limit applicable also to other
      * (non-streaming) request modes.
      */
-    let active = this.get('pathsViaStream'),
-     pathNFeatures = +this.get('pathNFeatures'),
-     nFeatures = active && expRange(pathNFeatures, 100, 10000);
+    const
+    active = this.get('pathsViaStream'),
+    pathNFeatures = +this.get('pathNFeatures');
+    let nFeatures = active && expRange(pathNFeatures, 100, 10000);
     if (nFeatures) {
       nFeatures = Math.round(nFeatures);
     }
     dLog('pathControlNFeatures', pathNFeatures, nFeatures);
     return nFeatures;
-   }),
+  }),
 
   pathsDensityParams : computed(
     'pathControlActiveSample', 'pathControlActiveDensity', 'pathControlNFeatures',
@@ -457,15 +489,14 @@ export default Component.extend({
   featuresCountsNBinsLinear : expRangeInitial(100, expRangeBase(100, 500)),
 
   featuresCountsNBins : computed('featuresCountsNBinsLinear', function () {
-    let
-     thresholdLinear = +this.get('featuresCountsNBinsLinear'),
-     threshold = expRange(thresholdLinear, 100, 500);
+    const thresholdLinear = +this.get('featuresCountsNBinsLinear');
+    let threshold = expRange(thresholdLinear, 100, 500);
     if (threshold) {
       threshold = Math.round(threshold);
     }
     dLog('featuresCountsNBins', thresholdLinear, threshold);
     return threshold;
-   }),
+  }),
 
   featuresCountsThresholdLinear : expRangeInitial(500, expRangeBase(100, 10000)),
 
@@ -474,15 +505,14 @@ export default Component.extend({
    *  - if  (count > featuresCountsThreshold) show featuresCounts (axis-charts)
    */
   featuresCountsThreshold : computed('featuresCountsThresholdLinear', function () {
-    let
-     thresholdLinear = +this.get('featuresCountsThresholdLinear'),
-     threshold = expRange(thresholdLinear, 100, 10000);
+    const thresholdLinear = +this.get('featuresCountsThresholdLinear');
+    let threshold = expRange(thresholdLinear, 100, 10000);
     if (threshold) {
       threshold = Math.round(threshold);
     }
     dLog('featuresCountsThreshold', thresholdLinear, threshold);
     return threshold;
-   }),
+  }),
 
   /*--------------------------------------------------------------------------*/
 
@@ -520,11 +550,11 @@ export default Component.extend({
     this.readParsedOptions();
     this.set('controls.view', this);
 
-    /* inherit browser default (1px) as an initial default, except for
-     * Firefox, as commented above.
+    /* inherit browser default (1px) as an initial default.
      */
-    setCssVariable ('--axisWidth', isFirefox() ? '2px' : 'inherit');
+    setCssVariable ('--axisWidth', 'inherit');
   },
+
   readParsedOptions() {
     /** this can be passed in from model.params.parsedOptions and then access pathsViaStream as 
      * this.get('parsedOptions.pathsViaStream');
@@ -533,10 +563,11 @@ export default Component.extend({
 
     /** default to true if not given as URL query param e.g. options=pathsViaStream=false  */
     let pathsViaStream = parsedOptions && parsedOptions.pathsViaStream;
-      // this.get('parsedOptions.pathsViaStream');
+    // this.get('parsedOptions.pathsViaStream');
     if (pathsViaStream !== undefined)
       this.set('pathsViaStream', toBool(pathsViaStream));
   },
+
   willDestroyElement() {
     dLog(compName, "willDestroyElement()");
     this.drawActions.trigger("drawControlsLife", false);
@@ -545,6 +576,10 @@ export default Component.extend({
   },
 
   actions : {
+    /**
+     * Sets the active tab for path controls.
+     * @param {string} tabName - The name of the tab to activate.
+     */
     pathTabActive : function(tabName) {
       let active;
       active = tabName === 'density';
@@ -556,15 +591,24 @@ export default Component.extend({
       this.set('pathSampleActive', active);
     },
 
+    /**
+     * Triggers the flip region action.
+     */
     flipRegion : function () {
       this.get('feed').trigger('flipRegion', undefined);
     },
 
+    /**
+     * Triggers the action to clear scaffold colours.
+     */
     clearScaffoldColours  : function () {
       dLog("clearScaffoldColours", "selected-markers.js");
       this.get('feed').trigger('clearScaffoldColours');
     },
 
+    /**
+     * Triggers the action to reset zoom levels.
+     */
     resetZooms : function () {
       this.get('feed').trigger('resetZooms');
     },
@@ -595,6 +639,10 @@ export default Component.extend({
     /** input range is [0,100];  desired output values are [0, 10].  */
     const factor = 100 / 10;
     let value = event.target.value / factor;
+    /** allow value = 0, which makes the axis disappear. */
+    if ((value != 0) && (value < 1) && isFirefox ) {
+      value = 1;
+    }
     // dLog('axisWidthInput', varName, value, event.target.value);
     setCssVariable(varName, value);
     // not used.
@@ -623,7 +671,7 @@ export default Component.extend({
      * event.target.value is a string; convert to a number.
      */
     let value = +event.target.value;
-     dLog('qtlUncolouredOpacityInput', value, event.target.value);
+    dLog('qtlUncolouredOpacityInput', value, event.target.value);
     this.set('qtlUncolouredOpacity', value);
   },
   titleTextSizeInput(event) {
@@ -650,7 +698,7 @@ export default Component.extend({
      * event.target.value is a string; convert to a number.
      */
     let value = +event.target.value;
-     dLog('pathNeighboursInput', value, event.target.value);
+    dLog('pathNeighboursInput', value, event.target.value);
     this.set('pathNeighbours', value);
   },
 
