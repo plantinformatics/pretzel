@@ -2279,9 +2279,9 @@ export default class PanelManageGenotypeComponent extends Component {
 
           if ((sampleNames?.length > 1e4) &&
               ! this.sampleNameFilter &&
-              // (config.environment === 'development') && 
-              navigator.userAgent.startsWith('Mozilla/')) {
-            /** Mozilla is currently slow in displaying 30k sample names, so in
+              ((config.environment === 'development') || this.urlOptions.advanced) && 
+              navigator.userAgent.includes(' Firefox/')) {
+            /** Firefox is currently slow in displaying 30k sample names, so in
              * development limit the length of .filteredSamples, displayed in
              * genotype-samples.hbs <select>
              */
