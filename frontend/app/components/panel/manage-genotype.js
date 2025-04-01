@@ -2476,7 +2476,11 @@ export default class PanelManageGenotypeComponent extends Component {
    */
   sampleName2Blocks(sampleName) {
     let blocks;
-    if (this.sampleName2Block) {
+    blocks = this.viewedVCFBlocks.filter(ab =>
+      ab.block.get('datasetId.sampleNamesSet').has(sampleName))
+      .mapBy('block');
+      
+    if (! blocks.length && this.sampleName2Block) {
       /** if a block is unviewed it will still be listed in sampleName2Block[].
        */
       blocks = this.sampleName2Block[sampleName];
