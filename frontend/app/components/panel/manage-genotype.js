@@ -543,7 +543,10 @@ export default class PanelManageGenotypeComponent extends Component {
     }
 
     if (userSettings.sampleFilterTypeName === undefined) {
-      userSettings.sampleFilterTypeName = 'variantInterval';
+      /** See sampleFilterTypes.
+       * equivalent : this.urlOptions.advanced ? 'variantInterval' : 'feature' */
+      const firstTab = Object.keys(this.sampleFilterTypes)[0];
+      userSettings.sampleFilterTypeName = firstTab;
     }
     if (userSettings.haplotypeFilterRef === undefined) {
       userSettings.haplotypeFilterRef = false;
