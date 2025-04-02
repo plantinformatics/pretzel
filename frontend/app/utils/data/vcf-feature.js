@@ -213,7 +213,7 @@ function featureBlockColour(feature, i) {
 function featureBlockColourValue(feature) {
   const
   axis1d = feature.get('blockId.axis1d'),
-  blockColourValue = axis1d.blockColourValue(feature.get('blockId'));
+  blockColourValue = axis1d?.blockColourValue(feature.get('blockId'));
   return blockColourValue;
 }
 

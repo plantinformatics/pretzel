@@ -237,7 +237,11 @@ export default Record.extend({
   },
   set sampleNames(names) {
     this[Symbol.for('sampleNames')] = names;
+    this[Symbol.for('sampleNamesSet')] = new Set(names);
     return names;
+  },
+  get sampleNamesSet() {
+    return this[Symbol.for('sampleNamesSet')];
   },
 
   //------------------------------------------------------------------------------

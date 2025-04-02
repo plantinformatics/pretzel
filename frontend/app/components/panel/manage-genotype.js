@@ -543,7 +543,10 @@ export default class PanelManageGenotypeComponent extends Component {
     }
 
     if (userSettings.sampleFilterTypeName === undefined) {
-      userSettings.sampleFilterTypeName = 'variantInterval';
+      /** See sampleFilterTypes.
+       * equivalent : this.urlOptions.advanced ? 'variantInterval' : 'feature' */
+      const firstTab = Object.keys(this.sampleFilterTypes)[0];
+      userSettings.sampleFilterTypeName = firstTab;
     }
     if (userSettings.haplotypeFilterRef === undefined) {
       userSettings.haplotypeFilterRef = false;
@@ -2324,7 +2327,24 @@ export default class PanelManageGenotypeComponent extends Component {
             // may need to a count to signal dataset update
             this.sampleCache.incrementProperty('filteredByGenotypeCount');
           }
-          this.mapSamplesToBlock(sampleNames, vcfBlock);
+          const
+          /** There is an assumption that samples of a VCF dataset are the same
+           * for each chromosome.  It is possible to have a distinct .vcf.gz
+           * file per chromosome, so they could have distinct sets of sample
+           * names, but that seems currently out of scope.
+           * If another block of the dataset is viewed, mapSamplesToBlock()
+           * should be called for it also; blockSetup() could set up a block CP.
+           * Perhaps better to map sampleNames to datasets, and use a function
+           * to lookup the viewed blocks of a dataset.
+           * Also will move the mapping to a service, e.g. sampleName2Block to
+           * services/data/block.
+           */
+          viewedBlocksOfDataset =
+            this.viewedVCFBlocks
+            .filter(B => B.block.get('datasetId.id') === vcfDatasetId);
+          viewedBlocksOfDataset.forEach(vb =>
+            this.mapSamplesToBlock(sampleNames, vb.block));
+
           if ((vcfDatasetId === this.lookupDatasetId) &&
               (this.vcfGenotypeSamplesSelected === undefined)) {
             this.vcfGenotypeSamplesSelected = [];
@@ -2459,7 +2479,11 @@ export default class PanelManageGenotypeComponent extends Component {
    */
   sampleName2Blocks(sampleName) {
     let blocks;
-    if (this.sampleName2Block) {
+    blocks = this.viewedVCFBlocks.filter(ab =>
+      ab.block.get('datasetId.sampleNamesSet').has(sampleName))
+      .mapBy('block');
+      
+    if (! blocks.length && this.sampleName2Block) {
       /** if a block is unviewed it will still be listed in sampleName2Block[].
        */
       blocks = this.sampleName2Block[sampleName];
