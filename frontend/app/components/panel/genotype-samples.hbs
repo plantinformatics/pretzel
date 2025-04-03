@@ -99,7 +99,8 @@
     <Textarea
       class="selectedSamplesInput"
       @value={{@the.selectedSamplesText}}
-      @input={{action @the.sampleNameListInputKey value="target.value" }}
+      {{ on 'input' (action @the.sampleNameListInputKey value="target.value" ) }}
+      {{!-- now that input is re-connected, these 3 are probably not required --}}
       @enter={{@the.sampleNameListInput}}
       @insert-newline={{@the.sampleNameListInput}}
       @escape-press={{@the.sampleNameListInput}}

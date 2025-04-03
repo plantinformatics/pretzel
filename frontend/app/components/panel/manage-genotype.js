@@ -1741,7 +1741,7 @@ export default class PanelManageGenotypeComponent extends Component {
       .trimEnd(/\n/)
       .split(/\n *\t*/g)
       .filter((name) => !!name);
-    dLog(fnName, value, selected);
+    dLog(fnName, value.length, value.slice(-50), selected.length);
     return selected;
   }
   /** parse the contents of the textarea -> selectedSamples
@@ -1756,15 +1756,20 @@ export default class PanelManageGenotypeComponent extends Component {
    * was last called.
    */
   selectedSamplesTextLines = null;
-  /** Called by @input - any user edit key.
+  /** Called by {{ on 'input' }} (equivalent to oninput=) - any user edit key.
    * Set this.selectedSamplesText to value.
    * If edit is substantial, e.g. changes # lines, then sampleNameListInput().
    */
   @action
   sampleNameListInputKey(value) {
+    const fnName = 'sampleNameListInputKey';
     this.selectedSamplesText = value;
     const
+    /** When Backspace or Delete removes the content of a line but not the
+     * newline, it would be good to update, i.e. exclude blank lines from the
+     * count. */
     lines = stringCountString(value, '\n');
+    dLog(fnName, value.length, lines, this.selectedSamplesTextLines);
     if (lines != this.selectedSamplesTextLines) {
       this.selectedSamplesTextLines = lines;
       this.sampleNameListInput(value);
