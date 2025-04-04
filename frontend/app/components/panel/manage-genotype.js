@@ -1567,7 +1567,7 @@ export default class PanelManageGenotypeComponent extends Component {
       cacheFiltered = this.sampleCache.filteredByGenotype,
       blockFiltered = cacheFiltered[vcfBlock.id];
       sampleNames = blockFiltered?.[filterDescription];
-      dLog(fnName, vcfBlock.name, sampleNames?.length, filterDescription, selectedSNPs, vcfBlock.brushName);
+      dLog(fnName, vcfBlock.name, sampleNames?.length, filterDescription, selectedSNPs, vcfBlock.brushName, 'FilteredSamples');
     } else {
       sampleNames = null;
     }
@@ -1741,7 +1741,7 @@ export default class PanelManageGenotypeComponent extends Component {
       .trimEnd(/\n/)
       .split(/\n *\t*/g)
       .filter((name) => !!name);
-    dLog(fnName, value, selected);
+    dLog(fnName, value.length, value.slice(-50), selected.length);
     return selected;
   }
   /** parse the contents of the textarea -> selectedSamples
@@ -1756,16 +1756,24 @@ export default class PanelManageGenotypeComponent extends Component {
    * was last called.
    */
   selectedSamplesTextLines = null;
-  /** Called by @input - any user edit key.
+  /** Called by {{ on 'input' }} (equivalent to oninput=) - any user edit key.
    * Set this.selectedSamplesText to value.
    * If edit is substantial, e.g. changes # lines, then sampleNameListInput().
    */
   @action
   sampleNameListInputKey(value) {
+    const fnName = 'sampleNameListInputKey';
     this.selectedSamplesText = value;
     const
+    /** When Backspace or Delete removes the content of a line but not the
+     * newline, it would be good to update, i.e. exclude blank lines from the
+     * count. */
     lines = stringCountString(value, '\n');
-    if (lines != this.selectedSamplesTextLines) {
+    dLog(fnName, value.length, lines, this.selectedSamplesTextLines);
+    /* After Ctrl-A Backspace, lines is 0, and often .selectedSamplesTextLines
+     * is already 0, so compare .selectedSamples.length also.
+     */
+    if ((lines != this.selectedSamplesTextLines) || (lines != this.selectedSamples.length) ) {
       this.selectedSamplesTextLines = lines;
       this.sampleNameListInput(value);
     }
@@ -2201,7 +2209,7 @@ export default class PanelManageGenotypeComponent extends Component {
       this.selectedSNPsInBrushedDomain(vcfBlock);
     dLog(fnName, vcfBlock.name, filterByHaplotype, 'FilteredSamples');
     if (filterByHaplotype?.length && ! this.blockFilteredSamplesGet(vcfBlock)) {
-      this.vcfGenotypeSamplesDataset(vcfBlock);
+      later(() => this.vcfGenotypeSamplesDataset(vcfBlock));
     } else if (this.args.userSettings.filterSamplesByHaplotype) {
       // trigger update of samples(); the unfiltered samples are already in cache
       this.sampleCache.incrementProperty('filteredByGenotypeCount');
@@ -2241,6 +2249,7 @@ export default class PanelManageGenotypeComponent extends Component {
     filterDescription = filterByHaplotype ? filterByHaplotype.features.map(
       h => '' + h.position + ':' + (h.matchRef ? 'Ref' : 'Alt')).join(' ') : '',
     requestDescription = "Fetching accessions for " + vcfBlock.brushName + ' ' + filterDescription;
+    dLog(fnName, filterDescription, vcfBlock.brushName, 'FilteredSamples');
     /** There may be multiple concurrent samples requests, so this could be an
      * array, but the requirement is simply to show to the user when there is a
      * samples request in process, as the request may take seconds.
@@ -2519,7 +2528,9 @@ export default class PanelManageGenotypeComponent extends Component {
       dLog(fnName, vcfBlock.brushName);
       const
       /** This can also depend on the other 2 filterTypeName-s : variantInterval, haplotype. */
-      cp = computed('selectedSNPCount.feature',
+      cp = computed(
+        'selectedSNPCount.feature',
+        'controls.userSettings.genotype.filterSamplesByHaplotype',
         () => this.genotypeSamplesFilteredByHaplotypes(vcfBlock));
       defineProperty(vcfBlock, 'genotypeSamplesFilteredByHaplotypes', cp);
 

@@ -48,7 +48,7 @@
     <Textarea
       class="selectedFeaturesInput"
       @value={{this.selectedFeaturesText}}
-      @input={{action this.featureNameListInputKey value="target.value" }}
+      oninput={{action this.featureNameListInputKey value="target.value" }}
       @enter={{this.featureNameListInput}}
       @insert-newline={{this.featureNameListInput}}
       @escape-press={{this.featureNameListInput}}
