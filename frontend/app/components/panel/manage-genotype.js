@@ -2489,7 +2489,7 @@ export default class PanelManageGenotypeComponent extends Component {
   sampleName2Blocks(sampleName) {
     let blocks;
     blocks = this.viewedVCFBlocks.filter(ab =>
-      ab.block.get('datasetId.sampleNamesSet').has(sampleName))
+      ab.block.get('datasetId.sampleNamesSet')?.has(sampleName))
       .mapBy('block');
       
     if (! blocks.length && this.sampleName2Block) {
