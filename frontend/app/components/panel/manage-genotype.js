@@ -915,7 +915,9 @@ export default class PanelManageGenotypeComponent extends Component {
       this.haplotypeFiltersApply();
     }
   }
-  /** Side Effect : copy sampleFilters of another block if a new block is viewed.  */
+  /** Side Effect : merge sampleFilters of other blocks on the same chromosome
+   * (referenceBlock) if a new block is viewed.  */
+  // maybe : , 'userSettings.resultCounts.blocks', gtBlocks.@each.block.selectedSNPCount.feature sampleFiltersCountSelected (sampleFiltersCount)
   @computed('gtBlocks')
   get sampleFiltersCopyEffect() {
     /** allow time for brushed features to be loaded.
@@ -932,7 +934,7 @@ export default class PanelManageGenotypeComponent extends Component {
   sampleFiltersCopy() {
     const fnName = 'sampleFiltersCopy';
     this.sampleFilterKeys.forEach(sampleFilterTypeName => this.sampleFiltersMergeType(sampleFilterTypeName));
-    dLog(fnName, this.sampleFiltersCheck());
+    dLog(fnName, this.sampleFiltersCheck(), 'FilteredSamples');
 
     // update selectedSampleEffect
    later(() => {
@@ -1065,7 +1067,12 @@ export default class PanelManageGenotypeComponent extends Component {
           /** referenceBlock does not have features, so refer to the feature of
            * the block which matches the position of the selected feature. */
           const blockFeature = block.features.findBy('value_0', feature.value_0);
-          dLog(fnName, 'copy', blockFeature.value_0, 'to', sampleFilters, block.brushName, 'FilteredSamples');
+          dLog(fnName, 'copy', blockFeature.value_0, 'to', sampleFilters, block.brushName, blockFeature[matchRefSymbol], feature[matchRefSymbol], 'FilteredSamples');
+          if (blockFeature[matchRefSymbol] === undefined) {
+            blockFeature[matchRefSymbol] = feature[matchRefSymbol];
+          } else if (blockFeature[matchRefSymbol] !== feature[matchRefSymbol]) {
+            dLog(fnName, 'copy', blockFeature.value_0, blockFeature[matchRefSymbol], '!==', feature[matchRefSymbol], 'FilteredSamples');
+          }
           sampleFilters.addObject(blockFeature);
         }
       });
@@ -1187,7 +1194,9 @@ export default class PanelManageGenotypeComponent extends Component {
 
   /** User has clicked Alt or Ref of a SNP - toggle the selection of that
    * SNP+genotype for sample sorting and filtering.
-   * Called from afterSelectionHaplotype() -> featureToggleRC() in matrix-view.js
+   *
+   * Called from afterOnCellMouseDown() -> handleCellClick() ->
+   *   featureToggleRC() in matrix-view.js
    */
   @action
   featureToggle(feature, columnName) {

@@ -1,6 +1,6 @@
 <div>
   <label>List of samples from VCF</label>
-  {{#if @the.vcfGenotypeSamplesText}}
+  {{#if @the.vcfGenotypeSamplesCount}}
     <span class="sample-count">(
       {{#if @userSettings.filterSamplesByHaplotype }} Filtered {{else}} Total {{/if}} :
       {{@the.vcfGenotypeSamplesCount}} )</span>
