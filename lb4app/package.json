@@ -82,7 +82,7 @@
     "loopback-connector-mongodb": "^6.1.0",
     "loopback-datasource-juggler": "^4.27.0",
     "memory-cache": "^0.2.0",
-    "mongoose": "^6.2.3",
+    "mongoose": "^8.9.5",
     "morgan": "^1.10.0",
     "node": "^17.4.0",
     "openai": "^3.3.0",
