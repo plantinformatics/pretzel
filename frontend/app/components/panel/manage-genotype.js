@@ -666,14 +666,14 @@ export default class PanelManageGenotypeComponent extends Component {
   // -----------------------------------
 
   /** Limit on result rows for VCF lookup response.
-   * This initial default value is coordinated with hbs : <input ... value=100 ... rowLimitInput >
+   * This initial default value is coordinated with hbs : <input ... value=300 ... rowLimitInput >
    */
   @tracked
-  rowLimit = 100;
+  rowLimit = 300;
 
   @action
   rowLimitInput(event) {
-    /** default is 100 : value=100 in hbs
+    /** default is 300 : value=300 in hbs
      * event.target.value is a string; convert to a number.
      */
     let value = +event.target.value;
