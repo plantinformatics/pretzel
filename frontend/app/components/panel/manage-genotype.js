@@ -666,14 +666,14 @@ export default class PanelManageGenotypeComponent extends Component {
   // -----------------------------------
 
   /** Limit on result rows for VCF lookup response.
-   * This initial default value is coordinated with hbs : <input ... value=100 ... rowLimitInput >
+   * This initial default value is coordinated with hbs : <input ... value=300 ... rowLimitInput >
    */
   @tracked
-  rowLimit = 100;
+  rowLimit = 300;
 
   @action
   rowLimitInput(event) {
-    /** default is 100 : value=100 in hbs
+    /** default is 300 : value=300 in hbs
      * event.target.value is a string; convert to a number.
      */
     let value = +event.target.value;
@@ -915,7 +915,9 @@ export default class PanelManageGenotypeComponent extends Component {
       this.haplotypeFiltersApply();
     }
   }
-  /** Side Effect : copy sampleFilters of another block if a new block is viewed.  */
+  /** Side Effect : merge sampleFilters of other blocks on the same chromosome
+   * (referenceBlock) if a new block is viewed.  */
+  // maybe : , 'userSettings.resultCounts.blocks', gtBlocks.@each.block.selectedSNPCount.feature sampleFiltersCountSelected (sampleFiltersCount)
   @computed('gtBlocks')
   get sampleFiltersCopyEffect() {
     /** allow time for brushed features to be loaded.
@@ -931,8 +933,8 @@ export default class PanelManageGenotypeComponent extends Component {
    */
   sampleFiltersCopy() {
     const fnName = 'sampleFiltersCopy';
-    this.sampleFilterKeys.forEach(sampleFilterTypeName => this.sampleFiltersCopyType(sampleFilterTypeName));
-    dLog(fnName, this.sampleFiltersCheck());
+    this.sampleFilterKeys.forEach(sampleFilterTypeName => this.sampleFiltersMergeType(sampleFilterTypeName));
+    dLog(fnName, this.sampleFiltersCheck(), 'FilteredSamples');
 
     // update selectedSampleEffect
    later(() => {
@@ -1005,6 +1007,76 @@ export default class PanelManageGenotypeComponent extends Component {
         });
       }
     }
+  }
+  /** Merge instead of Copy
+   *
+   * This is alternative to sampleFiltersCopyType(), which is only suitable once
+   * when a block is first viewed; otherwise it may overwrite
+   * block[sampleFiltersSymbol].
+   *
+   * This is a different approach, which uses the reference block as the central
+   * reference connecting vcf blocks, enabling selected SNPs to be translated
+   * between blocks.
+   * Sample column sorting is based on the selected SNP being a feature, whereas
+   * if they were stored on the reference block they would be just positions +
+   * genotype values.
+   */
+  sampleFiltersMergeType(sampleFilterTypeName) {
+    /**
+     * collate feature filters up to brush reference block
+     * then copy them down to vcf blocks
+     */
+    const fnName = 'sampleFiltersMergeType';
+
+    const
+    blocks = this.gtBlocks;
+    /** collate feature filters up to brush reference block */
+    blocks.forEach(block => {
+      const
+      sampleFilters = this.blockSampleFilters(block, sampleFilterTypeName),
+      referenceBlock = block.referenceBlock,
+      sampleFiltersRef = this.blockSampleFilters(referenceBlock, sampleFilterTypeName);
+      sampleFilters.forEach(feature => {
+        /** If feature.value_0 is not in sampleFiltersRef then add it.
+         * .value_0 === .value[0]
+         */
+        if (! sampleFiltersRef.findBy('value_0', feature.value_0)) {
+          /** referenceBlock does not have features, so refer to the feature of
+           * the block in which the feature was selected. */
+          sampleFiltersRef.addObject(feature);
+        }
+      });
+    });
+
+    /** then copy them down to vcf blocks */
+    blocks.forEach(block => {
+      const
+      sampleFilters = this.blockSampleFilters(block, sampleFilterTypeName),
+      referenceBlock = block.referenceBlock,
+      sampleFiltersRef = this.blockSampleFilters(referenceBlock, sampleFilterTypeName);
+
+      sampleFiltersRef.forEach(feature => {
+        /** If feature.value_0 is not in sampleFilters but it is in the
+         * positions of block, then add it.
+         * positionIsInBlock() uses block[featurePositionsSymbol] which is
+         * undefined until some features are loaded for block.
+         */
+        if (! sampleFilters.findBy('value_0', feature.value_0) &&
+            block[featurePositionsSymbol] &&
+            this.positionIsInBlock(block, feature)) {
+          /** referenceBlock does not have features, so refer to the feature of
+           * the block which matches the position of the selected feature. */
+          const blockFeature = block.features.findBy('value_0', feature.value_0);
+          dLog(fnName, 'copy', blockFeature.value_0, 'to', sampleFilters, block.brushName, blockFeature[matchRefSymbol], feature[matchRefSymbol], 'FilteredSamples');
+          if (blockFeature[matchRefSymbol] === undefined) {
+            blockFeature[matchRefSymbol] = feature[matchRefSymbol];
+          } else if (blockFeature[matchRefSymbol] !== feature[matchRefSymbol]) {
+            dLog(fnName, 'copy', blockFeature.value_0, blockFeature[matchRefSymbol], '!==', feature[matchRefSymbol], 'FilteredSamples');
+          }
+          sampleFilters.addObject(blockFeature);
+        }
+      });
+    });
   }
   /** Refresh display to show result of sampleFiltersCopy().
    */
@@ -1122,7 +1194,9 @@ export default class PanelManageGenotypeComponent extends Component {
 
   /** User has clicked Alt or Ref of a SNP - toggle the selection of that
    * SNP+genotype for sample sorting and filtering.
-   * Called from afterSelectionHaplotype() -> featureToggleRC() in matrix-view.js
+   *
+   * Called from afterOnCellMouseDown() -> handleCellClick() ->
+   *   featureToggleRC() in matrix-view.js
    */
   @action
   featureToggle(feature, columnName) {
@@ -2173,8 +2247,20 @@ export default class PanelManageGenotypeComponent extends Component {
     if (! vcfBlock.brushedDomain) {
       return [];
     }
-    const
-    features = this.blocksFeatureFilters.findBy('block', vcfBlock)?.sampleFilters.feature
+    let features;
+    /** if vcfBlock has no features loaded yet (e.g. zoomed out), then copy the
+     * selected SNPs from its referenceBlock.
+     */
+    if (! vcfBlock[featurePositionsSymbol]) {
+      const
+      referenceBlock = vcfBlock.referenceBlock,
+      sampleFilterTypeName = 'feature',
+      sampleFiltersRef = this.blockSampleFilters(referenceBlock, sampleFilterTypeName);
+      features = sampleFiltersRef;
+    } else {
+      features = this.blocksFeatureFilters.findBy('block', vcfBlock)?.sampleFilters.feature;
+    }
+    features = features
       .filter(f => inRange(f.value_0, vcfBlock.brushedDomain));
     return features;
   }
@@ -3244,7 +3330,7 @@ export default class PanelManageGenotypeComponent extends Component {
           choose.requiredBlock[featurePositionsSymbol].has(feature.get('value.0')) &&
           visibleBlocks.some((block, blockIndex) => {
             // could test > k instead of excluding requiredBlock from the count.
-            if ((block !== choose.requiredBlock) && positionIsInBlock(block, feature)) {
+            if ((block !== choose.requiredBlock) && this.positionIsInBlock(block, feature)) {
               overlaps++;
               if (logCount > 0) {
                 dLog(fnName, overlaps, );
@@ -3258,14 +3344,8 @@ export default class PanelManageGenotypeComponent extends Component {
         const
         blockOut = 
           blocks.find((block, blockIndex) => 
-            positionIsInBlock(block, feature) !== !!block.positionFilter );
+            this.positionIsInBlock(block, feature) !== !!block.positionFilter );
         return blockOut === undefined;
-      }
-      // const
-      /** refer : models/block.js : addFeaturePositions()  */
-      // featurePositions = blocks.map(block => block[featurePositionsSymbol]);
-      function positionIsInBlock(block, feature) {
-        return block[featurePositionsSymbol].has(feature.get('value.0'));
       }
 
       const feature0 = features[0];
@@ -3298,6 +3378,13 @@ export default class PanelManageGenotypeComponent extends Component {
 
     return features;
   }
+
+  /** refer : models/block.js : addFeaturePositions()  */
+  // featurePositions = blocks.map(block => block[featurePositionsSymbol]);
+  positionIsInBlock(block, feature) {
+    return block[featurePositionsSymbol].has(feature.get('value.0'));
+  }
+
 
   /** Calculate for each feature / SNP the count of values which are Alt and Ref.
    * If the SNP has only Alt or only Ref then it is monomorphic and is of
