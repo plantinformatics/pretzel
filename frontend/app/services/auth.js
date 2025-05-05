@@ -468,6 +468,24 @@ export default Service.extend({
     return this._ajax('Blocks/genotypeSamples', 'GET', params, true);
   },
 
+
+  /** Request haplotypes for given selected SNPs from a Genotype dataset.
+   * For each unique haplotype, the result includes sample (names or numbers)
+   * which have that haplotype, and a count of those samples.
+   * apiServer is derived from block.id (could also use datasetId).
+   * @param block
+   * @param datasetId of parent / reference of the blast db which is to be searched
+   * @param scope chromosome
+   * @param positions	array of feature / SNP positions
+   */
+  genotypeHaplotypesSamples(block, datasetId, scope, positions) {
+    dLog('services/auth genotypeHaplotypesSamples', datasetId, scope, positions);
+    const params = {id : block.id, datasetId, scope, positions};
+    return this._ajax('Blocks/genotypeHaplotypesSamples', 'GET', params, true);
+  },
+
+
+
   /** Request genotype calls.
    * apiServer is derived from datasetId.
    * @param datasetId of parent / reference of the VCF / Genotype db which is to be searched

@@ -242,6 +242,8 @@ function featureHasSamplesLoaded(feature) {
  *   The samples indicated by requestSamplesAll can be optionally filtered before request.
  * .filterSamplesByHaplotype  boolean, default : false
  *   Show samples selected by SNP filters
+ * .showHaplotypes  boolean, default : false
+ *   Show unique haplotypes of the selected SMPs, and their samples
  *
  * @see userSettingsDefaults()
  *------------------------------------------------------------------------------
@@ -565,6 +567,10 @@ export default class PanelManageGenotypeComponent extends Component {
 
     if (userSettings.filterSamplesByHaplotype === undefined) {
       userSettings.filterSamplesByHaplotype = false;
+    }
+
+    if (userSettings.showHaplotypes === undefined) {
+      userSettings.showHaplotypes = false;
     }
 
     if (userSettings.showNonVCFFeatureNames === undefined) {
@@ -2317,7 +2323,7 @@ export default class PanelManageGenotypeComponent extends Component {
     vcfDataset = contentOf(vcfBlock?.get('datasetId')),
     vcfDatasetId = vcfBlock?.get('datasetId.id'),
     vcfDatasetIdAPI = vcfBlock?.get('datasetId.genotypeId'),
-    /** as in .lookupScope */
+    /** Same comment as in .lookupScope */
     scope = vcfBlock.get('name'),
     /** Of the 3 ways to select SNPs for sample sorting / filtering :
      *  - .blocksHaplotypeFilters sampleFilters.haplotype
@@ -2341,6 +2347,7 @@ export default class PanelManageGenotypeComponent extends Component {
      * samples request in process, as the request may take seconds.
      */
     later(() => Ember_set(this, 'samplesRequestDescription', requestDescription));
+
 
     let textP;
     if (scope && vcfDatasetIdAPI)   {
@@ -2603,6 +2610,24 @@ export default class PanelManageGenotypeComponent extends Component {
 
   //----------------------------------------------------------------------------
 
+  /** When the user changes selected SNPs, request unique haplotypes and their samples.
+   * Dependency is copied from snpsInBrushedDomain().
+   */
+  @computed('lookupBlock.brushedDomain', 'featureFiltersCount')
+  get haplotypesSamples() {
+    const
+    fnName = 'haplotypesSamples',
+    vcfBlock = this.lookupBlock,
+    promise = this.vcfGenotypeHaplotypesSamples(vcfBlock)
+      .then(text => {
+        return text?.text;
+      });
+    return promise;
+  }
+
+  //----------------------------------------------------------------------------
+
+
   /** This is called for brushed VCF blocks.
    * Add a Computed Property genotypeSamplesFilteredByHaplotypes to the block,
    * and assign an attribute selectedSNPCount: {}.
@@ -2625,6 +2650,62 @@ export default class PanelManageGenotypeComponent extends Component {
       vcfBlock.set('selectedSNPCount', {});
     }
 
+  }
+
+  //----------------------------------------------------------------------------
+
+  /** Given 1 or more selected SNPs,
+   * - collate the haplotype values of all samples at those SNPs,
+   * - count the unique haplotype values, and for each unique haplotype value,
+   * - - collate a list of samples which have that haplotype value.
+   *
+   * Here haplotype value means the genotype value of a sample at the selected SNPs.
+   *
+   * These are not handled, but might be required later :
+   *
+   * - multiple blocks (chromosomes) within a dataset
+   * This could be implemented by combining the results from multiple calls to
+   * vcfGenotypeLookup.bash from the server, processing with
+   * haplotypes_samples_collate.awk but not haplotypes_samples_count.awk - that
+   * part would be done in the server.
+   *
+   * - blocks of multiple datasets on the same axis / chromosome
+   * This would only be meaningful if the dataset had common samples, which is
+   * not expected to be usual.
+   */
+  vcfGenotypeHaplotypesSamples(vcfBlock) {
+    const
+    fnName = 'vcfGenotypeHaplotypesSamples',
+    /** As in vcfGenotypeSamplesDataset() */
+    vcfDataset = contentOf(vcfBlock?.get('datasetId')),
+    vcfDatasetId = vcfBlock?.get('datasetId.id'),
+    vcfDatasetIdAPI = vcfBlock?.get('datasetId.genotypeId'),
+    /** Same comment as in .lookupScope */
+    scope = vcfBlock.get('name'),
+
+    /** See comment in vcfGenotypeSamplesDataset() */
+    positions = this.selectedSNPsInBrushedDomain(vcfBlock)
+      .sortBy('value_0')
+      .mapBy('value_0');
+
+    dLog(fnName, positions, vcfBlock.brushName, 'HaplotypesSamples');
+
+    let textP;
+    if (scope && vcfDatasetIdAPI && positions.length)   {
+
+      this.lookupMessage = null;
+
+      textP = this.auth.genotypeHaplotypesSamples(
+        vcfBlock, vcfDatasetIdAPI, scope, positions,
+        {} );
+      textP.then(
+        (text) => {
+        }
+      )
+        .catch(this.showError.bind(this, fnName));
+
+    }
+    return textP;    
   }
 
   // ---------------------------------------------------------------------------

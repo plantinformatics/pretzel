@@ -116,8 +116,8 @@ cd $vcfDir
 cd *40K*XT*
 vcfGz=_40K__samples_XT.exomeIDs.vcf.gz ;
 # If the .csi file is not present, create it with :
-# bcftools index vcfGz
-splitVcf vcfGz
+# bcftools index $vcfGz
+splitVcf $vcfGz
 ```
 
 In this case, each chromosome is in a separate .vcf.gz file :

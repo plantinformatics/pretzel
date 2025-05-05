@@ -28,6 +28,24 @@
     {{/ember-tooltip}}
   </div>
 
+  <div>
+    <input type="checkbox"
+      checked={{@userSettings.showHaplotypes}}
+      oninput={{action (mut @userSettings.showHaplotypes) value="target.checked" }}  >
+    <label>Show Haplotypes</label>
+    {{#ember-tooltip side="left" delay=1500}}
+      Show unique haplotypes for the selected SNPs, and samples which have each haplotype.
+    {{/ember-tooltip}}
+  </div>
+
+  {{#if @userSettings.showHaplotypes}}
+    {{#let (load @the.haplotypesSamples) as |result|}}
+      {{#if result.isResolved}}
+        <textarea style="min-width:100%">{{result.value}}</textarea>
+      {{/if}}
+    {{/let}}
+  {{/if}}
+
   <div style="min-height:1ex">{{@the.samplesRequestDescription}}</div>
 
 
