@@ -98,10 +98,26 @@ Setting up the chromosome link files :
 
 In this first case, a single .vcf.gz contains all chromosomes, so all chromosome link files refer to this single file :
 
+This function will be used :
+```
+# Split a .vcf.gz into 1 .vcf.gz file per chromosome.
+# The output files will be named with their chromosome name.
+# @param path/name of .vcf.gz file, which has a .csi file
+function splitVcf() {
+  VCF=$1;
+  nCores=$( < /proc/cpuinfo  awk 'BEGIN {sum = 0; }  /cpu cores/ {sum += $4;} END {  print sum; }')
+  bcftools query -f '%CHROM\n'  $VCF | uniq | xargs  -P $nCores -I{} sh -c \
+  "bcftools view -r {} -Oz -o {}.vcf.gz $VCF && bcftools index {}.vcf.gz"
+}
+```
+
 ```
 cd $vcfDir
 cd *40K*XT*
-vcfGz=_40K__samples_XT.exomeIDs.vcf.gz ; for i in {1,2,3,4,5,6,7}{A,B,D} ; do ln -s $vcfGz $i.vcf.gz ; done
+vcfGz=_40K__samples_XT.exomeIDs.vcf.gz ;
+# If the .csi file is not present, create it with :
+# bcftools index vcfGz
+splitVcf vcfGz
 ```
 
 In this case, each chromosome is in a separate .vcf.gz file :
