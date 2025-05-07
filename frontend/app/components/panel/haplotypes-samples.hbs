@@ -6,14 +6,5 @@
       values=this.haplotypesSamples
       selectedGroupChanged=(action this.selectedHaplotypeChanged) }}
 
-    <select style="height:100px" class="form-control" multiple onchange={{action @selectHaplotype}}>
-      {{#each this.haplotypesSamples as |haplotypeSamples|}}
-        <option value={{haplotypeSamples}} selected={{include @the.selectedHaplotypes haplotypeSamples}}>
-          {{haplotypeSamples.haplotype}}
-          {{haplotypeSamples.count}} {{join ',' haplotypeSamples.samples}}
-        </option>
-      {{/each}}
-    </select>
-
   </div>
 </div>

@@ -2634,38 +2634,8 @@ export default class PanelManageGenotypeComponent extends Component {
         return text?.text;
       })
       .catch(() => null);
-    this.selectedHaplotypes = [];
     return promise;
   }
-
-  /** Use jQuery target.val() to map the multi-select to an array of selected sample names.
-   * Based on selectSample() - see comment there.
-   */
-  @action
-  selectHaplotype(event) {
-    const
-    fnName = 'selectHaplotype',
-    selectedHaplotypes = $(event.target).val();
-    dLog(fnName, event.target, selectedHaplotypes);
-    if (! this.selectedHaplotypes) {
-      this.selectedHaplotypes = selectedHaplotypes;
-    } else {
-      this.selectedHaplotypes.addObjects(selectedHaplotypes);
-    }
-    /** copied from selectSample(). */
-    if (selectedHaplotypes.length) {
-      const
-      haplotypesSamples = selectedHaplotypes.mapBy('samples').flat(),
-      /** previous selected samples, possibly edited by user.
-       * Can use the same parsing as sampleNameListInput().  */
-      editedSamples = this.sampleNameListInputParse(this.selectedSamplesText);
-
-      // Using .addObjects removes duplicates, which string concatenation wouldn't do.
-      this.selectedSamplesText = editedSamples.addObjects(haplotypesSamples).join('\n');
-    }
-
-  }
-
 
   //----------------------------------------------------------------------------
 
