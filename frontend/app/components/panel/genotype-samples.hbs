@@ -41,7 +41,11 @@
   {{#if @userSettings.showHaplotypes}}
     {{#let (load @the.haplotypesSamples) as |result|}}
       {{#if result.isResolved}}
-        <textarea style="min-width:100%">{{result.value}}</textarea>
+        {{!-- i.e. panel/haplotypes-samples --}}
+        <Panel::HaplotypesSamples @the={{@the}} @userSettings={{@userSettings}}
+        @data={{result.value}} @selectHaplotype={{@the.selectHaplotype}}
+        >
+        </Panel::HaplotypesSamples>
       {{/if}}
     {{/let}}
   {{/if}}

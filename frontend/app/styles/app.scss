@@ -2575,6 +2575,14 @@ div.genotype label
 
 /*----------------------------------------------------------------------------*/
 
+.haplotypes-samples.genotype-controls > select[multiple]
+{
+  max-width: 40em;
+  overflow-x: auto;
+}
+
+/*----------------------------------------------------------------------------*/
+
 .gtDatasetIdsToFilter > select
 {
   width : fit-content;

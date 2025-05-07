@@ -1760,10 +1760,18 @@ export default class PanelManageGenotypeComponent extends Component {
   selectSample(event) {
     const
     selectedSamples = $(event.target).val();
+    this.selectSampleArray(selectedSamples, true);
+  }
+  /**
+   * @param selectSampleArray array of text sample names
+   * @param add true for add, false for remove
+   */
+  selectSampleArray(selectedSamples, add) {
+    const functionName = add ? 'addObjects' : 'removeObjects';
     if (! this.selectedSamples) {
       this.selectedSamples = selectedSamples;
     } else {
-      this.selectedSamples.addObjects(selectedSamples);
+      this.selectedSamples[functionName](selectedSamples);
     }
     if (! this.selectedSamplesText) {
       if (selectedSamples.length) {
@@ -1776,7 +1784,8 @@ export default class PanelManageGenotypeComponent extends Component {
       editedSamples = this.sampleNameListInputParse(this.selectedSamplesText);
 
       // Using .addObjects removes duplicates, which string concatenation wouldn't do.
-      this.selectedSamplesText = editedSamples.addObjects(selectedSamples).join('\n');
+      // .addObjects and .removeObjects match strings by == (not ===).
+      this.selectedSamplesText = editedSamples[functionName](selectedSamples).join('\n');
     }
   }
 
@@ -2612,6 +2621,8 @@ export default class PanelManageGenotypeComponent extends Component {
 
   /** When the user changes selected SNPs, request unique haplotypes and their samples.
    * Dependency is copied from snpsInBrushedDomain().
+   * @return promise yielding {text } of the API result
+   * or throwing null if e.g. there are no SNPs selected.
    */
   @computed('lookupBlock.brushedDomain', 'featureFiltersCount')
   get haplotypesSamples() {
@@ -2621,9 +2632,40 @@ export default class PanelManageGenotypeComponent extends Component {
     promise = this.vcfGenotypeHaplotypesSamples(vcfBlock)
       .then(text => {
         return text?.text;
-      });
+      })
+      .catch(() => null);
+    this.selectedHaplotypes = [];
     return promise;
   }
+
+  /** Use jQuery target.val() to map the multi-select to an array of selected sample names.
+   * Based on selectSample() - see comment there.
+   */
+  @action
+  selectHaplotype(event) {
+    const
+    fnName = 'selectHaplotype',
+    selectedHaplotypes = $(event.target).val();
+    dLog(fnName, event.target, selectedHaplotypes);
+    if (! this.selectedHaplotypes) {
+      this.selectedHaplotypes = selectedHaplotypes;
+    } else {
+      this.selectedHaplotypes.addObjects(selectedHaplotypes);
+    }
+    /** copied from selectSample(). */
+    if (selectedHaplotypes.length) {
+      const
+      haplotypesSamples = selectedHaplotypes.mapBy('samples').flat(),
+      /** previous selected samples, possibly edited by user.
+       * Can use the same parsing as sampleNameListInput().  */
+      editedSamples = this.sampleNameListInputParse(this.selectedSamplesText);
+
+      // Using .addObjects removes duplicates, which string concatenation wouldn't do.
+      this.selectedSamplesText = editedSamples.addObjects(haplotypesSamples).join('\n');
+    }
+
+  }
+
 
   //----------------------------------------------------------------------------
 
@@ -2672,6 +2714,10 @@ export default class PanelManageGenotypeComponent extends Component {
    * - blocks of multiple datasets on the same axis / chromosome
    * This would only be meaningful if the dataset had common samples, which is
    * not expected to be usual.
+   *
+   * @return promise yielding the text returned by the API
+   * or throw if these are not defined : vcfBlock.scope && vcfBlock.datasetId.genotypeId &&
+   * this.selectedSNPsInBrushedDomain(vcfBlock)
    */
   vcfGenotypeHaplotypesSamples(vcfBlock) {
     const
@@ -2704,8 +2750,10 @@ export default class PanelManageGenotypeComponent extends Component {
       )
         .catch(this.showError.bind(this, fnName));
 
+    } else {
+      textP = Promise.reject();
     }
-    return textP;    
+    return textP;
   }
 
   // ---------------------------------------------------------------------------
