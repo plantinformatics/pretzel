@@ -1,27 +1,26 @@
 {{#ember-modal-dialog
-    onClose=(action (mut this.showColourThemeModal) false)
+    onClose=(action (mut @userSettings.showColourThemeModal) false)
     targetAttachment="center"
     translucentOverlay=true
     clickOutsideToClose=true
     title="Colour Theme Selector"}}
   <select {{on "change" this.changeTheme}}>
     {{#each this.themes as |theme|}}
-      <option value={{theme.name}} selected={{eq theme.name this.selectedThemeName}}>{{theme.name}}</option>
+      <option value={{theme.name}} selected={{eq theme.name this.userColourThemeName}}>{{theme.name}}</option>
     {{/each}}
   </select>
 
   {{!-- Display the CSS variable names and current colours of the selected theme --}}
-  {{#each this.themes as |theme|}}
-    {{#if (eq theme.name this.selectedThemeName)}}
-      <ul>
-        {{#each-in theme.variables as |varName varValue|}}
-          <li style="margin: 0.5em 0;">
-            <span>{{varName}}:</span>
-            <span style="display:inline-block; width:20px; height:20px; background-color: {{varValue}}; margin: 0 0.5em;"></span>
-            <span>{{varValue}}</span>
-          </li>
-        {{/each-in}}
-      </ul>
-    {{/if}}
-  {{/each}}
+  <ul class="colour-vars-list">
+    {{#each-in this.userColourTheme.variables as |varName varValue|}}
+      <li>
+        <span class="colour-block" style="background-color: {{varValue}};"></span>
+        <span>{{varValue}}</span>
+        <span>{{varName}}</span>
+      </li>
+    {{/each-in}}
+  </ul>
+
+  <BsButton @type="info" class="margin-top" @onClick={{action (mut @userSettings.showColourThemeModal) false}}>OK</BsButton>
+
 {{/ember-modal-dialog}}

@@ -198,6 +198,9 @@ function featureHasSamplesLoaded(feature) {
  * .replaceResults default: false
 
  * .showResultText default: false
+ * .showColourThemeModal default: false
+ * Enables display of components/panel/colour-theme-selector
+ *
  * .compressVCF default : true
  * .showConfigureLookup default: false
  * .showSampleFilters default : false
@@ -497,6 +500,9 @@ export default class PanelManageGenotypeComponent extends Component {
 
     if (userSettings.showResultText === undefined) {
       userSettings.showResultText = false;
+    }
+    if (userSettings.showColourThemeModal === undefined) {
+      userSettings.showColourThemeModal = false;
     }
     if (userSettings.compressVCF === undefined) {
       userSettings.compressVCF = true;

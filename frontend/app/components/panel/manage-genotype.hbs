@@ -732,8 +732,12 @@
                        min="1" max="200"
                       />
                     </div>
+
                     <div>
-                      <button type="button" class="btn btn-info" onclick={{action (mut this.showColourThemeModal) true}}>
+                      <button type="button" class="btn btn-info" onclick={{pipe
+                          (action (mut @userSettings.showColourThemeModal) true)
+                          (action (mut this.showInputDialog) false)
+                        }}>
                         Choose Colour Theme
                       </button>
                     </div>
@@ -1173,6 +1177,13 @@ While scrolling through the Genotype Table this updates to show where the curren
   tablePositionChanged=this.tablePositionChanged
   tableApi=this.tableApi
 }}
+
+{{!---------------------------------------------------------------------------}}
+
+{{#if @userSettings.showColourThemeModal}}
+  <ColourThemeSelector  @the={{this}} @userSettings={{@userSettings}} >
+  </ColourThemeSelector>
+{{/if}}
 
 {{!---------------------------------------------------------------------------}}
 
