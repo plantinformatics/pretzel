@@ -48,6 +48,13 @@ export default class PanelGenotypeSamplesComponent extends Component {
     clipboard_writeText(samplesText);
   }
 
-
+  @action
+  clearSelectedSamples() {
+    const fnName = 'clearSelectedSamples';
+    const g = this.args.the;
+    dLog(fnName, g.selectedSamples.length, g.selectedSamplesText.length);
+    g.selectedSamples = [];
+    g.selectedSamplesText = '';
+  }
 
 }

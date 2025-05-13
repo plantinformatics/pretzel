@@ -57,6 +57,9 @@ export default class PanelHaplotypesSamplesComponent extends Component {
     }
 
     const
+    mg = this.args.the,
+    allSamplesText = mg.sampleCache.sampleNames[mg.lookupDatasetId],
+    allSamples = allSamplesText?.split('\n'),
     haplotypes = this.args.data.trim().split('\n')
       .map(line => {
         const
@@ -69,8 +72,8 @@ export default class PanelHaplotypesSamplesComponent extends Component {
         /** sample column numbers in the API result are 1-indexed,
          * whereas .samples[] is 0-indexed.
          */
-        samples = this.args.the.samples ?
-          sampleNumbers.map(i => this.args.the.samples[i-1]) : sampleNumbers,
+        samples = allSamples ?
+          sampleNumbers.map(i => allSamples[i-1]) : sampleNumbers,
         /** form/select-multiple uses .id (unique id) and .name (display name). */
         name = haplotype + ' ' + count + 
           (this.args.userSettings.showHaplotypesSamples ? ' ' + samples.join(',') : ''),

@@ -28,6 +28,7 @@
     {{/ember-tooltip}}
   </div>
 
+  {{#if @the.sampleFiltersCountSelected}}
   <div>
     <span>
     <input type="checkbox"
@@ -51,6 +52,7 @@
       </span>
     {{/if}}
   </div>
+  {{/if}}
 
   {{#if @userSettings.showHaplotypes}}
     {{#let (load @the.haplotypesSamples) as |result|}}
@@ -126,6 +128,14 @@
   <label>Selected samples to be requested in VCF Lookup</label>
   {{#if @the.selectedCount}}
     <span class="sample-count">( {{@the.selectedCount}} )</span>
+
+    <button type="button" class="btn btn-info btn-xs padding-thin" style="margin-left:0.8em" {{on 'click' (action this.clearSelectedSamples) }}>
+      Clear
+      {{#ember-tooltip side="bottom-end" delay=500}}
+        Clear the list of Selected samples
+      {{/ember-tooltip}}
+    </button>
+
   {{/if}}
 
   <div>
