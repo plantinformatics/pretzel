@@ -45,7 +45,7 @@ export default class PanelHaplotypesSamplesComponent extends Component {
   /** 
    * @data haplotypeSamples text result from API
    */
-  @computed('args.data', 'args.the.samples')
+  @computed('args.data', 'args.the.samples', 'args.userSettings.showHaplotypesSamples')
   get haplotypesSamples() {
     const fnName = 'haplotypesSamples';
     /** If there are no SNPs selected, data can be null.
@@ -72,7 +72,8 @@ export default class PanelHaplotypesSamplesComponent extends Component {
         samples = this.args.the.samples ?
           sampleNumbers.map(i => this.args.the.samples[i-1]) : sampleNumbers,
         /** form/select-multiple uses .id (unique id) and .name (display name). */
-        name = haplotype + ' ' + count + ' ' + samples.join(','),
+        name = haplotype + ' ' + count + 
+          (this.args.userSettings.showHaplotypesSamples ? ' ' + samples.join(',') : ''),
         hs = {haplotype, count, samples, id : haplotype, name};
         return hs;
       });

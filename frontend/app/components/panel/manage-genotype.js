@@ -247,6 +247,8 @@ function featureHasSamplesLoaded(feature) {
  *   Show samples selected by SNP filters
  * .showHaplotypes  boolean, default : false
  *   Show unique haplotypes of the selected SMPs, and their samples
+ * .showHaplotypesSamples  boolean, default : false
+ *   For each haplotype, show samples which have that haplotype.
  *
  * @see userSettingsDefaults()
  *------------------------------------------------------------------------------
@@ -577,6 +579,9 @@ export default class PanelManageGenotypeComponent extends Component {
 
     if (userSettings.showHaplotypes === undefined) {
       userSettings.showHaplotypes = false;
+    }
+    if (userSettings.showHaplotypesSamples === undefined) {
+      userSettings.showHaplotypesSamples = false;
     }
 
     if (userSettings.showNonVCFFeatureNames === undefined) {

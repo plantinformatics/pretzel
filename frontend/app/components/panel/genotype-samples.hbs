@@ -29,13 +29,27 @@
   </div>
 
   <div>
+    <span>
     <input type="checkbox"
       checked={{@userSettings.showHaplotypes}}
       oninput={{action (mut @userSettings.showHaplotypes) value="target.checked" }}  >
     <label>Show Haplotypes</label>
-    {{#ember-tooltip side="left" delay=1500}}
+    {{#ember-tooltip side="bottom-start" delay=1500}}
       Show unique haplotypes for the selected SNPs, and samples which have each haplotype.
     {{/ember-tooltip}}
+    </span>
+
+    {{#if @userSettings.showHaplotypes}}
+      <span>
+      <input type="checkbox"
+        checked={{@userSettings.showHaplotypesSamples}}
+        oninput={{action (mut @userSettings.showHaplotypesSamples) value="target.checked" }}  >
+      <label>Show Samples</label>
+      {{#ember-tooltip side="bottom-start" delay=1500}}
+        For each haplotype, show samples which have that haplotype.
+      {{/ember-tooltip}}
+      </span>
+    {{/if}}
   </div>
 
   {{#if @userSettings.showHaplotypes}}
