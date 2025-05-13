@@ -1871,19 +1871,21 @@ div.ht_clone_top_left_corner span.colHeader.cornerHeader {
 {
   background-color : var(--gt-background-color-Missing);
 }
+/** --gt-background-color-* are not set until the user opens <ColourThemeSelector >, so defaults are provide for the light theme. */
 /** colours representing N copies of Alt value */
 /* copyNum_0 : Ref */
 #observational-table td.copyNum_0 {
   /** copyNum_0, 2 colours from MS Teams 2023Mar10 chat 14:36, KLF */
-  background-color : var(--gt-background-color-Ref);  /* #b1c1e8 pale blue/grey. was  #5cb85c green, prev orange*/
+  /* pale blue/grey. was  #5cb85c green, prev orange*/
+  background-color : var(--gt-background-color-Ref, #b1c1e8);
 }
 /* copyNum_1 : Het */
 #observational-table td.copyNum_1 {
-  background-color : var(--gt-background-color-Het);  /* #d9edf7 near-white */
+  background-color : var(--gt-background-color-Het, #d9edf7);  /* near-white */
 }
 /* copyNum_2 : Alt */
 #observational-table td.copyNum_2 {
-  background-color : var(--gt-background-color-Alt); /* #ffc8ae pale orange, was #337ab7 blue*/
+  background-color : var(--gt-background-color-Alt, #ffc8ae); /* pale orange, was #337ab7 blue*/
 }
 
 #observational-table td.relativeColour_equal {
@@ -1919,7 +1921,7 @@ div.ht_clone_top_left_corner span.colHeader.cornerHeader {
   /** HandsOnTable shows blue border on selected cells, so the above border is not
    * visible until the user clicks away from the cell, so use background-color also.
    */
-  background-color : var(--gt-background-color-selected-snp);
+  background-color : var(--gt-background-color-selected-snp, springgreen);
 }
 
 // -----------------------------------------------------------------------------
