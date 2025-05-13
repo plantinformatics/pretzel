@@ -43,6 +43,14 @@
           <a href='https://github.com/plantinformatics/pretzel/releases' target='_blank'
              style="display: inline flow-root list-item;" >
             v{{this.version }} {{this.buildDateFormatted}}
+
+            {{!-- on development server the commit sha is useful, but
+            config.APP.version contains the commit sha only in development
+            build. --}}
+            {{#ember-tooltip delay=500}}
+              {{app-version shaOnly=true}}
+            {{/ember-tooltip}}
+
           </a>
           <a href='https://docs.plantinformatics.io' target='_blank'
              style="display: inline flow-root list-item;" >
