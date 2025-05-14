@@ -223,8 +223,8 @@ function featureHasSamplesLoaded(feature) {
  * .maxAlleles default ''
  * .typeSNP default false
  *
- * .samplesLimit default 10
- * .samplesLimitEnable default false
+ * .samplesLimit default 100
+ * .samplesLimitEnable default true
  * .sampleFilterTypeName default 'variantInterval'
  * .haplotypeFilterRef default : false
  * .showNonVCFFeatureNames default : true
@@ -546,10 +546,10 @@ export default class PanelManageGenotypeComponent extends Component {
     }
 
     if (userSettings.samplesLimit === undefined) {
-      userSettings.samplesLimit = 10;
+      userSettings.samplesLimit = 100;
     }
     if (userSettings.samplesLimitEnable === undefined) {
-      userSettings.samplesLimitEnable = false;
+      userSettings.samplesLimitEnable = true;
     }
 
     if (userSettings.sampleFilterTypeName === undefined) {
@@ -688,6 +688,14 @@ export default class PanelManageGenotypeComponent extends Component {
   @tracked
   rowLimit = 300;
 
+  /** Messages displayed in the GUI to inform the user that the request scope
+   * was truncated by .rowLimit, .samplesLimit respectively.
+   */
+  @tracked
+  rowLimitMessage = null;
+  @tracked
+  samplesLimitMessage = null;
+
   @action
   rowLimitInput(event) {
     /** default is 300 : value=300 in hbs
@@ -698,6 +706,19 @@ export default class PanelManageGenotypeComponent extends Component {
     this.rowLimit = value;
   }
 
+  /** Count of requested features, samples. Used in areaLimitMessage. */
+  @tracked
+  requestLength = { features : 0, samples : 0};
+
+  @computed('requestLength.features', 'requestLength.samples')
+  get areaLimitMessage() {
+    const
+    fnName = 'areaLimitMessage',
+    requestArea = this.requestLength.features * this.requestLength.samples,
+    message = (requestArea < 5e4) ? null : ' Genotype values requested : ' + requestArea + '.';
+    dLog(fnName, message);
+    return message;
+  }
 
 
   //----------------------------------------------------------------------------
@@ -2773,6 +2794,7 @@ export default class PanelManageGenotypeComponent extends Component {
   samplesOK(limitSamples, datasetId) {
     let samplesRaw, samples;
     const
+    fnName = 'samplesOK',
     userSettings = this.args.userSettings,
     requestSamplesAll = userSettings.requestSamplesAll,
     requestSamplesFiltered = userSettings.requestSamplesFiltered,
@@ -2812,9 +2834,15 @@ export default class PanelManageGenotypeComponent extends Component {
             (! this.sampleFilter || this.sampleFilter(this.lookupBlock, sampleName)) );
     }
 
+    Ember_set(this, 'requestLength.samples', samplesRaw?.length ?? 0);
     if (limitSamples && (samplesRaw?.length > samplesLimit)) {
       samplesRaw = samplesRaw.slice(0, samplesLimit);
+      this.samplesLimitMessage = " Samples limited to " + samplesLimit + '.';
+    } else {
+      this.samplesLimitMessage = null;
     }
+    dLog(fnName, 'samplesLimitMessage', this.samplesLimitMessage,
+      limitSamples, samplesRaw?.length, samplesLimit);
 
     /* Handle samplesLimit===0; that may not have a use since the features are
      * already requested without samples. */
@@ -3757,6 +3785,7 @@ export default class PanelManageGenotypeComponent extends Component {
        */
       dLog(fnName, visibleBlocks.mapBy('id'));
       if (visibleBlocks.length) {
+        this.rowLimitMessage = null;
         const
         // this.gtDatasets is equivalent to visibleBlocks.mapBy('datasetId.content').uniq(),
         gtDatasetIds = this.gtDatasetIds,
@@ -3771,7 +3800,15 @@ export default class PanelManageGenotypeComponent extends Component {
             return features;
           })
           .filter((features) => features.length)
-          .map((features) => features.slice(0, this.rowLimit));
+          .map((features) => {
+            if (features.length > this.rowLimit) {
+              this.rowLimitMessage = "Rows limited to " + this.rowLimit + '.';
+              features = features.slice(0, this.rowLimit);
+            }
+            return features;
+          });
+        const totalLength = featuresArrays.reduce((sum, features) => sum += features.length, 0);
+        Ember_set(this, 'requestLength.features', totalLength);
 
         this.collateBlockHaplotypeFeatures(featuresArrays);
         this.collateBlockSamplesCallRate(featuresArrays);
@@ -4056,6 +4093,8 @@ export default class PanelManageGenotypeComponent extends Component {
   //----------------------------------------------------------------------------
 
   /** Construct a map from haplotype / tSNP values to Feature arrays.
+   * Each Feature array is expected to be of a single block;
+   * the map is recorded in block[haplotypeFeaturesSymbol].
    * @param featuresArrays  array of arrays of features, 1 array per block
    */
   collateBlockHaplotypeFeatures(featuresArrays) {
@@ -4065,20 +4104,23 @@ export default class PanelManageGenotypeComponent extends Component {
           const
           blockp = features?.[0].get('blockId'),
           /** blockp may be a proxy; want the actual Block, for reference via Symbol */
-          block = blockp && contentOf(blockp),
-          map = block[haplotypeFeaturesSymbol] || (block[haplotypeFeaturesSymbol] = {});
-          features
-          .reduce(
-            (map, feature) => {
-              const
-              tSNP = feature.values?.tSNP;
-              if (tSNP) {
-                const features = map[tSNP] || (map[tSNP] = Ember_A());
-                features.push(feature);
-              }
-              return map;
-            },
-            map);
+          block = blockp && contentOf(blockp);
+          if (block) {
+            const
+            map = block[haplotypeFeaturesSymbol] || (block[haplotypeFeaturesSymbol] = {});
+            features
+            .reduce(
+              (map, feature) => {
+                const
+                tSNP = feature.values?.tSNP;
+                if (tSNP) {
+                  const features = map[tSNP] || (map[tSNP] = Ember_A());
+                  features.push(feature);
+                }
+                return map;
+              },
+              map);
+            }
         }
       );
   }

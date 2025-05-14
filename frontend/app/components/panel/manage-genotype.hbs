@@ -718,7 +718,8 @@
                 {{!---------------------------------------------------------------------}}
 
                 <ul class="list-group borderless view-controls">
-                  <li class="list-group-item horiz-2">
+                  {{!-- Prevent display of scroll bar, via overflow-x: clip --}}
+                  <li class="list-group-item horiz-2" style="overflow-x: clip;">
 
                     <div>
                       <label>Cell size factor</label>
@@ -733,7 +734,7 @@
                       />
                     </div>
 
-                    <div>
+                    <div style="margin: auto 0em;">
                       <button type="button" class="btn btn-info" onclick={{pipe
                           (action (mut @userSettings.showColourThemeModal) true)
                           (action (mut this.showInputDialog) false)
@@ -951,6 +952,9 @@ While scrolling through the Genotype Table this updates to show where the curren
         <span>VCF Lookup Region limit is {{this.intervalLimit}}Mb</span>
       {{/if}}
     {{/unless}}
+    {{this.rowLimitMessage}}
+    {{this.samplesLimitMessage}}
+    {{this.areaLimitMessage}}
     </div>
 
     {{!-----------------------------------------------------------------------}}
@@ -1059,6 +1063,13 @@ While scrolling through the Genotype Table this updates to show where the curren
           VCF Download
         </button>
       </div>
+
+      <div>
+        {{this.rowLimitMessage}}
+        {{this.samplesLimitMessage}}
+        {{this.areaLimitMessage}}
+      </div>
+
 
       {{#if (and this.urlOptions.advanced this.args.userSettings.filterSamplesByHaplotype )}}
         <div>
