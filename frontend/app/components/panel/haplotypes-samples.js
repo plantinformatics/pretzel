@@ -65,10 +65,13 @@ export default class PanelHaplotypesSamplesComponent extends Component {
         const
         columns = line.split(' '),
         [haplotype, count, samplesText] = columns,
-        /** first character is ',', so discard the first value
-         * limit to 20 during development.
+        /** It is possible to display hundreds of sample names in a single line,
+         * but it doesn't seem useful. */
+        displayLimit = 100,
+        /** first character is ',', so discard the first value.
+         * Limit the number of sample names displayed in each row.
          */
-        sampleNumbers = samplesText.split(',').slice(1, 20),
+        sampleNumbers = samplesText.split(',').slice(1, displayLimit),
         /** sample column numbers in the API result are 1-indexed,
          * whereas .samples[] is 0-indexed.
          */
