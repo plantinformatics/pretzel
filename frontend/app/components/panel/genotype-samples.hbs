@@ -41,7 +41,8 @@
     </span>
 
     {{#if @userSettings.showHaplotypes}}
-      <span>
+
+      <span class="margin-left-1em">
       <input type="checkbox"
         checked={{@userSettings.showHaplotypesSamples}}
         oninput={{action (mut @userSettings.showHaplotypesSamples) value="target.checked" }}  >
@@ -50,6 +51,17 @@
         For each haplotype, show samples which have that haplotype.
       {{/ember-tooltip}}
       </span>
+
+      <span class="margin-left-1em">
+        <input type="checkbox"
+          checked={{@userSettings.sortByHaplotypeValue}}
+          oninput={{action (mut @userSettings.sortByHaplotypeValue) value="target.checked" }}  >
+        <label>Sort by haplotype value</label>
+        {{#ember-tooltip side="bottom-start" delay=1500}}
+          Sort the haplotypes by their value, otherwise by their sample count.
+        {{/ember-tooltip}}
+      </span>
+
     {{/if}}
   </div>
   {{/if}}

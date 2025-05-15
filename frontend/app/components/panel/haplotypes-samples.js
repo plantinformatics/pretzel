@@ -42,10 +42,10 @@ export default class PanelHaplotypesSamplesComponent extends Component {
   //----------------------------------------------------------------------------
 
 
-  /** 
+  /** Parse the data into an array of {haplotype, count, samplesText}.
    * @data haplotypeSamples text result from API
    */
-  @computed('args.data', 'args.the.samples', 'args.userSettings.showHaplotypesSamples')
+  @computed('args.data', 'args.the.samples', 'args.userSettings.sortByHaplotypeValue')
   get haplotypesSamples() {
     const fnName = 'haplotypesSamples';
     /** If there are no SNPs selected, data can be null.
@@ -57,14 +57,32 @@ export default class PanelHaplotypesSamplesComponent extends Component {
     }
 
     const
-    mg = this.args.the,
-    allSamplesText = mg.sampleCache.sampleNames[mg.lookupDatasetId],
-    allSamples = allSamplesText?.split('\n'),
+    sortByHaplotypeValue = this.args.userSettings.sortByHaplotypeValue,
+    keyName = sortByHaplotypeValue ? 'haplotype' : 'count',
     haplotypes = this.args.data.trim().split('\n')
       .map(line => {
         const
         columns = line.split(' '),
         [haplotype, count, samplesText] = columns,
+        hs = {haplotype, count: +count, samplesText};
+        return hs;
+      })
+      .sortBy(keyName)
+      .reverse();
+    return haplotypes;
+  }
+  /** Convert the result of haplotypesSamples() into text for display in the <select>
+   */
+  @computed('haplotypesSamples', 'args.userSettings.showHaplotypesSamples')
+  get haplotypesSamplesText() {
+    const
+    fnName = 'haplotypesSamplesText',
+    mg = this.args.the,
+    allSamplesText = mg.sampleCache.sampleNames[mg.lookupDatasetId],
+    allSamples = allSamplesText?.split('\n'),
+    haplotypesSamples = this.haplotypesSamples,
+    haplotypes = haplotypesSamples.map(({haplotype, count, samplesText}) => {
+      const
         /** It is possible to display hundreds of sample names in a single line,
          * but it doesn't seem useful. */
         displayLimit = 100,

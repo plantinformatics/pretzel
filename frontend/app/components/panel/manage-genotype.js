@@ -249,6 +249,8 @@ function featureHasSamplesLoaded(feature) {
  *   Show unique haplotypes of the selected SMPs, and their samples
  * .showHaplotypesSamples  boolean, default : false
  *   For each haplotype, show samples which have that haplotype.
+ * .sortByHaplotypeValue  boolean, default : true
+ *   Sort the haplotypes by their value, otherwise by their sample count. 
  *
  * @see userSettingsDefaults()
  *------------------------------------------------------------------------------
@@ -582,6 +584,9 @@ export default class PanelManageGenotypeComponent extends Component {
     }
     if (userSettings.showHaplotypesSamples === undefined) {
       userSettings.showHaplotypesSamples = false;
+    }
+    if (userSettings.sortByHaplotypeValue === undefined) {
+      userSettings.sortByHaplotypeValue = true;
     }
 
     if (userSettings.showNonVCFFeatureNames === undefined) {
