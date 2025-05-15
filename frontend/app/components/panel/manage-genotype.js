@@ -4848,7 +4848,9 @@ export default class PanelManageGenotypeComponent extends Component {
   @action
   tablePositionChanged(features) {
     const fnName = 'tablePositionChanged';
-    dLog(fnName, features);
+    if (trace) {
+      dLog(fnName, features);
+    }
     // The caller may pass empty features[] to indicate the table is empty.
     features = features.filter(f => f);
     if (features?.length) {

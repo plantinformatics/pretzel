@@ -1185,7 +1185,7 @@ export default Component.extend({
     matchRef = feature[Symbol.for('matchRef')],
     featureIsFilter = featureFilters?.includes(feature),
     isFilter = featureIsFilter && (matchRef === (prop === 'Ref'));
-    if (isFilter) {
+    if (isFilter && trace > 1) {
       dLog('featureIsFilter', feature.value, feature.name, matchRef, prop);
     }
     return isFilter;
