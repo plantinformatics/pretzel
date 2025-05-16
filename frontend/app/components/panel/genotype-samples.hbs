@@ -34,9 +34,9 @@
     <input type="checkbox"
       checked={{@userSettings.showHaplotypes}}
       oninput={{action (mut @userSettings.showHaplotypes) value="target.checked" }}  >
-    <label>Show Haplotypes</label>
+    <label>Show GT pattern</label>
     {{#ember-tooltip side="bottom-start" delay=1500}}
-      Show unique haplotypes for the selected SNPs, and samples which have each haplotype.
+      Show unique genotype patterns (i.e. Multi-Locus Genotypes) for the selected SNPs, and samples which have each value.
     {{/ember-tooltip}}
     </span>
 
@@ -48,7 +48,7 @@
         oninput={{action (mut @userSettings.showHaplotypesSamples) value="target.checked" }}  >
       <label>Show Samples</label>
       {{#ember-tooltip side="bottom-start" delay=1500}}
-        For each haplotype, show samples which have that haplotype.
+        For each genotype pattern, show samples which have that value.
       {{/ember-tooltip}}
       </span>
 
@@ -56,9 +56,9 @@
         <input type="checkbox"
           checked={{@userSettings.sortByHaplotypeValue}}
           oninput={{action (mut @userSettings.sortByHaplotypeValue) value="target.checked" }}  >
-        <label>Sort by haplotype</label>
-        {{#ember-tooltip side="bottom-start" delay=1500}}
-          Sort the haplotypes by their value, otherwise by their sample count.
+        <label>Sort by GT</label>
+        {{#ember-tooltip side="bottom" delay=1500}}
+          Sort the genotype patterns by their value, otherwise by their sample count.
         {{/ember-tooltip}}
       </span>
 
@@ -67,8 +67,8 @@
           checked={{@userSettings.includeHetMissingHaplotypes}}
           oninput={{action (mut @userSettings.includeHetMissingHaplotypes) value="target.checked" }}  >
         <label>Show Het & missing</label>
-        {{#ember-tooltip side="bottom-start" delay=1500}}
-          Include haplotypes with heterozygous and missing data.
+        {{#ember-tooltip side="bottom-end" delay=1500}}
+          Include genotype patterns with heterozygous and missing data.
         {{/ember-tooltip}}
       </span>
 
