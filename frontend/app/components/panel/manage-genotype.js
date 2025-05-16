@@ -250,7 +250,10 @@ function featureHasSamplesLoaded(feature) {
  * .showHaplotypesSamples  boolean, default : false
  *   For each haplotype, show samples which have that haplotype.
  * .sortByHaplotypeValue  boolean, default : true
- *   Sort the haplotypes by their value, otherwise by their sample count. 
+ *   Sort the haplotypes by their value, otherwise by their sample count.
+ * .includeHetMissingHaplotypes  boolean, default : false
+ *   Show haplotypes which contain heterozygous values and missing data.
+ *   If false, show only haplotypes with all homozygous genotype values.
  *
  * @see userSettingsDefaults()
  *------------------------------------------------------------------------------
@@ -587,6 +590,9 @@ export default class PanelManageGenotypeComponent extends Component {
     }
     if (userSettings.sortByHaplotypeValue === undefined) {
       userSettings.sortByHaplotypeValue = true;
+    }
+    if (userSettings.includeHetMissingHaplotypes === undefined) {
+      userSettings.includeHetMissingHaplotypes = true;
     }
 
     if (userSettings.showNonVCFFeatureNames === undefined) {

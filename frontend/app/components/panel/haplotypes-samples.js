@@ -45,7 +45,11 @@ export default class PanelHaplotypesSamplesComponent extends Component {
   /** Parse the data into an array of {haplotype, count, samplesText}.
    * @data haplotypeSamples text result from API
    */
-  @computed('args.data', 'args.the.samples', 'args.userSettings.sortByHaplotypeValue')
+  @computed(
+    'args.data', 'args.the.samples',
+    'args.userSettings.sortByHaplotypeValue',
+    'args.userSettings.includeHetMissingHaplotypes',
+  )
   get haplotypesSamples() {
     const fnName = 'haplotypesSamples';
     /** If there are no SNPs selected, data can be null.
@@ -56,18 +60,31 @@ export default class PanelHaplotypesSamplesComponent extends Component {
       return [];
     }
 
+    /** option : filter out missing / het.
+     * It might be useful to instead use the filter to split into 2 groups, and
+     * sort them separately, then concat. */
+    function homValueFilter(value) {
+      return ! value.haplotype.match(/[.1]/);
+    }
+    /** @return array, filtered by filter if flag */
+    function optionalFilter(array, flag, filter) {
+      return flag ? array.filter(filter) : array;
+    }
+
     const
-    sortByHaplotypeValue = this.args.userSettings.sortByHaplotypeValue,
-    keyName = sortByHaplotypeValue ? 'haplotype' : 'count',
-    haplotypes = this.args.data.trim().split('\n')
+    userSettings = this.args.userSettings,
+    keyName = userSettings.sortByHaplotypeValue ? 'haplotype' : 'count',
+    haplotypesIn = this.args.data.trim().split('\n')
       .map(line => {
         const
         columns = line.split(' '),
         [haplotype, count, samplesText] = columns,
         hs = {haplotype, count: +count, samplesText};
         return hs;
-      })
-      .sortBy(keyName)
+      }),
+    haplotypes = 
+      optionalFilter(haplotypesIn, ! userSettings.includeHetMissingHaplotypes, homValueFilter)
+     .sortBy(keyName)
       .reverse();
     return haplotypes;
   }
