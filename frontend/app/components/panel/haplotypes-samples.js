@@ -41,9 +41,9 @@ export default class PanelHaplotypesSamplesComponent extends Component {
 
   //----------------------------------------------------------------------------
 
-
-  /** Parse the data into an array of {haplotype, count, samplesText}.
-   * @data haplotypeSamples text result from API
+  /** Parse the data, and combine if the data is of multiple blocks.
+   * @param @data array of haplotypeSamples text results from API
+   * @return object { haplotype : samples, ... }
    */
   @computed(
     'args.data', 'args.the.samples',
@@ -71,10 +71,11 @@ export default class PanelHaplotypesSamplesComponent extends Component {
       return flag ? array.filter(filter) : array;
     }
 
-    const
-    userSettings = this.args.userSettings,
-    keyName = userSettings.sortByHaplotypeValue ? 'haplotype' : 'count',
-    haplotypesIn = this.args.data.trim().split('\n')
+    const userSettings = this.args.userSettings;
+
+    function parseResult(data) {
+      const
+      parsed = data.trim().split('\n')
       .map(line => {
         const
         columns = line.split(' '),
@@ -82,40 +83,127 @@ export default class PanelHaplotypesSamplesComponent extends Component {
         hs = {haplotype, count: +count, samplesText};
         return hs;
       }),
-    haplotypes = 
-      optionalFilter(haplotypesIn, ! userSettings.includeHetMissingHaplotypes, homValueFilter)
-     .sortBy(keyName)
-      .reverse();
+      filtered = 
+        optionalFilter(parsed, ! userSettings.includeHetMissingHaplotypes, homValueFilter);
+
+      return filtered;
+    }
+    const
+    /** 1 result per chromosome / Block */
+    chromosomes = this.args.data
+      .map(data => 
+        parseResult(data)),
+    withNames = chromosomes.map(map => this.sampleTextToNames(map)),
+    haplotypes = withNames.length < 2 ? Object.fromEntries(withNames[0]) : this.combine(withNames);
+
     return haplotypes;
   }
+  /** Given an entries array [[key, value], ... ] invert it to
+   * {value : key, ... }
+   */
+  invertObjectArrays(entries) {
+    const
+    inverted = entries
+      .reduce((inv, [key, values]) => { values.forEach(value => inv[value] = key); return inv; }, {});
+    return inverted;
+  }
+  /** Combine haplotypesSamples results from multiple Blocks / chromosomes
+   * @param blockMaps parsed and filtered results for the chromosomes of one dataset which have selected SNPs.
+   * form is [Object.entries()] : [[[haplotype, samples], ...], ... ]
+   * @return { haplotype : samples, ... }
+   */
+  combine(blockMaps) {
+    const
+    fnName = 'combine';
+    /* e.g. for 2 chromosomes : (drafted by ChatGPT)
+     *  for each sample in intersection(Object.keys(map1), Object.keys(map2)):
+     *    value = map1[sample] + map2[sample]
+     *    group results by value
+     */
+    /** Since all of blocks are from a single dataset, we expect the samples set to be the same. */
+    const
+    maps = blockMaps.map(this.invertObjectArrays),
+    samples = Object.keys(maps[0]);
+    maps.forEach(map => (Object.keys(map).length !== samples.length) && dLog(fnName, Object.keys(map).length, '!==', samples.length, map));
+    const
+    catenated = samples.map(sample => maps.map(m => m[sample]).join(' ')),
+    grouped = catenated
+      .reduce((group, value, i) => {
+        const a = group[value] || (group[value] = []);
+        a.push(samples[i]);
+        return group;
+      }, {});
+    dLog(fnName, catenated, grouped, samples);
+    return grouped;
+  }
+
   /** Convert the result of haplotypesSamples() into text for display in the <select>
    */
   @computed('haplotypesSamples', 'args.userSettings.showHaplotypesSamples')
   get haplotypesSamplesText() {
     const
     fnName = 'haplotypesSamplesText',
+    haplotypesSamples = this.haplotypesSamples,
+    haplotypes = this.samplesForSelect(haplotypesSamples);
+    return haplotypes;
+  }
+  /**
+   * Uses manage-genotype .lookupDatasetId, which is the datasetId of the tab in
+   * which .haplotypesSamplesText is displayed.
+   * @return Object.entries() form [[key, value], ... ]
+   */
+  sampleTextToNames(haplotypesSamples) {
+    const
+    fnName = 'sampleTextToNames',
     mg = this.args.the,
     allSamplesText = mg.sampleCache.sampleNames[mg.lookupDatasetId],
     allSamples = allSamplesText?.split('\n'),
-    haplotypesSamples = this.haplotypesSamples,
-    haplotypes = haplotypesSamples.map(({haplotype, count, samplesText}) => {
-      const
-        /** It is possible to display hundreds of sample names in a single line,
-         * but it doesn't seem useful. */
-        displayLimit = 100,
+    haplotypes =
+      haplotypesSamples.map(({haplotype, count, samplesText}) => {
+        const
         /** first character is ',', so discard the first value.
-         * Limit the number of sample names displayed in each row.
          */
-        sampleNumbers = samplesText.split(',').slice(1, displayLimit),
+        sampleNumbers = samplesText.split(',').slice(1),
         /** sample column numbers in the API result are 1-indexed,
          * whereas .samples[] is 0-indexed.
          */
         samples = allSamples ?
-          sampleNumbers.map(i => allSamples[i-1]) : sampleNumbers,
+          sampleNumbers.map(i => allSamples[i-1]) : sampleNumbers;
+        if (sampleNumbers.length !== count) {
+          dLog(fnName, sampleNumbers.length, '!==', count);
+        }
+        const hs = [haplotype, samples];
+        return hs;
+      });
+    return haplotypes;
+  }
+  /**
+   * @param haplotypesSamples	{ key : samples, ... }
+   * where key is the "haplotype" or genotypic pattern or Multi-Locus Genotype (MLG).
+   * If the user has selected SNPs across multiple chromosomes / Blocks of the dataset,
+   * this value will be the catenated genotype values from those chromosomes / Blocks.
+   */
+  samplesForSelect(haplotypesSamples) {
+    const
+    userSettings = this.args.userSettings,
+    keyName = userSettings.sortByHaplotypeValue ? 'haplotype' : 'count',
+    fnName = 'samplesForSelect',
+    haplotypes = Object.entries(haplotypesSamples)
+      .map(([haplotype, samples]) => ({haplotype, samples, count : samples.length}))
+      .sortBy(keyName)
+      .reverse()
+      .map(({haplotype, count, samples}) => {
+        const
+        /** It is possible to display hundreds of sample names in a single line,
+         * but it doesn't seem useful. */
+        displayLimit = 100,
+        /** Limit the number of sample names displayed in each row. */
         /** form/select-multiple uses .id (unique id) and .name (display name). */
         name = haplotype + ' ' + count + 
-          (this.args.userSettings.showHaplotypesSamples ? ' ' + samples.join(',') : ''),
+          (! userSettings.showHaplotypesSamples ? '' :
+           ' ' + samples.slice(0, displayLimit + 1).join(',')),
         hs = {haplotype, count, samples, id : haplotype, name};
+
         return hs;
       });
     return haplotypes;

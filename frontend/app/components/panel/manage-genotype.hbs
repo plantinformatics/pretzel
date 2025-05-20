@@ -1198,4 +1198,14 @@ While scrolling through the Genotype Table this updates to show where the curren
 
 {{!---------------------------------------------------------------------------}}
 
+{{!--  style="display:none" --}}
+{{!-- result of brushedVCFBlocks is an array of { axisBrush, block } --}}
+<span class="block-gt-views">
+  {{#each this.brushedVCFBlocks as |aBlock|}}
+    {{panel/block-gt-view block=aBlock.block mg=this}}
+  {{/each}}
+</span>
+
+{{!---------------------------------------------------------------------------}}
+
 {{yield}}
