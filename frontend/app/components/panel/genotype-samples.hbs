@@ -26,6 +26,15 @@
     {{#ember-tooltip side="left" delay=1500}}
       Show samples selected by SNP filters
     {{/ember-tooltip}}
+
+    {{#if @the.featureFiltersCountOfDatasetInBrushedDomain.length}}
+      <span class="sample-count"> (
+        {{@the.featureFiltersCountOfDatasetInBrushedDomain.length}}
+        {{#unless (eq @the.featureFiltersCountOfDatasetInBrushedDomain.length @the.featureFiltersCount) }} 
+          in scope, out of {{@the.featureFiltersCount}}
+        {{/unless}}
+      ) </span>
+    {{/if}}
   </div>
 
   {{#if @the.sampleFiltersCountSelected}}

@@ -55,7 +55,7 @@ export default class PanelHaplotypesSamplesComponent extends Component {
     /** If there are no SNPs selected, data can be null.
      * genotype-samples only instantiates this component when
      * result.isResolved, but in this case there is no new request.  */
-    if (! this.args.data) {
+    if (! this.args.data || ! this.args.data.length) {
       dLog(fnName, '! @data');
       return [];
     }

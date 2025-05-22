@@ -2662,6 +2662,28 @@ export default class PanelManageGenotypeComponent extends Component {
 
   //----------------------------------------------------------------------------
 
+  /** For display in dataset tab, show how many selected SNPs affect blocks of .lookupDatasetId
+   * - these are the SNPs which will be used by haplotypesSamples() ->
+   *  genotypePatternsSamples(), which also uses
+   *  selectedSNPsInBrushedDomain(vcfBlock).
+   *
+   * @return the array of SNPS / features (.length is displayed, the feature
+   * details could be displayed in a hover)
+   *
+   * Related : snpsInBrushedDomain().
+   */
+  @computed('lookupDatasetId', 'block.brushedDomain', 'featureFiltersCount')
+  get featureFiltersCountOfDatasetInBrushedDomain() {
+    const
+    fnName = 'featureFiltersCountOfDatasetInBrushedDomain',
+    // copied from haplotypesSamples().
+    aBlocks = this.brushedVCFBlocks.filter(
+      ab => ab.block.datasetId.id == this.lookupDatasetId),
+    features = aBlocks.reduce((accum, aBlock) =>
+      accum.concat(this.selectedSNPsInBrushedDomain(aBlock.block)), []);
+    return features;
+  }
+
   /** When the user changes selected SNPs, request unique haplotypes and their samples.
    * @return promise yielding {text } of the API result
    * or throwing null if e.g. there are no SNPs selected.
