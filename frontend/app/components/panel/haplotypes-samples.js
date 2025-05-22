@@ -215,35 +215,51 @@ export default class PanelHaplotypesSamplesComponent extends Component {
   @tracked
   haplotypesSelected = undefined;
 
-  /**
-   * @param selectedHaplotype  null or { id, name, ... } Ember Object
+  /** Called via user selection change in select-multiple
+   * The parameters added and deleted indicate changes to the selection.
+   * They are arrays of :
+   *  { id, name, ... } Ember Object
+   * See form/select-multiple.js : selectedGroupChangedId().
+   *
+   * @param added
+   * @param deleted
    *
    * based on manage-explorer.js : selectedCategoryChanged()
    */
-  selectedHaplotypeChanged(selectedHaplotype) {
+  selectedHaplotypeChanged(added, deleted) {
     const fnName = 'selectedHaplotypeChanged';
 
     const isMultiple = true;
+    /* This would only be relevant if multiple was not used.
     if (selectedHaplotype === noHaplotype) {
       this.haplotypesSelected = null;
     } else if (! isMultiple) {
       this.haplotypesSelected = selectedHaplotype;
-    } else {
+    } else */ {
       const
-      haplotypes = this.haplotypesSelected || (this.haplotypesSelected = []),
+      haplotypes = this.haplotypesSelected || (this.haplotypesSelected = []);
       /** or c === selectedHaplotype */
-      present = haplotypes.find(c => c.id == selectedHaplotype.id);
+      // present = haplotypes.find(c => c.id == selectedHaplotype.id);
       /** use .pushObject() (or .removeObject) so that () sees the
        * change to its dependency haplotypesSelected.length */
-      if (present) {
-        haplotypes.removeObject(present);
-      } else {
-        haplotypes.pushObject(selectedHaplotype);
-      }
-      const samples = selectedHaplotype.samples;
-      this.args.the.selectSampleArray(samples, ! present);
+      const
+      /** changes[add=true] === added. */
+      changes = [deleted, added];
+      /** delete then add. */
+      [false, true].forEach(add => {
+        const change = changes[+add];
+        change.forEach(c => {
+          if (add) {
+            haplotypes.pushObject(c);
+          } else {
+            haplotypes.removeObject(c);
+          }
+          const samples = c.samples;
+          this.args.the.selectSampleArray(samples, add);
+        });
+      });
     }
-    dLog(fnName, selectedHaplotype, this.haplotypesSelected);
+    dLog(fnName, added, deleted, this.haplotypesSelected);
   }
 
   //----------------------------------------------------------------------------
