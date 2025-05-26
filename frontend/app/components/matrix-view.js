@@ -5,7 +5,7 @@ import { inject as service } from '@ember/service';
 import { get as Ember_get, set as Ember_set } from '@ember/object';
 import { later, once, bind, debounce } from '@ember/runloop';
 import { on } from '@ember/object/evented';
-import { task, didCancel } from 'ember-concurrency';
+import { task, didCancel, timeout } from 'ember-concurrency';
 
 
 /* global Handsontable */
@@ -2158,6 +2158,7 @@ export default Component.extend({
       dLog(fnName, 'error', e);
     } finally {
     }
+    yield timeout(1000);
   }).keepLatest(),
 
   updateTableOnce() {
