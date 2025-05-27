@@ -39,6 +39,17 @@
   <span style="display: inline-block;">
     <input
       type="checkbox"
+      name="matchRegExp"
+      checked={{this.matchRegExp}}
+      oninput={{action this.matchRegExpChanged value='target.checked' preventDefault=false}}
+      id="checkbox-matchRegExp"
+    />
+    <label for="checkbox-matchRegExp">Match part & ignore case</label>
+  </span>
+
+  <span style="display: inline-block;">
+    <input
+      type="checkbox"
       name="matchAliases"
       checked={{this.matchAliases}}
       oninput={{action this.matchAliasesChanged value='target.checked' preventDefault=false}}
@@ -94,6 +105,9 @@
              Ember Component to a native class which extends glimmer Component  --}}
           {{#if this.taskGet.lastPerformed.value.aliases }}
             <li>{{this.aliases.length}} Aliases</li>
+          {{/if}}
+          {{#if this.featuresResultTruncated}}
+            <li>{{this.featuresResultTruncated}}</li>
           {{/if}}
         </ul>
       {{/unless}}

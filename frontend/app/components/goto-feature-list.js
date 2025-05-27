@@ -18,7 +18,14 @@ export default Component.extend({
 
   serverTabSelected : alias('controls.serverTabSelected'),
 
-  matchAliases : true,
+  /** true means match features which have an alias to a given search key */
+  matchAliases : false,
+  /** true means features whose name contains a given search key.
+   * This is implemented via /key/i, so the key can be a RegExp, but some
+   * punctuation is removed to sanitise the expression.
+   */
+  matchRegExp : true,
+
   /** Cleared by clearResults(), set by getBlocksOfFeatures(). */
   showResult : true,
 
@@ -54,9 +61,25 @@ export default Component.extend({
     }
   }, // actions
 
+  /** Simultaneous use of matchAliases and matchRegExp is not implemented
+   * because it would signifantly complicate Feature.search
+   * (lb4app/lb3app/common/models/feature.js) and may not be used - currently
+   * aliases are not loaded.
+   * So setting either of these to true sets the other one to false.
+   */
   matchAliasesChanged(value) {
     dLog('matchAliasesChanged', value, this.matchAliases);
-    this.matchAliases = value;
+    this.set('matchAliases', value);
+    if (value) {
+      this.set('matchRegExp', !value);
+    }
+  },
+  matchRegExpChanged(value) {
+    dLog('matchRegExpChanged', value, this.matchRegExp);
+    this.set('matchRegExp', value);
+    if (value) {
+      this.set('matchAliases', !value);
+    }
   },
 
 
@@ -69,6 +92,8 @@ export default Component.extend({
    * @return undefined
    */
   blocksUnique : function (selectedFeatureNames) {
+      const fnName = 'blocksUnique';
+      const maxResultFeatures = 1000;
       let blockService = this.get('blockService');
       function peekBlock(block) {
         return blockService.peekBlock(block.id); };
@@ -78,10 +103,19 @@ export default Component.extend({
 
       let taskGet = this.get('taskGet'); // blockService.get('getBlocksOfFeatures');
       let matchAliases = this.matchAliases;
-      let blockTask = taskGet.perform(apiServer, matchAliases, /*blockId*/ undefined, selectedFeatureNames)
+      let blockTask = taskGet.perform(apiServer, matchAliases, this.matchRegExp, /*blockId*/ undefined, selectedFeatureNames)
         .then((result) => {
           /** result is : matchAliases ? {features, aliases} : [feature, ...] */
           let features = matchAliases ? result.features : result;
+          /** matchRegExp===true may produce a large result array. */
+          const
+          truncated = (features.length > maxResultFeatures),
+          msg = truncated ? "Truncated result at " + maxResultFeatures : null;
+          this.set('featuresResultTruncated', msg);
+          if (truncated) {
+            features = features.slice(0, maxResultFeatures);
+          }
+
           if (matchAliases) {
             let
             aliasFeatureNamesSet = result.aliases

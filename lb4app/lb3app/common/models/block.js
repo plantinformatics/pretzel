@@ -1614,7 +1614,7 @@ The output includes the count and list of samples which have each haplotype valu
     }
   };
 
-  /** POST version of Feature.search, which is addressed by verb GET.
+  /** POST version of Block.vcfGenotypeLookup, which is addressed by verb GET.
    */
   Block.vcfGenotypeLookupPost = Block.vcfGenotypeLookup;
 

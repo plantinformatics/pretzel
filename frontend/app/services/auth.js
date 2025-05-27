@@ -429,13 +429,14 @@ export default Service.extend({
    * If blockId is given, only search within that block.
    * @param blockId undefined or string DB ObjectId
    * @param featureNames  array of Feature name strings
+   * @param matchRegExp	select to match either whole name or regexp.
    */
-  featureSearch(apiServer, blockId, featureNames, options) {
+  featureSearch(apiServer, blockId, featureNames, matchRegExp, options) {
     if (trace_paths)
-      dLog('services/auth featureSearch', blockId, featureNames, options);
+      dLog('services/auth featureSearch', blockId, featureNames, matchRegExp, options);
     let paramLimit = 200;
     const post = featureNames?.length > paramLimit;
-    const data = {blockId, filter : featureNames, options};
+    const data = {blockId, filter : featureNames, matchRegExp, options};
     return this._ajax(
       'Features/search' + (post ? 'Post' : ''),
       post ? 'POST' : 'GET',
