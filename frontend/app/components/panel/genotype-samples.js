@@ -4,7 +4,17 @@ import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { alias } from '@ember/object/computed';
 
+//------------------------------------------------------------------------------
+
+import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
+const /*import */{
+  getPassportDataByGenotypeIds,
+} = vcfGenotypeBrapi.genolinkPassport; /*from 'vcf-genotype-brapi'; */
+
+//------------------------------------------------------------------------------
+
 import { clipboard_writeText } from '../../utils/common/html';
+import { exportObjectsAsCSVFile } from '../../utils/dom/file-download';
 
 //------------------------------------------------------------------------------
 
@@ -56,5 +66,28 @@ export default class PanelGenotypeSamplesComponent extends Component {
     g.selectedSamples = [];
     g.selectedSamplesText = '';
   }
+
+  @action
+  selectedSamplesGetPassport() {
+    const
+    fnName = 'selectedSamplesGetPassport',
+    g = this.args.the,
+    aggSamples = g.selectedSamples.filter(s => s.match(/^AGG/)),
+    baseUrl = "https://genolink.plantinformatics.io",
+    passportP = aggSamples.length ? getPassportDataByGenotypeIds(aggSamples, baseUrl) :
+      Promise.reject('No AGG samples out of ' + g.selectedSamples.length);
+    passportP.then(resultByGenotype => {
+      console.log("Result by genotype IDs:", resultByGenotype);
+      const data = resultByGenotype.content;
+      // just to test array.
+      data.forEach(row => (row.aliases = row.aliases.mapBy('name')));
+      const
+      needsQuoting = (key, value, columnIndex) => ! key.endsWith('.id') && (value !== null),
+      baseColumnHeaders = [];
+      exportObjectsAsCSVFile('passportData.csv', needsQuoting, baseColumnHeaders, /*useAllKeys*/true, /*columnHeadersMap*/null, data);
+    })
+      .catch(err => console.log(err));
+    return passportP;
+   }
 
 }

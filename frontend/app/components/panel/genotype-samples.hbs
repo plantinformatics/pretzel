@@ -163,7 +163,14 @@
     <button type="button" class="btn btn-info btn-xs padding-thin" style="margin-left:0.8em" {{on 'click' (action this.clearSelectedSamples) }}>
       Clear
       {{#ember-tooltip side="bottom-end" delay=500}}
-        Clear the list of Selected samples
+        Clear the list of selected samples
+      {{/ember-tooltip}}
+    </button>
+
+    <button type="button" class="btn btn-info btn-xs padding-thin" style="margin-left:0.8em" {{on 'click' (action this.selectedSamplesGetPassport) }}>
+      Passport
+      {{#ember-tooltip side="bottom-end" delay=500}}
+        Get the passport data of selected samples from AGG GenoLink.
       {{/ember-tooltip}}
     </button>
 
