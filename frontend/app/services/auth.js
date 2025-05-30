@@ -461,7 +461,7 @@ export default Service.extend({
    * @param datasetId of parent / reference of the blast db which is to be searched
    * @param scope chromosome
    * @param filter	optional sample filter 
-   *  { features : [{position, matchRef}, ... ]}
+   *  { features : [{position, matchRef}, ... ], matchHet}
    */
   genotypeSamples(block, datasetId, scope, filter) {
     dLog('services/auth genotypeSamples', datasetId, scope, filter);
