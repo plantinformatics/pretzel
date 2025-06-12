@@ -2060,8 +2060,14 @@ div#left-panel > div > div.tab-content > div.tab-pane
 }
 
 #left-panel > div > div.tab-content > div.tab-pane > div:last-child {
-  /* this enables the scrollbar to reach the bottom of the div, there is probably a better solution.  */
-  margin-bottom: 70px;
+  /* this enables the scrollbar to reach the bottom of the div, there is probably a better solution.
+   * Changed from 70px -> 18ex to handle variation of browser Ctrl +/- text magnification,
+   * because it was noted in workshop that some computers+browsers had to Ctrl - to be
+   * able to scroll down to select the last dataset in the Dataset Explorer.
+   * It seems more margin is required when font size is larger, which is
+   * achieved by using ex instead of px.
+   */
+  margin-bottom: 18ex;
 }
 
 /*------------------------------------*/

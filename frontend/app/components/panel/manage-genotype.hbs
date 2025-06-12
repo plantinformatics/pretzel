@@ -940,12 +940,14 @@ While scrolling through the Genotype Table this updates to show where the curren
 
     <div>
       <EmberTooltip side="right" delay=500>
-        <span>Request the Genotypes as configured by Selected Samples and the brushed axis region</span>
+        {{#if this.vcfGenotypeLookupButtonDisabled}}
+          {{this.vcfGenotypeLookupButtonDisabled}}
+        {{else}}
+          <span>Request the Genotypes as configured by Selected Samples and the brushed axis region</span>
+        {{/if}}
       </EmberTooltip>
       <button type="button" onclick={{action this.vcfGenotypeLookup}}
-        disabled={{or
-          (not this.vcfGenotypeLookupDomain)
-          this.vcfGenotypeLookupButtonDisabled}}
+        disabled={{this.vcfGenotypeLookupButtonDisabled}}
         class="btn btn-info">VCF Lookup</button>
     {{#unless this.vcfGenotypeLookupDomain}}
       {{#if this.urlOptions.gtIntervalLimit}}
@@ -1042,14 +1044,14 @@ While scrolling through the Genotype Table this updates to show where the curren
 
       <div>
         <EmberTooltip side="right" delay=500>
-          <span>Request the Genotypes as configured by Selected Samples and the brushed axis region</span>
+          {{#if this.vcfGenotypeLookupButtonDisabled}}
+            {{this.vcfGenotypeLookupButtonDisabled}}
+          {{else}}
+            <span>Request the Genotypes as configured by Selected Samples and the brushed axis region</span>
+          {{/if}}
         </EmberTooltip>
         <button type="button" onclick={{action this.vcfGenotypeLookup}}
-          disabled={{or
-            (not this.vcfGenotypeLookupDomain)
-            (and (not @userSettings.requestSamplesAll) (not this.vcfGenotypeSamplesSelected.length))
-            (and @userSettings.requestSamplesAll @userSettings.samplesIntersection (not this.samples.length))
-          }}
+          disabled={{this.vcfGenotypeLookupButtonDisabled}}
           class="btn btn-info">VCF Lookup</button>
       </div>
 

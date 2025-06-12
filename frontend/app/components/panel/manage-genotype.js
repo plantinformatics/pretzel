@@ -2857,14 +2857,19 @@ export default class PanelManageGenotypeComponent extends Component {
    * selected, or previous button action is in process.
    * @return disabled if ! All && no samples selected, or All && Common && no samples to select
    * Also disabled if vcfGenotypeLookup button action is in process.
+   *
+   * The return value is a text value identifying which condition was not
+   * satisfied, for display in the GUI as hover text tooltip when the 'VCF
+   * Lookup' button is disabled by this function.
    */
   get vcfGenotypeLookupButtonDisabled() {
     const
     userSettings = this.args.userSettings,
     disabled = 
-      ((! userSettings.requestSamplesAll) && (! this.vcfGenotypeSamplesSelected?.length)) ||
-      (userSettings.requestSamplesAll && userSettings.samplesIntersection && ! this.samples?.length) ||
-      this.vcfGenotypeLookupTask.isRunning;
+      (! this.vcfGenotypeLookupDomain && 'Select a region of the axis') ||
+      (((! userSettings.requestSamplesAll) && (! this.vcfGenotypeSamplesSelected?.length)) && 'Select Samples') ||
+      ((userSettings.requestSamplesAll && userSettings.samplesIntersection && ! this.samples?.length) && 'There are no samples in common') ||
+      (this.vcfGenotypeLookupTask.isRunning && 'Lookup is in progress');
     return disabled;
   }
 
