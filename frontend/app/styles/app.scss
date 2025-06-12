@@ -853,6 +853,14 @@ svg.applyChange path.syntenyEdge {
 }
 
 /*----------------------------------------------------------------------------*/
+
+/** for <a >, similar to <button disabled> */
+.disabled {
+  pointer-events: none;
+  cursor: default;
+}
+
+/*----------------------------------------------------------------------------*/
 /* Button */
 .btn { cursor: pointer; }
 

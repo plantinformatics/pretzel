@@ -178,13 +178,16 @@
       {{/ember-tooltip}}
     </button>
 
-    <a target='_blank' href={{this.genolinkSearchURL}}>
-      Genolink
+    <span>
+      <a target='_blank' href={{this.genolinkSearchURL}}
+        class={{if this.searchIdsTruncatedMessage "disabled" ""}} >
+        Genolink
+      </a>
       {{#ember-tooltip side="bottom-end" delay=500}}
         {{this.searchIdsTruncatedMessage}}
         Open AGG Genolink showing the selected samples.
       {{/ember-tooltip}}
-    </a>
+    </span>
 
     {{#if this.urlOptions.passportExport}}
     <button type="button" class="btn btn-info btn-xs padding-thin" style="margin-left:0.8em" {{on 'click' (action this.selectedSamplesGetPassport) }}>
