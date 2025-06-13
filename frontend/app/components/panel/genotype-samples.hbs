@@ -37,11 +37,11 @@
 
       <span>
         <input type="checkbox"
-          checked={{@userSettings.matchHet}}
-          oninput={{action (mut @userSettings.matchHet) value="target.checked" }}  >
-        <label>Match het</label>
+          checked={{this.matchExactAlleles}}
+          oninput={{action (mut this.matchExactAlleles) value="target.checked" }}  >
+        <label>Match exact alleles</label>
         {{#ember-tooltip side="bottom-start" delay=1500}}
-          Match for samples which have a heterozygous genotype value at a selected SNP.
+          Match only for samples which have a homozygous genotype value at a selected SNP.
         {{/ember-tooltip}}
       </span>
 

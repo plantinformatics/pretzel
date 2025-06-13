@@ -245,7 +245,7 @@ function featureHasSamplesLoaded(feature) {
  *   The samples indicated by requestSamplesAll can be optionally filtered before request.
  * .filterSamplesByHaplotype  boolean, default : false
  *   Show samples selected by SNP filters
- * .matchHet  boolean, default : false
+ * .matchHet  boolean, default : true
  *   Match for samples which have a heterozygous genotype value at a selected SNP.
  * .showHaplotypes  boolean, default : false
  *   Show unique haplotypes of the selected SMPs, and their samples
@@ -585,7 +585,7 @@ export default class PanelManageGenotypeComponent extends Component {
     }
 
     if (userSettings.matchHet === undefined) {
-      userSettings.matchHet = false;
+      userSettings.matchHet = true;
     }
 
     if (userSettings.showHaplotypes === undefined) {

@@ -47,6 +47,20 @@ export default class PanelGenotypeSamplesComponent extends Component {
 
   //----------------------------------------------------------------------------
 
+  /** .matchExactAlleles is the inverse of @userSettings.matchHet
+   * This is added as a wrapper when the decision was made to invert the sense
+   * of the checkbox in the GUI.
+   */
+  get matchExactAlleles() {
+    return ! this.args.userSettings.matchHet;
+  }
+  set matchExactAlleles(matchExactAlleles) {
+    Ember_set(this, 'args.userSettings.matchHet', ! matchExactAlleles);
+  }
+
+
+  //----------------------------------------------------------------------------
+
   @action
   vcfGenotypeSamples() {
     this.args.the.vcfGenotypeSamples();
