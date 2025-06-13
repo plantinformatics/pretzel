@@ -1692,7 +1692,7 @@ export default class PanelManageGenotypeComponent extends Component {
     let sampleNames;
     if (selectedSNPs?.length) {
       const
-      filterDescription = this.selectedSNPsToKey(selectedSNPs),
+      filterDescription = this.selectedSNPsToKeyWithSortAndMap(selectedSNPs),
       cacheFiltered = this.sampleCache.filteredByGenotype,
       blockFiltered = cacheFiltered[vcfBlock.id];
       sampleNames = blockFiltered?.[filterDescription];
@@ -2331,16 +2331,37 @@ export default class PanelManageGenotypeComponent extends Component {
   }
 
   /** Construct a text key from the result of this.selectedSNPsInBrushedDomain(vcfBlock)
-   * The format is the same as filterDescription in vcfGenotypeSamplesDataset().
+   *
+   * Related : in vcfGenotypeSamplesDataset() : filterByHaplotype has already
+   * been through the same sort and map, so selectedSNPsToKey() is used for
+   * filterDescription.
    */
-  selectedSNPsToKey(selectedSNPs) {
+  selectedSNPsToKeyWithSortAndMap(selectedSNPs) {
     const
     features = selectedSNPs
       // sort enables filterDescription to be cache key
       .sortBy('value_0')
       .map(f => ({position : f.value_0,  matchRef : f[Symbol.for('matchRef')]})),
-    filterDescription = features.map(
-      h => '' + h.position + ':' + (h.matchRef ? 'Ref' : 'Alt')).join(' ');
+    matchHet = this.args.userSettings.matchHet,
+    filterDescription = this.selectedSNPsToKey(features, matchHet);
+    return filterDescription;
+  }
+  /** Construct a text key from the result of this.selectedSNPsInBrushedDomain(vcfBlock)
+   * @param selected SNPs features sorted by position and mapped as {position, matchRef}
+   * @param matchHet @userSettings.matchHet indicates to match samples with a
+   * single copy of Alt at the SNP position (i.e. 0.1 or 1.0, where . matches / or |)
+   * @return filterDescription
+   *
+   * This is used to access the blockFiltered cache as blockFiltered[filterDescription]
+   * when :
+   * - writing to cache in vcfGenotypeSamplesDataset().
+   * - reading cache in blockFilteredSamplesGet().
+   */
+  selectedSNPsToKey(features, matchHet) {
+    const
+    featuresDescription = features.map(
+      h => '' + h.position + ':' + (h.matchRef ? 'Ref' : 'Alt')).join(' '),
+    filterDescription = 'matchHet:' + matchHet + ' ' + featuresDescription;
     return filterDescription;
   }
 
@@ -2396,14 +2417,14 @@ export default class PanelManageGenotypeComponent extends Component {
      */
     filterByHaplotype = ! this.args.userSettings.filterSamplesByHaplotype ? undefined :
       {features : this.selectedSNPsInBrushedDomain(vcfBlock)
-       // This matches selectedSNPsToKey().
+       // This matches selectedSNPsToKeyWithSortAndMap().
        // sort enables filterDescription to be cache key
        .sortBy('value_0')
        .map(f => ({position : f.value_0,  matchRef : f[Symbol.for('matchRef')]})),
        matchHet
       },
-    filterDescription = filterByHaplotype ? filterByHaplotype.features.map(
-      h => '' + h.position + ':' + (h.matchRef ? 'Ref' : 'Alt')).join(' ') : '',
+    filterDescription = filterByHaplotype ?
+      this.selectedSNPsToKey(filterByHaplotype.features, matchHet) : '',
     requestDescription = "Fetching accessions for " + vcfBlock.brushName + ' ' + filterDescription;
     dLog(fnName, filterDescription, vcfBlock.brushName, 'FilteredSamples');
     /** There may be multiple concurrent samples requests, so this could be an
@@ -2748,6 +2769,7 @@ export default class PanelManageGenotypeComponent extends Component {
       cp = computed(
         'selectedSNPCount.feature',
         'controls.userSettings.genotype.filterSamplesByHaplotype',
+        'controls.userSettings.genotype.matchHet',
         () => this.genotypeSamplesFilteredByHaplotypes(vcfBlock));
       defineProperty(vcfBlock, 'genotypeSamplesFilteredByHaplotypes', cp);
 
