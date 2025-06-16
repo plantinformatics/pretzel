@@ -442,7 +442,11 @@ export default Component.extend({
 
         let searchData = sequenceSearchData.create({promise, seq, parent, searchType});
         this.get('searches').pushObject(searchData);
-        promise.then(() => this.selectResultTab(searchData));
+        /* If there is an error message, it is displayed in the Blast Output tab
+         * (panel/upload/blast-results), so switch to that tab when the promise
+         * resolves or rejects.
+         */
+        promise.always(() => this.selectResultTab(searchData));
 
     return promise;
   }).drop(),
