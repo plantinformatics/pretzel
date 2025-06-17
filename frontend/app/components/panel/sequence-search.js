@@ -446,7 +446,7 @@ export default Component.extend({
          * (panel/upload/blast-results), so switch to that tab when the promise
          * resolves or rejects.
          */
-        promise.always(() => this.selectResultTab(searchData));
+        promise.always(() => this.selectResultTab(searchData.tabId));
 
     return promise;
   }).drop(),
@@ -458,14 +458,16 @@ export default Component.extend({
         tab = searches.find((s) => s.tabId === tabId);
     if (tab) {
       searches.removeObject(tab);
+      later(() => this.selectResultTab('sequence-search-input'));
     } else {
       dLog('closeResultTab', tabId, tab);      
     }
     
   },
 
-  selectResultTab(searchData) {
-    this.bsTab.select(searchData.tabId);
+  selectResultTab(tabId) {
+    this.bsTab.select(tabId);
+    this.set('bsTab.activeId', tabId);
   },
 
   /*--------------------------------------------------------------------------*/
