@@ -48,6 +48,7 @@
     {{/if}}
   </div>
 
+  {{#if this.urlOptions.new}}
   {{#if @the.sampleFiltersCountSelected}}
   <div>
     <span>
@@ -95,6 +96,7 @@
     {{/if}}
   </div>
   {{/if}}
+  {{/if}}   {{!-- .urlOptions.new --}}    
 
   {{#if @userSettings.showHaplotypes}}
     {{#let (load @the.haplotypesSamples) as |result|}}
