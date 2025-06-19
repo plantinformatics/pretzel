@@ -13,10 +13,13 @@ export default Component.extend({
   controls : service(),
   apiServers : service(),
   selected : service('data/selected'),
+  queryParams : service('query-params'),
 
   taskGet : alias('blockService.getBlocksOfFeatures'),
 
   serverTabSelected : alias('controls.serverTabSelected'),
+
+  urlOptions : alias('queryParams.urlOptions'),
 
   /** true means match features which have an alias to a given search key */
   matchAliases : false,
@@ -38,11 +41,14 @@ export default Component.extend({
       console.log("getBlocksOfFeatures", this);
       let 
         activeFeatureList = this.get('activeFeatureList'),
-      selectedFeatureNames = ! activeFeatureList ?
+      selectedFeatureNamesPre = ! activeFeatureList ?
         this.queryParamsState.searchFeatureNames.value?.split(',') :
         activeFeatureList.hasOwnProperty('selectedFeatures') ?
         activeFeatureList.selectedFeatures
         : activeFeatureList.featureNameList,
+      /** Punctuation used in regular expressions is permitted if .advanced */
+      selectedFeatureNames = this.get('urlOptions.advanced') ?
+	selectedFeatureNamesPre : selectedFeatureNamesPre.map(deletePunctuation),
       /** this.blocksUnique() doesn't return blocksUnique because that value is
        * available only after a promise resolves. If the input for the search is
        * empty, then set blocksOfFeatures to []. */
@@ -93,7 +99,7 @@ export default Component.extend({
    */
   blocksUnique : function (selectedFeatureNames) {
       const fnName = 'blocksUnique';
-      const maxResultFeatures = 1000;
+      const maxResultFeatures = 100;
       let blockService = this.get('blockService');
       function peekBlock(block) {
         return blockService.peekBlock(block.id); };
@@ -110,7 +116,7 @@ export default Component.extend({
           /** matchRegExp===true may produce a large result array. */
           const
           truncated = (features.length > maxResultFeatures),
-          msg = truncated ? "Truncated result at " + maxResultFeatures : null;
+          msg = truncated ? "Maximum search result limit reached, search results limited to " + maxResultFeatures : null;
           this.set('featuresResultTruncated', msg);
           if (truncated) {
             features = features.slice(0, maxResultFeatures);
@@ -307,3 +313,21 @@ export default Component.extend({
   }
 
 });
+
+//------------------------------------------------------------------------------
+
+/** based on lb4app/lb3app/common/models/feature.js
+ * with additional (simple regexp) punctuation excluded : *?\[\] |
+ */
+
+const deletePunctuationRe = /[^-_.,: 0-9A-Za-z]+/g;
+
+/* Based on deletePunctuation() in common/utilities/spreadsheet-read.js
+ */
+function deletePunctuation(s) {
+  const res = s.replaceAll(deletePunctuationRe, '');
+  if (res != s) {
+    console.log('deletePunctuation', 'modified', res, s);
+  }
+  return res;
+}

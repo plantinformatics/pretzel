@@ -47,6 +47,14 @@
     <label for="checkbox-matchRegExp">Match part & ignore case</label>
   </span>
 
+  {{!-- If aliases are not loaded in the database, then display of this checkbox
+    can be disabled in the server runtime environment. This prevents presenting
+    a distracting option to the user; enabling the checkbox has no effect if
+    there are no aliases.
+    For example aliases may be loaded for 90k and SSR to support feature search
+    and paths-by-alias, which is not limited by this flag.
+    --}}
+  {{#if this.urlOptions.aliasesSearch }}
   <span style="display: inline-block;">
     <input
       type="checkbox"
@@ -57,7 +65,9 @@
     />
     <label for="checkbox-matchAliases">Match aliases</label>
   </span>
+  {{/if}}
 
+  <div class="clear-both"></div>
 
   {{!-- same icon as button-refresh, but override colour.
    Use .list-group to get some margin-bottom; when upgrading bootstrap from 3
