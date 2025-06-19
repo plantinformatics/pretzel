@@ -116,7 +116,7 @@ export default Component.extend({
           /** matchRegExp===true may produce a large result array. */
           const
           truncated = (features.length > maxResultFeatures),
-          msg = truncated ? "Maximum search result limit reached, search results limited to " + maxResultFeatures : null;
+          msg = truncated ? "Maximum search result limit reached; search results limited to " + maxResultFeatures : null;
           this.set('featuresResultTruncated', msg);
           if (truncated) {
             features = features.slice(0, maxResultFeatures);
