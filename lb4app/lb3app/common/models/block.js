@@ -22,11 +22,12 @@ const { childProcess, dataOutReplyClosure, dataOutReplyClosureLimit } = require(
 const { ArgsDebounce } = require('../utilities/debounce-args');
 const { ErrorStatus } = require('../utilities/errorStatus.js');
 
-let vcfGenotypeSamplesFiltered, vcfGenotypeLookup, vcfGenotypeFeaturesCounts;
+let vcfGenotypeSamplesFiltered, vcfGenotypeHaplotypesSamples, vcfGenotypeLookup, vcfGenotypeFeaturesCounts;
 import('@plantinformatics/vcf-genotype-brapi/dist/vcf-genotype-brapi-node.mjs').then(vcfGenotypeBrapi => {
   const vcfGenotype = vcfGenotypeBrapi.default.vcfGenotype;
   console.log('vcfGenotypeBrapi', vcfGenotypeBrapi, 'vcfGenotype', vcfGenotype);
   vcfGenotypeSamplesFiltered =  vcfGenotype.vcfGenotypeSamplesFiltered;
+  vcfGenotypeHaplotypesSamples = vcfGenotype.vcfGenotypeHaplotypesSamples;
   vcfGenotypeLookup = vcfGenotype.vcfGenotypeLookup;
   vcfGenotypeFeaturesCounts = vcfGenotype.vcfGenotypeFeaturesCounts;
 });
@@ -1504,6 +1505,48 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     description: "VCF genotype Samples e.g. samtools bcftools, returns list of samples defined in .vcf TSV table as text string"
   });
 
+  //----------------------------------------------------------------------------
+
+
+  /**
+   * @param id  blockId.  block.scope === scope, and block.datasetId === datasetId
+   * @param datasetId  name of parent or view dataset, or vcf directory name
+   * @param scope e.g. '1A'; identifies the vcf file, i.e. datasetId/scope.vcf.gz
+   * @param positions optional filter e.g. haplotype
+   */
+  Block.genotypeHaplotypesSamples = function(id, datasetId, scope, positions, options, cb) {
+    const fnName = 'genotypeHaplotypesSamples';
+    {
+      this.blockDatasetLookup(id, options)
+        .then(samples.bind(this));
+
+      function samples([block, dataset]) {
+        if (dataset.tags?.includes('VCF')) {
+          const promise = vcfGenotypeHaplotypesSamples(datasetId, scope, positions);
+          promise.then(value => cb(null, value)).catch(cb);
+
+        } else {
+          console.log(fnName, 'applicable to VCF Genotype, not', dataset.tags, datasetId);
+        }
+      }
+    }
+  };
+
+
+  Block.remoteMethod('genotypeHaplotypesSamples', {
+    accepts: [
+      {arg: 'id', type: 'string', required: true},
+      {arg: 'datasetId', type: 'string', required: true},
+      {arg: 'scope', type: 'string', required: true},
+      {arg: 'positions', type: 'array', required: true},
+      {arg: 'options', type: 'object', http: 'optionsFromRequest'},
+    ],
+    http: {verb: 'get'},
+    returns: {arg: 'text', type: 'string'},
+    description: "VCF haplotype samples.  Given a list of selected SNPs, request the list of unique haplotype values across those positions. \
+The output includes the count and list of samples which have each haplotype value."
+  });
+
   // ---------------------------------------------------------------------------
 
   /**
@@ -1571,7 +1614,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     }
   };
 
-  /** POST version of Feature.search, which is addressed by verb GET.
+  /** POST version of Block.vcfGenotypeLookup, which is addressed by verb GET.
    */
   Block.vcfGenotypeLookupPost = Block.vcfGenotypeLookup;
 

@@ -54,8 +54,9 @@ function showSynteny(syntenyBlocks, t, oa)
     .append("g")
     .attr("class", "synteny"),
   sbM = sbE.merge(sbS);
-  if (trace_synteny)
+  if (trace_synteny && (syntenyBlocks.length || sbE.size())) {
     dLog("showSynteny", sbS.size(), sbE.size(), sbM.size(), sbM.node());
+  }
 
   function sbChrAreAdjacent(sb) {
     let a0 = sb[0], a1 = sb[1], adj = isAdjacent(a0, a1) || isAdjacent(a1, a0);

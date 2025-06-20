@@ -40,6 +40,7 @@
     "d3-scale-chromatic": "^3.0.0",
     "ember-3x-codemods": "^1.12.8",
     "ember-ajax": "^5.1.2",
+    "ember-async-data": "^2.0.0",
     "ember-auto-import": "^2.7.2",
     "ember-bootstrap": "^6.1.0",
     "ember-cli": "5.6.0",
@@ -103,7 +104,7 @@
   },
   "dependencies": {
     "@ember/test-helpers": "^3.3.0",
-    "@plantinformatics/vcf-genotype-brapi": "^1",
+    "@plantinformatics/vcf-genotype-brapi": "^1.0.17",
     "@solgenomics/brapijs": "https://github.com/solgenomics/BrAPI-js.git",
     "@voll/ember-parachute": "^2.0.0",
     "bluebird": "^3.7.2",

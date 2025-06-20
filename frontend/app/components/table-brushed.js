@@ -11,7 +11,7 @@ import { alias } from '@ember/object/computed';
 
 import { featureEdit } from '../components/form/feature-edit';
 import { eltClassName } from '../utils/domElements';
-import { exportAsCSVFile } from '../utils/dom/file-download';
+import { exportObjectsAsCSVFile } from '../utils/dom/file-download';
 import {
   // setRowAttributes,
   afterOnCellMouseOverClosure,
@@ -944,6 +944,7 @@ export default Component.extend({
    * export as a file download.
    */
   downloadCSVFile() {
+    // After a4610c88,  utils/dom/file-download.js : exportObjectsAsCSVFile() was factored out of this function.
     const
     fnName = 'downloadCSVFile',
     /** displayed as 'Block', download as 'Block' also.
@@ -955,31 +956,20 @@ export default Component.extend({
     baseColumnHeaders = [
       blockKey, 'Feature', 'Position',
     ],
+    /** For verification could add : && (columnIndex===0) */
+    columnHeadersMap = columnHeader => (columnHeader === blockKey) ? 'Block' : columnHeader,
+
     /** Block contains datasetId, which may contain a comma ?, so wrap with "".
      * Also wrap array values, and comma-separate their elements; this
      * is the expected upload format for flankingMarkers, which is the
      * only array value expected.
      */
-    needsQuoting = (value, columnIndex) =>
-    (baseColumnHeaders[columnIndex] === blockKey) ||
+    needsQuoting = (key, value, columnIndex) =>
+    (key === 'Block') ||
       (typeof value === 'string' && value.includes(',')),
-    quoteIfNeeded = (value, columnIndex) =>
-    needsQuoting(value, columnIndex) ? '"' + value + '"' :
-      Array.isArray(value) ?  '"' + value.join(',') +  '"' :
-      value,
+    data = this.dataForHoTable;
 
-    data = this.dataForHoTable,
-    /** result : S alias s.  d : row datum, k : cell key */
-    featureKeySet = data.reduce((S, d) =>
-      Object.keys(d).reduce((s, k) =>
-        s.add(k), S), new Set(baseColumnHeaders)),
-    featureKeyArray = Array.from(featureKeySet),
-    columnHeaders = featureKeyArray.slice();
-    if (columnHeaders[0] === blockKey) {
-      columnHeaders[0] = 'Block';
-    }
-
-    exportAsCSVFile('feature-table.csv', data, featureKeyArray, columnHeaders, quoteIfNeeded);
+    exportObjectsAsCSVFile('feature-table.csv', needsQuoting, baseColumnHeaders, true, columnHeadersMap, data);
 
   },
 

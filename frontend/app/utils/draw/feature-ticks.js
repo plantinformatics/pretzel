@@ -107,6 +107,20 @@ FeatureTicks.prototype.featuresOfBlock = function (featuresOfBlockLookup) {
     };
 };
 
+/** If the feature does not have .values.tSNP, fall back to block colour,
+ * as in layoutAndDrawTracks() : appendRect() : featureColour : which does :
+ * colour = feature.colour(qtlColourBy) || blockTrackColourI.apply(trackRect)
+ * Related : models/feature.js : haplotypeColour().
+ * @return result of useFeatureColour, or undefined to fall back to block colour
+ */
+function featureBlockColourBy(feature, block) {
+  let qtlColourBy = block.get('useFeatureColour');
+  if ((qtlColourBy === 'Haplotype') && ! feature.values.tSNP) {
+    qtlColourBy = null;
+  }
+  return qtlColourBy;
+}
+
 /** Determine the colour for the feature, either traitColour() if
  * feature.blockId is a QTL, or otherwise blockColourValue().
  */
@@ -114,7 +128,7 @@ FeatureTicks.prototype.featureColour = function (feature) {
   /** Similar @see featurePathStroke() */
   let colour;
   let block = feature.get('blockId');
-  let qtlColourBy = block.get('useFeatureColour');
+  let qtlColourBy = featureBlockColourBy(feature, block);
   if (qtlColourBy) {
     colour = feature.colour(qtlColourBy);
   } else {
@@ -194,7 +208,8 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
         let colour;
         /** BlockAxisView / block-axis-view (was Stacks : Block) */
         let block = this.parentElement.__data__;
-        let qtlColourBy = block.block.get('useFeatureColour');
+        let qtlColourBy = featureBlockColourBy(feature, block.block);
+
         if (qtlColourBy) {
           colour = feature.colour(qtlColourBy);
         } else {

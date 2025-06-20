@@ -1,9 +1,9 @@
 {{!-- (queue (mut selectedValue) (action @selectedGroupChanged)) --}}
   <select multiple
-     onchange={{action this.selectedGroupChangedId value="target.value" preventDefault=false}}>
+     onchange={{action this.selectedGroupChangedId preventDefault=false}}>
     {{#each @values as |optionValue|}}
       {{!-- selected seems to be not used for multiple --}}
-      <option value={{optionValue.id}} selected={{action this.selected @selectedValue optionValue}}>{{optionValue.name}}</option>
+      <option value={{optionValue.id}} selected={{call (fn this.selected @selectedValue optionValue) }} >{{optionValue.name}}</option>
     {{/each}}
   </select>
 

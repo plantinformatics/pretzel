@@ -198,6 +198,9 @@ function featureHasSamplesLoaded(feature) {
  * .replaceResults default: false
 
  * .showResultText default: false
+ * .showColourThemeModal default: false
+ * Enables display of components/panel/colour-theme-selector
+ *
  * .compressVCF default : true
  * .showConfigureLookup default: false
  * .showSampleFilters default : false
@@ -220,8 +223,8 @@ function featureHasSamplesLoaded(feature) {
  * .maxAlleles default ''
  * .typeSNP default false
  *
- * .samplesLimit default 10
- * .samplesLimitEnable default false
+ * .samplesLimit default 100
+ * .samplesLimitEnable default true
  * .sampleFilterTypeName default 'variantInterval'
  * .haplotypeFilterRef default : false
  * .showNonVCFFeatureNames default : true
@@ -242,6 +245,17 @@ function featureHasSamplesLoaded(feature) {
  *   The samples indicated by requestSamplesAll can be optionally filtered before request.
  * .filterSamplesByHaplotype  boolean, default : false
  *   Show samples selected by SNP filters
+ * .matchHet  boolean, default : true
+ *   Match for samples which have a heterozygous genotype value at a selected SNP.
+ * .showHaplotypes  boolean, default : false
+ *   Show unique haplotypes of the selected SMPs, and their samples
+ * .showHaplotypesSamples  boolean, default : false
+ *   For each haplotype, show samples which have that haplotype.
+ * .sortByHaplotypeValue  boolean, default : true
+ *   Sort the haplotypes by their value, otherwise by their sample count.
+ * .includeHetMissingHaplotypes  boolean, default : false
+ *   Show haplotypes which contain heterozygous values and missing data.
+ *   If false, show only haplotypes with all homozygous genotype values.
  *
  * @see userSettingsDefaults()
  *------------------------------------------------------------------------------
@@ -496,6 +510,9 @@ export default class PanelManageGenotypeComponent extends Component {
     if (userSettings.showResultText === undefined) {
       userSettings.showResultText = false;
     }
+    if (userSettings.showColourThemeModal === undefined) {
+      userSettings.showColourThemeModal = false;
+    }
     if (userSettings.compressVCF === undefined) {
       userSettings.compressVCF = true;
     }
@@ -536,10 +553,10 @@ export default class PanelManageGenotypeComponent extends Component {
     }
 
     if (userSettings.samplesLimit === undefined) {
-      userSettings.samplesLimit = 10;
+      userSettings.samplesLimit = 100;
     }
     if (userSettings.samplesLimitEnable === undefined) {
-      userSettings.samplesLimitEnable = false;
+      userSettings.samplesLimitEnable = true;
     }
 
     if (userSettings.sampleFilterTypeName === undefined) {
@@ -565,6 +582,23 @@ export default class PanelManageGenotypeComponent extends Component {
 
     if (userSettings.filterSamplesByHaplotype === undefined) {
       userSettings.filterSamplesByHaplotype = false;
+    }
+
+    if (userSettings.matchHet === undefined) {
+      userSettings.matchHet = true;
+    }
+
+    if (userSettings.showHaplotypes === undefined) {
+      userSettings.showHaplotypes = false;
+    }
+    if (userSettings.showHaplotypesSamples === undefined) {
+      userSettings.showHaplotypesSamples = false;
+    }
+    if (userSettings.sortByHaplotypeValue === undefined) {
+      userSettings.sortByHaplotypeValue = true;
+    }
+    if (userSettings.includeHetMissingHaplotypes === undefined) {
+      userSettings.includeHetMissingHaplotypes = true;
     }
 
     if (userSettings.showNonVCFFeatureNames === undefined) {
@@ -671,6 +705,14 @@ export default class PanelManageGenotypeComponent extends Component {
   @tracked
   rowLimit = 300;
 
+  /** Messages displayed in the GUI to inform the user that the request scope
+   * was truncated by .rowLimit, .samplesLimit respectively.
+   */
+  @tracked
+  rowLimitMessage = null;
+  @tracked
+  samplesLimitMessage = null;
+
   @action
   rowLimitInput(event) {
     /** default is 300 : value=300 in hbs
@@ -681,6 +723,19 @@ export default class PanelManageGenotypeComponent extends Component {
     this.rowLimit = value;
   }
 
+  /** Count of requested features, samples. Used in areaLimitMessage. */
+  @tracked
+  requestLength = { features : 0, samples : 0};
+
+  @computed('requestLength.features', 'requestLength.samples')
+  get areaLimitMessage() {
+    const
+    fnName = 'areaLimitMessage',
+    requestArea = this.requestLength.features * this.requestLength.samples,
+    message = (requestArea < 5e4) ? null : ' Genotype values requested : ' + requestArea + '.';
+    dLog(fnName, message);
+    return message;
+  }
 
 
   //----------------------------------------------------------------------------
@@ -1637,7 +1692,7 @@ export default class PanelManageGenotypeComponent extends Component {
     let sampleNames;
     if (selectedSNPs?.length) {
       const
-      filterDescription = this.selectedSNPsToKey(selectedSNPs),
+      filterDescription = this.selectedSNPsToKeyWithSortAndMap(selectedSNPs),
       cacheFiltered = this.sampleCache.filteredByGenotype,
       blockFiltered = cacheFiltered[vcfBlock.id];
       sampleNames = blockFiltered?.[filterDescription];
@@ -1706,9 +1761,10 @@ export default class PanelManageGenotypeComponent extends Component {
     'vcfGenotypeSamplesText',
     'args.userSettings.samplesIntersection',
     'sampleNameFilter',
-    /** These 4 dependencies relate to filterSamplesByHaplotype;
+    /** These 5 dependencies relate to filterSamplesByHaplotype;
      * possibly split this out as a separate CP samplesFilteredByHaplotype */
     'args.userSettings.filterSamplesByHaplotype',
+    'args.userSettings.matchHet',
     'snpsInBrushedDomain.length',
     /** update when new results in sampleCache.filteredByGenotype */
     'sampleCache.filteredByGenotypeCount',
@@ -1754,10 +1810,18 @@ export default class PanelManageGenotypeComponent extends Component {
   selectSample(event) {
     const
     selectedSamples = $(event.target).val();
+    this.selectSampleArray(selectedSamples, true);
+  }
+  /**
+   * @param selectSampleArray array of text sample names
+   * @param add true for add, false for remove
+   */
+  selectSampleArray(selectedSamples, add) {
+    const functionName = add ? 'addObjects' : 'removeObjects';
     if (! this.selectedSamples) {
       this.selectedSamples = selectedSamples;
     } else {
-      this.selectedSamples.addObjects(selectedSamples);
+      this.selectedSamples[functionName](selectedSamples);
     }
     if (! this.selectedSamplesText) {
       if (selectedSamples.length) {
@@ -1770,7 +1834,8 @@ export default class PanelManageGenotypeComponent extends Component {
       editedSamples = this.sampleNameListInputParse(this.selectedSamplesText);
 
       // Using .addObjects removes duplicates, which string concatenation wouldn't do.
-      this.selectedSamplesText = editedSamples.addObjects(selectedSamples).join('\n');
+      // .addObjects and .removeObjects match strings by == (not ===).
+      this.selectedSamplesText = editedSamples[functionName](selectedSamples).join('\n');
     }
   }
 
@@ -2266,16 +2331,37 @@ export default class PanelManageGenotypeComponent extends Component {
   }
 
   /** Construct a text key from the result of this.selectedSNPsInBrushedDomain(vcfBlock)
-   * The format is the same as filterDescription in vcfGenotypeSamplesDataset().
+   *
+   * Related : in vcfGenotypeSamplesDataset() : filterByHaplotype has already
+   * been through the same sort and map, so selectedSNPsToKey() is used for
+   * filterDescription.
    */
-  selectedSNPsToKey(selectedSNPs) {
+  selectedSNPsToKeyWithSortAndMap(selectedSNPs) {
     const
     features = selectedSNPs
       // sort enables filterDescription to be cache key
       .sortBy('value_0')
       .map(f => ({position : f.value_0,  matchRef : f[Symbol.for('matchRef')]})),
-    filterDescription = features.map(
-      h => '' + h.position + ':' + (h.matchRef ? 'Ref' : 'Alt')).join(' ');
+    matchHet = this.args.userSettings.matchHet,
+    filterDescription = this.selectedSNPsToKey(features, matchHet);
+    return filterDescription;
+  }
+  /** Construct a text key from the result of this.selectedSNPsInBrushedDomain(vcfBlock)
+   * @param selected SNPs features sorted by position and mapped as {position, matchRef}
+   * @param matchHet @userSettings.matchHet indicates to match samples with a
+   * single copy of Alt at the SNP position (i.e. 0.1 or 1.0, where . matches / or |)
+   * @return filterDescription
+   *
+   * This is used to access the blockFiltered cache as blockFiltered[filterDescription]
+   * when :
+   * - writing to cache in vcfGenotypeSamplesDataset().
+   * - reading cache in blockFilteredSamplesGet().
+   */
+  selectedSNPsToKey(features, matchHet) {
+    const
+    featuresDescription = features.map(
+      h => '' + h.position + ':' + (h.matchRef ? 'Ref' : 'Alt')).join(' '),
+    filterDescription = 'matchHet:' + matchHet + ' ' + featuresDescription;
     return filterDescription;
   }
 
@@ -2317,8 +2403,11 @@ export default class PanelManageGenotypeComponent extends Component {
     vcfDataset = contentOf(vcfBlock?.get('datasetId')),
     vcfDatasetId = vcfBlock?.get('datasetId.id'),
     vcfDatasetIdAPI = vcfBlock?.get('datasetId.genotypeId'),
-    /** as in .lookupScope */
+    /** Same comment as in .lookupScope */
     scope = vcfBlock.get('name'),
+    /** original discussions mentioned allowMissing; that might be a flag or
+     * number; it can be added to filterByHaplotype */
+    matchHet = this.args.userSettings.matchHet,
     /** Of the 3 ways to select SNPs for sample sorting / filtering :
      *  - .blocksHaplotypeFilters sampleFilters.haplotype
      *  - .blocksVariantIntervalFilters sampleFilters.variantInterval
@@ -2328,12 +2417,14 @@ export default class PanelManageGenotypeComponent extends Component {
      */
     filterByHaplotype = ! this.args.userSettings.filterSamplesByHaplotype ? undefined :
       {features : this.selectedSNPsInBrushedDomain(vcfBlock)
-       // This matches selectedSNPsToKey().
+       // This matches selectedSNPsToKeyWithSortAndMap().
        // sort enables filterDescription to be cache key
        .sortBy('value_0')
-       .map(f => ({position : f.value_0,  matchRef : f[Symbol.for('matchRef')]}))},
-    filterDescription = filterByHaplotype ? filterByHaplotype.features.map(
-      h => '' + h.position + ':' + (h.matchRef ? 'Ref' : 'Alt')).join(' ') : '',
+       .map(f => ({position : f.value_0,  matchRef : f[Symbol.for('matchRef')]})),
+       matchHet
+      },
+    filterDescription = filterByHaplotype ?
+      this.selectedSNPsToKey(filterByHaplotype.features, matchHet) : '',
     requestDescription = "Fetching accessions for " + vcfBlock.brushName + ' ' + filterDescription;
     dLog(fnName, filterDescription, vcfBlock.brushName, 'FilteredSamples');
     /** There may be multiple concurrent samples requests, so this could be an
@@ -2341,6 +2432,7 @@ export default class PanelManageGenotypeComponent extends Component {
      * samples request in process, as the request may take seconds.
      */
     later(() => Ember_set(this, 'samplesRequestDescription', requestDescription));
+
 
     let textP;
     if (scope && vcfDatasetIdAPI)   {
@@ -2603,6 +2695,66 @@ export default class PanelManageGenotypeComponent extends Component {
 
   //----------------------------------------------------------------------------
 
+  /** For display in dataset tab, show how many selected SNPs affect blocks of .lookupDatasetId
+   * - these are the SNPs which will be used by haplotypesSamples() ->
+   *  genotypePatternsSamples(), which also uses
+   *  selectedSNPsInBrushedDomain(vcfBlock).
+   *
+   * @return the array of SNPS / features (.length is displayed, the feature
+   * details could be displayed in a hover)
+   *
+   * Related : snpsInBrushedDomain().
+   */
+  @computed('lookupDatasetId', 'block.brushedDomain', 'featureFiltersCount')
+  get featureFiltersCountOfDatasetInBrushedDomain() {
+    const
+    fnName = 'featureFiltersCountOfDatasetInBrushedDomain',
+    // copied from haplotypesSamples().
+    aBlocks = this.brushedVCFBlocks.filter(
+      ab => ab.block.datasetId.id == this.lookupDatasetId),
+    features = aBlocks.reduce((accum, aBlock) =>
+      accum.concat(this.selectedSNPsInBrushedDomain(aBlock.block)), []);
+    return features;
+  }
+
+  /** When the user changes selected SNPs, request unique haplotypes and their samples.
+   * @return promise yielding {text } of the API result
+   * or throwing null if e.g. there are no SNPs selected.
+   */
+  @computed('lookupBlock.brushedDomain', 'featureFiltersCount')
+  get haplotypesSamples() {
+    const
+    fnName = 'haplotypesSamples',
+    aBlocks = this.brushedVCFBlocks.filter(
+      ab => ab.block.datasetId.id == this.lookupDatasetId),
+    promises = aBlocks.map(aBlock => {
+      const
+      vcfBlock = aBlock.block,
+      blockGtView = vcfBlock[Symbol.for('block-gt-view')],
+      promise = blockGtView && ! blockGtView.isDestroying ?
+        blockGtView.genotypePatternsSamples :
+        Promise.reject(vcfBlock.brushName + '! blockGtView');
+      if (! blockGtView) {
+        console.log(fnName, vcfBlock.brushName, '! blockGtView');
+      } else if (blockGtView.isDestroying) {
+        console.log(fnName, vcfBlock.brushName, 'blockGtView.isDestroying');
+        vcfBlock[Symbol.for('block-gt-view')] = null;
+      }
+      return promise;
+    }),
+    promise = Promise.all(promises);
+    promise.then(result => {
+      dLog(fnName, result);
+    });
+
+    return promise;
+  }
+
+
+
+  //----------------------------------------------------------------------------
+
+
   /** This is called for brushed VCF blocks.
    * Add a Computed Property genotypeSamplesFilteredByHaplotypes to the block,
    * and assign an attribute selectedSNPCount: {}.
@@ -2617,6 +2769,7 @@ export default class PanelManageGenotypeComponent extends Component {
       cp = computed(
         'selectedSNPCount.feature',
         'controls.userSettings.genotype.filterSamplesByHaplotype',
+        'controls.userSettings.genotype.matchHet',
         () => this.genotypeSamplesFilteredByHaplotypes(vcfBlock));
       defineProperty(vcfBlock, 'genotypeSamplesFilteredByHaplotypes', cp);
 
@@ -2627,7 +2780,7 @@ export default class PanelManageGenotypeComponent extends Component {
 
   }
 
-  // ---------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   showError(fnName, error) {
     let message;
@@ -2663,6 +2816,7 @@ export default class PanelManageGenotypeComponent extends Component {
   samplesOK(limitSamples, datasetId) {
     let samplesRaw, samples;
     const
+    fnName = 'samplesOK',
     userSettings = this.args.userSettings,
     requestSamplesAll = userSettings.requestSamplesAll,
     requestSamplesFiltered = userSettings.requestSamplesFiltered,
@@ -2702,9 +2856,15 @@ export default class PanelManageGenotypeComponent extends Component {
             (! this.sampleFilter || this.sampleFilter(this.lookupBlock, sampleName)) );
     }
 
+    Ember_set(this, 'requestLength.samples', samplesRaw?.length ?? 0);
     if (limitSamples && (samplesRaw?.length > samplesLimit)) {
       samplesRaw = samplesRaw.slice(0, samplesLimit);
+      this.samplesLimitMessage = " Samples limited to " + samplesLimit + '.';
+    } else {
+      this.samplesLimitMessage = null;
     }
+    dLog(fnName, 'samplesLimitMessage', this.samplesLimitMessage,
+      limitSamples, samplesRaw?.length, samplesLimit);
 
     /* Handle samplesLimit===0; that may not have a use since the features are
      * already requested without samples. */
@@ -2719,14 +2879,19 @@ export default class PanelManageGenotypeComponent extends Component {
    * selected, or previous button action is in process.
    * @return disabled if ! All && no samples selected, or All && Common && no samples to select
    * Also disabled if vcfGenotypeLookup button action is in process.
+   *
+   * The return value is a text value identifying which condition was not
+   * satisfied, for display in the GUI as hover text tooltip when the 'VCF
+   * Lookup' button is disabled by this function.
    */
   get vcfGenotypeLookupButtonDisabled() {
     const
     userSettings = this.args.userSettings,
     disabled = 
-      ((! userSettings.requestSamplesAll) && (! this.vcfGenotypeSamplesSelected?.length)) ||
-      (userSettings.requestSamplesAll && userSettings.samplesIntersection && ! this.samples?.length) ||
-      this.vcfGenotypeLookupTask.isRunning;
+      (! this.vcfGenotypeLookupDomain && 'Select a region of the axis') ||
+      (((! userSettings.requestSamplesAll) && (! this.vcfGenotypeSamplesSelected?.length)) && 'Select Samples') ||
+      ((userSettings.requestSamplesAll && userSettings.samplesIntersection && ! this.samples?.length) && 'There are no samples in common') ||
+      (this.vcfGenotypeLookupTask.isRunning && 'Lookup is in progress');
     return disabled;
   }
 
@@ -3647,6 +3812,7 @@ export default class PanelManageGenotypeComponent extends Component {
        */
       dLog(fnName, visibleBlocks.mapBy('id'));
       if (visibleBlocks.length) {
+        this.rowLimitMessage = null;
         const
         // this.gtDatasets is equivalent to visibleBlocks.mapBy('datasetId.content').uniq(),
         gtDatasetIds = this.gtDatasetIds,
@@ -3661,7 +3827,15 @@ export default class PanelManageGenotypeComponent extends Component {
             return features;
           })
           .filter((features) => features.length)
-          .map((features) => features.slice(0, this.rowLimit));
+          .map((features) => {
+            if (features.length > this.rowLimit) {
+              this.rowLimitMessage = "Rows limited to " + this.rowLimit + '.';
+              features = features.slice(0, this.rowLimit);
+            }
+            return features;
+          });
+        const totalLength = featuresArrays.reduce((sum, features) => sum += features.length, 0);
+        Ember_set(this, 'requestLength.features', totalLength);
 
         this.collateBlockHaplotypeFeatures(featuresArrays);
         this.collateBlockSamplesCallRate(featuresArrays);
@@ -3946,6 +4120,8 @@ export default class PanelManageGenotypeComponent extends Component {
   //----------------------------------------------------------------------------
 
   /** Construct a map from haplotype / tSNP values to Feature arrays.
+   * Each Feature array is expected to be of a single block;
+   * the map is recorded in block[haplotypeFeaturesSymbol].
    * @param featuresArrays  array of arrays of features, 1 array per block
    */
   collateBlockHaplotypeFeatures(featuresArrays) {
@@ -3955,20 +4131,23 @@ export default class PanelManageGenotypeComponent extends Component {
           const
           blockp = features?.[0].get('blockId'),
           /** blockp may be a proxy; want the actual Block, for reference via Symbol */
-          block = blockp && contentOf(blockp),
-          map = block[haplotypeFeaturesSymbol] || (block[haplotypeFeaturesSymbol] = {});
-          features
-          .reduce(
-            (map, feature) => {
-              const
-              tSNP = feature.values?.tSNP;
-              if (tSNP) {
-                const features = map[tSNP] || (map[tSNP] = Ember_A());
-                features.push(feature);
-              }
-              return map;
-            },
-            map);
+          block = blockp && contentOf(blockp);
+          if (block) {
+            const
+            map = block[haplotypeFeaturesSymbol] || (block[haplotypeFeaturesSymbol] = {});
+            features
+            .reduce(
+              (map, feature) => {
+                const
+                tSNP = feature.values?.tSNP;
+                if (tSNP) {
+                  const features = map[tSNP] || (map[tSNP] = Ember_A());
+                  features.push(feature);
+                }
+                return map;
+              },
+              map);
+            }
         }
       );
   }
@@ -4696,7 +4875,9 @@ export default class PanelManageGenotypeComponent extends Component {
   @action
   tablePositionChanged(features) {
     const fnName = 'tablePositionChanged';
-    dLog(fnName, features);
+    if (trace) {
+      dLog(fnName, features);
+    }
     // The caller may pass empty features[] to indicate the table is empty.
     features = features.filter(f => f);
     if (features?.length) {

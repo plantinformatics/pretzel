@@ -91,6 +91,23 @@ export default Component.extend({
     }
   }),  
 
+  /** Preserve a reference to the <BsTab> so that when the result is received
+   * (sendRequest -> dnaSequenceSearch() resolves), .then() can switch to that
+   * result tab.
+   *
+   * This design is sufficient in this case; for further tab control and
+   * interactions see also components/elem/tab-names, used in
+   * panel/manage-genotype for the sampleFilter tabs.
+   *
+   * The <BsTab> contains these tabs :
+   * - #sequence-search-input 'Sequence Input',
+   * - #sequence-search-output-3'Blast Output ({{search.timeId}}'
+   */
+  storeBsTab(argA) {
+    const tab = argA[0];
+    this.bsTab = tab;
+  },
+
   /*--------------------------------------------------------------------------*/
   /** copied from data-base.js; may factor or change the approach. */
   isProcessing: false,
@@ -425,6 +442,11 @@ export default Component.extend({
 
         let searchData = sequenceSearchData.create({promise, seq, parent, searchType});
         this.get('searches').pushObject(searchData);
+        /* If there is an error message, it is displayed in the Blast Output tab
+         * (panel/upload/blast-results), so switch to that tab when the promise
+         * resolves or rejects.
+         */
+        promise.always(() => this.selectResultTab(searchData.tabId));
 
     return promise;
   }).drop(),
@@ -436,11 +458,17 @@ export default Component.extend({
         tab = searches.find((s) => s.tabId === tabId);
     if (tab) {
       searches.removeObject(tab);
+      later(() => this.selectResultTab('sequence-search-input'));
     } else {
       dLog('closeResultTab', tabId, tab);      
     }
     
-  }
+  },
+
+  selectResultTab(tabId) {
+    this.bsTab.select(tabId);
+    this.set('bsTab.activeId', tabId);
+  },
 
   /*--------------------------------------------------------------------------*/
 
