@@ -178,24 +178,6 @@
   <label>Selected samples to be requested in VCF Lookup</label>
   {{#if @the.selectedCount}}
     <span class="sample-count">( {{@the.selectedCount}} )</span>
-
-    <button type="button" class="btn btn-info btn-xs padding-thin" style="margin-left:0.8em" {{on 'click' (action this.clearSelectedSamples) }}>
-      Clear
-      {{#ember-tooltip side="bottom-end" delay=500}}
-        Clear the list of selected samples
-      {{/ember-tooltip}}
-    </button>
-
-    {{#if this.urlOptions.passportExport}}
-    <button type="button" class="btn btn-info btn-xs padding-thin" style="margin-left:0.8em" {{on 'click' (action this.selectedSamplesGetPassport) }}>
-      Passport
-      {{#ember-tooltip side="bottom-end" delay=500}}
-        Get the passport data of selected samples from AGG GenoLink.
-      {{/ember-tooltip}}
-    </button>
-    {{/if}}	{{!-- this.urlOptions.passportExport --}}
-
-
   {{/if}}       {{!-- @the.selectedCount --}}
 
   <div>
@@ -216,8 +198,24 @@
   </div>
 
   {{#if (and @the.selectedCount this.genolinkSearchURL) }}
+    <button type="button" class="btn btn-info padding-thin margin-top"  {{on 'click' (action this.clearSelectedSamples) }}>
+      Clear
+      {{#ember-tooltip side="bottom-end" delay=500}}
+        Clear the list of selected samples
+      {{/ember-tooltip}}
+    </button>
+
+    {{#if this.urlOptions.passportExport}}
+    <button type="button" class="btn btn-info btn-xs padding-thin" style="margin-left:0.8em" {{on 'click' (action this.selectedSamplesGetPassport) }}>
+      Passport
+      {{#ember-tooltip side="bottom-end" delay=500}}
+        Get the passport data of selected samples from AGG GenoLink.
+      {{/ember-tooltip}}
+    </button>
+    {{/if}}	{{!-- this.urlOptions.passportExport --}}
+
   <div>
-    <span>View selected samples in Genolink</span>
+    <span>Access passport data via Genolink</span>
       <a target='_blank' href={{this.genolinkSearchURL}}
         class={{concat "btn-info margin-1em btn" (if this.searchIdsTruncatedMessage "disabled" "") }} >
         Genolink
@@ -225,7 +223,7 @@
 
       <EmberTooltip @side="bottom-end" @delay=500>
         {{this.searchIdsTruncatedMessage}}
-        Open AGG Genolink showing the selected samples.
+        Open AGG Genolink, showing the passport data of the selected samples.
       </EmberTooltip>
   </div>
   {{/if}}
