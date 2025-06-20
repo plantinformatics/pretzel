@@ -18,15 +18,99 @@
   {{/if}}
 
   <div>
+    <span>
     <input type="checkbox"
       checked={{@userSettings.filterSamplesByHaplotype}}
       oninput={{pipe (action (mut @userSettings.filterSamplesByHaplotype) value="target.checked")
         @the.ensureSamples }}  >
     <label>Filter by defined Haplotype</label>
-    {{#ember-tooltip side="left" delay=1500}}
+    {{#ember-tooltip side="bottom-start" delay=1500}}
       Show samples selected by SNP filters
     {{/ember-tooltip}}
+    </span>
+
+    {{#if @the.featureFiltersCountOfDatasetInBrushedDomain.length}}
+      <span class="sample-count"> (
+        {{@the.featureFiltersCountOfDatasetInBrushedDomain.length}}
+        {{#unless (eq @the.featureFiltersCountOfDatasetInBrushedDomain.length @the.featureFiltersCount) }} 
+          in scope, out of {{@the.featureFiltersCount}}
+        {{/unless}}
+      SNPs ) </span>
+
+      <span>
+        <input type="checkbox"
+          checked={{this.matchExactAlleles}}
+          oninput={{action (mut this.matchExactAlleles) value="target.checked" }}  >
+        <label>Match exact alleles</label>
+        {{#ember-tooltip side="bottom-end" delay=1500}}
+          Match only for samples which have a homozygous genotype value at a selected SNP.
+        {{/ember-tooltip}}
+      </span>
+
+    {{/if}}
   </div>
+
+  {{#if this.urlOptions.new}}
+  {{#if @the.sampleFiltersCountSelected}}
+  <div>
+    <span>
+    <input type="checkbox"
+      checked={{@userSettings.showHaplotypes}}
+      oninput={{action (mut @userSettings.showHaplotypes) value="target.checked" }}  >
+    <label>Show GT pattern</label>
+    {{#ember-tooltip side="bottom-start" delay=1500}}
+      Show unique genotype patterns (i.e. Multi-Locus Genotypes) for the selected SNPs, and samples which have each value.
+    {{/ember-tooltip}}
+    </span>
+
+    {{#if @userSettings.showHaplotypes}}
+
+      <span class="margin-left-1em">
+      <input type="checkbox"
+        checked={{@userSettings.showHaplotypesSamples}}
+        oninput={{action (mut @userSettings.showHaplotypesSamples) value="target.checked" }}  >
+      <label>Show Samples</label>
+      {{#ember-tooltip side="bottom-start" delay=1500}}
+        For each genotype pattern, show samples which have that value.
+      {{/ember-tooltip}}
+      </span>
+
+      <span class="margin-left-1em">
+        <input type="checkbox"
+          checked={{@userSettings.sortByHaplotypeValue}}
+          oninput={{action (mut @userSettings.sortByHaplotypeValue) value="target.checked" }}  >
+        <label>Sort by GT</label>
+        {{#ember-tooltip side="bottom" delay=1500}}
+          Sort the genotype patterns by their value, otherwise by their sample count.
+        {{/ember-tooltip}}
+      </span>
+
+      <span class="margin-left-1em">
+        <input type="checkbox"
+          checked={{@userSettings.includeHetMissingHaplotypes}}
+          oninput={{action (mut @userSettings.includeHetMissingHaplotypes) value="target.checked" }}  >
+        <label>Show Het & missing</label>
+        {{#ember-tooltip side="bottom-end" delay=1500}}
+          Include genotype patterns with heterozygous and missing data.
+        {{/ember-tooltip}}
+      </span>
+
+    {{/if}}
+  </div>
+  {{/if}}
+  {{/if}}   {{!-- .urlOptions.new --}}    
+
+  {{#if @userSettings.showHaplotypes}}
+    {{#let (load @the.haplotypesSamples) as |result|}}
+      {{#if result.isResolved}}
+        {{!-- i.e. panel/haplotypes-samples --}}
+        <Panel::HaplotypesSamples @the={{@the}} @userSettings={{@userSettings}}
+        @data={{result.value}} @selectHaplotype={{@the.selectHaplotype}}
+        >
+        </Panel::HaplotypesSamples>
+      {{/if}}
+    {{/let}}
+  {{/if}}
 
   <div style="min-height:1ex">{{@the.samplesRequestDescription}}</div>
 
@@ -83,6 +167,10 @@
       {{/each}}
     </select>
 
+    <EmberTooltip @side="bottom" @delay=500>
+      <span>Select samples to be requested in VCF Lookup.</span>
+    </EmberTooltip>
+
   </div>
 </div>
 
@@ -90,11 +178,11 @@
   <label>Selected samples to be requested in VCF Lookup</label>
   {{#if @the.selectedCount}}
     <span class="sample-count">( {{@the.selectedCount}} )</span>
-  {{/if}}
+  {{/if}}       {{!-- @the.selectedCount --}}
 
   <div>
-    <EmberTooltip side="right" delay=500>
-      <span>Edit the list of Selected samples to be requested in VCF Lookup.</span>
+    <EmberTooltip @side="top" @delay=500>
+      <span>Edit / copy / paste the list of Selected samples to be requested in VCF Lookup.</span>
     </EmberTooltip>
     <Textarea
       class="selectedSamplesInput"
@@ -108,6 +196,37 @@
       >
     </Textarea>
   </div>
+
+  {{#if (and @the.selectedCount this.genolinkSearchURL) }}
+    <button type="button" class="btn btn-info padding-thin margin-top"  {{on 'click' (action this.clearSelectedSamples) }}>
+      Clear
+      {{#ember-tooltip side="top-start" delay=500}}
+        Clear the list of selected samples
+      {{/ember-tooltip}}
+    </button>
+
+    {{#if this.urlOptions.passportExport}}
+    <button type="button" class="btn btn-info btn-xs padding-thin" style="margin-left:0.8em" {{on 'click' (action this.selectedSamplesGetPassport) }}>
+      Passport
+      {{#ember-tooltip side="top-start" delay=500}}
+        Get the passport data of selected samples from AGG GenoLink.
+      {{/ember-tooltip}}
+    </button>
+    {{/if}}	{{!-- this.urlOptions.passportExport --}}
+
+  <div>
+    <span>Access passport data via Genolink</span>
+      <a target='_blank' href={{this.genolinkSearchURL}}
+        class={{concat "btn-info margin-1em btn" (if this.searchIdsTruncatedMessage "disabled" "") }} >
+        Genolink
+      </a>
+
+      <EmberTooltip @side="bottom-end" @delay=500>
+        {{this.searchIdsTruncatedMessage}}
+        Open AGG Genolink, showing the passport data of the selected samples.
+      </EmberTooltip>
+  </div>
+  {{/if}}
 
 </div>
 

@@ -853,6 +853,14 @@ svg.applyChange path.syntenyEdge {
 }
 
 /*----------------------------------------------------------------------------*/
+
+/** for <a >, similar to <button disabled> */
+.disabled {
+  pointer-events: none;
+  cursor: default;
+}
+
+/*----------------------------------------------------------------------------*/
 /* Button */
 .btn { cursor: pointer; }
 
@@ -1696,6 +1704,10 @@ div > button.ember-tooltip-target.padding-thin
 {
   margin : 1em;
 }
+.margin-left-1em
+{
+  margin-left: 1em;
+}
 /* Space the <a>?</a> URL link away from text on its left.   */
 .margin-left-help {
   margin-left: 3em;
@@ -1866,19 +1878,26 @@ div.ht_clone_top_left_corner span.colHeader.cornerHeader {
  * (perhaps change to !important)
  */
 
+/** Missing data './.' uses the default table colour - white */
+#observational-table td.col-sample
+{
+  background-color : var(--gt-background-color-Missing);
+}
+/** --gt-background-color-* are not set until the user opens <ColourThemeSelector >, so defaults are provide for the light theme. */
 /** colours representing N copies of Alt value */
 /* copyNum_0 : Ref */
 #observational-table td.copyNum_0 {
   /** copyNum_0, 2 colours from MS Teams 2023Mar10 chat 14:36, KLF */
-  background-color : #b1c1e8;  /* pale blue/grey. was  #5cb85c green, prev orange*/
+  /* pale blue/grey. was  #5cb85c green, prev orange*/
+  background-color : var(--gt-background-color-Ref, #b1c1e8);
 }
 /* copyNum_1 : Het */
 #observational-table td.copyNum_1 {
-  background-color : #d9edf7;  /* near-white */
+  background-color : var(--gt-background-color-Het, #d9edf7);  /* near-white */
 }
 /* copyNum_2 : Alt */
 #observational-table td.copyNum_2 {
-  background-color : #ffc8ae; /* pale orange, was #337ab7 blue*/
+  background-color : var(--gt-background-color-Alt, #ffc8ae); /* pale orange, was #337ab7 blue*/
 }
 
 #observational-table td.relativeColour_equal {
@@ -1910,6 +1929,11 @@ div.ht_clone_top_left_corner span.colHeader.cornerHeader {
    * border width increases cell size, affecting table geometry.
    * Original edit was .A3 63037 2023 Sep 22 17:25. */
   /* border-left-width : 23px !important; */
+
+  /** HandsOnTable shows blue border on selected cells, so the above border is not
+   * visible until the user clicks away from the cell, so use background-color also.
+   */
+  background-color : var(--gt-background-color-selected-snp, springgreen);
 }
 
 // -----------------------------------------------------------------------------
@@ -2036,8 +2060,14 @@ div#left-panel > div > div.tab-content > div.tab-pane
 }
 
 #left-panel > div > div.tab-content > div.tab-pane > div:last-child {
-  /* this enables the scrollbar to reach the bottom of the div, there is probably a better solution.  */
-  margin-bottom: 70px;
+  /* this enables the scrollbar to reach the bottom of the div, there is probably a better solution.
+   * Changed from 70px -> 18ex to handle variation of browser Ctrl +/- text magnification,
+   * because it was noted in workshop that some computers+browsers had to Ctrl - to be
+   * able to scroll down to select the last dataset in the Dataset Explorer.
+   * It seems more margin is required when font size is larger, which is
+   * achieved by using ex instead of px.
+   */
+  margin-bottom: 18ex;
 }
 
 /*------------------------------------*/
@@ -2575,6 +2605,16 @@ div.genotype label
 
 /*----------------------------------------------------------------------------*/
 
+.haplotypes-samples.genotype-controls > select[multiple]
+{
+  max-width: 40em;
+  overflow-x: auto;
+  resize: both;
+}
+
+
+/*----------------------------------------------------------------------------*/
+
 .gtDatasetIdsToFilter > select
 {
   width : fit-content;
@@ -2605,6 +2645,26 @@ div.genotype .ember-tooltip
 .min-width-wide__inner
 {
   min-width : 50em;
+}
+
+/*----------------------------------------------------------------------------*/
+
+/** components/colour-theme-selector */
+.colour-vars-list
+{
+  padding-left: 0.5em;
+  margin-top: 2ex;
+}
+.colour-vars-list > li
+{
+  margin: 0.5em 0;
+  list-style: none;
+}
+.colour-vars-list > li > span.colour-block
+{
+  display:inline-block;
+  width:20px; height:20px; 
+  margin: 0 0.5em;
 }
 
 /* -------------------------------------------------------------------------- */

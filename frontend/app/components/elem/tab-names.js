@@ -12,7 +12,11 @@ const trace = 1;
 
 //------------------------------------------------------------------------------
 
-/**
+/** Wrap <BsTab > to provide an API for selection of tab,
+ * which is otherwise accessed as onclick= ... tab.select (where tab is <BsTab> )
+ * Usage e.g. 
+ *  @onChange={{action tn.onChangeTab}} @activeId={{tn.activeId}}
+ *
  * @param idPrefix  e.g. 'tab-view-SampleFilter-'
  * @param names text name of tab, which may be the displayed text label and
  * contain spaces; it is mapped via tabName2Id() to the tabId which is used as

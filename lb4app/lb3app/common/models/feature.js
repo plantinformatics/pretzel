@@ -92,14 +92,38 @@ module.exports = function(Feature) {
 
   /** Search for Features matching the given list of Feature names in filter[].
    * If blockId is given, only search within that block.
+   * @param blockId
+   * @param filter	array of feature names to match
+   * @param matchRegExp	true means filter are regexps
    */
-  Feature.search = function(blockId, filter, options, cb) {
-    let where = {
-          "name":
-          {
-            "inq": filter
-          }
+  Feature.search = function(blockId, filter, matchRegExp, options, cb) {
+    const fnName = 'Feature.search';
+    let where;
+    if (matchRegExp) {
+      const
+      orFilters = filter.map(k => ({
+        name: { regexp: new RegExp(deletePunctuation(k), 'i') }
+      }));
+      let nameFilter;
+      if (filter.length === 1) {
+        where = orFilters[0];
+      } else {
+        where = {
+          or: orFilters
         };
+      }
+      console.log(fnName, blockId, filter, matchRegExp, 'nameFilter');
+      console.dir(nameFilter);
+      /* const filter = { where : nameFilter }; */
+    } else {
+      where = {
+        "name":
+        {
+          "inq": filter
+        }
+      };
+
+    }
     if (blockId) {
       where.blockId = blockId;
     }
@@ -138,7 +162,7 @@ module.exports = function(Feature) {
         return result;
       }, []);
       let aliasAndFeatureNames = featureNames.concat(aliasNames);
-        let featuresP = Feature.search(/*blockId*/undefined, aliasAndFeatureNames, options, searchCb);
+        let featuresP = Feature.search(/*blockId*/undefined, aliasAndFeatureNames, /*matchRegExp*/false, options, searchCb);
         function searchCb(err, features) {
           if (err) {
             console.log(fnName, 'ERROR', err, featureNames.length || featureNames);
@@ -306,6 +330,7 @@ module.exports = function(Feature) {
     accepts: [
       {arg: 'blockId', type: 'string', required: false},
       {arg: 'filter', type: 'array', required: true},
+      {arg: 'matchRegExp', type: 'Boolean', required: false, default : 'false'},
       {arg: "options", type: "object", http: "optionsFromRequest"}
     ],
     http: {verb: 'get'},
@@ -373,5 +398,26 @@ const dev_blastResult = [
   "BobWhite_c10015_641     chr2A   100.000 50      0       0       1       50      154414057       154414008       2.36e-17        93.5    50      780798557",
   "BobWhite_c10015_641     chr2B   98.000  50      1       0       1       50      207600007       207600056       1.10e-15        87.9    50      801256715"
 ];
-/*----------------------------------------------------------------------------*/
 
+//------------------------------------------------------------------------------
+
+/** Modified from  deletePunctuationRe in common/utilities/spreadsheet-read.js which it is based :
+ * allow basic RegExp punctuation :
+_-,:
+.*?
+[]
+not / or \n
+*/
+const deletePunctuationRe = /[^-_.,:*?\[\] |0-9A-Za-z]+/g;
+
+/* Based on deletePunctuation() in common/utilities/spreadsheet-read.js
+ */
+function deletePunctuation(s) {
+  const res = s.replaceAll(deletePunctuationRe, '');
+  if (res != s) {
+    console.log('deletePunctuation', 'modified', res, s);
+  }
+  return res;
+}
+
+/*----------------------------------------------------------------------------*/

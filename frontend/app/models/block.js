@@ -1860,11 +1860,11 @@ export default Model.extend({
 
       let taskGet = this.get('blockService').get('getBlocksOfFeatures');
 
-      /** referencedFeatures() is used by loadRequiredData() for valueCompute()
+      /** referencedFeaturesOf() is used by loadRequiredData() for valueCompute()
        * for determining QTL position from QTL .values.flankingMarkers;
        * Currently using direct feature search for this, but feature search by aliases is on the roadmap.
        */
-      blockTask = taskGet.perform(apiServer, /*matchAliases*/false, parentBlock.id, featureNames);
+      blockTask = taskGet.perform(apiServer, /*matchAliases*/false, /*matchRegExp*/false, parentBlock.id, featureNames);
       blockTask
         .then((features) => {
           dLog(fnName, 'referencedFeatures', featureNames[0], featureNames.length, features.length);

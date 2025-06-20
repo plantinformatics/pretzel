@@ -1387,19 +1387,20 @@ export default Service.extend(Evented, {
 
   /** Search for the named features, and return also their blocks and datasets.
    * If blockId is given, restrict the search to that block.
-   * @param matchAliases  if true, use featureAliasSearch(), otherwise featureSearch()
    * @param blockId undefined or DB ObjectId string.
+   * @param matchAliases  if true, use featureAliasSearch(), otherwise featureSearch()
+   * @param matchRegExp	if true, match featureNames as partial / regexp.
    * @param featureNames  array of Feature name strings
    * @return  features (store object references)
    * If matchAliases, result is {features, aliases}
    */
-  getBlocksOfFeatures : task(function* (apiServer, matchAliases, blockId, featureNames) {
+  getBlocksOfFeatures : task(function* (apiServer, matchAliases, matchRegExp, blockId, featureNames) {
     let
     auth = this.get('auth'),
     featureResults =
       matchAliases ?
       yield auth.featureAliasSearch(apiServer, featureNames, /*options*/{}) :
-      yield auth.featureSearch(apiServer, blockId, featureNames, /*options*/{});
+      yield auth.featureSearch(apiServer, blockId, featureNames, matchRegExp, /*options*/{});
     let features = this.pushFeatureSearchResults(apiServer, featureResults.features);
     let result = matchAliases ? Object.assign(featureResults, {features}) : features;
     return result;

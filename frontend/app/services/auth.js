@@ -429,13 +429,14 @@ export default Service.extend({
    * If blockId is given, only search within that block.
    * @param blockId undefined or string DB ObjectId
    * @param featureNames  array of Feature name strings
+   * @param matchRegExp	select to match either whole name or regexp.
    */
-  featureSearch(apiServer, blockId, featureNames, options) {
+  featureSearch(apiServer, blockId, featureNames, matchRegExp, options) {
     if (trace_paths)
-      dLog('services/auth featureSearch', blockId, featureNames, options);
+      dLog('services/auth featureSearch', blockId, featureNames, matchRegExp, options);
     let paramLimit = 200;
     const post = featureNames?.length > paramLimit;
-    const data = {blockId, filter : featureNames, options};
+    const data = {blockId, filter : featureNames, matchRegExp, options};
     return this._ajax(
       'Features/search' + (post ? 'Post' : ''),
       post ? 'POST' : 'GET',
@@ -460,13 +461,31 @@ export default Service.extend({
    * @param datasetId of parent / reference of the blast db which is to be searched
    * @param scope chromosome
    * @param filter	optional sample filter 
-   *  { features : [{position, matchRef}, ... ]}
+   *  { features : [{position, matchRef}, ... ], matchHet}
    */
   genotypeSamples(block, datasetId, scope, filter) {
     dLog('services/auth genotypeSamples', datasetId, scope, filter);
     const params = {id : block.id, datasetId, scope, filter};
     return this._ajax('Blocks/genotypeSamples', 'GET', params, true);
   },
+
+
+  /** Request haplotypes for given selected SNPs from a Genotype dataset.
+   * For each unique haplotype, the result includes sample (names or numbers)
+   * which have that haplotype, and a count of those samples.
+   * apiServer is derived from block.id (could also use datasetId).
+   * @param block
+   * @param datasetId of parent / reference of the blast db which is to be searched
+   * @param scope chromosome
+   * @param positions	array of feature / SNP positions
+   */
+  genotypeHaplotypesSamples(block, datasetId, scope, positions) {
+    dLog('services/auth genotypeHaplotypesSamples', datasetId, scope, positions);
+    const params = {id : block.id, datasetId, scope, positions};
+    return this._ajax('Blocks/genotypeHaplotypesSamples', 'GET', params, true);
+  },
+
+
 
   /** Request genotype calls.
    * apiServer is derived from datasetId.

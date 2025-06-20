@@ -1,0 +1,26 @@
+{{#ember-modal-dialog
+    onClose=(action (mut @userSettings.showColourThemeModal) false)
+    targetAttachment="center"
+    translucentOverlay=true
+    clickOutsideToClose=true
+    title="Colour Theme Selector"}}
+  <select {{on "change" this.changeTheme}}>
+    {{#each this.themes as |theme|}}
+      <option value={{theme.name}} selected={{eq theme.name this.userColourThemeName}}>{{theme.name}}</option>
+    {{/each}}
+  </select>
+
+  {{!-- Display the CSS variable names and current colours of the selected theme --}}
+  <ul class="colour-vars-list">
+    {{#each-in this.userColourTheme.variables as |varName varValue|}}
+      <li>
+        <span class="colour-block" style="background-color: {{varValue}};"></span>
+        <span>{{varValue}}</span>
+        <span>{{varName}}</span>
+      </li>
+    {{/each-in}}
+  </ul>
+
+  <BsButton @type="info" class="margin-top" @onClick={{action (mut @userSettings.showColourThemeModal) false}}>OK</BsButton>
+
+{{/ember-modal-dialog}}
