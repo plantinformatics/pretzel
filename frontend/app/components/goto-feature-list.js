@@ -48,7 +48,7 @@ export default Component.extend({
         : activeFeatureList.featureNameList,
       /** Punctuation used in regular expressions is permitted if .advanced */
       selectedFeatureNames = this.get('urlOptions.advanced') ?
-	selectedFeatureNamesPre : selectedFeatureNamesPre.map(deletePunctuation),
+        selectedFeatureNamesPre : selectedFeatureNamesPre.map(deletePunctuation),
       /** this.blocksUnique() doesn't return blocksUnique because that value is
        * available only after a promise resolves. If the input for the search is
        * empty, then set blocksOfFeatures to []. */

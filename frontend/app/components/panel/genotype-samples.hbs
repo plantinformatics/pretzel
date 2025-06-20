@@ -23,7 +23,7 @@
       oninput={{pipe (action (mut @userSettings.filterSamplesByHaplotype) value="target.checked")
         @the.ensureSamples }}  >
     <label>Filter by defined Haplotype</label>
-    {{#ember-tooltip side="left" delay=1500}}
+    {{#ember-tooltip side="bottom-start" delay=1500}}
       Show samples selected by SNP filters
     {{/ember-tooltip}}
 
@@ -40,7 +40,7 @@
           checked={{this.matchExactAlleles}}
           oninput={{action (mut this.matchExactAlleles) value="target.checked" }}  >
         <label>Match exact alleles</label>
-        {{#ember-tooltip side="bottom-start" delay=1500}}
+        {{#ember-tooltip side="bottom-end" delay=1500}}
           Match only for samples which have a homozygous genotype value at a selected SNP.
         {{/ember-tooltip}}
       </span>
@@ -165,6 +165,10 @@
       {{/each}}
     </select>
 
+    <EmberTooltip @side="right" @delay=500>
+      <span>Select samples to be requested in VCF Lookup.</span>
+    </EmberTooltip>
+
   </div>
 </div>
 
@@ -180,17 +184,6 @@
       {{/ember-tooltip}}
     </button>
 
-    <span>
-      <a target='_blank' href={{this.genolinkSearchURL}}
-        class={{if this.searchIdsTruncatedMessage "disabled" ""}} >
-        Genolink
-      </a>
-      {{#ember-tooltip side="bottom-end" delay=500}}
-        {{this.searchIdsTruncatedMessage}}
-        Open AGG Genolink showing the selected samples.
-      {{/ember-tooltip}}
-    </span>
-
     {{#if this.urlOptions.passportExport}}
     <button type="button" class="btn btn-info btn-xs padding-thin" style="margin-left:0.8em" {{on 'click' (action this.selectedSamplesGetPassport) }}>
       Passport
@@ -201,11 +194,11 @@
     {{/if}}	{{!-- this.urlOptions.passportExport --}}
 
 
-  {{/if}}
+  {{/if}}       {{!-- @the.selectedCount --}}
 
   <div>
-    <EmberTooltip side="right" delay=500>
-      <span>Edit the list of Selected samples to be requested in VCF Lookup.</span>
+    <EmberTooltip @side="right" @delay=500>
+      <span>Edit / copy / paste the list of Selected samples to be requested in VCF Lookup.</span>
     </EmberTooltip>
     <Textarea
       class="selectedSamplesInput"
@@ -219,6 +212,21 @@
       >
     </Textarea>
   </div>
+
+  {{#if (and @the.selectedCount this.genolinkSearchURL) }}
+  <div>
+    <span>View selected samples in Genolink</span>
+      <a target='_blank' href={{this.genolinkSearchURL}}
+        class={{concat "btn-info margin-1em btn" (if this.searchIdsTruncatedMessage "disabled" "") }} >
+        Genolink
+      </a>
+
+      <EmberTooltip @side="bottom-end" @delay=500>
+        {{this.searchIdsTruncatedMessage}}
+        Open AGG Genolink showing the selected samples.
+      </EmberTooltip>
+  </div>
+  {{/if}}
 
 </div>
 

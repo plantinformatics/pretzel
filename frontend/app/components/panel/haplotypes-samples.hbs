@@ -6,5 +6,11 @@
       values=this.haplotypesSamplesText
       selectedGroupChanged=(action this.selectedHaplotypeChanged) }}
 
+
+    <EmberTooltip @side="right" @delay=500>
+      <span>Displays in the left column the genotypic pattern / haplotype of the selected SNPs,
+and in the right column the count of samples which have that haplotype.</span>
+    </EmberTooltip>
+
   </div>
 </div>

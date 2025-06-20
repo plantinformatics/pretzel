@@ -939,9 +939,10 @@ While scrolling through the Genotype Table this updates to show where the curren
     {{!-- ----------------------------------------------------------------- --}}
 
     <div>
-      <EmberTooltip side="right" delay=500>
+      <span>
+      <EmberTooltip @side="top-start" @delay=500>
         {{#if this.vcfGenotypeLookupButtonDisabled}}
-          {{this.vcfGenotypeLookupButtonDisabled}}
+          Enable this button by : {{this.vcfGenotypeLookupButtonDisabled}}
         {{else}}
           <span>Request the Genotypes as configured by Selected Samples and the brushed axis region</span>
         {{/if}}
@@ -949,6 +950,7 @@ While scrolling through the Genotype Table this updates to show where the curren
       <button type="button" onclick={{action this.vcfGenotypeLookup}}
         disabled={{this.vcfGenotypeLookupButtonDisabled}}
         class="btn btn-info">VCF Lookup</button>
+      </span>
     {{#unless this.vcfGenotypeLookupDomain}}
       {{#if this.urlOptions.gtIntervalLimit}}
         <span>VCF Lookup Region limit is {{this.intervalLimit}}Mb</span>
@@ -1043,9 +1045,9 @@ While scrolling through the Genotype Table this updates to show where the curren
       {{/if}}	{{!-- this.urlOptions.advanced --}}
 
       <div>
-        <EmberTooltip side="right" delay=500>
+        <EmberTooltip @side="bottom-start" @delay=500>
           {{#if this.vcfGenotypeLookupButtonDisabled}}
-            {{this.vcfGenotypeLookupButtonDisabled}}
+            Enable this button by : {{this.vcfGenotypeLookupButtonDisabled}}
           {{else}}
             <span>Request the Genotypes as configured by Selected Samples and the brushed axis region</span>
           {{/if}}
@@ -1056,7 +1058,7 @@ While scrolling through the Genotype Table this updates to show where the curren
       </div>
 
       <div>
-        <EmberTooltip side="right" delay=500>
+        <EmberTooltip @side="bottom" @delay=500>
           <span>Download the last received VCF genotype results as a VCF file</span>
         </EmberTooltip>
         <button type="button" class="btn btn-info btn-xs"

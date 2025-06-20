@@ -125,19 +125,38 @@ export default class PanelGenotypeSamplesComponent extends Component {
    *
    *  For now, limit that to 100 IDs (ie: if there's more than that in the list,
    *  the button can't be clicked and a message like "max 100 IDs" is displayed)
+   *
+   * Only AGG samples are included in the URL, because Genolink has only AGG samples.
+   * To test this without an AGG dataset, it is sufficient to paste AGG sample
+   * names into the <Textarea selectedSamplesText >.
+   *
+   * @return string URL if there are selected samples which match the pattern for
+   * the samples which are loaded in Genolink (/^AGG/).
+   * Otherwise return falsey :
+   * - undefined if ! .selectedSamples
+   * - 0 if there are no AGG samples selected
    */
 
   @computed('args.the.selectedSamples.length')
   get genolinkSearchURL() {
     const
     fnName = 'genolinkSearchURL',
-    g = this.args.the,
+    g = this.args.the;
+    if (! g.selectedSamples) {
+      return undefined;
+    }
+    const
     aggSamples = g.selectedSamples.filter(s => s.match(/^AGG/)),
     truncatedMessage = (aggSamples.length > genolinkSearchIdsLimit) ? 'Maximum 100 IDs' : '',
-    gIdsTruncated = truncatedMessage ? aggSamples.slice(0, genolinkSearchIdsLimit) : aggSamples, 
+    gIdsTruncated = truncatedMessage ? aggSamples.slice(0, genolinkSearchIdsLimit) : aggSamples,
     /** Sample / Accession names are system data not user data, and do not require quoting ATM. */
     genotypeIds = gIdsTruncated.join(','),
-    url = genolinkBaseUrl + '?filterMode=GenotypeId%20Filter&genotypeIds=' + genotypeIds;
+    url = aggSamples.length &&
+      (genolinkBaseUrl + '?filterMode=GenotypeId%20Filter&genotypeIds=' + genotypeIds);
+    if (aggSamples.length < g.selectedSamples.length) {
+      dLog(fnName, g.selectedSamples.length - aggSamples.length,
+           "selectedSamples not matching /^AGG/ are filtered out");
+    }
     Ember_set(this, 'searchIdsTruncatedMessage', truncatedMessage);
     return url;
   }
