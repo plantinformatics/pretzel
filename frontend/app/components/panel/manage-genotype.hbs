@@ -272,7 +272,7 @@
                           checked={{@userSettings.autoLookup}}
                           oninput={{action (mut @userSettings.autoLookup) value="target.checked"}}  >
                         <label>Auto lookup - all datasets
-                        <EmberTooltip side="right" delay=500>
+                        <EmberTooltip @side="top-start" @delay=500>
                           <span>
                             Request data for all VCFs in table when user clicks VCF Lookup.
                             Otherwise, request VCF data from the dataset whose tab is selected in Datasets.
@@ -284,7 +284,7 @@
 
                       {{#if this.urlOptions.advanced}}
                       <li>
-                        <EmberTooltip side="right" delay=500>
+                        <EmberTooltip @side="top-start" @delay=500>
                           <span>Enable VCF Lookup to clear existing data with the received genotype results.</span>
                         </EmberTooltip>
                         <input type="checkbox"
@@ -310,7 +310,7 @@
 
                         <div>
                           <label>Rows</label>
-                          {{#ember-tooltip side="right" delay=500}}
+                          {{#ember-tooltip side="top-start" delay=500}}
                             Limit of rows in result, and rows displayed per dataset.
                           {{/ember-tooltip}}
                           <span class="sub-label">{{ this.rowLimit }}</span>
@@ -337,7 +337,7 @@
                                 this.ensureSamples }}  >
 
                           </Elem::InputRangeText>
-                          <EmberTooltip side="right" delay=500>
+                          <EmberTooltip @side="top-end" @delay=500>
                             <span>Limit of number of samples requested in VCF Lookup.</span>
                           </EmberTooltip>
                         </div>
@@ -380,7 +380,7 @@
               {{!-- --------------------------------------------------------------- --}}
 
               <div class="genotype">
-                <EmberTooltip side="right" delay=500>
+                <EmberTooltip @side="top-start" @delay=500>
                   <span>Download the displayed data in a file, either .vcf or .vcf.gz</span>
                 </EmberTooltip>
 
@@ -407,7 +407,7 @@
               </div>
 
               <div>
-                <EmberTooltip side="right" delay=500>
+                <EmberTooltip @side="top-start" @delay=500>
                   <span>Download the last received VCF genotype results as a VCF file</span>
                 </EmberTooltip>
                 <button type="button" class="btn btn-info btn-xs"
@@ -627,7 +627,7 @@
                     <button type="button" class="btn btn-info btn-xs"
                       onclick={{action (pipe this.sampleFiltersClear this.haplotypeFiltersApply) }} >
                       Clear
-                      <EmberTooltip side="right" delay=500>
+                      <EmberTooltip @side="top-start" @delay=500>
                         <span>Clear the selected SNPs or LD Block from the sample filter.</span>
                       </EmberTooltip>
                     </button>
@@ -639,7 +639,7 @@
                       (action (mut @userSettings.haplotypeFilterRef) value="target.checked")
                       this.haplotypeFiltersApply) }}  >
                     <label>Match Ref
-                      <EmberTooltip side="right" delay=500>
+                      <EmberTooltip @side="top" @delay=500>
                         <span>Match against the SNP Ref value, in the sample filter based on SNP or LD Block.  Otherwise Alt.</span>
                       </EmberTooltip>
                     </label>
@@ -651,7 +651,7 @@
                       (action (mut @userSettings.haplotypeFiltersEnable) value="target.checked")
                       this.haplotypeFiltersApply) }}  >
                     <label>Filter
-                      <EmberTooltip side="right" delay=500>
+                      <EmberTooltip @side="top" @delay=500>
                         <span>Show only columns which match the sample filter based on SNP or LD Block. Otherwise, sort by closeness of match.</span>
                       </EmberTooltip>
                     </label>
@@ -675,7 +675,7 @@
                       checked={{@userSettings.filterBySelectedSamples}}
                       oninput={{action (mut @userSettings.filterBySelectedSamples) value="target.checked"}}  >
                     <label>Selected samples
-                      <EmberTooltip side="right" delay=500>
+                      <EmberTooltip @side="top-start" @delay=500>
                         <span>Show only columns of sample which are selected.</span>
                       </EmberTooltip>
                     </label>
@@ -685,7 +685,7 @@
                       checked={{this.urlOptions.gtMergeRows}}
                       oninput={{action (mut this.urlOptions.gtMergeRows) value="target.checked"}}  >
                     <label>Merge Rows
-                      <EmberTooltip side="right" delay=500>
+                      <EmberTooltip @side="top" @delay=500>
                         <span>Combine SNPs with the same Position from different datasets on the same row of the table.</span>
                       </EmberTooltip>
                     </label>
@@ -695,7 +695,7 @@
                       checked={{@userSettings.showNonVCFFeatureNames}}
                       oninput={{action (mut @userSettings.showNonVCFFeatureNames) value="target.checked"}}  >
                     <label>Feature Names
-                      <EmberTooltip side="right" delay=500>
+                      <EmberTooltip @side="top" @delay=500>
                         <span>Show Feature names of non-VCF datasets in the cell, otherwise in hover text.</span>
                       </EmberTooltip>
                     </label>
@@ -741,6 +741,9 @@
                         }}>
                         Choose Colour Theme
                       </button>
+                      <EmberTooltip @side="left" @delay=500>
+                        <span>Choose colour theme for the Genotype Table, including accessible colours for colour-blindness.</span>
+                      </EmberTooltip>
                     </div>
 
                   </li>
@@ -756,7 +759,7 @@
                       checked={{@userSettings.snpPolymorphismFilter}}
                       oninput={{action (mut @userSettings.snpPolymorphismFilter) value="target.checked"}}  >
                     <label>SNP Polymorphism Filter
-                      <EmberTooltip side="right" delay=500>
+                      <EmberTooltip @side="top-start" @delay=500>
                         <span>Filter out monomorphic SNPs.</span>
                       </EmberTooltip>
                     </label>
@@ -770,7 +773,7 @@
                   <li>
 
                     <div style="display : inline-block;">
-                      <EmberTooltip side="right" delay=500>
+                      <EmberTooltip @side="top-start" @delay=500>
                         <span>Filter SNPs by this MAF Threshold.
 The toggle enables filtering out SNPs with MAF above or below this threshold.</span>
                       </EmberTooltip>
@@ -786,7 +789,7 @@ The toggle enables filtering out SNPs with MAF above or below this threshold.</s
                         <input type="checkbox" id="gtInputMafUpper" name="mafUpper" checked={{@userSettings.mafUpper}}
                           oninput={{action (mut @userSettings.mafUpper) value="target.checked"}} 
                         >
-                        <EmberTooltip side="right" delay=500>
+                        <EmberTooltip @side="top" @delay=500>
                           <span>Use threshold as an upper / lower limit.</span>
                         </EmberTooltip>
                       </span>
@@ -797,7 +800,7 @@ The toggle enables filtering out SNPs with MAF above or below this threshold.</s
                     </div>
 
                     <div style="display : inline-block;">
-                      <EmberTooltip side="right" delay=500>
+                      <EmberTooltip @side="top" @delay=500>
                         <span>Filter Samples by Call Rate.</span>
                       </EmberTooltip>
                       <Elem::InputRangeText
@@ -812,7 +815,7 @@ The toggle enables filtering out SNPs with MAF above or below this threshold.</s
 
 
                     <div style="display : inline-block;">
-                      <EmberTooltip side="right" delay=500>
+                      <EmberTooltip @side="top" @delay=500>
                         <span>Filter SNPs by Call Rate.</span>
                       </EmberTooltip>
                       <Elem::InputRangeText
@@ -843,7 +846,7 @@ The toggle enables filtering out SNPs with MAF above or below this threshold.</s
                         class="small-number"
                         value=this.args.userSettings.maxAlleles
                       }}
-                      <EmberTooltip side="right" delay=500>
+                      <EmberTooltip @side="top" @delay=500>
                         <span>Filter SNPs by number of alleles. For bi-allelic SNPs, set Min and Max to 2.
 (--min-alleles and --max-alleles)</span>
                       </EmberTooltip>
@@ -854,7 +857,7 @@ The toggle enables filtering out SNPs with MAF above or below this threshold.</s
                       <input type="checkbox" name="typeSNP" checked={{@userSettings.typeSNP}}
                         oninput={{action (mut @userSettings.typeSNP) value="target.checked"}} 
                       >
-                      <EmberTooltip side="right" delay=500>
+                      <EmberTooltip @side="top-end" @delay=500>
                         <span>Select sites with Alt which is of type SNP. (-v snps)</span>
                       </EmberTooltip>
                     </span>
@@ -867,7 +870,7 @@ The toggle enables filtering out SNPs with MAF above or below this threshold.</s
                 {{!---------------------------------------------------------------------}}
 
                 <div class="gtDatasetIdsToFilter">
-                  <EmberTooltip side="right" delay=500>
+                  <EmberTooltip @side="bottom" @delay=500>
                     <span>Select the Datasets to which the above SNP and Samples MAF and Call Rate filters are applied.</span>
                   </EmberTooltip>
 
@@ -891,7 +894,7 @@ The toggle enables filtering out SNPs with MAF above or below this threshold.</s
                 <ul class="list-group borderless view-controls">
                   {{#if this.urlOptions.advanced}}
                   <li>
-                    <EmberTooltip side="right" delay=500>
+                    <EmberTooltip @side="top-start" @delay=500>
                       <span>Show LD Blocks colour on the SNP rectangles shown in Axis Tracks, for datasets which define the tagged SNP set value tSNP</span>
                     </EmberTooltip>
                     <input type="checkbox"
@@ -901,7 +904,7 @@ The toggle enables filtering out SNPs with MAF above or below this threshold.</s
                   </li>
 
                   <li>
-                    <EmberTooltip side="right" delay=500>
+                    <EmberTooltip @side="top-start" @delay=500>
                       <span>Show alignment paths between the Genotype Table and the adjacent axis.
 While scrolling through the Genotype Table this updates to show where the currently viewed page is within the axis.</span>
                     </EmberTooltip>
@@ -913,7 +916,7 @@ While scrolling through the Genotype Table this updates to show where the curren
                   {{/if}}	{{!-- this.urlOptions.advanced --}}
 
                   <li>
-                    <EmberTooltip side="right" delay=500>
+                    <EmberTooltip @side="top-start" @delay=500>
                       <span>Copy the displayed contents of the Genotype Table to the clipboard, enabling it to be pasted into a spreadsheet.</span>
                     </EmberTooltip>
                     <BsButton @type="info" @onClick={{this.copyTableToClipboard}} class="margin-top">Copy table to clipboard</BsButton>
@@ -1077,7 +1080,7 @@ While scrolling through the Genotype Table this updates to show where the curren
 
       {{#if (and this.urlOptions.advanced this.args.userSettings.filterSamplesByHaplotype )}}
         <div>
-          <EmberTooltip side="bottom" delay=500
+          <EmberTooltip @side="bottom" @delay=500
             @tooltipClass="min-width-wide"
             @innerClass="min-width-wide__inner" >
             <label>Count of intersection of Samples of chromosomes filtered by defined Haplotype</label>

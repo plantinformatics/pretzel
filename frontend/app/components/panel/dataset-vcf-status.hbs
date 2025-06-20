@@ -50,7 +50,7 @@
       <input type="checkbox" checked={{this.showDetail}}
         oninput={{action (mut this.showDetail) value="target.checked"}} 
       >
-      <EmberTooltip side="right" delay=500>
+      <EmberTooltip @side="top-start" @delay=500>
         <span>Show size and time-stamp of VCF files</span>
       </EmberTooltip>
     </span>

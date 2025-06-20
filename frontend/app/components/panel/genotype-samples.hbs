@@ -18,6 +18,7 @@
   {{/if}}
 
   <div>
+    <span>
     <input type="checkbox"
       checked={{@userSettings.filterSamplesByHaplotype}}
       oninput={{pipe (action (mut @userSettings.filterSamplesByHaplotype) value="target.checked")
@@ -26,6 +27,7 @@
     {{#ember-tooltip side="bottom-start" delay=1500}}
       Show samples selected by SNP filters
     {{/ember-tooltip}}
+    </span>
 
     {{#if @the.featureFiltersCountOfDatasetInBrushedDomain.length}}
       <span class="sample-count"> (
@@ -165,7 +167,7 @@
       {{/each}}
     </select>
 
-    <EmberTooltip @side="right" @delay=500>
+    <EmberTooltip @side="bottom" @delay=500>
       <span>Select samples to be requested in VCF Lookup.</span>
     </EmberTooltip>
 
@@ -197,7 +199,7 @@
   {{/if}}       {{!-- @the.selectedCount --}}
 
   <div>
-    <EmberTooltip @side="right" @delay=500>
+    <EmberTooltip @side="top" @delay=500>
       <span>Edit / copy / paste the list of Selected samples to be requested in VCF Lookup.</span>
     </EmberTooltip>
     <Textarea
