@@ -4,6 +4,8 @@
     <span class="sample-count">(
       {{#if @userSettings.filterSamplesByHaplotype }} Filtered {{else}} Total {{/if}} :
       {{@the.vcfGenotypeSamplesCount}} )</span>
+  {{else if @userSettings.filterSamplesByHaplotype}}
+    <span class="margin-left-1em">Filtered - No matching samples found.</span>
   {{else}}
     <button type="button" onclick={{this.vcfGenotypeSamples}} class="btn btn-info btn-xs">Get samples list</button>
   {{/if}}
