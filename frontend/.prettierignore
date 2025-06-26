@@ -1,3 +1,6 @@
+# don't enable prettier yet
+/app/
+
 # unconventional js
 /blueprints/*/files/
 /vendor/
