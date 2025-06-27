@@ -160,13 +160,11 @@ let config = {
         RSVP.cast([]);
     const
     controller = this.controllerFor(this.fullRouteName),
-    userSettings = controller.userSettings,
+    userSettings = this.controlsService.userSettings,
     layout = controller.layout,
     /** Includes user settings such as .tablesPanelRight; that is also present
      * in .componentGeometry - may include that for the .sizes */
     controls = controller.controls;
-    // can move userSettings into services/controls
-    this.controlsService.userSettings = userSettings;
 
     result = EmberObject.create(
       {

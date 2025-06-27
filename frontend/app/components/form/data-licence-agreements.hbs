@@ -1,0 +1,30 @@
+
+<div>
+  <h5 class="margin-1em">Data Licence Agreements</h5>
+  <ul class="view-controls"
+    style="min-width: fit-content; list-style-type: none; padding-left: 0px;">
+
+    {{#each-in this.agreements as |name text|}}
+
+    <li>
+
+      <input type="checkbox"
+        style="margin-left: 3em;"
+        checked={{get this.userSettings name}}
+        oninput={{action (fn this.userSettingsChange name) value="target.checked"}}  >
+      <label>{{name}}
+      <EmberTooltip @side="top-start" @delay=500>
+        <span>When checked, this data license agreement has been acknowledged.</span>
+      </EmberTooltip>
+      </label>
+      : {{text}}
+
+    </li>
+
+    {{/each-in}}
+  </ul>
+</div>
+
+
+
+{{yield}}
