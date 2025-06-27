@@ -3245,10 +3245,13 @@ export default class PanelManageGenotypeComponent extends Component {
     }
     // displays vcfGenotypeText in textarea, which triggers this.vcfGenotypeTextSetWidth();
     this.vcfGenotypeText = text;
+    blockV[Symbol.for('vcfGenotypeText')] = text;
     this.headerTextP?.then((headerText) => {
       const
+      /** blockV is passed to combineHeader() instead of text, to enable it to
+       * prepend blockV.name */
       combined = ! headerText ? this.vcfGenotypeText :
-        this.combineHeader(headerText, this.vcfGenotypeText)
+        this.combineHeader(headerText, [blockV])
       /** ember-csv:file-anchor.js is designed for spreadsheets, and hence
        * expects each row to be an array of cells.
        */
@@ -3343,6 +3346,20 @@ export default class PanelManageGenotypeComponent extends Component {
       }
     }
 
+  }
+
+  /** For the dataset selected in the datasets tab, return the brushed and
+   * visible blocks of the dataset.
+   * This is used in vcfExportTextP() to construct the VCF Download.
+   * @return [block, ...]
+   */
+  @computed('lookupBlock')
+  get lookupDatasetBlocks() {
+    const
+    vcfDataset = this.lookupBlock?.get('datasetId'),
+    vcfDatasetId = this.lookupBlock?.get('datasetId.genotypeId'),
+    blocks = this.brushedOrViewedVCFBlocksVisible.filterBy('datasetId.id', vcfDatasetId);
+    return blocks;
   }
 
   //----------------------------------------------------------------------------
@@ -4574,7 +4591,9 @@ export default class PanelManageGenotypeComponent extends Component {
       combinedP = this.headerTextP
         .then((headerText) => {
           const
-          combined = this.combineHeader(headerText, this.vcfGenotypeText);
+          blocks = this.lookupDatasetBlocks
+            .filter(b => b[Symbol.for('vcfGenotypeText')]),
+          combined = this.combineHeader(headerText, blocks);
           return combined;
         });
     } else {
@@ -4606,7 +4625,15 @@ export default class PanelManageGenotypeComponent extends Component {
     });
   }
 
-  combineHeader(headerText, vcfGenotypeText) {
+  /** Combine the given VCF result header with the VCF result bodies.
+   * @param headerText header part of a VCF lookup; the last line is the #CHROM
+   * row containing the column headers.
+   * @param blocks are all from the same dataset, and hence the
+   * headerText and in particular selected samples are the same.
+   * Each of the block vcfGenotypeTexts starts with the column header line (#[1]ID...).
+   * @return array of text rows, 1 per line
+   */
+  combineHeader(headerText, blocks) {
     /** remove trailing \n, so that split does not create a trailing empty line.  */
     headerText = headerText.trim().split('\n');
     /** vcfGenotypeText starts with column header line (#CHROM...), so trim the
@@ -4619,8 +4646,14 @@ export default class PanelManageGenotypeComponent extends Component {
     /** BrAPI headerTextP includes chrPosId[] columns, so don't call insertChromColumn().
      * Probably the current result (headerText, vcfGenotypeText) is for .lookupBlock */
     isBrAPI = this.lookupBlock?.hasTag('BrAPI'),
-    tableRows = isBrAPI ? vcfGenotypeText : this.insertChromColumn(vcfGenotypeText),
-    combined = headerText.concat(tableRows);
+    tableRows = blocks.map((b, i) => {
+      /** all rows of result in 1 string, with rows separated by \n  */
+      const vcfGenotypeText = b[Symbol.for('vcfGenotypeText')];
+      /** and prepend the chromosome column because that is not included in the request.  */
+      const blockText = isBrAPI ? vcfGenotypeText : this.insertChromColumn(vcfGenotypeText, b.name, i);
+      return blockText;
+    }),
+    combined = headerText.concat(tableRows.flat());
     return combined;
   }
 
@@ -4628,28 +4661,38 @@ export default class PanelManageGenotypeComponent extends Component {
    * constant - each request is specific to a chromosome.
    * This function re-inserts the CHROM column in the conventional (left) position.
    * @param vcfGenotypeText string
+   * @param chrName	text to prepend as left column of each row
+   * @param blockIndex	use the header row from the first block, and trim it off from the others
    * @return array of strings, 1 per line
    */
-  insertChromColumn(vcfGenotypeText) {
+  insertChromColumn(vcfGenotypeText, chrName, blockIndex) {
     const
-    withChrom = vcfGenotypeText
+    lines = vcfGenotypeText
     // ignore trailing \n which otherwise creates an empty line.
       .trim()
-      .split('\n')
+      .split('\n'),
+    /** expect that [0] line.startsWith('#[1]')
+     * trim this off for all but the first block
+     */
+    maybeSliced = blockIndex ? lines.slice(1) : lines,
+    withChrom = maybeSliced
       .map((line, rowIndex) => {
         let result;
-        if (rowIndex === 0) {
+        if ((rowIndex === 0) && ! blockIndex)
+        {
           // insert CHROM column header
           result = line
-            .replace(/# /, '#CHROM\t')
+            .replace(/^#/, '#CHROM\t')
           /* Strip out the column numbers [1] etc which are shown before column
            * headers by bcftools query -H.
            * Could match [ \t], but previous line changes that initial space to \t
+           * These 2 replace-s match respectively [1], and the remainder.
            */
+            .replace(/^#\[1\]/, '#')
             .replaceAll(/\t\[\d+\]/g, '\t');
         } else {
           // insert chromosome / scope column value.
-          result = this.lookupScope + '\t' + line;
+          result = chrName + '\t' + line;
         }
         return result;
       });
