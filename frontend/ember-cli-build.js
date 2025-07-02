@@ -2,8 +2,6 @@
 
 /* global require */
 
-var nodeSass = require('node-sass');
-
 const EmberApp = require('ember-cli/lib/broccoli/ember-app');
 
 module.exports = function (defaults) {
@@ -36,10 +34,6 @@ module.exports = function (defaults) {
 
         // NOTE: put any code coverage plugins last, after the transform.
       ],
-    },
-
-    sassOptions: {
-      implementation: nodeSass
     },
 
     'ember-bootstrap': {
