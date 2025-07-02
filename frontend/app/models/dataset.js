@@ -231,6 +231,7 @@ export default Record.extend({
 
   /** For a VCF dataset, sampleNames are received via bcftools request, and does
    * not change, so it is cached per dataset.
+   * .sampleNamesSet is a Set() containing .sampleNames.
    */
   get sampleNames() {
     return this[Symbol.for('sampleNames')];
@@ -242,6 +243,21 @@ export default Record.extend({
   },
   get sampleNamesSet() {
     return this[Symbol.for('sampleNamesSet')];
+  },
+
+  //------------------------------------------------------------------------------
+
+  /** samplesPassport [sampleName] -> { field : name, ... }
+   * For a VCF dataset, sample Passport field Names are received via Genolink
+   * getPassportData() request.  Fields may be added, but the passport data of a
+   * sample does not change, so they are cached per dataset.
+   */
+  get samplesPassport() {
+    return this[Symbol.for('samplesPassport')];
+  },
+  set samplesPassport(names) {
+    this[Symbol.for('samplesPassport')] = names;
+    return names;
   },
 
   //------------------------------------------------------------------------------

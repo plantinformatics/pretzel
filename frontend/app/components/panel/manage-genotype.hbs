@@ -1073,6 +1073,27 @@ While scrolling through the Genotype Table this updates to show where the curren
       </div>
 
       <div>
+        <span>
+        <input type="checkbox"
+          checked={{@userSettings.showSelectPassportFields}}
+          oninput={{action (mut @userSettings.showSelectPassportFields) value="target.checked" }}  >
+        <label>Select Passport fields</label>
+        {{#ember-tooltip side="bottom-start" delay=1500}}
+          Select which Passport fields will be added to the Sample / Accession column headers in the Genotype Table.
+        {{/ember-tooltip}}
+        </span>
+
+        {{#if @userSettings.showSelectPassportFields}}
+          {{!-- i.e. panel/select-passport-fields --}}
+          <Panel::SelectPassportFields @userSettings={{@userSettings}}
+            @selectedFieldsChanged={{this.selectedFieldsChanged}} >
+          </Panel::SelectPassportFields>
+        {{/if}}
+      </div>
+
+
+
+      <div>
         {{this.rowLimitMessage}}
         {{this.samplesLimitMessage}}
         {{this.areaLimitMessage}}

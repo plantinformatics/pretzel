@@ -1,0 +1,16 @@
+<div>
+  <div class="genotype-controls select-passport-fields">
+
+    <Form::SelectMultiple
+      @selectedValue={{@userSettings.passportFields}}
+      @values={{this.passportFieldNames}}
+      @selectValueArray={{this.selectedFieldsChanged}} />
+
+    <EmberTooltip @side="right" @delay=500>
+      <span>Displays the names of Passport data fields. These can be selected to add to the names displayed in the Genotype Table column headings.</span>
+    </EmberTooltip>
+
+
+
+  </div>
+</div>

@@ -323,6 +323,27 @@ function columnName2SampleName(columnName) {
   return sampleName;
 }
 
+/** If selectFields.length, augment the given sample / accession name with selected
+ * fields from the Passport data of the accession.
+ * @param sampleName
+ * @param selectFields	user-selected list of fields to add
+ * @param datasetId	to lookup the Passport data of the sampleName
+ * @param visibleBlocks	for visibleBlocks[].datasetId.samplesPassport
+ * which contains the Passport field value for the samples
+ */
+function augmentSampleName(sampleName, selectFields, datasetId, visibleBlocks) {
+  if (selectFields.length && ! valueNameIsNotSample(sampleName)) {
+  const 
+    block = visibleBlocks.find(b => b.datasetId.id == datasetId),
+    dataset = contentOf(block.datasetId);
+    if (dataset.samplesPassport) {
+      const values = selectFields.map(fieldName => dataset.samplesPassport[sampleName][fieldName]);
+      sampleName += ' | ' + values.join(', ');
+    }
+  }
+  return sampleName;
+}
+
 //------------------------------------------------------------------------------
 
 
@@ -569,7 +590,7 @@ function blockToMatrixColumn(singleBlock, block, sampleName, features) {
 
  * @param featureFilter filter applied to featuresArrays[*]
  * @param sampleFilters array of optional additional filters (selected sample, callRate filter)
- * @param options { userSettings }
+ * @param options { userSettings, selectedSamples, visibleBlocks }
  * @return result : {rows, sampleNames}
  */
 function vcfFeatures2MatrixViewRows(
@@ -703,6 +724,8 @@ function vcfFeatures2MatrixViewRowsResult(
               cell = (row[sampleName] ||= []);
               cell.push(fx);
             } else {
+              // These 2 calls are repeated below for columnNames.
+              sampleName = augmentSampleName(sampleName, userSettings.passportFields.mapBy('id'), datasetId, options.visibleBlocks);
               sampleName = columnNameAppendDatasetId(sampleName, datasetId);
               row[sampleName] = fx;
             }
@@ -752,6 +775,8 @@ function vcfFeatures2MatrixViewRowsResult(
     .filter(name => (datasetIndex === 0) || ! refAltHeadings.includes(name))
     .map(sampleName2ColumnName)
     .sort(columnNamesCmp)
+    // no change when ! userSettings.passportFields.length
+    .map((name) => augmentSampleName(name, userSettings.passportFields.mapBy('id'), datasetId, options.visibleBlocks))
     .map((name) => columnNameAppendDatasetId(name, datasetId))
     .map(name => stringSetSymbol(datasetSymbol, name, dataset));
   result.sampleNames.addObjects(columnNames);

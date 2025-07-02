@@ -47,9 +47,66 @@ export default class FormSelectMultipleComponent extends Component {
       deleted = Array.from(deletedSet).map(valueForId);
       this.selectedOptionsPrevious = current;
       dLog(fnName, select.value);
-      this.args.selectedGroupChanged(added, deleted);
+      /* haplotypes-samples.hbs passes @selectedGroupChanged, but it can change
+       * to pass @selectValueArray=@the.selectSampleArray
+       * because this.selectedValueChanged() is copied from haplotypes-samples.js.
+       */
+      if (this.args.selectedGroupChanged) {
+        this.args.selectedGroupChanged(added, deleted);
+      } else {
+        this.selectedValueChanged(added, deleted);
+      }
     });
   }
+
+  /** Called via user selection change in select-multiple
+   * The parameters added and deleted indicate changes to the selection.
+   * They are arrays of :
+   *  { id, name, ... } Ember Object
+   * See form/select-multiple.js : selectedGroupChangedId().
+   *
+   * @param added
+   * @param deleted
+   *
+   * based on manage-explorer.js : selectedCategoryChanged()
+   */
+  @action
+  selectedValueChanged(added, deleted) {
+    const fnName = 'selectedValueChanged';
+
+    const isMultiple = true;
+    /* This would only be relevant if multiple was not used.
+    if (selectedValue === noValue) {
+      this.valuesSelected = null;
+    } else if (! isMultiple) {
+      this.valuesSelected = selectedValue;
+    } else */ {
+      const
+      values = this.args.selectedValue;
+      /** or c === selectedValue */
+      // present = values.find(c => c.id == selectedValue.id);
+      /** use .pushObject() (or .removeObject) so that () sees the
+       * change to its dependency haplotypesSelected.length */
+      const
+      /** changes[add=true] === added. */
+      changes = [deleted, added];
+      /** delete then add. */
+      [false, true].forEach(add => {
+        const change = changes[+add];
+        change.forEach(c => {
+          if (add) {
+            values.pushObject(c);
+          } else {
+            values.removeObject(c);
+          }
+          const samples = c.samples;
+          this.args.selectValueArray(samples, add);
+        });
+      });
+    }
+    dLog(fnName, added, deleted, this.args.selectedValue);
+  }
+
 
   @action
   /**

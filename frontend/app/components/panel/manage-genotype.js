@@ -45,6 +45,11 @@ const /*import */{
   addFeaturesBrapi,
 } = vcfGenotypeBrapi.vcfFeature; /*from 'vcf-genotype-brapi'; */
 
+const /*import */{
+  getPassportData,
+} = vcfGenotypeBrapi.genolinkPassport; /*from 'vcf-genotype-brapi'; */
+
+
 import {
   refAlt,
   valueNameIsNotSample,
@@ -158,6 +163,13 @@ const emptyTableColumns = [
 ];
 
 //------------------------------------------------------------------------------
+// copied from genotype-samples.js, this will be imported from environment
+/** Base URL for HTTP GET request to open Genolink with the result of a search
+ * for genotypeIds included in the URL.
+ */
+const genolinkBaseUrl = "https://genolink.plantinformatics.io";
+
+//------------------------------------------------------------------------------
 
 /**
  * @return true if feature.values contains only non-sample values, as listed in
@@ -256,6 +268,11 @@ function featureHasSamplesLoaded(feature) {
  * .includeHetMissingHaplotypes  boolean, default : false
  *   Show haplotypes which contain heterozygous values and missing data.
  *   If false, show only haplotypes with all homozygous genotype values.
+ *
+ * .passportFields	array of Passport data field names
+ *   Selected by the user; the sample column headers are augmented with each
+ *   sample's values for these fields.
+ *   This is currently [ {id, name}, ... ], where id == name.
  *
  * @see userSettingsDefaults()
  *------------------------------------------------------------------------------
@@ -622,10 +639,16 @@ export default class PanelManageGenotypeComponent extends Component {
       userSettings.cellSizeFactor = 1;
     }
 
+    if (userSettings.passportFields === undefined) {
+      userSettings.passportFields = [];
+    }
+
+
 
     if (this.urlOptions.gtMergeRows === undefined) {
       this.urlOptions.gtMergeRows = true;
     }
+
 
   }
 
@@ -3867,7 +3890,8 @@ export default class PanelManageGenotypeComponent extends Component {
            */
           all = Object.values(this.vcfGenotypeSamplesSelectedAll),
           selectedSamples = all.length ? [].concat.apply(all[0], all.slice(1)) : [],
-          options = {userSettings, selectedSamples};
+          /** pass visibleBlocks for .datasetId.samplesPassport */
+          options = {userSettings, selectedSamples, visibleBlocks};
           if (this.urlOptions.gtMergeRows) {
             /** {rows, sampleNames}; */
             let sampleFilters = [];
@@ -4956,6 +4980,41 @@ export default class PanelManageGenotypeComponent extends Component {
   }
     return germinate;
   }
+
+  //----------------------------------------------------------------------------
+
+  @action
+  selectedFieldsChanged(added, deleted) {
+    const
+    /** may change passportFields to .mapBy('id') */
+    selectFields = this.args.userSettings.passportFields.mapBy('id'),
+    genotypeIds = this.selectedSamples;
+
+    this.gtDatasets.forEach(dataset => {
+      // related : blocksSelectedSamples(blocks)
+      const sampleNames = this.vcfGenotypeSamplesSelectedAll[dataset.id];
+      if (sampleNames) {
+        this.datasetGetPassportData(dataset, sampleNames, selectFields);
+      }
+    });
+  }
+  datasetGetPassportData(dataset, sampleNames, selectFields) {
+    const fnName = 'datasetGetPassportData';
+    const genotypeIds = sampleNames;
+    getPassportData({ genotypeIds, selectFields }, genolinkBaseUrl)
+      .then(data => {
+        dLog(fnName, dataset.id, data);
+        const
+        d = data.content,
+        samplesPassport = dataset.samplesPassport || (dataset.samplesPassport = {});
+        sampleNames.forEach((sampleName, i) => {
+          selectFields.forEach(field => {
+            const sp = samplesPassport[sampleName] || (samplesPassport[sampleName] = {});
+            sp[field] = d[i][field];
+          });
+        });
+      });
+    }
 
   //----------------------------------------------------------------------------
 

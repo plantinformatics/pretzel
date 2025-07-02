@@ -8,7 +8,7 @@ import { alias } from '@ember/object/computed';
 
 import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
 const /*import */{
-  getPassportDataByGenotypeIds,
+  getPassportData,
 } = vcfGenotypeBrapi.genolinkPassport; /*from 'vcf-genotype-brapi'; */
 
 /** Base URL for HTTP GET request to open Genolink with the result of a search
@@ -95,7 +95,11 @@ export default class PanelGenotypeSamplesComponent extends Component {
     fnName = 'selectedSamplesGetPassport',
     g = this.args.the,
     aggSamples = g.selectedSamples.filter(s => s.match(/^AGG/)),
-    passportP = aggSamples.length ? getPassportDataByGenotypeIds(aggSamples, genolinkBaseUrl) :
+    genotypeIds = aggSamples,
+    passportFields = this.args.userSettings.passportFields,
+    selectFields = passportFields.length ? passportFields : undefined,
+    passportP = aggSamples.length ?
+      getPassportData({ genotypeIds, selectFields }, genolinkBaseUrl) :
       Promise.reject('No AGG samples out of ' + g.selectedSamples.length);
     passportP.then(resultByGenotype => {
       console.log("Result by genotype IDs:", resultByGenotype);

@@ -226,6 +226,7 @@ export default class PanelHaplotypesSamplesComponent extends Component {
    *
    * based on manage-explorer.js : selectedCategoryChanged()
    */
+  @action
   selectedHaplotypeChanged(added, deleted) {
     const fnName = 'selectedHaplotypeChanged';
 
