@@ -4984,8 +4984,9 @@ export default class PanelManageGenotypeComponent extends Component {
   //----------------------------------------------------------------------------
 
   @action
-  selectedFieldsChanged(added, deleted) {
+  selectedFieldsChanged(values, c, add) {
     const
+    /** values === passportFields */
     /** may change passportFields to .mapBy('id') */
     selectFields = this.args.userSettings.passportFields.mapBy('id'),
     genotypeIds = this.selectedSamples;

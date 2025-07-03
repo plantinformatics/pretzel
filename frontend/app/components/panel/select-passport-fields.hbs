@@ -2,7 +2,7 @@
   <div class="genotype-controls select-passport-fields">
 
     <Form::SelectMultiple
-      @selectedValue={{@userSettings.passportFields}}
+      @selectedValues={{@userSettings.passportFields}}
       @values={{this.passportFieldNames}}
       @selectValueArray={{this.selectedFieldsChanged}} />
 

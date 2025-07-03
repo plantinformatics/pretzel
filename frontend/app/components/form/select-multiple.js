@@ -10,6 +10,14 @@ const dLog = console.debug;
 
 // -----------------------------------------------------------------------------
 
+/**
+ * @param values  array of values to populate the <select> <option>s
+ * @param selectedValues
+ * @param selectValueArray(values, c, add)
+ *   values : current list of selected values;
+ *   c : element de/selected in the current event
+ *   add : true if c was selected
+ */
 export default class FormSelectMultipleComponent extends Component {
   // selectedValue;
 
@@ -82,7 +90,7 @@ export default class FormSelectMultipleComponent extends Component {
       this.valuesSelected = selectedValue;
     } else */ {
       const
-      values = this.args.selectedValue;
+      values = this.args.selectedValues;
       /** or c === selectedValue */
       // present = values.find(c => c.id == selectedValue.id);
       /** use .pushObject() (or .removeObject) so that () sees the
@@ -99,12 +107,11 @@ export default class FormSelectMultipleComponent extends Component {
           } else {
             values.removeObject(c);
           }
-          const samples = c.samples;
-          this.args.selectValueArray(samples, add);
+          this.args.selectValueArray(values, c, add);
         });
       });
     }
-    dLog(fnName, added, deleted, this.args.selectedValue);
+    dLog(fnName, added, deleted, this.args.selectedValues);
   }
 
 

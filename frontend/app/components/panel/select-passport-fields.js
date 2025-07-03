@@ -34,18 +34,19 @@ export default class PanelSelectPassportFieldsComponent extends Component {
    *  { id, name, ... } Ember Object
    * See form/select-multiple.js : selectedGroupChangedId().
    *
-   * @param added
-   * @param deleted
+   * @param values : current list of selected values;  === userSettings.passportFields
+   * @param c : element de/selected in the current event
+   * @param add : true if c was selected
    *
    * based on haplotypes-samples.js : selectedHaplotypeChanged()
    */
   @action
-  selectedFieldsChanged(added, deleted) {
+  selectedFieldsChanged(values, c, add) {
     const fnName = 'selectedHaplotypeChanged';
     const userSettings = this.args.userSettings;
 
-    dLog(fnName, added, deleted, userSettings.passportFields);
-    this.args.selectedFieldsChanged(added, deleted);
+    dLog(fnName, values, c, add, userSettings.passportFields);
+    this.args.selectedFieldsChanged(values, c, add);
   }
 
   //----------------------------------------------------------------------------
