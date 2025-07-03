@@ -68,7 +68,7 @@ import {
   featureCallRateFilter,
   featuresFilterNalleles,
   objectSymbolNameArray,
- } from '../../utils/data/vcf-feature';
+} from '../../utils/data/vcf-feature';
 import {
   referenceSamplesSymbol,
   referenceSampleMatchesSymbol,
@@ -716,7 +716,7 @@ export default class PanelManageGenotypeComponent extends Component {
      * event.target.value is a string; convert to a number.
      */
     let value = +event.target.value;
-     dLog('intervalLimitInput', value, event.target.value);
+    dLog('intervalLimitInput', value, event.target.value);
     this.intervalLimit = value;
   }
 
@@ -742,7 +742,7 @@ export default class PanelManageGenotypeComponent extends Component {
      * event.target.value is a string; convert to a number.
      */
     let value = +event.target.value;
-     dLog('rowLimitInput', value, event.target.value);
+    dLog('rowLimitInput', value, event.target.value);
     this.rowLimit = value;
   }
 
@@ -881,9 +881,9 @@ export default class PanelManageGenotypeComponent extends Component {
     this.arrayToggleObject(filters, haplotype);
     this.ensureSamplesThenRender(filterTypeName);
   }
-    /** filtered/sorted display depends on .samples, which depends on
-     * this.vcfGenotypeSamplesText, so request all sampleNames if not received.
-     */
+  /** filtered/sorted display depends on .samples, which depends on
+   * this.vcfGenotypeSamplesText, so request all sampleNames if not received.
+   */
   ensureSamplesThenRender(filterTypeName) {
     const fnName = 'ensureSamplesThenRender';
     let textP = ! this.vcfGenotypeSamplesText && this.vcfGenotypeSamples();
@@ -902,7 +902,7 @@ export default class PanelManageGenotypeComponent extends Component {
     const present = array.includes(object);
     if (present) {
       /* currently getting multiple calls to afterSelectionHaplotype(), so disable toggle off
-      */
+       */
       array.removeObject(object);
     } else {
       array.addObject(object);
@@ -1015,7 +1015,7 @@ export default class PanelManageGenotypeComponent extends Component {
     dLog(fnName, this.sampleFiltersCheck(), 'FilteredSamples');
 
     // update selectedSampleEffect
-   later(() => {
+    later(() => {
       this.selectedSampleRefreshDisplay(/*sampleFilterTypeName*/undefined);
      // Repeat - will work out the requirements display to be refreshed.
       later(() => {
@@ -1063,23 +1063,23 @@ export default class PanelManageGenotypeComponent extends Component {
           copyThis = haveFilters?.find(b => b.referenceBlock === block.referenceBlock),
           copyThisFilter = copyThis?.[sampleFiltersSymbol];
           if (copyThisFilter) {
-          const
-          copy =
-            Object.entries(copyThisFilter).reduce((O, [k,v]) => {O[k] = v.slice(0); return O;}, {});
-          dLog(fnName, 'copyThisFilter', copyThisFilter, copyThis.brushName, copy);
+            const
+            copy =
+              Object.entries(copyThisFilter).reduce((O, [k,v]) => {O[k] = v.slice(0); return O;}, {});
+            dLog(fnName, 'copyThisFilter', copyThisFilter, copyThis.brushName, copy);
 
-          /** map from copyThis features to block.features, matching SNP position, i.e. .value_0 */
-          copy.feature?.forEach((f, i) => {
-            const f2 = block.get('features').findBy('value_0', f.value_0);
-            dLog(fnName, i, f, f2);
-            if (f2) {
-              f2[matchRefSymbol] = f[matchRefSymbol];
-              copy.feature[i] = f2;
-            }
-            /* else could remove copy.features[i], or search again later after
-             * more features are loaded.  Could use API to request those features. */
-          });
-          block[sampleFiltersSymbol] = copy;
+            /** map from copyThis features to block.features, matching SNP position, i.e. .value_0 */
+            copy.feature?.forEach((f, i) => {
+              const f2 = block.get('features').findBy('value_0', f.value_0);
+              dLog(fnName, i, f, f2);
+              if (f2) {
+                f2[matchRefSymbol] = f[matchRefSymbol];
+                copy.feature[i] = f2;
+              }
+              /* else could remove copy.features[i], or search again later after
+               * more features are loaded.  Could use API to request those features. */
+            });
+            block[sampleFiltersSymbol] = copy;
           } // if (copyThisFilter)
           dLog(fnName, block);
         });
@@ -1310,7 +1310,7 @@ export default class PanelManageGenotypeComponent extends Component {
    * also applies featureFilters, so there is no need for a separate
    * @action featureFiltersApply() 
    */
- 
+
   //----------------------------------------------------------------------------
 
   /** User has clicked on a cell which is part of the representation of a Variant Interval.
@@ -1536,13 +1536,13 @@ export default class PanelManageGenotypeComponent extends Component {
       dLog(fnName, 'initial activeDatasetId', datasetIds[0], this.activeDatasetId);
       later(() => {
         this.setSelectedDataset(datasetIds[0]);
-	/** The above sets @active of the <nav.item > i.e. <li>, but the class
-	 * active is not added, perhaps because it has already rendered.  So use
-	 * datasetTabActiveClass() for the initial render; after that the user
-	 * clicks on the tab which sets active class OK. There is hopefully a
-	 * more elegant way to do this.
-	 */
-	this.datasetTabActiveClass();
+        /** The above sets @active of the <nav.item > i.e. <li>, but the class
+         * active is not added, perhaps because it has already rendered.  So use
+         * datasetTabActiveClass() for the initial render; after that the user
+         * clicks on the tab which sets active class OK. There is hopefully a
+         * more elegant way to do this.
+         */
+        this.datasetTabActiveClass();
       });
     }
     dLog(fnName, datasetIds, this.gtDatasets);
@@ -1650,7 +1650,7 @@ export default class PanelManageGenotypeComponent extends Component {
      * using .vcfGenotypeSamplesAllDatasets().
      */
     datasetSamples =
-    Object.values(this.sampleCache.sampleNames)
+      Object.values(this.sampleCache.sampleNames)
       .map(value => this.samplesFromText(value));
     let commonSamples;
 
@@ -1773,7 +1773,7 @@ export default class PanelManageGenotypeComponent extends Component {
       dLog('samples', samples.length && samples.slice(samples.length-2, samples.length));
       samples.pop();
     }
- 
+
     return samples;
   }
   /** If userSettings.samplesIntersection return .sampleNamesIntersection, otherwise 
@@ -1874,8 +1874,8 @@ export default class PanelManageGenotypeComponent extends Component {
     const
     fnName = 'filteredSamples',
     nameFilterArray = this.namesFilters.nameFilterArray,
-    filteredSamples = this.samples
-      ?.filter(sampleName => this.namesFilters.matchFilters(
+    filteredSamples = this.samples?.filter(
+      sampleName => this.namesFilters.matchFilters(
         sampleName, nameFilterArray,
         /*this.caseInsensitive*/ true,
         /*this.searchFilterAll*/ true));
@@ -2224,11 +2224,12 @@ export default class PanelManageGenotypeComponent extends Component {
     let unselectedArray = [];
     if (selected) {
       const
-    /** Copy current and subtract selected from it, remainder is available for selection */
-    unselected = selected.reduce((set, field) => {
-      set.delete(field);
-      return set;
-    }, new Set(current));
+      /** Copy current and subtract selected from it, remainder is available for
+       * selection */
+      unselected = selected.reduce((set, field) => {
+        set.delete(field);
+        return set;
+      }, new Set(current));
       unselectedArray = Array.from(unselected);
     }
     return unselectedArray;
@@ -2600,7 +2601,7 @@ export default class PanelManageGenotypeComponent extends Component {
         vcfDatasetId = vcfBlock?.get('datasetId.id'),
         datasetSamples = (vcfDatasetId && ! this.sampleCache.sampleNames[vcfDatasetId]),
         samples =
-        requestSamples = this.args.userSettings.filterSamplesByHaplotype ?
+          requestSamples = this.args.userSettings.filterSamplesByHaplotype ?
           /* .blockFilteredSamplesGet(vcfBlock) is effectively : this.sampleCache.filteredByGenotype[vcfBlock.id][selected SNPs + genotype values]
            * i.e. the cache key includes the current (user-defined) haplotype
            *
@@ -2692,7 +2693,7 @@ export default class PanelManageGenotypeComponent extends Component {
     blocks = this.viewedVCFBlocks.filter(ab =>
       ab.block.get('datasetId.sampleNamesSet')?.has(sampleName))
       .mapBy('block');
-      
+
     if (! blocks.length && this.sampleName2Block) {
       /** if a block is unviewed it will still be listed in sampleName2Block[].
        */
@@ -2712,7 +2713,7 @@ export default class PanelManageGenotypeComponent extends Component {
           const names = block.get('datasetId.sampleNames');
           return names && names.includes(sampleName);
         });
-     }
+    }
     return blocks;
   }
 
@@ -3017,8 +3018,7 @@ export default class PanelManageGenotypeComponent extends Component {
       flags = '' + (k+1), /*-n*/
       /** (visibleBlocks - requiredBlock) C k */
       groups = arrayChoose(notSelf, k),
-      groupsP =
-      groups.map(group => {
+      groupsP = groups.map(group => {
         /** group combined with requiredBlock */
         const selfAnd = group.concat([requiredBlock]);
         return this.vcfGenotypeLookupGroup(selfAnd, flags);
@@ -3037,8 +3037,7 @@ export default class PanelManageGenotypeComponent extends Component {
    */
   vcfGenotypeLookupGroup(blocks, flags) {
     const
-    promises =
-    blocks
+    promises = blocks
       .map((blockV, i) => {
         const
         vcfDatasetId = blockV.get('datasetId.id'),
@@ -3066,8 +3065,9 @@ export default class PanelManageGenotypeComponent extends Component {
             {datasetIds : blocks.mapBy('datasetId.genotypeId'), flags} :
           this.intersectionParamsSimple(vcfDatasetId);
 
-          promise = 
-          this.vcfGenotypeLookupDataset(blockV, vcfDatasetIdAPI, intersection, scope, domainInteger, samples, samplesLimitEnable);
+          promise = this.vcfGenotypeLookupDataset(
+            blockV, vcfDatasetIdAPI, intersection,
+            scope, domainInteger, samples, samplesLimitEnable);
         }
         return promise;
       });
@@ -3144,16 +3144,16 @@ export default class PanelManageGenotypeComponent extends Component {
       }
 
       const requestP = () => {
-      const textP = vcfGenotypeLookup(
-        this.auth, samples, domainInteger, requestOptions,
-        vcfDatasetId, scope, this.rowLimit);
-      // re-initialise file-anchor with the new @data
-      /* file-anchor param data should be a defined array ; its init() does this.get("data").reduce. */
-      this.vcfExportText = [];
-      textP.then(
-        this.vcfGenotypeReceiveResult.bind(this, scope ? blockV : dataset, requestFormat, userSettings))
-        .catch(this.showError.bind(this, fnName));
-      return textP;
+        const textP = vcfGenotypeLookup(
+          this.auth, samples, domainInteger, requestOptions,
+          vcfDatasetId, scope, this.rowLimit);
+        // re-initialise file-anchor with the new @data
+        /* file-anchor param data should be a defined array ; its init() does this.get("data").reduce. */
+        this.vcfExportText = [];
+        textP.then(
+          this.vcfGenotypeReceiveResult.bind(this, scope ? blockV : dataset, requestFormat, userSettings))
+          .catch(this.showError.bind(this, fnName));
+        return textP;
       };
 
       if (scope) {
@@ -3541,8 +3541,8 @@ export default class PanelManageGenotypeComponent extends Component {
                 dLog(fnName, overlaps, );
               }
             }
-          return overlaps >= choose.k;
-        });
+            return overlaps >= choose.k;
+          });
         return ok;
       }
       function filterFnSimple(feature) {
@@ -3827,8 +3827,7 @@ export default class PanelManageGenotypeComponent extends Component {
     const fnName = 'showSamplesWithinBrush';
     if (! this.gtBlocks.length) {
       this.emptyTable();
-    } else
-    if (! this.axisBrush /* || ! this.lookupBlock*/) {
+    } else if (! this.axisBrush /* || ! this.lookupBlock*/) {
       // perhaps clear table
     } else {
       const userSettings = this.args.userSettings;
@@ -4176,8 +4175,7 @@ export default class PanelManageGenotypeComponent extends Component {
           if (block) {
             const
             map = block[haplotypeFeaturesSymbol] || (block[haplotypeFeaturesSymbol] = {});
-            features
-            .reduce(
+            features.reduce(
               (map, feature) => {
                 const
                 tSNP = feature.values?.tSNP;
@@ -4218,23 +4216,23 @@ export default class PanelManageGenotypeComponent extends Component {
     gtDatasetColumns = this.gtDatasetColumns,
     sets = {};
 
-    if (this.displayDataRows)
-    Object.entries(this.displayDataRows).forEach(([location, row]) => {
-      /** Find all intervals containing query point */
-      intervalTree.queryPoint(location, function(interval) {
-        const
-        /** this is the variantInterval feature - want the row feature. */
-        viFeature = interval[featureSymbol],
-        /** filter out undefined, which is from blocks without features overlapping this row. */
-        rowFeatures = gtDatasetColumns
-          .map(datasetId => row[datasetId]?.[featureSymbol])
-          .filter(f => f),
-        intervalName = interval.join('_'),
-        variantSet = sets[intervalName] || (sets[intervalName] = []);
-        /* rowFeatures will not be on other rows, so .addObjects() is not required for uniqueness */
-        variantSet.pushObjects(rowFeatures);
+    if (this.displayDataRows) Object.entries(this.displayDataRows).forEach(
+      ([location, row]) => {
+        /** Find all intervals containing query point */
+        intervalTree.queryPoint(location, function(interval) {
+          const
+          /** this is the variantInterval feature - want the row feature. */
+          viFeature = interval[featureSymbol],
+          /** filter out undefined, which is from blocks without features overlapping this row. */
+          rowFeatures = gtDatasetColumns
+            .map(datasetId => row[datasetId]?.[featureSymbol])
+            .filter(f => f),
+          intervalName = interval.join('_'),
+          variantSet = sets[intervalName] || (sets[intervalName] = []);
+          /* rowFeatures will not be on other rows, so .addObjects() is not required for uniqueness */
+          variantSet.pushObjects(rowFeatures);
+        });
       });
-    });
     return sets;
   }
 
@@ -4260,8 +4258,7 @@ export default class PanelManageGenotypeComponent extends Component {
           /** blockp may be a proxy; want the actual Block, for reference via Symbol */
           block = blockp && contentOf(blockp),
           map = block[callRateSymbol] || (block[callRateSymbol] = {});
-          features
-          .reduce(
+          features.reduce(
             (map, feature) => {
               const featureSamplesCount = {calls:0, misses:0};
               // could do map=, but the 3 levels have the same value for map.
@@ -4339,21 +4336,21 @@ export default class PanelManageGenotypeComponent extends Component {
           missing += 2;
           distance = this.matchRef ? 0 : 2;
         } else {
-        switch (value.length) {
-        case 3 :
-          if (numeric) { matchValue = this.matchRef ? '1' : '0'; }
-          distance = 2 - stringCountString(value, matchValue);
-          break;
-        case 1:
-          if (numeric) {
-            distance = this.matchRef ? +value : 2 - value;
-          } else {
-            distance = value === this.matchNumber;
+          switch (value.length) {
+          case 3 :
+            if (numeric) { matchValue = this.matchRef ? '1' : '0'; }
+            distance = 2 - stringCountString(value, matchValue);
+            break;
+          case 1:
+            if (numeric) {
+              distance = this.matchRef ? +value : 2 - value;
+            } else {
+              distance = value === this.matchNumber;
+            }
+            break;
+          default : dLog(fnName, 'invalid genotype value', value);
+            break;
           }
-          break;
-        default : dLog(fnName, 'invalid genotype value', value);
-          break;
-        }
         }
         if (Measure === Counts) {
           const counts = Measure.create();
@@ -4439,23 +4436,23 @@ export default class PanelManageGenotypeComponent extends Component {
           const
           matchRefs = matchRefFn ? matchRefFn(feature) : [new MatchRef(feature[matchRefSymbol])];
           matchRefs.forEach((matchRef, i) => {
-          const matchValue = feature.values[matchRef.matchKey];
-          Object.entries(feature.values).forEach(([key, value]) => {
-            if (! valueNameIsNotSample(key) /*&& matchValue*/ /*&& ! valueIsMissing(value)*/) {
-              const sampleName = key;
-              const distance = matchRef.distanceFn(value, matchValue);
-              if (distance !== undefined) {
-                const
-                referenceSampleName = matchRef.matchKey,
-                /** use [referenceSampleName] if referenceSamples.length,
-                 * e.g. matches[referenceSampleName][sampleName] */
-                matchesR = referenceSamples.length ?
-                  matches[referenceSampleName] || (matches[referenceSampleName] = {}) :
-                  matches;
-                matchesR[sampleName] = Measure.add(matchesR[sampleName], distance);
+            const matchValue = feature.values[matchRef.matchKey];
+            Object.entries(feature.values).forEach(([key, value]) => {
+              if (! valueNameIsNotSample(key) /*&& matchValue*/ /*&& ! valueIsMissing(value)*/) {
+                const sampleName = key;
+                const distance = matchRef.distanceFn(value, matchValue);
+                if (distance !== undefined) {
+                  const
+                  referenceSampleName = matchRef.matchKey,
+                  /** use [referenceSampleName] if referenceSamples.length,
+                   * e.g. matches[referenceSampleName][sampleName] */
+                  matchesR = referenceSamples.length ?
+                    matches[referenceSampleName] || (matches[referenceSampleName] = {}) :
+                    matches;
+                  matchesR[sampleName] = Measure.add(matchesR[sampleName], distance);
+                }
               }
-            }
-          });
+            });
           });
         });
       }
@@ -4563,8 +4560,7 @@ export default class PanelManageGenotypeComponent extends Component {
        * taking ~1min for it, and there is no benefit - the header is expected to
        * be simply samples. */
       textP = Promise.resolve(samples);
-    } else
-    if (samplesOK && scopeOK && vcfDatasetId) {
+    } else if (samplesOK && scopeOK && vcfDatasetId) {
       const
       requestFormat = this.requestFormat,
       userSettings = this.args.userSettings,
@@ -4586,8 +4582,7 @@ export default class PanelManageGenotypeComponent extends Component {
       textP = vcfGenotypeLookup(
         this.auth, samples, domainInteger,
         requestOptions, vcfDatasetId, scope, this.rowLimit)
-        .then(
-        (text) => {
+        .then((text) => {
           const
           isGerminate = resultIsGerminate(text);
           /** for BrAPI, domain [0, 1] will return 0 results, and hence 0
@@ -4849,15 +4844,15 @@ export default class PanelManageGenotypeComponent extends Component {
     dLog(fnName, this, datasetId, arguments);
 
     const
-      gtDatasetIds = this.gtDatasetTabs,
-      i = gtDatasetIds.findIndex(tabId => tabId === datasetId);
-      if (i < 0) {
-        dLog(fnName, i, datasetId, gtDatasetIds);
-      } else {
-        dLog(fnName, i, gtDatasetIds[i], datasetId);
-        // sets .axisBrushBlockIndex
-        this.mut_axisBrushBlockIndex(i);
-      }
+    gtDatasetIds = this.gtDatasetTabs,
+    i = gtDatasetIds.findIndex(tabId => tabId === datasetId);
+    if (i < 0) {
+      dLog(fnName, i, datasetId, gtDatasetIds);
+    } else {
+      dLog(fnName, i, gtDatasetIds[i], datasetId);
+      // sets .axisBrushBlockIndex
+      this.mut_axisBrushBlockIndex(i);
+    }
     this.setSelectedDataset(datasetId);
   }
   setSelectedDataset(datasetId) {
@@ -4971,13 +4966,13 @@ export default class PanelManageGenotypeComponent extends Component {
   @computed
   get germinate () {
     let germinate;
-  try {
-    germinate = new Germinate();
-    console.log('germinate', germinate);
-    // germinate.serverinfo(); // germplasm(); // callsets();
-  } catch (error) {
-    console.log('vcfGenotypeLookup', 'Germinate', error);
-  }
+    try {
+      germinate = new Germinate();
+      console.log('germinate', germinate);
+      // germinate.serverinfo(); // germplasm(); // callsets();
+    } catch (error) {
+      console.log('vcfGenotypeLookup', 'Germinate', error);
+    }
     return germinate;
   }
 
@@ -5006,7 +5001,7 @@ export default class PanelManageGenotypeComponent extends Component {
     const genotypeIds = sampleNames;
     const
     promise =
-    getPassportData({ genotypeIds, selectFields }, genolinkBaseUrl)
+      getPassportData({ genotypeIds, selectFields }, genolinkBaseUrl)
       .then(data => {
         dLog(fnName, dataset.id, data);
         const

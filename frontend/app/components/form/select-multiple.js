@@ -93,8 +93,11 @@ export default class FormSelectMultipleComponent extends Component {
       values = this.args.selectedValues;
       /** or c === selectedValue */
       // present = values.find(c => c.id == selectedValue.id);
-      /** use .pushObject() (or .removeObject) so that () sees the
-       * change to its dependency haplotypesSelected.length */
+      /** use .pushObject() (or .removeObject) so that uses of @selectedValues
+       * as a dependency will update, e.g. select-passport-fields.hbs depends on
+       * .passportFields.length to enable button .updateAndClose.
+       * haplotypesSelected.length is not currently a dependency.
+       */
       const
       /** changes[add=true] === added. */
       changes = [deleted, added];

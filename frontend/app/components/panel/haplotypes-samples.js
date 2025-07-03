@@ -75,8 +75,7 @@ export default class PanelHaplotypesSamplesComponent extends Component {
 
     function parseResult(data) {
       const
-      parsed = data.trim().split('\n')
-      .map(line => {
+      parsed = data.trim().split('\n').map(line => {
         const
         columns = line.split(' '),
         [haplotype, count, samplesText] = columns,

@@ -339,7 +339,7 @@ function sampleNameAddPassport(sampleName, selectFields, datasetId, visibleBlock
     if (dataset?.samplesPassport?.[sampleName]) {
       const values = selectFields.map(fieldName => {
         let text = dataset.samplesPassport[sampleName][fieldName];
-        /** 'aliases' value is an object; use the .name field  */
+        /** 'aliases' value is an array of objects; use the .name field  */
         if ((typeof text === 'object') && Array.isArray(text) &&
             (typeof text[0] === 'object')) {
           text = text.mapBy('name').join(',');
