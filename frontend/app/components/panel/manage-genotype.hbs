@@ -410,7 +410,7 @@
                 <EmberTooltip @side="top-start" @delay=500>
                   <span>Download the last received VCF genotype results as a VCF file</span>
                 </EmberTooltip>
-                <button type="button" class="btn btn-info btn-xs"
+                <button type="button" class="btn btn-info btn-xs margin-top"
                   onclick={{action this.vcfExportTextToFile}}
                   disabled={{not this.vcfExportText.length}} >
                   VCF Download
@@ -1073,11 +1073,29 @@ While scrolling through the Genotype Table this updates to show where the curren
       </div>
 
       <div>
+        <label>Genolink</label>
+
+        {{#if (and this.selectedCount this.genolinkSearchURL) }}
+        <div>
+          <span>Access passport data via Genolink</span>
+            <a target='_blank' href={{this.genolinkSearchURL}}
+              class={{concat "btn-info margin-1em btn" (if this.searchIdsTruncatedMessage "disabled" "") }} >
+              Genolink
+            </a>
+
+            <EmberTooltip @side="bottom-end" @delay=500>
+              {{this.searchIdsTruncatedMessage}}
+              Open AGG Genolink, showing the passport data of the selected samples.
+            </EmberTooltip>
+        </div>
+        {{/if}}
+
         <span>
-        <input type="checkbox"
-          checked={{@userSettings.showSelectPassportFields}}
-          oninput={{action (mut @userSettings.showSelectPassportFields) value="target.checked" }}  >
-        <label>Select Passport fields</label>
+          <button type="button" class="btn btn-info" onclick={{pipe
+              (action (mut @userSettings.showSelectPassportFields) true)
+            }}>
+            Select Passport fields
+          </button>
         {{#ember-tooltip side="bottom-start" delay=1500}}
           Select which Passport fields will be added to the Sample / Accession column headers in the Genotype Table.
         {{/ember-tooltip}}
@@ -1086,7 +1104,9 @@ While scrolling through the Genotype Table this updates to show where the curren
         {{#if @userSettings.showSelectPassportFields}}
           {{!-- i.e. panel/select-passport-fields --}}
           <Panel::SelectPassportFields @userSettings={{@userSettings}}
-            @selectedFieldsChanged={{this.selectedFieldsChanged}} >
+            @selectedFieldsChanged={{this.selectedFieldsChanged}}
+            @genotypeTable={{this}}
+            >
           </Panel::SelectPassportFields>
         {{/if}}
       </div>

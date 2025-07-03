@@ -336,8 +336,16 @@ function sampleNameAddPassport(sampleName, selectFields, datasetId, visibleBlock
   const 
     block = visibleBlocks.find(b => b.datasetId.id == datasetId),
     dataset = contentOf(block.datasetId);
-    if (dataset?.samplesPassport[sampleName]) {
-      const values = selectFields.map(fieldName => dataset.samplesPassport[sampleName][fieldName]);
+    if (dataset?.samplesPassport?.[sampleName]) {
+      const values = selectFields.map(fieldName => {
+        let text = dataset.samplesPassport[sampleName][fieldName];
+        /** 'aliases' value is an object; use the .name field  */
+        if ((typeof text === 'object') && Array.isArray(text) &&
+            (typeof text[0] === 'object')) {
+          text = text.mapBy('name').join(',');
+        }
+        return text;
+      });
       sampleName += ' | ' + values.join(', ');
     }
   }

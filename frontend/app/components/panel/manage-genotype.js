@@ -4985,6 +4985,7 @@ export default class PanelManageGenotypeComponent extends Component {
 
   @action
   selectedFieldsChanged(values, c, add) {
+    let promise;
     const
     /** values === passportFields */
     /** may change passportFields to .mapBy('id') */
@@ -4995,13 +4996,16 @@ export default class PanelManageGenotypeComponent extends Component {
       // related : blocksSelectedSamples(blocks)
       const sampleNames = this.vcfGenotypeSamplesSelectedAll[dataset.id];
       if (sampleNames) {
-        this.datasetGetPassportData(dataset, sampleNames, selectFields);
+        promise = this.datasetGetPassportData(dataset, sampleNames, selectFields);
       }
     });
+    return promise;
   }
   datasetGetPassportData(dataset, sampleNames, selectFields) {
     const fnName = 'datasetGetPassportData';
     const genotypeIds = sampleNames;
+    const
+    promise =
     getPassportData({ genotypeIds, selectFields }, genolinkBaseUrl)
       .then(data => {
         dLog(fnName, dataset.id, data);
@@ -5015,7 +5019,8 @@ export default class PanelManageGenotypeComponent extends Component {
           });
         });
       });
-    }
+    return promise;
+  }
 
   //----------------------------------------------------------------------------
 

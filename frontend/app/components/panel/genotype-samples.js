@@ -162,6 +162,9 @@ export default class PanelGenotypeSamplesComponent extends Component {
            "selectedSamples not matching /^AGG/ are filtered out");
     }
     Ember_set(this, 'searchIdsTruncatedMessage', truncatedMessage);
+    /* copy result to manage-genotype so it can be displayed in the tool banner
+     * above the Genotype Table; the GUI location of this button is in flux. */
+    Ember_set(g, 'genolinkSearchURL', url);
     return url;
   }
 

@@ -1,6 +1,6 @@
 import Component from '@glimmer/component';
 
-import EmberObject, { computed, action } from '@ember/object';
+import EmberObject, { computed, action, set as Ember_set } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 
 //------------------------------------------------------------------------------
@@ -26,6 +26,9 @@ export default class PanelSelectPassportFieldsComponent extends Component {
 
   passportFieldNames = passportFieldNames.map(name => ({id : name, name}));
 
+  @tracked
+  genolinkErrorMessage = null;
+
   //----------------------------------------------------------------------------
 
   /** Called via user selection change in select-multiple
@@ -46,11 +49,21 @@ export default class PanelSelectPassportFieldsComponent extends Component {
     const userSettings = this.args.userSettings;
 
     dLog(fnName, values, c, add, userSettings.passportFields);
-    this.args.selectedFieldsChanged(values, c, add);
+    this.genolinkErrorMessage = null;
+    const getPassportDataP = this.args.selectedFieldsChanged(values, c, add);
+    getPassportDataP?.catch(error => {
+      this.genolinkErrorMessage = error.message;
+    });
+  }
+
+  @action
+  updateAndClose() {
+    this.args.genotypeTable.showSamplesWithinBrush();
+    const userSettings = this.args.userSettings;
+    Ember_set(userSettings, 'showSelectPassportFields', false);
   }
 
   //----------------------------------------------------------------------------
 
 }
-
 
