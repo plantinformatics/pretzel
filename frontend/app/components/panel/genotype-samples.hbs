@@ -199,36 +199,39 @@
     </Textarea>
   </div>
 
-  {{#if (and @the.selectedCount this.genolinkSearchURL) }}
-    <button type="button" class="btn btn-info padding-thin margin-top"  {{on 'click' (action this.clearSelectedSamples) }}>
+  <button type="button" class="btn btn-info"  {{on 'click' (action this.clearSelectedSamples) }}>
       Clear
       {{#ember-tooltip side="top-start" delay=500}}
         Clear the list of selected samples
       {{/ember-tooltip}}
-    </button>
+  </button>
 
-    {{#if this.urlOptions.passportExport}}
-    <button type="button" class="btn btn-info btn-xs padding-thin" style="margin-left:0.8em" {{on 'click' (action this.selectedSamplesGetPassport) }}>
-      Passport
-      {{#ember-tooltip side="top-start" delay=500}}
-        Get the passport data of selected samples from AGG GenoLink.
-      {{/ember-tooltip}}
-    </button>
-    {{/if}}	{{!-- this.urlOptions.passportExport --}}
-
-  <div>
-    <span>Access passport data via Genolink</span>
-      <a target='_blank' href={{this.genolinkSearchURL}}
-        class={{concat "btn-info margin-1em btn" (if this.searchIdsTruncatedMessage "disabled" "") }} >
-        Genolink
-      </a>
-
-      <EmberTooltip @side="bottom-end" @delay=500>
+  <span> {{!-- wrapped in span so the tooltip can still display when the button is disabled --}} 
+    <a target='_blank' href={{this.genolinkSearchURL}}
+      class={{concat "btn btn-info" (if (and @the.selectedCount this.genolinkSearchURL) "" " disabled") }} >
+      Passport data via Genolink <i class="glyphicon glyphicon-new-window"></i>
+    </a>
+    {{#if (and @the.selectedCount this.genolinkSearchURL)}}
+      <EmberTooltip @side="bottom-start" @delay=500>
         {{this.searchIdsTruncatedMessage}}
         Open AGG Genolink, showing the passport data of the selected samples.
       </EmberTooltip>
-  </div>
-  {{/if}}
+    {{else}}
+      <EmberTooltip @side="bottom-start" @delay=500>
+        {{this.searchIdsTruncatedMessage}}
+        No samples selected, please select some samples first.
+      </EmberTooltip>
+    {{/if}}
+  </span>
+  
+  {{#if this.urlOptions.passportExport}}
+  <button type="button" class="btn btn-info btn-xs padding-thin" style="margin-left:0.8em" {{on 'click' (action this.selectedSamplesGetPassport) }}>
+    Passport
+    {{#ember-tooltip side="top-start" delay=500}}
+      Get the passport data of selected samples from AGG GenoLink.
+    {{/ember-tooltip}}
+  </button>
+  {{/if}}	{{!-- this.urlOptions.passportExport --}}
 
 </div>
 
