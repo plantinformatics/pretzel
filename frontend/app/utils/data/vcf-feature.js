@@ -342,7 +342,11 @@ function sampleNameAddPassport(sampleName, selectFields, datasetId, visibleBlock
         /** 'aliases' value is an array of objects; use the .name field  */
         if ((typeof text === 'object') && Array.isArray(text) &&
             (typeof text[0] === 'object')) {
-          text = text.mapBy('name').join(',');
+          const
+          aliases = text.mapBy('name'),
+          /** there is a lot of repetition in aliases[] */
+          aliasesUnique = Array.from(new Set(aliases));
+          text = aliasesUnique.join(',');
         }
         return text;
       });
