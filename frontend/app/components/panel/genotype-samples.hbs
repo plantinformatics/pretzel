@@ -20,18 +20,28 @@
   {{/if}}
 
   <div>
-    {{#if @the.featureFiltersCountOfDatasetInBrushedDomain.length}}
+   
     <span>
     <input type="checkbox"
       checked={{@userSettings.filterSamplesByHaplotype}}
+      disabled={{not @the.featureFiltersCountOfDatasetInBrushedDomain.length}}
       oninput={{pipe (action (mut @userSettings.filterSamplesByHaplotype) value="target.checked")
         @the.ensureSamples }}  >
-    <label>Filter by defined Haplotype</label>
-    {{#ember-tooltip side="bottom-start" delay=1500}}
-      Show samples selected by SNP filters
-    {{/ember-tooltip}}
+    <label class={{if (not @the.featureFiltersCountOfDatasetInBrushedDomain.length) "disabled"}}>
+      Filter by defined Haplotype
+    </label>
+    {{#if @the.featureFiltersCountOfDatasetInBrushedDomain.length}}
+      {{#ember-tooltip side="bottom-start" delay=500}}
+        Show samples selected by SNP filters
+      {{/ember-tooltip}}
+      {{else}}
+      <a target="_blank" href="https://docs.plantinformatics.io/Basic-Functions/Genotype-tab/#selecting-a-haplotype-and-ordering-the-genotype-matrix"><i class="glyphicon glyphicon-question-sign" o></i></a>
+      {{#ember-tooltip side="bottom-start" delay=500}}
+        No SNPs selected, please select some SNPs first.
+      {{/ember-tooltip}}
+    {{/if}}
     </span>
-
+ {{#if @the.featureFiltersCountOfDatasetInBrushedDomain.length}}
       <span class="sample-count"> (
         {{@the.featureFiltersCountOfDatasetInBrushedDomain.length}}
         {{#unless (eq @the.featureFiltersCountOfDatasetInBrushedDomain.length @the.featureFiltersCount) }} 
