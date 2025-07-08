@@ -314,6 +314,8 @@ export default Component.extend({
 
     formFeatureEditEnable = (enable) => later(() => this.set('formFeatureEditEnable', enable));
     windowOpenAction = (url) => later(() => window.open(url, '_blank'));
+
+    Handsontable.renderers.registerRenderer('ColourSpanRenderer', bind(this, this.ColourSpanRenderer));
   },
 
   /** Destroy the HandsOnTable so that it does not clash with the HandsOnTable
@@ -498,6 +500,9 @@ export default Component.extend({
     if (this.createdFeatures.length) {
       data = data.concat(this.createdFeatures);
     }
+    const datasetId = data?.[0]?.feature?.get('blockId.datasetId.id');
+    this.showColourSpan = datasetId === 'peptides_normalised-quanti';
+
     data = data.map((f) => {
       /** remove .feature from structure because it causes Handsontable to give errors. */
       let {feature, ...rest} = f,
@@ -596,6 +601,49 @@ export default Component.extend({
 
     return columnInfo;
   },
+  //----------------------------------------------------------------------------
+      
+   ColourSpanRenderer(instance, td, row, col, prop, value, cellProperties) {
+     // ?    Handsontable.renderers.TextRenderer.apply(this, arguments);
+
+      // Clean up any existing content
+     Handsontable.dom.empty(td);
+
+     // Ensure the value is treated as a string
+     const strValue = String(value || '');
+
+     // Split the value into individual numbers
+     const numbers = strValue.split(';').map(s => s.trim()).filter(s => s.length > 0);
+
+     // For each number, create a <span> with CSS variable and styling
+     numbers.forEach((numStr, i) => {
+       const num = parseFloat(numStr);
+       const span = document.createElement('span');
+       span.className = 'number2colour';
+       span.textContent = numStr;
+       span.style.setProperty('--value', num);
+       span.style.marginRight = '0.2em'; // optional spacing
+       td.appendChild(span);
+     });
+
+     // Optional: Set a base class
+     td.classList.add('multi-span-cell');
+     return td;
+   },
+
+  cells(row, col, prop) {
+    let cellProperties = {};
+
+    if (this.showColourSpan && /*(typeof prop === 'string') &&*/ (prop.startsWith('AGG') && prop.endsWith('WHEA'))) {
+      cellProperties.renderer = 'ColourSpanRenderer';
+    } else {
+      cellProperties.renderer = Handsontable.renderers.TextRenderer;
+    }
+    return cellProperties;
+  },
+
+  //----------------------------------------------------------------------------
+
   createTable: function() {
     var that = this;
     dLog("createTable", this);
@@ -635,6 +683,7 @@ export default Component.extend({
           column: 2,
           sortOrder: true
         },
+        cells : bind(this, this.cells),
         /* see comment re. handsOnTableLicenseKey in frontend/config/environment.js */
         licenseKey: config.handsOnTableLicenseKey,
         beforePaste : (data, coords) => this.beforePaste(data, coords),

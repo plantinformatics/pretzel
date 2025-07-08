@@ -305,6 +305,25 @@ table.contextual-data-table td
   color : red;
 }
 
+/** Show numbers in table cells in colour blocks.
+ * Used by table-brushed.js : ColourSpanRenderer() */
+.number2colour {
+  display: inline-block;
+  padding: 0.1em 0.3em;
+  border-radius: 4px;
+  color: #000;
+  // background-color: color-mix(in srgb, blue calc(var(--value) * 100%), white);
+  font-variant-numeric: tabular-nums;
+
+  background-color:
+    color-mix(
+      in srgb,
+      red calc(clamp(-1 * var(--value), 0, 1) * 100%),
+      green calc(clamp(var(--value), 0, 1) * 100%)
+    );
+}
+
+
 /* -------------------------------------------------------------------------- */
 
 svg {
