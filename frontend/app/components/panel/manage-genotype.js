@@ -4722,6 +4722,7 @@ export default class PanelManageGenotypeComponent extends Component {
    */
   vcfExportTextToFile() {
     this.vcfExportTextP.then(combined => {
+      combined.push('');  // for trailing newline
       const data = combined.join('\n');
       if (this.args.userSettings.compressVCF) {
         const blobP = text2Gzip(data, 'application/gzip');
