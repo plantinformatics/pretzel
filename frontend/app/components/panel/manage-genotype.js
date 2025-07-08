@@ -25,7 +25,7 @@ import { thenOrNow, contentOf, pollCondition, promiseThrottle } from '../../util
 import { responseTextParseHtml } from '../../utils/domElements';
 import { fileDownloadBlob, fileDownloadAsCSV, text2Gzip } from '../../utils/dom/file-download';
 import { clipboard_writeText } from '../../utils/common/html';
-import { arrayChoose } from  '../../utils/common/arrays';
+import { arrayChoose, arraySortNestedComparator } from  '../../utils/common/arrays';
 import { intervalSize } from '../../utils/interval-calcs';
 import { inRange, overlapInterval } from '../../utils/draw/zoomPanCalcs';
 import { featuresIntervalsForTree } from '../../utils/data/features';
@@ -57,6 +57,8 @@ import {
   normalizeMaf,
   sampleIsFilteredOut,
   columnName2SampleName,
+  passportValueCompare,
+  augmented2SampleName,
   vcfFeatures2MatrixView, vcfFeatures2MatrixViewRows,
   valueIsMissing,
   rowsAddFeature,
@@ -131,6 +133,10 @@ const callRateSymbol = Symbol.for('callRate');
 /** Indicate whether Alt or Ref value should be matched at this Feature / SNP.
  * feature[matchRefSymbol] true/false.  */
 const matchRefSymbol = Symbol.for('matchRef');
+/** Cache of Passport data for the sampleName, i.e. dataset.samplesPassport[sampleName]
+ * This attribute is assigned to a String sampleName. 
+ */
+const passportSymbol = Symbol.for('passport');
 
 /** dataset[enableFeatureFiltersSymbol] true/false enables feature filters for this dataset
  */
@@ -273,6 +279,8 @@ function featureHasSamplesLoaded(feature) {
  *   Selected by the user; the sample column headers are augmented with each
  *   sample's values for these fields.
  *   This is currently [ {id, name}, ... ], where id == name.
+ * .sortByPassportFields  boolean, default : false
+ *   Sort the Genotype Table columns by the selected Passport field values : .passportFields
  *
  * @see userSettingsDefaults()
  *------------------------------------------------------------------------------
@@ -642,7 +650,9 @@ export default class PanelManageGenotypeComponent extends Component {
     if (userSettings.passportFields === undefined) {
       userSettings.passportFields = [];
     }
-
+    if (userSettings.sortByPassportFields === undefined) {
+      userSettings.sortByPassportFields = false;
+    }
 
 
     if (this.urlOptions.gtMergeRows === undefined) {
@@ -3686,16 +3696,66 @@ export default class PanelManageGenotypeComponent extends Component {
     return ok;
   }
 
-  /** @return undefined if sampleFiltersCount[sampleFilterTypeName] is 0, otherwise
+  /** Return a comparator for sorting column sample names by Passport data
+   * fields selected by the user.
+   * @return undefined if no Passport data fields are selected, or sorting by
+   * Passport data fields is not enabled.
+   */
+  @computed(
+    'args.userSettings.sortByPassportFields',
+    'args.userSettings.passportFields.length')
+  get sampleNamesCmpField() {
+    let fn;
+    const userSettings = this.args.userSettings;
+    if (userSettings.sortByPassportFields && userSettings.passportFields.length) {
+      fn = (...sampleNames) => {
+        let cmp = 0;
+        const selectFields = userSettings.passportFields.mapBy('id');
+        /** Find the first non-zero comparison. The result of find() is not
+         * used. cmp is exported. */
+        selectFields.find(fieldName => {
+          const
+          /** dataset.samplesPassport[sampleName] */
+          v = sampleNames.map(sampleName => this.findPassportFields(sampleName)?.[fieldName]);
+          cmp = passportValueCompare(v);
+          // .find() will exit when cmp!==0
+          return cmp;
+        });
+        return cmp;
+      };
+    }
+    return fn;
+  }
+  /** Lookup the Passport field values of the given sample.
+   * If sampleName is a String, it may have [passportSymbol] assigned by
+   * vcfFeatures2MatrixViewRowsResult() : columnNames.
+   * The fallback is to find which dataset contains the given sample, and
+   * whether Passport fields of the sample have been retrieved.  This can be
+   * used this where dataset is not available.
+   * @param sampleName
+   * @return {fieldName -> fieldValue, ... }
+   */
+  findPassportFields(sampleName) {
+    let fieldValues = sampleName[passportSymbol];
+    if (! fieldValues) {
+      this.gtDatasets.find(d => (fieldValues = d.samplesPassport?.[sampleName]));
+    }
+    return fieldValues;
+  }
+  /** Return a comparator for sorting column sample names according to
+   * sampleFilters selected by the user.
+   * The header comment of sampleFilterTypeName() describes sampleFilters.
+   * 
+   * @return undefined if sampleFiltersCount[sampleFilterTypeName] is 0, otherwise
    * a sort comparator function with signature (sampleName1, sampleName2),
    * which returns +ve if column of sampleName2 should be shown to the right of sampleName1.
-   * Related : columnNamesCmp().
+   * Related : columnNamesCmp(), sampleNamesCmpField().
    */
   @computed(
     'sampleFiltersCountSelected',
     'matchesSummary',
   )
-  get sampleNamesCmp() {
+  get sampleNamesCmpFilter() {
     /** if there are referenceSamples, then filterSamples() will set .matchesSummary = distancesTo1d() */
     if (false && ! this.referenceSamplesCount) {
     /* clear the cached results of sampleMatchesSum() */
@@ -3706,21 +3766,50 @@ export default class PanelManageGenotypeComponent extends Component {
     fn = ! filtersCount ? undefined : (...sampleNames) => {
       const
       /** distance averages for the samples.  */
-      matchRates = sampleNames.map(this.sampleMatchesSum.bind(this)),
+      matchRates = sampleNames
+        .map(this.sampleMatchesSum.bind(this)),
       cmp = Measure.cmp(matchRates[0], matchRates[1]);
       return cmp;
     };
     return fn;
   }
+  @computed(
+    'sampleNamesCmpField',
+    'sampleNamesCmpFilter',
+  )
+  get sampleNamesCmp() {
+    let fn;
+    const
+    fns = [this.sampleNamesCmpField, this.sampleNamesCmpFilter].filter(x => x);
+    if (fns.length) {
+      fn = arraySortNestedComparator(fns);
+    }
+    return fn;
+  }
   /** Wrap sampleNamesCmp() - handle multiple blocks, and strip off
    * the datasetId which is appended to sampleNames to form columnNames.
-   * Related : vcf-feature.js : columnNamesCmp()
+   * Used in showSamplesWithinBrush().
+   *
+   * Related : vcf-feature.js : columnNamesCmp() which also wraps
+   * sampleNamesCmp(), and is defined and used within
+   * vcfFeatures2MatrixViewRowsResult().
+   *
+   * @param sampleNamesCmp comparator function, which may combine multiple
+   * comparator function, providing a nested sort.
+   * See sampleNamesCmp{,Field,Filter}().
    * @param columnNames 2 columnNames to compare
    */
   columnNamesCmp(sampleNamesCmp, ...columnNames) {
     const
     // this can be done in the caller
-    sampleNames = columnNames.map(columnName2SampleName),
+    /* also, this does not propagate [Symbol(dataset)] to the new value
+     * ([Symbol(passport)] is already omitted by augmentSampleName()).
+     * It could be re-added here; using sample references in place of names is
+     * another possibility.
+     * Currently findPassportFields() searches .gtDatasets to get [Symbol(passport)].
+     */
+    sampleNames = columnNames.map(name =>
+      augmented2SampleName(columnName2SampleName(name))),
     /** these non-sample columns are prioritised to the left : Alt Ref, .. */
     ns = sampleNames.map(columnName => valueNameIsNotSample(columnName)),
     /** if columnNames[0] is Alt/Ref then cmp is -1;   if ... [1] then ... +1  */
@@ -4980,6 +5069,9 @@ export default class PanelManageGenotypeComponent extends Component {
 
   @action
   selectedFieldsChanged(values, c, add) {
+    if (! add) {
+      return Promise.resolve();
+    }
     let promise;
     const
     /** values === passportFields */

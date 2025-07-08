@@ -15,14 +15,14 @@
   </div>
 </div>
 
-<div>
+<div class="margin-top">
   <EmberTooltip @side="bottom" @delay=500>
     <span>Add the selected Passport field values to the column headings of the Genotype Table, and Close this selection dialog.
     </span>
   </EmberTooltip>
   <button type="button" class="btn btn-info btn-xs margin-top"
     onclick={{action this.updateAndClose}}
-    disabled={{not @userSettings.passportFields.length}} >
+    >
     Update and Close
   </button>
 </div>

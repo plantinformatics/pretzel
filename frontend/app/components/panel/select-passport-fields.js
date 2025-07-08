@@ -48,7 +48,7 @@ export default class PanelSelectPassportFieldsComponent extends Component {
     const fnName = 'selectedHaplotypeChanged';
     const userSettings = this.args.userSettings;
 
-    dLog(fnName, values, c, add, userSettings.passportFields);
+    dLog(fnName, values.mapBy('id'), c, add, userSettings.passportFields.mapBy('id'));
     this.genolinkErrorMessage = null;
     const getPassportDataP = this.args.selectedFieldsChanged(values, c, add);
     getPassportDataP?.catch(error => {
