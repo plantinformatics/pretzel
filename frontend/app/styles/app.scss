@@ -2624,6 +2624,11 @@ div.genotype label
    */
 }
 
+.select-passport-fields select
+{
+  min-height : 42vh;
+}
+
 /*----------------------------------------------------------------------------*/
 
 /** panel/dataset-intersection-dialog.hbs input .chooseK */
