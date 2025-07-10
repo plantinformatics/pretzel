@@ -20,21 +20,43 @@ unused=${dockerExec="docker exec $DIM"}
 
 #-------------------------------------------------------------------------------
 
+function database_ip() {
+  di_DIM=$1;
+  docker inspect $di_DIM --format '{{ (index  .NetworkSettings.Networks "pretzel-prod_pretzel-prod").IPAddress }}'
+}
+
+#-------------------------------------------------------------------------------
+
+
+
+# from mongo_admin.2025Jun.bash
+
+logDate=$(date +%Y%b%d);
+echo logDate=$logDate
+
+echo DIM=$DIM
+
+DB_HOST=$(database_ip $DIM)
+echo DB_HOST=$DB_HOST
+
+
+#-------------------------------------------------------------------------------
+
 checkDIM()
 {
     if [ -n "$DIM" ];
      then 
-	 status=$?
+       status=$?
     else
-	 status=$?
-	 echo DIM : Docker identity of Mongo Instance is required
+       status=$?
+       echo DIM : Docker identity of Mongo Instance is required
     fi
     return $status
 }
 dbCollections()
 {
     checkDIM &&
-	docker exec -it $DIM mongo --quiet $DB_NAME --eval "db.getCollectionNames()" | tr -d '[\[\]",\t ]' | tr '\r' ' '
+      docker exec -it $DIM mongo --quiet $DB_NAME --eval "db.getCollectionNames()" | tr -d '[\[\]",\t ]' | tr '\r' ' '
 }
 
 
@@ -72,7 +94,7 @@ function signupList()
     unused=${emailVerified=false}
 
     checkDIM &&
-	docker exec -i $DIM mongo --quiet $DB_NAME <<EOF
+      docker exec -i $DIM mongo --host $DB_HOST --quiet $DB_NAME <<EOF
 db.Client.aggregate( [
   { \$match : { emailVerified: { \$exists: $emailVerified }} },
   { \$project: { _id: 0, signUp : {\$dateToString:{date:{\$toDate:"\$_id"}, format:"%Y-%m-%d %H:%M:%S %z", timezone : 'Australia/Melbourne'}}, email : 1, name : 1, institution : 1, project : 1, emailVerified : 1 } }
@@ -84,6 +106,31 @@ function signupReport()
 {
   echo -e 'Email\tName\tInstitution\tProject\tSignUp'
   signupList | jq -r 'map(.)  | @tsv'
+}
+
+
+#-------------------------------------------------------------------------------
+
+function signupReports() {
+
+  cd ~/log/agg_signupReport
+
+  signupReport > agg_unverified.$logDate.tsv
+  head -1 agg_unverified.$logDate.tsv
+  tail -5 agg_unverified.$logDate.tsv
+
+  emailVerified=true signupReport > agg_verified.$logDate.tsv
+  head -1 agg_verified.$logDate.tsv
+  tail -5 agg_verified.$logDate.tsv
+}
+
+
+verifySignup() {
+  email=$1
+  docker exec -i $DIM mongo --host $DB_HOST --quiet $DB_NAME <<EOF
+db.Client.find ( {email : "$email"})
+db.Client.updateOne ( {email : "$email"}, { \$set: {"emailVerified" : true} } )
+EOF
 }
 
 

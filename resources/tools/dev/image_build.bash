@@ -153,11 +153,109 @@ stage=dev
 
 L=~/log/compose/$stage/$logDate
 
+#-------------------------------------------------------------------------------
+
 pb_compose_down_up() {
   docker compose --progress=plain   --file $Dc/docker-compose.$stage.yaml  --env-file $Dc/pretzel.compose.$stage.env down
   nohup docker compose --progress=plain   --file $Dc/docker-compose.$stage.yaml  --env-file $Dc/pretzel.compose.$stage.env  up > $L &
 }
 
+#-------------------------------------------------------------------------------
+
+# Backup the existing container logs
+pb_backup_logs() {
+  # ls -gGArtF ~/log/compose/$stage | tail
+  for i in api database blastserver; do docker logs pretzel-$stage-$i-1 >& ~/log/compose/$stage/$i.$logDate; done
+  ls -gGArtF ~/log/compose/$stage | tail
+}
+
+# Build Pretzel Release
+#
+pb_build_and_release() {
+
+  echo $stage
+  stage=prod
+
+  if df_available_gt /mnt/dockerBuild 10
+  then
+    :
+  else
+    echo 1>&2 Insufficient space on docker build volume.
+    df -h /mnt/dockerBuild
+    return 1
+  fi
+
+  # Fetch the latest commits
+  cd $pretzel_build
+  git status
+
+  if [ $(git branch --show-current) = master ]
+  then
+    git pull
+  else
+    git fetch -v . origin/master:master
+    git checkout master
+  fi
+
+
+  # Configure
+  echo app=$app
+  app=pretzel
+  pb_set
+  pb_show
+
+
+  # Change the date-stamped version to a Release version
+  export PRETZEL_VERSION=v$(sed -n 's/",$//;s/^  "version": "//p' package.json)
+  echo $PRETZEL_VERSION
+  export PRETZEL_SERVER_IMAGE=$baseName:$PRETZEL_VERSION
+  echo PRETZEL_SERVER_IMAGE=$PRETZEL_SERVER_IMAGE
+
+  # Build the Docker image
+  pb_build_release
+
+  # Check the result
+  docker image ls | head
+  # set +x
+  pb_tag
+  echo Dc=$Dc
+  echo logDate=$logDate
+  echo stage=$stage
+
+  stage=prod
+  # Backup the existing container logs
+  pb_backup_logs
+
+  echo $L
+  docker ps
+  docker logs --tail 30 pretzel-prod-api-1
+  date
+
+  # Install the built release
+  pb_compose_down_up
+
+  for tag in $PRETZEL_VERSION latest; do docker push $baseName:$tag; done
+}
+
+#-------------------------------------------------------------------------------
+
+# Determine if the disc space available on the given volume is greater than the given
+#
+# @param df_volume	absolute path of volume, e.g. /mnt/dockerBuild
+# @param df_GB_threshold	minimum GB of space required, e.g. 10
+# (calculation currently x 10e6 instead of x 1048576 )
+# @return true (0) if there is sufficient space
+#
+# Usage example : df_available_gt /mnt/dockerBuild 10; echo $?
+function df_available_gt() {
+  df_volume=$1
+  df_GB_threshold=$2  # or  $(expr $2 \* 1024 \* 1024), instead of "000000"
+  available=$(df --output=avail $df_volume | tail -n +2)
+  [ -n "$available" -a \( "$available" -gt ${df_GB_threshold}000000 \) ]
+}
+
+
+#-------------------------------------------------------------------------------
 
 #===============================================================================
 
