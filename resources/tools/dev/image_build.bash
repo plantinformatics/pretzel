@@ -180,7 +180,7 @@ pb_build_and_release() {
   then
     :
   else
-    echo 1>&2 Insufficient space on docker build volume.
+    echo 1>&2 Insufficient space on docker build volume.  Use e.g. docker builder prune.
     df -h /mnt/dockerBuild
     return 1
   fi
