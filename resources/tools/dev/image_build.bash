@@ -25,7 +25,9 @@ echo $logDate;
 pb_set() {
   app=pretzel
   baseName=plantinformaticscollaboration/$app
-  export PRETZEL_VERSION=v$logDate
+  # can be overridden by pb_build_release
+  export PRETZEL_VERSION
+  echo PRETZEL_VERSION=${PRETZEL_VERSION=v$logDate}
   image=$app:$PRETZEL_VERSION
   LB=~/log/build/docker/$logDate
   L=~/log/compose/$stage/$logDate
@@ -49,6 +51,12 @@ function pb_fetch() {
   cd $pretzel_build;
   git status -sb
   git fetch
+  branch=$(git status  --porcelain -b | head -1  | sed 's/^## //;s/\.\.\..*//')
+  if [ -n "$pretzel_branch" -a \( $branch != $pretzel_branch] \) ]
+  then
+    # git fetch -v . origin/$pretzel_branch:$pretzel_branch
+    git checkout $pretzel_branch
+  fi
   # manual operation
   # git checkout feature/guiChangesLeftPanel
   # follow this with : pb_build_feature
@@ -65,8 +73,10 @@ function pb_build_feature() {
   HEAD_new=$(git rev-parse HEAD)
   [ "$HEAD_old" = "$HEAD_new" ]
   HEAD_unchanged=$?
-  # if unchanged is false (true is 0)
-  if [ "$HEAD_unchanged" -ne 0 ]
+  # build if $build_if_pulled is true or unchanged is false (true is 0)
+  # build_if_pulled may be undefined so use string comparison (-eq and -ne
+  # require a number).  HEAD_unchanged is defined.
+  if [ \( "$build_if_pulled" =  0 \) -o \( "$HEAD_unchanged" -ne 0 \) ]
   then
     pb_build
   fi
@@ -90,12 +100,20 @@ function pb_build() {
 # pull, build and label with version from package.json, e.g. v3.1.0
 function pb_build_release() {
   cd $pretzel_build
+
+  export pretzel_branch=master
+  branch=$(git status  --porcelain -b | head -1  | sed 's/^## //;s/\.\.\..*//')
+  if [ -n "$pretzel_branch" -a \( "$branch" != "$pretzel_branch" \) ]
+  then
+    set -x
+    # May integrate with pb_fetch(); just this line is different.
+    git fetch -v . origin/$pretzel_branch:$pretzel_branch || return
+    git checkout $pretzel_branch
+    set +x
+  fi
+
   git pull --ff-only || return
-  git fetch
-  set -x
-  git fetch -v . origin/master:master || return
-  git checkout master
-  set +x
+
   app=pretzel
   export PRETZEL_VERSION=v$(sed -n 's/",$//;s/^  "version": "//p' package.json)
   pb_build
@@ -112,6 +130,7 @@ function pb_build_feature_change() {
   git fetch
   # manual operation;  branch could be guessed from fetch trace
   # git checkout feature/guiChangesMessages
+  # instead pass pretzel_branch to pb_fetch
 
   # pb_build_feature does pull, which has no effect after above fetch & checkout
   pb_build_feature
