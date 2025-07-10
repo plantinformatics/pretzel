@@ -19,6 +19,8 @@ import {
 } from '../utils/panel/axis-table';
 import { afterSelectionFeatures } from '../utils/panel/feature-table';
 
+import { deletePunctuation } from './goto-feature-list';
+
 import config from '../config/environment';
 
 /* global d3 */
@@ -500,8 +502,24 @@ export default Component.extend({
     if (this.createdFeatures.length) {
       data = data.concat(this.createdFeatures);
     }
-    const datasetId = data?.[0]?.feature?.get('blockId.datasetId.id');
-    this.showColourSpan = datasetId === 'peptides_normalised-quanti';
+    const
+    fd = data?.uniqBy('feature.blockId.datasetId'),
+    datasets = fd.mapBy('feature.blockId.datasetId');
+    /** The dataset will be included in .colourColumns and in cellProperties to
+     * enable checking the cell feature is in a dataset with .cellColour, and to
+     * select colourScale.
+     * Currently one dataset with .cellColour will imply colouring for others;
+     * and in the intended use multiple datasets with the same columns will have
+     * .cellColour, so different rows of a column will have different
+     * .colourScale, to be indicated by the cell feature dataset.
+     */
+    this.colourColumns = datasets.mapBy('_meta.cellColour')
+      .filter(x => x)
+      .map(c => typeof c === 'string' ? JSON.parse(c) : c)
+      .map(({valueRegexp, colourScale}) =>
+        ({valueRegexp : new RegExp(deletePunctuation(valueRegexp)),
+          colourScale : deletePunctuation(colourScale)}));
+
 
     data = data.map((f) => {
       /** remove .feature from structure because it causes Handsontable to give errors. */
@@ -619,7 +637,7 @@ export default Component.extend({
      numbers.forEach((numStr, i) => {
        const num = parseFloat(numStr);
        const span = document.createElement('span');
-       span.className = 'number2colour';
+       span.className = 'number2colour ' + cellProperties.colourScale;
        span.textContent = numStr;
        span.style.setProperty('--value', num);
        span.style.marginRight = '0.2em'; // optional spacing
@@ -634,8 +652,10 @@ export default Component.extend({
   cells(row, col, prop) {
     let cellProperties = {};
 
-    if (this.showColourSpan && /*(typeof prop === 'string') &&*/ (prop.startsWith('AGG') && prop.endsWith('WHEA'))) {
+    const cellColour = this.colourColumns.find(c => c.valueRegexp.exec(prop));
+    if (cellColour) {
       cellProperties.renderer = 'ColourSpanRenderer';
+      cellProperties.colourScale = cellColour.colourScale;
     } else {
       cellProperties.renderer = Handsontable.renderers.TextRenderer;
     }

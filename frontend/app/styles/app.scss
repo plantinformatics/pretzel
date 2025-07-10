@@ -312,9 +312,12 @@ table.contextual-data-table td
   padding: 0.1em 0.3em;
   border-radius: 4px;
   color: #000;
-  // background-color: color-mix(in srgb, blue calc(var(--value) * 100%), white);
   font-variant-numeric: tabular-nums;
-
+}
+.number2colour.blue {
+  background-color: color-mix(in srgb, blue calc(var(--value) * 100%), white);
+}
+.number2colour.redGreen {
   background-color:
     color-mix(
       in srgb,
