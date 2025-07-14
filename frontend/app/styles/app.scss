@@ -2636,6 +2636,12 @@ div.genotype label
   font-family: "Courier New", --font-family-monospace;
 }
 
+.genotype-controls.select-passport-fields > ol > li.sortable-item,
+.genotype-controls.select-passport-fields ul > li > span.sortable
+{
+  border: 1px solid lightgray;
+  margin: 5px;
+}
 
 /*----------------------------------------------------------------------------*/
 

@@ -1,0 +1,48 @@
+{{log this 'dual-list' @availableItems @selectedItems }}
+
+{{!-- selection --}}
+<select multiple {{on "change" this.handleSelection}}>
+  {{#each @availableItems as |item|}}
+    <option value={{item}} >{{item}}</option>
+  {{/each}}
+</select>
+
+{{!-- ordered list --}}
+<ul>
+  {{#each this.selectedItems as |item index|}}
+    <li>
+      {{inc index}}
+      <button {{on "click" (fn this.moveUp index)}}>↑</button>
+      <button {{on "click" (fn this.moveDown index)}}>↓</button>
+      {{!--  .removeItem does not update selection in <select >, instead use Ctrl-click to de-select.
+      <button {{on "click" (fn this.removeItem item)}}>✕</button>
+      --}}
+      <span class="sortable">{{item}}</span>
+    </li>
+  {{/each}}
+</ul>
+
+{{!-- --------------------------------------------------------------------- --}}
+{{!--
+### **5. Optional: Drag and Drop**
+Use [ember-sortable](https://github.com/adopted-ember-addons/ember-sortable) to enable drag-and-drop reordering:
+--}}
+
+{{!--
+<SortableGroup @onChange={{this.reorder}} as |group|>
+  {{#each this.selectedItems as |item|}}
+    <SortableItem @model={{item}}>{{item}}</SortableItem>
+  {{/each}}
+</SortableGroup>
+--}}
+
+
+<ol {{sortable-group onChange=this.reorder }} >
+  {{#each this.selectedItems as |item|}}
+    <li {{sortable-item model=item spacing=15 distance=10}}>{{item}}</li>
+  {{/each}}
+</ol>
+
+
+{{!-- --------------------------------------------------------------------- --}}
+

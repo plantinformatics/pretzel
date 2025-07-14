@@ -3710,7 +3710,7 @@ export default class PanelManageGenotypeComponent extends Component {
     if (userSettings.sortByPassportFields && userSettings.passportFields.length) {
       fn = (...sampleNames) => {
         let cmp = 0;
-        const selectFields = userSettings.passportFields.mapBy('id');
+        const selectFields = userSettings.passportFields; // useSelectMultiple : .mapBy('id');
         /** Find the first non-zero comparison. The result of find() is not
          * used. cmp is exported. */
         selectFields.find(fieldName => {
@@ -5075,9 +5075,9 @@ export default class PanelManageGenotypeComponent extends Component {
     }
     let promise;
     const
-    /** values === passportFields */
-    /** may change passportFields to .mapBy('id') */
-    selectFields = this.args.userSettings.passportFields.mapBy('id'),
+    /** useSelectMultiple : values === passportFields;
+     * access passportFields with .mapBy('id') */
+    selectFields = this.args.userSettings.passportFields,
     genotypeIds = this.selectedSamples;
 
     this.gtDatasets.forEach(dataset => {
@@ -5096,7 +5096,7 @@ export default class PanelManageGenotypeComponent extends Component {
     promise =
       getPassportData({ genotypeIds, selectFields }, genolinkBaseUrl)
       .then(data => {
-        dLog(fnName, dataset.id, data);
+        dLog(fnName, dataset.id, selectFields, data);
         const
         d = data.content,
         samplesPassport = dataset.samplesPassport || (dataset.samplesPassport = {});

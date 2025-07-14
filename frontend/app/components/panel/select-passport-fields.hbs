@@ -1,6 +1,7 @@
+{{!-- tetherTarget #right-panel for SelectMultiple --}}
 <EmberModalDialog
   @onClose={{action (mut this.userSettings.showSelectPassportFields) false}}
-  @tetherTarget="#right-panel"
+  @tetherTarget="#holder"
   @translucentOverlay=true
   @title="Select Passport Fields"
   @header-icon='search'
@@ -8,12 +9,19 @@
 
   <div class="genotype-controls select-passport-fields">
 
-    <Form::SelectMultiple
+    <!-- Form::SelectMultiple
       @selectedValues={{@userSettings.passportFields}}
-      @values={{this.passportFieldNames}}
-      @selectValueArray={{this.selectedFieldsChanged}} />
+      @values={{this.passportFieldNamesObj}}
+      @selectValueArray={{this.selectedFieldsChanged}} / -->
 
-    <EmberTooltip @side="right" @delay=500>
+      <Panel::DualList
+      @selectedItems={{@userSettings.passportFields}}
+      @availableItems={{this.passportFieldNames}}
+      @selectValueArray={{this.selectedFieldsChanged}}
+      />
+
+
+    <EmberTooltip  @delay=500>
       <span>Displays the names of Passport data fields. These can be selected to add to the names displayed in the Genotype Table column headings.</span>
     </EmberTooltip>
 

@@ -327,7 +327,7 @@ function columnName2SampleName(columnName) {
 /** If selectFields.length, augment the given sample / accession name with selected
  * fields from the Passport data of the accession.
  * @param sampleName
- * @param selectFields	user-selected list of fields to add (userSettings.passportFields.mapBy('id'))
+ * @param selectFields	user-selected list of fields to add (userSettings.passportFields)
  * @param datasetId	to lookup the Passport data of the sampleName
  * @param visibleBlocks	for visibleBlocks[].datasetId.samplesPassport
  * which contains the Passport field value for the samples
@@ -686,7 +686,7 @@ function vcfFeatures2MatrixViewRowsResult(
   dataset = block?.get('datasetId'),
   datasetId = dataset?.get('id'),
   enableFeatureFilters = dataset.get('enableFeatureFilters');
-  const selectFields = userSettings.passportFields.mapBy('id');
+  const selectFields = userSettings.passportFields; // useSelectMultiple : .mapBy('id');
 
   let sampleNamesSet = new Set();
 

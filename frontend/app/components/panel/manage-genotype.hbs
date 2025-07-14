@@ -1107,7 +1107,8 @@ While scrolling through the Genotype Table this updates to show where the curren
         <span>
           <EmberTooltip @side="bottom" @delay=500>
           <span>Sort the Genotype Table columns by the selected Passport field values :
-            {{map-by 'id' @userSettings.passportFields}}.
+            {{!-- if useSelectMultiple, use map-by 'id' --}}
+            {{@userSettings.passportFields}}.
           </span>
           </EmberTooltip>
           <input type="checkbox"
