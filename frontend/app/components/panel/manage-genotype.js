@@ -4234,6 +4234,7 @@ export default class PanelManageGenotypeComponent extends Component {
     'args.userSettings.haplotypeFilterRef',
     'sampleFiltersCountSelected',
     'referenceSamplesCount',
+    'sampleNamesCmp',
   )
   get selectedSampleEffect () {
     const fnName = 'selectedSampleEffect';
