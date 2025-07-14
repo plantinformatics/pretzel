@@ -101,42 +101,4 @@ export default class DualListComponent extends Component {
     this.selectedItemsNotifyChange();
   }
 
-  @action
-  moveUp(index) {
-    const fnName = 'moveUp';
-    dLog(fnName, index);
-
-    if (index > 0) {
-      const selectedItems = this.selectedItems;
-      [selectedItems[index - 1], selectedItems[index]] = [selectedItems[index], selectedItems[index - 1]];
-      this.selectedItems = [...selectedItems]; // trigger reactivity
-      this.selectedItemsNotifyChange();
-    }
-  }
-
-  @action
-  moveDown(index) {
-    const fnName = 'moveDown';
-    dLog(fnName, index);
-
-    const selectedItems = this.selectedItems;
-    if (index < selectedItems.length - 1) {
-      [selectedItems[index + 1], selectedItems[index]] = [selectedItems[index], selectedItems[index + 1]];
-      this.selectedItems = [...selectedItems];
-      this.selectedItemsNotifyChange();
-    }
-  }
-
-  @action
-  removeItem(item) {
-    const fnName = 'removeItem';
-    dLog(fnName, item);
-
-    const selectedItems = this.selectedItems;
-    // this.selectedItems = selectedItems.filter(i => i !== item);
-    selectedItems.removeObject(item);
-    this.selectedItems = [...selectedItems];
-    this.selectedItemsNotifyChange();
-  }
-
 }
