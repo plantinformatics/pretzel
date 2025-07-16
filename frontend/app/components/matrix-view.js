@@ -47,7 +47,7 @@ import { toTitleCase } from '../utils/string';
 import { thenOrNow } from '../utils/common/promises';
 import { tableRowMerge } from '../utils/draw/progressive-table';
 import { eltWidthResizable, noKeyfilter } from '../utils/domElements';
-import { afterGetColHeader } from '../utils/dom/handsontable-header-resizer';
+import { afterGetColHeader /*as afterGetColHeaderResizer*/ } from '../utils/dom/handsontable-header-resizer';
 import { toggleString, sparseArrayFirstIndex } from '../utils/common/arrays';
 import { toggleMember } from '../utils/common/sets';
 import { toggleObject } from '../utils/ember-devel';
@@ -391,6 +391,32 @@ export default Component.extend({
     return width;
   },
 
+  //----------------------------------------------------------------------------
+  /** Add HTML elements in nestedHeaders rows.
+   * settings.nestedHeaders supports only text, whereas colHeaders accepts HTML.
+   */
+  afterGetColHeaderRows(col, TH) {
+    // Apply to Sample columns only, i.e. to the right of 'Alt'
+    if (col <= 6) return;
+    // don't re-apply. (idempotent)
+    if (TH.querySelector('done')) return;
+
+    // Only target the second row of headers (index 1)
+    const sampleName = TH.innerText;
+    if (TH && sampleName.match(/^AGG/)) {
+      TH.innerHTML = '<span class="colHeader done"><b>' + sampleName + '</b> <i class="info">ⓘ</i></span>';
+    } else {
+      TH.innerHTML = '<span class="colHeader done">' + sampleName + '</span>';
+    }
+  },
+  /*
+  afterGetColHeader(col, TH) {
+    afterGetColHeaderResizer(col, TH);
+    if (this.userSettings.passportFields) {
+      this.afterGetColHeaderRows(col, TH);
+    }
+  },
+  */
   // ---------------------------------------------------------------------------
 
   /** Show a white line between the Position [ / Ref / Alt] columns and the
@@ -522,7 +548,8 @@ export default Component.extend({
       outsideClickDeselects: true,
       afterOnCellMouseDown: bind(this, this.afterOnCellMouseDown),
       afterOnCellMouseOver,
-      afterGetColHeader,  // Column header height resizer
+      // Column header height resizer
+      afterGetColHeader, //  : bind(this, this.afterGetColHeader),
       beforeCopy: bind(this, this.beforeCopy),
       headerTooltips: {
         rows: false,
@@ -550,6 +577,8 @@ export default Component.extend({
       settings.afterScrollVertically = bind(this, this.afterScrollVertically);
     }
     settings.afterScrollVertically = this.afterScrollVertically_tablePosition.bind(this);
+    settings.afterScroll = () => { this.colWidthsSet(); this.colWidthsSamples(); };
+    // bind(this, this.colWidthsSamples);
 
     if (this.urlOptions.gtSelectColumn) {
       settings.afterSelection = bind(this, this.afterSelection);
@@ -600,6 +629,7 @@ export default Component.extend({
     }
 
     this.set('model.layout.matrixView.tableYDimensions', tableYDimensions());
+    this.colWidthsSamples();
   },
   showTextInTopLeftCorner(text) {
     /* Within #observational-table there are 4 
@@ -622,6 +652,7 @@ export default Component.extend({
     /** gtMergeRows : datasetId is not displayed, so width is not set  */
     let ot = d3.select('#observational-table');
     ot.classed('gtMergeRows', this.urlOptions.gtMergeRows);
+    ot.classed('nestedHeaders', this.userSettings.passportFields.length);
   },
 
   //----------------------------------------------------------------------------
@@ -1524,6 +1555,64 @@ export default Component.extend({
     });
     return colHeaders;
   }),
+  /** Add to settings : colHeaders, nestedHeaders, collapsibleColumns
+   */
+  colHeadersSettings(settings) {
+    const passportFields = this.userSettings.passportFields;
+    if (! passportFields.length) {
+      settings.colHeaders = this.colHeaders;
+    } else {
+      /** colHeaders() defines these which are missed in this case :
+       * positionFilter, positionFilterIcon, columnNameToClasses(),
+       * datasetId2Class(), col-selectedSample,
+       */
+      settings.colHeaders = true;
+      settings.nestedHeaders = passportFields.map((fieldName, i) => {
+        const h = this.columnNames.map(columnName =>
+          columnName[Symbol.for(fieldName)] || (columnName == 'Alt' ? fieldName : '') );
+        // could combine multiple consecutive equal values into e.g. { label: 'I', colspan: 2 }
+        // also : collapsibleColumns
+        return h;
+      });
+      settings.nestedHeaders.push(this.columnNames);
+      /** This does not succeed in disabling column width calculation, which is
+       * fixed by colWidthsSamples() */
+      settings.autoColumnSize = {useHeaders : false};
+    }
+  },
+  /** If .passportFields.length force the sample column widths to 25px, because
+   * column width calculation when using nestedHeaders instead of colHeaders
+   * seems to assume the header text is horizontal, i.e. not taking into account
+   * the transform: rotate(-90deg);
+   */
+  colWidthsSamples() {
+    if (! this.userSettings.passportFields.length) return;
+
+    function doTable(tableClass) {
+    const
+    colgroup$ = $('\
+div#observational-table \
+> div.' + tableClass + '.handsontable \
+> div.wtHolder \
+> div.wtHider \
+> div.wtSpreader \
+> table.htCore \
+> colgroup'),
+    colgroup = colgroup$[0];
+    if (colgroup) {
+      Array.from(colgroup.childNodes).slice(7).forEach(col => col.style.width="25px");
+    }
+    }
+    doTable('ht_clone_top');
+    doTable('ht_master');
+  },
+  colWidthsSet() {
+    const
+    columns = this.columnNamesToColumnOptions(this.columnNames),
+    settings = { columns };
+    // this.colHeadersSettings(settings);
+    this.table.updateSettings(settings);
+  },
   gtDatasetColumnIndexes : computed('columnNames', 'gtDatasetColumns', function () {
     const
     /** related : getColAttribute(col) assumes gtDatasetColumns[i] is in column i.
@@ -1546,10 +1635,11 @@ export default Component.extend({
     const fnName = 'positionFilterEffect';
     if (this.table) {
       const settings = {
-        colHeaders: this.colHeaders,
       };
+      this.colHeadersSettings(settings); 
       dLog(fnName);
       this.table.updateSettings(settings);
+      this.colWidthsSet();
     }
   }),
   /** @return true if the named column has a dataset attribute
@@ -2013,11 +2103,12 @@ export default Component.extend({
       repeat = largeArea ? 1 : 2;
       for(let i=0; i<repeat; i++) {
         const settings = {
-          colHeaders: this.colHeaders,
           columns,
           rowHeaderWidth: rowHeaderWidth,
           rowHeights : this.rowHeights,
         };
+        this.colHeadersSettings(settings);
+
         // .data is required, so invert the flag
         if (! (gtPlainRender & 0b100000)) {
           // this can be enabled as an alternative to progressiveRowMergeInBatch().
@@ -2068,6 +2159,7 @@ export default Component.extend({
       }
       t.hide();
     }
+    this.colWidthsSet();
     this.afterScrollVertically_tablePosition();
   },
 

@@ -311,11 +311,32 @@ function sampleName2ColumnName(sampleName) {
   return sampleName;
 }
 
+/** Copy Symbols from source to destination.
+ * Used to preserve attributes of sampleName (e.g. dataset, passport, passport
+ * fields) as it is formatted to columnName.
+ * An alternative is to move sampleName and the other attributes into a sample
+ * object, and use this in the various sample pipelines.
+ * @param source  Object
+ * @param destination Object
+ */
+function copySymbols(source, destination) {
+  for (const symbol of Object.getOwnPropertySymbols(source)) {
+    destination[symbol] = source[symbol];
+  }
+}
+
 function columnNameAppendDatasetId(columnName, datasetId) {
   /** Assume the SNPs are bi-allelic, so only display 1 Ref/Alt
    * regardless of multiple datasets. */
   if (! refAltHeadings.includes(columnName)) {
+    const previous = columnName;
     columnName = columnName + '\t' + datasetId;
+    /* Copy symbols if param is a String, (e.g. dataset, passport, passport
+     * fields) */
+    if (previous instanceof String) {
+      columnName = new String(columnName);
+      copySymbols(previous, columnName);
+    }
   }
   return columnName;
 }
@@ -351,7 +372,15 @@ function sampleNameAddPassport(sampleName, selectFields, datasetId, visibleBlock
         }
         return text;
       });
-      sampleName += ' | ' + values.join(', ');
+      /* The original implementation simply appended the Passport data values to
+       * the sampleName, but now nestedHeaders are used to instead display each
+       * Passport field in a separate row.
+      // sampleName += ' | ' + values.join(', ');
+      */
+      values.forEach((value, i) => {
+        const fieldName = selectFields[i];
+        sampleName = stringSetSymbol(Symbol.for(fieldName), sampleName, value);
+      });
     }
   }
   return sampleName;

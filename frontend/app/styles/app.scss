@@ -1819,7 +1819,8 @@ a.panel-heading-help > i {
   /* height : fit-content !important; */
 }
 /* .col-sample */
-#observational-table .head
+#observational-table .head,
+#observational-table.nestedHeaders span.colHeader
 {
   /* used --matrixViewColumnHeaderHeight * 0.84, and the threshold was at 250px, so 250px * (1 - .84) -> 40px */
   // margin-top: calc(var(--matrixViewColumnHeaderHeight) - 40px);
@@ -1828,6 +1829,9 @@ a.panel-heading-help > i {
   transform: rotate(-90deg);
   /* space above dataset colour border-left rectangle. */
   padding-left: 10px;
+  // These 2 were added for .nestedHeaders; maybe not required.
+  overflow : hidden;
+  white-space: nowrap;
 }
 #observational-table .head.col-Position
 {
