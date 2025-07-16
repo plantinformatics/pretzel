@@ -577,8 +577,6 @@ export default Component.extend({
       settings.afterScrollVertically = bind(this, this.afterScrollVertically);
     }
     settings.afterScrollVertically = this.afterScrollVertically_tablePosition.bind(this);
-    settings.afterScroll = () => { this.colWidthsSet(); this.colWidthsSamples(); };
-    // bind(this, this.colWidthsSamples);
 
     if (this.urlOptions.gtSelectColumn) {
       settings.afterSelection = bind(this, this.afterSelection);
@@ -629,7 +627,6 @@ export default Component.extend({
     }
 
     this.set('model.layout.matrixView.tableYDimensions', tableYDimensions());
-    this.colWidthsSamples();
   },
   showTextInTopLeftCorner(text) {
     /* Within #observational-table there are 4 
@@ -1575,18 +1572,23 @@ export default Component.extend({
         return h;
       });
       settings.nestedHeaders.push(this.columnNames);
-      /** This does not succeed in disabling column width calculation, which is
-       * fixed by colWidthsSamples() */
+      /** This does not succeed in disabling column width calculation; column
+       * widths are wrong after setting nestedHeaders - it seems to calculate
+       * the width disregarding the rotation of the header text from horizontal
+       * to vertical, which is fixed by colWidthsSet() (and earlier by
+       * colWidthsSamples()) */
       settings.autoColumnSize = {useHeaders : false};
     }
   },
+  useNestedHeaders : alias('userSettings.passportFields.length'),
+
   /** If .passportFields.length force the sample column widths to 25px, because
    * column width calculation when using nestedHeaders instead of colHeaders
    * seems to assume the header text is horizontal, i.e. not taking into account
    * the transform: rotate(-90deg);
    */
   colWidthsSamples() {
-    if (! this.userSettings.passportFields.length) return;
+    if (! this.useNestedHeaders) return;
 
     function doTable(tableClass) {
     const
@@ -1606,11 +1608,14 @@ div#observational-table \
     doTable('ht_clone_top');
     doTable('ht_master');
   },
+  /** If .useNestedHeaders, used after an updateSettings() which includes
+   * this.colHeadersSettings(settings) because nestedHeaders disrupts the
+   * colWidths.
+   */
   colWidthsSet() {
     const
     columns = this.columnNamesToColumnOptions(this.columnNames),
     settings = { columns };
-    // this.colHeadersSettings(settings);
     this.table.updateSettings(settings);
   },
   gtDatasetColumnIndexes : computed('columnNames', 'gtDatasetColumns', function () {
@@ -1639,7 +1644,9 @@ div#observational-table \
       this.colHeadersSettings(settings); 
       dLog(fnName);
       this.table.updateSettings(settings);
-      this.colWidthsSet();
+      if (this.useNestedHeaders) {
+        this.colWidthsSet();
+      }
     }
   }),
   /** @return true if the named column has a dataset attribute
@@ -2159,7 +2166,9 @@ div#observational-table \
       }
       t.hide();
     }
-    this.colWidthsSet();
+    if (this.useNestedHeaders) {
+      this.colWidthsSet();
+    }
     this.afterScrollVertically_tablePosition();
   },
 
