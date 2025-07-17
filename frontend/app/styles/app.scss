@@ -2608,7 +2608,7 @@ div.genotype label
   margin-top: 1em;
 }
 
-.genotype-controls > div {
+.genotype-controls > div:not(.tooltip) {
   min-width: 28em;
 }
 .lookup-line {

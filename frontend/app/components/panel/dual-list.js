@@ -68,10 +68,14 @@ export default class DualListComponent extends Component {
   @tracked
   lastDragged;
 
+  /** <select> element, initially null */
+  select = null;
+
   @action
   handleSelection(event) {
     const fnName = 'handleSelection';
     dLog(fnName, event);
+    this.select = event.target;
     let selected = Array.from(event.target.selectedOptions).map(o => o.value);
 
     // maintain order from current selectedItems when possible
@@ -100,5 +104,44 @@ export default class DualListComponent extends Component {
     this.lastDragged = draggedModel;
     this.selectedItemsNotifyChange();
   }
+  /** Clear the selection. */
+  @action
+  clearSelection() {
+    const fnName = 'clearSelection';
+    this.selectedItems = [];
+    if (this.select) {
+      for (const option of this.select.selectedOptions) {
+        dLog(fnName, option);
+        option.selected = false;
+      };
+    }
+    this.selectedItemsNotifyChange();
+  }
+  /** Clear the selection. */
+  @action
+  clearOption(itemName) {
+    const fnName = 'clearSelection';
+    if (this.select) {
+      const option = Array.from(this.select.selectedOptions).findBy('value', itemName);
+        dLog(fnName, option);
+        option.selected = false;
+    }
+  }
+
+  // re-instate, was dropped in 338bfa97
+  @action
+  removeItem(item) {
+    const fnName = 'removeItem';
+    dLog(fnName, item);
+    this.clearOption(item);
+
+    const selectedItems = this.selectedItems;
+    // this.selectedItems = selectedItems.filter(i => i !== item);
+    selectedItems.removeObject(item);
+    this.selectedItems = [...selectedItems];
+    this.selectedItemsNotifyChange();
+  }
+
+
 
 }

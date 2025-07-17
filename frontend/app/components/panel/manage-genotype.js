@@ -5084,7 +5084,7 @@ export default class PanelManageGenotypeComponent extends Component {
     this.gtDatasets.forEach(dataset => {
       // related : blocksSelectedSamples(blocks)
       const sampleNames = this.vcfGenotypeSamplesSelectedAll[dataset.id];
-      if (sampleNames) {
+      if (sampleNames?.length) {
         promise = this.datasetGetPassportData(dataset, sampleNames, selectFields);
       }
     });

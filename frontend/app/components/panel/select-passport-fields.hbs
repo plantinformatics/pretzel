@@ -21,14 +21,15 @@
       />
 
 
-    <EmberTooltip  @delay=500>
+    <!-- This is covered OK by the tooltip in dual-list.hbs
+      EmberTooltip  @side="bottom" @delay=500>
       <span>Displays the names of Passport data fields. These can be selected to add to the names displayed in the Genotype Table column headings.</span>
-    </EmberTooltip>
+    </EmberTooltip -->
 
   </div>
 
   <div class="margin-top">
-    <EmberTooltip @side="top" @delay=500>
+    <EmberTooltip @side="top-start" @delay=500>
       <span>Add the selected Passport field values to the column headings of the Genotype Table, and Close this selection dialog.
       </span>
     </EmberTooltip>
