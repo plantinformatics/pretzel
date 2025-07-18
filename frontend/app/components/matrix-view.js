@@ -1574,9 +1574,10 @@ export default Component.extend({
        * just text.
        */
       settings.colHeaders = true;
-      settings.nestedHeaders = passportFields.map((fieldName, i) => {
-        const h = this.columnNames.map(columnName =>
-          columnName[Symbol.for(fieldName)] || (columnName == 'Alt' ? fieldName : '') );
+      settings.nestedHeaders = passportFields.map((fieldName, row) => {
+        const h = this.columnNames.map((columnName, col) =>
+          // or : columnName == 'Alt' 
+          columnName[Symbol.for(fieldName)] || (col === 0 ? fieldName : ''));
         // could combine multiple consecutive equal values into e.g. { label: 'I', colspan: 2 }
         // also : collapsibleColumns
         return h;
