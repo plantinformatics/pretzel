@@ -95,6 +95,22 @@ function valueNameIsNotSample(valueName) {
   return nonSampleNames.includes(valueName);
 }
 
+/** Return true if sampleName matches the naming convention for AGG sample / accession names.
+ * It is not valid to send a request to Genolink for a genotypeId / sample name
+ * / accession name which is not present in Genolink, and the scope of Genolink
+ * is the samples in the AGG.
+ *
+ * For use in : components/matrix-view.js : afterGetColHeaderRows(),
+ * components/panel/genotype-samples.js : selectedSamplesGetPassport(),
+ * genolinkSearchURL().
+ * Used in manage-genotype.js : datasetGetPassportData().
+ *
+ * @return true or false
+ */
+export function sampleNameIsAGG(sampleName) {
+  return !!sampleName.match(/^AGG/);
+}
+
 //------------------------------------------------------------------------------
 
 /** if string.match(regexp), return match[valueIndex], otherwise undefined. 

@@ -46,11 +46,17 @@ function parentElementN(element, n) {
   return element;
 }
 export { afterGetColHeader }
-function afterGetColHeader(col, TH) {
+/** Enable user to drag .resize-handle within TH, to resize the height of this
+ * row of column headers.
+ * @param userSettings	for access to : columnHeaderHeight, .columnHeaderHeights, .passportFields
+ * @param col	column index
+ * @param TH	<th> which contains the resizer element, within column header
+ */
+function afterGetColHeader(userSettings, col, TH) {
   /* first call is within ht_master; wait for ht_clone_top where it will be visible. */
   const
   table = this;
-  // Add just in column -1 (left-most)
+  // Add .resize-handle only in column -1 (left-most)
   // Prevent multiple handles
   if ((col >= 0) || TH.querySelector(".resize-handle")) return;
 
@@ -73,7 +79,10 @@ function afterGetColHeader(col, TH) {
   });
 
   function resize(event) {
+    const fnName = 'resize';
     if (!isResizing) return;
+
+    // assert event.target.parentElement === TH
 
     /** prevent table selection */
     event.preventDefault(); // Cancel the native event
@@ -83,12 +92,50 @@ function afterGetColHeader(col, TH) {
     table.updateSettings({ disableVisualSelection: true });
 
     const newHeight = Math.max(20, startHeight + event.clientY - startY);
-    document.querySelectorAll(".handsontable thead th").forEach((th) => {
+    const
+    tr = TH.parentElement,
+    row = tr.ariaRowIndex,
+    /* use $() because document.querySelectorAll() doesn't support attribute
+     * search e.g. tr[aria-rowindex=2] */
+    th$ = $("#observational-table.handsontable thead tr[aria-rowindex=" + row + "]  th");
+    Array.from(th$).forEach((th) => {
       th.style.height = `${newHeight}px`;
     });
 
-    const settings = { columnHeaderHeight : newHeight };
-    table.updateSettings(settings);
+    const
+    /** nestedHeaders adds passportFields[] rows in the column header, above the
+     * row which shows the sampleName and is always present, either via
+     * colHeaders or nestedHeaders.  Resize of this row is recorded in
+     * .columnHeaderHeight (and also in .columnHeaderHeights['sampleName'] which
+     * is not used).
+     */
+    rowIsSampleName = (+row === userSettings.passportFields.length + 1),
+    // ariaRowIndex is 1-indexed. passportFields[] is 0-indexed.
+    fieldName = userSettings.passportFields[row - 1] ||
+      (rowIsSampleName && 'sampleName'),
+    columnHeaderHeights = userSettings.columnHeaderHeights || (userSettings.columnHeaderHeights = {});
+    columnHeaderHeights[fieldName] = newHeight;
+    if (rowIsSampleName) {
+      // this.setColumnHeaderHeight(newHeight);
+      userSettings.columnHeaderHeight = newHeight;
+    }
+
+    /** settings.columnHeaderHeight is an array when useNestedHeaders
+     */
+    const
+    settings = table.getSettings(),
+    columnHeaderHeight = settings.columnHeaderHeight;
+    if (Array.isArray(columnHeaderHeight)) {
+      columnHeaderHeight[row-1] = newHeight;
+      table.updateSettings({columnHeaderHeight});
+    } else { // expect : typeof columnHeaderHeight === 'number'
+      if (userSettings.passportFields?.length) {
+        console.log(
+          fnName, columnHeaderHeight, userSettings.passportFields,
+          settings.colHeaders?.length, settings.colHeaders?.at(-1));
+      }
+      table.updateSettings({ columnHeaderHeight : newHeight });
+    }
 
   }
 

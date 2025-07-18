@@ -7,6 +7,7 @@ import { later, once, bind, debounce } from '@ember/runloop';
 import { on } from '@ember/object/evented';
 import { task, didCancel, timeout } from 'ember-concurrency';
 
+// import lodash_bind from 'lodash/bind';
 
 /* global Handsontable */
 /* global $ */
@@ -47,7 +48,7 @@ import { toTitleCase } from '../utils/string';
 import { thenOrNow } from '../utils/common/promises';
 import { tableRowMerge } from '../utils/draw/progressive-table';
 import { eltWidthResizable, noKeyfilter } from '../utils/domElements';
-import { afterGetColHeader /*as afterGetColHeaderResizer*/ } from '../utils/dom/handsontable-header-resizer';
+import { afterGetColHeader as afterGetColHeaderResizer } from '../utils/dom/handsontable-header-resizer';
 import { toggleString, sparseArrayFirstIndex } from '../utils/common/arrays';
 import { toggleMember } from '../utils/common/sets';
 import { toggleObject } from '../utils/ember-devel';
@@ -409,14 +410,15 @@ export default Component.extend({
       TH.innerHTML = '<span class="colHeader done">' + sampleName + '</span>';
     }
   },
-  /*
   afterGetColHeader(col, TH) {
+    afterGetColHeaderResizer.apply(this.table, [this.userSettings, col, TH]);
+    /*
     afterGetColHeaderResizer(col, TH);
     if (this.userSettings.passportFields) {
       this.afterGetColHeaderRows(col, TH);
     }
+    */
   },
-  */
   // ---------------------------------------------------------------------------
 
   /** Show a white line between the Position [ / Ref / Alt] columns and the
@@ -549,7 +551,11 @@ export default Component.extend({
       afterOnCellMouseDown: bind(this, this.afterOnCellMouseDown),
       afterOnCellMouseOver,
       // Column header height resizer
-      afterGetColHeader, //  : bind(this, this.afterGetColHeader),
+      afterGetColHeader : bind(this, this.afterGetColHeader),
+      // this.table is not available yet, so wrap with this.afterGetColHeader().
+      // lodash_bind(afterGetColHeader, this.table, this.userSettings),
+      // afterGetColHeader requires this === .table
+      // (col, TH) => afterGetColHeader(col, TH, ),
       beforeCopy: bind(this, this.beforeCopy),
       headerTooltips: {
         rows: false,
@@ -1552,16 +1558,20 @@ export default Component.extend({
     });
     return colHeaders;
   }),
-  /** Add to settings : colHeaders, nestedHeaders, collapsibleColumns
+  /** Add to settings : colHeaders, nestedHeaders, (maybe later : collapsibleColumns).
+   * If passportFields.length, add .nestedHeaders, otherwise .colHeaders.
    */
   colHeadersSettings(settings) {
     const passportFields = this.userSettings.passportFields;
     if (! passportFields.length) {
       settings.colHeaders = this.colHeaders;
+      settings.nestedHeaders = null;
     } else {
       /** colHeaders() defines these which are missed in this case :
        * positionFilter, positionFilterIcon, columnNameToClasses(),
        * datasetId2Class(), col-selectedSample,
+       * Tried `= this.colHeaders` - same result as `= true`, i.e. no html,
+       * just text.
        */
       settings.colHeaders = true;
       settings.nestedHeaders = passportFields.map((fieldName, i) => {
@@ -1571,7 +1581,9 @@ export default Component.extend({
         // also : collapsibleColumns
         return h;
       });
-      settings.nestedHeaders.push(this.columnNames);
+      /** this loses Symbol(dataset), which is not used in nestedHeaders. */
+      const sampleNames = this.columnNames.map(columnName2SampleName);
+      settings.nestedHeaders.push(sampleNames);
       /** This does not succeed in disabling column width calculation; column
        * widths are wrong after setting nestedHeaders - it seems to calculate
        * the width disregarding the rotation of the header text from horizontal
@@ -2077,13 +2089,18 @@ div#observational-table \
     }
     let rows = this.get('rows');
     let rowHeaderWidth = this.get('rowHeaderWidth');
-    let colHeaderHeight = this.userSettings.columnHeaderHeight || this.get('colHeaderHeight');
+    let colHeaderHeight = this.userSettings.columnHeaderHeight ||
+        (this.userSettings.columnHeaderHeight = this.get('colHeaderHeight'));
     let table = this.get('table');
     let data = this.get('data');
     const gtPlainRender = this.urlOptions.gtPlainRender;
     dLog('matrix-view', fnName, t, rows.length, rowHeaderWidth, 'colHeaderHeight', colHeaderHeight, tableHeight, /*table,*/ data, this.blockSamples && 'vcf');
     // d3.select('body').style('--matrixViewColumnHeaderHeight', '' + colHeaderHeight + 'px');
+    /* .setColumnHeaderHeight() is not suited to nestedHeaders because it sets
+     * height of all rows indiscriminately, so userSettings.columnHeaderHeight
+     * is set directly above, and appended to fieldHeights[].
     this.setColumnHeaderHeight(colHeaderHeight);
+    */
 
     if (gtPlainRender & 0b10000) {
       this.hideColumns();
@@ -2128,6 +2145,16 @@ div#observational-table \
          * updateTable() and in utils/dom/handsontable-header-resizer.js : resize().
          */
         settings.columnHeaderHeight = colHeaderHeight;
+        if (this.useNestedHeaders) {
+          const
+          userSettings = this.userSettings,
+          fieldHeights = userSettings.passportFields.map((fieldName, i) => 
+            userSettings.columnHeaderHeights?.[fieldName] || 85 );
+            // colHeaderHeight/(i+1)
+          // sampleName row.  also this.userSettings.columnHeaderHeights['sampleName']
+          fieldHeights.push(this.userSettings.columnHeaderHeight);
+          settings.columnHeaderHeight = fieldHeights;
+        }
         if (this.fullPage) {
         } else {
           let nRows = rows.length;
@@ -2386,6 +2413,9 @@ div#observational-table \
   //----------------------------------------------------------------------------
 
   /** based on axis width resizer in axis-2d.js */
+
+  // resizedByDrag() and dragResizeListen() are replaced by
+  // utils/dom/handsontable-header-resizer.js : afterGetColHeader as afterGetColHeaderResizer
 
   /** Called when resizer element for column header height resize is dragged.
    * @param d data of the resizer elt

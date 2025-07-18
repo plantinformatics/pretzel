@@ -53,6 +53,7 @@ const /*import */{
 import {
   refAlt,
   valueNameIsNotSample,
+  sampleNameIsAGG,
 
   normalizeMaf,
   sampleIsFilteredOut,
@@ -5090,9 +5091,13 @@ export default class PanelManageGenotypeComponent extends Component {
     });
     return promise;
   }
+  /**
+   * @return promise which does not yield a value
+   */
   datasetGetPassportData(dataset, sampleNames, selectFields) {
     const fnName = 'datasetGetPassportData';
-    const genotypeIds = sampleNames;
+    const genotypeIds = sampleNames.filter(sampleNameIsAGG);
+    if (! genotypeIds.length) return Promise.resolve();
     const
     promise =
       getPassportData({ genotypeIds, selectFields }, genolinkBaseUrl)
