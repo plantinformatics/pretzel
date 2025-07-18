@@ -4,7 +4,7 @@
 <span>
   <select multiple {{on "change" this.handleSelection}}>
     {{#each @availableItems as |item|}}
-      <option value={{item}} >{{item}}</option>
+      <option value={{item}} selected={{call (fn this.selected item) }}>{{item}}</option>
     {{/each}}
   </select>
 

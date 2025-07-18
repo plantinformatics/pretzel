@@ -72,6 +72,26 @@ export default class DualListComponent extends Component {
   select = null;
 
   @action
+  /** Called when user selects an <option >.
+   * @param optionValue value of the selected row
+   *
+   * @desc
+   * For <select multiple >, after a user selection .selected is called for each
+   * option value.
+   */
+  selected(optionValue) {
+    const
+    fnName = 'selected',
+    selectedItems = this.args.selectedItems, 
+    /** The parent component is not permitted to pass @selectedItems=undefined or
+     * null; it should pass an initial value of [].
+     */
+    ok = selectedItems.includes(optionValue);
+    // dLog(fnName, ok, selectedItems, optionValue);
+    return ok;
+  }
+
+  @action
   handleSelection(event) {
     const fnName = 'handleSelection';
     dLog(fnName, event);
