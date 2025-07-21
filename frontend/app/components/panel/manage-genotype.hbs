@@ -1091,8 +1091,6 @@ While scrolling through the Genotype Table this updates to show where the curren
         </div>
         {{/if}}
 
-        {{#if this.urlOptions.new}}
-
         <span>
           <button type="button" class="btn btn-info" onclick={{pipe
               (action (mut @userSettings.showSelectPassportFields) true)
@@ -1125,8 +1123,6 @@ While scrolling through the Genotype Table this updates to show where the curren
             >
           </Panel::SelectPassportFields>
         {{/if}}
-
-        {{/if}}	{{!-- this.urlOptions.new --}}
 
       </div>
 
