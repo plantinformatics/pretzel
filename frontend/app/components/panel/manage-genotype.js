@@ -326,6 +326,10 @@ export default class PanelManageGenotypeComponent extends Component {
   @tracked
   receivedNamesCount = 0;
 
+  /** Counter of results from datasetsGetPassportData(). */
+  @tracked
+  passportDataCount = 0;
+
   // @alias('lookupBlockSamples.names')
   @computed('lookupDatasetId', 'receivedNamesCount')
   get vcfGenotypeSamplesText() {
@@ -2961,8 +2965,17 @@ export default class PanelManageGenotypeComponent extends Component {
     }
     if (this.args.userSettings.autoLookup) {
       promise = Promise.all(this.vcfGenotypeLookupAllDatasets());
+      const selectFields = this.args.userSettings.passportFields;
+      if (selectFields.length) {
+        promise = promise.then(() => this.datasetsGetPassportData(selectFields));
+        /* lookup causes render, but does not wait for PassportData,
+         * so signal a need for showSamplesWithinBrush().
+         */
+        promise.then(() => this.passportDataCount++);
+      }
     } else {
       promise = this.vcfGenotypeLookupSelected();
+      // could also : this.datasetGetPassportData(this.lookupBlock?.get('datasetId.content'), ...)
     }
     return promise;
   }
@@ -4236,6 +4249,7 @@ export default class PanelManageGenotypeComponent extends Component {
     'sampleFiltersCountSelected',
     'referenceSamplesCount',
     'sampleNamesCmp',
+    'passportDataCount',
   )
   get selectedSampleEffect () {
     const fnName = 'selectedSampleEffect';
@@ -5075,23 +5089,34 @@ export default class PanelManageGenotypeComponent extends Component {
     if (! add) {
       return Promise.resolve();
     }
-    let promise;
     const
     /** useSelectMultiple : values === passportFields;
      * access passportFields with .mapBy('id') */
     selectFields = this.args.userSettings.passportFields,
-    genotypeIds = this.selectedSamples;
-
-    this.gtDatasets.forEach(dataset => {
-      // related : blocksSelectedSamples(blocks)
-      const sampleNames = this.vcfGenotypeSamplesSelectedAll[dataset.id];
-      if (sampleNames?.length) {
-        promise = this.datasetGetPassportData(dataset, sampleNames, selectFields);
-      }
-    });
+    promise = this.datasetsGetPassportData(selectFields);
     return promise;
   }
-  /**
+  /** For each of the viewed datasets, .gtDatasets, call datasetGetPassportData().
+   */
+  datasetsGetPassportData(selectFields) {
+    const
+    promises =
+    this.gtDatasets.map(dataset => {
+      // related : blocksSelectedSamples(blocks)
+      const sampleNames = this.vcfGenotypeSamplesSelectedAll[dataset.id];
+      const
+      promise = sampleNames?.length ?
+        this.datasetGetPassportData(dataset, sampleNames, selectFields) :
+        Promise.resolve();
+      return promise;
+    });
+    return Promise.all(promises);
+  }
+  /** Get the Passport data values indicated by selectFields for the given
+   * dataset and sampleNames.
+   * @param dataset
+   * @param sampleNames
+   * @param selectFields  array of string Passport field names
    * @return promise which does not yield a value
    */
   datasetGetPassportData(dataset, sampleNames, selectFields) {
