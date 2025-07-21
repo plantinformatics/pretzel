@@ -394,15 +394,32 @@ export default Component.extend({
 
   //----------------------------------------------------------------------------
   /** Add HTML elements in nestedHeaders rows.
-   * settings.nestedHeaders supports only text, whereas colHeaders accepts HTML.
+   * settings.nestedHeaders supports only text, whereas colHeaders accepts HTML,
+   * so this callback is used to customise the generated HTML.
    */
   afterGetColHeaderRows(col, TH) {
+    /** Add a class passport-row-header to column header cells in column 0,
+     * except the last one, which is the sampleName row.
+     * The rows above the last row contain Passport field values.
+     */
+    if ((col === 0) && ! TH.querySelector('.passport-row-header')) {
+      const
+      tr = TH.parentElement,
+      row = tr.ariaRowIndex,
+      // Identify if it's the last header row, which contains sampleName
+      rowIsSampleName = (+row === this.userSettings.passportFields.length + 1);
+      if (!rowIsSampleName) {
+        TH.classList.add('passport-row-header');
+      }
+    }
+  },
+  /**  Experiment, not used. */
+  afterGetColHeaderIcon(col, TH) {
     // Apply to Sample columns only, i.e. to the right of 'Alt'
     if (col <= 6) return;
-    // don't re-apply. (idempotent)
-    if (TH.querySelector('done')) return;
+    // Don't re-apply the changes made by this function. (idempotent)
+    if (TH.querySelector('.done')) return;
 
-    // Only target the second row of headers (index 1)
     const sampleName = TH.innerText;
     if (TH && sampleName.match(/^AGG/)) {
       TH.innerHTML = '<span class="colHeader done"><b>' + sampleName + '</b> <i class="info">ⓘ</i></span>';
@@ -414,10 +431,10 @@ export default Component.extend({
     afterGetColHeaderResizer.apply(this.table, [this.userSettings, col, TH]);
     /*
     afterGetColHeaderResizer(col, TH);
-    if (this.userSettings.passportFields) {
+    */
+    if (this.userSettings.passportFields.length) {
       this.afterGetColHeaderRows(col, TH);
     }
-    */
   },
   // ---------------------------------------------------------------------------
 
