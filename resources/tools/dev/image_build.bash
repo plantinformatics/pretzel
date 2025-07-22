@@ -25,7 +25,9 @@ echo $logDate;
 pb_set() {
   app=pretzel
   baseName=plantinformaticscollaboration/$app
-  export PRETZEL_VERSION=v$logDate
+  # can be overridden by pb_build_release
+  export PRETZEL_VERSION
+  echo PRETZEL_VERSION=${PRETZEL_VERSION=v$logDate}
   image=$app:$PRETZEL_VERSION
   LB=~/log/build/docker/$logDate
   L=~/log/compose/$stage/$logDate
@@ -49,6 +51,12 @@ function pb_fetch() {
   cd $pretzel_build;
   git status -sb
   git fetch
+  branch=$(git status  --porcelain -b | head -1  | sed 's/^## //;s/\.\.\..*//')
+  if [ -n "$pretzel_branch" -a \( $branch != $pretzel_branch] \) ]
+  then
+    # git fetch -v . origin/$pretzel_branch:$pretzel_branch
+    git checkout $pretzel_branch
+  fi
   # manual operation
   # git checkout feature/guiChangesLeftPanel
   # follow this with : pb_build_feature
@@ -65,8 +73,10 @@ function pb_build_feature() {
   HEAD_new=$(git rev-parse HEAD)
   [ "$HEAD_old" = "$HEAD_new" ]
   HEAD_unchanged=$?
-  # if unchanged is false (true is 0)
-  if [ "$HEAD_unchanged" -ne 0 ]
+  # build if $build_if_pulled is true or unchanged is false (true is 0)
+  # build_if_pulled may be undefined so use string comparison (-eq and -ne
+  # require a number).  HEAD_unchanged is defined.
+  if [ \( "$build_if_pulled" =  0 \) -o \( "$HEAD_unchanged" -ne 0 \) ]
   then
     pb_build
   fi
@@ -90,12 +100,20 @@ function pb_build() {
 # pull, build and label with version from package.json, e.g. v3.1.0
 function pb_build_release() {
   cd $pretzel_build
+
+  export pretzel_branch=master
+  branch=$(git status  --porcelain -b | head -1  | sed 's/^## //;s/\.\.\..*//')
+  if [ -n "$pretzel_branch" -a \( "$branch" != "$pretzel_branch" \) ]
+  then
+    set -x
+    # May integrate with pb_fetch(); just this line is different.
+    git fetch -v . origin/$pretzel_branch:$pretzel_branch || return
+    git checkout $pretzel_branch
+    set +x
+  fi
+
   git pull --ff-only || return
-  git fetch
-  set -x
-  git fetch -v . origin/master:master || return
-  git checkout master
-  set +x
+
   app=pretzel
   export PRETZEL_VERSION=v$(sed -n 's/",$//;s/^  "version": "//p' package.json)
   pb_build
@@ -112,6 +130,7 @@ function pb_build_feature_change() {
   git fetch
   # manual operation;  branch could be guessed from fetch trace
   # git checkout feature/guiChangesMessages
+  # instead pass pretzel_branch to pb_fetch
 
   # pb_build_feature does pull, which has no effect after above fetch & checkout
   pb_build_feature
@@ -134,11 +153,109 @@ stage=dev
 
 L=~/log/compose/$stage/$logDate
 
+#-------------------------------------------------------------------------------
+
 pb_compose_down_up() {
   docker compose --progress=plain   --file $Dc/docker-compose.$stage.yaml  --env-file $Dc/pretzel.compose.$stage.env down
   nohup docker compose --progress=plain   --file $Dc/docker-compose.$stage.yaml  --env-file $Dc/pretzel.compose.$stage.env  up > $L &
 }
 
+#-------------------------------------------------------------------------------
+
+# Backup the existing container logs
+pb_backup_logs() {
+  # ls -gGArtF ~/log/compose/$stage | tail
+  for i in api database blastserver; do docker logs pretzel-$stage-$i-1 >& ~/log/compose/$stage/$i.$logDate; done
+  ls -gGArtF ~/log/compose/$stage | tail
+}
+
+# Build Pretzel Release
+#
+pb_build_and_release() {
+
+  echo $stage
+  stage=prod
+
+  if df_available_gt /mnt/dockerBuild 10
+  then
+    :
+  else
+    echo 1>&2 Insufficient space on docker build volume.  Use e.g. docker builder prune.
+    df -h /mnt/dockerBuild
+    return 1
+  fi
+
+  # Fetch the latest commits
+  cd $pretzel_build
+  git status
+
+  if [ $(git branch --show-current) = master ]
+  then
+    git pull
+  else
+    git fetch -v . origin/master:master
+    git checkout master
+  fi
+
+
+  # Configure
+  echo app=$app
+  app=pretzel
+  pb_set
+  pb_show
+
+
+  # Change the date-stamped version to a Release version
+  export PRETZEL_VERSION=v$(sed -n 's/",$//;s/^  "version": "//p' package.json)
+  echo $PRETZEL_VERSION
+  export PRETZEL_SERVER_IMAGE=$baseName:$PRETZEL_VERSION
+  echo PRETZEL_SERVER_IMAGE=$PRETZEL_SERVER_IMAGE
+
+  # Build the Docker image
+  pb_build_release
+
+  # Check the result
+  docker image ls | head
+  # set +x
+  pb_tag
+  echo Dc=$Dc
+  echo logDate=$logDate
+  echo stage=$stage
+
+  stage=prod
+  # Backup the existing container logs
+  pb_backup_logs
+
+  echo $L
+  docker ps
+  docker logs --tail 30 pretzel-prod-api-1
+  date
+
+  # Install the built release
+  pb_compose_down_up
+
+  for tag in $PRETZEL_VERSION latest; do docker push $baseName:$tag; done
+}
+
+#-------------------------------------------------------------------------------
+
+# Determine if the disc space available on the given volume is greater than the given
+#
+# @param df_volume	absolute path of volume, e.g. /mnt/dockerBuild
+# @param df_GB_threshold	minimum GB of space required, e.g. 10
+# (calculation currently x 10e6 instead of x 1048576 )
+# @return true (0) if there is sufficient space
+#
+# Usage example : df_available_gt /mnt/dockerBuild 10; echo $?
+function df_available_gt() {
+  df_volume=$1
+  df_GB_threshold=$2  # or  $(expr $2 \* 1024 \* 1024), instead of "000000"
+  available=$(df --output=avail $df_volume | tail -n +2)
+  [ -n "$available" -a \( "$available" -gt ${df_GB_threshold}000000 \) ]
+}
+
+
+#-------------------------------------------------------------------------------
 
 #===============================================================================
 

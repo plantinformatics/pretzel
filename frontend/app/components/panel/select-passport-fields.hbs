@@ -1,0 +1,38 @@
+<EmberModalDialog
+  @onClose={{action (mut this.userSettings.showSelectPassportFields) false}}
+  @tetherTarget="#right-panel"
+  @translucentOverlay=true
+  @title="Select Passport Fields"
+  @header-icon='search'
+>
+
+  <div class="genotype-controls select-passport-fields">
+
+    <Form::SelectMultiple
+      @selectedValues={{@userSettings.passportFields}}
+      @values={{this.passportFieldNames}}
+      @selectValueArray={{this.selectedFieldsChanged}} />
+
+    <EmberTooltip @side="right" @delay=500>
+      <span>Displays the names of Passport data fields. These can be selected to add to the names displayed in the Genotype Table column headings.</span>
+    </EmberTooltip>
+
+  </div>
+
+  <div class="margin-top">
+    <EmberTooltip @side="bottom" @delay=500>
+      <span>Add the selected Passport field values to the column headings of the Genotype Table, and Close this selection dialog.
+      </span>
+    </EmberTooltip>
+    <button type="button" class="btn btn-info btn-xs margin-top"
+      onclick={{action this.updateAndClose}}
+      >
+      Update and Close
+    </button>
+  </div>
+
+  {{#if this.genolinkErrorMessage}}
+    <div>{{this.genolinkErrorMessage}}</div>
+  {{/if}}
+
+</EmberModalDialog>

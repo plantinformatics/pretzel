@@ -317,14 +317,14 @@ export default Component.extend({
 //------------------------------------------------------------------------------
 
 /** based on lb4app/lb3app/common/models/feature.js
- * with additional (simple regexp) punctuation excluded : *?\[\] |
+ * with additional (simple regexp) punctuation excluded : ?\[\] |
  */
 
-const deletePunctuationRe = /[^-_.,: 0-9A-Za-z]+/g;
+const deletePunctuationRe = /[^-_.,:* 0-9A-Za-z]+/g;
 
 /* Based on deletePunctuation() in common/utilities/spreadsheet-read.js
  */
-function deletePunctuation(s) {
+export function deletePunctuation(s) {
   const res = s.replaceAll(deletePunctuationRe, '');
   if (res != s) {
     console.log('deletePunctuation', 'modified', res, s);

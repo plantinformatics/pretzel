@@ -118,3 +118,35 @@ function nameSort(array) {
 }
 
 //------------------------------------------------------------------------------
+
+/** Return a comparator function for Array.sort(), which will
+ * sort a array using the given array compareFunctions, which have
+ * the same signature as the cmpFn parameter to Array.sort().
+ * Each of the compare functions is applied in turn until one returns a non-zero comparison.
+ * i.e. compareFunctions defines a nested sort - if the first function compares
+ * equal, then continue to evaluate the next compare function.
+ * @param compareFunctions	array of (a, b) => a-b  (returning -ve/0/+ve)
+ * @return (a, b) => -ve/0/+ve
+ * @desc
+ *
+ * Example usage :
+ *   [["a", 56], ["a", 34], ["b" 12"]].sort(
+ *    arraySortNestedComparator(
+ *      [(a,b) => a[0].localeCompare(b[0]),
+ *       (a,b) => (b[1] - a[1])])
+ */
+export function arraySortNestedComparator(compareFunctions) {
+  const fn = (a, b) => {
+    let cmp = 0;
+    /** Find the first non-zero comparison. The result of find() is not
+     * used. cmp is exported. */
+    compareFunctions.find(compareFunction => (
+      cmp = compareFunction(a, b)
+    ));
+    return cmp;
+  };
+  return fn;
+}
+
+
+//------------------------------------------------------------------------------

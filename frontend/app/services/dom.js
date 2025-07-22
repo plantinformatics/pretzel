@@ -15,7 +15,7 @@ export default class DomService extends Service {
   receiveEventCb(state) {
     const receiveEvent = (event) => {
       const key = event.key;
-      dLog('receiveEvent', key, state, this.states);
+      // dLog('receiveEvent', key, state, this.states);
       if (modifiers.includes(key))
         this.states[key] = state;
     };

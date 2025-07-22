@@ -1,0 +1,26 @@
+{{page-title "AccountSettings"}}
+
+<hr>
+
+<div class="margin-1em">
+  <button type="button" class="btn btn-info"
+    onclick={{action (mut this.userSettings.showColourThemeModal) true}}>
+    Choose Colour Theme
+  </button>
+  <EmberTooltip @side="left" @delay=500>
+    <span>Choose colour theme, including accessible colours for colour-blindness.</span>
+  </EmberTooltip>
+</div>
+
+{{#if this.userSettings.showColourThemeModal}}
+  <ColourThemeSelector @userSettings={{this.userSettings}} >
+  </ColourThemeSelector>
+{{/if}}
+
+<hr>
+
+<Form::DataLicenceAgreements />
+
+<hr>
+
+{{outlet}}

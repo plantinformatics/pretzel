@@ -1,10 +1,10 @@
 <div>
   <div class="genotype-controls haplotypes-samples">
 
-    {{form/select-multiple
-      selectedValue=this.haplotypesSelected
-      values=this.haplotypesSamplesText
-      selectedGroupChanged=(action this.selectedHaplotypeChanged) }}
+    <Form::SelectMultiple
+      @selectedValues={{this.haplotypesSelected}}
+      @values={{this.haplotypesSamplesText}}
+      @selectValueArray={{this.selectedHaplotypeChanged}} />
 
 
     <EmberTooltip @side="right" @delay=500>

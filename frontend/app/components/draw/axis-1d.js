@@ -833,6 +833,10 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
    * The suffix Effect is used to denote a Side Effect triggered by a CF.
    */
   featureLengthEffect : computed('featureLength', 'flipRegionCounter', 'axisS', function () {
+    if (this.isDestroying) {
+      console.warning('featureLengthEffect', 'isDestroying', this);
+      return 0;
+    }
     let featureLength = this.get('featureLength');
 
     this.renderTicksDebounce();

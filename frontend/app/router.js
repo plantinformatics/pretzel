@@ -31,6 +31,7 @@ Router.map(function() {
     this.route('edit');
     this.route('delete');
   });
+  this.route('account-settings');
 
   // landing page if not handled previously
   this.route('404', { path: '/*wildcard' });

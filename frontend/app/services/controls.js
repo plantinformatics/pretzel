@@ -4,6 +4,8 @@ import Evented from '@ember/object/evented';
 import Service from '@ember/service';
 import { inject as service } from '@ember/service';
 
+import { storageFor } from 'ember-local-storage';
+
 import { pick } from 'lodash/object';
 
 import { stacks } from '../utils/stacks';
@@ -16,6 +18,22 @@ const dLog = console.debug;
  */
 export default Service.extend(Evented, {
   apiServers : service(),
+
+  /** When adding new data fields to userConfData, also add any required initial
+   * default value to initialData in frontend/app/storages/user-conf-data.js.
+   *
+   * Placing data in userConfData avoids having to add to app/storages/ for each
+   * data field, but it is still required to apply .set() to this.localSettings,
+   * as is done for example in userSettingsChange() in
+   * components/form/data-licence-agreements.js
+   *
+   * Because of the de/serialisation cost, large data should be placed in a
+   * separate localStorage(), as is done for example in services/data/view.js
+   * for blockViewHistory.
+   */
+  localSettings: storageFor('userConfData'),
+
+  userSettings : {genotype : {}},
 
   window : alias('view.controls.window'),
   /**
@@ -31,6 +49,14 @@ export default Service.extend(Evented, {
    * Glimmer Components, e.g.  'component:panel/manage-genotype'
    */
   registrationsByName : { updateCount : 0},
+
+  //----------------------------------------------------------------------------
+
+  init() {
+    this._super.apply(this, ...arguments);
+
+    this.set('userSettings.localStorage', this.localSettings);
+  },
 
   //----------------------------------------------------------------------------
 

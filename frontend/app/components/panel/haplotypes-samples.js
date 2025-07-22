@@ -75,8 +75,7 @@ export default class PanelHaplotypesSamplesComponent extends Component {
 
     function parseResult(data) {
       const
-      parsed = data.trim().split('\n')
-      .map(line => {
+      parsed = data.trim().split('\n').map(line => {
         const
         columns = line.split(' '),
         [haplotype, count, samplesText] = columns,
@@ -213,7 +212,7 @@ export default class PanelHaplotypesSamplesComponent extends Component {
 
   /** defined if user has selected haplotypes, for samples to lookup. */
   @tracked
-  haplotypesSelected = undefined;
+  haplotypesSelected = [];
 
   /** Called via user selection change in select-multiple
    * The parameters added and deleted indicate changes to the selection.
@@ -221,45 +220,14 @@ export default class PanelHaplotypesSamplesComponent extends Component {
    *  { id, name, ... } Ember Object
    * See form/select-multiple.js : selectedGroupChangedId().
    *
-   * @param added
-   * @param deleted
-   *
-   * based on manage-explorer.js : selectedCategoryChanged()
+   * @param values : current list of selected values;  === userSettings.passportFields
+   * @param c : element de/selected in the current event
+   * @param add : true if c was selected
    */
-  selectedHaplotypeChanged(added, deleted) {
-    const fnName = 'selectedHaplotypeChanged';
-
-    const isMultiple = true;
-    /* This would only be relevant if multiple was not used.
-    if (selectedHaplotype === noHaplotype) {
-      this.haplotypesSelected = null;
-    } else if (! isMultiple) {
-      this.haplotypesSelected = selectedHaplotype;
-    } else */ {
-      const
-      haplotypes = this.haplotypesSelected || (this.haplotypesSelected = []);
-      /** or c === selectedHaplotype */
-      // present = haplotypes.find(c => c.id == selectedHaplotype.id);
-      /** use .pushObject() (or .removeObject) so that () sees the
-       * change to its dependency haplotypesSelected.length */
-      const
-      /** changes[add=true] === added. */
-      changes = [deleted, added];
-      /** delete then add. */
-      [false, true].forEach(add => {
-        const change = changes[+add];
-        change.forEach(c => {
-          if (add) {
-            haplotypes.pushObject(c);
-          } else {
-            haplotypes.removeObject(c);
-          }
-          const samples = c.samples;
-          this.args.the.selectSampleArray(samples, add);
-        });
-      });
-    }
-    dLog(fnName, added, deleted, this.haplotypesSelected);
+  @action
+  selectedHaplotypeChanged(values, c, add) {
+    const samples = c.samples;
+    this.args.the.selectSampleArray(samples, add);
   }
 
   //----------------------------------------------------------------------------
