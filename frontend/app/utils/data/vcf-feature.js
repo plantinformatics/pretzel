@@ -49,6 +49,7 @@ const trace = 1;
 //------------------------------------------------------------------------------
 
 const datasetSymbol = Symbol.for('dataset');
+const passportSymbol = Symbol.for('passport');
 const featureSymbol = Symbol.for('feature');
 const sampleMatchesSymbol = Symbol.for('sampleMatches');
 const callRateSymbol = Symbol.for('callRate');
@@ -323,6 +324,80 @@ function columnName2SampleName(columnName) {
   return sampleName;
 }
 
+/** If selectFields.length, augment the given sample / accession name with selected
+ * fields from the Passport data of the accession.
+ * @param sampleName
+ * @param selectFields	user-selected list of fields to add (userSettings.passportFields.mapBy('id'))
+ * @param datasetId	to lookup the Passport data of the sampleName
+ * @param visibleBlocks	for visibleBlocks[].datasetId.samplesPassport
+ * which contains the Passport field value for the samples
+ */
+function sampleNameAddPassport(sampleName, selectFields, datasetId, visibleBlocks) {
+  if (selectFields.length && ! valueNameIsNotSample(sampleName)) {
+  const 
+    block = visibleBlocks.find(b => b.datasetId.id == datasetId),
+    dataset = contentOf(block.datasetId);
+    if (dataset?.samplesPassport?.[sampleName]) {
+      const values = selectFields.map(fieldName => {
+        let text = dataset.samplesPassport[sampleName][fieldName];
+        /** 'aliases' value is an array of objects; use the .name field  */
+        if ((typeof text === 'object') && Array.isArray(text) &&
+            (typeof text[0] === 'object')) {
+          const
+          aliases = text.mapBy('name'),
+          /** there is a lot of repetition in aliases[] */
+          aliasesUnique = Array.from(new Set(aliases));
+          text = aliasesUnique.join(',');
+        }
+        return text;
+      });
+      sampleName += ' | ' + values.join(', ');
+    }
+  }
+  return sampleName;
+}
+
+/** Compare Passport data values.
+ * @param values  [a, b] to compare
+ * @return a-b or the equivalent, depending on the type of values.
+ */
+export function passportValueCompare(values) {
+  const
+  types = values.map(v => typeof v),
+  cmp =
+    (types[0] === 'string') && (types[1] === 'string') ?
+    values[0].localeCompare(values[1]) :
+    (types[0] === 'number') && (types[1] === 'number' ) ?
+    (values[0] - values[1]) :
+    ! values[0] || ! values[1] ? 0 :
+    Array.isArray(values[0]) && Array.isArray(values[1]) ?
+    passportValueCompare([values[0][0], values[1][0]]) : 0;
+  return cmp;
+}
+
+/** At the last stage of preparing sampleNames for use as column headers they
+ * are augmented with Passport data fields (optional) and datasetId.
+ */
+function augmentSampleName(sampleName, selectFields, datasetId, visibleBlocks) {
+  // no change when ! selectFields.length
+  sampleName = sampleNameAddPassport(sampleName, selectFields, datasetId, visibleBlocks);
+  sampleName = columnNameAppendDatasetId(sampleName, datasetId);
+  return sampleName;
+}
+
+/** Reverse of augmentSampleName().
+ * Related : columnName2SampleName().
+ *
+ * All this mapping back and forth is not ideal; that would be reduced by a
+ * current proposal to move passport fields (and datasetId) into separate rows
+ * within the column header; alternately may introduce a sample object exposing
+ * these various display forms.
+ */
+export function augmented2SampleName(augmentedName) {
+  const sampleName = (augmentedName.split(' | ')?.[0]) || sampleName;
+  return sampleName;
+}
+
 //------------------------------------------------------------------------------
 
 
@@ -569,7 +644,7 @@ function blockToMatrixColumn(singleBlock, block, sampleName, features) {
 
  * @param featureFilter filter applied to featuresArrays[*]
  * @param sampleFilters array of optional additional filters (selected sample, callRate filter)
- * @param options { userSettings }
+ * @param options { userSettings, selectedSamples, visibleBlocks }
  * @return result : {rows, sampleNames}
  */
 function vcfFeatures2MatrixViewRows(
@@ -607,9 +682,11 @@ function vcfFeatures2MatrixViewRowsResult(
   const showHaplotypeColumn = features.length && features[0].values.tSNP;
   const block = features.length && contentOf(features[0].blockId);
   const
+  /** this is currently a Proxy; could use contentFor(). */
   dataset = block?.get('datasetId'),
   datasetId = dataset?.get('id'),
   enableFeatureFilters = dataset.get('enableFeatureFilters');
+  const selectFields = userSettings.passportFields.mapBy('id');
 
   let sampleNamesSet = new Set();
 
@@ -703,7 +780,7 @@ function vcfFeatures2MatrixViewRowsResult(
               cell = (row[sampleName] ||= []);
               cell.push(fx);
             } else {
-              sampleName = columnNameAppendDatasetId(sampleName, datasetId);
+              sampleName = augmentSampleName(sampleName, selectFields, datasetId, options.visibleBlocks);
               row[sampleName] = fx;
             }
             return res2;
@@ -748,11 +825,26 @@ function vcfFeatures2MatrixViewRowsResult(
    * whether they should be separate columns, which would favour annotating with
    * block here.  This value is used in matrix-view : colHeaders().
    */
-  columnNames = Array.from(sampleNamesSet.keys())
+  columnNamesSorted = Array.from(sampleNamesSet.keys())
     .filter(name => (datasetIndex === 0) || ! refAltHeadings.includes(name))
     .map(sampleName2ColumnName)
-    .sort(columnNamesCmp)
-    .map((name) => columnNameAppendDatasetId(name, datasetId))
+    /** passportSymbol is used by : columnNamesCmp() -> sampleNamesCmpField() -> findPassportFields()
+     */
+     .map(name => {
+       const fieldValues = Ember_get(dataset, 'samplesPassport')?.[name];
+       if (fieldValues) { name = stringSetSymbol(passportSymbol, name, fieldValues); }
+       return name; })
+    .sort(columnNamesCmp),
+  /* for re-adding passportSymbol, if required.
+  fieldValues = columnNamesSorted
+    .map(name => Ember_get(dataset, 'samplesPassport')?.[name]),
+    */
+  columnNames = columnNamesSorted
+    // could skip these for non-samples
+    .map((name) => augmentSampleName(name, selectFields, datasetId, options.visibleBlocks))
+    /* Could re-add passportSymbol via :
+    .map((name, i) => stringSetSymbol(passportSymbol, name, fieldValues[i]))
+    */
     .map(name => stringSetSymbol(datasetSymbol, name, dataset));
   result.sampleNames.addObjects(columnNames);
 

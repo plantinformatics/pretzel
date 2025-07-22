@@ -25,7 +25,7 @@ import { thenOrNow, contentOf, pollCondition, promiseThrottle } from '../../util
 import { responseTextParseHtml } from '../../utils/domElements';
 import { fileDownloadBlob, fileDownloadAsCSV, text2Gzip } from '../../utils/dom/file-download';
 import { clipboard_writeText } from '../../utils/common/html';
-import { arrayChoose } from  '../../utils/common/arrays';
+import { arrayChoose, arraySortNestedComparator } from  '../../utils/common/arrays';
 import { intervalSize } from '../../utils/interval-calcs';
 import { inRange, overlapInterval } from '../../utils/draw/zoomPanCalcs';
 import { featuresIntervalsForTree } from '../../utils/data/features';
@@ -45,6 +45,11 @@ const /*import */{
   addFeaturesBrapi,
 } = vcfGenotypeBrapi.vcfFeature; /*from 'vcf-genotype-brapi'; */
 
+const /*import */{
+  getPassportData,
+} = vcfGenotypeBrapi.genolinkPassport; /*from 'vcf-genotype-brapi'; */
+
+
 import {
   refAlt,
   valueNameIsNotSample,
@@ -52,6 +57,8 @@ import {
   normalizeMaf,
   sampleIsFilteredOut,
   columnName2SampleName,
+  passportValueCompare,
+  augmented2SampleName,
   vcfFeatures2MatrixView, vcfFeatures2MatrixViewRows,
   valueIsMissing,
   rowsAddFeature,
@@ -63,7 +70,7 @@ import {
   featureCallRateFilter,
   featuresFilterNalleles,
   objectSymbolNameArray,
- } from '../../utils/data/vcf-feature';
+} from '../../utils/data/vcf-feature';
 import {
   referenceSamplesSymbol,
   referenceSampleMatchesSymbol,
@@ -126,6 +133,10 @@ const callRateSymbol = Symbol.for('callRate');
 /** Indicate whether Alt or Ref value should be matched at this Feature / SNP.
  * feature[matchRefSymbol] true/false.  */
 const matchRefSymbol = Symbol.for('matchRef');
+/** Cache of Passport data for the sampleName, i.e. dataset.samplesPassport[sampleName]
+ * This attribute is assigned to a String sampleName. 
+ */
+const passportSymbol = Symbol.for('passport');
 
 /** dataset[enableFeatureFiltersSymbol] true/false enables feature filters for this dataset
  */
@@ -156,6 +167,13 @@ const emptyTableColumns = [
   'Ref',
   'Alt',
 ];
+
+//------------------------------------------------------------------------------
+// copied from genotype-samples.js, this will be imported from environment
+/** Base URL for HTTP GET request to open Genolink with the result of a search
+ * for genotypeIds included in the URL.
+ */
+const genolinkBaseUrl = "https://genolink.plantinformatics.io";
 
 //------------------------------------------------------------------------------
 
@@ -256,6 +274,13 @@ function featureHasSamplesLoaded(feature) {
  * .includeHetMissingHaplotypes  boolean, default : false
  *   Show haplotypes which contain heterozygous values and missing data.
  *   If false, show only haplotypes with all homozygous genotype values.
+ *
+ * .passportFields	array of Passport data field names
+ *   Selected by the user; the sample column headers are augmented with each
+ *   sample's values for these fields.
+ *   This is currently [ {id, name}, ... ], where id == name.
+ * .sortByPassportFields  boolean, default : false
+ *   Sort the Genotype Table columns by the selected Passport field values : .passportFields
  *
  * @see userSettingsDefaults()
  *------------------------------------------------------------------------------
@@ -622,10 +647,18 @@ export default class PanelManageGenotypeComponent extends Component {
       userSettings.cellSizeFactor = 1;
     }
 
+    if (userSettings.passportFields === undefined) {
+      userSettings.passportFields = [];
+    }
+    if (userSettings.sortByPassportFields === undefined) {
+      userSettings.sortByPassportFields = false;
+    }
+
 
     if (this.urlOptions.gtMergeRows === undefined) {
       this.urlOptions.gtMergeRows = true;
     }
+
 
   }
 
@@ -693,7 +726,7 @@ export default class PanelManageGenotypeComponent extends Component {
      * event.target.value is a string; convert to a number.
      */
     let value = +event.target.value;
-     dLog('intervalLimitInput', value, event.target.value);
+    dLog('intervalLimitInput', value, event.target.value);
     this.intervalLimit = value;
   }
 
@@ -719,7 +752,7 @@ export default class PanelManageGenotypeComponent extends Component {
      * event.target.value is a string; convert to a number.
      */
     let value = +event.target.value;
-     dLog('rowLimitInput', value, event.target.value);
+    dLog('rowLimitInput', value, event.target.value);
     this.rowLimit = value;
   }
 
@@ -858,9 +891,9 @@ export default class PanelManageGenotypeComponent extends Component {
     this.arrayToggleObject(filters, haplotype);
     this.ensureSamplesThenRender(filterTypeName);
   }
-    /** filtered/sorted display depends on .samples, which depends on
-     * this.vcfGenotypeSamplesText, so request all sampleNames if not received.
-     */
+  /** filtered/sorted display depends on .samples, which depends on
+   * this.vcfGenotypeSamplesText, so request all sampleNames if not received.
+   */
   ensureSamplesThenRender(filterTypeName) {
     const fnName = 'ensureSamplesThenRender';
     let textP = ! this.vcfGenotypeSamplesText && this.vcfGenotypeSamples();
@@ -879,7 +912,7 @@ export default class PanelManageGenotypeComponent extends Component {
     const present = array.includes(object);
     if (present) {
       /* currently getting multiple calls to afterSelectionHaplotype(), so disable toggle off
-      */
+       */
       array.removeObject(object);
     } else {
       array.addObject(object);
@@ -992,7 +1025,7 @@ export default class PanelManageGenotypeComponent extends Component {
     dLog(fnName, this.sampleFiltersCheck(), 'FilteredSamples');
 
     // update selectedSampleEffect
-   later(() => {
+    later(() => {
       this.selectedSampleRefreshDisplay(/*sampleFilterTypeName*/undefined);
      // Repeat - will work out the requirements display to be refreshed.
       later(() => {
@@ -1040,23 +1073,23 @@ export default class PanelManageGenotypeComponent extends Component {
           copyThis = haveFilters?.find(b => b.referenceBlock === block.referenceBlock),
           copyThisFilter = copyThis?.[sampleFiltersSymbol];
           if (copyThisFilter) {
-          const
-          copy =
-            Object.entries(copyThisFilter).reduce((O, [k,v]) => {O[k] = v.slice(0); return O;}, {});
-          dLog(fnName, 'copyThisFilter', copyThisFilter, copyThis.brushName, copy);
+            const
+            copy =
+              Object.entries(copyThisFilter).reduce((O, [k,v]) => {O[k] = v.slice(0); return O;}, {});
+            dLog(fnName, 'copyThisFilter', copyThisFilter, copyThis.brushName, copy);
 
-          /** map from copyThis features to block.features, matching SNP position, i.e. .value_0 */
-          copy.feature?.forEach((f, i) => {
-            const f2 = block.get('features').findBy('value_0', f.value_0);
-            dLog(fnName, i, f, f2);
-            if (f2) {
-              f2[matchRefSymbol] = f[matchRefSymbol];
-              copy.feature[i] = f2;
-            }
-            /* else could remove copy.features[i], or search again later after
-             * more features are loaded.  Could use API to request those features. */
-          });
-          block[sampleFiltersSymbol] = copy;
+            /** map from copyThis features to block.features, matching SNP position, i.e. .value_0 */
+            copy.feature?.forEach((f, i) => {
+              const f2 = block.get('features').findBy('value_0', f.value_0);
+              dLog(fnName, i, f, f2);
+              if (f2) {
+                f2[matchRefSymbol] = f[matchRefSymbol];
+                copy.feature[i] = f2;
+              }
+              /* else could remove copy.features[i], or search again later after
+               * more features are loaded.  Could use API to request those features. */
+            });
+            block[sampleFiltersSymbol] = copy;
           } // if (copyThisFilter)
           dLog(fnName, block);
         });
@@ -1287,7 +1320,7 @@ export default class PanelManageGenotypeComponent extends Component {
    * also applies featureFilters, so there is no need for a separate
    * @action featureFiltersApply() 
    */
- 
+
   //----------------------------------------------------------------------------
 
   /** User has clicked on a cell which is part of the representation of a Variant Interval.
@@ -1513,13 +1546,13 @@ export default class PanelManageGenotypeComponent extends Component {
       dLog(fnName, 'initial activeDatasetId', datasetIds[0], this.activeDatasetId);
       later(() => {
         this.setSelectedDataset(datasetIds[0]);
-	/** The above sets @active of the <nav.item > i.e. <li>, but the class
-	 * active is not added, perhaps because it has already rendered.  So use
-	 * datasetTabActiveClass() for the initial render; after that the user
-	 * clicks on the tab which sets active class OK. There is hopefully a
-	 * more elegant way to do this.
-	 */
-	this.datasetTabActiveClass();
+        /** The above sets @active of the <nav.item > i.e. <li>, but the class
+         * active is not added, perhaps because it has already rendered.  So use
+         * datasetTabActiveClass() for the initial render; after that the user
+         * clicks on the tab which sets active class OK. There is hopefully a
+         * more elegant way to do this.
+         */
+        this.datasetTabActiveClass();
       });
     }
     dLog(fnName, datasetIds, this.gtDatasets);
@@ -1627,7 +1660,7 @@ export default class PanelManageGenotypeComponent extends Component {
      * using .vcfGenotypeSamplesAllDatasets().
      */
     datasetSamples =
-    Object.values(this.sampleCache.sampleNames)
+      Object.values(this.sampleCache.sampleNames)
       .map(value => this.samplesFromText(value));
     let commonSamples;
 
@@ -1750,7 +1783,7 @@ export default class PanelManageGenotypeComponent extends Component {
       dLog('samples', samples.length && samples.slice(samples.length-2, samples.length));
       samples.pop();
     }
- 
+
     return samples;
   }
   /** If userSettings.samplesIntersection return .sampleNamesIntersection, otherwise 
@@ -1851,8 +1884,8 @@ export default class PanelManageGenotypeComponent extends Component {
     const
     fnName = 'filteredSamples',
     nameFilterArray = this.namesFilters.nameFilterArray,
-    filteredSamples = this.samples
-      ?.filter(sampleName => this.namesFilters.matchFilters(
+    filteredSamples = this.samples?.filter(
+      sampleName => this.namesFilters.matchFilters(
         sampleName, nameFilterArray,
         /*this.caseInsensitive*/ true,
         /*this.searchFilterAll*/ true));
@@ -2201,11 +2234,12 @@ export default class PanelManageGenotypeComponent extends Component {
     let unselectedArray = [];
     if (selected) {
       const
-    /** Copy current and subtract selected from it, remainder is available for selection */
-    unselected = selected.reduce((set, field) => {
-      set.delete(field);
-      return set;
-    }, new Set(current));
+      /** Copy current and subtract selected from it, remainder is available for
+       * selection */
+      unselected = selected.reduce((set, field) => {
+        set.delete(field);
+        return set;
+      }, new Set(current));
       unselectedArray = Array.from(unselected);
     }
     return unselectedArray;
@@ -2577,7 +2611,7 @@ export default class PanelManageGenotypeComponent extends Component {
         vcfDatasetId = vcfBlock?.get('datasetId.id'),
         datasetSamples = (vcfDatasetId && ! this.sampleCache.sampleNames[vcfDatasetId]),
         samples =
-        requestSamples = this.args.userSettings.filterSamplesByHaplotype ?
+          requestSamples = this.args.userSettings.filterSamplesByHaplotype ?
           /* .blockFilteredSamplesGet(vcfBlock) is effectively : this.sampleCache.filteredByGenotype[vcfBlock.id][selected SNPs + genotype values]
            * i.e. the cache key includes the current (user-defined) haplotype
            *
@@ -2669,7 +2703,7 @@ export default class PanelManageGenotypeComponent extends Component {
     blocks = this.viewedVCFBlocks.filter(ab =>
       ab.block.get('datasetId.sampleNamesSet')?.has(sampleName))
       .mapBy('block');
-      
+
     if (! blocks.length && this.sampleName2Block) {
       /** if a block is unviewed it will still be listed in sampleName2Block[].
        */
@@ -2689,7 +2723,7 @@ export default class PanelManageGenotypeComponent extends Component {
           const names = block.get('datasetId.sampleNames');
           return names && names.includes(sampleName);
         });
-     }
+    }
     return blocks;
   }
 
@@ -2994,8 +3028,7 @@ export default class PanelManageGenotypeComponent extends Component {
       flags = '' + (k+1), /*-n*/
       /** (visibleBlocks - requiredBlock) C k */
       groups = arrayChoose(notSelf, k),
-      groupsP =
-      groups.map(group => {
+      groupsP = groups.map(group => {
         /** group combined with requiredBlock */
         const selfAnd = group.concat([requiredBlock]);
         return this.vcfGenotypeLookupGroup(selfAnd, flags);
@@ -3014,8 +3047,7 @@ export default class PanelManageGenotypeComponent extends Component {
    */
   vcfGenotypeLookupGroup(blocks, flags) {
     const
-    promises =
-    blocks
+    promises = blocks
       .map((blockV, i) => {
         const
         vcfDatasetId = blockV.get('datasetId.id'),
@@ -3043,8 +3075,9 @@ export default class PanelManageGenotypeComponent extends Component {
             {datasetIds : blocks.mapBy('datasetId.genotypeId'), flags} :
           this.intersectionParamsSimple(vcfDatasetId);
 
-          promise = 
-          this.vcfGenotypeLookupDataset(blockV, vcfDatasetIdAPI, intersection, scope, domainInteger, samples, samplesLimitEnable);
+          promise = this.vcfGenotypeLookupDataset(
+            blockV, vcfDatasetIdAPI, intersection,
+            scope, domainInteger, samples, samplesLimitEnable);
         }
         return promise;
       });
@@ -3121,16 +3154,16 @@ export default class PanelManageGenotypeComponent extends Component {
       }
 
       const requestP = () => {
-      const textP = vcfGenotypeLookup(
-        this.auth, samples, domainInteger, requestOptions,
-        vcfDatasetId, scope, this.rowLimit);
-      // re-initialise file-anchor with the new @data
-      /* file-anchor param data should be a defined array ; its init() does this.get("data").reduce. */
-      this.vcfExportText = [];
-      textP.then(
-        this.vcfGenotypeReceiveResult.bind(this, scope ? blockV : dataset, requestFormat, userSettings))
-        .catch(this.showError.bind(this, fnName));
-      return textP;
+        const textP = vcfGenotypeLookup(
+          this.auth, samples, domainInteger, requestOptions,
+          vcfDatasetId, scope, this.rowLimit);
+        // re-initialise file-anchor with the new @data
+        /* file-anchor param data should be a defined array ; its init() does this.get("data").reduce. */
+        this.vcfExportText = [];
+        textP.then(
+          this.vcfGenotypeReceiveResult.bind(this, scope ? blockV : dataset, requestFormat, userSettings))
+          .catch(this.showError.bind(this, fnName));
+        return textP;
       };
 
       if (scope) {
@@ -3245,10 +3278,13 @@ export default class PanelManageGenotypeComponent extends Component {
     }
     // displays vcfGenotypeText in textarea, which triggers this.vcfGenotypeTextSetWidth();
     this.vcfGenotypeText = text;
+    blockV[Symbol.for('vcfGenotypeText')] = text;
     this.headerTextP?.then((headerText) => {
       const
+      /** blockV is passed to combineHeader() instead of text, to enable it to
+       * prepend blockV.name */
       combined = ! headerText ? this.vcfGenotypeText :
-        this.combineHeader(headerText, this.vcfGenotypeText)
+        this.combineHeader(headerText, [blockV])
       /** ember-csv:file-anchor.js is designed for spreadsheets, and hence
        * expects each row to be an array of cells.
        */
@@ -3343,6 +3379,20 @@ export default class PanelManageGenotypeComponent extends Component {
       }
     }
 
+  }
+
+  /** For the dataset selected in the datasets tab, return the brushed and
+   * visible blocks of the dataset.
+   * This is used in vcfExportTextP() to construct the VCF Download.
+   * @return [block, ...]
+   */
+  @computed('lookupBlock')
+  get lookupDatasetBlocks() {
+    const
+    vcfDataset = this.lookupBlock?.get('datasetId'),
+    vcfDatasetId = this.lookupBlock?.get('datasetId.genotypeId'),
+    blocks = this.brushedOrViewedVCFBlocksVisible.filterBy('datasetId.id', vcfDatasetId);
+    return blocks;
   }
 
   //----------------------------------------------------------------------------
@@ -3501,8 +3551,8 @@ export default class PanelManageGenotypeComponent extends Component {
                 dLog(fnName, overlaps, );
               }
             }
-          return overlaps >= choose.k;
-        });
+            return overlaps >= choose.k;
+          });
         return ok;
       }
       function filterFnSimple(feature) {
@@ -3646,16 +3696,66 @@ export default class PanelManageGenotypeComponent extends Component {
     return ok;
   }
 
-  /** @return undefined if sampleFiltersCount[sampleFilterTypeName] is 0, otherwise
+  /** Return a comparator for sorting column sample names by Passport data
+   * fields selected by the user.
+   * @return undefined if no Passport data fields are selected, or sorting by
+   * Passport data fields is not enabled.
+   */
+  @computed(
+    'args.userSettings.sortByPassportFields',
+    'args.userSettings.passportFields.length')
+  get sampleNamesCmpField() {
+    let fn;
+    const userSettings = this.args.userSettings;
+    if (userSettings.sortByPassportFields && userSettings.passportFields.length) {
+      fn = (...sampleNames) => {
+        let cmp = 0;
+        const selectFields = userSettings.passportFields.mapBy('id');
+        /** Find the first non-zero comparison. The result of find() is not
+         * used. cmp is exported. */
+        selectFields.find(fieldName => {
+          const
+          /** dataset.samplesPassport[sampleName] */
+          v = sampleNames.map(sampleName => this.findPassportFields(sampleName)?.[fieldName]);
+          cmp = passportValueCompare(v);
+          // .find() will exit when cmp!==0
+          return cmp;
+        });
+        return cmp;
+      };
+    }
+    return fn;
+  }
+  /** Lookup the Passport field values of the given sample.
+   * If sampleName is a String, it may have [passportSymbol] assigned by
+   * vcfFeatures2MatrixViewRowsResult() : columnNames.
+   * The fallback is to find which dataset contains the given sample, and
+   * whether Passport fields of the sample have been retrieved.  This can be
+   * used this where dataset is not available.
+   * @param sampleName
+   * @return {fieldName -> fieldValue, ... }
+   */
+  findPassportFields(sampleName) {
+    let fieldValues = sampleName[passportSymbol];
+    if (! fieldValues) {
+      this.gtDatasets.find(d => (fieldValues = d.samplesPassport?.[sampleName]));
+    }
+    return fieldValues;
+  }
+  /** Return a comparator for sorting column sample names according to
+   * sampleFilters selected by the user.
+   * The header comment of sampleFilterTypeName() describes sampleFilters.
+   * 
+   * @return undefined if sampleFiltersCount[sampleFilterTypeName] is 0, otherwise
    * a sort comparator function with signature (sampleName1, sampleName2),
    * which returns +ve if column of sampleName2 should be shown to the right of sampleName1.
-   * Related : columnNamesCmp().
+   * Related : columnNamesCmp(), sampleNamesCmpField().
    */
   @computed(
     'sampleFiltersCountSelected',
     'matchesSummary',
   )
-  get sampleNamesCmp() {
+  get sampleNamesCmpFilter() {
     /** if there are referenceSamples, then filterSamples() will set .matchesSummary = distancesTo1d() */
     if (false && ! this.referenceSamplesCount) {
     /* clear the cached results of sampleMatchesSum() */
@@ -3666,21 +3766,50 @@ export default class PanelManageGenotypeComponent extends Component {
     fn = ! filtersCount ? undefined : (...sampleNames) => {
       const
       /** distance averages for the samples.  */
-      matchRates = sampleNames.map(this.sampleMatchesSum.bind(this)),
+      matchRates = sampleNames
+        .map(this.sampleMatchesSum.bind(this)),
       cmp = Measure.cmp(matchRates[0], matchRates[1]);
       return cmp;
     };
     return fn;
   }
+  @computed(
+    'sampleNamesCmpField',
+    'sampleNamesCmpFilter',
+  )
+  get sampleNamesCmp() {
+    let fn;
+    const
+    fns = [this.sampleNamesCmpField, this.sampleNamesCmpFilter].filter(x => x);
+    if (fns.length) {
+      fn = arraySortNestedComparator(fns);
+    }
+    return fn;
+  }
   /** Wrap sampleNamesCmp() - handle multiple blocks, and strip off
    * the datasetId which is appended to sampleNames to form columnNames.
-   * Related : vcf-feature.js : columnNamesCmp()
+   * Used in showSamplesWithinBrush().
+   *
+   * Related : vcf-feature.js : columnNamesCmp() which also wraps
+   * sampleNamesCmp(), and is defined and used within
+   * vcfFeatures2MatrixViewRowsResult().
+   *
+   * @param sampleNamesCmp comparator function, which may combine multiple
+   * comparator function, providing a nested sort.
+   * See sampleNamesCmp{,Field,Filter}().
    * @param columnNames 2 columnNames to compare
    */
   columnNamesCmp(sampleNamesCmp, ...columnNames) {
     const
     // this can be done in the caller
-    sampleNames = columnNames.map(columnName2SampleName),
+    /* also, this does not propagate [Symbol(dataset)] to the new value
+     * ([Symbol(passport)] is already omitted by augmentSampleName()).
+     * It could be re-added here; using sample references in place of names is
+     * another possibility.
+     * Currently findPassportFields() searches .gtDatasets to get [Symbol(passport)].
+     */
+    sampleNames = columnNames.map(name =>
+      augmented2SampleName(columnName2SampleName(name))),
     /** these non-sample columns are prioritised to the left : Alt Ref, .. */
     ns = sampleNames.map(columnName => valueNameIsNotSample(columnName)),
     /** if columnNames[0] is Alt/Ref then cmp is -1;   if ... [1] then ... +1  */
@@ -3787,8 +3916,7 @@ export default class PanelManageGenotypeComponent extends Component {
     const fnName = 'showSamplesWithinBrush';
     if (! this.gtBlocks.length) {
       this.emptyTable();
-    } else
-    if (! this.axisBrush /* || ! this.lookupBlock*/) {
+    } else if (! this.axisBrush /* || ! this.lookupBlock*/) {
       // perhaps clear table
     } else {
       const userSettings = this.args.userSettings;
@@ -3850,7 +3978,8 @@ export default class PanelManageGenotypeComponent extends Component {
            */
           all = Object.values(this.vcfGenotypeSamplesSelectedAll),
           selectedSamples = all.length ? [].concat.apply(all[0], all.slice(1)) : [],
-          options = {userSettings, selectedSamples};
+          /** pass visibleBlocks for .datasetId.samplesPassport */
+          options = {userSettings, selectedSamples, visibleBlocks};
           if (this.urlOptions.gtMergeRows) {
             /** {rows, sampleNames}; */
             let sampleFilters = [];
@@ -4135,8 +4264,7 @@ export default class PanelManageGenotypeComponent extends Component {
           if (block) {
             const
             map = block[haplotypeFeaturesSymbol] || (block[haplotypeFeaturesSymbol] = {});
-            features
-            .reduce(
+            features.reduce(
               (map, feature) => {
                 const
                 tSNP = feature.values?.tSNP;
@@ -4177,23 +4305,23 @@ export default class PanelManageGenotypeComponent extends Component {
     gtDatasetColumns = this.gtDatasetColumns,
     sets = {};
 
-    if (this.displayDataRows)
-    Object.entries(this.displayDataRows).forEach(([location, row]) => {
-      /** Find all intervals containing query point */
-      intervalTree.queryPoint(location, function(interval) {
-        const
-        /** this is the variantInterval feature - want the row feature. */
-        viFeature = interval[featureSymbol],
-        /** filter out undefined, which is from blocks without features overlapping this row. */
-        rowFeatures = gtDatasetColumns
-          .map(datasetId => row[datasetId]?.[featureSymbol])
-          .filter(f => f),
-        intervalName = interval.join('_'),
-        variantSet = sets[intervalName] || (sets[intervalName] = []);
-        /* rowFeatures will not be on other rows, so .addObjects() is not required for uniqueness */
-        variantSet.pushObjects(rowFeatures);
+    if (this.displayDataRows) Object.entries(this.displayDataRows).forEach(
+      ([location, row]) => {
+        /** Find all intervals containing query point */
+        intervalTree.queryPoint(location, function(interval) {
+          const
+          /** this is the variantInterval feature - want the row feature. */
+          viFeature = interval[featureSymbol],
+          /** filter out undefined, which is from blocks without features overlapping this row. */
+          rowFeatures = gtDatasetColumns
+            .map(datasetId => row[datasetId]?.[featureSymbol])
+            .filter(f => f),
+          intervalName = interval.join('_'),
+          variantSet = sets[intervalName] || (sets[intervalName] = []);
+          /* rowFeatures will not be on other rows, so .addObjects() is not required for uniqueness */
+          variantSet.pushObjects(rowFeatures);
+        });
       });
-    });
     return sets;
   }
 
@@ -4219,8 +4347,7 @@ export default class PanelManageGenotypeComponent extends Component {
           /** blockp may be a proxy; want the actual Block, for reference via Symbol */
           block = blockp && contentOf(blockp),
           map = block[callRateSymbol] || (block[callRateSymbol] = {});
-          features
-          .reduce(
+          features.reduce(
             (map, feature) => {
               const featureSamplesCount = {calls:0, misses:0};
               // could do map=, but the 3 levels have the same value for map.
@@ -4298,21 +4425,21 @@ export default class PanelManageGenotypeComponent extends Component {
           missing += 2;
           distance = this.matchRef ? 0 : 2;
         } else {
-        switch (value.length) {
-        case 3 :
-          if (numeric) { matchValue = this.matchRef ? '1' : '0'; }
-          distance = 2 - stringCountString(value, matchValue);
-          break;
-        case 1:
-          if (numeric) {
-            distance = this.matchRef ? +value : 2 - value;
-          } else {
-            distance = value === this.matchNumber;
+          switch (value.length) {
+          case 3 :
+            if (numeric) { matchValue = this.matchRef ? '1' : '0'; }
+            distance = 2 - stringCountString(value, matchValue);
+            break;
+          case 1:
+            if (numeric) {
+              distance = this.matchRef ? +value : 2 - value;
+            } else {
+              distance = value === this.matchNumber;
+            }
+            break;
+          default : dLog(fnName, 'invalid genotype value', value);
+            break;
           }
-          break;
-        default : dLog(fnName, 'invalid genotype value', value);
-          break;
-        }
         }
         if (Measure === Counts) {
           const counts = Measure.create();
@@ -4398,23 +4525,23 @@ export default class PanelManageGenotypeComponent extends Component {
           const
           matchRefs = matchRefFn ? matchRefFn(feature) : [new MatchRef(feature[matchRefSymbol])];
           matchRefs.forEach((matchRef, i) => {
-          const matchValue = feature.values[matchRef.matchKey];
-          Object.entries(feature.values).forEach(([key, value]) => {
-            if (! valueNameIsNotSample(key) /*&& matchValue*/ /*&& ! valueIsMissing(value)*/) {
-              const sampleName = key;
-              const distance = matchRef.distanceFn(value, matchValue);
-              if (distance !== undefined) {
-                const
-                referenceSampleName = matchRef.matchKey,
-                /** use [referenceSampleName] if referenceSamples.length,
-                 * e.g. matches[referenceSampleName][sampleName] */
-                matchesR = referenceSamples.length ?
-                  matches[referenceSampleName] || (matches[referenceSampleName] = {}) :
-                  matches;
-                matchesR[sampleName] = Measure.add(matchesR[sampleName], distance);
+            const matchValue = feature.values[matchRef.matchKey];
+            Object.entries(feature.values).forEach(([key, value]) => {
+              if (! valueNameIsNotSample(key) /*&& matchValue*/ /*&& ! valueIsMissing(value)*/) {
+                const sampleName = key;
+                const distance = matchRef.distanceFn(value, matchValue);
+                if (distance !== undefined) {
+                  const
+                  referenceSampleName = matchRef.matchKey,
+                  /** use [referenceSampleName] if referenceSamples.length,
+                   * e.g. matches[referenceSampleName][sampleName] */
+                  matchesR = referenceSamples.length ?
+                    matches[referenceSampleName] || (matches[referenceSampleName] = {}) :
+                    matches;
+                  matchesR[sampleName] = Measure.add(matchesR[sampleName], distance);
+                }
               }
-            }
-          });
+            });
           });
         });
       }
@@ -4522,8 +4649,7 @@ export default class PanelManageGenotypeComponent extends Component {
        * taking ~1min for it, and there is no benefit - the header is expected to
        * be simply samples. */
       textP = Promise.resolve(samples);
-    } else
-    if (samplesOK && scopeOK && vcfDatasetId) {
+    } else if (samplesOK && scopeOK && vcfDatasetId) {
       const
       requestFormat = this.requestFormat,
       userSettings = this.args.userSettings,
@@ -4545,8 +4671,7 @@ export default class PanelManageGenotypeComponent extends Component {
       textP = vcfGenotypeLookup(
         this.auth, samples, domainInteger,
         requestOptions, vcfDatasetId, scope, this.rowLimit)
-        .then(
-        (text) => {
+        .then((text) => {
           const
           isGerminate = resultIsGerminate(text);
           /** for BrAPI, domain [0, 1] will return 0 results, and hence 0
@@ -4574,7 +4699,9 @@ export default class PanelManageGenotypeComponent extends Component {
       combinedP = this.headerTextP
         .then((headerText) => {
           const
-          combined = this.combineHeader(headerText, this.vcfGenotypeText);
+          blocks = this.lookupDatasetBlocks
+            .filter(b => b[Symbol.for('vcfGenotypeText')]),
+          combined = this.combineHeader(headerText, blocks);
           return combined;
         });
     } else {
@@ -4595,6 +4722,7 @@ export default class PanelManageGenotypeComponent extends Component {
    */
   vcfExportTextToFile() {
     this.vcfExportTextP.then(combined => {
+      combined.push('');  // for trailing newline
       const data = combined.join('\n');
       if (this.args.userSettings.compressVCF) {
         const blobP = text2Gzip(data, 'application/gzip');
@@ -4606,7 +4734,15 @@ export default class PanelManageGenotypeComponent extends Component {
     });
   }
 
-  combineHeader(headerText, vcfGenotypeText) {
+  /** Combine the given VCF result header with the VCF result bodies.
+   * @param headerText header part of a VCF lookup; the last line is the #CHROM
+   * row containing the column headers.
+   * @param blocks are all from the same dataset, and hence the
+   * headerText and in particular selected samples are the same.
+   * Each of the block vcfGenotypeTexts starts with the column header line (#[1]ID...).
+   * @return array of text rows, 1 per line
+   */
+  combineHeader(headerText, blocks) {
     /** remove trailing \n, so that split does not create a trailing empty line.  */
     headerText = headerText.trim().split('\n');
     /** vcfGenotypeText starts with column header line (#CHROM...), so trim the
@@ -4619,8 +4755,14 @@ export default class PanelManageGenotypeComponent extends Component {
     /** BrAPI headerTextP includes chrPosId[] columns, so don't call insertChromColumn().
      * Probably the current result (headerText, vcfGenotypeText) is for .lookupBlock */
     isBrAPI = this.lookupBlock?.hasTag('BrAPI'),
-    tableRows = isBrAPI ? vcfGenotypeText : this.insertChromColumn(vcfGenotypeText),
-    combined = headerText.concat(tableRows);
+    tableRows = blocks.map((b, i) => {
+      /** all rows of result in 1 string, with rows separated by \n  */
+      const vcfGenotypeText = b[Symbol.for('vcfGenotypeText')];
+      /** and prepend the chromosome column because that is not included in the request.  */
+      const blockText = isBrAPI ? vcfGenotypeText : this.insertChromColumn(vcfGenotypeText, b.name, i);
+      return blockText;
+    }),
+    combined = headerText.concat(tableRows.flat());
     return combined;
   }
 
@@ -4628,28 +4770,38 @@ export default class PanelManageGenotypeComponent extends Component {
    * constant - each request is specific to a chromosome.
    * This function re-inserts the CHROM column in the conventional (left) position.
    * @param vcfGenotypeText string
+   * @param chrName	text to prepend as left column of each row
+   * @param blockIndex	use the header row from the first block, and trim it off from the others
    * @return array of strings, 1 per line
    */
-  insertChromColumn(vcfGenotypeText) {
+  insertChromColumn(vcfGenotypeText, chrName, blockIndex) {
     const
-    withChrom = vcfGenotypeText
+    lines = vcfGenotypeText
     // ignore trailing \n which otherwise creates an empty line.
       .trim()
-      .split('\n')
+      .split('\n'),
+    /** expect that [0] line.startsWith('#[1]')
+     * trim this off for all but the first block
+     */
+    maybeSliced = blockIndex ? lines.slice(1) : lines,
+    withChrom = maybeSliced
       .map((line, rowIndex) => {
         let result;
-        if (rowIndex === 0) {
+        if ((rowIndex === 0) && ! blockIndex)
+        {
           // insert CHROM column header
           result = line
-            .replace(/# /, '#CHROM\t')
+            .replace(/^#/, '#CHROM\t')
           /* Strip out the column numbers [1] etc which are shown before column
            * headers by bcftools query -H.
            * Could match [ \t], but previous line changes that initial space to \t
+           * These 2 replace-s match respectively [1], and the remainder.
            */
+            .replace(/^#\[1\]/, '#')
             .replaceAll(/\t\[\d+\]/g, '\t');
         } else {
           // insert chromosome / scope column value.
-          result = this.lookupScope + '\t' + line;
+          result = chrName + '\t' + line;
         }
         return result;
       });
@@ -4782,15 +4934,15 @@ export default class PanelManageGenotypeComponent extends Component {
     dLog(fnName, this, datasetId, arguments);
 
     const
-      gtDatasetIds = this.gtDatasetTabs,
-      i = gtDatasetIds.findIndex(tabId => tabId === datasetId);
-      if (i < 0) {
-        dLog(fnName, i, datasetId, gtDatasetIds);
-      } else {
-        dLog(fnName, i, gtDatasetIds[i], datasetId);
-        // sets .axisBrushBlockIndex
-        this.mut_axisBrushBlockIndex(i);
-      }
+    gtDatasetIds = this.gtDatasetTabs,
+    i = gtDatasetIds.findIndex(tabId => tabId === datasetId);
+    if (i < 0) {
+      dLog(fnName, i, datasetId, gtDatasetIds);
+    } else {
+      dLog(fnName, i, gtDatasetIds[i], datasetId);
+      // sets .axisBrushBlockIndex
+      this.mut_axisBrushBlockIndex(i);
+    }
     this.setSelectedDataset(datasetId);
   }
   setSelectedDataset(datasetId) {
@@ -4904,14 +5056,58 @@ export default class PanelManageGenotypeComponent extends Component {
   @computed
   get germinate () {
     let germinate;
-  try {
-    germinate = new Germinate();
-    console.log('germinate', germinate);
-    // germinate.serverinfo(); // germplasm(); // callsets();
-  } catch (error) {
-    console.log('vcfGenotypeLookup', 'Germinate', error);
-  }
+    try {
+      germinate = new Germinate();
+      console.log('germinate', germinate);
+      // germinate.serverinfo(); // germplasm(); // callsets();
+    } catch (error) {
+      console.log('vcfGenotypeLookup', 'Germinate', error);
+    }
     return germinate;
+  }
+
+  //----------------------------------------------------------------------------
+
+  @action
+  selectedFieldsChanged(values, c, add) {
+    if (! add) {
+      return Promise.resolve();
+    }
+    let promise;
+    const
+    /** values === passportFields */
+    /** may change passportFields to .mapBy('id') */
+    selectFields = this.args.userSettings.passportFields.mapBy('id'),
+    genotypeIds = this.selectedSamples;
+
+    this.gtDatasets.forEach(dataset => {
+      // related : blocksSelectedSamples(blocks)
+      const sampleNames = this.vcfGenotypeSamplesSelectedAll[dataset.id];
+      if (sampleNames) {
+        promise = this.datasetGetPassportData(dataset, sampleNames, selectFields);
+      }
+    });
+    return promise;
+  }
+  datasetGetPassportData(dataset, sampleNames, selectFields) {
+    const fnName = 'datasetGetPassportData';
+    const genotypeIds = sampleNames;
+    const
+    promise =
+      getPassportData({ genotypeIds, selectFields }, genolinkBaseUrl)
+      .then(data => {
+        dLog(fnName, dataset.id, data);
+        const
+        d = data.content,
+        samplesPassport = dataset.samplesPassport || (dataset.samplesPassport = {});
+        sampleNames.forEach((sampleName, i) => {
+          selectFields.forEach(field => {
+            const sp = samplesPassport[sampleName] || (samplesPassport[sampleName] = {});
+            sp[field] = d[i][field];
+          });
+        });
+      });
+    return promise;
   }
 
   //----------------------------------------------------------------------------

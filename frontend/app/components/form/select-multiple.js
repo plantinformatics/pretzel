@@ -10,6 +10,14 @@ const dLog = console.debug;
 
 // -----------------------------------------------------------------------------
 
+/**
+ * @param values  array of values to populate the <select> <option>s
+ * @param selectedValues
+ * @param selectValueArray(values, c, add)
+ *   values : current list of selected values;
+ *   c : element de/selected in the current event
+ *   add : true if c was selected
+ */
 export default class FormSelectMultipleComponent extends Component {
   // selectedValue;
 
@@ -38,7 +46,9 @@ export default class FormSelectMultipleComponent extends Component {
     selectedGroup = thenOrNow(gsP, (gs) => {
       const
       select = event.target,
-      current = new Set(Array.from(select.selectedOptions).mapBy('value')),
+      /** may pass this to selectedValueChanged(). */
+      currentText = Array.from(select.selectedOptions).mapBy('value'),
+      current = new Set(currentText),
       previous = this.selectedOptionsPrevious,
       addedSet = current.difference(previous),
       deletedSet = previous.difference(current),
@@ -47,25 +57,93 @@ export default class FormSelectMultipleComponent extends Component {
       deleted = Array.from(deletedSet).map(valueForId);
       this.selectedOptionsPrevious = current;
       dLog(fnName, select.value);
-      this.args.selectedGroupChanged(added, deleted);
+      /* haplotypes-samples.hbs passed @selectedGroupChanged until d1f45ed9,
+       * which changed it to pass @selectValueArray=this.selectedHaplotypeChanged
+       * (reduced to just .selectSampleArray).
+       * because this.selectedValueChanged() is copied from haplotypes-samples.js.
+       */
+      if (this.args.selectedGroupChanged) {
+        this.args.selectedGroupChanged(added, deleted);
+      } else {
+        this.selectedValueChanged(added, deleted);
+      }
     });
   }
 
-  @action
-  /**
-   * @param selectedValue @selectedValue  i.e. currently selected values
-   * @param optionValue {id, name} of the selected row
-   * selected seems to be not used for multiple.
+  /** Called via user selection change in select-multiple
+   * The parameters added and deleted indicate changes to the selection.
+   * They are arrays of :
+   *  { id, name, ... } Ember Object
+   * See form/select-multiple.js : selectedGroupChangedId().
+   *
+   * @param added
+   * @param deleted
+   *
+   * based on manage-explorer.js : selectedCategoryChanged()
    */
-  selected(selectedValue, optionValue) {
+  @action
+  selectedValueChanged(added, deleted) {
+    const fnName = 'selectedValueChanged';
+
+    const isMultiple = true;
+    /* This would only be relevant if multiple was not used.
+    if (selectedValue === noValue) {
+      this.valuesSelected = null;
+    } else if (! isMultiple) {
+      this.valuesSelected = selectedValue;
+    } else */ {
+      const
+      values = this.args.selectedValues;
+      /** or c === selectedValue */
+      // present = values.find(c => c.id == selectedValue.id);
+      /** use .pushObject() (or .removeObject) so that uses of @selectedValues
+       * as a dependency will update, e.g. select-passport-fields.hbs depends on
+       * .passportFields.length to enable button .updateAndClose.
+       * haplotypesSelected.length is not currently a dependency.
+       */
+      const
+      /** changes[add=true] === added. */
+      changes = [deleted, added];
+      /** delete then add. */
+      [false, true].forEach(add => {
+        const change = changes[+add];
+        change.forEach(c => {
+          /* The original use of select-multiple before c43e8f41 had a fixed
+           * array for @values, but select-passport-fields generates the list
+           * passed to @values, so it is necessary to use .findBy('id'). */
+          const existing = values.findBy('id',  c.id);
+          if (add) {
+            if (! existing) {
+              values.pushObject(c);
+            }
+          } else {
+            values.removeObject(existing);
+          }
+          this.args.selectValueArray(values, c, add);
+        });
+      });
+    }
+    dLog(fnName, added.mapBy('id'), deleted.mapBy('id'), this.args.selectedValues.mapBy('id'));
+  }
+
+
+  @action
+  /** Called when user selects an <option >.
+   * @param optionValue {id, name} of the selected row
+   *
+   * @desc
+   * For <select multiple >, after a user selection .selected is called for each
+   * option value.
+   */
+  selected(optionValue) {
     const
     fnName = 'selected',
-    /** The parent component is permitted to pass @selectedValue=undefined or
-     * null, which is interpreted as [].  e.g. panel/haplotypes-samples does
-     * this.
+    selectedValues = this.args.selectedValues, 
+    /** The parent component is not permitted to pass @selectedValues=undefined or
+     * null; it should pass an initial value of [].
      */
-    ok = selectedValue?.any(s => s.id === optionValue.id);
-    // dLog(fnName, ok, selectedValue, optionValue);
+    ok = selectedValues.any(s => s.id === optionValue.id);
+    // dLog(fnName, ok, selectedValues, optionValue);
     return ok;
   }
 }

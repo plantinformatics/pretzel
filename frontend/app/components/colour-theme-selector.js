@@ -102,6 +102,7 @@ export default class ColourThemeSelectorComponent extends Component {
     super(...arguments);
 
     const
+    /** can now use controls service .userSettings.localStorage */
     item = window.localStorage.getItem('userColourTheme'),
     storedTheme = item && JSON.parse(item),
     storedThemeOK = themes.findBy('name', storedTheme);

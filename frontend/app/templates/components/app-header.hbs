@@ -70,6 +70,11 @@
             {{#if this.sessionAccount.account}}
               <p class="navbar-text pull-right">Signed in as {{this.sessionAccount.account.name}}</p>
             {{/if}}
+            <li>
+              <LinkTo @route="account-settings" @classNames="" @tagName="a">
+                Account <Elem::IconBase @name="user" />
+              </LinkTo>
+            </li> 
           {{else}}
             <li>
               <LinkTo @route="signup" @classNames="" @tagName="a">

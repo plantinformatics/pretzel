@@ -19,6 +19,8 @@ import {
 } from '../utils/panel/axis-table';
 import { afterSelectionFeatures } from '../utils/panel/feature-table';
 
+import { deletePunctuation } from './goto-feature-list';
+
 import config from '../config/environment';
 
 /* global d3 */
@@ -314,6 +316,8 @@ export default Component.extend({
 
     formFeatureEditEnable = (enable) => later(() => this.set('formFeatureEditEnable', enable));
     windowOpenAction = (url) => later(() => window.open(url, '_blank'));
+
+    Handsontable.renderers.registerRenderer('ColourSpanRenderer', bind(this, this.ColourSpanRenderer));
   },
 
   /** Destroy the HandsOnTable so that it does not clash with the HandsOnTable
@@ -498,6 +502,25 @@ export default Component.extend({
     if (this.createdFeatures.length) {
       data = data.concat(this.createdFeatures);
     }
+    const
+    fd = data?.uniqBy('feature.blockId.datasetId'),
+    datasets = fd.mapBy('feature.blockId.datasetId');
+    /** The dataset will be included in .colourColumns and in cellProperties to
+     * enable checking the cell feature is in a dataset with .cellColour, and to
+     * select colourScale.
+     * Currently one dataset with .cellColour will imply colouring for others;
+     * and in the intended use multiple datasets with the same columns will have
+     * .cellColour, so different rows of a column will have different
+     * .colourScale, to be indicated by the cell feature dataset.
+     */
+    this.colourColumns = datasets.mapBy('_meta.cellColour')
+      .filter(x => x)
+      .map(c => typeof c === 'string' ? JSON.parse(c) : c)
+      .map(({valueRegexp, colourScale}) =>
+        ({valueRegexp : new RegExp(deletePunctuation(valueRegexp)),
+          colourScale : deletePunctuation(colourScale)}));
+
+
     data = data.map((f) => {
       /** remove .feature from structure because it causes Handsontable to give errors. */
       let {feature, ...rest} = f,
@@ -596,6 +619,51 @@ export default Component.extend({
 
     return columnInfo;
   },
+  //----------------------------------------------------------------------------
+      
+   ColourSpanRenderer(instance, td, row, col, prop, value, cellProperties) {
+     // ?    Handsontable.renderers.TextRenderer.apply(this, arguments);
+
+      // Clean up any existing content
+     Handsontable.dom.empty(td);
+
+     // Ensure the value is treated as a string
+     const strValue = String(value || '');
+
+     // Split the value into individual numbers
+     const numbers = strValue.split(';').map(s => s.trim()).filter(s => s.length > 0);
+
+     // For each number, create a <span> with CSS variable and styling
+     numbers.forEach((numStr, i) => {
+       const num = parseFloat(numStr);
+       const span = document.createElement('span');
+       span.className = 'number2colour ' + cellProperties.colourScale;
+       span.textContent = numStr;
+       span.style.setProperty('--value', num);
+       span.style.marginRight = '0.2em'; // optional spacing
+       td.appendChild(span);
+     });
+
+     // Optional: Set a base class
+     td.classList.add('multi-span-cell');
+     return td;
+   },
+
+  cells(row, col, prop) {
+    let cellProperties = {};
+
+    const cellColour = this.colourColumns.find(c => c.valueRegexp.exec(prop));
+    if (cellColour) {
+      cellProperties.renderer = 'ColourSpanRenderer';
+      cellProperties.colourScale = cellColour.colourScale;
+    } else {
+      cellProperties.renderer = Handsontable.renderers.TextRenderer;
+    }
+    return cellProperties;
+  },
+
+  //----------------------------------------------------------------------------
+
   createTable: function() {
     var that = this;
     dLog("createTable", this);
@@ -635,6 +703,7 @@ export default Component.extend({
           column: 2,
           sortOrder: true
         },
+        cells : bind(this, this.cells),
         /* see comment re. handsOnTableLicenseKey in frontend/config/environment.js */
         licenseKey: config.handsOnTableLicenseKey,
         beforePaste : (data, coords) => this.beforePaste(data, coords),

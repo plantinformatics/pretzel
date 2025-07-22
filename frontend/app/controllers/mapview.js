@@ -575,7 +575,7 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
    * which exist only while their tab is visible.
    * e.g. preserved settings for component panel/manage-genotype are in userSettings.genotype.
    */
-  userSettings : {genotype : {}},
+  userSettings : alias('controlsService.userSettings'),
 
   selectedFeatures : alias('selectedService.selectedFeatures'),
   /** counts of selected paths, from paths-table; shown in tab. */
