@@ -410,13 +410,17 @@ export function passportValueCompare(values) {
   const
   types = values.map(v => typeof v),
   cmp =
+    (types[0] === 'undefined') || (types[1] === 'undefined') ? 0 :
     (types[0] === 'string') && (types[1] === 'string') ?
     values[0].localeCompare(values[1]) :
     (types[0] === 'number') && (types[1] === 'number' ) ?
     (values[0] - values[1]) :
     ! values[0] || ! values[1] ? 0 :
     Array.isArray(values[0]) && Array.isArray(values[1]) ?
-    passportValueCompare([values[0][0], values[1][0]]) : 0;
+    passportValueCompare([values[0][0], values[1][0]]) :
+    (types[0] === 'object') && (types[1] === 'object' ) ?
+    passportValueCompare(values.mapBy('name')) :
+    0;
   return cmp;
 }
 
