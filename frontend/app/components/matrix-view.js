@@ -7,6 +7,7 @@ import { later, once, bind, debounce } from '@ember/runloop';
 import { on } from '@ember/object/evented';
 import { task, didCancel, timeout } from 'ember-concurrency';
 
+// import lodash_bind from 'lodash/bind';
 
 /* global Handsontable */
 /* global $ */
@@ -47,7 +48,7 @@ import { toTitleCase } from '../utils/string';
 import { thenOrNow } from '../utils/common/promises';
 import { tableRowMerge } from '../utils/draw/progressive-table';
 import { eltWidthResizable, noKeyfilter } from '../utils/domElements';
-import { afterGetColHeader } from '../utils/dom/handsontable-header-resizer';
+import { afterGetColHeader as afterGetColHeaderResizer } from '../utils/dom/handsontable-header-resizer';
 import { toggleString, sparseArrayFirstIndex } from '../utils/common/arrays';
 import { toggleMember } from '../utils/common/sets';
 import { toggleObject } from '../utils/ember-devel';
@@ -391,6 +392,59 @@ export default Component.extend({
     return width;
   },
 
+  //----------------------------------------------------------------------------
+  /** Add HTML elements in nestedHeaders rows.
+   * settings.nestedHeaders supports only text, whereas colHeaders accepts HTML,
+   * so this callback is used to customise the generated HTML.
+   */
+  afterGetColHeaderRows(col, TH) {
+    /** Add a class passport-row-header to column header cells in column 0,
+     * except the last one, which is the sampleName row.
+     * The rows above the last row contain Passport field values.
+     */
+    if ((col === 0) && ! TH.querySelector('.passport-row-header')) {
+      const
+      tr = TH.parentElement,
+      row = tr.ariaRowIndex,
+      // Identify if it's the last header row, which contains sampleName
+      rowIsSampleName = (+row === this.userSettings.passportFields.length + 1);
+      if (!rowIsSampleName) {
+        TH.classList.add('passport-row-header');
+      }
+    }
+  },
+  /** Add cell text as title to TH so that it is available as tooltip hover.
+   * In particular, Passport data values in column headers (nestedHeaders) may
+   * be too long for the space available, so the tooltip enables the user to
+   * read them.
+   * This replaces the headerTooltips setting, which was deprecated after v8
+   */
+  afterGetColHeaderTooltip(col, TH) {
+    // Apply to Sample columns only, i.e. to the right of 'Alt'
+    if (col <= 6) return;
+    // Don't re-apply the changes made by this function. (idempotent)
+    if (TH.querySelector('.done')) return;
+
+    /* Typical contents before modification :
+     *  <th class="" tabindex="-1" scope="col" aria-colindex="9" role="columnheader">
+     *    <div class="relative" role="presentation">
+     *      <span class="colHeader" role="presentation">ALEPPO 28</span>
+     *    </div>
+     *  </th>
+     */
+
+    TH.classList.add('done');
+
+    TH.title = TH.innerText;
+  },
+  afterGetColHeader(col, TH) {
+    afterGetColHeaderResizer.apply(this.table, [this.userSettings, col, TH]);
+
+    this.afterGetColHeaderTooltip(col, TH);
+    if (this.userSettings.passportFields.length) {
+      this.afterGetColHeaderRows(col, TH);
+    }
+  },
   // ---------------------------------------------------------------------------
 
   /** Show a white line between the Position [ / Ref / Alt] columns and the
@@ -522,13 +576,17 @@ export default Component.extend({
       outsideClickDeselects: true,
       afterOnCellMouseDown: bind(this, this.afterOnCellMouseDown),
       afterOnCellMouseOver,
-      afterGetColHeader,  // Column header height resizer
+      // Column header height resizer
+      afterGetColHeader : bind(this, this.afterGetColHeader),
+      // this.table is not available yet, so wrap with this.afterGetColHeader().
+      // lodash_bind(afterGetColHeader, this.table, this.userSettings),
+      // afterGetColHeader requires this === .table
+      // (col, TH) => afterGetColHeader(col, TH, ),
       beforeCopy: bind(this, this.beforeCopy),
-      headerTooltips: {
-        rows: false,
-        columns: true,
-        onlyTrimmed: true
-      },
+      /** headerTooltips is dropped because the Header Tooltips plugin will be
+       * deprecated after version 8.0.0 :
+       * https://github.com/handsontable/handsontable/issues/7023
+       */
 
       hiddenColumns: {
         // copyPasteEnabled: default is true,
@@ -622,6 +680,8 @@ export default Component.extend({
     /** gtMergeRows : datasetId is not displayed, so width is not set  */
     let ot = d3.select('#observational-table');
     ot.classed('gtMergeRows', this.urlOptions.gtMergeRows);
+    ot.classed('nestedHeaders', this.userSettings.passportFields.length);
+    ot.classed('sortByPassportFields', this.userSettings.sortByPassportFields);
   },
 
   //----------------------------------------------------------------------------
@@ -1524,6 +1584,79 @@ export default Component.extend({
     });
     return colHeaders;
   }),
+  /** Add to settings : colHeaders, nestedHeaders, (maybe later : collapsibleColumns).
+   * If passportFields.length, add .nestedHeaders, otherwise .colHeaders.
+   */
+  colHeadersSettings(settings) {
+    const passportFields = this.userSettings.passportFields;
+    if (! passportFields.length) {
+      settings.colHeaders = this.colHeaders;
+      settings.nestedHeaders = null;
+    } else {
+      /** colHeaders() defines these which are missed in this case :
+       * positionFilter, positionFilterIcon, columnNameToClasses(),
+       * datasetId2Class(), col-selectedSample,
+       * Tried `= this.colHeaders` - same result as `= true`, i.e. no html,
+       * just text.
+       */
+      settings.colHeaders = true;
+      settings.nestedHeaders = passportFields.map((fieldName, row) => {
+        const h = this.columnNames.map((columnName, col) =>
+          // or : columnName == 'Alt' 
+          columnName[Symbol.for(fieldName)] || (col === 0 ? fieldName : ''));
+        // could combine multiple consecutive equal values into e.g. { label: 'I', colspan: 2 }
+        // also : collapsibleColumns
+        return h;
+      });
+      /** this loses Symbol(dataset), which is not used in nestedHeaders. */
+      const sampleNames = this.columnNames.map(columnName2SampleName);
+      settings.nestedHeaders.push(sampleNames);
+      /** This does not succeed in disabling column width calculation; column
+       * widths are wrong after setting nestedHeaders - it seems to calculate
+       * the width disregarding the rotation of the header text from horizontal
+       * to vertical, which is fixed by colWidthsSet() (and earlier by
+       * colWidthsSamples()) */
+      settings.autoColumnSize = {useHeaders : false};
+    }
+  },
+  useNestedHeaders : alias('userSettings.passportFields.length'),
+
+  /** If .passportFields.length force the sample column widths to 25px, because
+   * column width calculation when using nestedHeaders instead of colHeaders
+   * seems to assume the header text is horizontal, i.e. not taking into account
+   * the transform: rotate(-90deg);
+   */
+  colWidthsSamples() {
+    if (! this.useNestedHeaders) return;
+
+    function doTable(tableClass) {
+    const
+    colgroup$ = $('\
+div#observational-table \
+> div.' + tableClass + '.handsontable \
+> div.wtHolder \
+> div.wtHider \
+> div.wtSpreader \
+> table.htCore \
+> colgroup'),
+    colgroup = colgroup$[0];
+    if (colgroup) {
+      Array.from(colgroup.childNodes).slice(7).forEach(col => col.style.width="25px");
+    }
+    }
+    doTable('ht_clone_top');
+    doTable('ht_master');
+  },
+  /** If .useNestedHeaders, used after an updateSettings() which includes
+   * this.colHeadersSettings(settings) because nestedHeaders disrupts the
+   * colWidths.
+   */
+  colWidthsSet() {
+    const
+    columns = this.columnNamesToColumnOptions(this.columnNames),
+    settings = { columns };
+    this.table.updateSettings(settings);
+  },
   gtDatasetColumnIndexes : computed('columnNames', 'gtDatasetColumns', function () {
     const
     /** related : getColAttribute(col) assumes gtDatasetColumns[i] is in column i.
@@ -1546,10 +1679,13 @@ export default Component.extend({
     const fnName = 'positionFilterEffect';
     if (this.table) {
       const settings = {
-        colHeaders: this.colHeaders,
       };
+      this.colHeadersSettings(settings); 
       dLog(fnName);
       this.table.updateSettings(settings);
+      if (this.useNestedHeaders) {
+        this.colWidthsSet();
+      }
     }
   }),
   /** @return true if the named column has a dataset attribute
@@ -1980,13 +2116,18 @@ export default Component.extend({
     }
     let rows = this.get('rows');
     let rowHeaderWidth = this.get('rowHeaderWidth');
-    let colHeaderHeight = this.userSettings.columnHeaderHeight || this.get('colHeaderHeight');
+    let colHeaderHeight = this.userSettings.columnHeaderHeight ||
+        (this.userSettings.columnHeaderHeight = this.get('colHeaderHeight'));
     let table = this.get('table');
     let data = this.get('data');
     const gtPlainRender = this.urlOptions.gtPlainRender;
     dLog('matrix-view', fnName, t, rows.length, rowHeaderWidth, 'colHeaderHeight', colHeaderHeight, tableHeight, /*table,*/ data, this.blockSamples && 'vcf');
     // d3.select('body').style('--matrixViewColumnHeaderHeight', '' + colHeaderHeight + 'px');
+    /* .setColumnHeaderHeight() is not suited to nestedHeaders because it sets
+     * height of all rows indiscriminately, so userSettings.columnHeaderHeight
+     * is set directly above, and appended to fieldHeights[].
     this.setColumnHeaderHeight(colHeaderHeight);
+    */
 
     if (gtPlainRender & 0b10000) {
       this.hideColumns();
@@ -2013,11 +2154,12 @@ export default Component.extend({
       repeat = largeArea ? 1 : 2;
       for(let i=0; i<repeat; i++) {
         const settings = {
-          colHeaders: this.colHeaders,
           columns,
           rowHeaderWidth: rowHeaderWidth,
           rowHeights : this.rowHeights,
         };
+        this.colHeadersSettings(settings);
+
         // .data is required, so invert the flag
         if (! (gtPlainRender & 0b100000)) {
           // this can be enabled as an alternative to progressiveRowMergeInBatch().
@@ -2030,6 +2172,16 @@ export default Component.extend({
          * updateTable() and in utils/dom/handsontable-header-resizer.js : resize().
          */
         settings.columnHeaderHeight = colHeaderHeight;
+        if (this.useNestedHeaders) {
+          const
+          userSettings = this.userSettings,
+          fieldHeights = userSettings.passportFields.map((fieldName, i) => 
+            userSettings.columnHeaderHeights?.[fieldName] || 85 );
+            // colHeaderHeight/(i+1)
+          // sampleName row.  also this.userSettings.columnHeaderHeights['sampleName']
+          fieldHeights.push(this.userSettings.columnHeaderHeight);
+          settings.columnHeaderHeight = fieldHeights;
+        }
         if (this.fullPage) {
         } else {
           let nRows = rows.length;
@@ -2067,6 +2219,9 @@ export default Component.extend({
         this.progressiveRowMergeInBatch();
       }
       t.hide();
+    }
+    if (this.useNestedHeaders) {
+      this.colWidthsSet();
     }
     this.afterScrollVertically_tablePosition();
   },
@@ -2285,6 +2440,9 @@ export default Component.extend({
   //----------------------------------------------------------------------------
 
   /** based on axis width resizer in axis-2d.js */
+
+  // resizedByDrag() and dragResizeListen() are replaced by
+  // utils/dom/handsontable-header-resizer.js : afterGetColHeader as afterGetColHeaderResizer
 
   /** Called when resizer element for column header height resize is dragged.
    * @param d data of the resizer elt

@@ -250,12 +250,13 @@ function afterOnCellMouseOverClosure(hasTable) {
  * coords.col may be -1; this is seen in calls from
  * afterOnCellMouseOverClosure(), possibly when the mouse is hovered
  * on the row header
+ * Also, when using nestedHeaders, row may be < -1.
  * @return feature, or undefined if (coords.row === -1)
  */
 function tableCoordsToFeature(table, coords) {
   let feature;
 
-  if (coords.row === -1) {
+  if (coords.row < 0) {
     /* this may be ^A (Select All), or click outside, or click in header row.
      * No feature associated with those so return undefined.
      */

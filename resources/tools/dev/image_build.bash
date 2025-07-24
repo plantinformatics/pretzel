@@ -20,6 +20,13 @@ echo $logDate;
 
 #-------------------------------------------------------------------------------
 
+# Environment variables override those in pretzel.compose.prod.env, so unset them.
+unset DB_NAME
+unset API_HOST
+unset API_PORT_EXT
+
+#-------------------------------------------------------------------------------
+
 # These vars are set by other functions; use pb_set() after creating a new shell
 # on the same day.
 pb_set() {
@@ -157,6 +164,9 @@ L=~/log/compose/$stage/$logDate
 
 pb_compose_down_up() {
   docker compose --progress=plain   --file $Dc/docker-compose.$stage.yaml  --env-file $Dc/pretzel.compose.$stage.env down
+  # Allow extra time for resources like ports to be released by the exiting
+  # processes. (probably not needed)
+  sleep 3
   nohup docker compose --progress=plain   --file $Dc/docker-compose.$stage.yaml  --env-file $Dc/pretzel.compose.$stage.env  up > $L &
 }
 
