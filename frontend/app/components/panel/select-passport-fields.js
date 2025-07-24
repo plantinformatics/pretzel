@@ -14,6 +14,16 @@ const /*import */{
 
 const dLog = console.debug;
 
+const useSelectMultiple = false;
+/** form/select-multiple requires the list of available and selected items to be
+ *     arrays of : { id, name, ... } Ember Object
+ * Whereas panel/dual-list requires them to be simply arrays of names.
+ */
+function itemsToNames(list) {
+  return useSelectMultiple ? list.mapBy('id') : list;
+}
+
+
 //------------------------------------------------------------------------------
 
 /** Display in a <select> the list of Passport data field names which can be
@@ -24,7 +34,8 @@ const dLog = console.debug;
  */
 export default class PanelSelectPassportFieldsComponent extends Component {
 
-  passportFieldNames = passportFieldNames.map(name => ({id : name, name}));
+  passportFieldNames = passportFieldNames;
+  passportFieldNamesObj = passportFieldNames.map(name => ({id : name, name}));
 
   @tracked
   genolinkErrorMessage = null;
@@ -45,10 +56,12 @@ export default class PanelSelectPassportFieldsComponent extends Component {
    */
   @action
   selectedFieldsChanged(values, c, add) {
-    const fnName = 'selectedHaplotypeChanged';
+    const fnName = 'selectedFieldsChanged';
     const userSettings = this.args.userSettings;
+    // Notify of change - trigger reactivity
+    Ember_set(userSettings, 'passportFields', values);
 
-    dLog(fnName, values.mapBy('id'), c, add, userSettings.passportFields.mapBy('id'));
+    dLog(fnName, itemsToNames(values), c, add, itemsToNames(userSettings.passportFields));
     this.genolinkErrorMessage = null;
     const getPassportDataP = this.args.selectedFieldsChanged(values, c, add);
     getPassportDataP?.catch(error => {

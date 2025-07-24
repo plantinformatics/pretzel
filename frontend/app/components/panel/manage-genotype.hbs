@@ -1091,8 +1091,6 @@ While scrolling through the Genotype Table this updates to show where the curren
         </div>
         {{/if}}
 
-        {{#if this.urlOptions.new}}
-
         <span>
           <button type="button" class="btn btn-info" onclick={{pipe
               (action (mut @userSettings.showSelectPassportFields) true)
@@ -1107,7 +1105,9 @@ While scrolling through the Genotype Table this updates to show where the curren
         <span>
           <EmberTooltip @side="bottom" @delay=500>
           <span>Sort the Genotype Table columns by the selected Passport field values :
-            {{map-by 'id' @userSettings.passportFields}}.
+            {{!-- if useSelectMultiple, use map-by 'id' --}}
+            {{@userSettings.passportFields}}.
+            This will override 'Sort by Haplotype'.
           </span>
           </EmberTooltip>
           <input type="checkbox"
@@ -1124,8 +1124,6 @@ While scrolling through the Genotype Table this updates to show where the curren
             >
           </Panel::SelectPassportFields>
         {{/if}}
-
-        {{/if}}	{{!-- this.urlOptions.new --}}
 
       </div>
 

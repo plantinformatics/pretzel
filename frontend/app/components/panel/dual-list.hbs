@@ -1,0 +1,70 @@
+{{log this 'dual-list' @availableItems @selectedItems }}
+
+{{!-- selection --}}
+<span>
+  <select multiple {{on "change" this.handleSelection}}>
+    {{#each @availableItems as |item|}}
+      <option value={{item}} selected={{call (fn this.selected item) }}>{{item}}</option>
+    {{/each}}
+  </select>
+
+  <EmberTooltip  @side="right" @delay=500>
+    <span>Select Passport data fields, to add to the names displayed in the Genotype Table column headings.</span>
+  </EmberTooltip>
+
+</span>
+
+{{!-- --------------------------------------------------------------------- --}}
+{{!-- ordered list, enabling user to re-order using drag and drop. --}}
+
+{{!-- SortableGroup can be used either in a component form, as is shown here, or
+as a modifier, as is shown in the <ol> below.  Currently the component form is
+getting this error, so it is not used :
+ Attempted to resolve `sortable-group`, which was expected to be a component, but nothing was found.
+
+<SortableGroup @onChange={{this.reorder}} as |group|>
+  {{#each this.selectedItems as |item|}}
+    <SortableItem @model={{item}}>{{item}}</SortableItem>
+  {{/each}}
+</SortableGroup>
+--}}
+
+
+<div style="width: fit-content;" >
+  <ol {{sortable-group onChange=this.reorder }} style="width: fit-content;" >
+    {{#each this.selectedItems as |item|}}
+      <li {{sortable-item model=item}}>
+        {{!-- btn overrides btn-xs attributes --}}
+        <button type="button" class="btn-info btn-xs"
+          {{on "click" (fn this.removeItem item)}}
+          >
+          <i class="glyphicon glyphicon-remove"></i>
+        </button>
+        {{item}}
+      </li>
+    {{/each}}
+  </ol>
+
+{{#if this.selectedItems.length}}
+  <div class="clear-both"></div>
+  <div class="margin-top" style="width: fit-content;" >
+    <EmberTooltip @side="right" @delay=500>
+      <span>Clear the selection.</span>
+    </EmberTooltip>
+    <button type="button" class="btn btn-info btn-xs margin-1em"
+      onclick={{action this.clearSelection}}
+      style="margin-left: 2em;" >
+      Clear
+    </button>
+  </div>
+{{/if}}
+
+    <EmberTooltip  @side="left" @delay=500>
+      <span>Use drag/drop to change the display order and sort priority of the selected Passport data fields for the Genotype Table column headings.</span>
+    </EmberTooltip>
+
+</div>
+
+
+{{!-- --------------------------------------------------------------------- --}}
+

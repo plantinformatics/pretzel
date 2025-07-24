@@ -12,6 +12,7 @@ const dLog = console.debug;
 
 /** Make the given DOM element width resizable;  it is expected to contain an element
  * .resizer, which is what the user drags.
+ *   Update : added param vertical enables resizing height instead of width.
  * The .resizer is styled to position to the right or left edge :
  * e.g. <div class="resizer" style="float:right; width:10px; height:10px">X</div>
  * or instead of float:right could use position: absolute; right: -5px;

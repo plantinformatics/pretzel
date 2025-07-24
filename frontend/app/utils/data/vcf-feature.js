@@ -95,6 +95,22 @@ function valueNameIsNotSample(valueName) {
   return nonSampleNames.includes(valueName);
 }
 
+/** Return true if sampleName matches the naming convention for AGG sample / accession names.
+ * It is not valid to send a request to Genolink for a genotypeId / sample name
+ * / accession name which is not present in Genolink, and the scope of Genolink
+ * is the samples in the AGG.
+ *
+ * For use in : components/matrix-view.js : afterGetColHeaderRows(),
+ * components/panel/genotype-samples.js : selectedSamplesGetPassport(),
+ * genolinkSearchURL().
+ * Used in manage-genotype.js : datasetGetPassportData().
+ *
+ * @return true or false
+ */
+export function sampleNameIsAGG(sampleName) {
+  return !!sampleName.match(/^AGG/);
+}
+
 //------------------------------------------------------------------------------
 
 /** if string.match(regexp), return match[valueIndex], otherwise undefined. 
@@ -311,11 +327,32 @@ function sampleName2ColumnName(sampleName) {
   return sampleName;
 }
 
+/** Copy Symbols from source to destination.
+ * Used to preserve attributes of sampleName (e.g. dataset, passport, passport
+ * fields) as it is formatted to columnName.
+ * An alternative is to move sampleName and the other attributes into a sample
+ * object, and use this in the various sample pipelines.
+ * @param source  Object
+ * @param destination Object
+ */
+function copySymbols(source, destination) {
+  for (const symbol of Object.getOwnPropertySymbols(source)) {
+    destination[symbol] = source[symbol];
+  }
+}
+
 function columnNameAppendDatasetId(columnName, datasetId) {
   /** Assume the SNPs are bi-allelic, so only display 1 Ref/Alt
    * regardless of multiple datasets. */
   if (! refAltHeadings.includes(columnName)) {
+    const previous = columnName;
     columnName = columnName + '\t' + datasetId;
+    /* Copy symbols if param is a String, (e.g. dataset, passport, passport
+     * fields) */
+    if (previous instanceof String) {
+      columnName = new String(columnName);
+      copySymbols(previous, columnName);
+    }
   }
   return columnName;
 }
@@ -327,7 +364,7 @@ function columnName2SampleName(columnName) {
 /** If selectFields.length, augment the given sample / accession name with selected
  * fields from the Passport data of the accession.
  * @param sampleName
- * @param selectFields	user-selected list of fields to add (userSettings.passportFields.mapBy('id'))
+ * @param selectFields	user-selected list of fields to add (userSettings.passportFields)
  * @param datasetId	to lookup the Passport data of the sampleName
  * @param visibleBlocks	for visibleBlocks[].datasetId.samplesPassport
  * which contains the Passport field value for the samples
@@ -351,7 +388,15 @@ function sampleNameAddPassport(sampleName, selectFields, datasetId, visibleBlock
         }
         return text;
       });
-      sampleName += ' | ' + values.join(', ');
+      /* The original implementation simply appended the Passport data values to
+       * the sampleName, but now nestedHeaders are used to instead display each
+       * Passport field in a separate row.
+      // sampleName += ' | ' + values.join(', ');
+      */
+      values.forEach((value, i) => {
+        const fieldName = selectFields[i];
+        sampleName = stringSetSymbol(Symbol.for(fieldName), sampleName, value);
+      });
     }
   }
   return sampleName;
@@ -365,13 +410,17 @@ export function passportValueCompare(values) {
   const
   types = values.map(v => typeof v),
   cmp =
+    (types[0] === 'undefined') || (types[1] === 'undefined') ? 0 :
     (types[0] === 'string') && (types[1] === 'string') ?
     values[0].localeCompare(values[1]) :
     (types[0] === 'number') && (types[1] === 'number' ) ?
     (values[0] - values[1]) :
     ! values[0] || ! values[1] ? 0 :
     Array.isArray(values[0]) && Array.isArray(values[1]) ?
-    passportValueCompare([values[0][0], values[1][0]]) : 0;
+    passportValueCompare([values[0][0], values[1][0]]) :
+    (types[0] === 'object') && (types[1] === 'object' ) ?
+    passportValueCompare(values.mapBy('name')) :
+    0;
   return cmp;
 }
 
@@ -686,7 +735,7 @@ function vcfFeatures2MatrixViewRowsResult(
   dataset = block?.get('datasetId'),
   datasetId = dataset?.get('id'),
   enableFeatureFilters = dataset.get('enableFeatureFilters');
-  const selectFields = userSettings.passportFields.mapBy('id');
+  const selectFields = userSettings.passportFields; // useSelectMultiple : .mapBy('id');
 
   let sampleNamesSet = new Set();
 
