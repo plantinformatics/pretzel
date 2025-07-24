@@ -1965,6 +1965,10 @@ div.ht_clone_top_left_corner span.colHeader.cornerHeader {
    */
   background-color : var(--gt-background-color-selected-snp, springgreen);
 }
+/* Paler colour when sortByPassportFields to indicate that overrides sorting by SNP genotype.  */
+#observational-table.sortByPassportFields td.featureIsFilter {
+  background-color : #d3efc0;
+}
 
 // -----------------------------------------------------------------------------
 

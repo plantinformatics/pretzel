@@ -673,6 +673,7 @@ export default Component.extend({
     let ot = d3.select('#observational-table');
     ot.classed('gtMergeRows', this.urlOptions.gtMergeRows);
     ot.classed('nestedHeaders', this.userSettings.passportFields.length);
+    ot.classed('sortByPassportFields', this.userSettings.sortByPassportFields);
   },
 
   //----------------------------------------------------------------------------
