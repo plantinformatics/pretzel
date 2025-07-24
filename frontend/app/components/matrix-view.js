@@ -413,25 +413,34 @@ export default Component.extend({
       }
     }
   },
-  /**  Experiment, not used. */
-  afterGetColHeaderIcon(col, TH) {
+  /** Add cell text as title to TH so that it is available as tooltip hover.
+   * In particular, Passport data values in column headers (nestedHeaders) may
+   * be too long for the space available, so the tooltip enables the user to
+   * read them.
+   * This replaces the headerTooltips setting, which was deprecated after v8
+   */
+  afterGetColHeaderTooltip(col, TH) {
     // Apply to Sample columns only, i.e. to the right of 'Alt'
     if (col <= 6) return;
     // Don't re-apply the changes made by this function. (idempotent)
     if (TH.querySelector('.done')) return;
 
-    const sampleName = TH.innerText;
-    if (TH && sampleName.match(/^AGG/)) {
-      TH.innerHTML = '<span class="colHeader done"><b>' + sampleName + '</b> <i class="info">ⓘ</i></span>';
-    } else {
-      TH.innerHTML = '<span class="colHeader done">' + sampleName + '</span>';
-    }
+    /* Typical contents before modification :
+     *  <th class="" tabindex="-1" scope="col" aria-colindex="9" role="columnheader">
+     *    <div class="relative" role="presentation">
+     *      <span class="colHeader" role="presentation">ALEPPO 28</span>
+     *    </div>
+     *  </th>
+     */
+
+    TH.classList.add('done');
+
+    TH.title = TH.innerText;
   },
   afterGetColHeader(col, TH) {
     afterGetColHeaderResizer.apply(this.table, [this.userSettings, col, TH]);
-    /*
-    afterGetColHeaderResizer(col, TH);
-    */
+
+    this.afterGetColHeaderTooltip(col, TH);
     if (this.userSettings.passportFields.length) {
       this.afterGetColHeaderRows(col, TH);
     }
@@ -574,11 +583,10 @@ export default Component.extend({
       // afterGetColHeader requires this === .table
       // (col, TH) => afterGetColHeader(col, TH, ),
       beforeCopy: bind(this, this.beforeCopy),
-      headerTooltips: {
-        rows: false,
-        columns: true,
-        onlyTrimmed: true
-      },
+      /** headerTooltips is dropped because the Header Tooltips plugin will be
+       * deprecated after version 8.0.0 :
+       * https://github.com/handsontable/handsontable/issues/7023
+       */
 
       hiddenColumns: {
         // copyPasteEnabled: default is true,
