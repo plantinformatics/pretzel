@@ -3005,6 +3005,16 @@ ul.dataBlocks > li > * {
   margin : 1em;
 }
 
+/*----------------------------------------------------------------------------*/
+
+img.img-fit {
+  max-width: 100%;    /* Ensure image does not exceed its container width */
+  max-height: 100%;   /* Ensure image does not exceed its container height */
+  // display: block;      /* Prevents bottom spacing from inline images */
+  width: auto;         /* Keep the width auto; will scale based on parent's width */
+  height: auto;        /* Keep the height auto; will scale based on parent's height */
+}
+
 /* -------------------------------------------------------------------------- */
 
 /* @import "ember-bootstrap/bootstrap-sprockets"; */

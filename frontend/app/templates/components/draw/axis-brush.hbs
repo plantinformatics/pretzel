@@ -1,6 +1,6 @@
 {{!-- block.block.datasetNameAndScope or datasetId.name or .id --}} 
 
-
+{{!-- This is one data row in the <table> which is defined in the parent component, draw/axis-brush --}}
   <tr>
     <td>{{this.datasetName}}</td>
     <td>{{this.block.block.scope}}</td>
@@ -10,6 +10,8 @@
     <td class="devel-visible">{{this.zoomCounter}}</td>
     <td style="display:none;"> {{this.features.length}} <!-- for features request. --></td>
   </tr>
+
+  <tr><td colspan="6"> {{!-- This row spans all columns --}}
 
 <div>
   <label>DNA sequence for brushed interval</label>
@@ -27,7 +29,7 @@
 
 </div>
 <div>
-  <textarea>{{this.sequenceText}}</textarea>
+  <textarea style="width:100%">{{this.sequenceText}}</textarea>
 </div>
 
 
@@ -57,3 +59,6 @@
   {{/each}}
 
 </table>
+
+{{!-- end of <td colspan="6"> --}}
+</td></tr>

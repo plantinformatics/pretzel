@@ -795,4 +795,23 @@ export default Controller.extend(Evented, componentQueryParams.Mixin, {
 
   enableGenotypeControlsDialog : alias('block.viewedVCFBlocks.length'),
 
+  /** @return an array of axisBrush-s for which block.datasetId._meta.PanBARLEXName
+   * is defined, for the currently brushed axes.
+   * This is used to enable display of a button to request a PanBARLEX dotplot
+   * for the given datasets.
+   */
+  brushedDatasetsPanBARLEX : computed(
+    'axisBrush.brushCount',	// or axisBrush.brushedAxes.length
+    function () {
+      const
+      fnName = 'brushedDatasetsPanBARLEX',
+      brushedAxes = this.axisBrush.brushedAxes,
+      /** meta.PanBARLEXName indicates that the dataset is available on
+       * PanBARLEX, and it gives the name of the dataset on PanBARLEX, as these
+       * vary slightly for some datasets.
+       */
+      bas = brushedAxes.filterBy('block.datasetId._meta.PanBARLEXName');
+      return bas;
+    }),
+
 });

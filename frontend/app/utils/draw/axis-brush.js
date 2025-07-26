@@ -54,7 +54,39 @@ export default EmberObject.extend({
     }
     );
     return features;
-  })
+  }),
 
+  //----------------------------------------------------------------------------
+
+  /** Round .brushedDomain to 2 decimal places, which is appropriate for genetic maps.
+   * Also for reference assemblies : @see brushedDomainInt()
+   */
+  brushedDomainRounded : computed('brushedDomain.[0]', 'brushedDomain.[1]', function () {
+    /** Copied from :
+     *   components/draw/axis-brush.js
+     *   components/panel/manage-genotype.js
+     * This value could now be used in manage-genotype.
+     * Related : helpers/domainRounded.js : helper(function domainRounded( ) )
+     */
+    let domain = this.get('block.brushedDomain');
+    if (domain) {
+      domain = domain.map((d) => d.toFixed(2));
+    }
+    return domain;
+  }),
+  /** Round .brushedDomain to integer values, because for most dataset types,
+   * location / position is an integer number of nucleotide base pairs.
+   * Only for genetic maps is a rational value of location relevant; see
+   * brushedDomainRounded().
+   */
+  brushedDomainInt : computed('brushedDomain.[0]', 'brushedDomain.[1]', function () {
+    let domain = this.get('block.brushedDomain');
+    if (domain) {
+      domain = domain.map((d) => d.toFixed(0));
+    }
+    return domain;
+  }),
+
+  //----------------------------------------------------------------------------
 
 });
