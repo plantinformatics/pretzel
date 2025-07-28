@@ -52,7 +52,7 @@ This is enabled by the following configuration : within $blastDir/datasetId/, fo
 - X.dbName which is a text file containing the blast db file name prefix, e.g. dataset.fasta.
 
 It may be preferred to keep the blast database files separate from the datasetId configuration,
-so there is also conventionally a directory $blastDir/GENOME_REFERENCES/, which can contain a directory for each blast database, and the X.dbName can be a soft-link to this
+so there is also conventionally a directory $blastDir/GENOME_REFERENCES/, which can contain a directory for each blast database, and the X.dir can be a soft-link to this
 
 
 
@@ -65,10 +65,10 @@ so there is also conventionally a directory $blastDir/GENOME_REFERENCES/, which 
 Unlike  the blast databases, VCF doesn't need .dir and .dbName entries;  the structure is simply :
 ```
 $vcfDir/
-- datasetId/
+- <datasetId>/
 - - Chr1A.vcf.gz ...
 ```
-Where datasetId is derived from the worksheet name 'VCF|datasetId',
+Where <datasetId> is derived from the worksheet name 'VCF|datasetId',
 and Chr1A is the Chromosome name from the 'VCF|' worksheet.
 
 
