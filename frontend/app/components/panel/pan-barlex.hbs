@@ -47,6 +47,9 @@
   <img src="{{this.base64Image}}" alt="Base64 Image" class="img-fit"
     style="max-height: 85%" />
 {{else}}
-  {{!-- Only after request sent.  <p>Loading image...</p> --}}
+  {{!-- Only after request sent. --}}
+  {{#if this.requestPromise}}
+    <p>Loading image...</p>
+  {{/if}}
 {{/if}}
 {{yield}}

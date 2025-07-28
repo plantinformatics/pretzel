@@ -27,6 +27,12 @@ export default class PanBarlexComponent extends Component {
 
   //----------------------------------------------------------------------------
 
+  /** Result of getDotPlot().  Loading message is shown if this is defined and
+   * .base64Image is not yet defined (by receiving the response).  */
+  @tracked
+  requestPromise;
+  /** nullish or error message from getDotPlot(). For display in GUI.
+   */
   @tracked
   errorMessage;
 
@@ -91,6 +97,7 @@ export default class PanBarlexComponent extends Component {
       return interval;
     }),
     promise = fetchDotPlotData(intervals);
+    this.requestPromise = promise;
     this.errorMessage = null;
     return promise;
   }
@@ -115,6 +122,8 @@ export default class PanBarlexComponent extends Component {
       }
     });
   }
+  /** PNG image for display in <img>, based on image received by getDotPlot().
+   */
   @tracked base64Image;
   /** Display the given dotPlot image (which is a png) */
   showImage(base64ImageData) {

@@ -39,6 +39,9 @@ export default EmberObject.extend({
    * which is part of changing the axes (Stacked) to Ember components, and the dependent keys can be e.g. block.axis.domain.
    */
   features : computed('blockId', 'zoomCounter', 'brushedDomain.[0]', 'brushedDomain.[1]', function () {
+    /* see later comment in brushedDomainRounded() re. brushedDomain.{0,1}
+     * dependency
+     */
     let blockId = this.get('blockId'),
     id = this.get('id');
     if (blockId === undefined) {
@@ -61,12 +64,16 @@ export default EmberObject.extend({
   /** Round .brushedDomain to 2 decimal places, which is appropriate for genetic maps.
    * Also for reference assemblies : @see brushedDomainInt()
    */
-  brushedDomainRounded : computed('brushedDomain.[0]', 'brushedDomain.[1]', function () {
+  brushedDomainRounded : computed('brushedDomain', function () {
     /** Copied from :
      *   components/draw/axis-brush.js
      *   components/panel/manage-genotype.js
      * This value could now be used in manage-genotype.
      * Related : helpers/domainRounded.js : helper(function domainRounded( ) )
+     *
+     * The dependency could be brushedDomain.{0,1}, but the whole array is
+     * replaced in utils/draw/axisBrush.js : brushHelper() :
+     *   axisBrush.set('brushedDomain', ab.brushedDomain);
      */
     let domain = this.get('block.brushedDomain');
     if (domain) {
@@ -79,7 +86,7 @@ export default EmberObject.extend({
    * Only for genetic maps is a rational value of location relevant; see
    * brushedDomainRounded().
    */
-  brushedDomainInt : computed('brushedDomain.[0]', 'brushedDomain.[1]', function () {
+  brushedDomainInt : computed('brushedDomain', function () {
     let domain = this.get('block.brushedDomain');
     if (domain) {
       domain = domain.map((d) => d.toFixed(0));
