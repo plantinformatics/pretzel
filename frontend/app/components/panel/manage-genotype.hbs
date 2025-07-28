@@ -1082,12 +1082,12 @@ While scrolling through the Genotype Table this updates to show where the curren
         </span>
       {{else}}
 
-      <div>
-        <label>Genolink</label>
-
-        {{#if (and this.selectedCount this.genolinkSearchURL) }}
         <div>
-          <span>Access passport data via Genolink for currently loaded accessions</span>
+          <label>Genolink</label>
+
+          {{#if (and this.selectedCount this.genolinkSearchURL) }}
+          <div>
+            <span>Access passport data via Genolink for currently loaded accessions</span>
             <a target='_blank' href={{this.genolinkSearchURL}}
               class={{concat "btn-info margin-1em btn" (if this.searchIdsTruncatedMessage "disabled" "") }} >
               <img src="/assets/images/Genolink-logo.png" alt="Genolink logo" style="height: 3ex;">
@@ -1098,44 +1098,44 @@ While scrolling through the Genotype Table this updates to show where the curren
               {{this.searchIdsTruncatedMessage}}
               Open AGG Genolink, showing the passport data of the selected samples.
             </EmberTooltip>
-        </div>
-        {{/if}}
+          </div>
+          {{/if}}
 
-        <span>
-          <button type="button" class="btn btn-info" onclick={{pipe
+          <span>
+            <button type="button" class="btn btn-info" onclick={{pipe
               (action (mut @userSettings.showSelectPassportFields) true)
-            }}>
-            Select Passport fields
-          </button>
-        {{#ember-tooltip side="bottom-start" delay=1500}}
-          Select which Passport fields will be added to the Sample / Accession column headers in the Genotype Table.
-        {{/ember-tooltip}}
-        </span>
-
-        <span>
-          <EmberTooltip @side="bottom" @delay=500>
-          <span>Sort the Genotype Table columns by the selected Passport field values :
-            {{!-- if useSelectMultiple, use map-by 'id' --}}
-            {{@userSettings.passportFields}}.
-            This will override 'Sort by Haplotype'.
+              }}>
+              Select Passport fields
+            </button>
+            {{#ember-tooltip side="bottom-start" delay=1500}}
+              Select which Passport fields will be added to the Sample / Accession column headers in the Genotype Table.
+            {{/ember-tooltip}}
           </span>
-          </EmberTooltip>
-          <input type="checkbox"
-            checked={{@userSettings.sortByPassportFields}}
-            oninput={{action (mut @userSettings.sortByPassportFields) value="target.checked" }}  >
-          <label>Sort by Passport fields</label>
-        </span>
 
-        {{#if @userSettings.showSelectPassportFields}}
-          {{!-- i.e. panel/select-passport-fields --}}
-          <Panel::SelectPassportFields @userSettings={{@userSettings}}
-            @selectedFieldsChanged={{this.selectedFieldsChanged}}
-            @genotypeTable={{this}}
-            >
-          </Panel::SelectPassportFields>
-        {{/if}}
+          <span>
+            <EmberTooltip @side="bottom" @delay=500>
+              <span>Sort the Genotype Table columns by the selected Passport field values :
+                {{!-- if useSelectMultiple, use map-by 'id' --}}
+                {{@userSettings.passportFields}}.
+                This will override 'Sort by Haplotype'.
+              </span>
+            </EmberTooltip>
+            <input type="checkbox"
+              checked={{@userSettings.sortByPassportFields}}
+              oninput={{action (mut @userSettings.sortByPassportFields) value="target.checked" }}  >
+            <label>Sort by Passport fields</label>
+          </span>
 
-      </div>
+          {{#if @userSettings.showSelectPassportFields}}
+            {{!-- i.e. panel/select-passport-fields --}}
+            <Panel::SelectPassportFields @userSettings={{@userSettings}}
+              @selectedFieldsChanged={{this.selectedFieldsChanged}}
+              @genotypeTable={{this}}
+              >
+            </Panel::SelectPassportFields>
+          {{/if}}
+
+        </div>
       {{/unless}}       {{!-- .dataLicenceAgreements.Genolink }}
 
 
