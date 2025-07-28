@@ -1072,6 +1072,16 @@ While scrolling through the Genotype Table this updates to show where the curren
         </button>
       </div>
 
+      {{#unless this.genolinkSearchURL}}
+        {{!-- genolinkSearchURL is nullish if there are no samples selected
+          which can be looked up on Genolink, so in this case don't display
+          Genolink functionality.  --}}
+      {{else unless this.dataLicenceAgreements.Genolink}}
+        <span>To enable connectivity to Genolink/Genesys-PGR, you need to accept the terms in
+          <LinkTo @route="account-settings" @classNames="" @tagName="a">Account</LinkTo>
+        </span>
+      {{else}}
+
       <div>
         <label>Genolink</label>
 
@@ -1126,6 +1136,7 @@ While scrolling through the Genotype Table this updates to show where the curren
         {{/if}}
 
       </div>
+      {{/unless}}       {{!-- .dataLicenceAgreements.Genolink }}
 
 
 
