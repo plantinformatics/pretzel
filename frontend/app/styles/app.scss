@@ -326,6 +326,15 @@ table.contextual-data-table td
     );
 }
 
+.number2colour.gtAltRef {
+  background-color:
+    color-mix(
+      in srgb,
+      var(--gt-background-color-Ref, #b1c1e8) calc(clamp(-1 * var(--value), 0, 1) * 100%),
+      var(--gt-background-color-Alt, #ffc8ae) calc(clamp(var(--value), 0, 1) * 100%)
+    );
+}
+
 
 /* -------------------------------------------------------------------------- */
 
