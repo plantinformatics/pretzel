@@ -144,15 +144,15 @@ COPY ./frontend /frontend
 COPY ./resources/tools/dev/snps2Dataset.pl $scriptsDir/.
 
 # additional node version for lb4app (backend)
-ENV NODE_BE /usr/local/node16
+ENV NODE_BE /usr/local/node22
 RUN mkdir $NODE_BE $NODE_BE/bin $NODE_BE/lib
 
 # To copy these symbolic links successfully, copy the whole directory, not individual files :
 # /usr/local/bin
 #   npm -> ../lib/node_modules/npm/bin/npm-cli.js
 #   npx -> ../lib/node_modules/npm/bin/npx-cli.js
-COPY --from=node:16-alpine /usr/local/bin  $NODE_BE/bin
-COPY --from=node:16-alpine /usr/local/lib  $NODE_BE/lib
+COPY --from=node:22-alpine /usr/local/bin  $NODE_BE/bin
+COPY --from=node:22-alpine /usr/local/lib  $NODE_BE/lib
 
 # may be required later, for upgradeFrontend2 : -g rollup && npm install rollup@4.14.2
 RUN date \
@@ -188,7 +188,7 @@ RUN ( [ ! -L /app/client ] || rm /app/client ) && \
 ENV EMAIL_VERIFY=NONE AUTH=ALL
 
 # $NODE_BE/bin/node
-ENTRYPOINT ["/usr/local/node16/bin/node", "/app/lb3app/server/server.js"]
+ENTRYPOINT ["/usr/local/node22/bin/node", "/app/lb3app/server/server.js"]
 
 # ------------------------------------------------------------------------------
 
