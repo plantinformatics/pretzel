@@ -7,7 +7,7 @@ import { inject as service } from '@ember/service';
 import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
 const /*import */{
   fetchDotPlotData,
-} = vcfGenotypeBrapi.ipkPanbarlex; /*from 'vcf-genotype-brapi'; */
+} = vcfGenotypeBrapi.ipkPanbarlexBrowser; /*from 'vcf-genotype-brapi'; */
 
 
 const dLog = console.debug;
