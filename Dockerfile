@@ -155,12 +155,15 @@ COPY --from=node:22-alpine /usr/local/bin  $NODE_BE/bin
 COPY --from=node:22-alpine /usr/local/lib  $NODE_BE/lib
 
 # may be required later, for upgradeFrontend2 : -g rollup && npm install rollup@4.14.2
+#
+# This option existed until npm v6, but is not in v7,v8 (i.e. not in node22)
+#   && npm config set scripts-prepend-node-path true \
+#
 RUN date \
   && ls -sF $NODE_BE/lib \
   && export PATH=$NODE_BE/bin:$PATH \
   && export NODE_PATH=$NODE_BE/lib/node_modules \
   && cd $NODE_BE/lib && npm -v && node -v \
-  && npm config set scripts-prepend-node-path true \
   && cd /app && npm install -g rollup && npm install rollup@4.14.2 nodemon@1.18.8 && npm ci \
   && date
 

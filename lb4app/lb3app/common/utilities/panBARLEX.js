@@ -78,6 +78,11 @@ datasetAttributes = {
 function genesToDataset(responses) {
   const
   fnName = 'genesToDataset',
+  /** Map a response for a sequence cluster into a feature, which is added to the given dataset d.
+   * @param {object} d  dataset being accumulated
+   * @param {object} r  response for a sequence cluster (gene)
+   * @return {object} d dataset (this function is used in .reduce() )
+   */
   responseToFeature = (d, r) => {
     const
     /** Plan to use dataDescription.referenceAssemblyName in place of default 'MOREX' */
@@ -92,8 +97,10 @@ function genesToDataset(responses) {
         contigLength: 561794515
       }
     */
-    feature = m.genes[0].feature;
+    gene = m.genes.find(g => g.feature);
+    if (gene) {
       const
+      feature = gene.feature,
       blockName = feature.seqid,
       block = d.blocks[blockName] ||
         (d.blocks[blockName] = {
@@ -105,8 +112,9 @@ function genesToDataset(responses) {
       values = { name2 : feature.featureId, descriptions, URL},
       f = {name : r.clusterId, value : [feature.start, feature.end], values};
       block.features.push(f);
+    }
 
-      return d;
+    return d;
   },
   dataset = 
     responses.reduce(responseToFeature, {...datasetAttributes, blocks : {}});
@@ -114,10 +122,11 @@ function genesToDataset(responses) {
   /** Convert dataset.blocks from object to array.
    * Using an object enables simple and quick lookup of whether blockName is
    * already in d.blocks[] above.
+   * Can change to use a comparator suited to chromosome names.
    */
   const blocksArray = Object.values(dataset.blocks).sort((a, b) => (a == b ? 0 : a < b ? -1 : +1));
   dataset.blocks = blocksArray;
-  console.log(fnName, dataset);
+  console.log(fnName, dataset.blocks.length);
   return dataset;
 }
 
