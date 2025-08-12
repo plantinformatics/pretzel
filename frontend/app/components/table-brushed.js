@@ -367,10 +367,14 @@ export default Component.extend({
     positionEnd = data.any((datum) => datum.feature.value && (datum.feature.value.length > 1));
     return positionEnd;
   }),
+  /** Extra columns are added to show Feature attributes in .values and .values.INFO
+   * @return array of names of extra columns
+   */
   extraColumnsNames : computed('data.[]', function () {
     let
     data = this.get('data'),
     subFieldNames = {},
+    /** Collate names of Feature attributes in .values and .values.INFO */
     nameSet = data.reduce(
       (result, datum) => {
         let feature = datum.feature;
@@ -386,6 +390,10 @@ export default Component.extend({
             });
           }
         });
+        /** For QTLs, providing an Ontology column even if it is initially empty
+         * enables the use to edit the data cell and define an Ontology value
+         * for the Feature.
+         */
         if (feature.get('blockId.isQTL')) {
           result.add('Ontology');
         }
@@ -397,6 +405,7 @@ export default Component.extend({
     dLog('extraColumnsNames', names, data);
     return names;
   }),
+  /** column definitions for columns defined in extraColumns()  */
   extraColumns : computed('extraColumnsNames.[]', function () {
     return this.get('extraColumnsNames').map(
       (name) => {
@@ -413,9 +422,12 @@ export default Component.extend({
       });
   }),
 
+  /** Names of columns defined in extraColumns()  */
   extraColumnsHeaders : computed('extraColumnsNames.[]', function () {
     return this.get('extraColumnsNames').map(capitalize);
   }),
+  /** Widths for columns named in extraColumnsNames()
+   */
   extraColumnsWidths : computed('extraColumnsNames.[]', function () {
     /** ref, alt are configured in featureValuesWidths; default value
      * for other columns, which may be user-defined. */
