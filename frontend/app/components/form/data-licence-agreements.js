@@ -18,7 +18,7 @@ const
  */
 agreements =
   {
-    Genolink : "Passport data is sourced by Genolink from Genesys-PGR. Use of this service means you agree to the Genesys-PGR Terms and Conditions and acknowledge Genesys-PGR as the source when using Genolink data.  Refn : https://www.genesys-pgr.org/",
+    Genolink : "Passport data is sourced by Genolink from Genesys-PGR. Use of this service means you agree to the Genesys-PGR Terms and Conditions and acknowledge Genesys-PGR as the source when using Genolink data.  Refn : https://www.genesys-pgr.org/content/legal/terms",
   };
 
 /**   form/data-licence-agreements

@@ -148,6 +148,16 @@
 
         {{/elem/button-tab}}
 
+        {{#if this.brushedDatasetsPanBARLEX.length}}
+          {{#elem/button-tab
+             side="right"
+             key="PanBARLEX"
+             state=this.layout.right.tab onClick=(action "setTab") }}
+            <img src="/assets/images/ipk_logo_en.png" alt="IPK PanBARLEX logo" style="height: 1.5ex;">
+            &nbsp; PanBARLEX
+          {{/elem/button-tab}}
+        {{/if}}
+
         {{#if this.model.params.parsedOptions.advSettings}}
           {{#elem/button-tab
              side="right"
@@ -195,7 +205,8 @@
             loadBlock=(action this.actions.loadBlock)
             summaryData=this.summaryData.manageGenotype
             }}
-
+        {{else if (compare this.layout.right.tab '===' 'PanBARLEX')}}
+          <Panel::PanBarlex @brushedDatasetsPanBARLEX={{this.brushedDatasetsPanBARLEX}} />
         {{else if (and (compare this.layout.right.tab '===' 'settings') this.model.params.parsedOptions.advSettings)}}
           {{panel/manage-settings
             selectedFeatures=this.selectedFeatures

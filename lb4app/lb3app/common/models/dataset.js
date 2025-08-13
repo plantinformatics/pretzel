@@ -22,6 +22,10 @@ var upload = require('../utilities/upload');
 var load = require('../utilities/load');
 const { spreadsheetDataToJsObj } = require('../utilities/spreadsheet-read');
 const { GffParse } = require('../utilities/gff_read');
+
+
+const { panBARLEXLoadKnownGenes } = require('../utilities/panBARLEX');
+
 const { loadAliases } = require('../utilities/load-aliases');
 const { cacheClearBlocks } = require('../utilities/localise-blocks');
 const { cacheblocksFeaturesCounts } = require('../utilities/block-features');
@@ -37,6 +41,9 @@ import('@plantinformatics/vcf-genotype-brapi/dist/vcf-genotype-brapi-node.mjs').
   checkVCFsAreInstalled = vcfGenotype.checkVCFsAreInstalled;
 });
 //; //require('../utilities/vcf-genotype');
+
+// also available as parseStringFields()
+const { parseBooleanFields } = require('../utilities/json-text');
 
 const { ErrorStatus } = require('../utilities/errorStatus.js');
 const { objectLookup } = require('../utilities/mongoDB-driver-lib');
@@ -650,6 +657,58 @@ module.exports = function(Dataset) {
       }
     }
 
+  };
+
+  //----------------------------------------------------------------------------
+
+  Dataset.remoteMethod('loadFromURL', {
+    accepts: [
+      {arg: 'dataDescription', type: 'object', required: false/*true*/, http: {source: 'body'}},
+      {arg: "options", type: "object", http: "optionsFromRequest"},
+    ],
+    // http: {verb: 'get'},
+    returns: {arg: 'status', type: 'object'},
+    description: "Get features in referenceAssemblyName for PanBARLEX Known Genes."
+  });
+
+  /** Get features in referenceAssemblyName for PanBARLEX Known Genes.
+   * If dataDescription.upload, load into database as a Pretzel dataset.
+   * @param {Object} dataDescription
+   *   { endpoint : "panBARLEXLoadKnownGenes", referenceAssemblyName,
+   *     upload : boolean }
+   *
+   * In a subsequent commit referenceAssemblyName will be used (with ID Liftover ?)
+   * to map to the selected reference assembly; currently it effectively
+   * defaults to "MOREX" because genesToDataset() does :
+   *    r.clusterMembers.find(cm => cm.sampleId == 'MOREX').
+   *
+   * If upload is true, add the dataset content to the database and reply with
+   * the dataset name, otherwise send it in the response.
+   * @param {Object} options  optionsFromRequest
+   * @param {function(any, any)} cb (error, response)
+   * @desc
+   * return via cb : {errors, warnings, datasetName}
+   * .errors and .warnings may have [datasetName] : [] text messages
+   */
+  Dataset.loadFromURL = function(dataDescription, options, cb) {
+    // based on .gffUpload
+    const fnName = 'loadFromURL';
+    /** These boolean and numeric arguments are received as strings, so parse them. */
+    parseBooleanFields(dataDescription, ['upload']);
+    const
+    models = this.app.models,
+    datasetId = "panBARLEX_KnownGenes",
+    referenceAssemblyName = dataDescription.referenceAssemblyName || "MOREX";
+    panBARLEXLoadKnownGenes(referenceAssemblyName)
+      .then(dataset => {
+        dataset.meta.referenceAssemblyName = referenceAssemblyName;
+        if (dataDescription.upload) {
+          /** can add {name, errors, warnings} to dataObj param to gffUploadData(). */
+          this.gffUploadData({dataset}, datasetId, /*replaceDataset*/true, options, models, cb);
+        } else {
+          cb(null, dataset);
+        }
+      });
   };
 
 

@@ -12,6 +12,9 @@
 
 #-------------------------------------------------------------------------------
 
+# Fold the given json source files and output the first $length lines.
+# Used for preparing a subset of a geneticmap, for devel / testing.
+#
 # Usage e.g. : 
 #
 # docHead "IRGSP 3" IRGSP_3 200 < 2017Aug15
@@ -34,4 +37,32 @@ function docHead()
     [ -f $name ] || fgrep "\"$pattern\"" $* > $name
     <$name sed "s/},/},\n/g" > $name.fold
     (head -$length $name.fold  | sed '$s/,$//' ; tail -1 $name.fold | sed  ' s/"aliases" : \[\] } //') > $name.json
+}
+
+#-------------------------------------------------------------------------------
+
+# Output the documents (Dataset, Block) for the named datasets
+# Usage
+# DIM=$(sudo docker ps -a --filter=ancestor=mongo:4.4 --format '{{ .Names }}')
+# DB_NAME=pretzel
+function exportDatasets() {
+  if [ $# -eq 0 ]
+  then
+    datasets=$(sed 's/\(.*\)/"\1", /' | tr -d '\n' | sed 's/, $//')
+  else
+    datasets=$(for ed_da in $* ; do echo \""$ed_da"\"', '; done | sed 's/, $//')
+  fi
+  echo $datasets
+
+  db_args=( --db=$DB_NAME  --host $database_ip "${mAuth[@]}" )
+  # from $pA/notes/com/aws/aws :
+  sudo docker exec -it $DIM mongoexport --quiet "${db_args[@]}" --collection=Dataset --query='{"_id" : {"$in" : ['$datasets']}}' | cat > datasets.json
+  sudo docker exec -it $DIM mongoexport --quiet "${db_args[@]}" --collection=Block --query='{"datasetId" : {"$in" : ['$datasets']}}' | cat > blocks.json
+}
+function importDatasets() {
+  # failing to read from stdin, so cp into container :
+  sudo docker cp datasets.json $DIM:/tmp
+  sudo docker exec -i $DIM mongoimport  --db=$DB_NAME --collection=Dataset /tmp/datasets.json 
+  sudo docker cp blocks.json $DIM:/tmp
+  sudo docker exec -i $DIM mongoimport  --db=$DB_NAME --collection=Block /tmp/blocks.json 
 }

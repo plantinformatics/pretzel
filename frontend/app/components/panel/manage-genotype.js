@@ -307,6 +307,9 @@ export default class PanelManageGenotypeComponent extends Component {
   @alias('haplotypeService.haplotypeColourScale') haplotypeColourScale;
   @alias('haplotypeService.variantIntervalColourScale') variantIntervalColourScale;
 
+  @alias('controls.userSettings.localStorage') localStorage;
+  @alias('localStorage.dataLicenceAgreements') dataLicenceAgreements;
+
 
   // ---------------------------------------------------------------------------
 

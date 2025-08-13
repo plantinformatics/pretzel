@@ -52,6 +52,11 @@ const fieldNames = {
   PositionEnd : 'value.1',
 };
 
+const featureSymbol = Symbol.for('feature');
+
+/** Sanitize an array of numbers read from dataset._meta.cellColour.domain */
+const numberArrayRe = /[^-[\]., 0-9]+/g;
+
 /*----------------------------------------------------------------------------*/
 
 let formFeatureEditEnable;
@@ -362,10 +367,14 @@ export default Component.extend({
     positionEnd = data.any((datum) => datum.feature.value && (datum.feature.value.length > 1));
     return positionEnd;
   }),
+  /** Extra columns are added to show Feature attributes in .values and .values.INFO
+   * @return array of names of extra columns
+   */
   extraColumnsNames : computed('data.[]', function () {
     let
     data = this.get('data'),
     subFieldNames = {},
+    /** Collate names of Feature attributes in .values and .values.INFO */
     nameSet = data.reduce(
       (result, datum) => {
         let feature = datum.feature;
@@ -381,6 +390,10 @@ export default Component.extend({
             });
           }
         });
+        /** For QTLs, providing an Ontology column even if it is initially empty
+         * enables the use to edit the data cell and define an Ontology value
+         * for the Feature.
+         */
         if (feature.get('blockId.isQTL')) {
           result.add('Ontology');
         }
@@ -392,6 +405,7 @@ export default Component.extend({
     dLog('extraColumnsNames', names, data);
     return names;
   }),
+  /** column definitions for columns defined in extraColumns()  */
   extraColumns : computed('extraColumnsNames.[]', function () {
     return this.get('extraColumnsNames').map(
       (name) => {
@@ -408,9 +422,12 @@ export default Component.extend({
       });
   }),
 
+  /** Names of columns defined in extraColumns()  */
   extraColumnsHeaders : computed('extraColumnsNames.[]', function () {
     return this.get('extraColumnsNames').map(capitalize);
   }),
+  /** Widths for columns named in extraColumnsNames()
+   */
   extraColumnsWidths : computed('extraColumnsNames.[]', function () {
     /** ref, alt are configured in featureValuesWidths; default value
      * for other columns, which may be user-defined. */
@@ -503,21 +520,45 @@ export default Component.extend({
       data = data.concat(this.createdFeatures);
     }
     const
+    /** .mapBy().uniq() would likely be faster (more memory). */
     fd = data?.uniqBy('feature.blockId.datasetId'),
     datasets = fd.mapBy('feature.blockId.datasetId');
-    /** The dataset will be included in .colourColumns and in cellProperties to
-     * enable checking the cell feature is in a dataset with .cellColour, and to
+    /** Check that the value dataset._meta.cellColour.domain is an array of numbers.
+     * i.e. sanitize value read from user data.
+     * @param d domain.  This may be an Array or string representation, both are handled.
+     * @return sanitized value of d
+     */
+    function domainCheck(d) {
+      if (typeof d === 'string') {
+        d = JSON.parse(d.replaceAll(numberArrayRe, ''));
+      }
+      if (Array.isArray(d)) {
+        const ok = (d.length === 2) &&
+          (typeof d[0] === 'number') && (typeof d[1] === 'number');
+        if (! ok) {
+          d = null;
+        }
+      }
+      return d;
+    }
+    /** The dataset is included in .colourColumns (and in cellProperties?) to
+     * enable checking that the cell feature is in a dataset with .cellColour, and to
      * select colourScale.
-     * Currently one dataset with .cellColour will imply colouring for others;
-     * and in the intended use multiple datasets with the same columns will have
+     * In the intended use multiple datasets with the same columns will have
      * .cellColour, so different rows of a column will have different
      * .colourScale, to be indicated by the cell feature dataset.
+     *
+     * It is possible for dataset._meta.cellColour to be either an object or a string;
+     * both are handled here; probably an object will be better, and Dataset
+     * Meta Edit panel seems able to configure either.
      */
-    this.colourColumns = datasets.mapBy('_meta.cellColour')
-      .filter(x => x)
-      .map(c => typeof c === 'string' ? JSON.parse(c) : c)
-      .map(({valueRegexp, colourScale}) =>
-        ({valueRegexp : new RegExp(deletePunctuation(valueRegexp)),
+    this.colourColumns = datasets.map(d => [d, d.get('_meta.cellColour')])
+      .filter(dcc => dcc[1])
+      .map(([dataset, c]) => [dataset, typeof c === 'string' ? JSON.parse(c) : c] )
+      .map(([dataset, {valueRegexp, domain, colourScale}]) =>
+        ({dataset,
+          valueRegexp : new RegExp(deletePunctuation(valueRegexp)),
+          domain : domainCheck(domain) || undefined,
           colourScale : deletePunctuation(colourScale)}));
 
 
@@ -627,6 +668,16 @@ export default Component.extend({
       // Clean up any existing content
      Handsontable.dom.empty(td);
 
+     /** Use a d3 linear scale to map the number values to the [-1, 1] range
+      * expected by the number2colour colourScale defined in .scss */
+     const range = [-1, 1];
+     let scale;
+     if (cellProperties.domain) {
+       scale = d3.scaleLinear()
+         .domain(cellProperties.domain) // range of input values
+         .range(range); // range of output values
+     }
+
      // Ensure the value is treated as a string
      const strValue = String(value || '');
 
@@ -634,30 +685,58 @@ export default Component.extend({
      const numbers = strValue.split(';').map(s => s.trim()).filter(s => s.length > 0);
 
      // For each number, create a <span> with CSS variable and styling
-     numbers.forEach((numStr, i) => {
+     numbers.forEach(addStyledSpan);
+     /** Add to <td> : a <span> configured to implement a colour block around
+      * the given text.
+      * Called for each number in `value`.
+      */
+     function addStyledSpan(numStr, i) {
        const num = parseFloat(numStr);
        const span = document.createElement('span');
        span.className = 'number2colour ' + cellProperties.colourScale;
        span.textContent = numStr;
-       span.style.setProperty('--value', num);
+       span.style.setProperty('--value', scale ? scale(num).toFixed(2) : num);
        span.style.marginRight = '0.2em'; // optional spacing
        td.appendChild(span);
-     });
+     }
 
      // Optional: Set a base class
+     // This is not used. The name refers to the cell containing a <span> for each number
      td.classList.add('multi-span-cell');
      return td;
    },
 
+  /**
+   * @param row, col  visualRowIndex, visualColIndex
+   * @param prop
+   */
   cells(row, col, prop) {
     let cellProperties = {};
+    
+    if ((row < 0) || ! this.table)  return cellProperties;
 
-    const cellColour = this.colourColumns.find(c => c.valueRegexp.exec(prop));
-    if (cellColour) {
-      cellProperties.renderer = 'ColourSpanRenderer';
-      cellProperties.colourScale = cellColour.colourScale;
-    } else {
-      cellProperties.renderer = Handsontable.renderers.TextRenderer;
+    const
+    /** Determine the dataset of this row, from the feature reference in .data[] */
+    physicalRow = this.table.toPhysicalRow(row),
+    rowData = this.data[physicalRow],
+    feature = rowData ? (rowData[featureSymbol] || rowData.feature) : undefined,
+    datasetId = feature?.get('blockId.datasetId.id');
+
+    if (datasetId) {
+      /** cellColour includes .dataset here.
+       * Expect that c.dataset and feature.get('blockId.datasetId') are both
+       * proxies, so compare .id
+       */
+      const cellColour = this.colourColumns.find(c =>
+        (c.dataset.get('id') === datasetId) && 
+          c.valueRegexp.exec(prop));
+      if (cellColour) {
+        cellProperties.renderer = 'ColourSpanRenderer';
+        cellProperties.colourScale = cellColour.colourScale;
+        cellProperties.domain = cellColour.domain;
+      } else {
+        cellProperties.renderer = Handsontable.renderers.TextRenderer;
+      }
     }
     return cellProperties;
   },

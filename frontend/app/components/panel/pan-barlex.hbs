@@ -1,0 +1,55 @@
+{{#if @brushedDatasetsPanBARLEX.length}}
+
+  <div>
+    {{!-- based on components/panel/axis-brushes.hbs --}}
+    <table style="border-spacing: 1em 0px; border-collapse: separate;" >
+      <tr>
+        <th>Dataset Name</th>
+        <th>PanBARLEX Name</th>
+        <th>Scope</th>
+        <th>Interval</th>
+        <th>Length</th>
+      </tr>
+
+    {{#each @brushedDatasetsPanBARLEX as |brushedAxis| }}
+    {{!-- based on components/draw/axis-brush.hbs --}}
+      <tr>
+        <td>{{brushedAxis.block.datasetId.id}}</td>
+        <td>{{brushedAxis.block.datasetId._meta.PanBARLEXName}}</td>
+        <td>{{brushedAxis.block.scope}}</td>
+        <td>{{brushedAxis.brushedDomainInt}}</td>
+        <td>{{call (fn this.intervalLength brushedAxis.brushedDomainInt) }}</td>
+      </tr>
+    {{/each}}
+
+    </table>
+
+    {{this.intervalLengthMessage}}
+
+  </div>
+
+  <span>
+    <button type="button" class="btn btn-info margin-1em" onclick={{this.showDotPlot}}>
+      Show dot plot
+    </button>
+  {{#ember-tooltip side="bottom-start" delay=1500}}
+    Show a dot plot for the selected axis intervals, via IPK PanBARLEX.
+  {{/ember-tooltip}}
+  </span>
+{{/if}}
+<img src="/assets/images/ipk_logo_en.png" alt="IPK PanBARLEX logo" style="height: 4ex;">
+
+
+<div class="clear-both"></div>
+{{this.errorMessage}}
+
+{{#if this.base64Image}}
+  <img src="{{this.base64Image}}" alt="Base64 Image" class="img-fit"
+    style="max-height: 85%" />
+{{else}}
+  {{!-- Only after request sent. --}}
+  {{#if this.requestPromise}}
+    <p>Loading image...</p>
+  {{/if}}
+{{/if}}
+{{yield}}

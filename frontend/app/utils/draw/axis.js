@@ -94,14 +94,21 @@ function ensureYscaleDomain(yp, axis1d) {
  * g.tick already has a transform, so place the scale transform on g.tick > text.
  * g.btn contains <rect> and <text>, both requiring this scale.
  *
+ * @return {string} text of scale() operation, or '' if error.
  */
 function yAxisTextScale(/*d, i, g*/)
 {
-  let
-  axis1d = this.__data__,
-  portion = axis1d && axis1d.portion || 1,
-  scaleText = "scale(1, " + 1 / portion + ")";
-  // console.log("yAxisTextScale", d, i, g, this, axisName, axis, portion, scaleText);
+  let scaleText;
+  const axis1d = this.__data__;
+  if (axis1d.isDestroying) {
+    // in this case the value won't matter, and '' is a safe no-op.
+    scaleText = '';
+  } else {
+    const
+    portion = axis1d && axis1d.portion || 1;
+    scaleText = "scale(1, " + 1 / portion + ")";
+    // console.log("yAxisTextScale", d, i, g, this, axisName, axis, portion, scaleText);
+  }
   return scaleText;
 }
 function yAxisTicksScale(/*d, i, g*/)

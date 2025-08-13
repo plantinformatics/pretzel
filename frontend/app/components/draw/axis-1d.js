@@ -1269,7 +1269,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     svg = this.oa.svgContainer,
     viewedBlocks = this.get('viewedBlocks'),
     block = viewedBlocks[0];
-    if (block.features.length && (block.datasetId.id === 'Jun_Wei_022-03677')) {
+    if (block && block.features.length && (block.datasetId.id === 'Jun_Wei_022-03677')) {
       const
       markerData = block.features.map(f => ({name : f.name, position : f.value_0 ?? f.value[0]}))
         .sortBy('position'),
