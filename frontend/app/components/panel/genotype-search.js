@@ -112,7 +112,9 @@ export default class PanelGenotypeSearchComponent extends Component {
     this.navigateGenotypeTableP().then(() => {
       // equivalent : manageGenotype.vcfGenotypeSamplesSelectedAll
       const selectedSamples = this.args.userSettings.vcfGenotypeSamplesSelected[this.selectedDatasetId];
-      this.selectedSamplesText = selectedSamples ? selectedSamples.join('\n') : '';
+      if (selectedSamples || this.selectedSamplesText === undefined) {
+        this.selectedSamplesText = selectedSamples ? selectedSamples.join('\n') : '';
+      }
     });
   }
 

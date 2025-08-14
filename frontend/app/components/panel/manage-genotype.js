@@ -518,8 +518,12 @@ export default class PanelManageGenotypeComponent extends Component {
     }
 
     //--------------------------------------------------------------------------
-    const selectedSamples = userSettings.vcfGenotypeSamplesSelected[userSettings.selectedDatasetId];
-    later(() => this.selectedSamplesText = selectedSamples ? selectedSamples.join('\n') : '');
+    if (userSettings.selectedDatasetId) {
+      const selectedSamples = userSettings.vcfGenotypeSamplesSelected[userSettings.selectedDatasetId];
+      if (selectedSamples || (this.selectedSamplesText === undefined)) {
+        later(() => this.selectedSamplesText = selectedSamples ? selectedSamples.join('\n') : '');
+      }
+    }
     //--------------------------------------------------------------------------
 
     if (userSettings.samplesIntersection === undefined) {
