@@ -970,6 +970,11 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       if (trace_block > 1) {
         console.log(fnName, cacheId, 'put', limits[0] || limits);
       }
+      /** _id was received as ObjectID; this seems to be a change, possibly
+       * caused by upgrading Node.js in build from 16 to 22.
+       * Map the ObjectID-s to hex strings, which is the form the client is expecting.
+       */
+      limits = limits.map(({_id, ...rest}) => ({_id : _id.toHexString(), ...rest}));
       cache.put(cacheId, limits);
       cb(null, limits);
     }).catch(function(err) {

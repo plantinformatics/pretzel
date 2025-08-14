@@ -691,7 +691,12 @@ export default Service.extend(Evented, {
    */
   peekBlock(blockId)
   {
+    const fnName = 'peekBlock';
     if ((blockId === undefined) || (blockId === null)) {
+      return undefined;
+    }
+    if (typeof blockId != 'string') {
+      dLog(fnName, 'blockId', blockId);
       return undefined;
     }
     let
