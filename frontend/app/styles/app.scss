@@ -2724,6 +2724,7 @@ div.genotype .ember-tooltip
 
 /* -------------------------------------------------------------------------- */
 
+/** Also defined in bootstrap/scss/utilities/_sizing.scss */
 .h-100 {
   height: 100%;
 }
@@ -2731,6 +2732,14 @@ div.genotype .ember-tooltip
   width: 100%;
 }
 
+/*----------------------------------------------------------------------------*/
+
+.right-panel-height
+{
+  height: 100%;
+}
+
+/*----------------------------------------------------------------------------*/
 
 /* div#table-brushed.handsontable */
 
