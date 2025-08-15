@@ -2975,10 +2975,6 @@ export default class PanelManageGenotypeComponent extends Component {
       const selectFields = this.args.userSettings.passportFields;
       if (selectFields.length) {
         promise = promise.then(() => this.datasetsGetPassportData(selectFields));
-        /* lookup causes render, but does not wait for PassportData,
-         * so signal a need for showSamplesWithinBrush().
-         */
-        promise.then(() => this.passportDataCount++);
       }
     } else {
       promise = this.vcfGenotypeLookupSelected();
@@ -5117,7 +5113,15 @@ export default class PanelManageGenotypeComponent extends Component {
         Promise.resolve();
       return promise;
     });
-    return Promise.all(promises);
+    const allP = Promise.all(promises);
+    /* This function is called from vcfGenotypeLookupP(), which does
+     * vcfGenotypeLookupAllDatasets(); lookup causes render, but does not wait
+     * for PassportData, so signal a need for showSamplesWithinBrush().
+     * See related comment in updateAndClose() (select-passport-fields.js).
+     */
+    allP.then(() => later(() => this.passportDataCount++));
+
+    return allP;
   }
   /** Get the Passport data values indicated by selectFields for the given
    * dataset and sampleNames.
