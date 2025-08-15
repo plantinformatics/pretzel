@@ -97,6 +97,8 @@ import { Germinate } from '../../utils/data/germinate';
 const dLog = console.debug;
 
 const trace = 0;
+/** Enable trace of comparison / sorting of sample columns, via selected genotypic pattern. */
+const trace_sort = 0;
 
 const featureSymbol = Symbol.for('feature');
 
@@ -3883,7 +3885,9 @@ export default class PanelManageGenotypeComponent extends Component {
        * missing data is not sorted
        */
       ratio = Measure.average(ms, distanceCount);
-      dLog(fnName, sampleName, ratio, distanceCount, blocks.length);
+      if (trace_sort) {
+        dLog(fnName, sampleName, ratio, distanceCount, blocks.length);
+      }
       this.matchesSummary[sampleName] = ratio;
     }
     return ratio;
