@@ -749,7 +749,11 @@ export default Service.extend({
     let dataBlockIds =
         all ? [blockA] :
         axis.dataBlocksFiltered(true, false)
-        .filter((block) => block.get('isBrushableFeatures'))
+        /* filter out blocks which are transient (e.g. blast search results or
+         * PanBARLEX), or are not brushable because of zoom / feature density /
+         * threshold */
+        .filter((block) =>
+          ! block.hasTag('transient') && block.get('isBrushableFeatures'))
       .map(function (block) { return block.id; });
     /** The result of passing multiple blockIds to getBlockFeaturesInterval()
      * has an unevenly distributed result : all the results come from just 1 of

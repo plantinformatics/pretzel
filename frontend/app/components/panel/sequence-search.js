@@ -467,7 +467,7 @@ export default Component.extend({
 
   selectResultTab(tabId) {
     this.bsTab.select(tabId);
-    this.set('bsTab.activeId', tabId);
+    this.bsTab.activeId = tabId;
   },
 
   /*--------------------------------------------------------------------------*/

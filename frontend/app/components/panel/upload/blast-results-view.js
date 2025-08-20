@@ -431,12 +431,15 @@ export default Component.extend({
   resultParentBlocksByName : computed('parentBlocks', 'blockNames.[]', function () {
     const fnName = 'resultParentBlocksByName';
 
+    if (! this.parentBlocks.length) {
+      return {};
+    }
     let blockNames = this.get('blockNames');
     const
     blocks = this.parentBlocks
       .reduce((result, block) => {result[block.get('name')] = block; return result; }, {});
 
-    if (! blocks.length && blockNames.length) {
+    if (! Object.keys(blocks).length && blockNames.length) {
       const parentName = this.get('search.parent');
       dLog(fnName, parentName, blockNames, blocks);
     }
@@ -503,8 +506,8 @@ export default Component.extend({
       /* from a quick look, blockScopes and scopesForNames are probably similar
        * solutions to the same problem, from different branches, and likely the same.
        * from these branches / commits :
-       *   blockScopes    : [feature/ongoingGenotype ade64e58] Load blast search results with block .scope matching reference
-       *   scopesForNames : [feature/upgradeFrontend 8c8d63c2] update axis drag, feature search results display
+       *   scopesForNames : [feature/ongoingGenotype ade64e58] Load blast search results with block .scope matching reference
+       *   blockScopes    : [feature/upgradeFrontend 8c8d63c2] update axis drag, feature search results display
        */
       if (! isEqual(this.blockScopes, scopesForNames) ||
           (this.blockScopes.length < this.get('blockNames.length')) ||

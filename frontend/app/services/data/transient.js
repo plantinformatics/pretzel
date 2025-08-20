@@ -149,6 +149,7 @@ export default Service.extend({
    * viewing of distinct result sets.
    * @param view a flag per-feature to enable display of the feature row;
    * from values of the View checkbox column of the results features table.
+   * @return {Promise<Array<object>>} promise yielding array of stored features
    */
   showFeatures(dataset, blocks, features, active, view) {
     let
@@ -156,6 +157,7 @@ export default Service.extend({
     // may pass dataset, blocks to pushFeature()
     stored = features.map((f) => this.pushFeature(f));
     stored.forEach((feature, i) => this.showFeature(feature, active && view[i]));
+    return stored;
   },
   showFeature(feature, viewFeaturesFlag) {
     let

@@ -1,5 +1,20 @@
 //------------------------------------------------------------------------------
 
+/** Wrap Array.find(); return the result of fn(elt) instead of elt.
+ * Usage : instead of array.find(fn), use findResult(array, fn).
+ * @param {Array<any>} array
+ * @param {function} fn
+ * @return {any} undefined if fn(elt) is falsey for all elt of array,
+ * otherwise the first value of fn(elt) which is truthy.
+ */
+export function findResult(array, fn) {
+  let result;
+  array.find((elt, i) => result = fn(elt, i));
+  return result;
+}
+
+//------------------------------------------------------------------------------
+
 export { toggleString };
 
 /** Equivalent to toggleObject() but for String.
