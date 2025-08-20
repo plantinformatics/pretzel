@@ -48,7 +48,13 @@ const /*import */{
 const /*import */{
   getPassportData,
 } = vcfGenotypeBrapi.genolinkPassport; /*from 'vcf-genotype-brapi'; */
-
+/* Importing this directly instead of via the module package during development
+ * enables incremental builds, for a rapid development cycle. */
+// import { getPassportData } from '../../utils/genolink-passport';
+/* Pass chunk into getPassportData() to bypass module packaging issue when
+ * building genolink-passport.js in this repo via symbolic link.
+ */
+//import { chunk } from 'lodash/array'; // .js';
 
 import {
   refAlt,
@@ -5139,20 +5145,29 @@ export default class PanelManageGenotypeComponent extends Component {
     const genotypeIds = sampleNames.filter(sampleNameIsAGG);
     if (! genotypeIds.length) return Promise.resolve();
     const
-    promise =
-      getPassportData({ genotypeIds, selectFields }, genolinkBaseUrl)
-      .then(data => {
+    mg = this,
+    /** array of promises, each yielding response for 1 chunk */
+    chunkPs =
+      getPassportData({ genotypeIds, selectFields }, genolinkBaseUrl),
+    promise = Promise.all(chunkPs.map(chunkP => chunkP.then(receive)));
+    function receive(data) {
+      {
         dLog(fnName, dataset.id, selectFields, data);
         const
-        d = data.content,
+        // fillInMissingData() has already extracted .content from the response
+        d = data,
         samplesPassport = dataset.samplesPassport || (dataset.samplesPassport = {});
-        sampleNames.forEach((sampleName, i) => {
+        d.forEach((datum, i) => {
+          const sampleName = datum.genotypeID;
           selectFields.forEach(field => {
             const sp = samplesPassport[sampleName] || (samplesPassport[sampleName] = {});
-            sp[field] = d[i][field];
+            sp[field] = datum[field];
           });
         });
-      });
+      }
+      later(() => mg.passportDataCount++);
+    }
+
     return promise;
   }
 
