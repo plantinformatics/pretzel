@@ -69,8 +69,17 @@ export default class PanelSelectPassportFieldsComponent extends Component {
     });
   }
 
+  /** The user has completed changes to the selected .passportFields, so now
+   * update the Genotype Table display.
+   */
   @action
   updateAndClose() {
+    /** If the user clicks before selectedFieldsChanged() ->
+     * datasetsGetPassportData() has resolved, then this re-display will not
+     * show the new passport data. After resolving, datasetsGetPassportData()
+     * also signals passportDataCount which enables selectedSampleEffect() ->
+     * showSamplesWithinBrush() to refresh the display.
+     */
     this.args.genotypeTable.showSamplesWithinBrush();
     const userSettings = this.args.userSettings;
     Ember_set(userSettings, 'showSelectPassportFields', false);

@@ -15,6 +15,8 @@ import {
 
 const dLog = console.debug;
 
+const trace = 0;
+
 //----------------------------------------------------------------------------
 
 /** The following classes implement a common API, which is referred to as Measure :
@@ -153,7 +155,9 @@ Counts.cmp = function(counts1, counts2) {
     (counts1.differences - counts2.differences) ||
     (counts1.missing - counts2.missing);
 */
-  dLog('cmp', cmp, counts1, counts2);
+  if (trace) {
+    dLog('cmp', cmp, counts1, counts2);
+  }
   return cmp;
 };
 Counts.count = function(sampleMatch, match) {

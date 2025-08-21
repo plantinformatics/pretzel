@@ -99,11 +99,13 @@ export default class PanelGenotypeSamplesComponent extends Component {
     passportFields = this.args.userSettings.passportFields,
     selectFields = passportFields.length ? passportFields : undefined,
     passportP = aggSamples.length ?
-      getPassportData({ genotypeIds, selectFields }, genolinkBaseUrl) :
+      Promise.all(
+        getPassportData({ genotypeIds, selectFields }, genolinkBaseUrl))
+      .then(a => [].concat.apply([], a)) :
       Promise.reject('No AGG samples out of ' + g.selectedSamples.length);
     passportP.then(resultByGenotype => {
       console.log("Result by genotype IDs:", resultByGenotype);
-      const data = resultByGenotype.content;
+      const data = resultByGenotype;
       // just to test array.
       data.forEach(row => (row.aliases = row.aliases.mapBy('name')));
       const

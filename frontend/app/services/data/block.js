@@ -16,6 +16,7 @@ import { stacks } from '../../utils/stacks';
 import { intervalSize, truncateMantissa }  from '../../utils/interval-calcs';
 import { featuresCountsResultSum } from '../../utils/draw/featuresCountsResults';
 import { breakPoint } from '../../utils/breakPoint';
+import { findResult } from '../../utils/common/arrays';
 
 //------------------------------------------------------------------------------
 
@@ -691,7 +692,12 @@ export default Service.extend(Evented, {
    */
   peekBlock(blockId)
   {
+    const fnName = 'peekBlock';
     if ((blockId === undefined) || (blockId === null)) {
+      return undefined;
+    }
+    if (typeof blockId != 'string') {
+      dLog(fnName, 'blockId', blockId);
       return undefined;
     }
     let
@@ -703,7 +709,7 @@ export default Service.extend(Evented, {
     if (store) {
       block = store && store.peekRecord('block', blockId);
     } else {
-      block = Object.values(apiServers.servers).find(
+      block = findResult(Object.values(apiServers.servers),
         apiServer => apiServer.store.peekRecord('block', blockId));
     }
     return block;

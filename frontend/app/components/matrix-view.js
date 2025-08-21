@@ -101,10 +101,12 @@ const featureValuesWidths = {
 
 /** Initially '100%', but that puts horizontal scrollbar below the browser window.
  * Recalculated to a px value by tableHeightFromParent().
- * vh doesn't seem to work here. */
-let tableHeight = '100%';
+ * vh doesn't seem to work here.
+ * Update : 99.9% works, so calculateTableHeight is set to false.
+ */
+let tableHeight = '99.9%';
 /** Enable use of tableHeightFromParent().  */
-const calculateTableHeight = true;
+const calculateTableHeight = false;
 /** The tabs within showSampleFilters
  * (tab-view-SampleFilter-{haplotype,variantInterval,feature} ) which sets
  * .sampleFilterTypeName can be used to limit the available user actions :
@@ -268,7 +270,8 @@ export default Component.extend({
 
   //----------------------------------------------------------------------------
 
-  classNames: ['matrix-view'],
+  /** parent is mapview.hbs : #right-panel-content */
+  classNames: ['matrix-view flex-grow-1'],
 
   //----------------------------------------------------------------------------
 
@@ -495,6 +498,11 @@ export default Component.extend({
 
   /** Calculate height of table in px to enable horizontal scrollbar below table
    * to be visible.
+   *
+   * Using tableHeight 99.9% instead of 100% works, so calculateTableHeight has
+   * been set false, i.e. this function is not currently used; it would probably
+   * need to be updated as the addition of Genolink buttons in the top panel
+   * increases its height, when enabled by .genolinkSearchURL.
    */
   tableHeightFromParent(tableDiv) {
     const
@@ -695,7 +703,7 @@ export default Component.extend({
     /** related : cornerClones */
     topLeftDialog = $('#observational-table .ht_clone_top_left_corner .colHeader.cornerHeader')[0];
     // dLog(fnName, topLeftDialog);
-    later(() => Ember_set(this, 'tableApi.topLeftDialog', topLeftDialog));
+    later(() => ! this.isDestroying && Ember_set(this, 'tableApi.topLeftDialog', topLeftDialog));
     this.addComponentClass();
   },
 

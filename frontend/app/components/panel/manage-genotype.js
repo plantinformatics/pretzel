@@ -48,7 +48,13 @@ const /*import */{
 const /*import */{
   getPassportData,
 } = vcfGenotypeBrapi.genolinkPassport; /*from 'vcf-genotype-brapi'; */
-
+/* Importing this directly instead of via the module package during development
+ * enables incremental builds, for a rapid development cycle. */
+// import { getPassportData } from '../../utils/genolink-passport';
+/* Pass chunk into getPassportData() to bypass module packaging issue when
+ * building genolink-passport.js in this repo via symbolic link.
+ */
+//import { chunk } from 'lodash/array'; // .js';
 
 import {
   refAlt,
@@ -97,6 +103,8 @@ import { Germinate } from '../../utils/data/germinate';
 const dLog = console.debug;
 
 const trace = 0;
+/** Enable trace of comparison / sorting of sample columns, via selected genotypic pattern. */
+const trace_sort = 0;
 
 const featureSymbol = Symbol.for('feature');
 
@@ -518,8 +526,12 @@ export default class PanelManageGenotypeComponent extends Component {
     }
 
     //--------------------------------------------------------------------------
-    const selectedSamples = userSettings.vcfGenotypeSamplesSelected[userSettings.selectedDatasetId];
-    later(() => this.selectedSamplesText = selectedSamples ? selectedSamples.join('\n') : '');
+    if (userSettings.selectedDatasetId) {
+      const selectedSamples = userSettings.vcfGenotypeSamplesSelected[userSettings.selectedDatasetId];
+      if (selectedSamples || (this.selectedSamplesText === undefined)) {
+        later(() => this.selectedSamplesText = selectedSamples ? selectedSamples.join('\n') : '');
+      }
+    }
     //--------------------------------------------------------------------------
 
     if (userSettings.samplesIntersection === undefined) {
@@ -2971,10 +2983,6 @@ export default class PanelManageGenotypeComponent extends Component {
       const selectFields = this.args.userSettings.passportFields;
       if (selectFields.length) {
         promise = promise.then(() => this.datasetsGetPassportData(selectFields));
-        /* lookup causes render, but does not wait for PassportData,
-         * so signal a need for showSamplesWithinBrush().
-         */
-        promise.then(() => this.passportDataCount++);
       }
     } else {
       promise = this.vcfGenotypeLookupSelected();
@@ -3883,7 +3891,9 @@ export default class PanelManageGenotypeComponent extends Component {
        * missing data is not sorted
        */
       ratio = Measure.average(ms, distanceCount);
-      dLog(fnName, sampleName, ratio, distanceCount, blocks.length);
+      if (trace_sort) {
+        dLog(fnName, sampleName, ratio, distanceCount, blocks.length);
+      }
       this.matchesSummary[sampleName] = ratio;
     }
     return ratio;
@@ -5113,7 +5123,15 @@ export default class PanelManageGenotypeComponent extends Component {
         Promise.resolve();
       return promise;
     });
-    return Promise.all(promises);
+    const allP = Promise.all(promises);
+    /* This function is called from vcfGenotypeLookupP(), which does
+     * vcfGenotypeLookupAllDatasets(); lookup causes render, but does not wait
+     * for PassportData, so signal a need for showSamplesWithinBrush().
+     * See related comment in updateAndClose() (select-passport-fields.js).
+     */
+    allP.then(() => later(() => this.passportDataCount++));
+
+    return allP;
   }
   /** Get the Passport data values indicated by selectFields for the given
    * dataset and sampleNames.
@@ -5127,20 +5145,29 @@ export default class PanelManageGenotypeComponent extends Component {
     const genotypeIds = sampleNames.filter(sampleNameIsAGG);
     if (! genotypeIds.length) return Promise.resolve();
     const
-    promise =
-      getPassportData({ genotypeIds, selectFields }, genolinkBaseUrl)
-      .then(data => {
+    mg = this,
+    /** array of promises, each yielding response for 1 chunk */
+    chunkPs =
+      getPassportData({ genotypeIds, selectFields }, genolinkBaseUrl),
+    promise = Promise.all(chunkPs.map(chunkP => chunkP.then(receive)));
+    function receive(data) {
+      {
         dLog(fnName, dataset.id, selectFields, data);
         const
-        d = data.content,
+        // fillInMissingData() has already extracted .content from the response
+        d = data,
         samplesPassport = dataset.samplesPassport || (dataset.samplesPassport = {});
-        sampleNames.forEach((sampleName, i) => {
+        d.forEach((datum, i) => {
+          const sampleName = datum.genotypeID;
           selectFields.forEach(field => {
             const sp = samplesPassport[sampleName] || (samplesPassport[sampleName] = {});
-            sp[field] = d[i][field];
+            sp[field] = datum[field];
           });
         });
-      });
+      }
+      later(() => mg.passportDataCount++);
+    }
+
     return promise;
   }
 

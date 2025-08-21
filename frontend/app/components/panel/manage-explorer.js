@@ -27,6 +27,22 @@ import {
 
 import { task } from 'ember-concurrency';
 
+//------------------------------------------------------------------------------
+import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
+//import {
+//  ipkPanbarlexServer,
+//} /*= vcfGenotypeBrapi.ipkPanbarlexServer*/ from '@plantinformatics/vcf-genotype-brapi';
+const { init } =  vcfGenotypeBrapi.ipkPanbarlexServer;
+// or, for incremental build during development, import a local copy :
+// import { init } from '../../utils/ipk-panbarlex-server';
+const /*import */{
+  CacheWrapper,
+} = vcfGenotypeBrapi.cacheBrowser;
+// import { CacheWrapper } from '../../utils/cache-browser';
+/** Required setup for knownGenesDataset() */
+init(CacheWrapper, fetch);
+import { knownGenesDataset } from '../../utils/data/panBARLEX';
+
 /*----------------------------------------------------------------------------*/
 
 import { tab_explorer_prefix, text2EltId, keysLength } from '../../utils/explorer-tabId';
@@ -109,6 +125,7 @@ export default ManageBase.extend({
   blockValues : service('data/block-values'),
   auth : service(),
   queryParams: service('query-params'),
+  transient : service('data/transient'),
 
   init() {
     this._super(...arguments);
@@ -446,7 +463,13 @@ export default ManageBase.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  panBARLEXdemo() {
+    const
+    viewDataset = (datasetName, blocks) => 
+      this.get('viewDataset')(datasetName, /*active*/true, blocks.mapBy('name'));
+    knownGenesDataset(this.transient, viewDataset);
 
+  },
   /** Triggers a rerun of the availableMaps fetching task */
   refreshAvailable: function(){
     this.get('refreshDatasets')();
@@ -1837,9 +1860,13 @@ export default ManageBase.extend({
     },
     keysLength,
 
-    /** Triggered by refresh icon on datset list **/
+    /** Triggered by refresh icon on datset list.
+     *  refreshAvailable() method function is defined above.
+     */
     refreshAvailable() {
-      this.refreshAvailable(); // See method function above
+      /* double calls to refreshAvailable() are occurring from a single click,
+       * so apply debounce(). */
+      debounce(this, this.refreshAvailable, 1000);
     },
     changeFilter: function(f) {
       this.set('filter', f)

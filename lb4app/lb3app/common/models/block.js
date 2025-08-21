@@ -21,6 +21,8 @@ const { getAliases } = require('../utilities/localise-aliases');
 const { childProcess, dataOutReplyClosure, dataOutReplyClosureLimit } = require('../utilities/child-process');
 const { ArgsDebounce } = require('../utilities/debounce-args');
 const { ErrorStatus } = require('../utilities/errorStatus.js');
+const { arrayFieldToHex } = require('../utilities/mongoDB-driver-lib.js');
+
 
 let vcfGenotypeSamplesFiltered, vcfGenotypeHaplotypesSamples, vcfGenotypeLookup, vcfGenotypeFeaturesCounts;
 import('@plantinformatics/vcf-genotype-brapi/dist/vcf-genotype-brapi-node.mjs').then(vcfGenotypeBrapi => {
@@ -773,6 +775,12 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     cacheId = fnName + '_' + blockIds.join('_'),
     result = cache.get(cacheId);
     if (result) {
+      if (result[0]?._id._bsontype) {
+        console.log(fnName, result[0]);
+        result = arrayFieldToHex(result, '_id');
+        console.log(fnName, result[0], 'arrayFieldToHex');
+        cache.put(cacheId, result);
+      }
       if (trace_block > 1) {
         console.log(fnName, cacheId, 'get', result[0] || result);
       }
@@ -786,6 +794,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       if (trace_block > 1) {
         console.log(fnName, cacheId, 'get', featureCounts[0] || featureCounts);
       }
+      featureCounts = arrayFieldToHex(featureCounts, '_id');
       cache.put(cacheId, featureCounts);
       cb(null, featureCounts);
     }).catch(function(err) {
@@ -970,6 +979,11 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       if (trace_block > 1) {
         console.log(fnName, cacheId, 'put', limits[0] || limits);
       }
+      /** _id was received as ObjectID; this seems to be a change, possibly
+       * caused by upgrading Node.js in build from 16 to 22.
+       * Map the ObjectID-s to hex strings, which is the form the client is expecting.
+       */
+      limits = limits.map(({_id, ...rest}) => ({_id : _id.toHexString(), ...rest}));
       cache.put(cacheId, limits);
       cb(null, limits);
     }).catch(function(err) {
@@ -1072,6 +1086,12 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       if (trace_block > 1) {
         console.log(apiName, cacheId, 'get', cached.length || cached);
       }
+      if (cached[0]?._id._bsontype) {
+        console.log(apiName, cached[0]);
+        cached = arrayFieldToHex(cached, '_id');
+        console.log(apiName, cached[0], 'arrayFieldToHex');
+        cache.put(cacheId, cached);
+      }
       let filteredData = pathsFilter.filterFeatures(cached, intervals);
       cb(null, filteredData);
     }
@@ -1081,6 +1101,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       cursor.toArray()
         .then(function(data) {
           console.log(apiName, ' then', (data.length > 2) ? data.length : data);
+          data = arrayFieldToHex(data, '_id');
           if (useCache) {
             cache.put(cacheId, data);
             if (trace_block > 1) {

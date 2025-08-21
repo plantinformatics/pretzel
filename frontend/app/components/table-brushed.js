@@ -767,7 +767,7 @@ export default Component.extend({
         minRows: 1,
         rowHeaders: true,
         headerTooltips: true,
-        height: '100%',
+        height: '98%',	// 100% doesn't show horiz scrollbar
         manualRowResize: true,
         manualColumnResize: true,
         manualRowMove: true,
