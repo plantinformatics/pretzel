@@ -13,7 +13,7 @@ const /*import */{
 const dLog = console.debug;
 
 /** Recommended upper limit on interval length for dotplot request. */
-const intervalLengthLimit = 5000;
+const intervalLengthLimit = 50000;
 
 //------------------------------------------------------------------------------
 
