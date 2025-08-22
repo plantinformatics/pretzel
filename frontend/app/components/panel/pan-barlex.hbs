@@ -29,15 +29,17 @@
   </div>
 
   <span>
-    <button type="button" class="btn btn-info margin-1em" onclick={{this.showDotPlot}}>
+    <button type="button" class="btn btn-info margin-1em" onclick={{this.showDotPlot}}
+      disabled={{this.intervalLengthMessage}} >
       Show dot plot
     </button>
   {{#ember-tooltip side="bottom-start" delay=1500}}
     Show a dot plot for the selected axis intervals, via IPK PanBARLEX.
   {{/ember-tooltip}}
+  Via connecting to <a href="https://panbarlex.ipk-gatersleben.de">panbarlex.ipk-gatersleben.de</a>
+  <!-- img src="/assets/images/ipk_logo_en.png" alt="IPK PanBARLEX logo" style="height: 4ex;" -->
   </span>
 {{/if}}
-<img src="/assets/images/ipk_logo_en.png" alt="IPK PanBARLEX logo" style="height: 4ex;">
 
 
 <div class="clear-both"></div>

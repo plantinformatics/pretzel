@@ -148,12 +148,12 @@
 
         {{/elem/button-tab}}
 
-        {{#if this.brushedDatasetsPanBARLEX.length}}
+        {{#if (and this.model.params.parsedOptions.PanBARLEX this.brushedDatasetsPanBARLEX.length) }}
           {{#elem/button-tab
              side="right"
              key="PanBARLEX"
              state=this.layout.right.tab onClick=(action "setTab") }}
-            <img src="/assets/images/ipk_logo_en.png" alt="IPK PanBARLEX logo" style="height: 1.5ex;">
+            <!-- img src="/assets/images/ipk_logo_en.png" alt="IPK PanBARLEX logo" style="height: 1.5ex;" -->
             &nbsp; PanBARLEX
           {{/elem/button-tab}}
         {{/if}}
