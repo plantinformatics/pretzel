@@ -12,8 +12,12 @@ const /*import */{
 
 const dLog = console.debug;
 
-/** Recommended upper limit on interval length for dotplot request. */
-const intervalLengthLimit = 50000;
+/** Permitted upper limit on interval length for dotplot request.
+ * This can be further adjusted based on request delay and reasonable server load.
+ * Image files for 1M are reported as 2.3MB png, i.e. it is much less than 1
+ * pixel resolution per base-pair cell.
+ */
+const intervalLengthLimit = 1e6;
 
 //------------------------------------------------------------------------------
 
