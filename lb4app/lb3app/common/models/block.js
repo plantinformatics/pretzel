@@ -1105,6 +1105,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
         .then(function(data) {
           console.log(apiName, ' then', (data.length > 2) ? data.length : data);
           data = arrayFieldToHex(data, '_id');
+          data = arrayFieldToHex(data, 'blockId');
           if (useCache) {
             cache.put(cacheId, data);
             if (trace_block > 1) {
