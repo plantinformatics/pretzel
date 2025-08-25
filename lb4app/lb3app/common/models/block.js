@@ -21,7 +21,7 @@ const { getAliases } = require('../utilities/localise-aliases');
 const { childProcess, dataOutReplyClosure, dataOutReplyClosureLimit } = require('../utilities/child-process');
 const { ArgsDebounce } = require('../utilities/debounce-args');
 const { ErrorStatus } = require('../utilities/errorStatus.js');
-const { arrayFieldToHex } = require('../utilities/mongoDB-driver-lib.js');
+const { arrayFieldToHex, arrayFieldToHexCheck } = require('../utilities/mongoDB-driver-lib.js');
 
 
 let vcfGenotypeSamplesFiltered, vcfGenotypeHaplotypesSamples, vcfGenotypeLookup, vcfGenotypeFeaturesCounts;
@@ -1086,11 +1086,14 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       if (trace_block > 1) {
         console.log(apiName, cacheId, 'get', cached.length || cached);
       }
-      if (cached[0]?._id._bsontype) {
-        console.log(apiName, cached[0]);
-        cached = arrayFieldToHex(cached, '_id');
-        console.log(apiName, cached[0], 'arrayFieldToHex');
-        cache.put(cacheId, cached);
+      let
+      /** If change is needed, this is a modified copy of cached, otherwise === cached. */
+      maybeChanged = arrayFieldToHexCheck(apiName, cached, '_id');
+      maybeChanged = arrayFieldToHexCheck(apiName, maybeChanged, 'blockId');
+      if (maybeChanged !== cached)
+      {
+        const changed = maybeChanged;
+        cache.put(cacheId, changed);
       }
       let filteredData = pathsFilter.filterFeatures(cached, intervals);
       cb(null, filteredData);
