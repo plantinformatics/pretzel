@@ -93,10 +93,30 @@ let idToHex = function(i) {
  * [fieldname] which is some representation of an ObjectID.
  * @param {string} fieldName	name of id field, e.g. '_id'
  */
-exports.arrayFieldToHex =  function(a, fieldName) {
+exports.arrayFieldToHex = function arrayFieldToHex(a, fieldName) {
   return a.map(({[fieldName] : i, ... e}) => ({ [fieldName] : idToHex(i), ... e}));
 };
 // arrayFieldToHex(data, '_id')
 // arrayFieldToHex(cached, '_id')
+
+/** Wrap arrayFieldToHex() - first check if it should be applied, and return true if so.
+ *
+ * @param {string} apiName used in console.log, for confirming this change is
+ * OK, after which this can be switched off.
+ * @param {Array<object>} a result array; each element is an object containing
+ * [fieldname] which is some representation of an ObjectID.
+ * @param {string} fieldName	name of id field, e.g. '_id'
+ * @return a, or a modified copy of a if arrayFieldToHex() was applied.
+ */
+exports.arrayFieldToHexCheck = function(apiName, a, fieldName) {
+  const fnName = 'arrayFieldToHexCheck';
+  const change = a[0]?.[fieldName]._bsontype;
+  if (change) {
+    console.log(apiName, fnName, a[0], a[0][fieldName]);
+    a = exports.arrayFieldToHex(a, fieldName);
+    console.log(apiName, fnName, a[0], a[0][fieldName]);
+  }
+  return a;
+};
 
 //------------------------------------------------------------------------------
