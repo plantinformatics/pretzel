@@ -13,6 +13,7 @@ import { task, didCancel } from 'ember-concurrency';
 
 import { stacks, Stacked } from '../../utils/stacks';
 import AxisBrushObject from '../../utils/draw/axis-brush';
+import { intervalOrdered } from '../../utils/interval-calcs';
 import { storeFeature } from '../../utils/feature-lookup';
 //let vcfGenotypeBrapi = window["vcf-genotype-brapi"];
 import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
@@ -180,10 +181,29 @@ export default Service.extend({
     return intervals;
   },
   pathsDensityParams : alias('controls.view.pathsDensityParams'),
+  /** Copy interval, with a modified copy of .domain if needed to ensure it is
+   * non-negative.
+   * The API endpoints which take intervalParams as an argument expect the
+   * domains to be non-negative.
+   * This change could be pushed upstream to axisDimensions(), if compatible
+   * with other uses of that function.
+   * @param {domain, range, zoomed} interval
+   * from utils/stacks.js : Stacked.prototype.axisDimensions,
+   * via this.axisDimensions() or models/block-adj.js axisDimensions()
+   */
+  intervalBePositive(interval) {
+    const
+    {domain, ...rest} = interval,
+    ordered = {domain : intervalOrdered(domain), ...rest};
+    return ordered;
+  },
   /** Determine the parameters for the paths request, - intervals and density.
    * @param intervals domain for each blockAdj
+   * {domain, range, zoomed}
    */
   intervalParams(intervals) {
+    /** API endpoints assume that intervals are non-negative.  */
+    intervals = intervals.map(this.intervalBePositive);
     let
     page = { },
     noDbPathFilter = stacks.oa.eventBus.get('params.parsedOptions.noDbPathFilter'),
