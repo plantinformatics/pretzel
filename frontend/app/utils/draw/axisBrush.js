@@ -872,6 +872,7 @@ function AxisBrushZoom(oa) {
    */
   function resetZoom(axis1d)
   {
+    const fnName = 'resetZoom';
     const axisApi = oa.axisApi;
     let svgContainer = oa.svgContainer;
     let t = svgContainer.transition().duration(750);
@@ -885,11 +886,15 @@ function AxisBrushZoom(oa) {
       domain = a.referenceDomain;
       domain = maybeFlip(domain, a.flipped);
       a.setZoomed(false);
+      // a.set('flipped', false);
+      a.setDomain(domain);
+      later(() => {
       a.y.domain(domain);
       a.ys.domain(domain);
-      a.setDomain(domain);
+      dLog(fnName, 'setDomain', a.y.domain(), a.flipped);
       let yAxis = a.axisSide(a.y).ticks(10);
       oa.svgContainer.select("#"+idName).transition(t).call(yAxis);
+      });
     });
     let axisTickS = svgContainer.selectAll("g.axis > g.tick > text");
     axisTickS.attr("transform", yAxisTicksScale);

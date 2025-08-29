@@ -428,6 +428,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     {
       /** equivalent this.domain can be used instead.
        * .domain is signed so maybeFlip() is not required with it.
+       * getDomain() is also signed; this works well enough until change to use
+       * .range() for .flipped
        */
       const ys = d3.scaleLinear()
         .domain(maybeFlip(domain, a.flipped))
