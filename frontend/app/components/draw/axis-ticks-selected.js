@@ -116,6 +116,7 @@ export default Component.extend(AxisEvents, {
     'selected.labelledFeatures.length',
     'selected.features.length',
     'axis1d.blocks.length',
+    'axis1d.flipped',
     function () {
       this.renderTicksThrottle();
     }),
