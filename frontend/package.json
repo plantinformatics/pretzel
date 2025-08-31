@@ -139,7 +139,9 @@
     "moment": "^2.30.1",
     "normalize-wheel": "^1.0.1",
     "numeric": "github:lukaiser/numeric",
+    "pca-js": "^1.0.2",
     "phantom": "^6.3.0",
+    "plotly.js-dist": "^3.1.0",
     "tsne-js": "^1.0.3",
     "vector-cosine-similarity": "^1.8.0"
   }

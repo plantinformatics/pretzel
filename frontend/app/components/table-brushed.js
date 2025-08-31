@@ -2,7 +2,7 @@ import $ from 'jquery';
 
 import Component from '@ember/component';
 import EmberObject, { observer } from '@ember/object';
-import { computed } from '@ember/object';
+import { computed, action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { later, bind } from '@ember/runloop';
 import { capitalize } from '@ember/string';
@@ -311,6 +311,24 @@ export default Component.extend({
   get stretchHText() {
     return this.stretchHorizontal ? 'all' : 'none';
   },
+  //----------------------------------------------------------------------------
+  /** Update the table settings, wrapped with setting loadingData to true while
+   * updateSettings() is in progress.
+   *
+   * This function is factored from autoColumnWidthChanged(),
+   * stretchHorizontalChanged(), for use there and in openSampleData(). Could
+   * also use in onSelectionChange().  Related : showData().
+   */
+  updateSettings(fnName, settings) {
+    if (this.table) {
+      dLog(fnName, settings);
+      this.set('loadingData', true);
+      this.table.updateSettings(settings);
+      this.set('loadingData', false);
+    }
+  },
+
+  //----------------------------------------------------------------------------
 
 
   formFeatureEditEnable : false,
@@ -1119,6 +1137,60 @@ export default Component.extend({
 
     exportObjectsAsCSVFile('feature-table.csv', needsQuoting, baseColumnHeaders, true, columnHeadersMap, data);
 
+  },
+
+  datasetsSamples : computed('data', function () {
+    const
+    fnName = 'datasetsSamples',
+    datasets = this.data.reduce((ds, datum) => {
+      const
+      feature = datum.feature,
+      datasetId = feature.get('blockId.datasetId.id');
+      if (! ds[datasetId]) {
+      // for VCF genotype datasets : dataset.sampleNames
+        ds[datasetId] = 
+          Object.keys(feature.values).filter(key => (/^AGG[0-9]+WHEA.*/.test(key)));
+      }
+      return ds;
+    }, {});
+    dLog(fnName, datasets);
+    return datasets;
+  }),
+
+  sampleData : computed('data', function () {
+    const output = {};
+    this.data.forEach(({ feature }) => {
+      const
+      dataset = feature.get('blockId.datasetId'),
+      datasetId = feature.get('blockId.datasetId.id');
+      /** Only a VCF genotype dataset will have .samplesPassport, and only after
+       * user has requested it via 'Select Passport fields'.
+       * The passport data is applicable for other datasets which have the same sample IDs.
+       * This is passed to sample-data.
+       */
+      const samplesPassport = dataset.get('samplesPassport');
+      if (samplesPassport) {
+        this.samplesPassport = samplesPassport;
+      }
+      Object.entries(feature.values).forEach(([key, value]) => {
+        if (/^AGG[0-9]+WHEA.*/.test(key)) {
+          const
+          /** create output[datasetId] after finding a matching sample name */
+          samples = output[datasetId] || (output[datasetId] = {}),
+          sampleName = key,
+          sampleData = samples[sampleName] || (samples[sampleName] = []);
+          sampleData.push(value);
+        }
+      });
+    });
+    return output;
+  }),
+  // @action
+  openSampleData() {
+    const fnName = 'openSampleData';
+    this.updateSettings(fnName, {height : '15%'});
+    // or style="overflow-y: auto;"
+    $('div#right-panel-content')[0]?.classList.add('select-wrap');
   },
 
 });

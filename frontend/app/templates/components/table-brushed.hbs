@@ -6,6 +6,12 @@
     Download CSV file
   </button>
 
+  <button type="button" onclick={{action this.openSampleData}}
+    class="btn btn-info btn-xs"
+    style="margin: 6px; padding: 1px 3px;" >
+    Open Sample Data
+  </button>
+
   <input type="checkbox"
     checked={{this.stretchHorizontal}}
     oninput={{action this.stretchHorizontalChanged value="target.checked"}}  >
@@ -55,4 +61,16 @@
   {{#ember-modal-dialog modal-id="feature-edit-modal" title="Feature Edit" header-icon='edit'}}
       {{form/feature-edit cell=this.formFeatureEditEnable close=(action this.closeFeatureEdit) tableData=this.data}}
   {{/ember-modal-dialog}}
+{{/if}}
+
+{{#if (not (is-empty this.sampleData))}}
+  {{!-- this.datasetsSamples as |datasetId sampleNames| 
+   {{get this.sampleData datasetId}}
+   @sampleNames={{sampleNames}}
+   --}}
+  {{#each-in this.sampleData as |datasetId data|}}
+    <Form::SampleData @data={{data}}
+      @samplesPassport={{this.samplesPassport}}
+      @datasetId={{datasetId}} />
+  {{/each-in}}
 {{/if}}
