@@ -570,7 +570,8 @@ export default Component.extend({
      * both are handled here; probably an object will be better, and Dataset
      * Meta Edit panel seems able to configure either.
      */
-    this.colourColumns = datasets.map(d => [d, d.get('_meta.cellColour')])
+    this.colourColumns = ! this.urlOptions.cellColour ? [] :
+      datasets.map(d => [d, d.get('_meta.cellColour')])
       .filter(dcc => dcc[1])
       .map(([dataset, c]) => [dataset, typeof c === 'string' ? JSON.parse(c) : c] )
       .map(([dataset, {valueRegexp, domain, colourScale}]) =>
