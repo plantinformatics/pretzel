@@ -1045,11 +1045,14 @@ export default class PanelManageGenotypeComponent extends Component {
     dLog(fnName, this.sampleFiltersCheck(), 'FilteredSamples');
 
     // update selectedSampleEffect
+    const refreshDisplay = () => {
+      ! this.isDestroying && this.selectedSampleRefreshDisplay(/*sampleFilterTypeName*/undefined);
+    };
     later(() => {
-      this.selectedSampleRefreshDisplay(/*sampleFilterTypeName*/undefined);
+      refreshDisplay();
      // Repeat - will work out the requirements display to be refreshed.
       later(() => {
-        ! this.isDestroying && this.selectedSampleRefreshDisplay(/*sampleFilterTypeName*/undefined);
+        refreshDisplay();
       }, 1000);
     });
   }
