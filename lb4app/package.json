@@ -61,7 +61,7 @@
     "@loopback/rest-explorer": "^4.1.0",
     "@loopback/service-proxy": "^4.1.0",
     "@plantinformatics/child-process-progressive": "github:plantinformatics/child-process-progressive",
-    "@plantinformatics/vcf-genotype-brapi": "^1.0.26",
+    "@plantinformatics/vcf-genotype-brapi": "^1.0.27",
     "@solgenomics/brapijs": "github:solgenomics/BrAPI-js",
     "async": "^3.2.3",
     "bent": "^7.3.12",
