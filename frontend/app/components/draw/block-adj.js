@@ -152,6 +152,7 @@ export default Component.extend(Evented, AxisEvents, {
        * has <g> to render into.
        */
       next(() => {
+        if (this.isDestroying) { return; }
         /** it is possible (currently) for this CP to be evaluated after one end
          * (block) of a block-adj to become un-viewed and before the block-adj
          * is destroyed.  This check detects and handles that case.
@@ -564,6 +565,7 @@ looking at the currently displayed paths in a block_adj :
     function () {
       /** the comments in pathsResultLength re. next and isComplete apply here also. */
       next(() => {
+        if (this.isDestroying) { return; }
         if (this.isComplete()) {
           /* pathsAliasesResult is in a different form to pathsResult; passing it to
            * draw() requires some mapping, which is abstracted in 
