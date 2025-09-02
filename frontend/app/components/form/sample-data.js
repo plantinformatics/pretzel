@@ -39,11 +39,6 @@ export default class SampleDataComponent extends Component {
   }
 
   @action
-  closeDialog() {
-    this.set('data', null);
-  }
-
-  @action
   didInsertElement() {
     if (this.data) {
       this.showData();

@@ -254,6 +254,8 @@ export default Component.extend({
   autoColumnWidth : true,
   /** Enable stretchH:all, which stretches all columns to use the available width. */
   stretchHorizontal : true,
+  /** true means show sample-data - PCA of sample data of features */
+  showSampleData : false,
 
   actions : {
 
@@ -1190,9 +1192,20 @@ export default Component.extend({
   openSampleData() {
     const fnName = 'openSampleData';
     this.updateSettings(fnName, {height : '15%'});
+    this.toggleProperty('showSampleData');
+    // later() may be required, as enabling .showSampleData will re-render.
     // or style="overflow-y: auto;"
-    $('div#right-panel-content')[0]?.classList.add('select-wrap');
+    later( () => 
+      $('div#right-panel-content')[0]?.classList.add('select-wrap'));
   },
+
+  // @action
+  closeSampleData() {
+    const fnName = 'closeSampleData';
+    this.toggleProperty('showSampleData');
+    this.updateSettings(fnName, {height : '98%'});
+  }
+
 
 });
 

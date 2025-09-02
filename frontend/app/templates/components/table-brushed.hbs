@@ -66,15 +66,19 @@
 {{/if}}
 
 {{#if this.urlOptions.featuresPCA}}
-{{#if (not (is-empty this.sampleData))}}
-  {{!-- this.datasetsSamples as |datasetId sampleNames| 
-   {{get this.sampleData datasetId}}
-   @sampleNames={{sampleNames}}
-   --}}
-  {{#each-in this.sampleData as |datasetId data|}}
-    <Form::SampleData @data={{data}}
-      @samplesPassport={{this.samplesPassport}}
-      @datasetId={{datasetId}} />
-  {{/each-in}}
-{{/if}}
+  {{#if this.showSampleData}}
+    {{#if (not (is-empty this.sampleData))}}
+      <button type="button" {{on "click" (action this.closeSampleData)}}>X</button>
+
+      {{!-- alternative each-in : this.datasetsSamples as |datasetId sampleNames| 
+       {{get this.sampleData datasetId}}
+       @sampleNames={{sampleNames}}
+       --}}
+      {{#each-in this.sampleData as |datasetId data|}}
+        <Form::SampleData @data={{data}}
+          @samplesPassport={{this.samplesPassport}}
+          @datasetId={{datasetId}} />
+      {{/each-in}}
+    {{/if}}
+  {{/if}}
 {{/if}}
