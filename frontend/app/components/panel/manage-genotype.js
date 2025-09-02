@@ -1935,6 +1935,7 @@ export default class PanelManageGenotypeComponent extends Component {
     selected = value
       .trimEnd(/\n/)
       .split(/\n *\t*/g)
+      .uniq()
       .filter((name) => !!name);
     dLog(fnName, value.length, value.slice(-50), selected.length);
     return selected;
