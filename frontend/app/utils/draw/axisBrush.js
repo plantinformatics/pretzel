@@ -872,6 +872,7 @@ function AxisBrushZoom(oa) {
    */
   function resetZoom(axis1d)
   {
+    const fnName = 'resetZoom';
     const axisApi = oa.axisApi;
     let svgContainer = oa.svgContainer;
     let t = svgContainer.transition().duration(750);
@@ -885,11 +886,15 @@ function AxisBrushZoom(oa) {
       domain = a.referenceDomain;
       domain = maybeFlip(domain, a.flipped);
       a.setZoomed(false);
+      // a.set('flipped', false);
+      a.setDomain(domain);
+      later(() => {
       a.y.domain(domain);
       a.ys.domain(domain);
-      a.setDomain(domain);
+      dLog(fnName, 'setDomain', a.y.domain(), a.flipped);
       let yAxis = a.axisSide(a.y).ticks(10);
       oa.svgContainer.select("#"+idName).transition(t).call(yAxis);
+      });
     });
     let axisTickS = svgContainer.selectAll("g.axis > g.tick > text");
     axisTickS.attr("transform", yAxisTicksScale);
@@ -984,6 +989,9 @@ function AxisBrushZoom(oa) {
    * Traverse selected Axes, matching only the axisName of the brushed axis.
    * Set the y domain of the axis, from the inverse mapping of the brush extent limits.
    * Remove the zoom button, redraw the axis, ticks, zoomPath. Move the brush.
+   *
+   * See comment in axis-1d.js : domain() re. .flipped, un/signed.
+   *
    * @param event event of button-click on Zoom/Reset, or mouse scroll on brush
    * @param that  the brush g element.
    * The datum of `that` is the axis-1d of the brushed axis.
@@ -1096,7 +1104,10 @@ function AxisBrushZoom(oa) {
 
       if (event?.type === 'click') {
         domain = brushedDomain = brushedDomainClick;
-        dLog(fnName, axisName, yp.domain(), yp.range(), axis1d.brushedRegion, axis1d.portion, brushedDomain);
+        /* brushedDomainClick is axis1d.brushedDomain, which is unsigned -
+         * does not incorporate .flipped */
+        domain = maybeFlip(brushedDomainClick, axis1d.flipped);
+        dLog(fnName, 'setDomain', axisName, yp.domain(), yp.range(), axis1d.brushedRegion, axis1d.portion, brushedDomain);
       } else // isWheelEvent
       if (event)  // if there is a mousewheel event
       {
@@ -1106,11 +1117,14 @@ function AxisBrushZoom(oa) {
           brushedDomain = axisRange2Domain(axis1d, brushExtent);
 
         // wheelNewDomain can handle d3 ZoomEvent, but uses the .sourceEvent
+        // domain is in the direction of scale signed, i.e. incorporates .flipped.
         domain = wheelNewDomain(e, axis1d, oa.axisApi, false);
       } else if (axis1d.brushedRegion) {
         brushedDomain = axis1d.brushedRegion.map(function(ypx) { return yp.invert(ypx /* *axis1d.portion*/); });
         // brushedDomain = [yp.invert(brushExtents[i][0]), yp.invert(brushExtents[i][1])];
-        dLog(fnName, axisName, yp.domain(), yp.range(), axis1d.brushedRegion, axis1d.portion, brushedDomain);
+        dLog(fnName, 'setDomain', axisName, yp.domain(), yp.range(), axis1d.brushedRegion, axis1d.portion, brushedDomain);
+        /* .brushedRegion is unsigned, and yp.domain() is signed,
+         * so brushedDomain is signed. */
         domain = brushedDomain;
       } else {
         dLog(fnName, axisName, 'no mouse-wheel zoom or brushedRegion');
@@ -1135,6 +1149,7 @@ function AxisBrushZoom(oa) {
         y.domain(domain);
         axis1d.ys.domain(domain);
         // scale domain is signed. currently .zoomedDomain is not, so maybeFlip().
+        // This un-flips the (signed) scale domain.
         axis1d.setDomain(maybeFlip(domain, axis1d.flipped));
 
         if (scheduler) {

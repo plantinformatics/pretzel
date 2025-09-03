@@ -426,7 +426,11 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     let y;
     if (domain)
     {
-      /** equivalent this.domain can be used instead.  */
+      /** equivalent this.domain can be used instead.
+       * .domain is signed so maybeFlip() is not required with it.
+       * getDomain() is also signed; this works well enough until change to use
+       * .range() for .flipped
+       */
       const ys = d3.scaleLinear()
         .domain(maybeFlip(domain, a.flipped))
         .range([0, myRange]); // set scales for each axis
@@ -785,6 +789,26 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     return domain;
   },
   /** This is the currently viewed domain.
+   *
+   * The y axis domain will be a negative vector if .flipped.
+   * Other intervals such as brushedRegion, brushedDomain, may be in the same
+   * direction as the y axis domain, or always positive.  These alternatives are
+   * referred to with the terms "signed" / "unsigned" in commments.
+   * Conversion between these forms is done via :
+   *   signed = maybeFlip(unsigned, axis1d.flipped);
+   *   unsigned = maybeFlip(signed, axis1d.flipped);
+   * A better design would be to apply .flipped to scale .range() instead of .domain()
+   * - axis flip is a concern of presentation / view (.range), not the data model (.domain)
+   * - .domain is more dynamic (zoom, features received), and is used in
+   *   dependencies for requests; this change would separate flipping from those
+   *   interactions; for example axis flipping shouldn't imply requests for
+   *   features and paths because domain and resolution have not changed.
+   *
+   * this.setDomain() is AxisPosition : setDomain() (mixins/axis-position.js),
+   * which sets this.currentPosition.yDomain(), which is read by
+   *  zoomedDomain : alias('currentPosition.yDomain'), which is used here.
+   * These are all signed values, i.e. they incorporate .flipped.
+   *
    * @return if zoomed return the zoom yDomain, otherwise blockDomain.
    * Result .{0,1} are swapped if .flipped.
    */
@@ -798,6 +822,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     if (this.get('flipped')) {
       domain = [domain[1], domain[0]];
     }
+    dLog('domain', 'setDomain', domain);
     return domain;
   }),
 

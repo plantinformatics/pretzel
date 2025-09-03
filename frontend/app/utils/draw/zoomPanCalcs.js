@@ -260,8 +260,9 @@ function wheelNewDomain(event, axis, axisApi, inFilter) {
   if (trace_zoom > 1)
     console.log(axisReferenceDomain);
   // detect if domain is not flipped as expected
-  if (flipped != (interval < 0)) // i.e. intervalSign(domain))
-      console.log(domain, interval, 'flipped', flipped);
+  if (flipped != (interval < 0)) { // i.e. intervalSign(domain))
+    console.log(domain, interval, 'flipped', flipped);
+  }
 
 
   if (isPan) {
@@ -366,8 +367,9 @@ function wheelNewDomain(event, axis, axisApi, inFilter) {
     // Both newInterval and newDomain are signed (i.e. in the direction of .flipped).
 
     // detect if domain is becoming flipped during zoom
-    if (flipped != ((interval > 0) !== intervalSign(newDomain)))
+    if (flipped != ((interval > 0) !== intervalSign(newDomain))) {
       console.log(domain, deltaScale, newInterval, interval, newDomain, 'flipped', flipped);
+    }
 
     if (trace_zoom > 1)
       console.log(rangeYCentre, rangeSize, 'centre', centre);

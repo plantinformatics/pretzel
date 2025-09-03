@@ -6,6 +6,14 @@
     Download CSV file
   </button>
 
+  {{#if (not (is-empty this.sampleData))}}
+  <button type="button" onclick={{action this.openSampleData}}
+    class="btn btn-info btn-xs"
+    style="margin: 6px; padding: 1px 3px;" >
+    Sample PCA
+  </button>
+  {{/if}}
+
   <input type="checkbox"
     checked={{this.stretchHorizontal}}
     oninput={{action this.stretchHorizontalChanged value="target.checked"}}  >
@@ -56,3 +64,19 @@
       {{form/feature-edit cell=this.formFeatureEditEnable close=(action this.closeFeatureEdit) tableData=this.data}}
   {{/ember-modal-dialog}}
 {{/if}}
+
+  {{#if this.showSampleData}}
+    {{#if (not (is-empty this.sampleData))}}
+      <button type="button" {{on "click" (action this.closeSampleData)}}>X</button>
+
+      {{!-- alternative each-in : this.datasetsSamples as |datasetId sampleNames| 
+       {{get this.sampleData datasetId}}
+       @sampleNames={{sampleNames}}
+       --}}
+      {{#each-in this.sampleData as |datasetId data|}}
+        <Form::SampleData @data={{data}}
+          @samplesPassport={{this.samplesPassport}}
+          @datasetId={{datasetId}} />
+      {{/each-in}}
+    {{/if}}
+  {{/if}}

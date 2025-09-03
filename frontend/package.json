@@ -1,6 +1,6 @@
 {
   "name": "pretzel-frontend",
-  "version": "3.9.6",
+  "version": "3.9.7",
   "description": "Frontend code for Pretzel",
   "repository": "",
   "license": "MIT",
@@ -105,7 +105,7 @@
   },
   "dependencies": {
     "@ember/test-helpers": "^3.3.0",
-    "@plantinformatics/vcf-genotype-brapi": "^1.0.26",
+    "@plantinformatics/vcf-genotype-brapi": "^1.0.27",
     "@solgenomics/brapijs": "https://github.com/solgenomics/BrAPI-js.git",
     "@voll/ember-parachute": "^2.0.0",
     "bluebird": "^3.7.2",
@@ -139,7 +139,9 @@
     "moment": "^2.30.1",
     "normalize-wheel": "^1.0.1",
     "numeric": "github:lukaiser/numeric",
+    "pca-js": "^1.0.2",
     "phantom": "^6.3.0",
+    "plotly.js-dist": "^3.1.0",
     "tsne-js": "^1.0.3",
     "vector-cosine-similarity": "^1.8.0"
   }

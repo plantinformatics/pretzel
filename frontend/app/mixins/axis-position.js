@@ -55,6 +55,7 @@ export default Mixin.create({
    */
 
   /** Set the domain of the current position to the given domain
+   * @param domain	this is directional - it incorporates .flipped
    */
   setDomain(domain)
   {

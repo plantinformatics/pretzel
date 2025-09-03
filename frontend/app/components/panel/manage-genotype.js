@@ -1045,11 +1045,14 @@ export default class PanelManageGenotypeComponent extends Component {
     dLog(fnName, this.sampleFiltersCheck(), 'FilteredSamples');
 
     // update selectedSampleEffect
+    const refreshDisplay = () => {
+      ! this.isDestroying && this.selectedSampleRefreshDisplay(/*sampleFilterTypeName*/undefined);
+    };
     later(() => {
-      this.selectedSampleRefreshDisplay(/*sampleFilterTypeName*/undefined);
+      refreshDisplay();
      // Repeat - will work out the requirements display to be refreshed.
       later(() => {
-        ! this.isDestroying && this.selectedSampleRefreshDisplay(/*sampleFilterTypeName*/undefined);
+        refreshDisplay();
       }, 1000);
     });
   }
@@ -1932,6 +1935,7 @@ export default class PanelManageGenotypeComponent extends Component {
     selected = value
       .trimEnd(/\n/)
       .split(/\n *\t*/g)
+      .uniq()
       .filter((name) => !!name);
     dLog(fnName, value.length, value.slice(-50), selected.length);
     return selected;
