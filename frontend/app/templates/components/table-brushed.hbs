@@ -6,11 +6,11 @@
     Download CSV file
   </button>
 
-  {{#if this.urlOptions.featuresPCA}}
+  {{#if (not (is-empty this.sampleData))}}
   <button type="button" onclick={{action this.openSampleData}}
     class="btn btn-info btn-xs"
     style="margin: 6px; padding: 1px 3px;" >
-    Open Sample Data
+    Sample PCA
   </button>
   {{/if}}
 
@@ -65,7 +65,6 @@
   {{/ember-modal-dialog}}
 {{/if}}
 
-{{#if this.urlOptions.featuresPCA}}
   {{#if this.showSampleData}}
     {{#if (not (is-empty this.sampleData))}}
       <button type="button" {{on "click" (action this.closeSampleData)}}>X</button>
@@ -81,4 +80,3 @@
       {{/each-in}}
     {{/if}}
   {{/if}}
-{{/if}}

@@ -7,6 +7,7 @@ import { inject as service } from '@ember/service';
 import { later, bind } from '@ember/runloop';
 import { capitalize } from '@ember/string';
 import { alias } from '@ember/object/computed';
+import { on } from '@ember/object/evented';
 
 
 import { featureEdit } from '../components/form/feature-edit';
@@ -18,6 +19,7 @@ import {
   highlightFeature,
 } from '../utils/panel/axis-table';
 import { afterSelectionFeatures } from '../utils/panel/feature-table';
+import { contentOf } from '../utils/common/promises';
 
 import { deletePunctuation } from './goto-feature-list';
 
@@ -256,6 +258,18 @@ export default Component.extend({
   stretchHorizontal : true,
   /** true means show sample-data - PCA of sample data of features */
   showSampleData : false,
+
+  //----------------------------------------------------------------------------
+
+  init() {
+    this._super.apply(this, arguments);
+
+    if (window.PretzelFrontend) {
+      window.PretzelFrontend.tableBrushed = this;
+    }
+  },
+
+  //----------------------------------------------------------------------------
 
   actions : {
 
@@ -1142,6 +1156,10 @@ export default Component.extend({
 
   },
 
+  /** Alternative to .sampleData, which is used instead of this.
+   * Collate an array of feature values which are sampleNames, for each dataset in .data.
+   * @return [datasetId] -> [sampleName, ...]
+   */
   datasetsSamples : computed('data', function () {
     const
     fnName = 'datasetsSamples',
@@ -1160,12 +1178,23 @@ export default Component.extend({
     return datasets;
   }),
 
+  /** Collate from .data the brushed features' sample values.
+   * Sample names are filtered to match the AGG name pattern; other sample name
+   * patterns could be added.
+   * This is done only for Genotype datasets.
+   * @return [datasetId][sampleName] -> array of genotype values.
+   * The result contains a vector of genotype values for each sample name, for
+   * each datasetId.
+   * @desc .datasetsSamples is an alternative, not used.
+   */
   sampleData : computed('data', function () {
     const output = {};
     this.data.forEach(({ feature }) => {
       const
       dataset = feature.get('blockId.datasetId'),
+      enablePCA = this.urlOptions.featuresPCA || contentOf(dataset).hasTag('Genotype'),
       datasetId = feature.get('blockId.datasetId.id');
+      if (! enablePCA) { return; }
       /** Only a VCF genotype dataset will have .samplesPassport, and only after
        * user has requested it via 'Select Passport fields'.
        * The passport data is applicable for other datasets which have the same sample IDs.
