@@ -83,7 +83,9 @@ export default class SampleDataComponent extends Component {
       });
       traces = Object.entries(groups).map(([key, g], i) => {
       const trace = {
-        x: g.map(({index}, j) => vector2d[0][index] + j/100),
+        /** to show overlapping points as a series of offset points in a line,
+         * add to x value : + j/100 */
+        x: g.map(({index}, j) => vector2d[0][index]),
         y: g.map(({index}) => vector2d[1][index]),
         text: g.mapBy('sampleName'),
         name: key,

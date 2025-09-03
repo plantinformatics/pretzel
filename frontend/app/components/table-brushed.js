@@ -59,6 +59,11 @@ const featureSymbol = Symbol.for('feature');
 /** Sanitize an array of numbers read from dataset._meta.cellColour.domain */
 const numberArrayRe = /[^-[\]., 0-9]+/g;
 
+/** Recognise Feature.values field names which are Genotype Sample names.
+ * The 3 parts matched are : AGG number crop (WHEA, CHIC, ...)
+ */
+const sampleNameRe = /^AGG[0-9]+[A-Z][A-Z]+.*/;
+
 /*----------------------------------------------------------------------------*/
 
 let formFeatureEditEnable;
@@ -1170,7 +1175,7 @@ export default Component.extend({
       if (! ds[datasetId]) {
       // for VCF genotype datasets : dataset.sampleNames
         ds[datasetId] = 
-          Object.keys(feature.values).filter(key => (/^AGG[0-9]+WHEA.*/.test(key)));
+          Object.keys(feature.values).filter(key => (sampleNameRe.test(key)));
       }
       return ds;
     }, {});
@@ -1205,7 +1210,7 @@ export default Component.extend({
         this.samplesPassport = samplesPassport;
       }
       Object.entries(feature.values).forEach(([key, value]) => {
-        if (/^AGG[0-9]+WHEA.*/.test(key)) {
+        if (sampleNameRe.test(key)) {
           const
           /** create output[datasetId] after finding a matching sample name */
           samples = output[datasetId] || (output[datasetId] = {}),
