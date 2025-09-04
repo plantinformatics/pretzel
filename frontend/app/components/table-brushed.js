@@ -1183,6 +1183,12 @@ export default Component.extend({
     return datasets;
   }),
 
+  /** @return true if .sampleData contains 1 or more attributes ( [datasetId][sampleName] ) */
+  get sampleDataNotEmpty() {
+    const keysLength = Object.keys(this.sampleData).length;
+    return !! keysLength;
+  },
+
   /** Collate from .data the brushed features' sample values.
    * Sample names are filtered to match the AGG name pattern; other sample name
    * patterns could be added.
@@ -1197,7 +1203,10 @@ export default Component.extend({
     this.data.forEach(({ feature }) => {
       const
       dataset = feature.get('blockId.datasetId'),
-      enablePCA = this.urlOptions.featuresPCA || contentOf(dataset).hasTag('Genotype'),
+      featuresPCA = this.urlOptions.featuresPCA,
+      /** .featuresPCA enables PCA only for Genotype datasets, or any matching
+       * sampleNameRe if featuresPCA=='samples' */
+      enablePCA = featuresPCA && (contentOf(dataset).hasTag('Genotype') || featuresPCA == 'samples'),
       datasetId = feature.get('blockId.datasetId.id');
       if (! enablePCA) { return; }
       /** Only a VCF genotype dataset will have .samplesPassport, and only after
