@@ -1,9 +1,17 @@
 import { on } from '@ember/object/evented';
 import { computed } from '@ember/object';
+import { getOwner } from '@ember/application';
+
 import EntryBase from './entry-base';
 
 /* note also : naturalSort() from javascript-natural-sort/ which is a dependency of ember-jsoneditor / jsoneditor */
 import { alphanum } from '@cablanchard/koelle-sort';
+
+//------------------------------------------------------------------------------
+
+const dLog = console.debug;
+
+//------------------------------------------------------------------------------
 
 export default EntryBase.extend({
   initSteps: on('init', function() {
@@ -36,6 +44,9 @@ export default EntryBase.extend({
   actions: {
     switchDataset(dataset) {
       // console.log('switchDataset')
+      if (dataset.get('_meta')?.PanBARLEXURL) {
+        this.PanBARLEX_knownGenesAddToDataset(dataset);
+      }
       let active = this.get('entryLayout.active')
       this.set('entryLayout.active', !active)
     },
@@ -50,5 +61,25 @@ export default EntryBase.extend({
     selectDataset(dataset) {
       this.selectDataset(dataset);
     }
+  },
+  /** Get PanBARLEX_knownGenes and add them to dataset.
+   * @param {object} dataset	Ember Data store Dataset object
+   */
+  PanBARLEX_knownGenesAddToDataset(dataset) {
+    const
+    fnName = 'PanBARLEX_knownGenesAddToDataset',
+    /** This is a demonstration of concept, so it's probably premature to
+     * change the architecture to connect formally to manage-explorer.
+     *
+     * explorer === explorerComponent; using .lookup() is less brittle than
+     * .parentView, but explorerComponent is not the same, and does not have
+     * .viewDataset and .attrs
+     */
+    explorer = this.parentView.parentView,
+    explorerComponent = getOwner(this).lookup('component:panel/manage-explorer');
+    dLog(fnName, dataset.id, explorer._debugContainerKey,
+         explorerComponent._debugContainerKey);
+    explorer.knownGenesAddToDataset(dataset);
+
   }
 });

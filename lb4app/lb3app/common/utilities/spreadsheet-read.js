@@ -155,8 +155,10 @@ function spreadsheetDataToJsObj(fileData) {
    */
   status.datasets = datasets
     .reduce((result, dataset) => {
+      /** dataset.meta is an object here, and dataset.datasetMetadata is not defined. */
       const ok = /* ! dataset.sheetName || */  dataset.name &&
-            (dataset.blocks?.length || dataset.aliases?.length || dataset.datasetMetadata?.length);
+            (dataset.blocks?.length || dataset.aliases?.length
+             || dataset.datasetMetadata?.length || dataset.meta.PanBARLEXURL);
       ['warnings', 'errors'].forEach((fieldName) => {
         const df = dataset[fieldName];
         if (df?.length > datasetErrorWarningLimit) {
@@ -386,7 +388,7 @@ function sheetToDataset(
       return datasets;
     }, datasets);
 
-  if (! features.length) {
+  if (! features.length && ! (tags.includes('view') || meta.PanBARLEXURL)) {
     dataset.warnings.push('Worksheet does not contain data rows');
   }
 

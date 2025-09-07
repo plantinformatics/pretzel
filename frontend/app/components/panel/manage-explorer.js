@@ -39,9 +39,9 @@ const /*import */{
   CacheWrapper,
 } = vcfGenotypeBrapi.cacheBrowser;
 // import { CacheWrapper } from '../../utils/cache-browser';
-/** Required setup for knownGenesDataset() */
+/** Required setup for knownGenesDataset() and knownGenesAddToDataset() */
 init(CacheWrapper, fetch);
-import { knownGenesDataset } from '../../utils/data/panBARLEX';
+import { knownGenesDataset, knownGenesAddToDataset } from '../../utils/data/panBARLEX';
 
 /*----------------------------------------------------------------------------*/
 
@@ -468,8 +468,18 @@ export default ManageBase.extend({
     viewDataset = (datasetName, blocks) => 
       this.get('viewDataset')(datasetName, /*active*/true, blocks.mapBy('name'));
     knownGenesDataset(this.transient, viewDataset);
-
   },
+  knownGenesAddToDataset(dataset) {
+    const
+    /** alternative to viewDataset, but avoiding re-reading datasets from api,
+     * which might discard transient blocks. */
+    refreshDisplay = () => {}, // this.refreshAvailable(),
+    viewDataset = (datasetName, blocks) => 
+      this.get('viewDataset')(datasetName, /*active*/true, blocks.mapBy('name'));
+    knownGenesAddToDataset(
+      this.transient, this.blocksService, viewDataset, dataset);
+  },
+
   /** Triggers a rerun of the availableMaps fetching task */
   refreshAvailable: function(){
     this.get('refreshDatasets')();
