@@ -14,6 +14,10 @@
         style="margin: 6px; padding: 1px 3px;" >
         Sample PCA
       </button>
+      <input type="checkbox"
+        checked={{this.sortByGenotype}}
+        oninput={{action (mut this.sortByGenotype) value="target.checked"}}  >
+      <label>Sort by Genotype</label>
     {{/if}}
   {{/if}}
 
