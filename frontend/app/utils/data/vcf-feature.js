@@ -361,21 +361,21 @@ function columnName2SampleName(columnName) {
   return sampleName;
 }
 
-/** If selectFields.length, augment the given sample / accession name with selected
+/** If selectFields.length, return the selected
  * fields from the Passport data of the accession.
  * @param sampleName
  * @param selectFields	user-selected list of fields to add (userSettings.passportFields)
- * @param datasetId	to lookup the Passport data of the sampleName
- * @param visibleBlocks	for visibleBlocks[].datasetId.samplesPassport
+ * @param dataset	for dataset.samplesPassport
  * which contains the Passport field value for the samples
+ * @return {Array<string>} values	the Passport field value for the samples
+ * default is [], if ! selectFields.length or sampleName is not a sample, or
+ * dataset does not have passport data loaded.
  */
-function sampleNameAddPassport(sampleName, selectFields, datasetId, visibleBlocks) {
+export function sampleNamePassportValues(sampleName, selectFields, dataset) {
+  let values = [];
   if (selectFields.length && ! valueNameIsNotSample(sampleName)) {
-  const 
-    block = visibleBlocks.find(b => b.datasetId.id == datasetId),
-    dataset = contentOf(block.datasetId);
     if (dataset?.samplesPassport?.[sampleName]) {
-      const values = selectFields.map(fieldName => {
+      values = selectFields.map(fieldName => {
         let text = dataset.samplesPassport[sampleName][fieldName];
         /** 'aliases' value is an array of objects; use the .name field  */
         if ((typeof text === 'object') && Array.isArray(text) &&
@@ -388,6 +388,26 @@ function sampleNameAddPassport(sampleName, selectFields, datasetId, visibleBlock
         }
         return text;
       });
+    }
+  }
+  return values;
+}
+/** If selectFields.length, augment the given sample / accession name with selected
+ * fields from the Passport data of the accession.
+ * @param sampleName
+ * @param selectFields	user-selected list of fields to add (userSettings.passportFields)
+ * @param datasetId	to lookup the Passport data of the sampleName
+ * @param visibleBlocks	for visibleBlocks[].datasetId.samplesPassport
+ * which contains the Passport field value for the samples
+ * @param as for sampleNamePassportValues()
+ */
+function sampleNameAddPassport(sampleName, selectFields, datasetId, visibleBlocks) {
+  if (selectFields.length && ! valueNameIsNotSample(sampleName)) {
+    const
+    block = visibleBlocks.find(b => b.datasetId.id == datasetId),
+    dataset = contentOf(block.datasetId),
+    values = sampleNamePassportValues(sampleName, selectFields, dataset);
+
       /* The original implementation simply appended the Passport data values to
        * the sampleName, but now nestedHeaders are used to instead display each
        * Passport field in a separate row.
@@ -397,7 +417,6 @@ function sampleNameAddPassport(sampleName, selectFields, datasetId, visibleBlock
         const fieldName = selectFields[i];
         sampleName = stringSetSymbol(Symbol.for(fieldName), sampleName, value);
       });
-    }
   }
   return sampleName;
 }

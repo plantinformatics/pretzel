@@ -210,6 +210,7 @@
 
                     {{!-- i.e. panel/genotype-samples --}}
                     <Panel::GenotypeSamples @the={{this}} @userSettings={{@userSettings}}
+                      @enablePassportData={{true}}
                       @showIntersectionCheckbox={{this.brushedOrViewedVCFBlocks.length}} >
                       {{this.ensureSamplesForDatasetTabEffect}}
                     </Panel::GenotypeSamples>

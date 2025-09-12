@@ -4933,13 +4933,21 @@ export default class PanelManageGenotypeComponent extends Component {
 
   //----------------------------------------------------------------------------
 
-  /** activeIdDatasets, tabName2IdDatasets() are analogous to and based on 
+  /** Identify the dataset selected by the user, of VCF / genotype dataset via
+   * tab selection change of Datasets Samples tabs.
+   *
+   * activeIdDatasets is the DOM element id of <nav.item > <a>
+   * activeIdDatasets, tabName2IdDatasets() are analogous to and based on 
    * activeId, tabName2Id() above.
    */
   @tracked
   activeIdDatasets = null;
+  /** datasetId of selected dataset */
   @tracked
   activeDatasetId = null;
+  /** Ember Data store record handle of selected dataset */
+  @tracked
+  activeDataset = null;
 
   /** invoked from hbs via {{compute (action this.tabName2Id tabTypeName ) }}
    * @param tabName text displayed on the tab for user identification of the contents.
@@ -4978,9 +4986,15 @@ export default class PanelManageGenotypeComponent extends Component {
     }
     this.setSelectedDataset(datasetId);
   }
+  /** In response to user selection of a dataset tab in the settings/controls : Datasets tab, set :
+   * - activeDatasetId  datasetId
+   * - activeIdDatasets DOM element id of <nav.item > <a>
+   * - activeDataset  Ember Data store Dataset record for .activeDatasetId
+   */
   setSelectedDataset(datasetId) {
     this.activeDatasetId = datasetId;
     this.activeIdDatasets = this.tabName2IdDatasets(datasetId);
+    this.activeDataset = this.gtDatasets.findBy('id', this.activeDatasetId);
   }
 
   /** factored from selectDataset() - this would be passed to elem/tab-names
@@ -5110,7 +5124,8 @@ export default class PanelManageGenotypeComponent extends Component {
     /** useSelectMultiple : values === passportFields;
      * access passportFields with .mapBy('id') */
     selectFields = this.args.userSettings.passportFields,
-    promise = this.datasetsGetPassportData(selectFields);
+    promise = selectFields.length ?
+      this.datasetsGetPassportData(selectFields) : Promise.resolve();
     return promise;
   }
   /** For each of the viewed datasets, .gtDatasets, call datasetGetPassportData().
@@ -5147,7 +5162,9 @@ export default class PanelManageGenotypeComponent extends Component {
   datasetGetPassportData(dataset, sampleNames, selectFields) {
     const fnName = 'datasetGetPassportData';
     const genotypeIds = sampleNames.filter(sampleNameIsAGG);
-    if (! genotypeIds.length) return Promise.resolve();
+    if (! genotypeIds.length || ! selectFields.length) {
+      return Promise.resolve();
+    }
     const
     mg = this,
     /** array of promises, each yielding response for 1 chunk */

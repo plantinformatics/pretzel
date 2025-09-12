@@ -171,6 +171,17 @@
 
   </div>
 
+  {{#if @enablePassportData}}
+  <div class="genotype-controls">
+    <Panel::PassportTable
+      @userSettings={{@userSettings}}
+      @dataset={{@the.activeDataset}}
+      @samples={{@the.samples}}
+      >
+    </Panel::PassportTable>
+  </div>
+  {{/if}}
+
   <div class="genotype-controls">
 
     <select style="height:100px" class="form-control" multiple onchange={{action @the.selectSample}}>

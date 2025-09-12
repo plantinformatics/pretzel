@@ -1,0 +1,50 @@
+<div class="passport-table">
+  <table>
+    <thead>
+      <tr>
+          <th>
+            GenotypeId
+          </th>
+
+        {{#each this.columns as |column|}}
+          <th>
+            {{!-- Power select for filtering on this column --} }
+            {{#power-select 
+              selected=null 
+              options=column.filterOptions 
+              onChange=(action this.filterColumn column) 
+              as |option|}}
+              {{option} }
+            {{/power-select} } --}}
+
+            {{#if column.filterOptions.length}}
+              <select style="height:100px" class="form-control" multiple onchange={{action (fn this.selectFieldValue column) value="target" }}>
+                {{#each column.filterOptions as |filterOption|}}
+                <option value={{filterOption}}
+                  selected={{include (get this.selectedFieldValues column.property) filterOption}}>
+                  {{filterOption}}</option>
+                {{/each}}
+              </select>
+            {{/if}}
+
+            {{column.header}}
+          </th>
+        {{/each}}
+      </tr>
+    </thead>
+    <tbody>
+      {{#each this.tableData as |row rowIndex|}}
+        <tr>
+          {{!-- or {{get this.args.samples rowIndex}} --}}
+          <td>{{object-at rowIndex this.args.samples}}</td>
+          {{#each this.columns as |column|}}
+            <td>{{get row column.property}}</td>
+          {{/each}}
+        </tr>
+      {{/each}}
+    </tbody>
+  </table>
+  {{log 'passport-table' this.tableData this.columns }}
+  <div>{{toJson  this.tableData}}</div>
+  <div>{{toJson  this.columns}}</div>
+</div>

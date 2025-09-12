@@ -2663,6 +2663,12 @@ div.genotype label
   margin: 5px;
 }
 
+.genotype-controls > .passport-table
+{
+  overflow-y: auto;
+  height: 20em;
+}
+
 /*----------------------------------------------------------------------------*/
 
 .gtDatasetIdsToFilter > select
