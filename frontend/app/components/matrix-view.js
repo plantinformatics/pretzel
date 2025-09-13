@@ -2197,7 +2197,15 @@ div#observational-table \
         }
         const startTime = Date.now();
         console.time(fnName + ':updateSettings');
-        table.updateSettings(settings);
+        /** wrap updateSettings() in .batch() with colWidthsSet() which also
+         * does updateSettings(). */
+        table.batch(() => {
+          table.updateSettings(settings);
+          /** After the last updateSettings() ... */
+          if ((i+1 === repeat) && this.useNestedHeaders) {
+            this.colWidthsSet();
+          }
+        });
         // dLog(fnName,  d3.selectAll('.col-sample, .col-selectedSample').nodes());
         /* try setting meta references to features in batchRender().
          * In previous attempts it seemed to cause O(n2) rendering of cells.
@@ -2227,9 +2235,6 @@ div#observational-table \
         this.progressiveRowMergeInBatch();
       }
       t.hide();
-    }
-    if (this.useNestedHeaders) {
-      this.colWidthsSet();
     }
     this.afterScrollVertically_tablePosition();
   },
