@@ -892,8 +892,10 @@ export default Service.extend({
     addGerminateOptions(requestOptions, block);
     /** VCF lookup does not require param samples, but Germinate and BrAPI require
      * samples to be given.
+     * auth.js : _ajax() will do ensureSamplesParam() before germinateGenotypeLookupP
+     * in the case .serverType === 'Germinate' && route === 'Blocks/genotypeSamples'
      */
-    if (block.hasTag('BrAPI') || block.hasTag('Germinate')) {
+    if (block.hasTag('BrAPI') /*|| block.hasTag('Germinate')*/) {
       const sampleNames = block.get('datasetId.sampleNames');
       if (! sampleNames?.length) {
         return Promise.resolve([]);
