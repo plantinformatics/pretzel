@@ -62,6 +62,13 @@ export default class PanelGenotypeSamplesComponent extends Component {
   //----------------------------------------------------------------------------
 
   @action
+  selectSampleArray(selectedSamples, add) {
+    return this.args.the.selectSampleArray(selectedSamples, add);
+  }
+
+  //----------------------------------------------------------------------------
+
+  @action
   vcfGenotypeSamples() {
     this.args.the.vcfGenotypeSamples();
   }

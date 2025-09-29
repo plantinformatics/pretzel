@@ -10,13 +10,19 @@ const dLog = console.debug;
 
 // -----------------------------------------------------------------------------
 
-/**
+/** Based on a <select multiple>, provide notification when values are de/selected.
+ *
  * @param values  array of values to populate the <select> <option>s
- * @param selectedValues
+ *  an array of optionValue {id, name}.
+ * @param selectedValues is updated with the values selected by the user
  * @param selectValueArray(values, c, add)
  *   values : current list of selected values;
  *   c : element de/selected in the current event
  *   add : true if c was selected
+ * 
+ * Provide notification when values are de/selected, via
+ *  .selectedGroupChangedId() -> selectedValueChanged() -> @selectValueArray()
+ *  (or equivalent @selectedGroupChanged()).
  */
 export default class FormSelectMultipleComponent extends Component {
   // selectedValue;

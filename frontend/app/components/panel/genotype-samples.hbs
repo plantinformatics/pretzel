@@ -173,12 +173,22 @@
 
   {{#if @enablePassportData}}
   <div class="genotype-controls">
+    {{#unless this.urlOptions.tableRow}}
     <Panel::PassportTable
       @userSettings={{@userSettings}}
       @dataset={{@the.activeDataset}}
       @samples={{@the.samples}}
-      >
-    </Panel::PassportTable>
+      />
+    {{else}}
+    <Panel::PassportTableHtmlRow
+      @userSettings={{@userSettings}}
+      @dataset={{@the.activeDataset}}
+      @samples={{@the.samples}}
+      @rows={{@the.samples}}
+      @selectSampleArray={{this.selectSampleArray}}
+      />
+    {{/unless}}
+
   </div>
   {{/if}}
 

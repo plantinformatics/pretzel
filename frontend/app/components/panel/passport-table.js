@@ -1,6 +1,16 @@
 /**
  * @module components/panel/passport-table
- * @description A web component that displays a table with filtering support using ember-contextual-table and ember-power-select.
+ *
+ * @description A web component that displays a table with these features :
+ *
+ * - filtering via a <select> in each column header which displays the unique
+ *   column values and enables the user to select multiple of these to filter
+ *   the table.
+ *
+ * - column sorting
+ *
+ * - row selection of the table, in the same way a <select multiple> works,
+ *   instead of a checkbox.
  *
  * @example
  * <Panel::PassportTable @columns={{this.columns}} @data={{this.data}} />
@@ -8,6 +18,7 @@
 
 import Component from '@glimmer/component';
 import { action, computed } from '@ember/object';
+import { alias } from '@ember/object/computed';
 import { tracked } from '@glimmer/tracking';
 
 //------------------------------------------------------------------------------
@@ -56,7 +67,9 @@ export default class PanelPassportTableComponent extends Component {
     /** manage-genotype .samples is filtered by .filterSamplesByHaplotype
      * (not filteredSamples because this component replaces 'Filter by Name').
      */
-    samples = this.args.samples,
+    samplesFull = this.args.samples,
+    samples = (this.samplesListLimit ?? false) ? 
+      samplesFull.slice(0, this.samplesListLimit) : samplesFull,
     /** result is [fieldName] -> unique values, i.e. filterOptions */
     fieldValues = samples.reduce((fv, sampleName) => {
       const
@@ -88,7 +101,13 @@ export default class PanelPassportTableComponent extends Component {
     const
     fnName = 'columns',
     fieldsValues = this.fieldsUniqueValues,
-    columns = this.args.userSettings.passportFields.map(fieldName => {
+    passportFields = this.args.userSettings.passportFields,
+
+    /** in this commit passport-table{,-html-row} differ in that idField is
+     * prepended to columns in passport-table-html-row. */
+    /** columns[this.idField].filterOptions will be []. */
+    fields = this.idFieldInColumns ? [this.idField].concat(passportFields) : passportFields,
+    columns = fields.map(fieldName => {
       const
       set = fieldsValues[fieldName],
       filterOptions = set ? Array.from(set) : [],
@@ -113,7 +132,7 @@ export default class PanelPassportTableComponent extends Component {
     dataset = this.args.dataset,
     selectFields = this.args.userSettings.passportFields,
     samples = this.args.samples,
-    tableLength = 50, // 500,
+    tableLength = 20, // 500,
     rows = [];
     for (let sampleIndex = 0;
          (sampleIndex < samples.length) && (rows.length < tableLength);
@@ -136,6 +155,7 @@ export default class PanelPassportTableComponent extends Component {
         dLog(fnName, sampleIndex, sampleName, values, rowEntries, mismatch);
       });
       if (! mismatch) {
+        rowEntries.push(['GenotypeId', sampleName]);
         const row = Object.fromEntries(rowEntries);
         rows.push(row);
       }
@@ -144,8 +164,35 @@ export default class PanelPassportTableComponent extends Component {
     return rows;
   }
 
+
   //----------------------------------------------------------------------------
 
+  @action
+  rowText(row) {
+    const
+    fnName = 'rowText',
+    {GenotypeId, ...nonId} = row,
+    values = Object.values(nonId);
+    values.unshift(GenotypeId);
+    const text = values
+    // .entries(), .map(kv => kv.join(':'))
+      .join('&nbsp;');
+    return text;
+  }
+
+  @action
+  selectSample(event) {
+    /** copied from manage-genotype.js : selectSample() */
+    const
+    selectedSamples = $(event.target).val();
+    // this.selectSampleArray(selectedSamples, true);
+    this.selectedSamples = selectedSamples;
+  }
+
+
+  //----------------------------------------------------------------------------
+
+  // for power-select, unused
   /**
    * Handles filter changes for a column.
    * @param {string} column - The column name.
@@ -174,5 +221,75 @@ export default class PanelPassportTableComponent extends Component {
   }
 
   //----------------------------------------------------------------------------
+  // From https://chatgpt.com/share/68d0e67a-7428-800e-85e2-e31ee741ece3
+
+  // sort + selection state
+  @tracked sortBy = null;           // e.g. 'sampleName'
+  @tracked sortDir = 'asc';         // 'asc' | 'desc'
+  @tracked selectedIds = new Set(); // store stable row keys (e.g. accession id)
+
+  /* If you already compute filtered rows, plug that in here instead of this.args.rows
+  get filteredRows() {
+    return this.args.rows ?? [];
+  }
+  */
+  @alias('tableData') filteredRows;
+
+  get sortedRows() {
+    const rows = [...this.filteredRows];
+    if (!this.sortBy) return rows;
+
+    const dir = this.sortDir === 'asc' ? 1 : -1;
+    return rows.sort((a, b) => {
+      // basic, locale-aware, numeric-friendly compare
+      const av = a[this.sortBy];
+      const bv = b[this.sortBy];
+      if (av == null && bv == null) return 0;
+      if (av == null) return -1 * dir;
+      if (bv == null) return  1 * dir;
+      return String(av).localeCompare(String(bv), undefined, { numeric: true, sensitivity: 'base' }) * dir;
+    });
+  }
+
+  @action toggleSort(property) {
+    if (this.sortBy === property) {
+      this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortBy = property;
+      this.sortDir = 'asc';
+    }
+  }
+
+  @action toggleRow(id, event) {
+    const fnName = 'toggleRow';
+    const checked = event.target.checked;
+    const next = new Set(this.selectedIds);
+    checked ? next.add(id) : next.delete(id);
+    this.selectedIds = next;
+    dLog(fnName, checked, this.selectedIds, event.target.value);
+    this.args.onSelectionChange?.([...next]); // bubble up if parent cares
+  }
+
+  @action toggleAll(event) {
+    const fnName = 'toggleRow';
+    const checked = event.target.checked;
+    this.selectedIds = checked ? new Set(this.sortedRows.map(r => r.id)) : new Set();
+    dLog(fnName, checked, this.selectedIds);
+    this.args.onSelectionChange?.([...this.selectedIds]);
+  }
+
+  isAllVisibleSelected() {
+    const visibleIds = this.sortedRows.map(r => r.id);
+    return visibleIds.length > 0 && visibleIds.every(id => this.selectedIds.has(id));
+  }
+
+
+  //----------------------------------------------------------------------------
+
+  has(selectedIds, rowId) {
+    dLog('has(selectedIds, rowId)', selectedIds, rowId);
+    const h = selectedIds.has(rowId);
+    return  h;
+  }
 
 }

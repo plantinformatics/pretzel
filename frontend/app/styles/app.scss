@@ -2669,6 +2669,43 @@ div.genotype label
   height: 20em;
 }
 
+/*------------------------------------*/
+
+/* Avoid text highlight when shift-selecting; table has select-none class already */
+.table .is-selected td {
+  // background: var(--row-selected-bg, rgba(0, 120, 215, 0.12));
+  background-color: #007bff; /* Bootstrap primary color */
+  color: white;
+}
+/** Indicate row focus (passport-table-html-row : .focusIndex) */
+/* Place outline on tr > td if rectangleSelect in selectCells(). */
+.table  tr.is-focused {
+  outline: 4px solid #72b3e7;
+  outline-offset: -4px; /* keep inside cells */
+}
+/* Hover state for better UX */
+.table td:hover {
+  background-color: #f0f0f0; /* Light gray hover state */
+}
+/* Applying selected styles on focus for accessibility */
+.table td:focus {
+  outline: none;
+  background-color: #007bff;
+  color: white;
+}
+
+/** disable text selection - prevent users from selecting text within the element.
+ * In the passport-table <table> ( table#passport-table > tbody > tr > td ),
+ * row selection is used, so text selection is disabled to make the function clearer.
+ */
+.no-select {
+  user-select: none;
+  -webkit-user-select: none; /* For Safari */
+  // Not required - Mozilla Firefox supports user-select.
+  // -moz-user-select: none; /* For Firefox */
+  -ms-user-select: none; /* For Internet Explorer/Edge */
+}
+
 /*----------------------------------------------------------------------------*/
 
 .gtDatasetIdsToFilter > select
