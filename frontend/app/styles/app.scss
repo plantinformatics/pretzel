@@ -2663,10 +2663,18 @@ div.genotype label
   margin: 5px;
 }
 
-.genotype-controls > .passport-table
+.genotype-controls:has( > #passport-table)
 {
   overflow-y: auto;
-  height: 20em;
+  height: 35ex;
+  resize: vertical;
+}
+
+table#passport-table > thead > tr > th
+{
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 /*------------------------------------*/

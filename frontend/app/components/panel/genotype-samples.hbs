@@ -188,6 +188,7 @@
   </div>
   {{/if}}
 
+  {{#unless this.urlOptions.tableRow}}
   <div class="genotype-controls">
 
     <select style="height:100px" class="form-control" multiple onchange={{action @the.selectSample}}>
@@ -201,6 +202,8 @@
     </EmberTooltip>
 
   </div>
+  {{/unless}}
+
 </div>
 
 <div>

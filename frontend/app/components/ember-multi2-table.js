@@ -102,6 +102,18 @@ export default class EmberMulti2TableComponent extends Component {
     this.selectedFieldValuesCount++;
   }
 
+  @computed('selectedFieldValuesCount')
+  get selectedFieldValuesTexts() {
+    const
+    texts = this.columns.reduce((ts, column) => {
+      const
+      text = this.selectedFieldValues[column.property]?.join(', ');
+      ts[column.property] = text;
+      return ts;
+    }, {});
+    return texts;
+  }
+
   //----------------------------------------------------------------------------
 
   // From https://chatgpt.com/share/68d0e67a-7428-800e-85e2-e31ee741ece3

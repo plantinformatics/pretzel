@@ -18,14 +18,25 @@
       {{!-- Sortable headers. Keep your existing filter row below. --}}
       {{#each this.columns as |column|}}
         <th
-          role="button" {{!-- was columnheader --}}
+          role="columnheader" {{!-- or button ?  --}}
           class="whitespace-nowrap cursor-pointer select-none"
-          {{on "click" (fn this.toggleSort column.property)}}
-          title="Click to sort; click again to reverse"
         >
 
+          <div
+            {{on "click" (fn this.toggleSort column.property)}}
+            title="Click to sort; click again to reverse" >
+            {{column.header}}
+          {{#if (eq this.sortBy column.property)}}
+            <span aria-hidden="true">{{if (eq this.sortDir "asc") " ▲" " ▼"}}</span>
+          {{/if}}
+          </div>
+
           {{!-- for filtering on this column --}}
-          {{#if column.filterOptions.length}}
+          <div class="font-weight-normal" 
+            {{on "click" (toggle "showFilters" this ) }}
+            title="Show filter selection" >
+            &#xFE40; {{get this.selectedFieldValuesTexts column.property }}</div>
+          {{#if (and this.showFilters column.filterOptions.length ) }}
             <select style="height:100px" class="form-control" multiple onchange={{action (fn this.selectFieldValue column) value="target" }}>
               {{#each column.filterOptions as |filterOption|}}
               <option value={{filterOption}}
@@ -35,10 +46,8 @@
             </select>
           {{/if}}
 
-          {{column.header}}
-          {{#if (eq this.sortBy column.property)}}
-            <span aria-hidden="true">{{if (eq this.sortDir "asc") " ▲" " ▼"}}</span>
-          {{/if}}
+  
+
         </th>
       {{/each}}
     </tr>

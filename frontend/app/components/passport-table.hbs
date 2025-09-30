@@ -1,15 +1,17 @@
-{{#unless @tableRow}}
-  <span>EmberMulti2Select</span>
-{{else}}
-  <EmberMulti2Table
-    @userSettings={{@userSettings}}
-    @dataset={{@dataset}}
-    @samples={{@samples}}
-    {{!-- @rows={{@rows}}     same as @samples --}}
-    @selectSampleArray={{@selectSampleArray}}
-    @sampleNamePassportValues={{@sampleNamePassportValues}}
-    />
-{{/unless}}
+{{!-- For angle-bracket components, use Camel Case <EmberMulti2Table> <EmberMulti2Select>,
+ and prefix args with '@', e.g. @userSettings={{@userSettings}}
+--}}
+{{#let (if @tableRow "ember-multi2-table" "ember-multi2-select") as |tableComponent|}}
 
+  {{component
+    tableComponent
+    userSettings=@userSettings
+    dataset=@dataset
+    samples=@samples
+    selectSampleArray=@selectSampleArray
+    sampleNamePassportValues=@sampleNamePassportValues
+    }}
+
+{{/let}}
 
 {{yield}}
