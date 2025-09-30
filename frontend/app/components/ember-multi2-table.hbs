@@ -16,15 +16,27 @@
   <thead>
     <tr role="row">
       {{!-- Sortable headers. Keep your existing filter row below. --}}
-      {{#each this.columns as |col|}}
+      {{#each this.columns as |column|}}
         <th
-          role="columnheader"
+          role="button" {{!-- was columnheader --}}
           class="whitespace-nowrap cursor-pointer select-none"
-          {{on "click" (fn this.toggleSort col.property)}}
+          {{on "click" (fn this.toggleSort column.property)}}
           title="Click to sort; click again to reverse"
         >
-          {{col.header}}
-          {{#if (eq this.sortBy col.property)}}
+
+          {{!-- for filtering on this column --}}
+          {{#if column.filterOptions.length}}
+            <select style="height:100px" class="form-control" multiple onchange={{action (fn this.selectFieldValue column) value="target" }}>
+              {{#each column.filterOptions as |filterOption|}}
+              <option value={{filterOption}}
+                selected={{include (get this.selectedFieldValues column.property) filterOption}}>
+                {{filterOption}}</option>
+              {{/each}}
+            </select>
+          {{/if}}
+
+          {{column.header}}
+          {{#if (eq this.sortBy column.property)}}
             <span aria-hidden="true">{{if (eq this.sortDir "asc") " ▲" " ▼"}}</span>
           {{/if}}
         </th>

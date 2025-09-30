@@ -23,15 +23,11 @@ import { tracked } from '@glimmer/tracking';
 
 //------------------------------------------------------------------------------
 
-import { sampleNamePassportValues } from '../../utils/data/vcf-feature';
-
-//------------------------------------------------------------------------------
-
 const dLog = console.debug;
 
 //------------------------------------------------------------------------------
 
-export default class PanelPassportTableComponent extends Component {
+export default class EmberMulti2SelectComponent extends Component {
 
   //------------------------------------------------------------------------------
 
@@ -55,26 +51,29 @@ export default class PanelPassportTableComponent extends Component {
   //------------------------------------------------------------------------------
 
   /** Collate Passport data values for @samples and @userSettings.passportFields.
+   * @samples and @userSettings.passportFields may be nullish, both defaulting to [].
    * This is used to populate the column-header <select>s.
    * @return [fieldName] -> Set of unique string field values.
+   * Return {} when this.args.samples is null or empty.
    */
   @computed('args.userSettings.passportFields', 'args.dataset', 'args.samples')
   get fieldsUniqueValues() {
     const
     fnName = 'fieldsUniqueValues',
     dataset = this.args.dataset,
-    selectFields = this.args.userSettings.passportFields,
+    selectFields = this.args.userSettings.passportFields || [],
     /** manage-genotype .samples is filtered by .filterSamplesByHaplotype
      * (not filteredSamples because this component replaces 'Filter by Name').
      */
-    samplesFull = this.args.samples,
+    samplesFull = this.args.samples || [],
     samples = (this.samplesListLimit ?? false) ? 
       samplesFull.slice(0, this.samplesListLimit) : samplesFull,
     /** result is [fieldName] -> unique values, i.e. filterOptions */
     fieldValues = samples.reduce((fv, sampleName) => {
       const
       /** Passport data values for sampleName */
-      values = sampleNamePassportValues(sampleName, selectFields, dataset);
+      values = this.args.sampleNamePassportValues(sampleName, selectFields, dataset);
+      // if selectFields is [], then values is [].
       values.forEach((value, i) => {
         const
         fieldName = selectFields[i],
@@ -94,6 +93,7 @@ export default class PanelPassportTableComponent extends Component {
    * descriptor data.
    * Currently the header and property are both the field name; potentially the
    * header could be formatted, e.g. capitalised.
+   * @userSettings.passportFields may be nullish, defaulting to [].
    * @return {Array<{header, property, filterOptions}>}
    */
   @computed('args.userSettings.passportFields')
@@ -101,7 +101,7 @@ export default class PanelPassportTableComponent extends Component {
     const
     fnName = 'columns',
     fieldsValues = this.fieldsUniqueValues,
-    passportFields = this.args.userSettings.passportFields,
+    passportFields = this.args.userSettings.passportFields || [],
 
     /** in this commit passport-table{,-html-row} differ in that idField is
      * prepended to columns in passport-table-html-row. */
@@ -134,13 +134,16 @@ export default class PanelPassportTableComponent extends Component {
     samples = this.args.samples,
     tableLength = 20, // 500,
     rows = [];
+    if (! samples) {
+      return rows;
+    }
     for (let sampleIndex = 0;
          (sampleIndex < samples.length) && (rows.length < tableLength);
          sampleIndex++) {
       // samples.slice(0, tableLength).map(sampleName => {
       const
       sampleName = samples[sampleIndex],
-      values = sampleNamePassportValues(sampleName, selectFields, dataset),
+      values = this.args.sampleNamePassportValues(sampleName, selectFields, dataset),
       rowEntries = [],
       mismatch = values.find((value, fieldIndex) => {
         const

@@ -23,10 +23,15 @@ const genolinkSearchIdsLimit = 100;
 
 import { clipboard_writeText } from '../../utils/common/html';
 import { exportObjectsAsCSVFile } from '../../utils/dom/file-download';
+import { sampleNamePassportValues } from '../../utils/data/vcf-feature';
+
+
 
 //------------------------------------------------------------------------------
 
 const dLog = console.debug;
+
+const trace = 0;
 
 //------------------------------------------------------------------------------
 
@@ -35,15 +40,22 @@ export default class PanelGenotypeSamplesComponent extends Component {
 
   @alias('queryParamsService.urlOptions') urlOptions;
 
+  sampleNamePassportValues = sampleNamePassportValues;
+
   //----------------------------------------------------------------------------
 
-  /*
   constructor() {
     super(...arguments);
 
-    dLog('genotype-samples', 'showIntersectionCheckbox', this.args.showIntersectionCheckbox);
+    if (trace) {
+      dLog('genotype-samples', 'showIntersectionCheckbox', this.args.showIntersectionCheckbox);
+    }
+
+    if (window.PretzelFrontend) {
+      window.PretzelFrontend.genotypeSamples = this;
+    }
+
   }
-  */
 
   //----------------------------------------------------------------------------
 

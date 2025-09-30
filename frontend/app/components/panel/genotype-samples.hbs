@@ -172,22 +172,18 @@
   </div>
 
   {{#if @enablePassportData}}
+  {{log 'genotype-samples' this this.args.userSettings @userSettings}}
   <div class="genotype-controls">
-    {{#unless this.urlOptions.tableRow}}
-    <Panel::PassportTable
+    <PassportTable
+      @one={{1}}     {!-- not used.  first arg is not passed successfully --}}
       @userSettings={{@userSettings}}
       @dataset={{@the.activeDataset}}
       @samples={{@the.samples}}
-      />
-    {{else}}
-    <Panel::PassportTableHtmlRow
-      @userSettings={{@userSettings}}
-      @dataset={{@the.activeDataset}}
-      @samples={{@the.samples}}
-      @rows={{@the.samples}}
+      {{!-- @rows={{@the.samples --}}
       @selectSampleArray={{this.selectSampleArray}}
+      @tableRow={{this.urlOptions.tableRow}}
+      @sampleNamePassportValues={{this.sampleNamePassportValues}}
       />
-    {{/unless}}
 
   </div>
   {{/if}}

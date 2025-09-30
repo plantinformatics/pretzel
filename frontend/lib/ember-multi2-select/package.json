@@ -1,0 +1,13 @@
+{
+  "name": "ember-multi2-select",
+  "keywords": [
+    "ember-addon"
+  ],
+  "dependencies": {
+    "ember-cli-babel" : "^7.26.11",
+    "ember-cli-htmlbars" : "^6.3.0"
+  },
+  "devDependencies": {
+  }
+
+}

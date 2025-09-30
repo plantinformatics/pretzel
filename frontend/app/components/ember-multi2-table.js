@@ -13,9 +13,7 @@ const dLog = console.debug;
 
 //------------------------------------------------------------------------------
 
-import { sampleNamePassportValues } from '../../utils/data/vcf-feature';
-
-import PanelPassportTableComponent from './passport-table';
+import PanelPassportTableComponent from './ember-multi2-select';
 console.log('PanelPassportTableComponent', PanelPassportTableComponent);
 const
 prototype = PanelPassportTableComponent.prototype,
@@ -37,7 +35,16 @@ function cmp(a, b) {
   return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
 }
 
-export default class PassportTable extends Component {
+/**
+ * Component args :
+ * @param userSettings
+ * @param dataset
+ * @param samples
+ * @param rows	same as samples, omitted, but later will rename samples to rows.
+ * @param selectSampleArray
+ * @param sampleNamePassportValues
+ */
+export default class EmberMulti2TableComponent extends Component {
   //----------------------------------------------------------------------------
   // from passport-table.js
   //------------------------------------------------------------------------------
@@ -65,7 +72,7 @@ export default class PassportTable extends Component {
 
     // used in development only, in Web Inspector console.
     if (window.PretzelFrontend) {
-      window.PretzelFrontend.passportTable = this;
+      window.PretzelFrontend.emberMulti2Table = this;
     }
   }
 
@@ -80,11 +87,32 @@ export default class PassportTable extends Component {
 
   //----------------------------------------------------------------------------
 
+  /** User action which selects a value of a Passport field, to add/remove to
+   * the corresponding column filter, implemented by mismatch in tableData().
+   */
+  @action
+  selectFieldValue(column, target) {
+    const
+    fnName = 'selectFieldValue',
+    selectedOptions = target.selectedOptions,
+    // related : selectedGroupChangedId() in components/form/select-multiple.js
+    options = Array.from(selectedOptions).mapBy('value');
+    dLog(fnName, target, selectedOptions, options, column);
+    this.selectedFieldValues[column.property] = options;
+    this.selectedFieldValuesCount++;
+  }
+
+  //----------------------------------------------------------------------------
+
+  // From https://chatgpt.com/share/68d0e67a-7428-800e-85e2-e31ee741ece3
+
+
   // --- Sorting ---
   @tracked sortBy = null;     // e.g. 'sampleName'
   @tracked sortDir = 'asc';   // 'asc' | 'desc'
 
   // --- Selection like <select multiple> ---
+  /** store stable row keys (e.g. GenotypeId / sample / accession id) */
   @tracked selectedKeys = new Set(); // stable keys for rows
   @tracked focusIndex = 0;           // index in visible (sorted+filtered) rows
   anchorIndex = null;                // start of shift-range
@@ -137,7 +165,7 @@ export default class PassportTable extends Component {
     // Use the full dataset if you want selections to persist across filtering
     /* (currently @rows is just the GenotypeIds, whereas .sortedRows contains
      * the full row data; rowKey() handles this). */
-    const source = this.args.rows ?? this.sortedRows;
+    const source = this.args.samples /*rows*/ ?? this.sortedRows;
     return source.filter((r) => set.has(key(r)));
   }
 
