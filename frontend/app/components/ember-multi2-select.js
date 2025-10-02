@@ -56,7 +56,12 @@ export default class EmberMulti2SelectComponent extends Component {
    * @return [fieldName] -> Set of unique string field values.
    * Return {} when this.args.samples is null or empty.
    */
-  @computed('args.userSettings.passportFields', 'args.dataset', 'args.samples')
+  @computed(
+    'args.userSettings.passportFields', 'args.dataset', 'args.samples',
+    'args.lastPassport',
+    'args.mg.passportDataCount',
+    'selectedFieldValuesCount'
+  )
   get fieldsUniqueValues() {
     const
     fnName = 'fieldsUniqueValues',
@@ -97,7 +102,7 @@ export default class EmberMulti2SelectComponent extends Component {
    * @userSettings.passportFields may be nullish, defaulting to [].
    * @return {Array<{header, property, filterOptions}>}
    */
-  @computed('args.userSettings.passportFields')
+  @computed('args.userSettings.passportFields', 'fieldsUniqueValues')
   get columns() {
     const
     fnName = 'columns',
