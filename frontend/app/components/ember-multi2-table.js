@@ -4,6 +4,7 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
+import { later } from '@ember/runloop';
 
 import config from 'pretzel-frontend/config/environment';
 
@@ -26,6 +27,12 @@ tableData = Object.getOwnPropertyDescriptor(prototype, 'tableData').get;
 
 /** class added to <tr> which are selected */
 const isSelectedClass = 'is-selected';
+
+const
+isDevelopment =
+  (config.environment === 'development') &&
+  ! config.apiHost.endsWith('3000');
+
 
 // Utility: case/locale/numeric aware compare
 function cmp(a, b) {
@@ -63,7 +70,8 @@ export default class EmberMulti2TableComponent extends Component {
    * See also @userSettings.samplesLimit which is the number of samples which may be
    * selected at once.
    */ 
-  samplesListLimit = (config.environment === 'development') ? 20 : 2000;
+  samplesListLimit = 20; // isDevelopment ? 20 : 2000;
+
 
   //------------------------------------------------------------------------------
 
@@ -153,7 +161,7 @@ export default class EmberMulti2TableComponent extends Component {
 
   @computed('filteredRows', 'sortBy', 'sortDir')
   get sortedRows() {
-    const rows = this.filteredRows.slice(0,20); // [...this.filteredRows];
+    const rows = this.filteredRows; // .slice(0,20); // [...this.filteredRows];
     if (!this.sortBy) return rows;
     const dir = this.sortDir === 'asc' ? 1 : -1;
     return rows.sort((a, b) => cmp(a[this.sortBy], b[this.sortBy]) * dir);
@@ -352,14 +360,16 @@ export default class EmberMulti2TableComponent extends Component {
   // Generated via Google search : "html table callback click-drag selection" / Gemini
 
   /**
+   *
 2. JavaScript for Event Handling:
 Use JavaScript to attach event listeners to the table cells and manage the selection state.
- */
+   * @param table	<table  id="passport-table" >
+   */
   @action
-  registerListeners() {
+  registerListeners(table) {
 
     const self = this;
-    const table = this.table = document.getElementById('passport-table');
+    this.table = table; // or document.getElementById('passport-table');
     let isMouseDown = false;
     let startCell = null;
 
@@ -440,6 +450,16 @@ Use JavaScript to attach event listeners to the table cells and manage the selec
       // You might want to trigger a final callback here after selection is complete
     });
 
+    //----------------------------------------------------------------------------
+    /* moreDidInsertSetup() is not related to registerListeners(), except that
+     * its contents are also required at did-insert, i.e. just temporal cohesion
+     * / coupling / binding.
+     */
+    later(() => this.moreDidInsertSetup(), 2000);
+  }
+  moreDidInsertSetup() {
+    this.args.scrolledDiv.addEventListener('scroll', this.scrollListener);
+    this.args.getNextPage();
   }
 
   /*
@@ -471,6 +491,27 @@ You can define a callback function that is executed when the selection changes o
     return data;
   }
 
+  //----------------------------------------------------------------------------
+
+  @action
+  scrollListener(event) {
+    const
+    fnName = 'scrollListener',
+    /** this.args.scrolledDiv */
+    element = event.target,
+    element$ = $(element),
+    /** In first test `+ 100` was not required; after moving getNextPage() to
+     * passport-table.js it was required.  It's good to request the next page a
+     * bit earlier anyway to provide a smoother flow.
+     */
+    atEnd = element$.scrollTop() + element$.innerHeight() + 100 >= element.scrollHeight;
+    if (atEnd) {
+      dLog(fnName, 'end reached', atEnd, element, event);
+      this.args.getNextPage();
+    }
+    return atEnd;
+  }
+ 
   //----------------------------------------------------------------------------
 
 }

@@ -66,8 +66,9 @@ export default class EmberMulti2SelectComponent extends Component {
      * (not filteredSamples because this component replaces 'Filter by Name').
      */
     samplesFull = this.args.samples || [],
-    samples = (this.samplesListLimit ?? false) ? 
-      samplesFull.slice(0, this.samplesListLimit) : samplesFull,
+    /** could .slice(0, this.lastPassport) */
+    samples = /*(this.samplesListLimit ?? false) ? 
+      samplesFull.slice(0, this.samplesListLimit) :*/ samplesFull,
     /** result is [fieldName] -> unique values, i.e. filterOptions */
     fieldValues = samples.reduce((fv, sampleName) => {
       const
@@ -124,7 +125,7 @@ export default class EmberMulti2SelectComponent extends Component {
    * @return {Array<object>} Array of rows.  Row data is {fieldName : value, ...}
    */
   @computed(
-    'args.userSettings.passportFields',
+    'args.userSettings.passportFields', 'args.lastPassport', 'args.mg.passportDataCount',
     'args.dataset', 'args.samples', 'selectedFieldValuesCount')
   get tableData() {
     const
@@ -132,14 +133,16 @@ export default class EmberMulti2SelectComponent extends Component {
     dataset = this.args.dataset,
     selectFields = this.args.userSettings.passportFields,
     samples = this.args.samples,
-    tableLength = 20, // 500,
+    // tableLength = (this.samplesListLimit ?? 500),
     rows = [];
     if (! samples) {
       return rows;
     }
-    for (let sampleIndex = 0;
-         (sampleIndex < samples.length) && (rows.length < tableLength);
-         sampleIndex++) {
+    for (
+      let sampleIndex = 0;
+      /*&& (rows.length < tableLength)*/
+      (sampleIndex < samples.length) && (sampleIndex <= this.args.lastPassport);
+      sampleIndex++) {
       // samples.slice(0, tableLength).map(sampleName => {
       const
       sampleName = samples[sampleIndex],
@@ -151,7 +154,7 @@ export default class EmberMulti2SelectComponent extends Component {
         filterOptions = this.selectedFieldValues[fieldName],
         ok = ! filterOptions?.length || filterOptions.includes(value);
         if (ok) {
-          const entry = [fieldName, value || 'x'];
+          const entry = [fieldName, value || '_'];
           rowEntries.push(entry);
         }
         return ! ok;

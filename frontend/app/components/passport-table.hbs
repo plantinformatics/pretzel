@@ -3,13 +3,18 @@
 --}}
 {{#let (if @tableRow "ember-multi2-table" "ember-multi2-select") as |tableComponent|}}
 
+  {{!-- tableData() depends on @mg.passportDataCount --}}
   {{component
     tableComponent
+    mg=@mg
     userSettings=@userSettings
     dataset=@dataset
     samples=@samples
     selectSampleArray=@selectSampleArray
     sampleNamePassportValues=@sampleNamePassportValues
+    scrolledDiv=@scrolledDiv
+    lastPassport=this.lastPassport
+    getNextPage=this.getNextPage
     }}
 
 {{/let}}

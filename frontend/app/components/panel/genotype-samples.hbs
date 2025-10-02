@@ -173,9 +173,13 @@
 
   {{#if @enablePassportData}}
   {{log 'genotype-samples' this this.args.userSettings @userSettings}}
-  <div class="genotype-controls">
+  <div class="genotype-controls"
+    {{did-insert (action (mut this.scrolledDiv)) }}
+  >
     <PassportTable
       @one={{1}}     {!-- not used.  first arg is not passed successfully --}}
+      {{!-- for datasetGetPassportData(), may narrow param to just this action --}}
+      @mg={{@the}}
       @userSettings={{@userSettings}}
       @dataset={{@the.activeDataset}}
       @samples={{@the.samples}}
@@ -183,6 +187,7 @@
       @selectSampleArray={{this.selectSampleArray}}
       @tableRow={{this.urlOptions.tableRow}}
       @sampleNamePassportValues={{this.sampleNamePassportValues}}
+      @scrolledDiv={{this.scrolledDiv}}
       />
 
   </div>
