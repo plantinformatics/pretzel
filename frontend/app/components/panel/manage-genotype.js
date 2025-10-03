@@ -2063,6 +2063,21 @@ export default class PanelManageGenotypeComponent extends Component {
          */
         if (axisBrushBlockIndex === -1) {
           axisBrushBlockIndex = blocks.findIndex((abb) => abb.block.referenceBlock === lookupBlock.referenceBlock);
+          /** This likely indicates that lookupBlock and its referenceBlock are
+           * now un-viewed, so choose one of blocks[].  */
+          if (axisBrushBlockIndex === -1) {
+            /** name and isViewed */
+            function nv(b) { return [b?.isViewed, b?.brushName]; }
+            const
+            a = [
+              fnName, axisBrushBlockIndex, 
+              nv(lookupBlock),
+              nv(lookupBlock.referenceBlock),
+              blocks.mapBy('block').map(nv),
+              blocks.mapBy('block.referenceBlock').map(nv)].flat();
+            console.debug.apply(undefined, a);
+            axisBrushBlockIndex = 0;
+          }
         } else if (blocks.length) {
           axisBrushBlockIndex = 0;
         }
