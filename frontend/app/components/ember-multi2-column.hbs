@@ -1,0 +1,35 @@
+<!-- ember-multi2-column.  Used in ember-multi2-table. -->
+
+<th
+  role="columnheader" {{!-- or button ?  --}}
+  class="whitespace-nowrap cursor-pointer select-none"
+>
+
+  <div
+    {{on "click" (fn @toggleSort @column.property)}}
+    title="Click to sort; click again to reverse" >
+    {{@column.header}}
+  {{#if (eq @sortBy @column.property)}}
+    <span aria-hidden="true">{{if (eq @sortDir "asc") " ▲" " ▼"}}</span>
+  {{/if}}
+  </div>
+
+  {{!-- for filtering on this column --}}
+  <div class="font-weight-normal" 
+    {{on "click" @toggleShowFilters }}
+    title="Show filter selection" >
+    &#xFE40; {{get @selectedFieldValuesTexts @column.property }}</div>
+
+  {{#if (and @showFilters @column.filterOptions.length ) }}
+    <select style="height:100px" class="form-control" multiple onchange={{action (fn @selectFieldValue @column) value="target" }}>
+      {{#each @column.filterOptions as |filterOption|}}
+      <option value={{filterOption}}
+        selected={{include (get @selectedFieldValues @column.property) filterOption}}>
+        {{filterOption}}</option>
+      {{/each}}
+    </select>
+  {{/if}}
+
+
+
+</th>

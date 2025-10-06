@@ -54,7 +54,7 @@ function cmp(a, b) {
 export default class EmberMulti2TableComponent extends Component {
   //----------------------------------------------------------------------------
   // from passport-table.js
-  //------------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   /** Per-column filter values : [fieldName] -> [passport data values, ...] */
   selectedFieldValues = {};
