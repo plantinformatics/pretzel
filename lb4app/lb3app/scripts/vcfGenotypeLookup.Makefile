@@ -64,6 +64,7 @@
 	# only require information from cols 1-5, but VCF requires 1-9, i.e. including : QUAL FILTER INFO FORMAT
 	# Seems that 1 sample column is required, so request 1-10
 	# (option abbreviations : -G = --drop-genotypes, -O = --output-type, -o = --output)
-	bcftools view --drop-genotypes --threads $(nproc) --output-type z $<  --output $@
+	# Using Bourne-shell notation `` instead of bash $() for nproc to avoid clash with make variable expansion syntax.
+	bcftools view --drop-genotypes --threads `nproc` --output-type z $<  --output $@
 
 #-------------------------------------------------------------------------------
