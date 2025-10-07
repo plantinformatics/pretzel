@@ -10,6 +10,10 @@ import config from 'pretzel-frontend/config/environment';
 
 //------------------------------------------------------------------------------
 
+import NamesFilters from '../utils/data/names-filters';
+
+//------------------------------------------------------------------------------
+
 const dLog = console.debug;
 
 //------------------------------------------------------------------------------
@@ -56,11 +60,19 @@ export default class EmberMulti2TableComponent extends Component {
   // from passport-table.js
   //----------------------------------------------------------------------------
 
-  /** Per-column filter values : [fieldName] -> [passport data values, ...] */
+  /** Per-column category filter values : [fieldName] -> [passport data values, ...] */
   selectedFieldValues = {};
+  /** Per-column search filter values : [fieldName] -> search string */
+  fieldSearchString = {};
+  /** Per-column filter implementing fieldSearchString. [fieldName] -> NamesFilter  */
+  fieldNamesFilters = {};
+
   @tracked
   /** Count of changes to selectedFieldValues, for dependency. */
   selectedFieldValuesCount = 0;
+  @tracked
+  /** Count of changes to columns[].namesFilters.nameFilterArray, for dependency. */
+  namesFiltersCount = 0;
 
   idField = this.args.idFieldName || 'GenotypeId'; 
   /** indicate that idField is prepended to columns. */
@@ -92,6 +104,18 @@ export default class EmberMulti2TableComponent extends Component {
   get fieldsUniqueValues() { return fieldsUniqueValues.apply(this); }
   get columns() { return columns.apply(this); }
   get tableData() { return tableData.apply(this); }
+
+  /** Create a NamesFilters if there is not already one for fieldName.
+   * The reason for persisting these is that changes to .nameFilter are
+   * debounced, so re-creating this in .columns() and setting .nameFilter
+   * does not filter.
+   */
+  newNamesFilters(fieldName, filterChanged) {
+    const
+    nf = this.fieldNamesFilters[fieldName] ||
+      (this.fieldNamesFilters[fieldName] = new NamesFilters(filterChanged));
+    return nf;
+  }
 
   //----------------------------------------------------------------------------
 
@@ -312,6 +336,8 @@ export default class EmberMulti2TableComponent extends Component {
     dLog('onKeyDown', key, ctrlKey, metaKey, shiftKey);
     const n = this.sortedRows.length;
     if (n === 0) return;
+    /** Allow user to edit the <input id="nameFilter" > */
+    if (event.target.tagName === 'INPUT' ) return;
 
     const move = (delta) => {
       const next = this.clampIndex(this.focusIndex + delta);

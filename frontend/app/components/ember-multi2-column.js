@@ -1,5 +1,5 @@
 import Component from '@glimmer/component';
-
+import { action } from '@ember/object';
 
 /**
  * Component args :	
@@ -24,6 +24,32 @@ export default class EmberMulti2ColumnComponent extends Component {
     if (window.PretzelFrontend) {
       window.PretzelFrontend.emberMulti2Column = this;
     }
+  }
+
+  //------------------------------------------------------------------------------
+
+  /** <input  ... value={{this.nameFilter}} >
+   * reads `get`, does not use `set`.
+   */
+  get nameFilter() {
+    const
+    column = this.args.column,
+    value = column.fieldSearchString[column.property];
+    return value;
+  }
+  set nameFilter(value) {
+    const
+    column = this.args.column;
+    column.fieldSearchString[column.property] = value;
+  }
+
+
+  @action
+  nameFilterChanged(event) {
+    const value = event.target.value;
+    console.log('nameFilterChanged', value);
+    this.nameFilter = value;
+    this.args.column.namesFilters.nameFilterChanged(value);
   }
 
   //------------------------------------------------------------------------------

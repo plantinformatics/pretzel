@@ -23,6 +23,15 @@ import { tracked } from '@glimmer/tracking';
 
 //------------------------------------------------------------------------------
 
+
+import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
+const /*import */{
+  passportFieldNamesCategory,
+} = vcfGenotypeBrapi.genolinkPassport; /*from 'vcf-genotype-brapi'; */
+
+//------------------------------------------------------------------------------
+
+
 const dLog = console.debug;
 
 //------------------------------------------------------------------------------
@@ -106,6 +115,7 @@ export default class EmberMulti2SelectComponent extends Component {
   get columns() {
     const
     fnName = 'columns',
+    filterChanged = () => this.namesFiltersCount++,
     fieldsValues = this.fieldsUniqueValues,
     passportFields = this.args.userSettings.passportFields || [],
 
@@ -117,7 +127,17 @@ export default class EmberMulti2SelectComponent extends Component {
       const
       set = fieldsValues[fieldName],
       filterOptions = set ? Array.from(set) : [],
-      column = {header: fieldName, property: fieldName, filterOptions};
+      isCategory = passportFieldNamesCategory.includes(fieldName),
+      namesFilters = isCategory ? undefined : this.newNamesFilters(fieldName, filterChanged),
+      /** Persist fieldSearchString because columns[] is re-created after paging. */
+      fieldSearchString = this.fieldSearchString,
+      column = {
+        header: fieldName, property: fieldName, filterOptions, namesFilters,
+        fieldSearchString
+      };
+      if (namesFilters && fieldSearchString[fieldName] && ! namesFilters.nameFilter) {
+        namesFilters.set('nameFilter', fieldSearchString[fieldName]);
+      }
       return column;
     });
     dLog(fnName, columns);
@@ -131,7 +151,8 @@ export default class EmberMulti2SelectComponent extends Component {
    */
   @computed(
     'args.userSettings.passportFields', 'args.lastPassport', 'args.mg.passportDataCount',
-    'args.dataset', 'args.samples', 'selectedFieldValuesCount')
+    'args.dataset', 'args.samples', 'selectedFieldValuesCount',
+    'namesFiltersCount',)
   get tableData() {
     const
     fnName = 'tableData',
@@ -155,9 +176,20 @@ export default class EmberMulti2SelectComponent extends Component {
       rowEntries = [],
       mismatch = values.find((value, fieldIndex) => {
         const
+        /** based on get filteredSamples() (panel/manage-genotype.js )  */
+        column = this.columns[fieldIndex+1],
+        nf = column.namesFilters,
         fieldName = selectFields[fieldIndex],
-        filterOptions = this.selectedFieldValues[fieldName],
-        ok = ! filterOptions?.length || filterOptions.includes(value);
+        okFn = nf ? 
+          sampleName => nf.nameFilterArray.length ?
+          nf.matchFilters(value, nf.nameFilterArray, true, true) : true :
+          sampleName => {
+            const
+            filterOptions = this.selectedFieldValues[fieldName],
+            ok = ! filterOptions?.length || filterOptions.includes(value);
+            return ok;
+          },
+        ok = okFn(sampleName);
         if (ok) {
           const entry = [fieldName, value || '_'];
           rowEntries.push(entry);

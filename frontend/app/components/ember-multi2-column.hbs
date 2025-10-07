@@ -15,12 +15,21 @@
   </div>
 
   {{!-- for filtering on this column --}}
-  <div class="font-weight-normal" 
-    {{on "click" @toggleShowFilters }}
-    title="Show filter selection" >
-    &#xFE40; {{get @selectedFieldValuesTexts @column.property }}</div>
 
-  {{#if (and @showFilters @column.filterOptions.length ) }}
+  {{#if @column.namesFilters}}
+    <input id="nameFilter" type="search" value={{this.nameFilter}}
+      oninput={{this.nameFilterChanged}}
+      style="min-width: 16em;"
+      placeholder="Filter available samples / accessions by {{@column.property}}" />
+      <span style="display:none">{{@column.namesFilters.nameFilterArray.length}}</span>
+
+  {{else}}
+    <div class="font-weight-normal" 
+      {{on "click" @toggleShowFilters }}
+      title="Show filter selection" >
+      &#xFE40; {{get @selectedFieldValuesTexts @column.property }}</div>
+
+    {{#if (and @showFilters @column.filterOptions.length )  }}
     <select style="height:100px" class="form-control" multiple onchange={{action (fn @selectFieldValue @column) value="target" }}>
       {{#each @column.filterOptions as |filterOption|}}
       <option value={{filterOption}}
@@ -28,6 +37,7 @@
         {{filterOption}}</option>
       {{/each}}
     </select>
+    {{/if}}
   {{/if}}
 
 

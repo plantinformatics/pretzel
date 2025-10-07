@@ -22,14 +22,22 @@ export default class NamesFilter extends EmberObject {
   @tracked
   nameFilterDebounced = '';
 
-  constructor() {
+  /**
+   * @param filterChanged	optional callback. Called when nameFilterArray is updated,
+   * after nameFilterDebounced is set
+   */
+  constructor(filterChanged) {
     super(...arguments);
 
+    if (filterChanged) {
+      this.filterChanged = filterChanged;
+    }
     if (trace) {
       dLog('names-filters', 'constructor', 'this', this);
     }
   }
 
+  /** Called via user input in <input > e.g. nameFilter, sampleNameFilter */
   nameFilterChanged(value) {
     // dLog('nameFilterChanged', value);
     // debounce(this, this.nameFilterChangedSet, 2000);
@@ -45,6 +53,9 @@ export default class NamesFilter extends EmberObject {
   }
 
   @computed
+  /** Set .nameFilterDebounced = value.
+   * Called from nameFilterDebouncedLodash() when debounce conditions are satisfied.
+   */
   get nameFilterChangedSet() {
     /**
      * @param value
@@ -59,11 +70,14 @@ export default class NamesFilter extends EmberObject {
   }
 
   @computed('nameFilterDebounced')
+  /** Split .nameFilterDebounced into an array, for use in matchFilters().
+   */
   get nameFilterArray() {
     const
     nameFilter = this.get('nameFilterDebounced'),
     array = !nameFilter || (nameFilter === '') ? [] :
       nameFilter.split(/[ \t]/);
+    this.filterChanged?.();
     return array;
   }
 
