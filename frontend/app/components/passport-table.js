@@ -1,5 +1,6 @@
 import Component from '@glimmer/component';
 import { action, computed } from '@ember/object';
+import { later } from '@ember/runloop';
 import { tracked } from '@glimmer/tracking';
 
 //------------------------------------------------------------------------------
@@ -46,19 +47,23 @@ export default class PassportTable extends Component {
 
   @action
   getNextPage() {
+    if (this.lastPassport > this.args.samples.length) {
+      return;
+    }
     /** get next chunk */
     const
     fnName = 'getNextPage',
     lastPassport = this.lastPassport,
-    lastPassportNew = this.lastPassport += this.pageLength,
+    lastPassportNew = this.lastPassport + this.pageLength,
     /** could filter [0, lastPassportNew] @samples for selectFields; group by
      * required fields and request in groups. */
     sampleNames = this.args.samples.slice(lastPassport, lastPassportNew), 
     selectFields = this.args.userSettings.passportFields;
-    dLog(fnName, lastPassport, this.lastPassport, this.pageLength);
+    dLog(fnName, lastPassport, lastPassportNew, this.pageLength);
     if (selectFields.length) {
       this.args.mg.datasetGetPassportData(this.args.dataset, sampleNames, selectFields);
     }
+    later(() => this.lastPassport = lastPassportNew);
   }
 
  

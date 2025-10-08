@@ -204,6 +204,13 @@ export default class EmberMulti2SelectComponent extends Component {
       }
     }
     dLog(fnName, selectFields, rows);
+    /* If the rows do not fill the current height of the table, get more.
+     * Limited to a few pages - need to throttle this to a reasonable number / rate,
+     * and it will be solved by using Genolink search endpoints including /text.
+     */
+    if ((rows.length < 10) && (this.args.lastPassport < 4 * 20)) {
+      this.args.getNextPage();
+    }
     return rows;
   }
 

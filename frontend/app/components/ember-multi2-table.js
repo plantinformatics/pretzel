@@ -533,7 +533,9 @@ You can define a callback function that is executed when the selection changes o
     atEnd = element$.scrollTop() + element$.innerHeight() + 100 >= element.scrollHeight;
     if (atEnd) {
       dLog(fnName, 'end reached', atEnd, element, event);
-      this.args.getNextPage();
+      /* later() is not essential, but it is probably better to isolate API
+       * requests from DOM event inputs. */
+      later(() => this.args.getNextPage());
     }
     return atEnd;
   }
