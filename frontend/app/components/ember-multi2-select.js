@@ -144,6 +144,19 @@ export default class EmberMulti2SelectComponent extends Component {
     return columns;
   }
 
+  @computed('namesFiltersCount')
+  get nameFieldEntries() {
+    const
+    /** same as @column.fieldSearchString */
+    fieldSearchString = this.fieldSearchString,
+    nameEntries = ['GenotypeId', 'accessionNumber'].map(
+      /** Genolink expects an array of names. Initially handle search string
+       * being just 1 name; later can split into an array, e.g. at '|'. */
+      fieldName => [fieldName + 's', [fieldSearchString[fieldName]]])
+      .filter((key, value) => value);
+    return nameEntries;
+  }
+
   /** Filter @samples by user-selected .selectedFieldValues,
    * augment with their Passport data values.
    * The result data is displayed in the body of the table.
@@ -204,6 +217,16 @@ export default class EmberMulti2SelectComponent extends Component {
       }
     }
     dLog(fnName, selectFields, rows);
+
+    /** If user has entered name fields (GenotypeId / accessionNumber),
+     * use those for lookup. */
+    const
+    nameEntries = this.nameFieldEntries,
+    rowNames = Object.fromEntries(nameEntries);
+    // if accessionNumber or GenotypeId, search
+    if (! rows.length && nameEntries.length) {
+      this.args.getNamedRows(rowNames);
+    } else
     /* If the rows do not fill the current height of the table, get more.
      * Limited to a few pages - need to throttle this to a reasonable number / rate,
      * and it will be solved by using Genolink search endpoints including /text.
@@ -211,6 +234,7 @@ export default class EmberMulti2SelectComponent extends Component {
     if ((rows.length < 10) && (this.args.lastPassport < 4 * 20)) {
       this.args.getNextPage();
     }
+
     return rows;
   }
 

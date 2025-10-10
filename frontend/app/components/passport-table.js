@@ -61,11 +61,28 @@ export default class PassportTable extends Component {
     selectFields = this.args.userSettings.passportFields;
     dLog(fnName, lastPassport, lastPassportNew, this.pageLength);
     if (selectFields.length) {
-      this.args.mg.datasetGetPassportData(this.args.dataset, sampleNames, selectFields);
+      this.args.mg.datasetGetPassportData(this.args.dataset, {sampleNames}, selectFields);
     }
     later(() => this.lastPassport = lastPassportNew);
   }
+ 
+  //----------------------------------------------------------------------------
 
+  @action
+  /**
+   * @param sampleNames	{accessionNumbers, genotypeIds} (aka rowNames)
+   */
+  getNamedRows(sampleNames) {
+    const
+    fnName = 'getNamedRows',
+    selectFields = this.args.userSettings.passportFields;
+    dLog(fnName, sampleNames);
+    /* if ! selectFields.length, and sampleNames is searching genotypeIds,
+     * can get those from mg.samples */
+    /*if (selectFields.length)*/ {
+      this.args.mg.datasetGetPassportData(this.args.dataset, sampleNames, selectFields);
+    }
+  }
  
   //----------------------------------------------------------------------------
 

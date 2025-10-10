@@ -5153,7 +5153,7 @@ export default class PanelManageGenotypeComponent extends Component {
       const sampleNames = this.vcfGenotypeSamplesSelectedAll[dataset.id];
       const
       promise = sampleNames?.length ?
-        this.datasetGetPassportData(dataset, sampleNames, selectFields) :
+        this.datasetGetPassportData(dataset, {sampleNames}, selectFields) :
         Promise.resolve();
       return promise;
     });
@@ -5170,21 +5170,26 @@ export default class PanelManageGenotypeComponent extends Component {
   /** Get the Passport data values indicated by selectFields for the given
    * dataset and sampleNames.
    * @param dataset
-   * @param sampleNames
+   * @param {sampleNames, genotypeIds, accessionNumbers}
+   * genotypeIds / accessionNumbers are the name/identity fields supported by
+   * the Genolink API.  Some of sampleNames may be AGG genotypeIds and hence can
+   * be used as genotypeIds in lookup.
    * @param selectFields  array of string Passport field names
    * @return promise which does not yield a value
    */
-  datasetGetPassportData(dataset, sampleNames, selectFields) {
+  datasetGetPassportData(dataset, {sampleNames, genotypeIds, accessionNumbers}, selectFields) {
     const fnName = 'datasetGetPassportData';
-    const genotypeIds = sampleNames.filter(sampleNameIsAGG);
-    if (! genotypeIds.length || ! selectFields.length) {
+    if (! genotypeIds?.length && sampleNames?.length) {
+      genotypeIds = sampleNames.filter(sampleNameIsAGG);
+    }
+    if ((! genotypeIds?.length && ! accessionNumbers?.length) || ! selectFields.length) {
       return Promise.resolve();
     }
     const
     mg = this,
     /** array of promises, each yielding response for 1 chunk */
     chunkPs =
-      getPassportData({ genotypeIds, selectFields }, genolinkBaseUrl),
+      getPassportData({ genotypeIds, accessionNumbers, selectFields }, genolinkBaseUrl),
     promise = Promise.all(chunkPs.map(chunkP => chunkP.then(receive)));
     function receive(data) {
       {
