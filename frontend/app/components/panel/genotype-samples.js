@@ -70,6 +70,18 @@ export default class PanelGenotypeSamplesComponent extends Component {
     Ember_set(this, 'args.userSettings.matchHet', ! matchExactAlleles);
   }
 
+  //----------------------------------------------------------------------------
+
+  get activeDataset() {
+    const
+    mg = this.args.the,
+    /** activeDataset is derived from brushedOrViewedVCFBlocksVisible,
+     * but depends on setSelectedDataset() which is called in later(),
+     * so provide a direct fallback.
+     */
+    dataset = mg.activeDataset || mg.lookupBlock?.datasetId.content;
+    return dataset;
+  }
 
   //----------------------------------------------------------------------------
 

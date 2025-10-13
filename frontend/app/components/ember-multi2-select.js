@@ -153,7 +153,7 @@ export default class EmberMulti2SelectComponent extends Component {
       /** Genolink expects an array of names. Initially handle search string
        * being just 1 name; later can split into an array, e.g. at '|'. */
       fieldName => [fieldName + 's', [fieldSearchString[fieldName]]])
-      .filter((key, value) => value);
+      .filter(([key, value]) => value[0]);
     return nameEntries;
   }
 
@@ -166,7 +166,7 @@ export default class EmberMulti2SelectComponent extends Component {
     'args.userSettings.passportFields', 'args.lastPassport', 'args.mg.passportDataCount',
     'args.dataset', 'args.samples', 'selectedFieldValuesCount',
     'namesFiltersCount',)
-  get tableData() {
+  get sampleData() {
     const
     fnName = 'tableData',
     dataset = this.args.dataset,
@@ -235,6 +235,17 @@ export default class EmberMulti2SelectComponent extends Component {
       this.args.getNextPage();
     }
 
+    return rows;
+  }
+  @computed ('sampleData', 'searchData')
+  get tableData() {
+    const rows = this.args.currentData.searchKV ? this.searchData : this.sampleData;
+    return rows;
+  }
+
+  @computed('args.currentData.searchKV', 'args.currentData.rows.length')
+  get searchData() {
+    const rows = this.args.currentData.rows;
     return rows;
   }
 

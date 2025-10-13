@@ -12,7 +12,9 @@ import { action } from '@ember/object';
  * @param showFilters	
  * @param selectFieldValue	
  * @param selectedFieldValues	
-  */
+ * @param nameFilterChanged	action ([key, value]) to signal to parent that
+ * user has entered value in column with property key.
+ */
 export default class EmberMulti2ColumnComponent extends Component {
 
   //------------------------------------------------------------------------------
@@ -49,7 +51,9 @@ export default class EmberMulti2ColumnComponent extends Component {
     const value = event.target.value;
     console.log('nameFilterChanged', value);
     this.nameFilter = value;
-    this.args.column.namesFilters.nameFilterChanged(value);
+    const column = this.args.column;
+    column.namesFilters.nameFilterChanged(value);
+    this.args.nameFilterChanged([column.property, value]);
   }
 
   //------------------------------------------------------------------------------

@@ -5170,26 +5170,31 @@ export default class PanelManageGenotypeComponent extends Component {
   /** Get the Passport data values indicated by selectFields for the given
    * dataset and sampleNames.
    * @param dataset
-   * @param {sampleNames, genotypeIds, accessionNumbers}
+   * @param {sampleNames, genotypeIds, accessionNumbers, _text, page}
    * genotypeIds / accessionNumbers are the name/identity fields supported by
    * the Genolink API.  Some of sampleNames may be AGG genotypeIds and hence can
    * be used as genotypeIds in lookup.
+   * The above forms of ID are optional if _text is given.
+   * Optional, for text search : _text and page.  page is only used if _text.
    * @param selectFields  array of string Passport field names
-   * @return promise which does not yield a value
+   * @return promise which currently yields all the received data columns;
+   * caller only needs genotypeIds / accessionNumbers, as the data
+   * has been loaded into dataset.samplesPassport.
    */
-  datasetGetPassportData(dataset, {sampleNames, genotypeIds, accessionNumbers}, selectFields) {
+  datasetGetPassportData(dataset, {sampleNames, genotypeIds, accessionNumbers, _text, page}, selectFields) {
     const fnName = 'datasetGetPassportData';
     if (! genotypeIds?.length && sampleNames?.length) {
       genotypeIds = sampleNames.filter(sampleNameIsAGG);
     }
-    if ((! genotypeIds?.length && ! accessionNumbers?.length) || ! selectFields.length) {
+    if ((! genotypeIds?.length && ! accessionNumbers?.length && ! (_text ?? false))
+        || ! selectFields.length) {
       return Promise.resolve();
     }
     const
     mg = this,
     /** array of promises, each yielding response for 1 chunk */
     chunkPs =
-      getPassportData({ genotypeIds, accessionNumbers, selectFields }, genolinkBaseUrl),
+      getPassportData({ genotypeIds, accessionNumbers, selectFields, _text, page }, genolinkBaseUrl),
     promise = Promise.all(chunkPs.map(chunkP => chunkP.then(receive)));
     function receive(data) {
       {
@@ -5205,6 +5210,7 @@ export default class PanelManageGenotypeComponent extends Component {
             sp[field] = datum[field];
           });
         });
+        return data;
       }
       later(() => mg.passportDataCount++);
     }

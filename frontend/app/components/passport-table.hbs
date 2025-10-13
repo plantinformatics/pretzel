@@ -10,14 +10,28 @@
     userSettings=@userSettings
     dataset=@dataset
     samples=@samples
+    currentData=this.currentData
     selectSampleArray=@selectSampleArray
     sampleNamePassportValues=@sampleNamePassportValues
     scrolledDiv=@scrolledDiv
     lastPassport=this.lastPassport
     getNextPage=this.getNextPage
     getNamedRows=this.getNamedRows
+    nameFilterChanged=this.nameFilterChanged
     }}
 
 {{/let}}
+
+<div class="clear-both" style="min-height:3ex">
+{{#let this.currentData as |pageData|}}
+  {{#if pageData.loadPage.isRunning}}
+    <div class="py-3 text-sm text-gray-500">Loading…</div>
+  {{/if}}
+
+  {{#if (and (not pageData.hasMore) (not pageData.isFirstLoad))}}
+    <div class="py-3 text-sm text-gray-400">No more results.</div>
+  {{/if}}
+{{/let}}
+</div>
 
 {{yield}}

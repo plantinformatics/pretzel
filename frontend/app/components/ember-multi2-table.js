@@ -24,7 +24,10 @@ const
 prototype = PanelPassportTableComponent.prototype,
 fieldsUniqueValues = Object.getOwnPropertyDescriptor(prototype, 'fieldsUniqueValues').get,
 columns = Object.getOwnPropertyDescriptor(prototype, 'columns').get,
-tableData = Object.getOwnPropertyDescriptor(prototype, 'tableData').get;
+nameFieldEntries = Object.getOwnPropertyDescriptor(prototype, 'nameFieldEntries').get,
+sampleData = Object.getOwnPropertyDescriptor(prototype, 'sampleData').get,
+tableData = Object.getOwnPropertyDescriptor(prototype, 'tableData').get,
+searchData = Object.getOwnPropertyDescriptor(prototype, 'searchData').get;
 
 
 //------------------------------------------------------------------------------
@@ -103,7 +106,10 @@ export default class EmberMulti2TableComponent extends Component {
    */
   get fieldsUniqueValues() { return fieldsUniqueValues.apply(this); }
   get columns() { return columns.apply(this); }
+  get nameFieldEntries() { return nameFieldEntries.apply(this); }
+  get sampleData() { return sampleData.apply(this); }
   get tableData() { return tableData.apply(this); }
+  get searchData() { return searchData.apply(this); }
 
   /** Create a NamesFilters if there is not already one for fieldName.
    * The reason for persisting these is that changes to .nameFilter are
@@ -485,7 +491,8 @@ Use JavaScript to attach event listeners to the table cells and manage the selec
   }
   moreDidInsertSetup() {
     this.args.scrolledDiv.addEventListener('scroll', this.scrollListener);
-    this.args.getNextPage();
+    // now done in paged-data.js : constructor() -> refresh() -> loadPage.perform( )
+    // this.args.getNextPage();
   }
 
   /*
