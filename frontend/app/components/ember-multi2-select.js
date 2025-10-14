@@ -196,20 +196,8 @@ export default class EmberMulti2SelectComponent extends Component {
       rowEntries = [],
       mismatch = values.find((value, fieldIndex) => {
         const
-        /** based on get filteredSamples() (panel/manage-genotype.js )  */
-        column = this.columns[fieldIndex+1],
-        nf = column.namesFilters,
         fieldName = selectFields[fieldIndex],
-        okFn = nf ? 
-          sampleName => nf.nameFilterArray.length ?
-          nf.matchFilters(value, nf.nameFilterArray, true, true) : true :
-          sampleName => {
-            const
-            filterOptions = this.selectedFieldValues[fieldName],
-            ok = ! filterOptions?.length || filterOptions.includes(value);
-            return ok;
-          },
-        ok = okFn(sampleName);
+        ok = this.matchField(selectFields, value, fieldIndex, fieldName);
         if (ok) {
           const entry = [fieldName, value || '_'];
           rowEntries.push(entry);
@@ -244,15 +232,54 @@ export default class EmberMulti2SelectComponent extends Component {
 
     return rows;
   }
+  matchField(selectFields, value, fieldIndex, fieldName) {
+    const
+    fnName = 'matchField',
+    /** based on get filteredSamples() (panel/manage-genotype.js )  */
+    column = this.columns[fieldIndex+1],
+    nf = column.namesFilters,
+    okFn = nf ? 
+      () => nf.nameFilterArray.length ?
+      ((value === null) ? false :
+       nf.matchFilters(value, nf.nameFilterArray, true, true)) :
+      true :
+      () => {
+        const
+        filterOptions = this.selectedFieldValues[fieldName],
+        ok = ! filterOptions?.length || filterOptions.includes(value);
+        return ok;
+      },
+    ok = okFn();
+    return ok;
+  }
+
+  /** If the user has entered a search string, return .searchData,
+   * otherwise data for a page of all samples (.sampleData).
+   */
   @computed ('sampleData', 'searchData')
   get tableData() {
     const rows = this.args.currentData.searchKV ? this.searchData : this.sampleData;
     return rows;
   }
 
+  /** Filter @currentData.rows by matchField().
+   */
   @computed('args.currentData.searchKV', 'args.currentData.rows.length')
   get searchData() {
-    const rows = this.args.currentData.rows;
+    const
+    fnName = 'searchData',
+    selectFields = this.args.userSettings.passportFields,
+    rows = this.args.currentData.rows.filter(row =>
+      {
+        const
+        mismatch = selectFields.find((fieldName, fieldIndex) => {
+          const
+          value = row[fieldName],
+          ok = this.matchField(selectFields, value, fieldIndex, fieldName);
+          return ! ok;
+        });
+        return ! mismatch;
+      });
     return rows;
   }
 

@@ -155,7 +155,7 @@ export default class PassportTable extends Component {
     data.forEach((datum, i) => {
       const sampleName = a2gMap.get(datum.accessionNumber);
       if (! sampleName) {
-        dLog(fnName, datum.accessionNumber, datum);
+        // dLog(fnName, datum.accessionNumber, datum);
       } else {
         const sp = samplesPassport[sampleName] || (samplesPassport[sampleName] = {});
         Object.entries(datum).forEach(([field, value]) => {
