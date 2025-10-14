@@ -2663,7 +2663,8 @@ div.genotype label
   margin: 5px;
 }
 
-.genotype-controls:has( > #passport-table)
+/* .passport-table is the container <div>, #passport-table is the <table> */
+.passport-table:has( > #passport-table)
 {
   overflow-y: auto;
   height: 35ex;

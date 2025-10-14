@@ -174,7 +174,7 @@
   {{#if @enablePassportData}}
   {{#if (or this.urlOptions.tableRow this.urlOptions.multiSelect)}}
   {{log 'genotype-samples' this this.args.userSettings @userSettings}}
-  <div class="genotype-controls"
+  <div class="passport-table"
     {{did-insert (action (mut this.scrolledDiv)) }}
   >
     <PassportTable
