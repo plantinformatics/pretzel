@@ -6,7 +6,19 @@ import { tracked } from '@glimmer/tracking';
 
 //------------------------------------------------------------------------------
 
+import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
+const /*import */{
+  accessionNumbers2genotypeIds,
+} = vcfGenotypeBrapi.genolinkPassport; /*from 'vcf-genotype-brapi'; */
+
 import PagedData from '../utils/data/paged-data';
+
+//------------------------------------------------------------------------------
+// copied from genotype-samples.js and manage-genotype.js, this will be imported from environment
+/** Base URL for HTTP GET request to open Genolink with the result of a search
+ * for genotypeIds included in the URL.
+ */
+const genolinkBaseUrl = "https://genolink.plantinformatics.io";
 
 //------------------------------------------------------------------------------
 
@@ -103,15 +115,63 @@ export default class PassportTable extends Component {
     dLog(fnName, page, key, _text, this.pageLength);
     // Already have sampleNames, so nothing to request if ! selectFields.length
     if (selectFields.length) {
+      const dataset = this.args.dataset;
       /** /query ?_text is across all fields; key is not passed */
-      promise = this.args.mg.datasetGetPassportData(this.args.dataset, {_text, page}, selectFields);
-      promise.then(data => console.log(fnName, data));
+      promise = this.args.mg.datasetGetPassportData(dataset, {_text, page}, selectFields);
+      promise.then(data => {
+        dLog(fnName, data);
+        const accessionNumbers = data[0].mapBy('accessionNumber');
+        accessionNumbers2genotypeIds(accessionNumbers, genolinkBaseUrl).then(ag => {
+          const
+          /** Use result ag to map from accessionNumber to genotypeId.
+           * @param Accession	accessionNumber
+           * @param Sample	genotypeId
+           */
+          a2gMap = ag.Samples.reduce((map, {Accession, Sample}) => {
+            map.set(Accession, Sample);
+            return map;
+          }, new Map());
+          this.toSamplesPassport(a2gMap, dataset, data[0]);
+        });
+      });
     } else {
       dLog(fnName, 'selectFields is empty');
       promise = Promise.resolve([]);
     }
     }
     return promise;
+  }
+
+  /** Store the received data in data.samplesPassport
+   * Use a2gMap to map accessionNumber in data[] to genotypeId, which is the
+   * sampleName used to index .samplesPassport.
+   */
+  toSamplesPassport(a2gMap, dataset, data) {
+    /** Based on datasetGetPassportData() : receive(). (manage-genotype.js)
+     */
+    const
+    fnName = 'toSamplesPassport',
+    samplesPassport = dataset.samplesPassport || (dataset.samplesPassport = {});
+    data.forEach((datum, i) => {
+      const sampleName = a2gMap.get(datum.accessionNumber);
+      if (! sampleName) {
+        dLog(fnName, datum.accessionNumber, datum);
+      } else {
+        const sp = samplesPassport[sampleName] || (samplesPassport[sampleName] = {});
+        Object.entries(datum).forEach(([field, value]) => {
+          sp[field] = value; // datum[field];
+        });
+        // if datum.genotypeID is undefined, null, or ''
+        if (! datum.genotypeID) {
+          // Modify the parsed result, as this is returned by .tableData().
+          datum.genotypeID = sampleName;
+        } else if (datum.genotypeID !== sampleName) {
+          dLog(fnName, sampleName, datum.genotypeID, datum);
+        }
+        sp.genotypeID = sampleName;
+      }
+    });
+
   }
 
 

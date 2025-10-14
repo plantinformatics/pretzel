@@ -26,6 +26,7 @@ import { tracked } from '@glimmer/tracking';
 
 import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
 const /*import */{
+  fieldName2ParamName,
   passportFieldNamesCategory,
 } = vcfGenotypeBrapi.genolinkPassport; /*from 'vcf-genotype-brapi'; */
 
@@ -145,14 +146,20 @@ export default class EmberMulti2SelectComponent extends Component {
   }
 
   @computed('namesFiltersCount')
+  /** The fields genotypeID and accessionNumber identify the passport data rows.
+   * Collate an array of these identity / name fields for which the user has
+   * entered a search string.
+   * @return {Array<[key, value]>}	key is "genotypeIds" or "accessionNumbers"
+   * and value is the search string which the user has entered.
+   */
   get nameFieldEntries() {
     const
     /** same as @column.fieldSearchString */
     fieldSearchString = this.fieldSearchString,
-    nameEntries = ['GenotypeId', 'accessionNumber'].map(
+    nameEntries = ['genotypeID', 'accessionNumber'].map(
       /** Genolink expects an array of names. Initially handle search string
        * being just 1 name; later can split into an array, e.g. at '|'. */
-      fieldName => [fieldName + 's', [fieldSearchString[fieldName]]])
+      fieldName => [fieldName2ParamName[fieldName], [fieldSearchString[fieldName]]])
       .filter(([key, value]) => value[0]);
     return nameEntries;
   }
@@ -211,14 +218,14 @@ export default class EmberMulti2SelectComponent extends Component {
         dLog(fnName, sampleIndex, sampleName, values, rowEntries, mismatch);
       });
       if (! mismatch) {
-        rowEntries.push(['GenotypeId', sampleName]);
+        rowEntries.push(['genotypeID', sampleName]);	// or genotypeId
         const row = Object.fromEntries(rowEntries);
         rows.push(row);
       }
     }
     dLog(fnName, selectFields, rows);
 
-    /** If user has entered name fields (GenotypeId / accessionNumber),
+    /** If user has entered name fields (genotypeID / accessionNumber),
      * use those for lookup. */
     const
     nameEntries = this.nameFieldEntries,
@@ -256,9 +263,9 @@ export default class EmberMulti2SelectComponent extends Component {
   rowText(row) {
     const
     fnName = 'rowText',
-    {GenotypeId, ...nonId} = row,
+    {genotypeID, ...nonId} = row,
     values = Object.values(nonId);
-    values.unshift(GenotypeId);
+    values.unshift(genotypeID);
     const text = values
     // .entries(), .map(kv => kv.join(':'))
       .join('&nbsp;');

@@ -77,7 +77,7 @@ export default class EmberMulti2TableComponent extends Component {
   /** Count of changes to columns[].namesFilters.nameFilterArray, for dependency. */
   namesFiltersCount = 0;
 
-  idField = this.args.idFieldName || 'GenotypeId'; 
+  idField = this.args.idFieldName || 'genotypeID'; 
   /** indicate that idField is prepended to columns. */
   idFieldInColumns = true;
 
@@ -162,7 +162,7 @@ export default class EmberMulti2TableComponent extends Component {
   @tracked sortDir = 'asc';   // 'asc' | 'desc'
 
   // --- Selection like <select multiple> ---
-  /** store stable row keys (e.g. GenotypeId / sample / accession id) */
+  /** store stable row keys (e.g. genotypeID / sample / accession id) */
   @tracked selectedKeys = new Set(); // stable keys for rows
   @tracked focusIndex = 0;           // index in visible (sorted+filtered) rows
   anchorIndex = null;                // start of shift-range
@@ -177,7 +177,8 @@ export default class EmberMulti2TableComponent extends Component {
       typeof row === 'string' ? row :
        (typeof this.args.rowKey === 'function') ?
        this.args.rowKey(row) :
-       row.GenotypeId ?? row.id ?? row.sampleName ?? row.accession ?? JSON.stringify(row);
+       row.genotypeID ?? /* row.id ?? row.sampleName ?? */
+       row.accessionNumber ?? JSON.stringify(row);
     return text;
   };
 
