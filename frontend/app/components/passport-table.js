@@ -58,10 +58,16 @@ export default class PassportTable extends Component {
   /** undefined, or {key, value} defining the most recent search entered by the user. */
   currentSearch = undefined;
 
-  @computed('currentSearch')
+  @computed('currentSearch', 'args.mg.namesFilters.nameFilterDebounced')
   get currentData () {
     const
-    searchKV = this.currentSearch,
+    /** mg.sampleNameFilter is not updated. */
+    sampleNameFilter = this.args.mg .namesFilters.nameFilterDebounced,
+    /** Use .currentSearch from column headers, or fall back to sampleNameFilter,
+     * which sets this.currentSearch (Side-Effect). */
+    searchKV = this.currentSearch ||
+      ((sampleNameFilter ?? false) ?
+       (this.currentSearch = { key : 'All', value : sampleNameFilter}) : undefined),
     searchName = searchKV ? searchKV.key + '|' + searchKV.value : 'NoSearch',
     search = this.pagedData[searchName] ||
       (this.pagedData[searchName] = new PagedData(searchName, searchKV, this.getPage));
