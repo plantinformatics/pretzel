@@ -26,6 +26,7 @@ fieldsUniqueValues = Object.getOwnPropertyDescriptor(prototype, 'fieldsUniqueVal
 columns = Object.getOwnPropertyDescriptor(prototype, 'columns').get,
 nameFieldEntries = Object.getOwnPropertyDescriptor(prototype, 'nameFieldEntries').get,
 sampleData = Object.getOwnPropertyDescriptor(prototype, 'sampleData').get,
+okFn = Object.getOwnPropertyDescriptor(prototype, 'okFn').value,
 matchField = Object.getOwnPropertyDescriptor(prototype, 'matchField').value,
 tableData = Object.getOwnPropertyDescriptor(prototype, 'tableData').get,
 searchData = Object.getOwnPropertyDescriptor(prototype, 'searchData').get;
@@ -109,6 +110,7 @@ export default class EmberMulti2TableComponent extends Component {
   get columns() { return columns.apply(this); }
   get nameFieldEntries() { return nameFieldEntries.apply(this); }
   get sampleData() { return sampleData.apply(this); }
+  okFn() { return okFn.apply(this, arguments); }
   matchField() { return matchField.apply(this, arguments); }
   get tableData() { return tableData.apply(this); }
   get searchData() { return searchData.apply(this); }

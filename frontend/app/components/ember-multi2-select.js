@@ -70,7 +70,8 @@ export default class EmberMulti2SelectComponent extends Component {
     'args.userSettings.passportFields', 'args.dataset', 'args.samples',
     'args.lastPassport',
     'args.mg.passportDataCount',
-    'selectedFieldValuesCount'
+    'args.currentData.rows.length',
+    'args.samples.length'
   )
   get fieldsUniqueValues() {
     const
@@ -179,6 +180,8 @@ export default class EmberMulti2SelectComponent extends Component {
     dataset = this.args.dataset,
     selectFields = this.args.userSettings.passportFields,
     samples = this.args.samples,
+    /** cache of okFn-s for matchField */
+    matchFieldFns = {},
     // tableLength = (this.samplesListLimit ?? 500),
     rows = [];
     if (! samples) {
@@ -197,7 +200,7 @@ export default class EmberMulti2SelectComponent extends Component {
       mismatch = values.find((value, fieldIndex) => {
         const
         fieldName = selectFields[fieldIndex],
-        ok = this.matchField(selectFields, value, fieldIndex, fieldName);
+        ok = this.matchField(matchFieldFns, value, fieldIndex, fieldName);
         if (ok) {
           const entry = [fieldName, value || '_'];
           rowEntries.push(entry);
@@ -232,24 +235,43 @@ export default class EmberMulti2SelectComponent extends Component {
 
     return rows;
   }
-  matchField(selectFields, value, fieldIndex, fieldName) {
+  /** Return a function to match column values against the defined filters.
+   * @param cache functions are cached to assist the JavaScript engine to optimise.
+   * The cache key combines fieldIndex and fieldName, since they are tied.
+   * @param {number} (integer >= 0) fieldIndex  index of column / field
+   * @param {string} fieldName name of column / field
+   * @return {function({number, string})} : boolean
+   */
+  okFn(cache, fieldIndex, fieldName) {
     const
-    fnName = 'matchField',
-    /** based on get filteredSamples() (panel/manage-genotype.js )  */
+    fnName = 'okFn',
+    cacheKey = fieldIndex + '|' + fieldName,
+    fn = cache[cacheKey] ||
+      (cache[cacheKey] = constructFieldFilter.apply(this, [fieldIndex, fieldName]));
+    function constructFieldFilter(fieldIndex, fieldName) {
+    const
     column = this.columns[fieldIndex+1],
     nf = column.namesFilters,
     okFn = nf ? 
-      () => nf.nameFilterArray.length ?
+      (value) => nf.nameFilterArray.length ?
       ((value === null) ? false :
        nf.matchFilters(value, nf.nameFilterArray, true, true)) :
-      true :
-      () => {
+        () => true :
+      (value) => {
         const
         filterOptions = this.selectedFieldValues[fieldName],
         ok = ! filterOptions?.length || filterOptions.includes(value);
         return ok;
-      },
-    ok = okFn();
+      };
+      return okFn;
+    }
+    return fn;
+  }
+  matchField(cache, value, fieldIndex, fieldName) {
+    const
+    fnName = 'matchField',
+    /** based on get filteredSamples() (panel/manage-genotype.js )  */
+    ok = this.okFn(cache, fieldIndex, fieldName)(value);
     return ok;
   }
 
@@ -264,18 +286,28 @@ export default class EmberMulti2SelectComponent extends Component {
 
   /** Filter @currentData.rows by matchField().
    */
-  @computed('args.currentData.searchKV', 'args.currentData.rows.length')
+  @computed(
+    'args.currentData.searchKV', 'args.currentData.rows.length',
+    /* incremented when user selects a category in column filter.
+     * Used in .matchField()
+     */
+    'selectedFieldValuesCount',
+    // incremented when user alters nameFilter
+    'namesFiltersCount',
+  )
   get searchData() {
     const
     fnName = 'searchData',
     selectFields = this.args.userSettings.passportFields,
+    /** cache of okFn-s for matchField */
+    matchFieldFns = {},
     rows = this.args.currentData.rows.filter(row =>
       {
         const
         mismatch = selectFields.find((fieldName, fieldIndex) => {
           const
           value = row[fieldName],
-          ok = this.matchField(selectFields, value, fieldIndex, fieldName);
+          ok = this.matchField(matchFieldFns, value, fieldIndex, fieldName);
           return ! ok;
         });
         return ! mismatch;
