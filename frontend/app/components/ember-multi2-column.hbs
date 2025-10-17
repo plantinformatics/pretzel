@@ -30,13 +30,13 @@
       &#xFE40; {{get @selectedFieldValuesTexts @column.property }}</div>
 
     {{#if (and @showFilters @column.filterOptions.length )  }}
-    <select style="height:100px" class="form-control" multiple onchange={{action (fn @selectFieldValue @column) value="target" }}>
-      {{#each @column.filterOptions as |filterOption|}}
-      <option value={{filterOption}}
-        selected={{include (get @selectedFieldValues @column.property) filterOption}}>
-        {{filterOption}}</option>
-      {{/each}}
-    </select>
+      <select style="height:100px" class="form-control" multiple onchange={{action (fn @selectFieldValue @column) value="target" }}>
+        {{#each @column.filterOptions as |filterOption|}}
+          <option value={{filterOption}}
+            selected={{include (get @selectedFieldValues @column.property) filterOption}}>
+            {{filterOption}}</option>
+        {{/each}}
+      </select>
     {{/if}}
   {{/if}}
 

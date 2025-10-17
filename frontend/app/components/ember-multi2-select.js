@@ -224,12 +224,12 @@ export default class EmberMulti2SelectComponent extends Component {
     // if accessionNumber or GenotypeId, search
     if (! rows.length && nameEntries.length) {
       this.args.getNamedRows(rowNames);
-    } else
+    }
     /* If the rows do not fill the current height of the table, get more.
      * Limited to a few pages - need to throttle this to a reasonable number / rate,
      * and it will be solved by using Genolink search endpoints including /text.
      */
-    if ((rows.length < 10) && (this.args.lastPassport < 4 * 20)) {
+    else if ((rows.length < 10) && (this.args.lastPassport < 4 * 20)) {
       this.args.getNextPage();
     }
 
@@ -249,13 +249,13 @@ export default class EmberMulti2SelectComponent extends Component {
     fn = cache[cacheKey] ||
       (cache[cacheKey] = constructFieldFilter.apply(this, [fieldIndex, fieldName]));
     function constructFieldFilter(fieldIndex, fieldName) {
-    const
-    column = this.columns[fieldIndex+1],
-    nf = column.namesFilters,
-    okFn = nf ? 
-      (value) => nf.nameFilterArray.length ?
-      ((value === null) ? false :
-       nf.matchFilters(value, nf.nameFilterArray, true, true)) :
+      const
+      column = this.columns[fieldIndex+1],
+      nf = column.namesFilters,
+      okFn = nf ? 
+        (value) => nf.nameFilterArray.length ?
+        ((value === null) ? false :
+         nf.matchFilters(value, nf.nameFilterArray, true, true)) :
         () => true :
       (value) => {
         const
@@ -301,17 +301,16 @@ export default class EmberMulti2SelectComponent extends Component {
     selectFields = this.args.userSettings.passportFields,
     /** cache of okFn-s for matchField */
     matchFieldFns = {},
-    rows = this.args.currentData.rows.filter(row =>
-      {
+    rows = this.args.currentData.rows.filter(row => {
+      const
+      mismatch = selectFields.find((fieldName, fieldIndex) => {
         const
-        mismatch = selectFields.find((fieldName, fieldIndex) => {
-          const
-          value = row[fieldName],
-          ok = this.matchField(matchFieldFns, value, fieldIndex, fieldName);
-          return ! ok;
-        });
-        return ! mismatch;
+        value = row[fieldName],
+        ok = this.matchField(matchFieldFns, value, fieldIndex, fieldName);
+        return ! ok;
       });
+      return ! mismatch;
+    });
     return rows;
   }
 

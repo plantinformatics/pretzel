@@ -106,38 +106,38 @@ export default class PassportTable extends Component {
     if (! searchKV) {
       promise = this.getNextPageNoSearch();
     } else {
-    const
-    fnName = 'getPage',
+      const
+      fnName = 'getPage',
 
-    selectFields = this.args.userSettings.passportFields,
-    /** name value as _text for passing in parameter bundle to getPassportData(). */
-    {key, value : _text} = searchKV;
-    dLog(fnName, page, key, _text, this.pageLength);
-    // Already have sampleNames, so nothing to request if ! selectFields.length
-    if (selectFields.length) {
-      const dataset = this.args.dataset;
-      /** /query ?_text is across all fields; key is not passed */
-      promise = this.args.mg.datasetGetPassportData(dataset, {_text, page}, selectFields);
-      promise.then(data => {
-        dLog(fnName, data);
-        const accessionNumbers = data[0].mapBy('accessionNumber');
-        accessionNumbers2genotypeIds(accessionNumbers, genolinkBaseUrl).then(ag => {
-          const
-          /** Use result ag to map from accessionNumber to genotypeId.
-           * @param Accession	accessionNumber
-           * @param Sample	genotypeId
-           */
-          a2gMap = ag.Samples.reduce((map, {Accession, Sample}) => {
-            map.set(Accession, Sample);
-            return map;
-          }, new Map());
-          this.toSamplesPassport(a2gMap, dataset, data[0]);
+      selectFields = this.args.userSettings.passportFields,
+      /** name value as _text for passing in parameter bundle to getPassportData(). */
+      {key, value : _text} = searchKV;
+      dLog(fnName, page, key, _text, this.pageLength);
+      // Already have sampleNames, so nothing to request if ! selectFields.length
+      if (selectFields.length) {
+        const dataset = this.args.dataset;
+        /** /query ?_text is across all fields; key is not passed */
+        promise = this.args.mg.datasetGetPassportData(dataset, {_text, page}, selectFields);
+        promise.then(data => {
+          dLog(fnName, data);
+          const accessionNumbers = data[0].mapBy('accessionNumber');
+          accessionNumbers2genotypeIds(accessionNumbers, genolinkBaseUrl).then(ag => {
+            const
+            /** Use result ag to map from accessionNumber to genotypeId.
+             * @param Accession	accessionNumber
+             * @param Sample	genotypeId
+             */
+            a2gMap = ag.Samples.reduce((map, {Accession, Sample}) => {
+              map.set(Accession, Sample);
+              return map;
+            }, new Map());
+            this.toSamplesPassport(a2gMap, dataset, data[0]);
+          });
         });
-      });
-    } else {
-      dLog(fnName, 'selectFields is empty');
-      promise = Promise.resolve([]);
-    }
+      } else {
+        dLog(fnName, 'selectFields is empty');
+        promise = Promise.resolve([]);
+      }
     }
     return promise;
   }
@@ -193,33 +193,32 @@ export default class PassportTable extends Component {
     const datasetSamplesTask = this.args.dataset[Symbol.for('samplesP')];
     if (! this.args.samples.length && datasetSamplesTask) {
       promise = datasetSamplesTask.promise.then(() => this.getNextPageNoSearch());
-    } else
-    if (this.lastPassport > this.args.samples.length) {
+    } else if (this.lastPassport > this.args.samples.length) {
       promise = Promise.reject('No more data');
     } else {
-    /** get next chunk */
-    const
-    fnName = 'getNextPageNoSearch',
-    lastPassport = this.lastPassport,
-    lastPassportNew = this.lastPassport + this.pageLength,
-    /** could filter [0, lastPassportNew] @samples for selectFields; group by
-     * required fields and request in groups. */
-    sampleNames = this.args.samples.slice(lastPassport, lastPassportNew), 
-    selectFields = this.args.userSettings.passportFields;
-    dLog(fnName, lastPassport, lastPassportNew, this.pageLength);
-    // Already have sampleNames, so nothing to request if ! selectFields.length
-    if (selectFields.length) {
-      promise = this.args.mg.datasetGetPassportData(this.args.dataset, {sampleNames}, selectFields);
-    } else {
-      dLog(fnName, 'selectFields is empty');
-      promise = Promise.resolve([]);
-    }
+      /** get next chunk */
+      const
+      fnName = 'getNextPageNoSearch',
+      lastPassport = this.lastPassport,
+      lastPassportNew = this.lastPassport + this.pageLength,
+      /** could filter [0, lastPassportNew] @samples for selectFields; group by
+       * required fields and request in groups. */
+      sampleNames = this.args.samples.slice(lastPassport, lastPassportNew), 
+      selectFields = this.args.userSettings.passportFields;
+      dLog(fnName, lastPassport, lastPassportNew, this.pageLength);
+      // Already have sampleNames, so nothing to request if ! selectFields.length
+      if (selectFields.length) {
+        promise = this.args.mg.datasetGetPassportData(this.args.dataset, {sampleNames}, selectFields);
+      } else {
+        dLog(fnName, 'selectFields is empty');
+        promise = Promise.resolve([]);
+      }
 
-    later(() => this.lastPassport = lastPassportNew);
+      later(() => this.lastPassport = lastPassportNew);
     }
     return promise;
   }
- 
+
   //----------------------------------------------------------------------------
 
   @action
@@ -237,7 +236,7 @@ export default class PassportTable extends Component {
       this.args.mg.datasetGetPassportData(this.args.dataset, sampleNames, selectFields);
     }
   }
- 
+
   //----------------------------------------------------------------------------
 
 

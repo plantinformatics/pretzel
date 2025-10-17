@@ -34,9 +34,9 @@
             {{#if column.filterOptions.length}}
               <select style="height:100px" class="form-control" multiple onchange={{action (fn this.selectFieldValue column) value="target" }}>
                 {{#each column.filterOptions as |filterOption|}}
-                <option value={{filterOption}}
-                  selected={{include (get this.selectedFieldValues column.property) filterOption}}>
-                  {{filterOption}}</option>
+                  <option value={{filterOption}}
+                    selected={{include (get this.selectedFieldValues column.property) filterOption}}>
+                    {{filterOption}}</option>
                 {{/each}}
               </select>
             {{/if}}
