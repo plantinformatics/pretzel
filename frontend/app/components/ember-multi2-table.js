@@ -142,6 +142,19 @@ export default class EmberMulti2TableComponent extends Component {
     dLog(fnName, target, selectedOptions, options, column);
     this.selectedFieldValues[column.property] = options;
     this.selectedFieldValuesCount++;
+
+    /** Use value in /query _text= search.
+     * region and subRegion are Genolink data fields, so they cannot be
+     * searched with /query _text=
+     * An alternative is countryOfOrigin.name which is 'Provenance of Material'.
+     */
+    if ((column.property !== 'region') &&  (column.property !== 'subRegion')) {
+      const
+      key = column.property,
+      /** The most recently selected value is target.value */
+      value = options.map(o => '"' + o + '"').join('|');
+      this.args.nameFilterChanged([key, value]);
+    }
   }
 
   @computed('selectedFieldValuesCount')
@@ -185,6 +198,36 @@ export default class EmberMulti2TableComponent extends Component {
        row.accessionNumber ?? JSON.stringify(row);
     return text;
   };
+
+  @action
+  /** This is the same as the {{get object fieldName}} helper, except it treats
+   * '.' in fieldName as part of the name instead of a object path divider.
+   * e.g. countryOfOrigin.name and crop.name are handled correctly.
+   *
+   * Also, values which are an array are converted to a string; the array is
+   * expected to be an array of objects, with a .name field; this is true of the
+   * 'aliases' field, which may be the only field with an array value.
+   */
+  getRowProperty(row, columnProperty) {
+    let value = row[columnProperty];
+
+    /** Handle aliases field, which is an array of e.g. :
+        {
+        _class: "AccessionAlias",
+        aliasType: "OTHERNUMB",
+        id: 2826995,
+        lang: null,
+        name: "AUS 10345",
+        usedBy: null,
+        version: 1,
+        }
+    */
+    if (Array.isArray(value)) {
+      /* e.g. columnProperty === 'aliases' */
+      value = value.mapBy('name').join(', ');
+    }
+    return value;
+  }
 
   /*/ Wire to your existing filtering pipeline if you have one
   get filteredRows() {

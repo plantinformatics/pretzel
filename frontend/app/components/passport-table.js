@@ -94,7 +94,15 @@ export default class PassportTable extends Component {
    * @param [key, value]
    */
   nameFilterChanged([key, value]) {
-    this.currentSearch = {key, value};
+    const fnName = 'passport-table : nameFilterChanged';
+    if (value) {
+      this.currentSearch = {key, value};
+    } else {
+      if (this.currentSearch.key === key) {
+        dLog(fnName, 'removing', this.currentSearch, value);
+        delete this.currentSearch;
+      }
+    }
   }
 
   //----------------------------------------------------------------------------

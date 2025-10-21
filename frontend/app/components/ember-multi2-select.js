@@ -256,7 +256,7 @@ export default class EmberMulti2SelectComponent extends Component {
         (value) => nf.nameFilterArray.length ?
         ((value === null) ? false :
          nf.matchFilters(value, nf.nameFilterArray, true, true)) :
-        () => true :
+        true :
       (value) => {
         const
         filterOptions = this.selectedFieldValues[fieldName],
@@ -306,7 +306,9 @@ export default class EmberMulti2SelectComponent extends Component {
       mismatch = selectFields.find((fieldName, fieldIndex) => {
         const
         value = row[fieldName],
-        ok = this.matchField(matchFieldFns, value, fieldIndex, fieldName);
+        /** (for fieldName 'aliases'), map array of objects to array of name strings. */
+        valueName = Array.isArray(value) ? value.mapBy('name') : value,
+        ok = this.matchField(matchFieldFns, valueName, fieldIndex, fieldName);
         return ! ok;
       });
       return ! mismatch;

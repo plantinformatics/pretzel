@@ -102,6 +102,7 @@ export default class NamesFilter extends EmberObject {
   /** Apply nameFilters[] to the given name.
    * @return true if each / any of the name keys matches name
    * @param name  text name of e.g. Trait
+   * Also handle name being an array of name strings.
    * @param caseInsensitive true if Search Filter is case insensitive.
    * @param searchFilterAll
    * indicates how to match search/filter which has multiple strings (space-separated).
@@ -114,12 +115,18 @@ export default class NamesFilter extends EmberObject {
   matchFilters(name, nameFilters, caseInsensitive, searchFilterAll) {
     const
     maybeLC = this.maybeLC(caseInsensitive),
-    nameMaybeLC = maybeLC(name),
+    nameMaybeLC = Array.isArray(name) ?
+      name.map(this.maybeLC(caseInsensitive)) :
+      maybeLC(name),
     multiFnName = searchFilterAll ? 'every' : 'any',
     nameFiltersMaybeLC = this.maybeLCArray(caseInsensitive, nameFilters),
     matchAll = nameFiltersMaybeLC[multiFnName]((nameFilter) => {
       const
-      match = nameMaybeLC.includes(nameFilter);
+      /** Passport data .aliases is an array; matching any of the aliases is
+       * more useful than matching all of them ('every'). */
+      match = Array.isArray(nameMaybeLC) ?
+        nameMaybeLC.any(name => name.includes(nameFilter)) :
+        nameMaybeLC.includes(nameFilter);
       return match;
     });
     return matchAll;

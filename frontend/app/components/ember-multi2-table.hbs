@@ -52,7 +52,7 @@
           {{!-- row[idField] is equivalent to : <td>{{object-at rowIndex this.args.samples} }</td> --}}
           {{#each this.columns as |column|}}
           {{!-- log 'column' column --}}
-            <td>{{get row column.property}}</td>
+            <td>{{this.getRowProperty row column.property}}</td>
           {{/each}}
 
       </tr>
