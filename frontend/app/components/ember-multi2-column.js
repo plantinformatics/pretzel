@@ -1,5 +1,6 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
+import { debounce } from '@ember/runloop';
 
 /**
  * Component args :	
@@ -46,6 +47,11 @@ export default class EmberMulti2ColumnComponent extends Component {
   }
 
 
+
+  @action
+  nameFilterChangedDebounce(event) {
+    debounce(this, this.nameFilterChanged, event, 800);
+  }
   @action
   nameFilterChanged(event) {
     const value = event.target.value;

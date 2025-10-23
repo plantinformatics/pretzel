@@ -30,13 +30,17 @@ export default class PagedData extends EmberObject {
    * @param searchKV	{key, value}, i.e. search field and value search string to match.
    * .pages is added to searchKV by loadPage().
    * @param getPage	action to get next page of search results
+   * @param pageLength	assigned to .pageSize if defined, overriding default 100
    */
-  constructor(searchName, searchKV, getPage) {
+  constructor(searchName, searchKV, getPage, pageLength) {
     super(...arguments);
 
     this.searchName = searchName;
     this.searchKV = searchKV;
     this.getPage = getPage;
+    if (pageLength) {
+      this.pageSize = pageLength;
+    }
     // Optional: kick off initial load when component first renders
     this.refresh();
   }

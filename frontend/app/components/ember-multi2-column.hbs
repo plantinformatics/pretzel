@@ -18,7 +18,7 @@
 
   {{#if @column.namesFilters}}
     <input id="nameFilter" type="search" value={{this.nameFilter}}
-      oninput={{this.nameFilterChanged}}
+      oninput={{this.nameFilterChangedDebounce}}
       style="min-width: 16em;"
       placeholder="Filter available samples / accessions by {{@column.property}}" />
       <span style="display:none">{{@column.namesFilters.nameFilterArray.length}}</span>

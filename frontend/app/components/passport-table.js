@@ -11,6 +11,8 @@ const /*import */{
   accessionNumbers2genotypeIds,
 } = vcfGenotypeBrapi.genolinkPassport; /*from 'vcf-genotype-brapi'; */
 
+import config from 'pretzel-frontend/config/environment';
+
 import PagedData from '../utils/data/paged-data';
 
 //------------------------------------------------------------------------------
@@ -31,8 +33,10 @@ export default class PassportTable extends Component {
 
   //----------------------------------------------------------------------------
 
-  /** Display table rows in pages */
-  pageLength = 20;  // probably this.args.pageLength ??, from urlOptions
+  /** Display table rows in pages
+   * passed to new PagedData() so that paged-data.js : pageSize can match this.
+   */
+  pageLength = 500; // 20;  // probably this.args.pageLength ??, from urlOptions
   @tracked
   /** end row of last page of Passport data requested.  */
   lastPassport = 0;
@@ -82,7 +86,7 @@ export default class PassportTable extends Component {
        (this.currentSearch = { key : 'All', value : sampleNameFilter}) : undefined),
     searchName = searchKV ? searchKV.key + '|' + searchKV.value : 'NoSearch',
     search = this.pagedData[searchName] ||
-      (this.pagedData[searchName] = new PagedData(searchName, searchKV, this.getPage));
+      (this.pagedData[searchName] = new PagedData(searchName, searchKV, this.getPage, this.pageLength));
     return search;
   }
 
@@ -125,7 +129,8 @@ export default class PassportTable extends Component {
       if (selectFields.length) {
         const dataset = this.args.dataset;
         /** /query ?_text is across all fields; key is not passed */
-        promise = this.args.mg.datasetGetPassportData(dataset, {_text, page}, selectFields);
+        const optionsParam = {_text, page, pageLength : this.pageLength};
+        promise = this.args.mg.datasetGetPassportData(dataset, optionsParam, selectFields);
         promise.then(data => {
           dLog(fnName, data);
           const accessionNumbers = data[0].mapBy('accessionNumber');
@@ -201,7 +206,10 @@ export default class PassportTable extends Component {
     const datasetSamplesTask = this.args.dataset[Symbol.for('samplesP')];
     if (! this.args.samples.length && datasetSamplesTask) {
       promise = datasetSamplesTask.promise.then(() => this.getNextPageNoSearch());
-    } else if (this.lastPassport > this.args.samples.length) {
+    } else if (
+      /** .samples.length is limited to 2000 in development */
+      (this.lastPassport > this.args.samples.length) &&
+        (config.environment !== 'development')) {
       promise = Promise.reject('No more data');
     } else {
       /** get next chunk */
@@ -216,7 +224,8 @@ export default class PassportTable extends Component {
       dLog(fnName, lastPassport, lastPassportNew, this.pageLength);
       // Already have sampleNames, so nothing to request if ! selectFields.length
       if (selectFields.length) {
-        promise = this.args.mg.datasetGetPassportData(this.args.dataset, {sampleNames}, selectFields);
+        const optionsParam = {sampleNames, pageLength : this.pageLength};
+        promise = this.args.mg.datasetGetPassportData(this.args.dataset, optionsParam, selectFields);
       } else {
         dLog(fnName, 'selectFields is empty');
         promise = Promise.resolve([]);
@@ -241,7 +250,8 @@ export default class PassportTable extends Component {
     /* if ! selectFields.length, and sampleNames is searching genotypeIds,
      * can get those from mg.samples */
     /*if (selectFields.length)*/ {
-      this.args.mg.datasetGetPassportData(this.args.dataset, sampleNames, selectFields);
+      const optionsParam = {sampleNames, pageLength : this.pageLength};
+      this.args.mg.datasetGetPassportData(this.args.dataset, optionsParam, selectFields);
     }
   }
 
