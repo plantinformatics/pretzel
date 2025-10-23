@@ -176,7 +176,7 @@ export default class EmberMulti2SelectComponent extends Component {
     'namesFiltersCount',)
   get sampleData() {
     const
-    fnName = 'tableData',
+    fnName = 'sampleData',
     dataset = this.args.dataset,
     selectFields = this.args.userSettings.passportFields,
     samples = this.args.samples,
@@ -280,14 +280,18 @@ export default class EmberMulti2SelectComponent extends Component {
    */
   @computed ('sampleData', 'searchData')
   get tableData() {
-    const rows = this.args.currentData.searchKV ? this.searchData : this.sampleData;
+    const
+    searchKV = this.args.currentData.searchKV,
+    rows = searchKV && searchKV.value ? this.searchData : this.sampleData;
     return rows;
   }
 
   /** Filter @currentData.rows by matchField().
    */
   @computed(
-    'args.currentData.searchKV', 'args.currentData.rows.length',
+    'args.currentData.searchKV',
+    'args.currentData.rows',
+    'args.currentData.rows.length',
     /* incremented when user selects a category in column filter.
      * Used in .matchField()
      */
@@ -301,7 +305,12 @@ export default class EmberMulti2SelectComponent extends Component {
     selectFields = this.args.userSettings.passportFields,
     /** cache of okFn-s for matchField */
     matchFieldFns = {},
-    rows = this.args.currentData.rows.filter(row => {
+    cdRows = this.args.currentData.rows,
+    /** If @currentData.rows is empty, use cached pages of data.
+     * It may be worth merging these based on accessionNumber in loadPage(),
+     * instead of simply storing pages in cache */
+    rows = cdRows?.length ? cdRows : this.cachedRows(),
+    filteredRows = rows.filter(row => {
       const
       mismatch = selectFields.find((fieldName, fieldIndex) => {
         const
@@ -313,7 +322,7 @@ export default class EmberMulti2SelectComponent extends Component {
       });
       return ! mismatch;
     });
-    return rows;
+    return filteredRows;
   }
 
 

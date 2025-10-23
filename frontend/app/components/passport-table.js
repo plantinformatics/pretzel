@@ -100,7 +100,7 @@ export default class PassportTable extends Component {
     } else {
       if (this.currentSearch.key === key) {
         dLog(fnName, 'removing', this.currentSearch, value);
-        delete this.currentSearch;
+        this.currentSearch = { key : 'All', value : ""};
       }
     }
   }
@@ -111,7 +111,7 @@ export default class PassportTable extends Component {
   /** Get requested page of the result for searchKV. */
   getPage(searchKV, page) {
     let promise;
-    if (! searchKV) {
+    if (! searchKV || ! searchKV.value) {
       promise = this.getNextPageNoSearch();
     } else {
       const

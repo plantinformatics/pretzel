@@ -27,7 +27,8 @@ export default class PagedData extends EmberObject {
 
   /**
    * @param searchName	text identifying searchKV
-   * @param searchKV	{key, value}, i.e. search field and value search string to match
+   * @param searchKV	{key, value}, i.e. search field and value search string to match.
+   * .pages is added to searchKV by loadPage().
    * @param getPage	action to get next page of search results
    */
   constructor(searchName, searchKV, getPage) {
@@ -70,6 +71,10 @@ export default class PagedData extends EmberObject {
         this.rows = data;
       } else {
         this.rows = [...this.rows, ...data];
+      }
+      if (this.searchKV) {
+        const cache = this.searchKV.pages || (this.searchKV.pages = {});
+        cache[page] = data;
       }
 
       this.page = page;

@@ -58,4 +58,19 @@ export default class EmberMulti2ColumnComponent extends Component {
 
   //------------------------------------------------------------------------------
 
+
+  @action
+  /** This is the same as the {{get object fieldName}} helper, except it treats
+   * '.' in fieldName as part of the name instead of a object path divider.
+   * e.g. countryOfOrigin.name and crop.name are handled correctly.
+   *
+   * Used for object === {@selectedFieldValues,@selectedFieldValuesTexts}, with
+   * propertyName === @column.property.
+   * Based on ember-multi2-table.js : getRowProperty().
+   */
+  getProperty(object, propertyName) {
+    let value = object[propertyName];
+    return value;
+  }
+
 }

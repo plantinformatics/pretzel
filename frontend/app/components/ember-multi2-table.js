@@ -57,8 +57,15 @@ function cmp(a, b) {
  * @param dataset
  * @param samples
  * @param rows	same as samples, omitted, but later will rename samples to rows.
+ * @param currentData
+ * @param pagedData
  * @param selectSampleArray
  * @param sampleNamePassportValues
+ * @param scrolledDiv
+ * @param lastPassport
+ * @param getNextPage
+ * @param getNamedRows
+ * @param nameFilterChanged
  */
 export default class EmberMulti2TableComponent extends Component {
   //----------------------------------------------------------------------------
@@ -169,6 +176,48 @@ export default class EmberMulti2TableComponent extends Component {
     return texts;
   }
 
+
+  @action
+  /** Signal from ember-multi2-column that user has entered value in column with
+   * property key.
+   * If ! value, clear search.
+   * Propagate action to @nameFilterChanged (passport-table).
+   * @param [key, value]
+   */
+  nameFilterChanged([key, value]) {
+    const fnName = 'ember-multi2-table : nameFilterChanged';
+    if (! value) {
+      const nf = this.fieldNamesFilters[key];
+      // Object.values().map(nf => [nf.nameFilterArray, nf.nameFilterDebounced, nf.nameFilter]);
+      if (nf.nameFilterDebounced) {
+        dLog(fnName, key, 'removing', nf.nameFilter, nf.nameFilterArray, nf.nameFilterDebounced, value);
+        nf.nameFilterChanged('');
+        nf.nameFilterDebounced = ''; // .nameFilterChangedSet("");
+        nf.nameFilter = '';
+      }
+      if (this.fieldNamesFilters[key]) {
+        dLog(fnName, key, 'removing', this.fieldNamesFilters[key]);
+        delete this.fieldNamesFilters[key];
+      }
+    }
+    this.args.nameFilterChanged?.([key, value]);
+  }
+
+  /** Concatenate rows from all cached data pages,
+   * i.e. .pagedData[].searchKV?.pages[]
+   * @return {Array<object>} array of rows
+   */
+  cachedRows() {
+    const
+    pages = Object.values(this.args.pagedData)
+      .map(v => v.searchKV?.pages)
+      .filter(x => x)
+      .map(o => Object.values(o))
+      .flat(),
+    rows = [].concat.apply([], pages);
+    return rows;
+  }
+
   //----------------------------------------------------------------------------
 
   // From https://chatgpt.com/share/68d0e67a-7428-800e-85e2-e31ee741ece3
@@ -212,7 +261,7 @@ export default class EmberMulti2TableComponent extends Component {
     let value = row[columnProperty];
 
     /** Handle aliases field, which is an array of e.g. :
-        {
+      {
         _class: "AccessionAlias",
         aliasType: "OTHERNUMB",
         id: 2826995,
@@ -220,7 +269,7 @@ export default class EmberMulti2TableComponent extends Component {
         name: "AUS 10345",
         usedBy: null,
         version: 1,
-        }
+      }
     */
     if (Array.isArray(value)) {
       /* e.g. columnProperty === 'aliases' */
@@ -500,7 +549,9 @@ Use JavaScript to attach event listeners to the table cells and manage the selec
 
     // Event listeners
     table.addEventListener('mousedown', (e) => {
-      dLog('mousedown', e.target.tagName, e.target.innerText);
+      dLog(
+        'mousedown', 'shift', e.shiftKey, 'ctrl', e.ctrlKey, 'alt', e.altKey,
+        e.target.tagName, e.target.innerText);
       if (e.target.tagName === 'TD') {
         isMouseDown = true;
         startCell = e.target;
