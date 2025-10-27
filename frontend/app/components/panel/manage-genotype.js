@@ -184,6 +184,21 @@ const emptyTableColumns = [
  */
 const genolinkBaseUrl = "https://genolink.plantinformatics.io";
 
+/** Passport data fields initially displayed in passport-table.
+ * The user is able to configure this via <Panel::SelectPassportFields >
+ * This is a subset of passportFieldNames (genolink-passport.js).
+ */
+const passportFields = [
+  "region",
+  "subRegion",
+  "accessionName",
+  "accessionNumber",
+  "aliases",
+  "countryOfOrigin.name",
+  "crop.name",
+];
+
+
 //------------------------------------------------------------------------------
 
 /**
@@ -293,7 +308,7 @@ function featureHasSamplesLoaded(feature) {
  * .showSelectPassportFields  show select-passport-fields for extra rows in table column headings
  *
  * .passportTable  settings for passportFields for passport-table for filtering samples in genotype-samples
- * { passportFields : [], showSelectPassportFields : false }
+ * { passportFields : {Array<string fieldName>}, showSelectPassportFields : boolean, default false }
  *
  * @see userSettingsDefaults()
  *------------------------------------------------------------------------------
@@ -679,7 +694,7 @@ export default class PanelManageGenotypeComponent extends Component {
     }
 
     if (userSettings.passportTable === undefined) {
-      userSettings.passportTable = { passportFields : [], showSelectPassportFields : false };
+      userSettings.passportTable = { passportFields, showSelectPassportFields : false };
     }
 
 
