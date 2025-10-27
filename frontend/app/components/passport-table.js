@@ -2,7 +2,7 @@ import Component from '@glimmer/component';
 import { action, computed } from '@ember/object';
 import { later } from '@ember/runloop';
 import { tracked } from '@glimmer/tracking';
-
+import { alias } from '@ember/object/computed';
 
 //------------------------------------------------------------------------------
 
@@ -63,6 +63,9 @@ export default class PassportTable extends Component {
       'this', this);
   }
 
+  //----------------------------------------------------------------------------
+
+  @alias('args.userSettings.passportTable.passportFields') passportFields;
 
   //----------------------------------------------------------------------------
   /** Cache of paged input data streams.
@@ -121,7 +124,7 @@ export default class PassportTable extends Component {
       const
       fnName = 'getPage',
 
-      selectFields = this.args.userSettings.passportFields,
+      selectFields = this.passportFields,
       /** name value as _text for passing in parameter bundle to getPassportData(). */
       {key, value : _text} = searchKV;
       dLog(fnName, page, key, _text, this.pageLength);
@@ -220,7 +223,7 @@ export default class PassportTable extends Component {
       /** could filter [0, lastPassportNew] @samples for selectFields; group by
        * required fields and request in groups. */
       sampleNames = this.args.samples.slice(lastPassport, lastPassportNew), 
-      selectFields = this.args.userSettings.passportFields;
+      selectFields = this.passportFields;
       dLog(fnName, lastPassport, lastPassportNew, this.pageLength);
       // Already have sampleNames, so nothing to request if ! selectFields.length
       if (selectFields.length) {
@@ -240,19 +243,20 @@ export default class PassportTable extends Component {
 
   @action
   /**
-   * @param sampleNames	{accessionNumbers, genotypeIds} (aka rowNames)
+   * @param sampleNames	aka genotypeIds, rowNames. (could use accessionNumbers)
    */
-  getNamedRows(sampleNames) {
+  getNamedRows(sampleNames, selectFields = this.passportFields) {
     const
-    fnName = 'getNamedRows',
-    selectFields = this.args.userSettings.passportFields;
+    fnName = 'getNamedRows';
     dLog(fnName, sampleNames);
+    let promise;
     /* if ! selectFields.length, and sampleNames is searching genotypeIds,
      * can get those from mg.samples */
     /*if (selectFields.length)*/ {
       const optionsParam = {sampleNames, pageLength : this.pageLength};
-      this.args.mg.datasetGetPassportData(this.args.dataset, optionsParam, selectFields);
+      promise = this.args.mg.datasetGetPassportData(this.args.dataset, optionsParam, selectFields);
     }
+    return promise;
   }
 
   //----------------------------------------------------------------------------

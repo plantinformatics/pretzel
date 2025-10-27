@@ -127,6 +127,9 @@ export default class PanelGenotypeSamplesComponent extends Component {
     g = this.args.the,
     aggSamples = g.selectedSamples.filter(s => s.match(/^AGG/)),
     genotypeIds = aggSamples,
+    /** The user may want selectFields to be those of the Genotype Table column
+     * headers, or passport-table columns.
+     * If the latter, change this to userSettings.passportTable.passportFields */
     passportFields = this.args.userSettings.passportFields,
     selectFields = passportFields.length ? passportFields : undefined,
     passportP = aggSamples.length ?

@@ -290,6 +290,10 @@ function featureHasSamplesLoaded(feature) {
  *   This is currently [ {id, name}, ... ], where id == name.
  * .sortByPassportFields  boolean, default : false
  *   Sort the Genotype Table columns by the selected Passport field values : .passportFields
+ * .showSelectPassportFields  show select-passport-fields for extra rows in table column headings
+ *
+ * .passportTable  settings for passportFields for passport-table for filtering samples in genotype-samples
+ * { passportFields : [], showSelectPassportFields : false }
  *
  * @see userSettingsDefaults()
  *------------------------------------------------------------------------------
@@ -672,6 +676,10 @@ export default class PanelManageGenotypeComponent extends Component {
     }
     if (userSettings.sortByPassportFields === undefined) {
       userSettings.sortByPassportFields = false;
+    }
+
+    if (userSettings.passportTable === undefined) {
+      userSettings.passportTable = { passportFields : [], showSelectPassportFields : false };
     }
 
 

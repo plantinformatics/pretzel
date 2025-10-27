@@ -60,14 +60,18 @@ export default class EmberMulti2SelectComponent extends Component {
 
   //------------------------------------------------------------------------------
 
-  /** Collate Passport data values for @samples and @userSettings.passportFields.
-   * @samples and @userSettings.passportFields may be nullish, both defaulting to [].
+  /** done in ember-multi2-table.js
+  @alias('args.userSettings.passportTable.passportFields') passportFields;
+   */
+
+  /** Collate Passport data values for @samples and .passportFields.
+   * @samples and .passportFields may be nullish, both defaulting to [].
    * This is used to populate the column-header <select>s.
    * @return [fieldName] -> Set of unique string field values.
    * Return {} when this.args.samples is null or empty.
    */
   @computed(
-    'args.userSettings.passportFields', 'args.dataset', 'args.samples',
+    'passportFields', 'args.dataset', 'args.samples',
     'args.lastPassport',
     'args.mg.passportDataCount',
     'args.currentData.rows.length',
@@ -77,7 +81,7 @@ export default class EmberMulti2SelectComponent extends Component {
     const
     fnName = 'fieldsUniqueValues',
     dataset = this.args.dataset,
-    selectFields = this.args.userSettings.passportFields || [],
+    selectFields = this.passportFields || [],
     /** manage-genotype .samples is filtered by .filterSamplesByHaplotype
      * (not filteredSamples because this component replaces 'Filter by Name').
      */
@@ -110,16 +114,16 @@ export default class EmberMulti2SelectComponent extends Component {
    * descriptor data.
    * Currently the header and property are both the field name; potentially the
    * header could be formatted, e.g. capitalised.
-   * @userSettings.passportFields may be nullish, defaulting to [].
+   * .passportFields may be nullish, defaulting to [].
    * @return {Array<{header, property, filterOptions}>}
    */
-  @computed('args.userSettings.passportFields', 'fieldsUniqueValues')
+  @computed('passportFields', 'fieldsUniqueValues')
   get columns() {
     const
     fnName = 'columns',
     filterChanged = () => this.namesFiltersCount++,
     fieldsValues = this.fieldsUniqueValues,
-    passportFields = this.args.userSettings.passportFields || [],
+    passportFields = this.passportFields || [],
 
     /** in this commit passport-table{,-html-row} differ in that idField is
      * prepended to columns in passport-table-html-row. */
@@ -171,14 +175,16 @@ export default class EmberMulti2SelectComponent extends Component {
    * @return {Array<object>} Array of rows.  Row data is {fieldName : value, ...}
    */
   @computed(
-    'args.userSettings.passportFields', 'args.lastPassport', 'args.mg.passportDataCount',
+    'passportFields',
+    'passportFields.length',
+    'args.lastPassport', 'args.mg.passportDataCount',
     'args.dataset', 'args.samples', 'selectedFieldValuesCount',
     'namesFiltersCount',)
   get sampleData() {
     const
     fnName = 'sampleData',
     dataset = this.args.dataset,
-    selectFields = this.args.userSettings.passportFields,
+    selectFields = this.passportFields,
     samples = this.args.samples,
     /** cache of okFn-s for matchField */
     matchFieldFns = {},
@@ -232,6 +238,7 @@ export default class EmberMulti2SelectComponent extends Component {
     else if ((rows.length < 10) && (this.args.lastPassport < 4 * 20)) {
       this.args.getNextPage();
     }
+    this.requestMissing(rows);
 
     return rows;
   }
@@ -302,7 +309,7 @@ export default class EmberMulti2SelectComponent extends Component {
   get searchData() {
     const
     fnName = 'searchData',
-    selectFields = this.args.userSettings.passportFields,
+    selectFields = this.passportFields,
     /** cache of okFn-s for matchField */
     matchFieldFns = {},
     cdRows = this.args.currentData.rows,

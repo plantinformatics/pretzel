@@ -30,7 +30,8 @@ function itemsToNames(list) {
  * requested from the Genolink API endpoint /api/genesys/accession/query,
  * enabling the user to select which fields to add to the Genotype Table sample
  * / accession column headers.
- * @param userSettings	Genotype Table userSettings
+ * @param userSettings	userSettings for Genotype Table or for passport-table,
+ * for filtering samples in genotype-samples.
  */
 export default class PanelSelectPassportFieldsComponent extends Component {
 

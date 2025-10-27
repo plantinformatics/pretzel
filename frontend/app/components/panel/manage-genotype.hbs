@@ -8,13 +8,12 @@
 {{!-- --------------------------------------------------------------------- --}}
 
 {{#if this.showInputDialog}}
-
+{{!--     clickOutsideToClose=true --}}
   {{#ember-modal-dialog
     containerClassNames="genotype"
     onClose=(action (mut this.showInputDialog) false)
     targetAttachment="center"
     translucentOverlay=true
-    clickOutsideToClose=true
 
     title="Genotype Table Controls, Datasets, Samples, Filters, VCF Lookup Inputs"
     header-icon='search'

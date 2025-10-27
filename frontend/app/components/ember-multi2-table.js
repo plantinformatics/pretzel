@@ -10,6 +10,14 @@ import config from 'pretzel-frontend/config/environment';
 
 //------------------------------------------------------------------------------
 
+import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
+const /*import */{
+  missingCells,
+  requestMissingCells,
+} = vcfGenotypeBrapi.genolinkPassport; /*from 'vcf-genotype-brapi'; */
+
+//------------------------------------------------------------------------------
+
 import NamesFilters from '../utils/data/names-filters';
 
 //------------------------------------------------------------------------------
@@ -133,6 +141,10 @@ export default class EmberMulti2TableComponent extends Component {
       (this.fieldNamesFilters[fieldName] = new NamesFilters(filterChanged));
     return nf;
   }
+
+  //----------------------------------------------------------------------------
+
+  @alias('args.userSettings.passportTable.passportFields') passportFields;
 
   //----------------------------------------------------------------------------
 
@@ -647,5 +659,27 @@ You can define a callback function that is executed when the selection changes o
   }
  
   //----------------------------------------------------------------------------
+
+  /** Record the params of requests sent by requestMissing(), to avoid duplicate
+   * requests being sent while the original request is in transit.  */
+  requestCache = {};
+
+  /** Scan rows for missing cells, and request them.
+   * The request will redisplay the table, showing the received values.
+   * This is used for sampleData(); the other input to tableData, searchData(),
+   * requests the fields which are to be displayed.
+   * @param rows	table data
+   */
+  requestMissing(rows) {
+    const
+    fnName = 'requestMissing',
+    missing = missingCells(rows, this.args.userSettings.passportTable.passportFields),
+    promises = requestMissingCells(this.requestCache, missing, this.args.getNamedRows);
+    // future option : return Promise.all(promises.filter(p => p);
+    promises.forEach(p =>
+      p && p.then(() => later(() => this.args.mg.passportDataCount++)));
+  }
+
+  //------------------------------------------------------------------------------
 
 }
