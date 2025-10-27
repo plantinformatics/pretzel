@@ -68,6 +68,18 @@ export default class PassportTable extends Component {
   @alias('args.userSettings.passportTable.passportFields') passportFields;
 
   //----------------------------------------------------------------------------
+
+  /** If the active dataset has _meta.Crop, select that value in the crop.name
+   * column, i.e. use that as an initial filter.
+   */
+  get initialFilter() {
+    const
+    Crop = this.args.dataset?._meta?.Crop,
+    filter = Crop ? {key : 'crop.name', value : Crop} : undefined;
+    return filter;
+  }
+
+  //----------------------------------------------------------------------------
   /** Cache of paged input data streams.
    * searchStringName ->  {PagedData}
    */

@@ -12,6 +12,7 @@ import config from 'pretzel-frontend/config/environment';
 
 import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
 const /*import */{
+  passportFieldNamesCategory,
   missingCells,
   requestMissingCells,
 } = vcfGenotypeBrapi.genolinkPassport; /*from 'vcf-genotype-brapi'; */
@@ -110,6 +111,10 @@ export default class EmberMulti2TableComponent extends Component {
   constructor() {
     super(...arguments);
 
+    if (this.args.initialFilter) {
+      this.setInitialFilter(this.args.initialFilter);
+    }
+
     // used in development only, in Web Inspector console.
     if (window.PretzelFrontend) {
       window.PretzelFrontend.emberMulti2Table = this;
@@ -145,6 +150,26 @@ export default class EmberMulti2TableComponent extends Component {
   //----------------------------------------------------------------------------
 
   @alias('args.userSettings.passportTable.passportFields') passportFields;
+
+  //----------------------------------------------------------------------------
+
+  /** Used to set an initial filter on crop.name : dataset._meta.Crop (if defined). */
+  setInitialFilter(initialFilter) {
+    const
+    fieldName = initialFilter.key,
+    isCategory = passportFieldNamesCategory.includes(fieldName);
+    if (isCategory) {
+      this.selectedFieldValues[initialFilter.key] = [initialFilter.value];
+    } else {
+      /* not required because Crop is a category. */
+      const
+      nf = this.columns.findBy('property', fieldName).namesFilters,
+      value = initialFilter.value;
+      nf.nameFilterChanged(value);
+      nf.nameFilterDebounced = value;
+      nf.nameFilter = value;
+    }
+  }
 
   //----------------------------------------------------------------------------
 
