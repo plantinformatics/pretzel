@@ -2,6 +2,8 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { debounce } from '@ember/runloop';
 
+//------------------------------------------------------------------------------
+
 /**
  * Component args :	
  * @param column	column definition {header, property, filterOptions }

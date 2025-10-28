@@ -12,6 +12,7 @@ import config from 'pretzel-frontend/config/environment';
 
 import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
 const /*import */{
+  genolinkFieldNames,
   passportFieldNamesCategory,
   missingCells,
   requestMissingCells,
@@ -97,7 +98,7 @@ export default class EmberMulti2TableComponent extends Component {
 
   idField = this.args.idFieldName || 'genotypeID'; 
   /** indicate that idField is prepended to columns. */
-  idFieldInColumns = true;
+  idFieldInColumns = false;
 
   /** Limit the number of sample / accession names displayed in the selection list.
    * See also @userSettings.samplesLimit which is the number of samples which may be
@@ -175,6 +176,8 @@ export default class EmberMulti2TableComponent extends Component {
 
   /** User action which selects a value of a Passport field, to add/remove to
    * the corresponding column filter, implemented by mismatch in tableData().
+   * @param column  from .columns()
+   * @param target	DOM <select> element which is target of user click
    */
   @action
   selectFieldValue(column, target) {
@@ -192,7 +195,7 @@ export default class EmberMulti2TableComponent extends Component {
      * searched with /query _text=
      * An alternative is countryOfOrigin.name which is 'Provenance of Material'.
      */
-    if ((column.property !== 'region') &&  (column.property !== 'subRegion')) {
+    if (! genolinkFieldNames.includes(column.property)) {
       const
       key = column.property,
       /** The most recently selected value is target.value */

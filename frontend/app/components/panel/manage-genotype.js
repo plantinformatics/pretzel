@@ -189,6 +189,7 @@ const genolinkBaseUrl = "https://genolink.plantinformatics.io";
  * This is a subset of passportFieldNames (genolink-passport.js).
  */
 const passportFields = [
+  "genotypeID",
   "region",
   "subRegion",
   "accessionName",

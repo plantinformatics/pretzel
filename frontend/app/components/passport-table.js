@@ -8,6 +8,7 @@ import { alias } from '@ember/object/computed';
 
 import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
 const /*import */{
+  genolinkFieldNames,
   accessionNumbers2genotypeIds,
 } = vcfGenotypeBrapi.genolinkPassport; /*from 'vcf-genotype-brapi'; */
 
@@ -79,6 +80,11 @@ export default class PassportTable extends Component {
     return filter;
   }
 
+  @tracked
+  /** true means a row is displayed iff it has a value in the id (genotypeID)
+   * column. */
+  requireId = true;
+
   //----------------------------------------------------------------------------
   /** Cache of paged input data streams.
    * searchStringName ->  {PagedData}
@@ -114,7 +120,10 @@ export default class PassportTable extends Component {
    */
   nameFilterChanged([key, value]) {
     const fnName = 'passport-table : nameFilterChanged';
-    if (value) {
+    if (genolinkFieldNames.includes(key)) {
+      // key cannot be searched via /query _text
+    }
+    else if (value) {
       this.currentSearch = {key, value};
     } else {
       if (this.currentSearch.key === key) {

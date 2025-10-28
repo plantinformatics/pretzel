@@ -5,17 +5,32 @@
   class="whitespace-nowrap cursor-pointer select-none"
 >
 
-  <div
+  <div style="display: flex; justify-content: space-between;" >
+    <span
     {{on "click" (fn @toggleSort @column.property)}}
     title="Click to sort; click again to reverse" >
     {{@column.header}}
   {{#if (eq @sortBy @column.property)}}
     <span aria-hidden="true">{{if (eq @sortDir "asc") " ▲" " ▼"}}</span>
   {{/if}}
+    </span>
+    {{#if @column.isId}}
+      <span>
+        <input type="checkbox"
+        checked={{this.args.requireId}}
+        oninput={{action @setRequireId value="target.checked" }}  >
+        {{!-- avoiding div.genotype label { margin-top: 2em; } --}}
+        <label style="margin-top: inherit;" >
+          Required
+        </label>
+      </span>
+    {{/if}}
   </div>
 
   {{!-- for filtering on this column --}}
-
+  {{!-- these 2 cases are respectively :
+      - namesFilters via text <input>,
+      - category filter via <select> --}}
   {{#if @column.namesFilters}}
     <input id="nameFilter" type="search" value={{this.nameFilter}}
       oninput={{this.nameFilterChangedDebounce}}

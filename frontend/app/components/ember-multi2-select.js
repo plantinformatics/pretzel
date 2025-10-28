@@ -67,7 +67,7 @@ export default class EmberMulti2SelectComponent extends Component {
   /** Collate Passport data values for @samples and .passportFields.
    * @samples and .passportFields may be nullish, both defaulting to [].
    * This is used to populate the column-header <select>s.
-   * @return [fieldName] -> Set of unique string field values.
+   * @return [fieldName] -> array of unique string field values.
    * Return {} when this.args.samples is null or empty.
    */
   @computed(
@@ -81,7 +81,9 @@ export default class EmberMulti2SelectComponent extends Component {
     const
     fnName = 'fieldsUniqueValues',
     dataset = this.args.dataset,
-    selectFields = this.passportFields || [],
+    passportFields = this.passportFields || [],
+    selectFields = passportFields.filter(
+      fieldName => passportFieldNamesCategory.includes(fieldName)),
     /** manage-genotype .samples is filtered by .filterSamplesByHaplotype
      * (not filteredSamples because this component replaces 'Filter by Name').
      */
@@ -105,9 +107,13 @@ export default class EmberMulti2SelectComponent extends Component {
         }
       });
       return fv;
-    }, {});
-    dLog(fnName, fieldValues);
-    return fieldValues;
+    }, {}),
+    entriesSorted = 
+      Object.entries(fieldValues).map(([fieldName, set]) =>
+        [fieldName, Array.from(set).sort()]),
+    sorted = Object.fromEntries(entriesSorted);
+    dLog(fnName, sorted /*,fieldValues*/);
+    return sorted;
   }
 
   /** Each Passport field selected by the user is translated here into column
@@ -131,14 +137,16 @@ export default class EmberMulti2SelectComponent extends Component {
     fields = this.idFieldInColumns ? [this.idField].concat(passportFields) : passportFields,
     columns = fields.map(fieldName => {
       const
-      set = fieldsValues[fieldName],
-      filterOptions = set ? Array.from(set) : [],
+      array = fieldsValues[fieldName],
+      filterOptions = array || [],
       isCategory = passportFieldNamesCategory.includes(fieldName),
+      isId = fieldName === this.idField,
       namesFilters = isCategory ? undefined : this.newNamesFilters(fieldName, filterChanged),
       /** Persist fieldSearchString because columns[] is re-created after paging. */
       fieldSearchString = this.fieldSearchString,
       column = {
-        header: fieldName, property: fieldName, filterOptions, namesFilters,
+        header: fieldName, property: fieldName, isId,
+        filterOptions, namesFilters,
         fieldSearchString
       };
       if (namesFilters && fieldSearchString[fieldName] && ! namesFilters.nameFilter) {
@@ -185,13 +193,20 @@ export default class EmberMulti2SelectComponent extends Component {
     fnName = 'sampleData',
     dataset = this.args.dataset,
     selectFields = this.passportFields,
-    samples = this.args.samples,
     /** cache of okFn-s for matchField */
     matchFieldFns = {},
     // tableLength = (this.samplesListLimit ?? 500),
     rows = [];
+    let samples = this.args.samples;
     if (! samples) {
       return rows;
+    }
+    /** Pre-filter samples by genotypeID if it has a search input. */
+    const nf = this.columns[0].namesFilters;
+    if (nf.nameFilterArray.length) {
+      samples = samples.filter(value =>   
+        ((value === null) ? false :
+         nf.matchFilters(value, nf.nameFilterArray, true, true)));
     }
     for (
       let sampleIndex = 0;
@@ -203,7 +218,8 @@ export default class EmberMulti2SelectComponent extends Component {
       sampleName = samples[sampleIndex],
       values = this.args.sampleNamePassportValues(sampleName, selectFields, dataset),
       rowEntries = [],
-      mismatch = values.find((value, fieldIndex) => {
+      /** find any field which has a filter and the data does not match it. */
+      mismatchIndex = values.findIndex((value, fieldIndex) => {
         const
         fieldName = selectFields[fieldIndex],
         ok = this.matchField(matchFieldFns, value, fieldIndex, fieldName);
@@ -212,9 +228,9 @@ export default class EmberMulti2SelectComponent extends Component {
           rowEntries.push(entry);
         }
         return ! ok;
-        dLog(fnName, sampleIndex, sampleName, values, rowEntries, mismatch);
+        dLog(fnName, sampleIndex, sampleName, values, rowEntries, mismatchIndex);
       });
-      if (! mismatch) {
+      if (mismatchIndex === -1) {
         rowEntries.push(['genotypeID', sampleName]);	// or genotypeId
         const row = Object.fromEntries(rowEntries);
         rows.push(row);
@@ -257,7 +273,8 @@ export default class EmberMulti2SelectComponent extends Component {
       (cache[cacheKey] = constructFieldFilter.apply(this, [fieldIndex, fieldName]));
     function constructFieldFilter(fieldIndex, fieldName) {
       const
-      column = this.columns[fieldIndex+1],
+      /** don't expect to need idFieldInColumns===true in future so this can be simplified. */
+      column = this.columns[fieldIndex + (this.idFieldInColumns ? 1 : 0)],
       nf = column.namesFilters,
       okFn = nf ? 
         (value) => nf.nameFilterArray.length ?
@@ -269,16 +286,21 @@ export default class EmberMulti2SelectComponent extends Component {
         filterOptions = this.selectedFieldValues[fieldName],
         ok = ! filterOptions?.length || filterOptions.includes(value);
         return ok;
-      };
-      return okFn;
+      },
+      combinedFn = this.args.requireId && (fieldName === this.idField) ?
+        value => !! value && okFn(value) : okFn;
+      return combinedFn;
     }
     return fn;
   }
   matchField(cache, value, fieldIndex, fieldName) {
     const
     fnName = 'matchField',
-    /** based on get filteredSamples() (panel/manage-genotype.js )  */
-    ok = this.okFn(cache, fieldIndex, fieldName)(value);
+    /** based on get filteredSamples() (panel/manage-genotype.js )
+     * null values are from Genesys so they can't match - assigned false in okFn
+     * undefined values are not yet retrieved, so assign ok = true here.
+     */
+    ok = (value === undefined) || this.okFn(cache, fieldIndex, fieldName)(value);
     return ok;
   }
 
@@ -319,7 +341,7 @@ export default class EmberMulti2SelectComponent extends Component {
     rows = cdRows?.length ? cdRows : this.cachedRows(),
     filteredRows = rows.filter(row => {
       const
-      mismatch = selectFields.find((fieldName, fieldIndex) => {
+      mismatchIndex = selectFields.findIndex((fieldName, fieldIndex) => {
         const
         value = row[fieldName],
         /** (for fieldName 'aliases'), map array of objects to array of name strings. */
@@ -327,7 +349,7 @@ export default class EmberMulti2SelectComponent extends Component {
         ok = this.matchField(matchFieldFns, valueName, fieldIndex, fieldName);
         return ! ok;
       });
-      return ! mismatch;
+      return mismatchIndex === -1;
     });
     return filteredRows;
   }
@@ -374,7 +396,7 @@ export default class EmberMulti2SelectComponent extends Component {
   }
 
   /** User action which selects a value of a Passport field, to add/remove to
-   * the corresponding column filter, implemented by mismatch in tableData().
+   * the corresponding column filter, implemented by mismatchIndex in {sample,search}Data().
    */
   @action
   selectFieldValue(column, target) {

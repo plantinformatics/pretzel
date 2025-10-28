@@ -105,7 +105,7 @@
   },
   "dependencies": {
     "@ember/test-helpers": "^3.3.0",
-    "@plantinformatics/vcf-genotype-brapi": "^1.0.32",
+    "@plantinformatics/vcf-genotype-brapi": "^1.0.33",
     "@solgenomics/brapijs": "https://github.com/solgenomics/BrAPI-js.git",
     "@voll/ember-parachute": "^2.0.0",
     "bluebird": "^3.7.2",
