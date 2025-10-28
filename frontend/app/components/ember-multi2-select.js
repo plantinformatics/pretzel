@@ -187,7 +187,10 @@ export default class EmberMulti2SelectComponent extends Component {
     'passportFields.length',
     'args.lastPassport', 'args.mg.passportDataCount',
     'args.dataset', 'args.samples', 'selectedFieldValuesCount',
-    'namesFiltersCount',)
+    'namesFiltersCount',
+    // used in matchField() : okFn()
+    'args.requireId',
+  )
   get sampleData() {
     const
     fnName = 'sampleData',
@@ -327,6 +330,8 @@ export default class EmberMulti2SelectComponent extends Component {
     'selectedFieldValuesCount',
     // incremented when user alters nameFilter
     'namesFiltersCount',
+    // used in matchField() : okFn()
+    'args.requireId',
   )
   get searchData() {
     const
