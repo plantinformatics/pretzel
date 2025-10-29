@@ -167,7 +167,7 @@ export default class PassportTable extends Component {
             a2gMap = ag.Samples.reduce((map, {Accession, Sample}) => {
               map.set(Accession, Sample);
               return map;
-            }, new Map());
+            }, dataset.samplesPassport.a2gMap);
             this.toSamplesPassport(a2gMap, dataset, data[0]);
           });
         });
@@ -179,33 +179,45 @@ export default class PassportTable extends Component {
     return promise;
   }
 
-  /** Store the received data in data.samplesPassport
+  /** Store the received data in data.samplesPassport.{genotypeID,accessionNumber}.
    * Use a2gMap to map accessionNumber in data[] to genotypeId, which is the
-   * sampleName used to index .samplesPassport.
+   * sampleName used to index .samplesPassport.genotypeID
    */
   toSamplesPassport(a2gMap, dataset, data) {
     /** Based on datasetGetPassportData() : receive(). (manage-genotype.js)
      */
     const
     fnName = 'toSamplesPassport',
-    samplesPassport = dataset.samplesPassport || (dataset.samplesPassport = {});
+    samplesPassport = dataset.samplesPassport;
     data.forEach((datum, i) => {
+      /** In a Genolink API endpoint if genotypeIds are given as search
+       * parameters, then Genolink inserts the genotypeID in the result.
+       * Otherwise the .genotypeID field is "", so in this case augment the
+       * result with .genotypeID = sampleName.
+       */
+      // if datum.genotypeID is undefined, null, or ''
+      if (! datum.genotypeID) {
+        // Modify the parsed result, as this is returned by .tableData().
+        datum.genotypeID = sampleName;
+      } else if (datum.genotypeID !== sampleName) {
+        dLog(fnName, sampleName, datum.genotypeID, datum);
+      }
+
+      /** accessionNumber is the Genesys ID, so if corresponding Genolink /
+       * Pretzel ID (genotypeID) is not found, cache the data by
+       * accessionNumber.
+       */
       const sampleName = a2gMap.get(datum.accessionNumber);
       if (! sampleName) {
-        // dLog(fnName, datum.accessionNumber, datum);
+        dLog(fnName, datum.accessionNumber, datum);
+        const
+        spx = samplesPassport.accessionNumber,
+        sp = spx[datum.accessionNumber] || (spx[datum.accessionNumber] = {});
+        Object.assign(sp, datum);
       } else {
-        const sp = samplesPassport[sampleName] || (samplesPassport[sampleName] = {});
-        Object.entries(datum).forEach(([field, value]) => {
-          sp[field] = value; // datum[field];
-        });
-        // if datum.genotypeID is undefined, null, or ''
-        if (! datum.genotypeID) {
-          // Modify the parsed result, as this is returned by .tableData().
-          datum.genotypeID = sampleName;
-        } else if (datum.genotypeID !== sampleName) {
-          dLog(fnName, sampleName, datum.genotypeID, datum);
-        }
-        sp.genotypeID = sampleName;
+        const
+        spx = samplesPassport.genotypeID,
+        sp = spx[sampleName] || (spx[sampleName] = {});
       }
     });
 

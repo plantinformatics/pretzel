@@ -142,7 +142,7 @@ const callRateSymbol = Symbol.for('callRate');
 /** Indicate whether Alt or Ref value should be matched at this Feature / SNP.
  * feature[matchRefSymbol] true/false.  */
 const matchRefSymbol = Symbol.for('matchRef');
-/** Cache of Passport data for the sampleName, i.e. dataset.samplesPassport[sampleName]
+/** Cache of Passport data for the sampleName, i.e. dataset.samplesPassport.genotypeID[sampleName]
  * This attribute is assigned to a String sampleName. 
  */
 const passportSymbol = Symbol.for('passport');
@@ -3783,7 +3783,7 @@ export default class PanelManageGenotypeComponent extends Component {
          * used. cmp is exported. */
         selectFields.find(fieldName => {
           const
-          /** dataset.samplesPassport[sampleName] */
+          /** dataset.samplesPassport.genotypeID[sampleName] */
           v = sampleNames.map(sampleName => this.findPassportFields(sampleName)?.[fieldName]);
           cmp = passportValueCompare(v);
           // .find() will exit when cmp!==0
@@ -3806,7 +3806,7 @@ export default class PanelManageGenotypeComponent extends Component {
   findPassportFields(sampleName) {
     let fieldValues = sampleName[passportSymbol];
     if (! fieldValues) {
-      this.gtDatasets.find(d => (fieldValues = d.samplesPassport?.[sampleName]));
+      this.gtDatasets.find(d => (fieldValues = d.samplesPassport?.genotypeID[sampleName]));
     }
     return fieldValues;
   }
@@ -4048,7 +4048,7 @@ export default class PanelManageGenotypeComponent extends Component {
            */
           all = Object.values(this.vcfGenotypeSamplesSelectedAll),
           selectedSamples = all.length ? [].concat.apply(all[0], all.slice(1)) : [],
-          /** pass visibleBlocks for .datasetId.samplesPassport */
+          /** pass visibleBlocks for .datasetId.samplesPassport.genotypeID */
           options = {userSettings, selectedSamples, visibleBlocks};
           if (this.urlOptions.gtMergeRows) {
             /** {rows, sampleNames}; */
@@ -5205,7 +5205,7 @@ export default class PanelManageGenotypeComponent extends Component {
    * @param selectFields  array of string Passport field names
    * @return promise which currently yields all the received data columns;
    * caller only needs genotypeIds / accessionNumbers, as the data
-   * has been loaded into dataset.samplesPassport.
+   * has been loaded into dataset.samplesPassport.{genotypeID,accessionNumber}.
    */
   datasetGetPassportData(dataset, {sampleNames, genotypeIds, accessionNumbers, _text, page, pageLength}, selectFields) {
     const fnName = 'datasetGetPassportData';
@@ -5228,9 +5228,13 @@ export default class PanelManageGenotypeComponent extends Component {
         const
         // fillInMissingData() has already extracted .content from the response
         d = data,
-        samplesPassport = dataset.samplesPassport || (dataset.samplesPassport = {});
+        samplesPassport = dataset.samplesPassport.genotypeID;
         d.forEach((datum, i) => {
           const sampleName = datum.genotypeID;
+          /* similar : Object.assign(sp, datum);
+           * but datum may have an extra field : countryOfOrigin.codeNum
+           * which Genolink adds, probably to support subRegion request.
+           */
           selectFields.forEach(field => {
             const sp = samplesPassport[sampleName] || (samplesPassport[sampleName] = {});
             sp[field] = datum[field];

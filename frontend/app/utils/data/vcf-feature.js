@@ -365,7 +365,7 @@ function columnName2SampleName(columnName) {
  * fields from the Passport data of the accession.
  * @param sampleName
  * @param selectFields	user-selected list of fields to add (userSettings.passportFields)
- * @param dataset	for dataset.samplesPassport
+ * @param dataset	for dataset.samplesPassport.genotypeID
  * which contains the Passport field value for the samples
  * @return {Array<string>} values	the Passport field value for the samples
  * default is [], if ! selectFields.length or sampleName is not a sample, or
@@ -374,9 +374,10 @@ function columnName2SampleName(columnName) {
 export function sampleNamePassportValues(sampleName, selectFields, dataset) {
   let values = [];
   if (selectFields.length && ! valueNameIsNotSample(sampleName)) {
-    if (dataset?.samplesPassport?.[sampleName]) {
+    const sampleCache = dataset?.samplesPassport?.genotypeID[sampleName];
+    if (sampleCache) {
       values = selectFields.map(fieldName => {
-        let text = dataset.samplesPassport[sampleName][fieldName];
+        let text = sampleCache[fieldName];
         /** 'aliases' value is an array of objects; use the .name field  */
         if ((typeof text === 'object') && Array.isArray(text) &&
             (typeof text[0] === 'object')) {
@@ -397,7 +398,7 @@ export function sampleNamePassportValues(sampleName, selectFields, dataset) {
  * @param sampleName
  * @param selectFields	user-selected list of fields to add (userSettings.passportFields)
  * @param datasetId	to lookup the Passport data of the sampleName
- * @param visibleBlocks	for visibleBlocks[].datasetId.samplesPassport
+ * @param visibleBlocks	for visibleBlocks[].datasetId.samplesPassport.genotypeID
  * which contains the Passport field value for the samples
  * @param as for sampleNamePassportValues()
  */
@@ -899,13 +900,13 @@ function vcfFeatures2MatrixViewRowsResult(
     /** passportSymbol is used by : columnNamesCmp() -> sampleNamesCmpField() -> findPassportFields()
      */
      .map(name => {
-       const fieldValues = Ember_get(dataset, 'samplesPassport')?.[name];
+       const fieldValues = Ember_get(dataset, 'samplesPassport.genotypeID')?.[name];
        if (fieldValues) { name = stringSetSymbol(passportSymbol, name, fieldValues); }
        return name; })
     .sort(columnNamesCmp),
   /* for re-adding passportSymbol, if required.
   fieldValues = columnNamesSorted
-    .map(name => Ember_get(dataset, 'samplesPassport')?.[name]),
+    .map(name => Ember_get(dataset, 'samplesPassport.genotypeID')?.[name]),
     */
   columnNames = columnNamesSorted
     // could skip these for non-samples
