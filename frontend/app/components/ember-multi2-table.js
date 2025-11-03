@@ -160,7 +160,11 @@ export default class EmberMulti2TableComponent extends Component {
     fieldName = initialFilter.key,
     isCategory = passportFieldNamesCategory.includes(fieldName);
     if (isCategory) {
-      this.selectedFieldValues[initialFilter.key] = [initialFilter.value];
+      // this.selectedFieldValues[initialFilter.key] = [initialFilter.value];
+      const
+      column = this.columns.findBy('property', initialFilter.key),
+      targetMock = {selectedOptions : [{value : initialFilter.value}]};
+      later(() => this.selectFieldValue(column, targetMock));
     } else {
       /* not required because Crop is a category. */
       const
