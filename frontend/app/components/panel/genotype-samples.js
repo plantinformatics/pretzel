@@ -44,6 +44,16 @@ export default class PanelGenotypeSamplesComponent extends Component {
 
   //----------------------------------------------------------------------------
 
+  get enablePassportData() {
+    const
+    enable = this.args.enablePassportData &&
+      (this.activeDataset.isGenolink &&
+       (this.urlOptions.tableRow || this.urlOptions.multiSelect));
+    return enable;
+  }
+
+  //----------------------------------------------------------------------------
+
   constructor() {
     super(...arguments);
 
@@ -125,7 +135,16 @@ export default class PanelGenotypeSamplesComponent extends Component {
     const
     fnName = 'selectedSamplesGetPassport',
     g = this.args.the,
-    aggSamples = g.selectedSamples.filter(s => s.match(/^AGG/)),
+    /** Originally this filtered for samples which matched the AGG name pattern
+     * and hence are known to be available on Genolink.  This is no longer
+     * required since we now indicate datasets which have samples on Genolink
+     * with _meta.GenolinkURL "Genolink", and all their samples are valid for
+     * Passport requests.
+     *
+     *  This was later factored as sampleNameIsAGG().
+     * .filter(s => s.match(/^AGG/)),
+     */
+    aggSamples = g.selectedSamples,
     genotypeIds = aggSamples,
     /** The user may want selectFields to be those of the Genotype Table column
      * headers, or passport-table columns.
@@ -182,12 +201,18 @@ export default class PanelGenotypeSamplesComponent extends Component {
     const
     fnName = 'genolinkSearchURL',
     g = this.args.the;
-    if (! g.selectedSamples) {
+    /** related : enablePassportData() */
+    if (! g.selectedSamples ||
+        ! (/*this.args.enablePassportData &&*/ this.activeDataset.isGenolink)) {
       return undefined;
     }
     const
-    aggSamples = g.selectedSamples.filter(s => s.match(/^AGG/)),
-    truncatedMessage = (aggSamples.length > genolinkSearchIdsLimit) ? 'Maximum 100 IDs' : '',
+    /** Same comment as in selectedSamplesGetPassport() above, 
+     * .filter(s => s.match(/^AGG/))
+     */
+    aggSamples = g.selectedSamples,
+    truncatedMessage = (aggSamples.length > genolinkSearchIdsLimit) ?
+      'Maximum ' + genolinkSearchIdsLimit + ' IDs' : '',
     gIdsTruncated = truncatedMessage ? aggSamples.slice(0, genolinkSearchIdsLimit) : aggSamples,
     /** Sample / Accession names are system data not user data, and do not require quoting ATM. */
     genotypeIds = gIdsTruncated.join(','),

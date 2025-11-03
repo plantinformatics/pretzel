@@ -171,8 +171,7 @@
 
   </div>
 
-  {{#if @enablePassportData}}
-  {{#if (or this.urlOptions.tableRow this.urlOptions.multiSelect)}}
+  {{#if this.enablePassportData }}
   {{log 'genotype-samples' this this.args.userSettings @userSettings}}
   <div class="passport-table"
     {{did-insert (action (mut this.scrolledDiv)) }}
@@ -214,9 +213,8 @@
 
   </div>
   {{/if}}       {{!-- passport-table for selecting samples tableRow or multiSelect --}}
-  {{/if}}
 
-  {{#unless this.urlOptions.tableRow}}
+  {{#unless this.enablePassportData}}
   <div class="genotype-controls">
 
     <select style="height:100px" class="form-control" multiple onchange={{action @the.selectSample}}>
@@ -282,7 +280,7 @@
     {{/if}}
   </span>
   
-  {{#if this.urlOptions.passportExport}}
+  {{#if (and this.urlOptions.passportExport this.activeDataset.isGenolink)}}
   <button type="button" class="btn btn-info btn-xs padding-thin" style="margin-left:0.8em" {{on 'click' (action this.selectedSamplesGetPassport) }}>
     Passport
     {{#ember-tooltip side="top-start" delay=500}}

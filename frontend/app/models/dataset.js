@@ -194,6 +194,13 @@ export default Record.extend({
     return this.hasTag('VCF');
   },
 
+  /** @return true if the samples of this dataset can be used in Genolink
+   * Passport requests
+   */
+  get isGenolink() {
+    return this._meta?.GenolinkURL;
+  },
+
   //----------------------------------------------------------------------------
 
   /** positionFilter is applicable to VCF / genotype datasets, and indicates if

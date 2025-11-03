@@ -1080,7 +1080,7 @@ While scrolling through the Genotype Table this updates to show where the curren
         <span>To enable connectivity to Genolink/Genesys-PGR, you need to accept the terms in
           <LinkTo @route="account-settings" @classNames="" @tagName="a">Account</LinkTo>
         </span>
-      {{else}}
+      {{else if this.activeDataset.isGenolink}}
 
         <div>
           <label>Genolink</label>
