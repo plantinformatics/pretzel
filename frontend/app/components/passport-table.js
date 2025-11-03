@@ -1,5 +1,5 @@
 import Component from '@glimmer/component';
-import { action, computed } from '@ember/object';
+import { action, computed, set as Ember_set } from '@ember/object';
 import { later } from '@ember/runloop';
 import { tracked } from '@glimmer/tracking';
 import { alias } from '@ember/object/computed';
@@ -9,6 +9,7 @@ import { alias } from '@ember/object/computed';
 import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
 const /*import */{
   genolinkFieldNames,
+  PassportFilter,
   accessionNumbers2genotypeIds,
 } = vcfGenotypeBrapi.genolinkPassport; /*from 'vcf-genotype-brapi'; */
 
@@ -26,6 +27,18 @@ const genolinkBaseUrl = "https://genolink.plantinformatics.io";
 //------------------------------------------------------------------------------
 
 const dLog = console.debug;
+
+//------------------------------------------------------------------------------
+
+/** Map a search description (.currentSearch or .searchKV) to a text
+ * name for caching in PagedData()
+ */
+function searchNameFn(search) {
+  const
+  name = ((search.key ?? '') + '|' + (search.value ?? '')) +
+    (search.filter ? '|' + JSON.stringify(search.filter) : '');
+  return name;
+}
 
 //------------------------------------------------------------------------------
 
@@ -85,6 +98,11 @@ export default class PassportTable extends Component {
    * column. */
   requireId = true;
 
+  @tracked
+  /* incremented after accessionNumbers2genotypeIds() gets genotypeIDs for
+   * _text search result */
+  genotypeIDsReceived = 0;
+
   //----------------------------------------------------------------------------
   /** Cache of paged input data streams.
    * searchStringName ->  {PagedData}
@@ -95,8 +113,9 @@ export default class PassportTable extends Component {
   /** undefined, or {key, value} defining the most recent search entered by the user. */
   currentSearch = undefined;
 
-  @computed('currentSearch', 'args.mg.namesFilters.nameFilterDebounced')
+  @computed('currentSearch', 'currentSearch.changeCount', 'args.mg.namesFilters.nameFilterDebounced')
   get currentData () {
+    dLog('currentData', 'currentSearch', this.currentSearch, this.currentSearch?.changeCount);
     const
     /** mg.sampleNameFilter is not updated. */
     sampleNameFilter = this.args.mg .namesFilters.nameFilterDebounced,
@@ -105,7 +124,7 @@ export default class PassportTable extends Component {
     searchKV = this.currentSearch ||
       ((sampleNameFilter ?? false) ?
        (this.currentSearch = { key : 'All', value : sampleNameFilter}) : undefined),
-    searchName = searchKV ? searchKV.key + '|' + searchKV.value : 'NoSearch',
+    searchName = searchKV ? searchNameFn(searchKV) : 'NoSearch',
     search = this.pagedData[searchName] ||
       (this.pagedData[searchName] = new PagedData(searchName, searchKV, this.getPage, this.pageLength));
     return search;
@@ -116,19 +135,39 @@ export default class PassportTable extends Component {
   @action
   /** Signal from ember-multi2-column that user has entered value in column with
    * property key.
+   * Update .currentSearch to implement this search.
    * @param [key, value]
+   * value is an array of strings when called from selectFieldValue(),
+   * or otherwise a single string.
    */
   nameFilterChanged([key, value]) {
     const fnName = 'passport-table : nameFilterChanged';
+    dLog(fnName, key, value, 'currentSearch', this.currentSearch);
+    const
+    currentSearch = this.currentSearch || (this.currentSearch = {}),
+    /** previous .filter, preserved when changing .currentSearch.{key,value}.  */
+    filter = currentSearch?.filter;
+
+    let changeCount = currentSearch?.changeCount ?? 0;
+    function signalChange() { Ember_set(currentSearch, 'changeCount', ++changeCount); }
     if (genolinkFieldNames.includes(key)) {
       // key cannot be searched via /query _text
-    }
-    else if (value) {
-      this.currentSearch = {key, value};
+    } else if (key === 'crop.name') {
+      PassportFilter.update(currentSearch, key, value);
+      // this.currentSearch = Object.assign({}, currentSearch);
+      signalChange();
+    } else if (value) {
+      if (Array.isArray(value)) {
+        value = value.map(o => '"' + o + '"').join('|');
+      }
+      Object.assign(currentSearch, {key, value});
+      // Object.assign() bypasses `set changeCount()`
+      signalChange();
     } else {
-      if (this.currentSearch.key === key) {
-        dLog(fnName, 'removing', this.currentSearch, value);
-        this.currentSearch = { key : 'All', value : ""};
+      if (currentSearch.key === key) {
+        dLog(fnName, 'removing', currentSearch, value);
+        Object.assign(currentSearch, {key : 'All', value : ""});
+        signalChange();
       }
     }
   }
@@ -139,7 +178,7 @@ export default class PassportTable extends Component {
   /** Get requested page of the result for searchKV. */
   getPage(searchKV, page) {
     let promise;
-    if (! searchKV || ! searchKV.value) {
+    if (! searchKV || ! (searchKV.value || searchKV.filter)) {
       promise = this.getNextPageNoSearch();
     } else {
       const
@@ -147,17 +186,27 @@ export default class PassportTable extends Component {
 
       selectFields = this.passportFields,
       /** name value as _text for passing in parameter bundle to getPassportData(). */
-      {key, value : _text} = searchKV;
-      dLog(fnName, page, key, _text, this.pageLength);
+      {key, value : _text, filter : filter_} = searchKV,
+      filter = filter_?.body;
+      dLog(fnName, page, key, _text, this.pageLength, filter, filter_);
       // Already have sampleNames, so nothing to request if ! selectFields.length
       if (selectFields.length) {
         const dataset = this.args.dataset;
         /** /query ?_text is across all fields; key is not passed */
-        const optionsParam = {_text, page, pageLength : this.pageLength};
+        const optionsParam = {_text, filter, page, pageLength : this.pageLength};
         promise = this.args.mg.datasetGetPassportData(dataset, optionsParam, selectFields);
-        promise.then(data => {
-          dLog(fnName, data);
-          const accessionNumbers = data[0].mapBy('accessionNumber');
+        promise.then(dataChunks => {
+          dLog(fnName, dataChunks);
+          /** perhaps concat the chunk results */
+          const data = dataChunks[0];
+          const a2gMap = dataset.samplesPassport.a2gMap;
+          /** Before accessionNumbers2genotypeIds(), a2gMap may not have
+           * the necessary genotypeID-s, but render occurs before
+           * accessionNumbers2genotypeIds().then().
+           * This .genotypeIDForRow() is repeated in .then().
+           */
+          data.forEach(datum => {const sampleName = this.genotypeIDForRow(datum, a2gMap); if (sampleName) dLog(fnName, sampleName, datum);});
+          const accessionNumbers = data.mapBy('accessionNumber');
           accessionNumbers2genotypeIds(accessionNumbers, genolinkBaseUrl).then(ag => {
             const
             /** Use result ag to map from accessionNumber to genotypeId.
@@ -168,7 +217,9 @@ export default class PassportTable extends Component {
               map.set(Accession, Sample);
               return map;
             }, dataset.samplesPassport.a2gMap);
-            this.toSamplesPassport(a2gMap, dataset, data[0]);
+            this.toSamplesPassport(a2gMap, dataset, data);
+            /** after genotypeIDForRow(), searchData() needs re-filter. */
+            this.genotypeIDsReceived++;
           });
         });
       } else {
@@ -178,7 +229,28 @@ export default class PassportTable extends Component {
     }
     return promise;
   }
+  genotypeIDForRow(datum, a2gMap) {
+    const
+    fnName = 'genotypeIDForRow',
+    sampleName = a2gMap.get(datum.accessionNumber);
 
+    if (sampleName) {
+      /** In a Genolink API endpoint if genotypeIds are given as search
+       * parameters, then Genolink inserts the genotypeID in the result.
+       * Otherwise the .genotypeID field is "", so in this case augment the
+       * result with .genotypeID = sampleName.
+       */
+      // if datum.genotypeID is undefined, null, or ''
+      if (! datum.genotypeID) {
+        // Modify the parsed result, as this is returned by .tableData().
+        datum.genotypeID = sampleName;
+      } else if (datum.genotypeID !== sampleName) {
+        dLog(fnName, sampleName, datum.genotypeID, datum);
+      }
+    }
+
+    return sampleName;
+  }
   /** Store the received data in data.samplesPassport.{genotypeID,accessionNumber}.
    * Use a2gMap to map accessionNumber in data[] to genotypeId, which is the
    * sampleName used to index .samplesPassport.genotypeID
@@ -190,22 +262,7 @@ export default class PassportTable extends Component {
     fnName = 'toSamplesPassport',
     samplesPassport = dataset.samplesPassport;
     data.forEach((datum, i) => {
-      const sampleName = a2gMap.get(datum.accessionNumber);
-
-      if (sampleName) {
-        /** In a Genolink API endpoint if genotypeIds are given as search
-         * parameters, then Genolink inserts the genotypeID in the result.
-         * Otherwise the .genotypeID field is "", so in this case augment the
-         * result with .genotypeID = sampleName.
-         */
-        // if datum.genotypeID is undefined, null, or ''
-        if (! datum.genotypeID) {
-          // Modify the parsed result, as this is returned by .tableData().
-          datum.genotypeID = sampleName;
-        } else if (datum.genotypeID !== sampleName) {
-          dLog(fnName, sampleName, datum.genotypeID, datum);
-        }
-      }
+      const sampleName = this.genotypeIDForRow(datum, a2gMap);
 
       /** accessionNumber is the Genesys ID, so if corresponding Genolink /
        * Pretzel ID (genotypeID) is not found, cache the data by
@@ -217,7 +274,7 @@ export default class PassportTable extends Component {
         Object.assign(sp, datum);
       }
       if (! sampleName) {
-        dLog(fnName, datum.accessionNumber, datum);
+        // dLog(fnName, datum.accessionNumber, datum);
         store(samplesPassport.accessionNumber, datum.accessionNumber);
       } else {
         store(samplesPassport.genotypeID, sampleName);

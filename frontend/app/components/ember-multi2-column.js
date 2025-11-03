@@ -33,8 +33,14 @@ export default class EmberMulti2ColumnComponent extends Component {
 
   //------------------------------------------------------------------------------
 
-  /** <input  ... value={{this.nameFilter}} >
-   * reads `get`, does not use `set`.
+  /** This was used to support <input  ... value={{this.nameFilter}} >
+   * which reads `get`, does not use `set`.
+   *
+   * Now instead the <input> uses debounce which sets this.nameFilter via
+   * nameFilterChanged() :
+   * <input id="nameFilter" ...
+   * value={{@column.namesFilters.nameFilterDebounced}}
+      oninput={{this.nameFilterChangedDebounce}} ... >
    */
   get nameFilter() {
     const

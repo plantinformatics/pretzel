@@ -5207,12 +5207,16 @@ export default class PanelManageGenotypeComponent extends Component {
    * caller only needs genotypeIds / accessionNumbers, as the data
    * has been loaded into dataset.samplesPassport.{genotypeID,accessionNumber}.
    */
-  datasetGetPassportData(dataset, {sampleNames, genotypeIds, accessionNumbers, _text, page, pageLength}, selectFields) {
+  datasetGetPassportData(
+    dataset,
+    {sampleNames, genotypeIds, accessionNumbers, _text, filter, page, pageLength},
+    selectFields) {
     const fnName = 'datasetGetPassportData';
     if (! genotypeIds?.length && sampleNames?.length) {
       genotypeIds = sampleNames.filter(sampleNameIsAGG);
     }
-    if ((! genotypeIds?.length && ! accessionNumbers?.length && ! (_text ?? false))
+    if ((! genotypeIds?.length && ! accessionNumbers?.length && ! (_text ?? false) &&
+         ! (filter ?? false))
         || ! selectFields.length) {
       return Promise.resolve();
     }
@@ -5220,7 +5224,9 @@ export default class PanelManageGenotypeComponent extends Component {
     mg = this,
     /** array of promises, each yielding response for 1 chunk */
     chunkPs =
-      getPassportData({ genotypeIds, accessionNumbers, selectFields, _text, page, pageLength }, genolinkBaseUrl),
+      getPassportData(
+        {genotypeIds, accessionNumbers, selectFields, _text, filter, page, pageLength },
+        genolinkBaseUrl),
     promise = Promise.all(chunkPs.map(chunkP => chunkP.then(receive)));
     function receive(data) {
       {

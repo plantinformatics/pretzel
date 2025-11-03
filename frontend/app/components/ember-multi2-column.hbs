@@ -32,6 +32,7 @@
       - namesFilters via text <input>,
       - category filter via <select> --}}
   {{#if @column.namesFilters}}
+    {{!-- .nameFilter is equivalent to @column.namesFilters.nameFilterDebounced --}}
     <input id="nameFilter" type="search" value={{this.nameFilter}}
       oninput={{this.nameFilterChangedDebounce}}
       style="min-width: 16em;"

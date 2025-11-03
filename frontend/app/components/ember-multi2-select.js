@@ -332,6 +332,7 @@ export default class EmberMulti2SelectComponent extends Component {
     'namesFiltersCount',
     // used in matchField() : okFn()
     'args.requireId',
+    'args.genotypeIDsReceived',
   )
   get searchData() {
     const

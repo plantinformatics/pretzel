@@ -137,7 +137,7 @@ export default class EmberMulti2TableComponent extends Component {
   get searchData() { return searchData.apply(this); }
 
   /** Create a NamesFilters if there is not already one for fieldName.
-   * The reason for persisting these is that changes to .nameFilter are
+   * The reason for persisting these is that changes to nf.nameFilter are
    * debounced, so re-creating this in .columns() and setting .nameFilter
    * does not filter.
    */
@@ -168,7 +168,7 @@ export default class EmberMulti2TableComponent extends Component {
       value = initialFilter.value;
       nf.nameFilterChanged(value);
       nf.nameFilterDebounced = value;
-      nf.nameFilter = value;
+      // nf.nameFilter = value;
     }
   }
 
@@ -198,8 +198,10 @@ export default class EmberMulti2TableComponent extends Component {
     if (! genolinkFieldNames.includes(column.property)) {
       const
       key = column.property,
-      /** The most recently selected value is target.value */
-      value = options.map(o => '"' + o + '"').join('|');
+      /** The most recently selected value is target.value
+       * options is all the currently selected <options>
+       */
+      value = options;
       this.args.nameFilterChanged([key, value]);
     }
   }
@@ -233,7 +235,7 @@ export default class EmberMulti2TableComponent extends Component {
         dLog(fnName, key, 'removing', nf.nameFilter, nf.nameFilterArray, nf.nameFilterDebounced, value);
         nf.nameFilterChanged('');
         nf.nameFilterDebounced = ''; // .nameFilterChangedSet("");
-        nf.nameFilter = '';
+        // nf.nameFilter = '';
       }
       if (this.fieldNamesFilters[key]) {
         dLog(fnName, key, 'removing', this.fieldNamesFilters[key]);
