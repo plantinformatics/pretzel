@@ -10,6 +10,7 @@ import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
 const /*import */{
   genolinkFieldNames,
   PassportFilter,
+  PassportSearch,
   accessionNumbers2genotypeIds,
 } = vcfGenotypeBrapi.genolinkPassport; /*from 'vcf-genotype-brapi'; */
 
@@ -27,18 +28,6 @@ const genolinkBaseUrl = "https://genolink.plantinformatics.io";
 //------------------------------------------------------------------------------
 
 const dLog = console.debug;
-
-//------------------------------------------------------------------------------
-
-/** Map a search description (.currentSearch or .searchKV) to a text
- * name for caching in PagedData()
- */
-function searchNameFn(search) {
-  const
-  name = ((search.key ?? '') + '|' + (search.value ?? '')) +
-    (search.filter ? '|' + JSON.stringify(search.filter) : '');
-  return name;
-}
 
 //------------------------------------------------------------------------------
 
@@ -116,21 +105,46 @@ export default class PassportTable extends Component {
   @computed('currentSearch', 'currentSearch.changeCount', 'args.mg.namesFilters.nameFilterDebounced')
   get currentData () {
     dLog('currentData', 'currentSearch', this.currentSearch, this.currentSearch?.changeCount);
+    /** reference to signalChange() if required. */
+    let postSignal;
     const
     /** mg.sampleNameFilter is not updated. */
     sampleNameFilter = this.args.mg .namesFilters.nameFilterDebounced,
+    /** do .signalChange() after storeSearch(). */
+    signalChange = search => { postSignal = () => this.signalChange(search); },
     /** Use .currentSearch from column headers, or fall back to sampleNameFilter,
      * which sets this.currentSearch (Side-Effect). */
     searchKV = this.currentSearch ||
       ((sampleNameFilter ?? false) ?
-       (this.currentSearch = { key : 'All', value : sampleNameFilter}) : undefined),
-    searchName = searchKV ? searchNameFn(searchKV) : 'NoSearch',
-    search = this.pagedData[searchName] ||
-      (this.pagedData[searchName] = new PagedData(searchName, searchKV, this.getPage, this.pageLength));
+       (this.currentSearch =
+        PassportSearch.update(signalChange, {}, 'All', sampleNameFilter)) :
+       undefined),
+    search = this.storeSearch(searchKV);
+    postSignal?.();
+
     return search;
   }
 
+  /** Store the given search in the cache, .pagedData.
+   */
+  storeSearch(searchKV) {
+    const
+    searchName = searchKV ? searchKV.searchNameFn() : 'NoSearch', 
+    search = this.pagedData[searchName] ||
+      (this.pagedData[searchName] =
+       new PagedData(searchName, searchKV, this.getPage, this.pageLength));
+    return search;
+  }
+
+
   //----------------------------------------------------------------------------
+
+  /** Signal that params of search have changed, and currentData should be updated.
+   * Now that .currentSearch is again being replaced when params are changed,
+   * the dependency on .currentSearch should be sufficient, and .changeCount should
+   * not be required.
+   */
+  signalChange(search) { Ember_set(search, 'changeCount', (search.changeCount ?? 0) + 1); }
 
   @action
   /** Signal from ember-multi2-column that user has entered value in column with
@@ -144,38 +158,13 @@ export default class PassportTable extends Component {
     const fnName = 'passport-table : nameFilterChanged';
     dLog(fnName, key, value, 'currentSearch', this.currentSearch);
     const
-    currentSearch = this.currentSearch || (this.currentSearch = {}),
-    /** previous .filter, preserved when changing .currentSearch.{key,value}.  */
-    filter = currentSearch?.filter;
-    /** The change in a0ab0727 means that .currentSearch is re-used, so
-     * .pagedData[].searchKV are all the same object.
-     * Instead, could create a new .currentSearch here, enabling search in
-     * this.pagedData[] cache for matching filter and re-use it, including
+    currentSearch = this.currentSearch || (this.currentSearch = {});
+    /** Create a new .currentSearch, enabling search in
+     * this.pagedData[] cache for matching filter and re-use, including
      * .filterCode */
-    delete currentSearch?.filterCode;
-
-    let changeCount = currentSearch?.changeCount ?? 0;
-    function signalChange() { Ember_set(currentSearch, 'changeCount', ++changeCount); }
-    if (genolinkFieldNames.includes(key)) {
-      // key cannot be searched via /query _text
-    } else if (key === 'crop.name') {
-      PassportFilter.update(currentSearch, key, value);
-      // this.currentSearch = Object.assign({}, currentSearch);
-      signalChange();
-    } else if (value) {
-      if (Array.isArray(value)) {
-        value = value.map(o => '"' + o + '"').join('|');
-      }
-      Object.assign(currentSearch, {key, value});
-      // Object.assign() bypasses `set changeCount()`
-      signalChange();
-    } else {
-      if (currentSearch.key === key) {
-        dLog(fnName, 'removing', currentSearch, value);
-        Object.assign(currentSearch, {key : 'All', value : ""});
-        signalChange();
-      }
-    }
+    this.currentSearch =
+      PassportSearch.update(this.signalChange, currentSearch, key, value);
+    const search = this.storeSearch(this.currentSearch);
   }
 
   //----------------------------------------------------------------------------
