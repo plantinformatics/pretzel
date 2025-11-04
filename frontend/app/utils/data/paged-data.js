@@ -5,8 +5,18 @@ import { tracked } from '@glimmer/tracking';
 import { task, timeout } from 'ember-concurrency';
 import { action } from '@ember/object';
 
+/* global AbortController */
+
+//------------------------------------------------------------------------------
+
+const dLog = console.debug;
+
+//------------------------------------------------------------------------------
+
 /** Genolink / Genesys page numbering starts at 0. */
 const startPage = 0;
+
+//------------------------------------------------------------------------------
 
 /** Read a data source in pages.
  * Results are accumulated in an array which is used in table display
@@ -52,6 +62,7 @@ export default class PagedData extends EmberObject {
   // - drop: ignore new triggers while one is running (good to resist rapid scroll spam)
   // - enqueue: queue them (rarely necessary for paging)
   @(task({ drop: true /* restartable : true*/ })) *loadPage({ page = this.page } = {}) {
+    const fnName = 'loadPage';
     // Optional: small debounce to smooth rapid triggers
     yield timeout(80);
 
@@ -59,7 +70,7 @@ export default class PagedData extends EmberObject {
     const controller = new AbortController();
     try {
       // could pass controller.signal to getPassportData{,Chunk}.
-      const dataArray = yield this.getPage(this.searchKV, page);
+      const responses = yield this.getPage(this.searchKV, page);
       /* generated :
          // Expect { data: [...], meta: { hasMore: boolean } } or similar
          resp = yield fetch(
@@ -69,6 +80,7 @@ export default class PagedData extends EmberObject {
        .then(r => r.json());
        const data = resp.data;
       */
+      const dataArray = responses.mapBy('content');
       /** result is in chunks (just 1 chunk if _text). */
       const data = dataArray.flat();
       if (page === startPage) {
@@ -77,6 +89,11 @@ export default class PagedData extends EmberObject {
         this.rows = [...this.rows, ...data];
       }
       if (this.searchKV) {
+        /** Just 1 response for /query _text.
+         * Expect that .filterCode for each page is the same. */
+        const filterCodes = responses.mapBy('filterCode');
+        dLog(fnName, filterCodes);
+        this.searchKV.filterCode = filterCodes[0];
         const cache = this.searchKV.pages || (this.searchKV.pages = {});
         cache[page] = data;
       }

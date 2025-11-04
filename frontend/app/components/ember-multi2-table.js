@@ -160,7 +160,9 @@ export default class EmberMulti2TableComponent extends Component {
     fieldName = initialFilter.key,
     isCategory = passportFieldNamesCategory.includes(fieldName);
     if (isCategory) {
-      // this.selectedFieldValues[initialFilter.key] = [initialFilter.value];
+      /* This is set up via .selectFieldValue() instead.
+      this.selectedFieldValues[initialFilter.key] = [initialFilter.value];
+      */
       const
       column = this.columns.findBy('property', initialFilter.key),
       targetMock = {selectedOptions : [{value : initialFilter.value}]};

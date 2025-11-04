@@ -5176,8 +5176,11 @@ export default class PanelManageGenotypeComponent extends Component {
       // related : blocksSelectedSamples(blocks)
       const sampleNames = this.vcfGenotypeSamplesSelectedAll[dataset.id];
       const
+      /** datasetGetPassportData() previously yielded just the .content, so
+       * preserve that signature, although the value is not used. */
       promise = sampleNames?.length ?
-        this.datasetGetPassportData(dataset, {sampleNames}, selectFields) :
+        this.datasetGetPassportData(dataset, {sampleNames}, selectFields)
+        .then(responses => responses.mapBy('content')) :
         Promise.resolve();
       return promise;
     });
@@ -5194,12 +5197,14 @@ export default class PanelManageGenotypeComponent extends Component {
   /** Get the Passport data values indicated by selectFields for the given
    * dataset and sampleNames.
    * @param dataset
-   * @param {sampleNames, genotypeIds, accessionNumbers, _text, page}
+   * @param {sampleNames, genotypeIds, accessionNumbers, _text, filter, filterCode,
+   * page, pageLength}
    * genotypeIds / accessionNumbers are the name/identity fields supported by
    * the Genolink API.  Some of sampleNames may be AGG genotypeIds and hence can
    * be used as genotypeIds in lookup.
    * The above forms of ID are optional if _text is given.
-   * Optional, for text search : _text, page, pageLength.  page is only used if _text.
+   * Optional, for search : _text, filter, filterCode, page, pageLength.
+   * page is not applicable when passing genotypeIds or accessionNumbers.
    * If page is not specified in the URL, result is page 0.
    * Default pageLength is 100.
    * @param selectFields  array of string Passport field names
@@ -5209,7 +5214,8 @@ export default class PanelManageGenotypeComponent extends Component {
    */
   datasetGetPassportData(
     dataset,
-    {sampleNames, genotypeIds, accessionNumbers, _text, filter, page, pageLength},
+    {sampleNames, genotypeIds, accessionNumbers, _text, filter, filterCode,
+     page, pageLength},
     selectFields) {
     const fnName = 'datasetGetPassportData';
     if (! genotypeIds?.length && sampleNames?.length) {
@@ -5225,11 +5231,13 @@ export default class PanelManageGenotypeComponent extends Component {
     /** array of promises, each yielding response for 1 chunk */
     chunkPs =
       getPassportData(
-        {genotypeIds, accessionNumbers, selectFields, _text, filter, page, pageLength },
+        {genotypeIds, accessionNumbers, selectFields, _text, filter, filterCode,
+         page, pageLength },
         genolinkBaseUrl),
     promise = Promise.all(chunkPs.map(chunkP => chunkP.then(receive)));
-    function receive(data) {
+    function receive(response) {
       {
+        const data = response.content;
         dLog(fnName, dataset.id, selectFields, data);
         const
         // fillInMissingData() has already extracted .content from the response
@@ -5246,7 +5254,7 @@ export default class PanelManageGenotypeComponent extends Component {
             sp[field] = datum[field];
           });
         });
-        return data;
+        return response;
       }
       later(() => mg.passportDataCount++);
     }

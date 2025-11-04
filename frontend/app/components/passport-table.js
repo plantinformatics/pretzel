@@ -50,7 +50,7 @@ export default class PassportTable extends Component {
   /** Display table rows in pages
    * passed to new PagedData() so that paged-data.js : pageSize can match this.
    */
-  pageLength = 500; // 20;  // probably this.args.pageLength ??, from urlOptions
+  pageLength = 20; // 500;  // probably this.args.pageLength ??, from urlOptions
   @tracked
   /** end row of last page of Passport data requested.  */
   lastPassport = 0;
@@ -147,6 +147,12 @@ export default class PassportTable extends Component {
     currentSearch = this.currentSearch || (this.currentSearch = {}),
     /** previous .filter, preserved when changing .currentSearch.{key,value}.  */
     filter = currentSearch?.filter;
+    /** The change in a0ab0727 means that .currentSearch is re-used, so
+     * .pagedData[].searchKV are all the same object.
+     * Instead, could create a new .currentSearch here, enabling search in
+     * this.pagedData[] cache for matching filter and re-use it, including
+     * .filterCode */
+    delete currentSearch?.filterCode;
 
     let changeCount = currentSearch?.changeCount ?? 0;
     function signalChange() { Ember_set(currentSearch, 'changeCount', ++changeCount); }
@@ -186,16 +192,17 @@ export default class PassportTable extends Component {
 
       selectFields = this.passportFields,
       /** name value as _text for passing in parameter bundle to getPassportData(). */
-      {key, value : _text, filter : filter_} = searchKV,
+      {key, value : _text, filter : filter_, filterCode} = searchKV,
       filter = filter_?.body;
-      dLog(fnName, page, key, _text, this.pageLength, filter, filter_);
+      dLog(fnName, page, key, _text, this.pageLength, filter, filter_, filterCode);
       // Already have sampleNames, so nothing to request if ! selectFields.length
       if (selectFields.length) {
         const dataset = this.args.dataset;
         /** /query ?_text is across all fields; key is not passed */
-        const optionsParam = {_text, filter, page, pageLength : this.pageLength};
+        const optionsParam = {_text, filter, filterCode, page, pageLength : this.pageLength};
         promise = this.args.mg.datasetGetPassportData(dataset, optionsParam, selectFields);
-        promise.then(dataChunks => {
+        promise.then(responses => {
+          const dataChunks = responses.mapBy('content');
           dLog(fnName, dataChunks);
           /** perhaps concat the chunk results */
           const data = dataChunks[0];
