@@ -268,6 +268,14 @@ export default class EmberMulti2TableComponent extends Component {
 
   //----------------------------------------------------------------------------
 
+  /** Provide a constant function reference for debounce(), used in searchData().
+   */
+  getNextPage() {
+    this.args.getNextPage();
+  }
+
+  //----------------------------------------------------------------------------
+
   // From https://chatgpt.com/share/68d0e67a-7428-800e-85e2-e31ee741ece3
 
 

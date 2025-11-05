@@ -5,6 +5,8 @@ import { tracked } from '@glimmer/tracking';
 import { task, timeout } from 'ember-concurrency';
 import { action } from '@ember/object';
 
+import { pick } from 'lodash/object';
+
 /* global AbortController */
 
 //------------------------------------------------------------------------------
@@ -89,19 +91,29 @@ export default class PagedData extends EmberObject {
         this.rows = [...this.rows, ...data];
       }
       if (this.searchKV) {
-        /** Just 1 response for /query _text.
-         * Expect that .filterCode for each page is the same. */
-        const filterCodes = responses.mapBy('filterCode');
-        dLog(fnName, filterCodes);
-        this.searchKV.filterCode = filterCodes[0];
+        const fieldNames = [
+          'filterCode', 'last', 'totalPages', 'totalElements',
+          'size', 'number', 'first'];
+        if (responses.length > 1) {
+          console.warn(
+            fnName, responses.length, page, this.searchKV,
+            responses.map(r => pick(r, fieldNames)));
+        }
+        /** Just 1 response for /query _text, i.e. if this.searchKV.
+         * Expect that .filterCode for each chunk is the same (if multiple responses).
+         * .last will change for the last response.
+         */
+        Object.assign(this.searchKV, pick(responses.at(-1), fieldNames));
         const cache = this.searchKV.pages || (this.searchKV.pages = {});
         cache[page] = data;
       }
 
       this.page = page;
       /** Provision for getPage() to indicate when the received result is the
-       * last page, using Symbol to carry an out-of-band signal. */
+       * last page, using Symbol to carry an out-of-band signal.
       const hasMore = dataArray[Symbol.for('hasMore')]; // generated : resp.meta?.hasMore
+      */
+      const hasMore = this.searchKV ? ! this.searchKV.last : null;
       this.hasMore = hasMore ?? (data.length >= this.pageSize);
       this.isFirstLoad = false;
     } finally {

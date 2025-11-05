@@ -20,6 +20,7 @@ import Component from '@glimmer/component';
 import { action, computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import { tracked } from '@glimmer/tracking';
+import { debounce } from '@ember/runloop';
 
 //------------------------------------------------------------------------------
 
@@ -357,9 +358,18 @@ export default class EmberMulti2SelectComponent extends Component {
       });
       return mismatchIndex === -1;
     });
+
+    /** passport-table.pageLength === 500
+     * This condition is not necessarily exactly pageLength - just enough to
+     * fill the user's screen.
+     */
+    if (! this.args.currentData.searchKV.last  && (filteredRows.length < 500)) {
+      /** debounce because searchData() is triggered twice before page updates. */
+      debounce(this, this.getNextPage, 200, /*immediate*/ true);
+    }
+
     return filteredRows;
   }
-
 
   //----------------------------------------------------------------------------
 
