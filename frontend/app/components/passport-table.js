@@ -29,6 +29,11 @@ const genolinkBaseUrl = "https://genolink.plantinformatics.io";
 
 const dLog = console.debug;
 
+const
+isDevelopment =
+  (config.environment === 'development') &&
+  ! config.apiHost.endsWith('3000');
+
 //------------------------------------------------------------------------------
 
 
@@ -39,7 +44,7 @@ export default class PassportTable extends Component {
   /** Display table rows in pages
    * passed to new PagedData() so that paged-data.js : pageSize can match this.
    */
-  pageLength = 20; // 500;  // probably this.args.pageLength ??, from urlOptions
+  pageLength = isDevelopment ? 20 : 500;  // probably this.args.pageLength ??, from urlOptions
   @tracked
   /** end row of last page of Passport data requested.  */
   lastPassport = 0;

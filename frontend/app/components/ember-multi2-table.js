@@ -82,12 +82,16 @@ export default class EmberMulti2TableComponent extends Component {
   // from passport-table.js
   //----------------------------------------------------------------------------
 
+  settingsPt = this.args.userSettings.passportTable;
   /** Per-column category filter values : [fieldName] -> [passport data values, ...] */
-  selectedFieldValues = {};
+  @alias('settingsPt.selectedFieldValues')
+  selectedFieldValues;
   /** Per-column search filter values : [fieldName] -> search string */
-  fieldSearchString = {};
+  @alias('settingsPt.fieldSearchString')
+  fieldSearchString;
   /** Per-column filter implementing fieldSearchString. [fieldName] -> NamesFilter  */
-  fieldNamesFilters = {};
+  @alias('settingsPt.fieldNamesFilters')
+  fieldNamesFilters;
 
   @tracked
   /** Count of changes to selectedFieldValues, for dependency. */
@@ -154,9 +158,12 @@ export default class EmberMulti2TableComponent extends Component {
 
   //----------------------------------------------------------------------------
 
-  /** Used to set an initial filter on crop.name : dataset._meta.Crop (if defined). */
+  /** Used to set an initial filter on crop.name : dataset._meta.Crop (if defined).
+   * Also re-read the search strings from userSettings, and set up .currentSearch.
+ */
   setInitialFilter(initialFilter) {
     const
+    fnName = 'setInitialFilter',
     fieldName = initialFilter.key,
     isCategory = passportFieldNamesCategory.includes(fieldName);
     if (isCategory) {
@@ -169,13 +176,35 @@ export default class EmberMulti2TableComponent extends Component {
       later(() => this.selectFieldValue(column, targetMock));
     } else {
       /* not required because Crop is a category. */
+      this.setNameFilter(fieldName, initialFilter.value);
+    }
+    /* If there are search strings defined in fieldSearchString, this will
+     * replace .currentSearch */
+    later(() => this.setNameFiltersFromSettings());
+  }
+  /** Read the search strings from userSettings fieldSearchString, and set up
+   * .currentSearch.
+   */
+  setNameFiltersFromSettings() {
+    const fnName = 'setNameFiltersFromSettings';
+    /* If there are multiple fields with a search string, the last one will be
+     * retained in .currentSearch.  May be able to instead use _text search with
+     * multiple strings separated by '|', and filter condition AND.
+     */
+    Object.entries(this.fieldSearchString).forEach(([key, value]) => {
+      dLog(fnName, key, value);
+      this.setNameFilter(key, value);
+    });
+  }
+
+  setNameFilter(fieldName, value) {
       const
-      nf = this.columns.findBy('property', fieldName).namesFilters,
-      value = initialFilter.value;
+      nf = this.columns.findBy('property', fieldName).namesFilters;
       nf.nameFilterChanged(value);
       nf.nameFilterDebounced = value;
       // nf.nameFilter = value;
-    }
+
+    this.args.nameFilterChanged([fieldName, value]);
   }
 
   //----------------------------------------------------------------------------

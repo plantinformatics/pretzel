@@ -695,7 +695,18 @@ export default class PanelManageGenotypeComponent extends Component {
     }
 
     if (userSettings.passportTable === undefined) {
-      userSettings.passportTable = { passportFields, showSelectPassportFields : false };
+      userSettings.passportTable = {
+        passportFields, showSelectPassportFields : false,
+        /** User text inputs for column search / filter of passport-table,
+         * commented in ember-multi2-table.js; briefly :
+         * selectedFieldValues is the category / pull-down <select> options
+         * fieldSearchString is the non-category search strings,
+         * which is implemented by fieldNamesFilters.
+         */
+        selectedFieldValues : {},
+        fieldSearchString : {},
+        fieldNamesFilters : {},
+      };
     }
 
 
