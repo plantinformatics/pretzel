@@ -125,6 +125,15 @@ export default class PassportTable extends Component {
         PassportSearch.update(signalChange, {}, 'All', sampleNameFilter)) :
        undefined),
     search = this.storeSearch(searchKV);
+    /* Handle the case where a search template is created with
+     * PassportSearch.update(), which provides searchName, which storeSearch()
+     * finds in .pagedData[], so search is a reference to the existing search in
+     * .pagedData[]; change this.currentSearch because the template reference
+     * was assigned to it.
+     */
+    if (search !== this.currentSearch) {
+      this.currentSearch = search;
+    }
     postSignal?.();
 
     return search;
@@ -207,21 +216,50 @@ export default class PassportTable extends Component {
            * This .genotypeIDForRow() is repeated in .then().
            */
           data.forEach(datum => {const sampleName = this.genotypeIDForRow(datum, a2gMap); if (sampleName) dLog(fnName, sampleName, datum);});
-          const accessionNumbers = data.mapBy('accessionNumber');
-          accessionNumbers2genotypeIds(accessionNumbers, genolinkBaseUrl).then(ag => {
-            const
-            /** Use result ag to map from accessionNumber to genotypeId.
-             * @param Accession	accessionNumber
-             * @param Sample	genotypeId
-             */
-            a2gMap = ag.Samples.reduce((map, {Accession, Sample}) => {
-              map.set(Accession, Sample);
-              return map;
-            }, dataset.samplesPassport.a2gMap);
-            this.toSamplesPassport(a2gMap, dataset, data);
-            /** after genotypeIDForRow(), searchData() needs re-filter. */
-            this.genotypeIDsReceived++;
-          });
+          /** Filter out accessionNumbers which Genolink has indicated are unknown (null in a2gMap).  */
+          const accessionNumbers = data.mapBy('accessionNumber')
+                .filter(accessionNumber => a2gMap.get(accessionNumber) === undefined);
+          /** Record the given accessionNumbers as not having a GenotypeID. */
+          function accessionNumbersSetMissing(accessionNumbers) {
+            accessionNumbers.forEach(accessionNumber => a2gMap.set(accessionNumber, null));
+          }
+          if (accessionNumbers.length) {
+            accessionNumbers2genotypeIds(accessionNumbers, genolinkBaseUrl)
+              .catch(error => {
+                /** response is 400 if none of accessionNumbers have a corresponding genotypeID. */
+                dLog(fnName, 'error', error);
+                accessionNumbersSetMissing(accessionNumbers);
+              })
+              .then(ag => {
+                /** accessionNumbers2genotypeIds() catches 404 and returns [].
+                 * This case is also handled by the following */
+                if (ag.Samples.length < accessionNumbers.length) {
+                  const missing = new Set(accessionNumbers).difference(new Set(ag.Samples));
+                  dLog(
+                    fnName,
+                    ag.Samples.length, '<', accessionNumbers.length,
+                    missing,
+                    ag.Samples, accessionNumbers);
+                  accessionNumbersSetMissing(Array.from(missing));
+                }
+                /** Use result ag to map from accessionNumber to genotypeId.
+                 * The reference a2gMap is unchanged by this .reduce();
+                 * the contents of the Map are modified.
+                 * @param Accession	accessionNumber
+                 * @param Sample	genotypeId
+                 */
+                /*a2gMap =*/ ag.Samples.reduce((map, {Accession, Sample}) => {
+                  /* Requested Samples are omitted from response if their Accession
+                   * does not have a corresponding genotypeID.  Record these as
+                   * null. */
+                  map.set(Accession, Sample);
+                  return map;
+                }, a2gMap);
+                this.toSamplesPassport(a2gMap, dataset, data);
+                /** after genotypeIDForRow(), searchData() needs re-filter. */
+                this.genotypeIDsReceived++;
+              });
+          }
         });
       } else {
         dLog(fnName, 'selectFields is empty');
