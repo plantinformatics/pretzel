@@ -1221,7 +1221,7 @@ export default Component.extend({
        * The passport data is applicable for other datasets which have the same sample IDs.
        * This is passed to sample-data.
        */
-      const samplesPassport = dataset.get('samplesPassport');
+      const samplesPassport = dataset.get('samplesPassport.genotypeID');
       if (samplesPassport) {
         this.samplesPassport = samplesPassport;
       }

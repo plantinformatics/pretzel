@@ -5190,7 +5190,8 @@ export default class PanelManageGenotypeComponent extends Component {
       /** datasetGetPassportData() previously yielded just the .content, so
        * preserve that signature, although the value is not used. */
       promise = sampleNames?.length ?
-        this.datasetGetPassportData(dataset, {sampleNames}, selectFields)
+        this.datasetGetPassportData(
+          dataset, {sampleNames, pageLength : sampleNames.length}, selectFields)
         .then(responses => responses.mapBy('content')) :
         Promise.resolve();
       return promise;

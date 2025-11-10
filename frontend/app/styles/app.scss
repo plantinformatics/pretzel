@@ -3086,6 +3086,14 @@ img.img-fit {
   height: auto;        /* Keep the height auto; will scale based on parent's height */
 }
 
+/*----------------------------------------------------------------------------*/
+
+/* form/sample-data */
+.sample-data-dialog > .sdd-controls
+{
+  width : 20em;
+}
+
 /* -------------------------------------------------------------------------- */
 
 /* @import "ember-bootstrap/bootstrap-sprockets"; */
