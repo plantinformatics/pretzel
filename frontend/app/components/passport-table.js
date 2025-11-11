@@ -122,7 +122,7 @@ export default class PassportTable extends Component {
    * possibleValuesFilterOptions() depends on that value.
    */
   possibleValuesForFiltersP = possibleValuesForFiltersP
-    .then(result => {this.possibleValuesForFilters = result; dLog('possibleValuesForFilters', result); });
+    .then(result => later(() => this.possibleValuesForFilters = result));
   @tracked
   possibleValuesForFilters = null;
 
@@ -182,29 +182,37 @@ export default class PassportTable extends Component {
        (this.currentSearch =
         PassportSearch.update(signalChange, {}, 'All', sampleNameFilter)) :
        undefined),
-    search = this.storeSearch(searchKV);
+    pagedData = this.storeSearch(searchKV);
     /* Handle the case where a search template is created with
      * PassportSearch.update(), which provides searchName, which storeSearch()
      * finds in .pagedData[], so search is a reference to the existing search in
      * .pagedData[]; change this.currentSearch because the template reference
      * was assigned to it.
      */
-    if (search !== this.currentSearch) {
-      this.currentSearch = search;
+    if (pagedData.searchKV !== this.currentSearch) {
+      this.currentSearch = pagedData.searchKV;
     }
     postSignal?.();
 
-    return search;
+    return pagedData;
   }
 
   /** Store the given search in the cache, .pagedData.
+   * @param {PassportSearch} searchKV
+   * @return {PagedData} containing searchKV
    */
   storeSearch(searchKV) {
     const
+    fnName = 'storeSearch',
     searchName = searchKV ? searchKV.searchNameFn() : 'NoSearch', 
     search = this.pagedData[searchName] ||
       (this.pagedData[searchName] =
        new PagedData(searchName, searchKV, this.getPage, this.pageLength));
+    if (searchKV?.filterCode && ! search.searchKV?.filterCode) {
+      console.warn(
+        fnName, searchKV?.filterCode, search.searchKV?.filterCode,
+        searchKV, search.searchKV);
+    }
     return search;
   }
 
@@ -242,7 +250,10 @@ export default class PassportTable extends Component {
   //----------------------------------------------------------------------------
 
   @action
-  /** Get requested page of the result for searchKV. */
+  /** Get requested page of the result for searchKV.
+   * @param {PassportSearch} searchKV
+   * @param {optional number} page
+   */
   getPage(searchKV, page) {
     let promise;
     if (! searchKV || ! (searchKV.value || searchKV.filter)) {
@@ -384,7 +395,7 @@ export default class PassportTable extends Component {
   @action
   getNextPage() {
     let promise;
-    if (this.currentSearch?.value ?? false) {
+    if (this.currentSearch?.isSearch ?? false) {
       promise = this.currentData?.loadNextPage();
     } else {
       // this uses @samples, which getPage() does not.
