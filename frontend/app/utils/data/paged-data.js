@@ -34,6 +34,8 @@ export default class PagedData extends EmberObject {
   @tracked pageSize = 100;  // generated : 50
   @tracked hasMore = true;
   @tracked isFirstLoad = true;
+  /** Search {key, value}, i.e. search field and value search string to match. */
+  @tracked searchKV = null;
 
   //----------------------------------------------------------------------------
 

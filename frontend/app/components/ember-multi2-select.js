@@ -67,7 +67,9 @@ export default class EmberMulti2SelectComponent extends Component {
 
   /** Collate Passport data values for @samples and .passportFields.
    * @samples and .passportFields may be nullish, both defaulting to [].
-   * This is used to populate the column-header <select>s.
+   * This is used in columns() to populate the column-header <select>s;
+   * those fields which have @possibleValuesFilterOptions[fieldName] use it in
+   * preference.
    * @return [fieldName] -> array of unique string field values.
    * Return {} when this.args.samples is null or empty.
    */
@@ -138,7 +140,7 @@ export default class EmberMulti2SelectComponent extends Component {
     fields = this.idFieldInColumns ? [this.idField].concat(passportFields) : passportFields,
     columns = fields.map(fieldName => {
       const
-      array = fieldsValues[fieldName],
+      array = this.args.possibleValuesFilterOptions[fieldName] || fieldsValues[fieldName],
       filterOptions = array || [],
       isCategory = passportFieldNamesCategory.includes(fieldName),
       isId = fieldName === this.idField,
@@ -228,7 +230,10 @@ export default class EmberMulti2SelectComponent extends Component {
         fieldName = selectFields[fieldIndex],
         ok = this.matchField(matchFieldFns, value, fieldIndex, fieldName);
         if (ok) {
-          const entry = [fieldName, value || '_'];
+          const
+          /** 'null' is not treated as missing by missingCells(). */
+          valueText = value === null ? 'null' : value || '_', 
+          entry = [fieldName, valueText];
           rowEntries.push(entry);
         }
         return ! ok;
@@ -288,6 +293,10 @@ export default class EmberMulti2SelectComponent extends Component {
       (value) => {
         const
         filterOptions = this.selectedFieldValues[fieldName],
+        /** possibleValuesFilterOptions.crop has been mapped to "Title Case" in
+         * 'crop.name', i.e. first letter is capitalised, to enable it to match
+         * value.
+         */
         ok = ! filterOptions?.length || filterOptions.includes(value);
         return ok;
       },
@@ -311,11 +320,11 @@ export default class EmberMulti2SelectComponent extends Component {
   /** If the user has entered a search string, return .searchData,
    * otherwise data for a page of all samples (.sampleData).
    */
-  @computed ('sampleData', 'searchData')
+  @computed ('sampleData', 'searchData', 'args.currentData.searchKV')
   get tableData() {
     const
     searchKV = this.args.currentData.searchKV,
-    rows = searchKV && searchKV.value ? this.searchData : this.sampleData;
+    rows = searchKV && searchKV.isSearch ? this.searchData : this.sampleData;
     return rows;
   }
 

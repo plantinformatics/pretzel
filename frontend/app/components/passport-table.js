@@ -12,11 +12,14 @@ const /*import */{
   PassportFilter,
   PassportSearch,
   accessionNumbers2genotypeIds,
+  possibleValues,
+  countryAlpha3ToName,
 } = vcfGenotypeBrapi.genolinkPassport; /*from 'vcf-genotype-brapi'; */
 
 import config from 'pretzel-frontend/config/environment';
 
 import PagedData from '../utils/data/paged-data';
+import { toTitleCase } from '../utils/string';
 
 //------------------------------------------------------------------------------
 // copied from genotype-samples.js and manage-genotype.js, this will be imported from environment
@@ -33,6 +36,21 @@ const
 isDevelopment =
   (config.environment === 'development') &&
   ! config.apiHost.endsWith('3000');
+
+//------------------------------------------------------------------------------
+
+/** Values used are :
+ * - crop
+ * - OriginOfMaterial
+ * The OriginOfMaterial values are the alpha-3 values (e.g. "AFG") from
+ plantinformatics/genolink/shared-data/Country2Region.json
+ * This is used in /query body { countryOfOrigin": { "code3" : ... } }
+ */
+
+const possibleValuesForFiltersP = possibleValues(genolinkBaseUrl);
+
+
+// import country2Region from '../utils/Country2Region.json';
 
 //------------------------------------------------------------------------------
 
@@ -98,6 +116,46 @@ export default class PassportTable extends Component {
   genotypeIDsReceived = 0;
 
   //----------------------------------------------------------------------------
+
+  /** /possibleValues is requested when this file is loaded.
+   * When that promise resolves .possibleValuesForFilters is set and
+   * possibleValuesFilterOptions() depends on that value.
+   */
+  possibleValuesForFiltersP = possibleValuesForFiltersP
+    .then(result => {this.possibleValuesForFilters = result; dLog('possibleValuesForFilters', result); });
+  @tracked
+  possibleValuesForFilters = null;
+
+  @computed('possibleValuesForFilters')
+  /** Map .possibleValuesForFilters to populate <select><option>s
+   * for the category fields (pull-down lists).
+   */
+  get possibleValuesFilterOptions() {
+    const fnName = 'possibleValuesFilterOptions';
+    dLog(fnName, this.possibleValuesForFilters);
+    if (! this.possibleValuesForFilters) {
+      return {};
+    }
+    dLog(fnName, typeof this.possibleValuesForFilters, Object.keys(this.possibleValuesForFilters));
+    const
+    OriginOfMaterial1 = this.possibleValuesForFilters.OriginOfMaterial,
+    {institute, crop, taxonomy, OriginOfMaterial, BiologicalStatus, TypeOfGermplasmStorage} = this.possibleValuesForFilters,
+    countryNames = OriginOfMaterial1.map(alpha3 => countryAlpha3ToName[alpha3]),
+    /** Passport data has crop names in upper case, and crop.name is used for filtering  */
+    cropCapital = crop.map(c => toTitleCase(c)),
+    obj = {
+      instituteCode : institute,
+      'crop.name' : cropCapital,
+      cropName : crop,
+      genus : taxonomy,
+      'countryOfOrigin.name' : countryNames,
+    };
+    dLog(fnName, obj);
+    return obj;
+  }
+
+  //----------------------------------------------------------------------------
+
   /** Cache of paged input data streams.
    * searchStringName ->  {PagedData}
    */
