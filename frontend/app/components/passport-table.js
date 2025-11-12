@@ -328,6 +328,9 @@ export default class PassportTable extends Component {
                   return map;
                 }, a2gMap);
                 this.toSamplesPassport(a2gMap, dataset, data);
+                /* Genolink returns "" in .genotypeID if genotypeIDs were not
+                 * given in the request. */
+                data.forEach(d => (d.genotypeID == '') && (d.genotypeID = 'Not yet genotyped'));
                 /** after genotypeIDForRow(), searchData() needs re-filter. */
                 this.genotypeIDsReceived++;
               });
