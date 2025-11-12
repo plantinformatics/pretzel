@@ -187,9 +187,10 @@ const genolinkBaseUrl = "https://genolink.plantinformatics.io";
 /** Passport data fields initially displayed in passport-table.
  * The user is able to configure this via <Panel::SelectPassportFields >
  * This is a subset of passportFieldNames (genolink-passport.js).
+ * "genotypeID" may be prepended to this list in columns(), enabled by
+ * idFieldInColumns.
  */
 const passportFields = [
-  "genotypeID",
   "region",
   "subRegion",
   "accessionName",

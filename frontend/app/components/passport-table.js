@@ -144,11 +144,11 @@ export default class PassportTable extends Component {
     /** Passport data has crop names in upper case, and crop.name is used for filtering  */
     cropCapital = crop.map(c => toTitleCase(c)),
     obj = {
-      instituteCode : institute,
+      instituteCode : institute.sort(),
       'crop.name' : cropCapital,
       cropName : crop,
-      genus : taxonomy,
-      'countryOfOrigin.name' : countryNames,
+      genus : taxonomy.sort(),
+      'countryOfOrigin.name' : countryNames.sort(),
     };
     dLog(fnName, obj);
     return obj;

@@ -101,8 +101,9 @@ export default class EmberMulti2TableComponent extends Component {
   namesFiltersCount = 0;
 
   idField = this.args.idFieldName || 'genotypeID'; 
-  /** indicate that idField is prepended to columns. */
-  idFieldInColumns = false;
+  /** indicate that idField is prepended to columns and that it is not in
+   * passportFields. */
+  idFieldInColumns = true;
 
   /** Limit the number of sample / accession names displayed in the selection list.
    * See also @userSettings.samplesLimit which is the number of samples which may be

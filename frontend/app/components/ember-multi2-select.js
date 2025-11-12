@@ -282,7 +282,6 @@ export default class EmberMulti2SelectComponent extends Component {
       (cache[cacheKey] = constructFieldFilter.apply(this, [fieldIndex, fieldName]));
     function constructFieldFilter(fieldIndex, fieldName) {
       const
-      /** don't expect to need idFieldInColumns===true in future so this can be simplified. */
       column = this.columns[fieldIndex + (this.idFieldInColumns ? 1 : 0)],
       nf = column.namesFilters,
       okFn = nf ? 
