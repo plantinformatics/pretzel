@@ -21,8 +21,14 @@
         oninput={{action @setRequireId value="target.checked" }}  >
         {{!-- avoiding div.genotype label { margin-top: 2em; } --}}
         <label style="margin-top: inherit;" >
-          Required
+          In Dataset
         </label>
+
+        <EmberTooltip @side="bottom" @delay=1000>
+          <span>
+            Restrict the display to Accessions / Samples in this dataset.
+          </span>
+        </EmberTooltip>
       </span>
     {{/if}}
   </div>

@@ -143,6 +143,9 @@ export default class PassportTable extends Component {
     countryNames = OriginOfMaterial1.map(alpha3 => countryAlpha3ToName[alpha3]),
     /** Passport data has crop names in upper case, and crop.name is used for filtering  */
     cropCapital = crop.map(c => toTitleCase(c)),
+    /** Most of these are easier to read after sort.
+     *  crop has Wheat at the top so don't sort it for now.
+     */
     obj = {
       instituteCode : institute.sort(),
       'crop.name' : cropCapital,

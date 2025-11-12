@@ -177,16 +177,6 @@
   <div class="passport-table"
     {{did-insert (action (mut this.scrolledDiv)) }}
   >
-    <span>
-      <button type="button" class="btn btn-info" onclick={{pipe
-        (action (mut @userSettings.passportTable.showSelectPassportFields) true)
-        }}>
-        Select Passport fields
-      </button>
-      {{#ember-tooltip side="bottom-start" delay=1500}}
-        Select which Passport fields will be shown as columns for filtering samples / accessions.
-      {{/ember-tooltip}}
-    </span>
 
     {{#if @userSettings.passportTable.showSelectPassportFields}}
       {{!-- i.e. panel/select-passport-fields --}}
@@ -210,6 +200,7 @@
       @tableRow={{this.urlOptions.tableRow}}
       @sampleNamePassportValues={{this.sampleNamePassportValues}}
       @scrolledDiv={{this.scrolledDiv}}
+      @addColumnSelector={{action (mut @userSettings.passportTable.showSelectPassportFields) true}}
       />
 
   </div>
