@@ -126,6 +126,7 @@
 
   <div style="height:3ex; overflow : auto; max-width : 35em">{{@the.samplesRequestDescription}}</div>
 
+  {{#unless this.enablePassportData}}
 
   <div class="genotypeSampleFilter_textInput">
     <div>
@@ -171,7 +172,7 @@
 
   </div>
 
-  {{#if this.enablePassportData }}
+  {{else}}
   {{log 'genotype-samples' this this.args.userSettings @userSettings}}
   <div class="passport-table"
     {{did-insert (action (mut this.scrolledDiv)) }}
@@ -212,7 +213,7 @@
       />
 
   </div>
-  {{/if}}       {{!-- passport-table for selecting samples tableRow or multiSelect --}}
+  {{/unless}}       {{!-- passport-table for selecting samples tableRow or multiSelect --}}
 
   {{#unless this.enablePassportData}}
   <div class="genotype-controls">

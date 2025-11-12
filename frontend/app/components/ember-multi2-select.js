@@ -324,7 +324,8 @@ export default class EmberMulti2SelectComponent extends Component {
   get tableData() {
     const
     searchKV = this.args.currentData.searchKV,
-    rows = searchKV && searchKV.isSearch ? this.searchData : this.sampleData;
+    useSearch = ! this.args.requireId && searchKV && searchKV.isSearch,
+    rows = useSearch ? this.searchData : this.sampleData;
     return rows;
   }
 
