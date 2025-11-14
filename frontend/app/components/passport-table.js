@@ -259,6 +259,9 @@ export default class PassportTable extends Component {
    */
   getPage(searchKV, page) {
     let promise;
+    if (this.isDestroying) {
+      return Promise.resolve([]);
+    }
     if (! searchKV || ! (searchKV.value || searchKV.filter)) {
       promise = this.getNextPageNoSearch();
     } else {
@@ -282,6 +285,7 @@ export default class PassportTable extends Component {
           /** perhaps concat the chunk results */
           const data = dataChunks[0];
           const a2gMap = dataset.samplesPassport.a2gMap;
+          const g2aMap = dataset.samplesPassport.g2aMap;
           /** Before accessionNumbers2genotypeIds(), a2gMap may not have
            * the necessary genotypeID-s, but render occurs before
            * accessionNumbers2genotypeIds().then().
@@ -324,9 +328,10 @@ export default class PassportTable extends Component {
                   /* Requested Samples are omitted from response if their Accession
                    * does not have a corresponding genotypeID.  Record these as
                    * null. */
-                  map.set(Accession, Sample);
+                  map.a2g.set(Accession, Sample);
+                  map.g2a.set(Sample, Accession);
                   return map;
-                }, a2gMap);
+                }, {a2g : a2gMap, g2a : g2aMap});
                 this.toSamplesPassport(a2gMap, dataset, data);
                 /* Genolink returns "" in .genotypeID if genotypeIDs were not
                  * given in the request. */
@@ -343,6 +348,9 @@ export default class PassportTable extends Component {
     }
     return promise;
   }
+  /** Lookup datum.accessionNumber for genotypeID, and if found and
+   * datum.genotypeID is not defined then set it.
+   */
   genotypeIDForRow(datum, a2gMap) {
     const
     fnName = 'genotypeIDForRow',
@@ -368,6 +376,7 @@ export default class PassportTable extends Component {
   /** Store the received data in data.samplesPassport.{genotypeID,accessionNumber}.
    * Use a2gMap to map accessionNumber in data[] to genotypeId, which is the
    * sampleName used to index .samplesPassport.genotypeID
+   * Store by accessionNumber if genotypeID is empty or not known.
    */
   toSamplesPassport(a2gMap, dataset, data) {
     /** Based on datasetGetPassportData() : receive(). (manage-genotype.js)
@@ -436,6 +445,15 @@ export default class PassportTable extends Component {
       if (selectFields.length) {
         const optionsParam = {sampleNames, pageLength : this.pageLength};
         promise = this.args.mg.datasetGetPassportData(this.args.dataset, optionsParam, selectFields);
+        promise.then(rows => {
+          if (! rows) {
+            console.warn(fnName, 'rows', rows, optionsParam);
+          } else {
+            const g2aMap = this.args.dataset.samplesPassport.g2aMap;
+            dLog(fnName, rows, g2aMap);
+            rows.forEach(row => g2aMap.set(row.genotypeID, row.accessionNumber));
+          }
+        });
       } else {
         dLog(fnName, 'selectFields is empty');
         promise = Promise.resolve([]);
@@ -450,17 +468,20 @@ export default class PassportTable extends Component {
 
   @action
   /**
-   * @param sampleNames	aka genotypeIds, rowNames. (could use accessionNumbers)
+   * @param ids from FieldsRows.ids. {genotypeIDs : [], accessionNumbers : []
+   * (sampleNames	are genotypeIDs)
    */
-  getNamedRows(sampleNames, selectFields = this.passportFields) {
+  getNamedRows(ids, selectFields = this.passportFields) {
     const
     fnName = 'getNamedRows';
-    dLog(fnName, sampleNames);
+    dLog(fnName, ids);
     let promise;
     /* if ! selectFields.length, and sampleNames is searching genotypeIds,
      * can get those from mg.samples */
     /*if (selectFields.length)*/ {
-      const optionsParam = {sampleNames, pageLength : this.pageLength};
+      /** could use fieldName2ParamName to map this. */
+      const {genotypeIDs : genotypeIds, accessionNumbers} = ids;
+      const optionsParam = {genotypeIds, accessionNumbers, pageLength : this.pageLength};
       promise = this.args.mg.datasetGetPassportData(this.args.dataset, optionsParam, selectFields);
     }
     return promise;

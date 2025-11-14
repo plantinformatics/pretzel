@@ -5237,7 +5237,10 @@ export default class PanelManageGenotypeComponent extends Component {
     if ((! genotypeIds?.length && ! accessionNumbers?.length && ! (_text ?? false) &&
          ! (filter ?? false))
         || ! selectFields.length) {
-      return Promise.resolve();
+      const traceParams = {genotypeIds, accessionNumbers, _text, filter, selectFields};
+      dLog(fnName, 'empty inputs', traceParams);
+      console.warn(fnName, 'empty inputs', traceParams);
+      return Promise.resolve([]);
     }
     const
     mg = this,
@@ -5255,17 +5258,28 @@ export default class PanelManageGenotypeComponent extends Component {
         const
         // fillInMissingData() has already extracted .content from the response
         d = data,
-        samplesPassport = dataset.samplesPassport.genotypeID;
+        samplesPassport = dataset.samplesPassport,
+        {a2gMap, g2aMap} = samplesPassport;
         d.forEach((datum, i) => {
-          const sampleName = datum.genotypeID;
+          const
+          idName = datum.genotypeID ? 'genotypeID' : 'accessionNumber',
+          /** ids and sampleName are either .genotypeID or .accessionNumber */
+          ids = samplesPassport[idName],
+          sampleName = datum[idName],
+          sp = ids[sampleName] || (ids[sampleName] = {});
           /* similar : Object.assign(sp, datum);
            * but datum may have an extra field : countryOfOrigin.codeNum
            * which Genolink adds, probably to support subRegion request.
            */
           selectFields.forEach(field => {
-            const sp = samplesPassport[sampleName] || (samplesPassport[sampleName] = {});
             sp[field] = datum[field];
           });
+          /** Also store mappings between genotypeID <-> accessionNumber */
+          const {genotypeID, accessionNumber} = datum;
+          if (genotypeID && accessionNumber) {
+            a2gMap.set(accessionNumber, genotypeID);
+            g2aMap.set(genotypeID, accessionNumber);
+          }
         });
         return response;
       }

@@ -363,7 +363,10 @@ function columnName2SampleName(columnName) {
 
 /** If selectFields.length, return the selected
  * fields from the Passport data of the accession.
- * @param sampleName
+ * One of the parameters sampleName (genotypeID) and accessionNumber must be
+ * given to identify the accession / sample.
+ * @param sampleName  optional genotypeID
+ * @param accessionNumber optional id
  * @param selectFields	user-selected list of fields to add (userSettings.passportFields)
  * @param dataset	for dataset.samplesPassport.genotypeID
  * which contains the Passport field value for the samples
@@ -371,28 +374,52 @@ function columnName2SampleName(columnName) {
  * default is [], if ! selectFields.length or sampleName is not a sample, or
  * dataset does not have passport data loaded.
  */
-export function sampleNamePassportValues(sampleName, selectFields, dataset) {
+export function sampleNamePassportValues(sampleName, accessionNumber, selectFields, dataset) {
   let values = [];
-  if (selectFields.length && ! valueNameIsNotSample(sampleName)) {
+  const samplesPassport = dataset?.samplesPassport;
+  if (selectFields.length && ! valueNameIsNotSample(sampleName) && samplesPassport) {
     const sampleCache = dataset?.samplesPassport?.genotypeID[sampleName];
-    if (sampleCache) {
+    const
+    g2aMap = samplesPassport.g2aMap,
+    accessionNumber_ = accessionNumber || g2aMap.get(sampleName),
+    acccessionCache = samplesPassport.accessionNumber[accessionNumber_];
+    if (sampleCache || acccessionCache) {
       values = selectFields.map(fieldName => {
-        let text = sampleCache[fieldName];
-        /** 'aliases' value is an array of objects; use the .name field  */
-        if ((typeof text === 'object') && Array.isArray(text) &&
-            (typeof text[0] === 'object')) {
-          const
-          aliases = text.mapBy('name'),
-          /** there is a lot of repetition in aliases[] */
-          aliasesUnique = Array.from(new Set(aliases));
-          text = aliasesUnique.join(',');
-        }
+        let text = sampleCache?.[fieldName] || acccessionCache?.[fieldName];
+
+        text = passportArrayToText(fieldName, text);
+
         return text;
       });
     }
   }
   return values;
 }
+/** Passport alias data is an array of objects containing a .name field.
+ * Recognise if the given data is such a Passport array, and if so convert it to
+ * a text representation; no change otherwise.
+ * @param fieldName e.g. 'aliases'
+ * @param data  passport data value
+ * @return text form of data value
+ */
+export function passportArrayToText(fieldName, data) {
+  let text = data;
+  /* could match on fieldName 'aliases'; this array data form may be used on
+   * some other fields.
+   */
+  /** 'aliases' value is an array of objects; use the .name field  */
+  if ((typeof text === 'object') && Array.isArray(text) &&
+      (typeof text[0] === 'object')) {
+    const
+    aliases = text.mapBy('name'),
+    /** there is a lot of repetition in aliases[] */
+    aliasesUnique = Array.from(new Set(aliases));
+    text = aliasesUnique.join(',');
+  }
+  return text;
+}
+
+
 /** If selectFields.length, augment the given sample / accession name with selected
  * fields from the Passport data of the accession.
  * @param sampleName
@@ -407,7 +434,7 @@ function sampleNameAddPassport(sampleName, selectFields, datasetId, visibleBlock
     const
     block = visibleBlocks.find(b => b.datasetId.id == datasetId),
     dataset = contentOf(block.datasetId),
-    values = sampleNamePassportValues(sampleName, selectFields, dataset);
+    values = sampleNamePassportValues(sampleName, null, selectFields, dataset);
 
       /* The original implementation simply appended the Passport data values to
        * the sampleName, but now nestedHeaders are used to instead display each

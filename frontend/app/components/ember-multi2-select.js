@@ -27,6 +27,7 @@ import { debounce } from '@ember/runloop';
 
 import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
 const /*import */{
+  genotypeIDnone,
   fieldName2ParamName,
   passportFieldNamesCategory,
 } = vcfGenotypeBrapi.genolinkPassport; /*from 'vcf-genotype-brapi'; */
@@ -98,7 +99,7 @@ export default class EmberMulti2SelectComponent extends Component {
     fieldValues = samples.reduce((fv, sampleName) => {
       const
       /** Passport data values for sampleName */
-      values = this.args.sampleNamePassportValues(sampleName, selectFields, dataset);
+      values = this.args.sampleNamePassportValues(sampleName, null, selectFields, dataset);
       // if selectFields is [], then values is [].
       values.forEach((value, i) => {
         const
@@ -186,6 +187,7 @@ export default class EmberMulti2SelectComponent extends Component {
    * @return {Array<object>} Array of rows.  Row data is {fieldName : value, ...}
    */
   @computed(
+    'args.samples.length',
     'passportFields',
     'passportFields.length',
     'args.lastPassport', 'args.mg.passportDataCount',
@@ -204,7 +206,7 @@ export default class EmberMulti2SelectComponent extends Component {
     // tableLength = (this.samplesListLimit ?? 500),
     rows = [];
     let samples = this.args.samples;
-    if (! samples) {
+    if (! samples?.length) {
       return rows;
     }
     /** Pre-filter samples by genotypeID if it has a search input. */
@@ -222,7 +224,7 @@ export default class EmberMulti2SelectComponent extends Component {
       // samples.slice(0, tableLength).map(sampleName => {
       const
       sampleName = samples[sampleIndex],
-      values = this.args.sampleNamePassportValues(sampleName, selectFields, dataset),
+      values = this.args.sampleNamePassportValues(sampleName, null, selectFields, dataset),
       rowEntries = [],
       /** find any field which has a filter and the data does not match it. */
       mismatchIndex = values.findIndex((value, fieldIndex) => {
@@ -318,6 +320,12 @@ export default class EmberMulti2SelectComponent extends Component {
 
   /** If the user has entered a search string, return .searchData,
    * otherwise data for a page of all samples (.sampleData).
+   *
+   * sampleNamePassportValues() is used to augment the row data to satisfy
+   * selectFields[].  This is in line with a medium term plan to merge results
+   * from searches, e.g. when a column is added after a search, a request by
+   * accessionNumber for the added field can be merged into the search result
+   * rows.
    */
   @computed ('sampleData', 'searchData', 'args.currentData.searchKV')
   get tableData() {
@@ -334,6 +342,7 @@ export default class EmberMulti2SelectComponent extends Component {
     'args.currentData.searchKV',
     'args.currentData.rows',
     'args.currentData.rows.length',
+    'passportFields.length',
     /* incremented when user selects a category in column filter.
      * Used in .matchField()
      */
@@ -355,11 +364,15 @@ export default class EmberMulti2SelectComponent extends Component {
      * It may be worth merging these based on accessionNumber in loadPage(),
      * instead of simply storing pages in cache */
     rows = cdRows?.length ? cdRows : this.cachedRows(),
+    dataset = this.args.dataset,
+    fieldValueFromCache = (row, selectField) => 
+      this.args.sampleNamePassportValues(
+        (row.genotypeID !== genotypeIDnone) && row.genotypeID, row.accessionNumber, [selectField], dataset)[0],
     filteredRows = rows.filter(row => {
       const
       mismatchIndex = selectFields.findIndex((fieldName, fieldIndex) => {
         const
-        value = row[fieldName],
+        value = row[fieldName] || (row[fieldName] = fieldValueFromCache(row, fieldName)),
         /** (for fieldName 'aliases'), map array of objects to array of name strings. */
         valueName = Array.isArray(value) ? value.mapBy('name') : value,
         ok = this.matchField(matchFieldFns, valueName, fieldIndex, fieldName);
@@ -376,6 +389,10 @@ export default class EmberMulti2SelectComponent extends Component {
       /** debounce because searchData() is triggered twice before page updates. */
       debounce(this, this.getNextPage, 200, /*immediate*/ true);
     }
+
+    /** search result cdRows will generally have selectFields, except after a
+     * new column is added, which doesn't trigger a search. */
+    this.requestMissing(filteredRows);
 
     return filteredRows;
   }

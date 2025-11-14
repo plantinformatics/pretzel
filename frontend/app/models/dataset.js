@@ -258,6 +258,7 @@ export default Record.extend({
    * - genotypeID : { [sampleName] -> { field : name, ... } },
    * - accessionNumber : { [accessionNumber] -> { field : name, ... } }
    * - a2gMap : [accessionNumber] -> genotypeID. initial : new Map()
+   * - g2aMap : [genotypeID] -> accessionNumber. initial : new Map()
    * }
    *
    * For a VCF dataset, sample Passport field Names are received via Genolink
@@ -269,7 +270,9 @@ export default Record.extend({
     if (! obj) {
       /** Initial empty data structure. */
       this[Symbol.for('samplesPassport')] = {
-        genotypeID : {}, accessionNumber : {}, a2gMap : new Map()};
+        genotypeID : {}, accessionNumber : {},
+        a2gMap : new Map(),
+        g2aMap : new Map() };
     }
     return obj;
   },

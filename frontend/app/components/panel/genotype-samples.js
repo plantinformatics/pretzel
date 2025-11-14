@@ -229,7 +229,24 @@ export default class PanelGenotypeSamplesComponent extends Component {
     return url;
   }
 
+  //----------------------------------------------------------------------------
 
- 
+  @action
+  /** event from Panel::SelectPassportFields indicating that user has selected
+   * Passport fields for display in <PassportTable>
+   */
+  selectedFieldsChanged(values, c, add) {
+    if (! add) {
+      return Promise.resolve();
+    }
+    const
+    /** not clear yet how best to connect to emberMulti2Table */
+    emt = window.PretzelFrontend.emberMulti2Table,
+    promise = emt.requestMissing(emt.tableData);
+
+    return promise;
+  }
+
+  //----------------------------------------------------------------------------
 
 }
