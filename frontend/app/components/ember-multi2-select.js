@@ -30,6 +30,7 @@ const /*import */{
   genotypeIDnone,
   fieldName2ParamName,
   passportFieldNamesCategory,
+  uniqueByIds,
 } = vcfGenotypeBrapi.genolinkPassport; /*from 'vcf-genotype-brapi'; */
 
 //------------------------------------------------------------------------------
@@ -320,6 +321,8 @@ export default class EmberMulti2SelectComponent extends Component {
 
   /** If the user has entered a search string, return .searchData,
    * otherwise data for a page of all samples (.sampleData).
+   * When requireId && isSearch, concat .searchData and .sampleData and use
+   * uniqueByIds() to remove duplicates by genotypeID and accessionNumber.
    *
    * sampleNamePassportValues() is used to augment the row data to satisfy
    * selectFields[].  This is in line with a medium term plan to merge results
@@ -331,8 +334,12 @@ export default class EmberMulti2SelectComponent extends Component {
   get tableData() {
     const
     searchKV = this.args.currentData.searchKV,
-    useSearch = ! this.args.requireId && searchKV && searchKV.isSearch,
-    rows = useSearch ? this.searchData : this.sampleData;
+    isSearch = searchKV && searchKV.isSearch,
+    rows = (this.args.requireId && isSearch) ?
+      uniqueByIds(
+        [].concat(this.searchData, this.sampleData),
+        ['genotypeID', 'accessionNumber']) :
+      isSearch ? this.searchData : this.sampleData;
     return rows;
   }
 
