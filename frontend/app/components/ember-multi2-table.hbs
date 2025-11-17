@@ -48,10 +48,15 @@
   </thead>
 
   <tbody class="no-select">
-    {{#each this.sortedRows as |row rowIndex|}}
+    {{!-- log 'sortedRows' this.sortedRows.length --}}
+    {{#each this.sortedRows key="rowKey" as |row rowIndex|}}
+    {{#let (this.rowKey row) as |rowKey|}}
     {{!-- log 'row' row rowIndex --}}
+    {{#unless rowIndex}}
+      {{!-- log 'sortedRows' 'row' rowKey (this.rowKey row) --}}
+    {{/unless}}
       <tr
-        id={{concat "row-" (this.rowKey row)}}
+        id={{concat "row-"  (this.rowKey row)}}
         role="row"
         class="{{if (compute this.isSelectedBound  row) "is-selected"}} {{if (eq rowIndex this.focusIndex) "is-focused"}}"
         aria-selected={{compute this.isSelectedBound  row}}
@@ -61,11 +66,17 @@
         {{!-- yield row --}}
           {{!-- row[idField] is equivalent to : <td>{{object-at rowIndex this.args.samples} }</td> --}}
           {{#each this.columns as |column|}}
-          {{!-- log 'column' column --}}
+            {{!-- log 'column' column --}}
+            {{#unless rowIndex}}
+              {{!-- log 'sortedRows' 'cell' column.property (this.getRowProperty row column.property) --}}
+            {{/unless}}
+
+            {{!-- not needed : id={{concat "cell-" rowKey "-" column.property --}} 
             <td>{{this.getRowProperty row column.property}}</td>
           {{/each}}
 
       </tr>
+    {{/let}}
     {{/each}}
   </tbody>
 

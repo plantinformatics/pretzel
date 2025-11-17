@@ -234,8 +234,8 @@ export default class EmberMulti2SelectComponent extends Component {
         ok = this.matchField(matchFieldFns, value, fieldIndex, fieldName);
         if (ok) {
           const
-          /** 'null' is not treated as missing by missingCells(). */
-          valueText = value === null ? 'null' : value || '_', 
+          /** null is not treated as missing by missingCells(). */
+          valueText = value === null ? value : value || '_', 
           entry = [fieldName, valueText];
           rowEntries.push(entry);
         }
@@ -333,6 +333,7 @@ export default class EmberMulti2SelectComponent extends Component {
   @computed ('sampleData', 'searchData', 'args.currentData.searchKV')
   get tableData() {
     const
+    fnName = 'tableData',
     searchKV = this.args.currentData.searchKV,
     isSearch = searchKV && searchKV.isSearch,
     rows = (this.args.requireId && isSearch) ?
@@ -340,6 +341,7 @@ export default class EmberMulti2SelectComponent extends Component {
         [].concat(this.searchData, this.sampleData),
         ['genotypeID', 'accessionNumber']) :
       isSearch ? this.searchData : this.sampleData;
+    dLog(fnName, isSearch, searchKV, rows);
     return rows;
   }
 
@@ -359,6 +361,9 @@ export default class EmberMulti2SelectComponent extends Component {
     // used in matchField() : okFn()
     'args.requireId',
     'args.genotypeIDsReceived',
+    /* incremented by receiving Passport data which may have been requested to
+     * populate columns added by user. */
+    'args.mg.passportDataCount',
   )
   get searchData() {
     const
@@ -400,6 +405,8 @@ export default class EmberMulti2SelectComponent extends Component {
     /** search result cdRows will generally have selectFields, except after a
      * new column is added, which doesn't trigger a search. */
     this.requestMissing(filteredRows);
+
+    dLog(fnName, filteredRows, this.args.currentData.searchKV);
 
     return filteredRows;
   }
@@ -474,6 +481,8 @@ export default class EmberMulti2SelectComponent extends Component {
   */
   @alias('tableData') filteredRows;
 
+  /** Currently ember-multi2-table.js : sortedRows() is used instead of this
+   */
   get sortedRows() {
     const rows = [...this.filteredRows];
     if (!this.sortBy) return rows;

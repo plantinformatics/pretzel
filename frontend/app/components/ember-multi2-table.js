@@ -322,15 +322,20 @@ export default class EmberMulti2TableComponent extends Component {
   /** Provide a stable key extractor. Override via @rowKey or ensure rows have `id`.
    * This works for either @rows which is {Array<string>} or
    * this.sortedRows which is {Array<row data>}
+   * @param row object containing data for cells in a row of the table
    */
   rowKey = (row) => {
+    // handle undefined row, although that would be an incorrect call.
+    if (! row) { dLog('rowKey', row); return '_-_'; }
     const
     text =
       typeof row === 'string' ? row :
        (typeof this.args.rowKey === 'function') ?
        this.args.rowKey(row) :
-       row.genotypeID ?? /* row.id ?? row.sampleName ?? */
-       row.accessionNumber ?? JSON.stringify(row);
+      /** this part is specific to passport-table and can be migrated out to @rowKey() */
+      /** row.genotypeID may be "" - don't use that as key */
+    row.genotypeID ? row.genotypeID :
+    row.accessionNumber ?? '';
     return text;
   };
 
@@ -374,7 +379,20 @@ export default class EmberMulti2TableComponent extends Component {
 
   @computed('filteredRows', 'sortBy', 'sortDir')
   get sortedRows() {
+    const fnName = 'sortedRows';
     const rows = this.filteredRows; // .slice(0,20); // [...this.filteredRows];
+    dLog(fnName, rows);
+
+    /** add .rowKey for use in #each key= */
+    rows.forEach(row => {
+      if (! row.hasOwnProperty('rowKey')) {
+        Object.defineProperty(row, 'rowKey', {
+          get: () => this.rowKey(row),
+          enumerable: true  // show up in for..in or Object.keys()
+        });
+      }
+    });
+
     if (!this.sortBy) return rows;
     const dir = this.sortDir === 'asc' ? 1 : -1;
     return rows.sort((a, b) => cmp(a[this.sortBy], b[this.sortBy]) * dir);
