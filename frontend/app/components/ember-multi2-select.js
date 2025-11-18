@@ -348,7 +348,9 @@ export default class EmberMulti2SelectComponent extends Component {
     isSearch = searchKV && searchKV.isSearch,
     rows = (this.args.requireId && isSearch) ?
       uniqueByIds(
-        [].concat(this.searchData, this.sampleData),
+        [].concat(
+          this.searchData.filter(r => r.genotypeID && r.genotypeID !== genotypeIDnone),
+          this.sampleData),
         ['genotypeID', 'accessionNumber']) :
       isSearch ? this.searchData : this.sampleData;
     dLog(fnName, isSearch, searchKV, rows);
