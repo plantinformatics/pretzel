@@ -128,11 +128,21 @@ export default class EmberMulti2SelectComponent extends Component {
    * .passportFields may be nullish, defaulting to [].
    * @return {Array<{header, property, filterOptions}>}
    */
-  @computed('passportFields', 'fieldsUniqueValues')
+  @computed('passportFields' /*,'fieldsUniqueValues' */)
   get columns() {
     const
     fnName = 'columns',
     filterChanged = () => this.namesFiltersCount++,
+    /** The dependency fieldsUniqueValues is commented out because it causes the
+     * column headers to redraw, which disrupts focus while the user is entering
+     * text into a search filter <input>.
+     * fieldsUniqueValues depends on args.mg.passportDataCount because received
+     * passport data will extend the range of fieldsUniqueValues.  But the
+     * <option> values come primarily from possibleValuesFilterOptions[], and
+     * passport data is being received continually, so re-rendering column
+     * headers makes it hard for the user to retain focus and type in the
+     * <input>.
+     */
     fieldsValues = this.fieldsUniqueValues,
     passportFields = this.passportFields || [],
 
