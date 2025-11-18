@@ -67,6 +67,9 @@ export default class PassportTable extends Component {
   /** end row of last page of Passport data requested.  */
   lastPassport = 0;
 
+  @tracked
+  genolinkErrorMessage = null;
+
   //----------------------------------------------------------------------------
 
   constructor() {
@@ -279,6 +282,7 @@ export default class PassportTable extends Component {
         /** /query ?_text is across all fields; key is not passed */
         const optionsParam = {_text, filter, filterCode, page, pageLength : this.pageLength};
         promise = this.args.mg.datasetGetPassportData(dataset, optionsParam, selectFields);
+        this.genolinkErrorMessageDisplay(promise);
         promise.then(responses => {
           const dataChunks = responses.mapBy('content');
           dLog(fnName, dataChunks);
@@ -445,6 +449,7 @@ export default class PassportTable extends Component {
       if (selectFields.length) {
         const optionsParam = {sampleNames, pageLength : this.pageLength};
         promise = this.args.mg.datasetGetPassportData(this.args.dataset, optionsParam, selectFields);
+        this.genolinkErrorMessageDisplay(promise);
         promise.then(rows => {
           if (! rows) {
             console.warn(fnName, 'rows', rows, optionsParam);
@@ -483,8 +488,29 @@ export default class PassportTable extends Component {
       const {genotypeIDs : genotypeIds, accessionNumbers} = ids;
       const optionsParam = {genotypeIds, accessionNumbers, pageLength : this.pageLength};
       promise = this.args.mg.datasetGetPassportData(this.args.dataset, optionsParam, selectFields);
+      this.genolinkErrorMessageDisplay(promise);
     }
     return promise;
+  }
+
+  //----------------------------------------------------------------------------
+
+  /** Given a promise for a Genolink API request (from
+   * this.args.mg.datasetGetPassportData()), catch any error and show it in the GUI via
+   * .genolinkErrorMessage
+   */
+  genolinkErrorMessageDisplay(promise) {
+     /* Wrap with later() to avoid warning : "it had already been used previously
+     * in the same computation.  Attempting to update a value after using it in
+     * a computation ..."
+     */
+    later(() => this.genolinkErrorMessage = null);
+
+    /* copied from components/panel/select-passport-fields.js : selectedFieldsChanged()
+     */
+    promise?.catch(error => {
+      this.genolinkErrorMessage = error.message;
+    });
   }
 
   //----------------------------------------------------------------------------
