@@ -16,8 +16,11 @@
     </span>
     {{#if @column.isId}}
       <span>
+        {{!-- .filterSamplesByHaplotype implies this checkbox is disabled and true -
+           passport-table passes null for @setRequireId to indicate this --}}
         <input type="checkbox"
-        checked={{this.args.requireId}}
+        checked={{or this.args.requireId (not @setRequireId) }}
+        disabled={{not @setRequireId}}
         oninput={{action @setRequireId value="target.checked" }}  >
         {{!-- avoiding div.genotype label { margin-top: 2em; } --}}
         <label style="margin-top: inherit;" >

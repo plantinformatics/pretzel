@@ -346,7 +346,10 @@ export default class EmberMulti2SelectComponent extends Component {
     fnName = 'tableData',
     searchKV = this.args.currentData.searchKV,
     isSearch = searchKV && searchKV.isSearch,
-    rows = (this.args.requireId && isSearch) ?
+    filterSamplesByHaplotype = this.args.userSettings.filterSamplesByHaplotype,
+    rows = filterSamplesByHaplotype ?
+      this.sampleData :
+      (this.args.requireId && isSearch) ?
       uniqueByIds(
         [].concat(
           this.searchData.filter(r => r.genotypeID && r.genotypeID !== genotypeIDnone),

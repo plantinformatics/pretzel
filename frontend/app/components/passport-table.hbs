@@ -27,7 +27,7 @@
     getNamedRows=this.getNamedRows
     initialFilter=this.initialFilter
     requireId=this.requireId
-    setRequireId=(action (mut this.requireId) )
+    setRequireId=(if @userSettings.filterSamplesByHaplotype null (action (mut this.requireId) ))
     nameFilterChanged=this.nameFilterChanged
     genotypeIDsReceived=this.genotypeIDsReceived
     addColumnSelector=@addColumnSelector
