@@ -300,6 +300,7 @@ function sheetToDataset(
   dataset = Object.assign({name : datasetName}, datasetTemplate),
   datasets = [dataset];
   dataset.warnings = [];
+  dataset.errors = [];
 
   /** The spreadsheet value parentName corresponds to dataset.parent,
    * i.e. in metadata sheet : metadata.parentName, and in dataset worksheet column feature.parentName
@@ -313,6 +314,9 @@ function sheetToDataset(
   const missingFields = requiredFieldsMeta.filter(fieldName => (meta[fieldName] ?? undefined) === undefined);
   if (missingFields.length) {
     const warningText = 'These fields are expected to be present in Dataset.meta : ' + missingFields.join(', ');
+    if (! meta.crop && meta.GenolinkURL) {
+      dataset.errors.push('Dataset.meta.GenolinkURL is defined, so Crop must also be defined');
+    }
     dataset.warnings.push(warningText);
   }
 
