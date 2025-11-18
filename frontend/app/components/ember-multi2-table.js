@@ -150,6 +150,8 @@ export default class EmberMulti2TableComponent extends Component {
     const
     nf = this.fieldNamesFilters[fieldName] ||
       (this.fieldNamesFilters[fieldName] = new NamesFilters(filterChanged));
+    // update function, which likely has old closure.
+    nf.filterChanged = filterChanged;
     return nf;
   }
 
