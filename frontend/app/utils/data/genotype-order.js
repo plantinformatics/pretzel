@@ -30,9 +30,14 @@
 
 //------------------------------------------------------------------------------
 
-import {
+import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
+const /*import */{
   gtValueIsNumeric,
-} from './vcf-feature';
+} = vcfGenotypeBrapi.vcfFeature; /*from 'vcf-genotype-brapi'; */
+
+
+import { stringCountString } from '../string';
+
 
 //----------------------------------------------------------------------------
 
@@ -329,8 +334,78 @@ function distancesTo1d(blocks, referenceSamplesCount, userSettings) {
 
 //------------------------------------------------------------------------------
 
-export { tsneOrder };
+/** match a (sample genotype call) value against the Ref/Alt value of the
+ * feature / SNP.  a rough factorisation; currently there is just 1 flag
+ * haplotypeFilterRef for all selected 'LD Blocks', and hence one instance
+ * of MatchRef, but these requirements are likely to evolve.
+ *
+ * Origin : in cafd7623 MatchRef was factored from haplotypeFilterSamples()
+ * (later renamed to filterSamples()).
+ */
+export class MatchRef {
+  constructor(matchRef) {
+    this.matchRef = matchRef;
+    this.matchKey = matchRef ? 'ref' : 'alt';
+    this.matchNumber = matchRef ? '0' : '2';
+  }
+  /** to match homozygous could use .startsWith(); that will also match 1/2 of heterozygous.
+   * Will check on (value === '1') : should it match depending on matchRef ?
+   * @param value sample/individual value at feature / SNP
+   * This function is not called if valueIsMissing(value).
+   * @param matchValue  ref/alt value at feature / SNP (depends on matchRef)
+   */
+  matchFn(value, matchValue) { return (value === this.matchNumber) || (value === '1') || value.includes(matchValue); }
+  /**
+   * Param comments of matchFn() apply here also.
+   * @return undefined if value is invalid
+   * missing data, i.e. './.', is counted in .missing if using Counts
+   */
+  distanceFn(value, matchValue) {
+    const fnName = 'distanceFn';
+    /** number of copies of Alt / Ref, for matchRef true / false. */
+    let distance, missing = 0;
+    const numeric = gtValueIsNumeric(value);
+    if (value === './.') {
+      missing += 2;
+      distance = this.matchRef ? 0 : 2;
+    } else {
+      switch (value.length) {
+      case 3 :
+        if (numeric) { matchValue = this.matchRef ? '1' : '0'; }
+        distance = 2 - stringCountString(value, matchValue);
+        break;
+      case 1:
+        if (numeric) {
+          distance = this.matchRef ? +value : 2 - value;
+        } else {
+          distance = value === this.matchNumber;
+        }
+        break;
+      default : dLog(fnName, 'invalid genotype value', value);
+        break;
+      }
+    }
+    if (Measure === Counts) {
+      const counts = Measure.create();
+      // similar to Counts.count(), except that increments by only 1.
+      if (missing) {
+        counts.missing = missing;
+      } else {
+        counts.notMissing = 2;
+        counts.distance = distance;
+        counts.differences = distance ? 1 : 0;
+      }
+      distance = counts;
+    }
 
+    return distance;
+  }
+}
+
+
+//------------------------------------------------------------------------------
+
+export
 /** Comparator that uses the genotype values of a user-selected reference sample.
  *
  * Manage-genotype reuses the same filtering pipeline for both of these scenarios:
@@ -379,8 +454,7 @@ class MatchRefSample {
 
 import TSNE from 'tsne-js';
 
-export { MatchRefSample };
-
+export
 /** Map distance vectors of samples to 1D.
  * param samples {sampleName : [distance, ...], ... }
  */
