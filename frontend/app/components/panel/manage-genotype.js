@@ -1339,11 +1339,33 @@ export default class PanelManageGenotypeComponent extends Component {
    */
 
 
-  /** User has clicked Alt or Ref of a SNP - toggle the selection of that
+  /** Toggle the SNP+allele pair that the user just clicked in the matrix view.
+   *
+   * User has clicked Alt or Ref of a SNP - toggle the selection of that
    * SNP+genotype for sample sorting and filtering.
+   *
+   * Event flow :
+   *   afterOnCellMouseDown() ➜ handleCellClick() ➜ featureToggleRC() ➜ featureToggle().
    *
    * Called from afterOnCellMouseDown() -> handleCellClick() ->
    *   featureToggleRC() in matrix-view.js
+   *
+   * Data flow :
+   *   • `feature` is the Ember Data Feature model representing the clicked SNP row.
+   *   • `blockSampleFilters(block,'feature')` returns the mutable array that keeps
+   *     track of SNP filters for the table block.  The array lives on the block
+   *     itself via the `sampleFiltersSymbol`.
+   *   • `feature[matchRefSymbol]` stores whether the Ref (`true`) or Alt (`false`)
+   *     allele is the active comparator for this SNP across every block that shares
+   *     the same genomic position.
+   *
+   * The method toggles presence of the feature in the filter array (removing it if
+   * the same allele is clicked twice, switching allele in place otherwise), updates
+   * the per-block selected SNP counters, and triggers `ensureSamplesThenRender()`
+   * so the downstream filtering / sorting pipeline can recompute column order.
+   *
+   * @param {FeatureModel} feature  SNP that owns the clicked cell.
+   * @param {'Ref'|'Alt'} columnName  Indicates which allele was clicked.
    */
   @action
   featureToggle(feature, columnName) {
@@ -2439,11 +2461,26 @@ export default class PanelManageGenotypeComponent extends Component {
     return features;
   }
 
-  /** Construct a text key from the result of this.selectedSNPsInBrushedDomain(vcfBlock)
+  /** Build the canonical cache key for the active SNP selections in the brushed window.
    *
+   * Construct a text key from the result of this.selectedSNPsInBrushedDomain(vcfBlock)
    * Related : in vcfGenotypeSamplesDataset() : filterByHaplotype has already
    * been through the same sort and map, so selectedSNPsToKey() is used for
    * filterDescription.
+   *
+   * The selections live on each block inside `blocksFeatureFilters`.  When a block is
+   * zoomed in enough to provide concrete `Feature` models we grab the entries that lie
+   * inside the current `brushedDomain`.  When a block is still loading, we fall back to
+   * the reference block’s features so the user can still request filtering.
+   *
+   * This helper performs the deterministic sort+map step that every consumer must run
+   * before passing the data to `selectedSNPsToKey()`.  Sorting by `value_0`
+   * (chromosomal position) guarantees that identical SNP sets map to the same cache
+   * entry even if the user clicked them in a different order, which is essential for
+   * reusing `blockFiltered` results across panes and API calls.
+   *
+   * Related : in vcfGenotypeSamplesDataset() the `filterByHaplotype.features` payload
+   * is already sorted/mapped via this logic prior to issuing the samples API call.
    */
   selectedSNPsToKeyWithSortAndMap(selectedSNPs) {
     const
@@ -2455,7 +2492,9 @@ export default class PanelManageGenotypeComponent extends Component {
     filterDescription = this.selectedSNPsToKey(features, matchHet);
     return filterDescription;
   }
-  /** Construct a text key from the result of this.selectedSNPsInBrushedDomain(vcfBlock)
+  /** Construct the string cache key for a sorted selection of SNPs.
+   *
+   * Construct a text key from the result of this.selectedSNPsInBrushedDomain(vcfBlock)
    * @param selected SNPs features sorted by position and mapped as {position, matchRef}
    * @param matchHet @userSettings.matchHet indicates to match samples with a
    * single copy of Alt at the SNP position (i.e. 0.1 or 1.0, where . matches / or |)
@@ -2465,6 +2504,19 @@ export default class PanelManageGenotypeComponent extends Component {
    * when :
    * - writing to cache in vcfGenotypeSamplesDataset().
    * - reading cache in blockFilteredSamplesGet().
+   *
+   * @param {Array<{position:number, matchRef:boolean}>} features
+   *   Output from selectedSNPsToKeyWithSortAndMap(); order matters.
+   * @param {Boolean} matchHet  Current value of `userSettings.matchHet` that defines
+   *   whether heterozygous calls are treated as matches.  Because the backend applies
+   *   this flag when streaming samples, it must be encoded into the cache key.
+   * @return {String} filterDescription suitable for the dataset ➜ samples cache.
+   *
+   * Usage:
+   *   • vcfGenotypeSamplesDataset() keys the async sample request cache so that a new
+   *     API call is issued only when either the SNP set or matchHet flag changes.
+   *   • blockFilteredSamplesGet() / datasetFilteredSamplesGet() lookups reuse the same
+   *     identifier to retrieve previously computed sample lists.
    */
   selectedSNPsToKey(features, matchHet) {
     const
@@ -4458,7 +4510,9 @@ export default class PanelManageGenotypeComponent extends Component {
         });
   }
 
-  /** for brushedOrViewedVCFBlocks, apply any sampleFilters which the blocks have.
+  /** Evaluate the currently active sample filters and accumulate per-sample measures.
+   *
+   * for brushedOrViewedVCFBlocks, apply any sampleFilters which the blocks have.
    * Used for all 3 types of Sample Filters :
    * sampleFilterTabs = ['Variant Intervals', 'LD Blocks', 'Features'];
    *
@@ -4471,8 +4525,38 @@ export default class PanelManageGenotypeComponent extends Component {
    *       sample *
    *         accumulate : block : sample : count of matches and mismatches 
    *
+   * Scope :
+   *   • iterates over `brushedOrViewedVCFBlocks` so that every block displayed in the
+   *     genotype table contributes distances.
+   *   • supports the three filter types exposed in the UI
+   *     (`Variant Intervals`, `LD Blocks`, `Features`) by reading the arrays stored on
+   *     each block through `blockSampleFilters(block, filterTypeName)`.
+   *
+   * Data flow :
+   *   • For each feature participating in the filter, the helper
+   *     `featuresCountMatches()` walks across every sample column value and feeds a
+   *     `Measure` (currently `Counts`) into the accumulating `blockMatches` map.
+   *   • When reference samples are selected the counts are stored in
+   *     `block[referenceSampleMatchesSymbol][referenceSampleName][sampleName]`.  When
+   *     no explicit references are chosen the counts live under
+   *     `block[sampleMatchesSymbol][sampleName]`.  These maps are later consumed by
+   *     `distancesTo1d()` (for ordering) and `matchesSummary`.
+   *   • `showHideSampleFn`, if provided (e.g. `matrixView.filterSamplesBySelectedHaplotypes`),
+   *     is invoked for every sample to synchronise DOM visibility with the computed
+   *     counts.
+   *   • The method updates `this.matchesSummary` with the merged distance signal so that
+   *     column sort order reacts once the asynchronous work finishes.
+   *
+   * Event flow :
+   *   Called after user actions such as `featureToggle()`, `variantIntervalToggle()`,
+   *   haplotype filter changes, or when brushing selects a new interval.
+   *
+   * @param {?Function} showHideSampleFn  Callback that hides/shows a column based on
+   *     the accumulated `Measure`.
    * @param showHideSampleFn if provided, after filtering, call this for each
    * sample to hide/show the column.
+   * @param {?MatrixView} matrixView  Cached table controller so we can refresh it when
+   *     sample visibility changes.
    */
   @action
   filterSamples(showHideSampleFn, matrixView) {
@@ -4600,6 +4684,31 @@ export default class PanelManageGenotypeComponent extends Component {
       }
 
       /**
+       * Iterate over a list of features and accumulate Measures for every sample found
+       * in their genotype vectors.
+       *
+       * Data structures involved:
+       *   • `features` is an array of Feature Ember models where `feature.values` is the
+       *     per-sample genotype lookup returned by the VCF service.
+       *   • `matches` is either the block-local `sampleMatchesSymbol` map or the nested
+       *     `referenceSampleMatchesSymbol` map.  Keys are sample names and the values
+       *     are Measure instances (currently `Counts`).
+       *   • `matchRefFn` determines which comparator to use:
+       *       - `null/undefined` ➜ use the `feature[matchRefSymbol]` that the user set
+       *         via `featureToggle()`.
+       *       - function ➜ generate dynamic comparators such as `MatchRefSample` for
+       *         each reference sample.
+       *
+       * Algorithm:
+       *   1. Build the list of `matchRefs` (one per allele / reference sample).
+       *   2. For every sample genotype stored in `feature.values`, compute the distance
+       *      via the injected `distanceFn`.
+       *   3. Add the returned Measure fragment to the correct accumulator map using
+       *      `Measure.add()`.  When reference samples are active, a dedicated level is
+       *      created for each reference (`matches[referenceSampleName][sampleName]`).
+       *
+       * The function is side-effect only; it mutates `matches`.
+       *
        * @param matches[sampleName] is now Measure, replacing : distance, {matches,mismatches}.
        * @param matchRefFn undefined or function returning [MatchRef, ...].
        * if not defined then construct it for each feature from feature[matchRefSymbol].
