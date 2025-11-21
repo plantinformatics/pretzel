@@ -646,6 +646,7 @@ function valueIsMissing(valueIn) {
  *  undefined
  *  'A' 'C' 'T' 'G' '0' '1' '2'
  *  '0/1' '1/0' './.' 
+ *  'N' (null value)
  *  or matching /^[ACTG][/|][ACTG]$/, the 2 allele values are different.
  * @return string value  in requestFormat
  */
@@ -653,7 +654,8 @@ function valueToFormat(requestFormat, refAltValues, valueIn) {
   const
   fnName = 'valueToFormat';
   let valueOut;
-  if (valueIsMissing(valueIn)) {
+  /** No change to missing and null values. */
+  if (valueIsMissing(valueIn) || (valueIn === 'N')) {
     valueOut = valueIn;
   } else {
     const
@@ -944,7 +946,8 @@ function vcfFeatures2MatrixViewRowsResult(
     .map(name => stringSetSymbol(datasetSymbol, name, dataset));
   result.sampleNames.addObjects(columnNames);
 
-  dLog(fnName, result.rows.length);
+  // result.rows is a Map()
+  dLog(fnName, result.rows.size);
   return result;
 }
 

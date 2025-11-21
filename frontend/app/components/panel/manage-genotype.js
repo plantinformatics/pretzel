@@ -3261,12 +3261,14 @@ export default class PanelManageGenotypeComponent extends Component {
       mafThreshold = userSettings.mafThreshold,
       mafUpper = userSettings.mafUpper,
       featureCallRateThreshold = userSettings.featureCallRateThreshold,
+      /** true if the VCF file has null genotype values (encoded as :1). */
+      genotypeHasNull = this.lookupBlock.get('datasetId._meta.genotypeHasNull'),
       /** related : genotypeSNPFilters() */
       requestOptions = {
         requestFormat, requestSamplesAll, snpPolymorphismFilter,
         mafThreshold, mafUpper, featureCallRateThreshold,
-      },
-      x=0;
+        genotypeHasNull,
+      };
 
       if (intersection) {
         requestOptions.isecDatasetIds = intersection.datasetIds;
@@ -4809,6 +4811,18 @@ export default class PanelManageGenotypeComponent extends Component {
           this.headerText = (isBrAPI || resultIsBrapi(text)) ? columnHeadersChrPosId +
             (text.callSetDbIds?.join('\t') || samples.replaceAll('\n', '\t') || '') :
             isGerminate ? text.join('\t') : text;
+
+          /** similar .isVCF, but don't expect Germinate to have
+           * ##FORMAT=<ID=NU, so want to exclude Germinate for this purpose. */
+          const isVCF = this.lookupBlock?.hasTag('VCF');
+          if (isVCF) {
+            const hasNull = text.match(/\n##FORMAT=<ID=NU.*/);
+            if (hasNull) {
+              dLog(fnName, hasNull);
+              this.lookupBlock.datasetId?.set('_meta.genotypeHasNull', true);
+            }
+          }
+
           if (trace) {
             dLog(fnName, text);
           }
