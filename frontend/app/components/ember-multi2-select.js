@@ -128,7 +128,16 @@ export default class EmberMulti2SelectComponent extends Component {
    * .passportFields may be nullish, defaulting to [].
    * @return {Array<{header, property, filterOptions}>}
    */
-  @computed('passportFields' /*,'fieldsUniqueValues' */)
+  @computed(
+    'passportFields',
+    /* 'fieldsUniqueValues' is based on received Passport data, so it updates
+     * when that is received, but making fieldsUniqueValues a dependency causes
+     * too many column header refreshes, causing loss of user focus in the seach
+     * <input> fields.
+     * possibleValuesFilterOptions is the more significant source of filterOptions.
+     */
+    'args.possibleValuesFilterOptions',
+  )
   get columns() {
     const
     fnName = 'columns',
