@@ -42,7 +42,7 @@
             {{/if}}
 
             {{column.header}}
-            {{#if (eq this.sortBy column.property)}}
+            {{#if (and (eq this.sortBy column.property) this.sortDir)}}
               {{if (eq this.sortDir "asc") "▲" "▼"}}
             {{/if}}
 

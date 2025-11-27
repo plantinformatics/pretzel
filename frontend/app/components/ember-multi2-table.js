@@ -313,7 +313,7 @@ export default class EmberMulti2TableComponent extends Component {
 
   // --- Sorting ---
   @tracked sortBy = null;     // e.g. 'sampleName'
-  @tracked sortDir = 'asc';   // 'asc' | 'desc'
+  @tracked sortDir = null;    // 'asc' | 'desc' | null
 
   // --- Selection like <select multiple> ---
   /** store stable row keys (e.g. genotypeID / sample / accession id) */
@@ -395,9 +395,10 @@ export default class EmberMulti2TableComponent extends Component {
       }
     });
 
-    if (!this.sortBy) return rows;
+    if (!this.sortBy || !this.sortDir) return rows;
     const dir = this.sortDir === 'asc' ? 1 : -1;
-    return rows.sort((a, b) => cmp(a[this.sortBy], b[this.sortBy]) * dir);
+    const sorted = rows.toSorted((a, b) => cmp(a[this.sortBy], b[this.sortBy]) * dir);
+    return sorted;
   }
 
   get activeRowId() {
@@ -435,7 +436,14 @@ export default class EmberMulti2TableComponent extends Component {
     // Don't change selection anchors when sorting
     evt?.preventDefault?.();
     if (this.sortBy === property) {
-      this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
+      if (this.sortDir === 'asc') {
+        this.sortDir = 'desc';
+      } else if (this.sortDir === 'desc') {
+        this.sortDir = null;
+        this.sortBy = null;
+      } else {
+        this.sortDir = 'asc';
+      }
     } else {
       this.sortBy = property;
       this.sortDir = 'asc';

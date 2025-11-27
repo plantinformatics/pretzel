@@ -498,7 +498,7 @@ export default class EmberMulti2SelectComponent extends Component {
 
   // sort + selection state
   @tracked sortBy = null;           // e.g. 'sampleName'
-  @tracked sortDir = 'asc';         // 'asc' | 'desc'
+  @tracked sortDir = null;          // 'asc' | 'desc' | null
   @tracked selectedIds = new Set(); // store stable row keys (e.g. accession id)
 
   /* If you already compute filtered rows, plug that in here instead of this.args.rows
@@ -512,7 +512,7 @@ export default class EmberMulti2SelectComponent extends Component {
    */
   get sortedRows() {
     const rows = [...this.filteredRows];
-    if (!this.sortBy) return rows;
+    if (!this.sortBy || !this.sortDir) return rows;
 
     const dir = this.sortDir === 'asc' ? 1 : -1;
     return rows.sort((a, b) => {
@@ -528,7 +528,14 @@ export default class EmberMulti2SelectComponent extends Component {
 
   @action toggleSort(property) {
     if (this.sortBy === property) {
-      this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
+      if (this.sortDir === 'asc') {
+        this.sortDir = 'desc';
+      } else if (this.sortDir === 'desc') {
+        this.sortDir = null;
+        this.sortBy = null;
+      } else {
+        this.sortDir = 'asc';
+      }
     } else {
       this.sortBy = property;
       this.sortDir = 'asc';
