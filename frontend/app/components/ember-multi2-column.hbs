@@ -27,10 +27,12 @@
           In Dataset
         </label>
 
+        {{!-- the first line is clipped at the right margin of the column;
+           -- increasing the text length with &nbsp; shifts it left and avoids clipping.
+           -- (The tooltip for <button @addColumnSelector is not clipped.) --}}
         <EmberTooltip @side="bottom" @delay=1000>
-          <span>
-            Restrict the display to Accessions / Samples in this dataset.
-          </span>
+          <div>Restrict the display &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+          <div> to Accessions / Samples in this dataset.</div>
         </EmberTooltip>
       </span>
     {{/if}}
