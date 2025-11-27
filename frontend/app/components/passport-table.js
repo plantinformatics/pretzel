@@ -8,6 +8,7 @@ import { alias } from '@ember/object/computed';
 
 import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
 const /*import */{
+  genotypeIDnone,
   genolinkFieldNames,
   PassportFilter,
   PassportSearch,
@@ -339,7 +340,7 @@ export default class PassportTable extends Component {
                 this.toSamplesPassport(a2gMap, dataset, data);
                 /* Genolink returns "" in .genotypeID if genotypeIDs were not
                  * given in the request. */
-                data.forEach(d => (d.genotypeID == '') && (d.genotypeID = 'Not yet genotyped'));
+                data.forEach(d => (d.genotypeID == '') && (d.genotypeID = genotypeIDnone));
                 /** after genotypeIDForRow(), searchData() needs re-filter. */
                 this.genotypeIDsReceived++;
               });
