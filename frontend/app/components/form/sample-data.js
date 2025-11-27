@@ -12,6 +12,9 @@ const dLog = console.debug;
 
 const trace = 0;
 
+/** <input type="range" ...  min="0" max="200" */
+const groupOffsetIntMax = 200;
+
 //------------------------------------------------------------------------------
 
 /** If string contains a space, trim from the first space onwards.
@@ -111,7 +114,7 @@ export default class SampleDataComponent extends Component {
       groups = Object.groupBy(dataIndexed, ({sampleName}, i) => {
         const
         passport = samplesPassport[sampleName],
-        key =
+        key = ! passport ? "No Passport Data" :
           passport.subRegion ||
           passport.region ||
           passport.countryOfOrigin?.name ||
@@ -131,7 +134,10 @@ export default class SampleDataComponent extends Component {
         name: key,
         // hovertemplate,
         customdata : g.map(({sampleName, index}, j) =>
-          ({trace : i, j, index, passport : JSON.stringify(samplesPassport[sampleName])})),
+          ({trace : i, j, index,
+            passport : JSON.stringify(samplesPassport[sampleName]),
+            data : this.data[sampleName]?.join(',')
+           })),
         ... traceConfig
       };
         return trace;
@@ -218,6 +224,7 @@ const
     <td>${customdata.j}</td>
     <td>${customdata.index}</td>
     <td>${customdata.passport}</td>
+    <td>${customdata.data}</td>
   </tr>
 `;
   return text;
@@ -237,6 +244,7 @@ function hoverDataHtml(data) {
       <th>j</th>\
       <th>index</th>\
       <th>passport</th>\
+      <th>data</th>\
     </tr>\
   </thead>\
   <tbody>\
@@ -267,8 +275,12 @@ function hoverDataHtml(data) {
   groups = v[0].reduce(
     (g, x, i) => {
       const
-      /** convert position to a text key for grouping */
-      key = '' + x + '|' + v[1][i],
+      y = v[1][i],
+      /** convert position to a text key for grouping
+       * Points within 0.1% are too close for hover to separate them, so use
+       * groupOffset for these.
+       */
+      key = '' + x.toFixed(2) + '|' + y.toFixed(2),
       group = g[key] || (g[key] = []);
       group.push([i, v[0], v[1]]);
       return g;
