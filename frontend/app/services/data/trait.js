@@ -86,6 +86,10 @@ export default Service.extend({
     let
     group = this.get(groupName),
     trait = Trait.create({name});
+    /** When a QTL Dataset Block is viewed, the traits are added;  at this time
+     * default them to visible.
+     */
+    trait.set('visible', true);
     group.pushObject(trait);
     return trait;
   },
