@@ -6,12 +6,19 @@
     Download CSV file
   </button>
 
-  {{#if (not (is-empty this.sampleData))}}
-  <button type="button" onclick={{action this.openSampleData}}
-    class="btn btn-info btn-xs"
-    style="margin: 6px; padding: 1px 3px;" >
-    Sample PCA
-  </button>
+  {{#if this.urlOptions.featuresPCA}}
+    {{!-- tried : (not (is-empty this.sampleData)), but (is-empty {}) returns false --}}
+    {{#if this.sampleDataNotEmpty}}
+      <button type="button" onclick={{action this.openSampleData}}
+        class="btn btn-info btn-xs"
+        style="margin: 6px; padding: 1px 3px;" >
+        Sample PCA
+      </button>
+      <input type="checkbox"
+        checked={{this.sortByGenotype}}
+        oninput={{action (mut this.sortByGenotype) value="target.checked"}}  >
+      <label>Sort by Genotype</label>
+    {{/if}}
   {{/if}}
 
   <input type="checkbox"
@@ -65,6 +72,8 @@
   {{/ember-modal-dialog}}
 {{/if}}
 
+{{!-- .showSampleData cannot be set without .featuresPCA so .featuresPCA check is superfluous here. --}}
+{{#if this.urlOptions.featuresPCA}}
   {{#if this.showSampleData}}
     {{#if (not (is-empty this.sampleData))}}
       <button type="button" {{on "click" (action this.closeSampleData)}}>X</button>
@@ -80,3 +89,4 @@
       {{/each-in}}
     {{/if}}
   {{/if}}
+{{/if}}

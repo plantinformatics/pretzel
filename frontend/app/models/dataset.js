@@ -194,6 +194,13 @@ export default Record.extend({
     return this.hasTag('VCF');
   },
 
+  /** @return true if the samples of this dataset can be used in Genolink
+   * Passport requests
+   */
+  get isGenolink() {
+    return this._meta?.GenolinkURL;
+  },
+
   //----------------------------------------------------------------------------
 
   /** positionFilter is applicable to VCF / genotype datasets, and indicates if
@@ -247,17 +254,31 @@ export default Record.extend({
 
   //------------------------------------------------------------------------------
 
-  /** samplesPassport [sampleName] -> { field : name, ... }
+  /** samplesPassport : {
+   * - genotypeID : { [sampleName] -> { field : name, ... } },
+   * - accessionNumber : { [accessionNumber] -> { field : name, ... } }
+   * - a2gMap : [accessionNumber] -> genotypeID. initial : new Map()
+   * - g2aMap : [genotypeID] -> accessionNumber. initial : new Map()
+   * }
+   *
    * For a VCF dataset, sample Passport field Names are received via Genolink
    * getPassportData() request.  Fields may be added, but the passport data of a
    * sample does not change, so they are cached per dataset.
    */
   get samplesPassport() {
-    return this[Symbol.for('samplesPassport')];
+    const obj = this[Symbol.for('samplesPassport')];
+    if (! obj) {
+      /** Initial empty data structure. */
+      this[Symbol.for('samplesPassport')] = {
+        genotypeID : {}, accessionNumber : {},
+        a2gMap : new Map(),
+        g2aMap : new Map() };
+    }
+    return obj;
   },
-  set samplesPassport(names) {
-    this[Symbol.for('samplesPassport')] = names;
-    return names;
+  set samplesPassport(obj) {
+    this[Symbol.for('samplesPassport')] = obj;
+    return obj;
   },
 
   //------------------------------------------------------------------------------

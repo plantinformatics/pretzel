@@ -1,0 +1,72 @@
+<!-- ember-multi2-column.  Used in ember-multi2-table. -->
+
+<th
+  role="columnheader" {{!-- or button ?  --}}
+  class="whitespace-nowrap cursor-pointer select-none"
+>
+
+  <div style="display: flex; justify-content: space-between;" >
+    <span
+    {{on "click" (fn @toggleSort @column.property)}}
+    title="Click to sort; click again to reverse" >
+    {{@column.header}}
+  {{#if (eq @sortBy @column.property)}}
+    <span aria-hidden="true">{{if (eq @sortDir "asc") " ▲" " ▼"}}</span>
+  {{/if}}
+    </span>
+    {{#if @column.isId}}
+      <span>
+        {{!-- .filterSamplesByHaplotype implies this checkbox is disabled and true -
+           passport-table passes null for @setRequireId to indicate this --}}
+        <input type="checkbox"
+        checked={{or this.args.requireId (not @setRequireId) }}
+        disabled={{not @setRequireId}}
+        oninput={{action @setRequireId value="target.checked" }}  >
+        {{!-- avoiding div.genotype label { margin-top: 2em; } --}}
+        <label style="margin-top: inherit;" >
+          In Dataset
+        </label>
+
+        {{!-- the first line is clipped at the right margin of the column;
+           -- increasing the text length with &nbsp; shifts it left and avoids clipping.
+           -- (The tooltip for <button @addColumnSelector is not clipped.) --}}
+        <EmberTooltip @side="bottom" @delay=1000>
+          <div>Restrict the display &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+          <div> to Accessions / Samples in this dataset.</div>
+        </EmberTooltip>
+      </span>
+    {{/if}}
+  </div>
+
+  {{!-- for filtering on this column --}}
+  {{!-- these 2 cases are respectively :
+      - namesFilters via text <input>,
+      - category filter via <select> --}}
+  {{#if @column.namesFilters}}
+    {{!-- .nameFilter is equivalent to @column.namesFilters.nameFilterDebounced --}}
+    <input id="nameFilter" type="search" value={{this.nameFilter}}
+      oninput={{this.nameFilterChangedDebounce}}
+      style="min-width: 16em;"
+      placeholder="Filter available samples / accessions by {{@column.property}}" />
+      <span style="display:none">{{@column.namesFilters.nameFilterArray.length}}</span>
+
+  {{else}}
+    <div class="font-weight-normal" 
+      {{on "click" @toggleShowFilters }}
+      title="Show filter selection" >
+      &#xFE40; {{this.getProperty @selectedFieldValuesTexts @column.property }}</div>
+
+    {{#if (and @showFilters @column.filterOptions.length )  }}
+      <select style="height:100px" class="form-control" multiple onchange={{action (fn @selectFieldValue @column) value="target" }}>
+        {{#each @column.filterOptions as |filterOption|}}
+          <option value={{filterOption}}
+            selected={{include (this.getProperty @selectedFieldValues @column.property) filterOption}}>
+            {{filterOption}}</option>
+        {{/each}}
+      </select>
+    {{/if}}
+  {{/if}}
+
+
+
+</th>

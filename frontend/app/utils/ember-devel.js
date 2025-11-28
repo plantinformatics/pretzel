@@ -1,6 +1,8 @@
 import { later as run_later } from '@ember/runloop';
 import { getOwner, setOwner } from '@ember/application';
 
+import { get as Ember_get } from '@ember/object';
+
 /*----------------------------------------------------------------------------*/
 /* Various utility functions for development / debugging of Ember objects. */
 
@@ -191,11 +193,14 @@ let objectDependenciesCache = new WeakMap();
  * @param object Ember Object - this of the CP
  * @param label string to label the console.debug() output
  * @param dependencies array of strings which identify the dependencies
+ * @desc Example of use : in a computed() or @computed() property :
+ *   const dependencies = [... 'args.currentData.rows.length', 'args.samples.length'];
+ *   compareDependencies(this, fnName, dependencies);
  */
 function compareDependencies(object, label, dependencies) {
   let
   previous = objectDependenciesCache.get(object),
-  current = dependencies.map((d) => object.get(d));
+  current = dependencies.map((d) => object.get ? object.get(d) : Ember_get(object, d));
   if (previous) {
     let changes = dependencies.map((d, i) => (previous[i] !== current[i]) && d);
     dLog(label, changes, previous, current);

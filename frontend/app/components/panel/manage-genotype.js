@@ -84,6 +84,7 @@ import {
   Counts,
   Measure,
   distancesTo1d,
+  MatchRef,
   MatchRefSample,
   tsneOrder,
 } from '../../utils/data/genotype-order';
@@ -142,7 +143,7 @@ const callRateSymbol = Symbol.for('callRate');
 /** Indicate whether Alt or Ref value should be matched at this Feature / SNP.
  * feature[matchRefSymbol] true/false.  */
 const matchRefSymbol = Symbol.for('matchRef');
-/** Cache of Passport data for the sampleName, i.e. dataset.samplesPassport[sampleName]
+/** Cache of Passport data for the sampleName, i.e. dataset.samplesPassport.genotypeID[sampleName]
  * This attribute is assigned to a String sampleName. 
  */
 const passportSymbol = Symbol.for('passport');
@@ -183,6 +184,23 @@ const emptyTableColumns = [
  * for genotypeIds included in the URL.
  */
 const genolinkBaseUrl = "https://genolink.plantinformatics.io";
+
+/** Passport data fields initially displayed in passport-table.
+ * The user is able to configure this via <Panel::SelectPassportFields >
+ * This is a subset of passportFieldNames (genolink-passport.js).
+ * "genotypeID" may be prepended to this list in columns(), enabled by
+ * idFieldInColumns.
+ */
+const passportFields = [
+  "region",
+  "subRegion",
+  "accessionName",
+  "accessionNumber",
+  "aliases",
+  "countryOfOrigin.name",
+  "crop.name",
+];
+
 
 //------------------------------------------------------------------------------
 
@@ -290,6 +308,10 @@ function featureHasSamplesLoaded(feature) {
  *   This is currently [ {id, name}, ... ], where id == name.
  * .sortByPassportFields  boolean, default : false
  *   Sort the Genotype Table columns by the selected Passport field values : .passportFields
+ * .showSelectPassportFields  show select-passport-fields for extra rows in table column headings
+ *
+ * .passportTable  settings for passportFields for passport-table for filtering samples in genotype-samples
+ * { passportFields : {Array<string fieldName>}, showSelectPassportFields : boolean, default false }
  *
  * @see userSettingsDefaults()
  *------------------------------------------------------------------------------
@@ -672,6 +694,21 @@ export default class PanelManageGenotypeComponent extends Component {
     }
     if (userSettings.sortByPassportFields === undefined) {
       userSettings.sortByPassportFields = false;
+    }
+
+    if (userSettings.passportTable === undefined) {
+      userSettings.passportTable = {
+        passportFields, showSelectPassportFields : false,
+        /** User text inputs for column search / filter of passport-table,
+         * commented in ember-multi2-table.js; briefly :
+         * selectedFieldValues is the category / pull-down <select> options
+         * fieldSearchString is the non-category search strings,
+         * which is implemented by fieldNamesFilters.
+         */
+        selectedFieldValues : {},
+        fieldSearchString : {},
+        fieldNamesFilters : {},
+      };
     }
 
 
@@ -1303,11 +1340,33 @@ export default class PanelManageGenotypeComponent extends Component {
    */
 
 
-  /** User has clicked Alt or Ref of a SNP - toggle the selection of that
+  /** Toggle the SNP+allele pair that the user just clicked in the matrix view.
+   *
+   * User has clicked Alt or Ref of a SNP - toggle the selection of that
    * SNP+genotype for sample sorting and filtering.
+   *
+   * Event flow :
+   *   afterOnCellMouseDown() ➜ handleCellClick() ➜ featureToggleRC() ➜ featureToggle().
    *
    * Called from afterOnCellMouseDown() -> handleCellClick() ->
    *   featureToggleRC() in matrix-view.js
+   *
+   * Data flow :
+   *   • `feature` is the Ember Data Feature model representing the clicked SNP row.
+   *   • `blockSampleFilters(block,'feature')` returns the mutable array that keeps
+   *     track of SNP filters for the table block.  The array lives on the block
+   *     itself via the `sampleFiltersSymbol`.
+   *   • `feature[matchRefSymbol]` stores whether the Ref (`true`) or Alt (`false`)
+   *     allele is the active comparator for this SNP across every block that shares
+   *     the same genomic position.
+   *
+   * The method toggles presence of the feature in the filter array (removing it if
+   * the same allele is clicked twice, switching allele in place otherwise), updates
+   * the per-block selected SNP counters, and triggers `ensureSamplesThenRender()`
+   * so the downstream filtering / sorting pipeline can recompute column order.
+   *
+   * @param {FeatureModel} feature  SNP that owns the clicked cell.
+   * @param {'Ref'|'Alt'} columnName  Indicates which allele was clicked.
    */
   @action
   featureToggle(feature, columnName) {
@@ -2063,6 +2122,21 @@ export default class PanelManageGenotypeComponent extends Component {
          */
         if (axisBrushBlockIndex === -1) {
           axisBrushBlockIndex = blocks.findIndex((abb) => abb.block.referenceBlock === lookupBlock.referenceBlock);
+          /** This likely indicates that lookupBlock and its referenceBlock are
+           * now un-viewed, so choose one of blocks[].  */
+          if (axisBrushBlockIndex === -1) {
+            /** name and isViewed */
+            function nv(b) { return [b?.isViewed, b?.brushName]; }
+            const
+            a = [
+              fnName, axisBrushBlockIndex, 
+              nv(lookupBlock),
+              nv(lookupBlock.referenceBlock),
+              blocks.mapBy('block').map(nv),
+              blocks.mapBy('block.referenceBlock').map(nv)].flat();
+            console.debug.apply(undefined, a);
+            axisBrushBlockIndex = 0;
+          }
         } else if (blocks.length) {
           axisBrushBlockIndex = 0;
         }
@@ -2388,11 +2462,26 @@ export default class PanelManageGenotypeComponent extends Component {
     return features;
   }
 
-  /** Construct a text key from the result of this.selectedSNPsInBrushedDomain(vcfBlock)
+  /** Build the canonical cache key for the active SNP selections in the brushed window.
    *
+   * Construct a text key from the result of this.selectedSNPsInBrushedDomain(vcfBlock)
    * Related : in vcfGenotypeSamplesDataset() : filterByHaplotype has already
    * been through the same sort and map, so selectedSNPsToKey() is used for
    * filterDescription.
+   *
+   * The selections live on each block inside `blocksFeatureFilters`.  When a block is
+   * zoomed in enough to provide concrete `Feature` models we grab the entries that lie
+   * inside the current `brushedDomain`.  When a block is still loading, we fall back to
+   * the reference block’s features so the user can still request filtering.
+   *
+   * This helper performs the deterministic sort+map step that every consumer must run
+   * before passing the data to `selectedSNPsToKey()`.  Sorting by `value_0`
+   * (chromosomal position) guarantees that identical SNP sets map to the same cache
+   * entry even if the user clicked them in a different order, which is essential for
+   * reusing `blockFiltered` results across panes and API calls.
+   *
+   * Related : in vcfGenotypeSamplesDataset() the `filterByHaplotype.features` payload
+   * is already sorted/mapped via this logic prior to issuing the samples API call.
    */
   selectedSNPsToKeyWithSortAndMap(selectedSNPs) {
     const
@@ -2404,7 +2493,9 @@ export default class PanelManageGenotypeComponent extends Component {
     filterDescription = this.selectedSNPsToKey(features, matchHet);
     return filterDescription;
   }
-  /** Construct a text key from the result of this.selectedSNPsInBrushedDomain(vcfBlock)
+  /** Construct the string cache key for a sorted selection of SNPs.
+   *
+   * Construct a text key from the result of this.selectedSNPsInBrushedDomain(vcfBlock)
    * @param selected SNPs features sorted by position and mapped as {position, matchRef}
    * @param matchHet @userSettings.matchHet indicates to match samples with a
    * single copy of Alt at the SNP position (i.e. 0.1 or 1.0, where . matches / or |)
@@ -2414,6 +2505,19 @@ export default class PanelManageGenotypeComponent extends Component {
    * when :
    * - writing to cache in vcfGenotypeSamplesDataset().
    * - reading cache in blockFilteredSamplesGet().
+   *
+   * @param {Array<{position:number, matchRef:boolean}>} features
+   *   Output from selectedSNPsToKeyWithSortAndMap(); order matters.
+   * @param {Boolean} matchHet  Current value of `userSettings.matchHet` that defines
+   *   whether heterozygous calls are treated as matches.  Because the backend applies
+   *   this flag when streaming samples, it must be encoded into the cache key.
+   * @return {String} filterDescription suitable for the dataset ➜ samples cache.
+   *
+   * Usage:
+   *   • vcfGenotypeSamplesDataset() keys the async sample request cache so that a new
+   *     API call is issued only when either the SNP set or matchHet flag changes.
+   *   • blockFilteredSamplesGet() / datasetFilteredSamplesGet() lookups reuse the same
+   *     identifier to retrieve previously computed sample lists.
    */
   selectedSNPsToKey(features, matchHet) {
     const
@@ -3157,12 +3261,14 @@ export default class PanelManageGenotypeComponent extends Component {
       mafThreshold = userSettings.mafThreshold,
       mafUpper = userSettings.mafUpper,
       featureCallRateThreshold = userSettings.featureCallRateThreshold,
+      /** true if the VCF file has null genotype values (encoded as :1). */
+      genotypeHasNull = this.lookupBlock.get('datasetId._meta.genotypeHasNull'),
       /** related : genotypeSNPFilters() */
       requestOptions = {
         requestFormat, requestSamplesAll, snpPolymorphismFilter,
         mafThreshold, mafUpper, featureCallRateThreshold,
-      },
-      x=0;
+        genotypeHasNull,
+      };
 
       if (intersection) {
         requestOptions.isecDatasetIds = intersection.datasetIds;
@@ -3744,7 +3850,7 @@ export default class PanelManageGenotypeComponent extends Component {
          * used. cmp is exported. */
         selectFields.find(fieldName => {
           const
-          /** dataset.samplesPassport[sampleName] */
+          /** dataset.samplesPassport.genotypeID[sampleName] */
           v = sampleNames.map(sampleName => this.findPassportFields(sampleName)?.[fieldName]);
           cmp = passportValueCompare(v);
           // .find() will exit when cmp!==0
@@ -3767,7 +3873,7 @@ export default class PanelManageGenotypeComponent extends Component {
   findPassportFields(sampleName) {
     let fieldValues = sampleName[passportSymbol];
     if (! fieldValues) {
-      this.gtDatasets.find(d => (fieldValues = d.samplesPassport?.[sampleName]));
+      this.gtDatasets.find(d => (fieldValues = d.samplesPassport?.genotypeID[sampleName]));
     }
     return fieldValues;
   }
@@ -4009,7 +4115,7 @@ export default class PanelManageGenotypeComponent extends Component {
            */
           all = Object.values(this.vcfGenotypeSamplesSelectedAll),
           selectedSamples = all.length ? [].concat.apply(all[0], all.slice(1)) : [],
-          /** pass visibleBlocks for .datasetId.samplesPassport */
+          /** pass visibleBlocks for .datasetId.samplesPassport.genotypeID */
           options = {userSettings, selectedSamples, visibleBlocks};
           if (this.urlOptions.gtMergeRows) {
             /** {rows, sampleNames}; */
@@ -4407,7 +4513,9 @@ export default class PanelManageGenotypeComponent extends Component {
         });
   }
 
-  /** for brushedOrViewedVCFBlocks, apply any sampleFilters which the blocks have.
+  /** Evaluate the currently active sample filters and accumulate per-sample measures.
+   *
+   * for brushedOrViewedVCFBlocks, apply any sampleFilters which the blocks have.
    * Used for all 3 types of Sample Filters :
    * sampleFilterTabs = ['Variant Intervals', 'LD Blocks', 'Features'];
    *
@@ -4420,76 +4528,42 @@ export default class PanelManageGenotypeComponent extends Component {
    *       sample *
    *         accumulate : block : sample : count of matches and mismatches 
    *
+   * Scope :
+   *   • iterates over `brushedOrViewedVCFBlocks` so that every block displayed in the
+   *     genotype table contributes distances.
+   *   • supports the three filter types exposed in the UI
+   *     (`Variant Intervals`, `LD Blocks`, `Features`) by reading the arrays stored on
+   *     each block through `blockSampleFilters(block, filterTypeName)`.
+   *
+   * Data flow :
+   *   • For each feature participating in the filter, the helper
+   *     `featuresCountMatches()` walks across every sample column value and feeds a
+   *     `Measure` (currently `Counts`) into the accumulating `blockMatches` map.
+   *   • When reference samples are selected the counts are stored in
+   *     `block[referenceSampleMatchesSymbol][referenceSampleName][sampleName]`.  When
+   *     no explicit references are chosen the counts live under
+   *     `block[sampleMatchesSymbol][sampleName]`.  These maps are later consumed by
+   *     `distancesTo1d()` (for ordering) and `matchesSummary`.
+   *   • `showHideSampleFn`, if provided (e.g. `matrixView.filterSamplesBySelectedHaplotypes`),
+   *     is invoked for every sample to synchronise DOM visibility with the computed
+   *     counts.
+   *   • The method updates `this.matchesSummary` with the merged distance signal so that
+   *     column sort order reacts once the asynchronous work finishes.
+   *
+   * Event flow :
+   *   Called after user actions such as `featureToggle()`, `variantIntervalToggle()`,
+   *   haplotype filter changes, or when brushing selects a new interval.
+   *
+   * @param {?Function} showHideSampleFn  Callback that hides/shows a column based on
+   *     the accumulated `Measure`.
    * @param showHideSampleFn if provided, after filtering, call this for each
    * sample to hide/show the column.
+   * @param {?MatrixView} matrixView  Cached table controller so we can refresh it when
+   *     sample visibility changes.
    */
   @action
   filterSamples(showHideSampleFn, matrixView) {
     const fnName = 'filterSamples';
-
-    /** match a (sample genotype call) value against the Ref/Alt value of the
-     * feature / SNP.  a rough factorisation; currently there is just 1 flag
-     * haplotypeFilterRef for all selected 'LD Blocks', and hence one instance
-     * of MatchRef, but these requirements are likely to evolve.  */
-    class MatchRef {
-      constructor(matchRef) {
-        this.matchRef = matchRef;
-        this.matchKey = matchRef ? 'ref' : 'alt';
-        this.matchNumber = matchRef ? '0' : '2';
-      }
-      /** to match homozygous could use .startsWith(); that will also match 1/2 of heterozygous.
-       * Will check on (value === '1') : should it match depending on matchRef ?
-       * @param value sample/individual value at feature / SNP
-       * This function is not called if valueIsMissing(value).
-       * @param matchValue  ref/alt value at feature / SNP (depends on matchRef)
-       */
-      matchFn(value, matchValue) { return (value === this.matchNumber) || (value === '1') || value.includes(matchValue); }
-      /**
-       * Param comments of matchFn() apply here also.
-       * @return undefined if value is invalid
-       * missing data, i.e. './.', is counted in .missing if using Counts
-       */
-      distanceFn(value, matchValue) {
-        const fnName = 'distanceFn';
-        /** number of copies of Alt / Ref, for matchRef true / false. */
-        let distance, missing = 0;
-        const numeric = gtValueIsNumeric(value);
-        if (value === './.') {
-          missing += 2;
-          distance = this.matchRef ? 0 : 2;
-        } else {
-          switch (value.length) {
-          case 3 :
-            if (numeric) { matchValue = this.matchRef ? '1' : '0'; }
-            distance = 2 - stringCountString(value, matchValue);
-            break;
-          case 1:
-            if (numeric) {
-              distance = this.matchRef ? +value : 2 - value;
-            } else {
-              distance = value === this.matchNumber;
-            }
-            break;
-          default : dLog(fnName, 'invalid genotype value', value);
-            break;
-          }
-        }
-        if (Measure === Counts) {
-          const counts = Measure.create();
-          // similar to Counts.count(), except that increments by only 1.
-          if (missing) {
-            counts.missing = missing;
-          } else {
-            counts.notMissing = 2;
-            counts.distance = distance;
-            counts.differences = distance ? 1 : 0;
-          }
-          distance = counts;
-        }
-
-        return distance;
-      }
-    }
 
     const
     userSettings = this.args.userSettings,
@@ -4542,13 +4616,38 @@ export default class PanelManageGenotypeComponent extends Component {
         const
         features = filterArray;
         if (features) {
-          featuresCountMatches(features, blockMatches, /*matchRef*/null);
+          featuresCountMatches(features, blockMatches, /*matchRefFn*/null);
         }
       }
         break;
       }
 
       /**
+       * Iterate over a list of features and accumulate Measures for every sample found
+       * in their genotype vectors.
+       *
+       * Data structures involved:
+       *   • `features` is an array of Feature Ember models where `feature.values` is the
+       *     per-sample genotype lookup returned by the VCF service.
+       *   • `matches` is either the block-local `sampleMatchesSymbol` map or the nested
+       *     `referenceSampleMatchesSymbol` map.  Keys are sample names and the values
+       *     are Measure instances (currently `Counts`).
+       *   • `matchRefFn` determines which comparator to use:
+       *       - `null/undefined` ➜ use the `feature[matchRefSymbol]` that the user set
+       *         via `featureToggle()`.
+       *       - function ➜ generate dynamic comparators such as `MatchRefSample` for
+       *         each reference sample.
+       *
+       * Algorithm:
+       *   1. Build the list of `matchRefs` (one per allele / reference sample).
+       *   2. For every sample genotype stored in `feature.values`, compute the distance
+       *      via the injected `distanceFn`.
+       *   3. Add the returned Measure fragment to the correct accumulator map using
+       *      `Measure.add()`.  When reference samples are active, a dedicated level is
+       *      created for each reference (`matches[referenceSampleName][sampleName]`).
+       *
+       * The function is side-effect only; it mutates `matches`.
+       *
        * @param matches[sampleName] is now Measure, replacing : distance, {matches,mismatches}.
        * @param matchRefFn undefined or function returning [MatchRef, ...].
        * if not defined then construct it for each feature from feature[matchRefSymbol].
@@ -4712,6 +4811,18 @@ export default class PanelManageGenotypeComponent extends Component {
           this.headerText = (isBrAPI || resultIsBrapi(text)) ? columnHeadersChrPosId +
             (text.callSetDbIds?.join('\t') || samples.replaceAll('\n', '\t') || '') :
             isGerminate ? text.join('\t') : text;
+
+          /** similar .isVCF, but don't expect Germinate to have
+           * ##FORMAT=<ID=NU, so want to exclude Germinate for this purpose. */
+          const isVCF = this.lookupBlock?.hasTag('VCF');
+          if (isVCF) {
+            const hasNull = text.match(/\n##FORMAT=<ID=NU.*/);
+            if (hasNull) {
+              dLog(fnName, hasNull);
+              this.lookupBlock.datasetId?.set('_meta.genotypeHasNull', true);
+            }
+          }
+
           if (trace) {
             dLog(fnName, text);
           }
@@ -4933,13 +5044,21 @@ export default class PanelManageGenotypeComponent extends Component {
 
   //----------------------------------------------------------------------------
 
-  /** activeIdDatasets, tabName2IdDatasets() are analogous to and based on 
+  /** Identify the dataset selected by the user, of VCF / genotype dataset via
+   * tab selection change of Datasets Samples tabs.
+   *
+   * activeIdDatasets is the DOM element id of <nav.item > <a>
+   * activeIdDatasets, tabName2IdDatasets() are analogous to and based on 
    * activeId, tabName2Id() above.
    */
   @tracked
   activeIdDatasets = null;
+  /** datasetId of selected dataset */
   @tracked
   activeDatasetId = null;
+  /** Ember Data store record handle of selected dataset */
+  @tracked
+  activeDataset = null;
 
   /** invoked from hbs via {{compute (action this.tabName2Id tabTypeName ) }}
    * @param tabName text displayed on the tab for user identification of the contents.
@@ -4978,9 +5097,15 @@ export default class PanelManageGenotypeComponent extends Component {
     }
     this.setSelectedDataset(datasetId);
   }
+  /** In response to user selection of a dataset tab in the settings/controls : Datasets tab, set :
+   * - activeDatasetId  datasetId
+   * - activeIdDatasets DOM element id of <nav.item > <a>
+   * - activeDataset  Ember Data store Dataset record for .activeDatasetId
+   */
   setSelectedDataset(datasetId) {
     this.activeDatasetId = datasetId;
     this.activeIdDatasets = this.tabName2IdDatasets(datasetId);
+    this.activeDataset = this.gtDatasets.findBy('id', this.activeDatasetId);
   }
 
   /** factored from selectDataset() - this would be passed to elem/tab-names
@@ -5110,7 +5235,8 @@ export default class PanelManageGenotypeComponent extends Component {
     /** useSelectMultiple : values === passportFields;
      * access passportFields with .mapBy('id') */
     selectFields = this.args.userSettings.passportFields,
-    promise = this.datasetsGetPassportData(selectFields);
+    promise = selectFields.length ?
+      this.datasetsGetPassportData(selectFields) : Promise.resolve();
     return promise;
   }
   /** For each of the viewed datasets, .gtDatasets, call datasetGetPassportData().
@@ -5122,8 +5248,12 @@ export default class PanelManageGenotypeComponent extends Component {
       // related : blocksSelectedSamples(blocks)
       const sampleNames = this.vcfGenotypeSamplesSelectedAll[dataset.id];
       const
+      /** datasetGetPassportData() previously yielded just the .content, so
+       * preserve that signature, although the value is not used. */
       promise = sampleNames?.length ?
-        this.datasetGetPassportData(dataset, sampleNames, selectFields) :
+        this.datasetGetPassportData(
+          dataset, {sampleNames, pageLength : sampleNames.length}, selectFields)
+        .then(responses => responses.mapBy('content')) :
         Promise.resolve();
       return promise;
     });
@@ -5140,34 +5270,78 @@ export default class PanelManageGenotypeComponent extends Component {
   /** Get the Passport data values indicated by selectFields for the given
    * dataset and sampleNames.
    * @param dataset
-   * @param sampleNames
+   * @param {sampleNames, genotypeIds, accessionNumbers, _text, filter, filterCode,
+   * page, pageLength}
+   * genotypeIds / accessionNumbers are the name/identity fields supported by
+   * the Genolink API.  Some of sampleNames may be AGG genotypeIds and hence can
+   * be used as genotypeIds in lookup.
+   * The above forms of ID are optional if _text is given.
+   * Optional, for search : _text, filter, filterCode, page, pageLength.
+   * page is not applicable when passing genotypeIds or accessionNumbers.
+   * If page is not specified in the URL, result is page 0.
+   * Default pageLength is 100.
    * @param selectFields  array of string Passport field names
-   * @return promise which does not yield a value
+   * @return promise which currently yields all the received data columns;
+   * caller only needs genotypeIds / accessionNumbers, as the data
+   * has been loaded into dataset.samplesPassport.{genotypeID,accessionNumber}.
    */
-  datasetGetPassportData(dataset, sampleNames, selectFields) {
+  datasetGetPassportData(
+    dataset,
+    {sampleNames, genotypeIds, accessionNumbers, _text, filter, filterCode,
+     page, pageLength},
+    selectFields) {
     const fnName = 'datasetGetPassportData';
-    const genotypeIds = sampleNames.filter(sampleNameIsAGG);
-    if (! genotypeIds.length) return Promise.resolve();
+    if (! genotypeIds?.length && sampleNames?.length) {
+      genotypeIds = sampleNames.filter(sampleNameIsAGG);
+    }
+    if ((! genotypeIds?.length && ! accessionNumbers?.length && ! (_text ?? false) &&
+         ! (filter ?? false))
+        || ! selectFields.length) {
+      const traceParams = {genotypeIds, accessionNumbers, _text, filter, selectFields};
+      dLog(fnName, 'empty inputs', traceParams);
+      console.warn(fnName, 'empty inputs', traceParams);
+      return Promise.resolve([]);
+    }
     const
     mg = this,
     /** array of promises, each yielding response for 1 chunk */
     chunkPs =
-      getPassportData({ genotypeIds, selectFields }, genolinkBaseUrl),
+      getPassportData(
+        {genotypeIds, accessionNumbers, selectFields, _text, filter, filterCode,
+         page, pageLength },
+        genolinkBaseUrl),
     promise = Promise.all(chunkPs.map(chunkP => chunkP.then(receive)));
-    function receive(data) {
+    function receive(response) {
       {
+        const data = response.content;
         dLog(fnName, dataset.id, selectFields, data);
         const
         // fillInMissingData() has already extracted .content from the response
         d = data,
-        samplesPassport = dataset.samplesPassport || (dataset.samplesPassport = {});
+        samplesPassport = dataset.samplesPassport,
+        {a2gMap, g2aMap} = samplesPassport;
         d.forEach((datum, i) => {
-          const sampleName = datum.genotypeID;
+          const
+          idName = datum.genotypeID ? 'genotypeID' : 'accessionNumber',
+          /** ids and sampleName are either .genotypeID or .accessionNumber */
+          ids = samplesPassport[idName],
+          sampleName = datum[idName],
+          sp = ids[sampleName] || (ids[sampleName] = {});
+          /* similar : Object.assign(sp, datum);
+           * but datum may have an extra field : countryOfOrigin.codeNum
+           * which Genolink adds, probably to support subRegion request.
+           */
           selectFields.forEach(field => {
-            const sp = samplesPassport[sampleName] || (samplesPassport[sampleName] = {});
             sp[field] = datum[field];
           });
+          /** Also store mappings between genotypeID <-> accessionNumber */
+          const {genotypeID, accessionNumber} = datum;
+          if (genotypeID && accessionNumber) {
+            a2gMap.set(accessionNumber, genotypeID);
+            g2aMap.set(genotypeID, accessionNumber);
+          }
         });
+        return response;
       }
       later(() => mg.passportDataCount++);
     }

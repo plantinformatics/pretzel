@@ -1,3 +1,19 @@
 <div class="sample-data-dialog">
   <div id="plot"></div>
+  <div id="plot-hover-info" style="min-height:40ex"></div>
+
+  <div class="sdd-controls">
+    <label>Group Offset</label>
+    {{#ember-tooltip side="right" delay=500}}
+      Adjust offset of points which have the same position.
+    {{/ember-tooltip}}
+    <span class="sub-label">{{ this.groupOffset }}</span>
+    <input type="range"
+     value={{ this.groupOffsetInt }}
+     oninput={{action this.groupOffsetInput}}
+     min="0" max="200"
+    />
+  </div>
+  {{this.showDataEffect}}
+  <div>{{this.errorMessage}}</div>
 </div>

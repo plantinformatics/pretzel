@@ -126,6 +126,7 @@
 
   <div style="height:3ex; overflow : auto; max-width : 35em">{{@the.samplesRequestDescription}}</div>
 
+  {{#unless this.enablePassportData}}
 
   <div class="genotypeSampleFilter_textInput">
     <div>
@@ -171,6 +172,41 @@
 
   </div>
 
+  {{else}}
+  {{log 'genotype-samples' this this.args.userSettings @userSettings}}
+  <div class="passport-table"
+    {{did-insert (action (mut this.scrolledDiv)) }}
+  >
+
+    {{#if @userSettings.passportTable.showSelectPassportFields}}
+      {{!-- i.e. panel/select-passport-fields --}}
+      <Panel::SelectPassportFields @userSettings={{@userSettings.passportTable}}
+        @selectedFieldsChanged={{@the.selectedFieldsChanged}}
+        @genotypeTable={{@the}}
+        >
+      </Panel::SelectPassportFields>
+    {{/if}}
+
+
+    <PassportTable
+      @one={{1}}     {!-- not used.  first arg is not passed successfully --}}
+      {{!-- for datasetGetPassportData(), may narrow param to just this action --}}
+      @mg={{@the}}
+      @userSettings={{@userSettings}}
+      @dataset={{this.activeDataset}}
+      @samples={{@the.filteredSamples}}
+      {{!-- @rows={{@the.samples --}}
+      @selectSampleArray={{this.selectSampleArray}}
+      @tableRow={{this.urlOptions.tableRow}}
+      @sampleNamePassportValues={{this.sampleNamePassportValues}}
+      @scrolledDiv={{this.scrolledDiv}}
+      @addColumnSelector={{action (mut @userSettings.passportTable.showSelectPassportFields) true}}
+      />
+
+  </div>
+  {{/unless}}       {{!-- passport-table for selecting samples tableRow or multiSelect --}}
+
+  {{#unless this.enablePassportData}}
   <div class="genotype-controls">
 
     <select style="height:100px" class="form-control" multiple onchange={{action @the.selectSample}}>
@@ -184,6 +220,8 @@
     </EmberTooltip>
 
   </div>
+  {{/unless}}
+
 </div>
 
 <div>
@@ -234,7 +272,7 @@
     {{/if}}
   </span>
   
-  {{#if this.urlOptions.passportExport}}
+  {{#if (and this.urlOptions.passportExport this.activeDataset.isGenolink)}}
   <button type="button" class="btn btn-info btn-xs padding-thin" style="margin-left:0.8em" {{on 'click' (action this.selectedSamplesGetPassport) }}>
     Passport
     {{#ember-tooltip side="top-start" delay=500}}

@@ -8,13 +8,12 @@
 {{!-- --------------------------------------------------------------------- --}}
 
 {{#if this.showInputDialog}}
-
+{{!--     clickOutsideToClose=true --}}
   {{#ember-modal-dialog
     containerClassNames="genotype"
     onClose=(action (mut this.showInputDialog) false)
     targetAttachment="center"
     translucentOverlay=true
-    clickOutsideToClose=true
 
     title="Genotype Table Controls, Datasets, Samples, Filters, VCF Lookup Inputs"
     header-icon='search'
@@ -210,6 +209,7 @@
 
                     {{!-- i.e. panel/genotype-samples --}}
                     <Panel::GenotypeSamples @the={{this}} @userSettings={{@userSettings}}
+                      @enablePassportData={{true}}
                       @showIntersectionCheckbox={{this.brushedOrViewedVCFBlocks.length}} >
                       {{this.ensureSamplesForDatasetTabEffect}}
                     </Panel::GenotypeSamples>
@@ -1080,7 +1080,7 @@ While scrolling through the Genotype Table this updates to show where the curren
         <span>To enable connectivity to Genolink/Genesys-PGR, you need to accept the terms in
           <LinkTo @route="account-settings" @classNames="" @tagName="a">Account</LinkTo>
         </span>
-      {{else}}
+      {{else if this.activeDataset.isGenolink}}
 
         <div>
           <label>Genolink</label>

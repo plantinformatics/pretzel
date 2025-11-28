@@ -155,8 +155,10 @@ function spreadsheetDataToJsObj(fileData) {
    */
   status.datasets = datasets
     .reduce((result, dataset) => {
+      /** dataset.meta is an object here, and dataset.datasetMetadata is not defined. */
       const ok = /* ! dataset.sheetName || */  dataset.name &&
-            (dataset.blocks?.length || dataset.aliases?.length || dataset.datasetMetadata?.length);
+            (dataset.blocks?.length || dataset.aliases?.length
+             || dataset.datasetMetadata?.length || dataset.meta.PanBARLEXURL);
       ['warnings', 'errors'].forEach((fieldName) => {
         const df = dataset[fieldName];
         if (df?.length > datasetErrorWarningLimit) {
@@ -298,6 +300,7 @@ function sheetToDataset(
   dataset = Object.assign({name : datasetName}, datasetTemplate),
   datasets = [dataset];
   dataset.warnings = [];
+  dataset.errors = [];
 
   /** The spreadsheet value parentName corresponds to dataset.parent,
    * i.e. in metadata sheet : metadata.parentName, and in dataset worksheet column feature.parentName
@@ -311,6 +314,9 @@ function sheetToDataset(
   const missingFields = requiredFieldsMeta.filter(fieldName => (meta[fieldName] ?? undefined) === undefined);
   if (missingFields.length) {
     const warningText = 'These fields are expected to be present in Dataset.meta : ' + missingFields.join(', ');
+    if (! meta.crop && meta.GenolinkURL) {
+      dataset.errors.push('Dataset.meta.GenolinkURL is defined, so Crop must also be defined');
+    }
     dataset.warnings.push(warningText);
   }
 
@@ -386,7 +392,7 @@ function sheetToDataset(
       return datasets;
     }, datasets);
 
-  if (! features.length) {
+  if (! features.length && ! (tags.includes('view') || meta.PanBARLEXURL)) {
     dataset.warnings.push('Worksheet does not contain data rows');
   }
 
@@ -627,8 +633,13 @@ function parseSheetName(sheetName) {
 function readMetadataSheet(sheet) {
   const
   data = sheet2Array(sheet),
+  /** trimAndDeletePunctuationMeta() should be applied to just the values in the
+   * Metadata table; later this is further narrowed using
+   * trimAndDeletePunctuation() for the row and column headers (fieldNames and
+   * datasetNames, respectively).
+   */
   d1 = data.filter((d) => ! d[0]?.startsWith('#'))
-    .map((d) => d.map(trimAndDeletePunctuation)),
+    .map((d) => d.map(trimAndDeletePunctuationMeta)),
 
   /*
     (4) [Array(2), Array(2), Array(2), Array(2)]
@@ -654,10 +665,10 @@ function readMetadataSheet(sheet) {
    * Here instead : remove punctuation from fieldNames
    * (trimAndDeletePunctuation() is already applied above)
    */
-  fieldNames = table.map((d) => normaliseFieldName(d[0])),
+  fieldNames = table.map((d) => trimAndDeletePunctuation(normaliseFieldName(d[0]))),
   // (4) ['Field', 'commonName', 'platform', 'shortName']
 
-  datasetNames = table[0].slice(1),
+  datasetNames = table[0].slice(1).map(trimAndDeletePunctuation),
   // ['Map| Template Map Dataset Name']
 
   // datasetsBase
@@ -895,6 +906,9 @@ function ensureString(s) {
 }
 
 const deletePunctuationRe = /[^-_.,\/\n |0-9A-Za-z]+/g;
+/** Allow more punctuation in Metadata values, particularly for URLs, which require ':', ? and & */
+const deletePunctuationMetaRe = /[^-_.,\/\n |:?&0-9A-Za-z]+/g;
+
 /**
  * Sanitize input by removing punctuation other than space, comma, -, _, ., /, \n
  * Commonly _ and . are present in parentName.
@@ -913,6 +927,14 @@ function deletePunctuation(s) {
 function trimAndDeletePunctuation(s) {
   return (s == undefined) ? s : deletePunctuation(trimOutsideQuotesAndSpaces(s));
 }
+/** For values in Metadata worksheet */
+function deletePunctuationMeta(s) {
+  return s.replaceAll(deletePunctuationMetaRe, '');
+}
+function trimAndDeletePunctuationMeta(s) {
+  return (s == undefined) ? s : deletePunctuationMeta(trimOutsideQuotesAndSpaces(s));
+}
+
 
 /*
 

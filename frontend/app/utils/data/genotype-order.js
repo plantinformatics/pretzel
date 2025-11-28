@@ -1,15 +1,43 @@
-/** Operations on genotype data, focused on ordering the sample columns based on
+/** Utilities that collate and order genotype-based column metrics.
+ *
  * genotype values within variantSets.
+ *
+ * The genotype table lets users pin a set of SNPs (via features, variant intervals,
+ * or LD blocks) and optionally choose reference samples.  The UI then needs to
+ * compute a sortable "distance" per sample column that captures how closely that
+ * sample matches the selected genotype pattern.
+ *
+ * This module centralises the domain-specific types and helpers that make the above
+ * possible:
+ *   • `Measure` implementations (`MatchesCounts`, `Distance`, `Counts`) define how a
+ *     stream of per-feature comparisons is aggregated.
+ *   • `distancesTo1d()` merges the per-block per-reference Measures produced by
+ *     `filterSamples()` and projects them into a single ordering value that the table
+ *     can sort by.
+ *   • `MatchRefSample` implements the same comparator contract as the inline MatchRef
+ *     class in manage-genotype.js but uses sample genotypes instead of Ref/Alt values.
+ *   • `tsneOrder()` performs the dimensionality reduction that collapses multi-block
+ *     vectors into sortable scalars while preserving relative similarity.
+ *
+ * Keep this file free of Ember-specific constructs so it can be reused by other
+ * environments (e.g. tests or scripts) that operate directly on JSON data volumes.
  *
  * This group of related functions could be moved here from components/panel/manage-genotype.js :
  *   sampleNamesCmp(), columnNamesCmp(), matchesSummary, sampleMatchesSum().
+
  */
+
 
 //------------------------------------------------------------------------------
 
-import {
+import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
+const /*import */{
   gtValueIsNumeric,
-} from './vcf-feature';
+} = vcfGenotypeBrapi.vcfFeature; /*from 'vcf-genotype-brapi'; */
+
+
+import { stringCountString } from '../string';
+
 
 //----------------------------------------------------------------------------
 
@@ -204,7 +232,27 @@ export {
 
 export { distancesTo1d };
 
-/** collate distances by sampleName
+/** Merge per-block Measure maps into a single sortable value per sample.
+ * collate distances by sampleName
+ *
+ * Input expectations :
+ *   • `blocks` is an array of genotype table blocks.  Each block may carry
+ *     `block[sampleMatchesSymbol]` (no explicit reference samples) and/or
+ *     `block[referenceSampleMatchesSymbol]` (distances measured against specific
+ *     reference samples).  Both maps originate from filterSamples().
+ *   • `referenceSamplesCount` is used as the quick path: if there are zero or one
+ *     reference samples in play we do not need t-SNE because `sampleMatchesSum()`
+ *     can compare Measures directly.
+ *   • `userSettings` (currently `sampleFilterTypeName` and `haplotypeFilterRef`) tell
+ *     the function which reference map to use when no explicit references exist.
+ *
+ * Behaviour :
+ *   • Simple cases (≤1 reference sample) reuse the raw Measure values as-is.  The
+ *     consumer will call `Measure.order()` later to derive a numeric sort key.
+ *   • When multiple references and/or blocks contribute distances we treat each
+ *     reference as a dimension and build a vector per sample.  These vectors feed into
+ *     `tsneOrder()` which outputs a 1-D embedding that preserves relative separation
+ *     so samples can still be sorted left-to-right in a meaningful way.
  *
  * @param blocks
  * @param referenceSamplesCount number of selected referenceSamples
@@ -212,6 +260,8 @@ export { distancesTo1d };
  * @return {} if no dimension reduction is required, i.e. there is <= 1
  * selected referenceSample.  These cases are handled by sampleMatchesSum(),
  * which is equivalent.
+ *
+ * @return Object<string,number|Object>  Mapping sampleName ➜ ordering metric.
  */
 function distancesTo1d(blocks, referenceSamplesCount, userSettings) {
   const fnName = 'distancesTo1d';
@@ -284,9 +334,90 @@ function distancesTo1d(blocks, referenceSamplesCount, userSettings) {
 
 //------------------------------------------------------------------------------
 
-export { tsneOrder };
+/** match a (sample genotype call) value against the Ref/Alt value of the
+ * feature / SNP.  a rough factorisation; currently there is just 1 flag
+ * haplotypeFilterRef for all selected 'LD Blocks', and hence one instance
+ * of MatchRef, but these requirements are likely to evolve.
+ *
+ * Origin : in cafd7623 MatchRef was factored from haplotypeFilterSamples()
+ * (later renamed to filterSamples()).
+ */
+export class MatchRef {
+  constructor(matchRef) {
+    this.matchRef = matchRef;
+    this.matchKey = matchRef ? 'ref' : 'alt';
+    this.matchNumber = matchRef ? '0' : '2';
+  }
+  /** to match homozygous could use .startsWith(); that will also match 1/2 of heterozygous.
+   * Will check on (value === '1') : should it match depending on matchRef ?
+   * @param value sample/individual value at feature / SNP
+   * This function is not called if valueIsMissing(value).
+   * @param matchValue  ref/alt value at feature / SNP (depends on matchRef)
+   */
+  matchFn(value, matchValue) { return (value === this.matchNumber) || (value === '1') || value.includes(matchValue); }
+  /**
+   * Param comments of matchFn() apply here also.
+   * @return undefined if value is invalid
+   * missing data, i.e. './.', is counted in .missing if using Counts
+   */
+  distanceFn(value, matchValue) {
+    const fnName = 'distanceFn';
+    /** number of copies of Alt / Ref, for matchRef true / false. */
+    let distance, missing = 0;
+    const numeric = gtValueIsNumeric(value);
+    if (value === './.') {
+      missing += 2;
+      distance = this.matchRef ? 0 : 2;
+    } else {
+      switch (value.length) {
+      case 3 :
+        if (numeric) { matchValue = this.matchRef ? '1' : '0'; }
+        distance = 2 - stringCountString(value, matchValue);
+        break;
+      case 1:
+        if (numeric) {
+          distance = this.matchRef ? +value : 2 - value;
+        } else {
+          distance = value === this.matchNumber;
+        }
+        break;
+      default : dLog(fnName, 'invalid genotype value', value);
+        break;
+      }
+    }
+    if (Measure === Counts) {
+      const counts = Measure.create();
+      // similar to Counts.count(), except that increments by only 1.
+      if (missing) {
+        counts.missing = missing;
+      } else {
+        counts.notMissing = 2;
+        counts.distance = distance;
+        counts.differences = distance ? 1 : 0;
+      }
+      distance = counts;
+    }
 
-/** match a (sample genotype call) value against the alleles genotype values
+    return distance;
+  }
+}
+
+
+//------------------------------------------------------------------------------
+
+export
+/** Comparator that uses the genotype values of a user-selected reference sample.
+ *
+ * Manage-genotype reuses the same filtering pipeline for both of these scenarios:
+ *   1. Compare every sample column against a synthetic Ref/Alt pattern
+ *      (`MatchRef` in manage-genotype.js).
+ *   2. Compare every sample column against the actual genotype calls of one of the
+ *      reference samples selected in the UI.
+ *
+ * This class implements scenario #2 so that `filterSamples()` can keep the same
+ * aggregation code path regardless of the source of the comparator data.
+ *
+ * match a (sample genotype call) value against the alleles genotype values
  * of the reference sample at the feature / SNP.
  * Used in filterSamples(), and based on the Alt/Ref equivalent `MatchRef` there.
  */
@@ -323,8 +454,7 @@ class MatchRefSample {
 
 import TSNE from 'tsne-js';
 
-export { MatchRefSample };
-
+export
 /** Map distance vectors of samples to 1D.
  * param samples {sampleName : [distance, ...], ... }
  */

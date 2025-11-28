@@ -1,0 +1,83 @@
+{{!--
+  The TABLE itself becomes the keyboard focus target (tabindex=0),
+  plays the ARIA Grid role, and points to the active row with aria-activedescendant.
+--}}
+<table
+  id="passport-table"
+  class="table table-sm w-full select-none"
+  role="grid"
+  aria-multiselectable="true"
+  tabindex="0"
+  aria-activedescendant={{this.activeRowId}}
+  {{did-insert (action this.registerListeners) }}
+  {{on "keydown" this.onKeyDown}}
+  {{!-- on "mousedown" this.onMouseDownPreventSelection // Done by other mousedown listener --}}
+>
+  <thead>
+    <tr role="row">
+      {{!-- Sortable headers. Keep your existing filter row below. --}}
+      {{#each this.columns as |column|}}
+      <EmberMulti2Column
+        @column={{column}}
+        @toggleSort={{this.toggleSort}}
+        @toggleShowFilters={{toggle "showFilters" this }}
+        @sortBy={{this.sortBy}}
+        @sortDir={{this.sortDir}}
+        @selectedFieldValuesTexts={{this.selectedFieldValuesTexts}}
+        @showFilters={{this.showFilters}}
+        @selectFieldValue={{this.selectFieldValue}}
+        @selectedFieldValues={{this.selectedFieldValues}}
+        @nameFilterChanged={{this.nameFilterChanged}}
+        @requireId={{@requireId}}
+        @setRequireId={{@setRequireId}}
+      />
+
+      {{/each}}
+
+      <th>
+        <button style="border-style: dotted;" {{on "click" @addColumnSelector }}>+</button>
+        <EmberTooltip @side="bottom-end" @delay=1500>
+          Select which Passport fields will be shown as columns for filtering samples / accessions.
+        </EmberTooltip>
+      </th>
+
+    </tr>
+
+    {{!-- Your existing header filter row with <select multiple> per column --}}
+    {{yield to="filters-row"}}
+  </thead>
+
+  <tbody class="no-select">
+    {{!-- log 'sortedRows' this.sortedRows.length --}}
+    {{#each this.sortedRows key="rowKey" as |row rowIndex|}}
+    {{#let (this.rowKey row) as |rowKey|}}
+    {{!-- log 'row' row rowIndex --}}
+    {{#unless rowIndex}}
+      {{!-- log 'sortedRows' 'row' rowKey (this.rowKey row) --}}
+    {{/unless}}
+      <tr
+        id={{concat "row-"  (this.rowKey row)}}
+        role="row"
+        class="{{if (compute this.isSelectedBound  row) "is-selected"}} {{if (eq rowIndex this.focusIndex) "is-focused"}}"
+        aria-selected={{compute this.isSelectedBound  row}}
+        {{on "click" (fn this.onRowClick row rowIndex)}}
+      >
+        {{!-- Render cells exactly as you do today --}}
+        {{!-- yield row --}}
+          {{!-- row[idField] is equivalent to : <td>{{object-at rowIndex this.args.samples} }</td> --}}
+          {{#each this.columns as |column|}}
+            {{!-- log 'column' column --}}
+            {{#unless rowIndex}}
+              {{!-- log 'sortedRows' 'cell' column.property (this.getRowProperty row column.property) --}}
+            {{/unless}}
+
+            {{!-- not needed : id={{concat "cell-" rowKey "-" column.property --}} 
+            <td>{{this.getRowProperty row column.property}}</td>
+          {{/each}}
+
+      </tr>
+    {{/let}}
+    {{/each}}
+  </tbody>
+
+</table>

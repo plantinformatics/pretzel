@@ -22,14 +22,22 @@ export default class NamesFilter extends EmberObject {
   @tracked
   nameFilterDebounced = '';
 
-  constructor() {
+  /**
+   * @param filterChanged	optional callback. Called when nameFilterArray is updated,
+   * after nameFilterDebounced is set
+   */
+  constructor(filterChanged) {
     super(...arguments);
 
+    if (filterChanged) {
+      this.filterChanged = filterChanged;
+    }
     if (trace) {
       dLog('names-filters', 'constructor', 'this', this);
     }
   }
 
+  /** Called via user input in <input > e.g. nameFilter, sampleNameFilter */
   nameFilterChanged(value) {
     // dLog('nameFilterChanged', value);
     // debounce(this, this.nameFilterChangedSet, 2000);
@@ -45,6 +53,9 @@ export default class NamesFilter extends EmberObject {
   }
 
   @computed
+  /** Set .nameFilterDebounced = value.
+   * Called from nameFilterDebouncedLodash() when debounce conditions are satisfied.
+   */
   get nameFilterChangedSet() {
     /**
      * @param value
@@ -59,11 +70,14 @@ export default class NamesFilter extends EmberObject {
   }
 
   @computed('nameFilterDebounced')
+  /** Split .nameFilterDebounced into an array, for use in matchFilters().
+   */
   get nameFilterArray() {
     const
     nameFilter = this.get('nameFilterDebounced'),
     array = !nameFilter || (nameFilter === '') ? [] :
       nameFilter.split(/[ \t]/);
+    this.filterChanged?.();
     return array;
   }
 
@@ -88,6 +102,7 @@ export default class NamesFilter extends EmberObject {
   /** Apply nameFilters[] to the given name.
    * @return true if each / any of the name keys matches name
    * @param name  text name of e.g. Trait
+   * Also handle name being an array of name strings.
    * @param caseInsensitive true if Search Filter is case insensitive.
    * @param searchFilterAll
    * indicates how to match search/filter which has multiple strings (space-separated).
@@ -100,12 +115,18 @@ export default class NamesFilter extends EmberObject {
   matchFilters(name, nameFilters, caseInsensitive, searchFilterAll) {
     const
     maybeLC = this.maybeLC(caseInsensitive),
-    nameMaybeLC = maybeLC(name),
+    nameMaybeLC = Array.isArray(name) ?
+      name.map(this.maybeLC(caseInsensitive)) :
+      maybeLC(name),
     multiFnName = searchFilterAll ? 'every' : 'any',
     nameFiltersMaybeLC = this.maybeLCArray(caseInsensitive, nameFilters),
     matchAll = nameFiltersMaybeLC[multiFnName]((nameFilter) => {
       const
-      match = nameMaybeLC.includes(nameFilter);
+      /** Passport data .aliases is an array; matching any of the aliases is
+       * more useful than matching all of them ('every'). */
+      match = Array.isArray(nameMaybeLC) ?
+        nameMaybeLC.any(name => name.includes(nameFilter)) :
+        nameMaybeLC.includes(nameFilter);
       return match;
     });
     return matchAll;

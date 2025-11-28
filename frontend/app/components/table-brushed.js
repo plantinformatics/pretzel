@@ -9,6 +9,7 @@ import { capitalize } from '@ember/string';
 import { alias } from '@ember/object/computed';
 import { on } from '@ember/object/evented';
 
+import PCA from 'pca-js';
 
 import { featureEdit } from '../components/form/feature-edit';
 import { eltClassName } from '../utils/domElements';
@@ -263,6 +264,8 @@ export default Component.extend({
   stretchHorizontal : true,
   /** true means show sample-data - PCA of sample data of features */
   showSampleData : false,
+  /** Enable extraColumnsSortByGenotype(), if urlOptions.featuresPCA. */
+  sortByGenotype : false,
 
   //----------------------------------------------------------------------------
 
@@ -409,7 +412,7 @@ export default Component.extend({
   /** Extra columns are added to show Feature attributes in .values and .values.INFO
    * @return array of names of extra columns
    */
-  extraColumnsNames : computed('data.[]', function () {
+  extraColumnsNames : computed('data.[]', 'sortByGenotype', function () {
     let
     data = this.get('data'),
     subFieldNames = {},
@@ -442,6 +445,10 @@ export default Component.extend({
     names = Array.from(nameSet.values());
     this.set('subFieldNames', subFieldNames);
     dLog('extraColumnsNames', names, data);
+    if (this.sortByGenotype) {
+      names = this.extraColumnsSortByGenotype(names);
+      dLog('extraColumnsNames', names);
+    }
     return names;
   }),
   /** column definitions for columns defined in extraColumns()  */
@@ -1183,6 +1190,12 @@ export default Component.extend({
     return datasets;
   }),
 
+  /** @return true if .sampleData contains 1 or more attributes ( [datasetId][sampleName] ) */
+  get sampleDataNotEmpty() {
+    const keysLength = Object.keys(this.sampleData).length;
+    return !! keysLength;
+  },
+
   /** Collate from .data the brushed features' sample values.
    * Sample names are filtered to match the AGG name pattern; other sample name
    * patterns could be added.
@@ -1197,7 +1210,10 @@ export default Component.extend({
     this.data.forEach(({ feature }) => {
       const
       dataset = feature.get('blockId.datasetId'),
-      enablePCA = this.urlOptions.featuresPCA || contentOf(dataset).hasTag('Genotype'),
+      featuresPCA = this.urlOptions.featuresPCA,
+      /** .featuresPCA enables PCA only for Genotype datasets, or any matching
+       * sampleNameRe if featuresPCA=='samples' */
+      enablePCA = featuresPCA && (contentOf(dataset).hasTag('Genotype') || featuresPCA == 'samples'),
       datasetId = feature.get('blockId.datasetId.id');
       if (! enablePCA) { return; }
       /** Only a VCF genotype dataset will have .samplesPassport, and only after
@@ -1205,7 +1221,7 @@ export default Component.extend({
        * The passport data is applicable for other datasets which have the same sample IDs.
        * This is passed to sample-data.
        */
-      const samplesPassport = dataset.get('samplesPassport');
+      const samplesPassport = dataset.get('samplesPassport.genotypeID');
       if (samplesPassport) {
         this.samplesPassport = samplesPassport;
       }
@@ -1238,9 +1254,52 @@ export default Component.extend({
     const fnName = 'closeSampleData';
     this.toggleProperty('showSampleData');
     this.updateSettings(fnName, {height : '98%'});
-  }
+  },
 
+  //----------------------------------------------------------------------------
 
+  datasets : computed('data', function () {
+    const datasets = this.data.mapBy('feature.blockId.datasetId.content')
+          .uniq();
+    return datasets;
+  }),
+
+  /** Sort .extraColumnsNames by the sample genotype values, if the data is genotype. */
+  extraColumnsSortByGenotype(extraColumnsNames) {
+    const
+    fnName = 'extraColumnsSortByGenotype',
+    datasetIds = this.datasets.filter(dataset => dataset.hasTag('Genotype'));
+    if (datasetIds.length) {
+      const
+      /** filter by the genotype values of just the first dataset, since another
+       * dataset may have different samples. */
+      data = this.sampleData[datasetIds[0].id],
+      /** based on extract from sample-data.js : showData() */
+      sampleNames = Object.keys(data),
+      sampleValues = Object.values(data),
+      pcaData = PCA.getEigenVectors(sampleValues),
+      reducedData = PCA.computeAdjustedData(sampleValues, pcaData[0], pcaData[1]),
+      pc1 = reducedData.adjustedData[0],
+      entries = sampleNames.map((sampleName, i) => [sampleName, pc1[i]]),
+      samplePC1 = Object.fromEntries(entries),
+      cmpFn = (a, b) => compare(samplePC1[a], samplePC1[b]);
+      extraColumnsNames = extraColumnsNames.sort(cmpFn);
+    }
+    return extraColumnsNames;
+  },
 });
+
+/** Use to implement a compare function for Array.sort() and it has the
+ * signature of the Array.sort() compare function: (a, b) => -1, 0, +1
+ * Compare a, b, returning 0 if they are equal or either is undefined,
+ * -1 if a < b, +1 if a > b.
+ */
+function compare(a, b) {
+  const
+  diff = 
+    (a === undefined) || (b === undefined) || (a === b) ? 0 :
+    a < b ? -1 : +1;
+  return diff;
+}
 
 /*----------------------------------------------------------------------------*/

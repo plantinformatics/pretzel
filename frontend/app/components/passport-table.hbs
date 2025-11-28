@@ -1,0 +1,50 @@
+
+{{#if this.genolinkErrorMessage}}
+  <label>Genolink API error :</label>
+  <div>{{this.genolinkErrorMessage}}</div>
+{{/if}}
+
+{{!-- For angle-bracket components, use Camel Case <EmberMulti2Table> <EmberMulti2Select>,
+ and prefix args with '@', e.g. @userSettings={{@userSettings}}
+--}}
+{{#let (if @tableRow "ember-multi2-table" "ember-multi2-select") as |tableComponent|}}
+
+  {{!-- tableData() depends on @mg.passportDataCount --}}
+  {{component
+    tableComponent
+    mg=@mg
+    userSettings=@userSettings
+    dataset=@dataset
+    samples=@samples
+    currentData=this.currentData
+    pagedData=this.pagedData
+    selectSampleArray=@selectSampleArray
+    sampleNamePassportValues=@sampleNamePassportValues
+    possibleValuesFilterOptions=this.possibleValuesFilterOptions
+    scrolledDiv=@scrolledDiv
+    lastPassport=this.lastPassport
+    getNextPage=this.getNextPage
+    getNamedRows=this.getNamedRows
+    initialFilter=this.initialFilter
+    requireId=this.requireId
+    setRequireId=(if @userSettings.filterSamplesByHaplotype null (action (mut this.requireId) ))
+    nameFilterChanged=this.nameFilterChanged
+    genotypeIDsReceived=this.genotypeIDsReceived
+    addColumnSelector=@addColumnSelector
+    }}
+
+{{/let}}
+
+<div class="clear-both" style="min-height:3ex">
+{{#let this.currentData as |pageData|}}
+  {{#if pageData.loadPage.isRunning}}
+    <div class="py-3 text-sm text-gray-500">Loading…</div>
+  {{/if}}
+
+  {{#if (and (not pageData.hasMore) (not pageData.isFirstLoad))}}
+    <div class="py-3 text-sm text-gray-400">No more results.</div>
+  {{/if}}
+{{/let}}
+</div>
+
+{{yield}}

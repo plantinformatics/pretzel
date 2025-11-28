@@ -361,33 +361,81 @@ function columnName2SampleName(columnName) {
   return sampleName;
 }
 
+/** If selectFields.length, return the selected
+ * fields from the Passport data of the accession.
+ * One of the parameters sampleName (genotypeID) and accessionNumber must be
+ * given to identify the accession / sample.
+ * @param sampleName  optional genotypeID
+ * @param accessionNumber optional id
+ * @param selectFields	user-selected list of fields to add (userSettings.passportFields)
+ * @param dataset	for dataset.samplesPassport.genotypeID
+ * which contains the Passport field value for the samples
+ * @return {Array<string>} values	the Passport field value for the samples
+ * default is [], if ! selectFields.length or sampleName is not a sample, or
+ * dataset does not have passport data loaded.
+ */
+export function sampleNamePassportValues(sampleName, accessionNumber, selectFields, dataset) {
+  let values = [];
+  const samplesPassport = dataset?.samplesPassport;
+  if (selectFields.length && ! valueNameIsNotSample(sampleName) && samplesPassport) {
+    const sampleCache = dataset?.samplesPassport?.genotypeID[sampleName];
+    const
+    g2aMap = samplesPassport.g2aMap,
+    accessionNumber_ = accessionNumber || g2aMap.get(sampleName),
+    acccessionCache = samplesPassport.accessionNumber[accessionNumber_];
+    if (sampleCache || acccessionCache) {
+      values = selectFields.map(fieldName => {
+        let text = sampleCache?.[fieldName] || acccessionCache?.[fieldName];
+
+        text = passportArrayToText(fieldName, text);
+
+        return text;
+      });
+    }
+  }
+  return values;
+}
+/** Passport alias data is an array of objects containing a .name field.
+ * Recognise if the given data is such a Passport array, and if so convert it to
+ * a text representation; no change otherwise.
+ * @param fieldName e.g. 'aliases'
+ * @param data  passport data value
+ * @return text form of data value
+ */
+export function passportArrayToText(fieldName, data) {
+  let text = data;
+  /* could match on fieldName 'aliases'; this array data form may be used on
+   * some other fields.
+   */
+  /** 'aliases' value is an array of objects; use the .name field  */
+  if ((typeof text === 'object') && Array.isArray(text) &&
+      (typeof text[0] === 'object')) {
+    const
+    aliases = text.mapBy('name'),
+    /** there is a lot of repetition in aliases[] */
+    aliasesUnique = Array.from(new Set(aliases));
+    text = aliasesUnique.join(',');
+  }
+  return text;
+}
+
+
 /** If selectFields.length, augment the given sample / accession name with selected
  * fields from the Passport data of the accession.
  * @param sampleName
  * @param selectFields	user-selected list of fields to add (userSettings.passportFields)
  * @param datasetId	to lookup the Passport data of the sampleName
- * @param visibleBlocks	for visibleBlocks[].datasetId.samplesPassport
+ * @param visibleBlocks	for visibleBlocks[].datasetId.samplesPassport.genotypeID
  * which contains the Passport field value for the samples
+ * @param as for sampleNamePassportValues()
  */
 function sampleNameAddPassport(sampleName, selectFields, datasetId, visibleBlocks) {
   if (selectFields.length && ! valueNameIsNotSample(sampleName)) {
-  const 
+    const
     block = visibleBlocks.find(b => b.datasetId.id == datasetId),
-    dataset = contentOf(block.datasetId);
-    if (dataset?.samplesPassport?.[sampleName]) {
-      const values = selectFields.map(fieldName => {
-        let text = dataset.samplesPassport[sampleName][fieldName];
-        /** 'aliases' value is an array of objects; use the .name field  */
-        if ((typeof text === 'object') && Array.isArray(text) &&
-            (typeof text[0] === 'object')) {
-          const
-          aliases = text.mapBy('name'),
-          /** there is a lot of repetition in aliases[] */
-          aliasesUnique = Array.from(new Set(aliases));
-          text = aliasesUnique.join(',');
-        }
-        return text;
-      });
+    dataset = contentOf(block.datasetId),
+    values = sampleNamePassportValues(sampleName, null, selectFields, dataset);
+
       /* The original implementation simply appended the Passport data values to
        * the sampleName, but now nestedHeaders are used to instead display each
        * Passport field in a separate row.
@@ -397,7 +445,6 @@ function sampleNameAddPassport(sampleName, selectFields, datasetId, visibleBlock
         const fieldName = selectFields[i];
         sampleName = stringSetSymbol(Symbol.for(fieldName), sampleName, value);
       });
-    }
   }
   return sampleName;
 }
@@ -599,6 +646,7 @@ function valueIsMissing(valueIn) {
  *  undefined
  *  'A' 'C' 'T' 'G' '0' '1' '2'
  *  '0/1' '1/0' './.' 
+ *  'N' (null value)
  *  or matching /^[ACTG][/|][ACTG]$/, the 2 allele values are different.
  * @return string value  in requestFormat
  */
@@ -606,7 +654,8 @@ function valueToFormat(requestFormat, refAltValues, valueIn) {
   const
   fnName = 'valueToFormat';
   let valueOut;
-  if (valueIsMissing(valueIn)) {
+  /** No change to missing and null values. */
+  if (valueIsMissing(valueIn) || (valueIn === 'N')) {
     valueOut = valueIn;
   } else {
     const
@@ -880,13 +929,13 @@ function vcfFeatures2MatrixViewRowsResult(
     /** passportSymbol is used by : columnNamesCmp() -> sampleNamesCmpField() -> findPassportFields()
      */
      .map(name => {
-       const fieldValues = Ember_get(dataset, 'samplesPassport')?.[name];
+       const fieldValues = Ember_get(dataset, 'samplesPassport.genotypeID')?.[name];
        if (fieldValues) { name = stringSetSymbol(passportSymbol, name, fieldValues); }
        return name; })
     .sort(columnNamesCmp),
   /* for re-adding passportSymbol, if required.
   fieldValues = columnNamesSorted
-    .map(name => Ember_get(dataset, 'samplesPassport')?.[name]),
+    .map(name => Ember_get(dataset, 'samplesPassport.genotypeID')?.[name]),
     */
   columnNames = columnNamesSorted
     // could skip these for non-samples
@@ -897,7 +946,8 @@ function vcfFeatures2MatrixViewRowsResult(
     .map(name => stringSetSymbol(datasetSymbol, name, dataset));
   result.sampleNames.addObjects(columnNames);
 
-  dLog(fnName, result.rows.length);
+  // result.rows is a Map()
+  dLog(fnName, result.rows.size);
   return result;
 }
 

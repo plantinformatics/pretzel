@@ -1,0 +1,94 @@
+<div class="passport-table">
+  <table class="table table-sm w-full">
+    <thead>
+      <tr>
+        <th class="w-8">
+          <input
+            type="checkbox"
+            checked={{this.isAllVisibleSelected}}
+            {{on "change" this.toggleAll}}
+            aria-label="Select all rows"
+          />
+        </th>
+
+          <th>
+            GenotypeId
+          </th>
+
+        {{!-- Clickable sort headers. Show ▲/▼ when active --}}
+
+        {{#each this.columns as |column|}}
+          <th role="button"
+            {{on "click" (fn this.toggleSort column.property)}}
+            class="whitespace-nowrap">
+
+            {{!-- Power select for filtering on this column --} }
+            {{#power-select 
+              selected=null 
+              options=column.filterOptions 
+              onChange=(action this.filterColumn column) 
+              as |option|}}
+              {{option} }
+            {{/power-select} } --}}
+
+            {{#if column.filterOptions.length}}
+              <select style="height:100px" class="form-control" multiple onchange={{action (fn this.selectFieldValue column) value="target" }}>
+                {{#each column.filterOptions as |filterOption|}}
+                  <option value={{filterOption}}
+                    selected={{include (get this.selectedFieldValues column.property) filterOption}}>
+                    {{filterOption}}</option>
+                {{/each}}
+              </select>
+            {{/if}}
+
+            {{column.header}}
+            {{#if (and (eq this.sortBy column.property) this.sortDir)}}
+              {{if (eq this.sortDir "asc") "▲" "▼"}}
+            {{/if}}
+
+          </th>
+        {{/each}}
+      </tr>
+    </thead>
+    <tbody>
+      {{log '.selectedIds' this.selectedIds}}
+      {{#each this.sortedRows as |row rowIndex|}}       {{!-- .tableData --}}
+      {{!-- in place of row.id.  maybe (get row 'GenotypeId') --}}
+      {{#let (object-at rowIndex this.args.samples) as |rowId|}}
+      {{log 'rowId' rowId 'selectedIds' this.selectedIds rowIndex }}
+      {{log 'rowId' rowId 'selectedIds' this.selectedIds (call (fn this.has this.selectedIds rowId) ) }}
+        <tr>
+          <td>
+            <input
+              type="checkbox"
+              checked={{action (invoke "has" this.selectedIds) rowId}}
+              {{on "change" (fn this.toggleRow rowId)}}
+              aria-label="Select row"
+            />
+          </td>
+
+          {{!-- or {{get this.args.samples rowIndex}} --}}
+          <td>{{object-at rowIndex this.args.samples}}</td>
+          {{#each this.columns as |column|}}
+            <td>{{get row column.property}}</td>
+          {{/each}}
+        </tr>
+      {{/let}}
+      {{/each}}
+    </tbody>
+  </table>
+
+  <select style="height:100px" class="form-control" multiple onchange={{action this.selectSample}}>
+    {{#each this.sortedRows as |row rowIndex|}}
+      {{#let (object-at rowIndex this.args.samples) as |rowId|}}
+      {{!-- Use html-safe to prevent translation of "&nbsp;" from rowText() into "&amp;" + "nbsp;". --}}
+        <option value={{rowId}} selected={{include @the.selectedSamples rowId}}>{{html-safe (call (fn this.rowText row)) }}</option>
+      {{/let}}
+    {{/each}}
+  </select>
+
+
+  {{log 'passport-table' this.tableData this.columns }}
+  <div>{{toJson  this.tableData}}</div>
+  <div>{{toJson  this.columns}}</div>
+</div>

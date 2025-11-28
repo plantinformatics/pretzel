@@ -23,10 +23,15 @@ const genolinkSearchIdsLimit = 100;
 
 import { clipboard_writeText } from '../../utils/common/html';
 import { exportObjectsAsCSVFile } from '../../utils/dom/file-download';
+import { sampleNamePassportValues } from '../../utils/data/vcf-feature';
+
+
 
 //------------------------------------------------------------------------------
 
 const dLog = console.debug;
+
+const trace = 0;
 
 //------------------------------------------------------------------------------
 
@@ -35,15 +40,32 @@ export default class PanelGenotypeSamplesComponent extends Component {
 
   @alias('queryParamsService.urlOptions') urlOptions;
 
+  sampleNamePassportValues = sampleNamePassportValues;
+
   //----------------------------------------------------------------------------
 
-  /*
+  get enablePassportData() {
+    const
+    enable = this.args.enablePassportData &&
+      (this.activeDataset.isGenolink &&
+       (this.urlOptions.tableRow || this.urlOptions.multiSelect));
+    return enable;
+  }
+
+  //----------------------------------------------------------------------------
+
   constructor() {
     super(...arguments);
 
-    dLog('genotype-samples', 'showIntersectionCheckbox', this.args.showIntersectionCheckbox);
+    if (trace) {
+      dLog('genotype-samples', 'showIntersectionCheckbox', this.args.showIntersectionCheckbox);
+    }
+
+    if (window.PretzelFrontend) {
+      window.PretzelFrontend.genotypeSamples = this;
+    }
+
   }
-  */
 
   //----------------------------------------------------------------------------
 
@@ -58,6 +80,25 @@ export default class PanelGenotypeSamplesComponent extends Component {
     Ember_set(this, 'args.userSettings.matchHet', ! matchExactAlleles);
   }
 
+  //----------------------------------------------------------------------------
+
+  get activeDataset() {
+    const
+    mg = this.args.the,
+    /** activeDataset is derived from brushedOrViewedVCFBlocksVisible,
+     * but depends on setSelectedDataset() which is called in later(),
+     * so provide a direct fallback.
+     */
+    dataset = mg.activeDataset || mg.lookupBlock?.datasetId.content;
+    return dataset;
+  }
+
+  //----------------------------------------------------------------------------
+
+  @action
+  selectSampleArray(selectedSamples, add) {
+    return this.args.the.selectSampleArray(selectedSamples, add);
+  }
 
   //----------------------------------------------------------------------------
 
@@ -94,8 +135,20 @@ export default class PanelGenotypeSamplesComponent extends Component {
     const
     fnName = 'selectedSamplesGetPassport',
     g = this.args.the,
-    aggSamples = g.selectedSamples.filter(s => s.match(/^AGG/)),
+    /** Originally this filtered for samples which matched the AGG name pattern
+     * and hence are known to be available on Genolink.  This is no longer
+     * required since we now indicate datasets which have samples on Genolink
+     * with _meta.GenolinkURL "Genolink", and all their samples are valid for
+     * Passport requests.
+     *
+     *  This was later factored as sampleNameIsAGG().
+     * .filter(s => s.match(/^AGG/)),
+     */
+    aggSamples = g.selectedSamples,
     genotypeIds = aggSamples,
+    /** The user may want selectFields to be those of the Genotype Table column
+     * headers, or passport-table columns.
+     * If the latter, change this to userSettings.passportTable.passportFields */
     passportFields = this.args.userSettings.passportFields,
     selectFields = passportFields.length ? passportFields : undefined,
     passportP = aggSamples.length ?
@@ -148,12 +201,18 @@ export default class PanelGenotypeSamplesComponent extends Component {
     const
     fnName = 'genolinkSearchURL',
     g = this.args.the;
-    if (! g.selectedSamples) {
+    /** related : enablePassportData() */
+    if (! g.selectedSamples ||
+        ! (/*this.args.enablePassportData &&*/ this.activeDataset.isGenolink)) {
       return undefined;
     }
     const
-    aggSamples = g.selectedSamples.filter(s => s.match(/^AGG/)),
-    truncatedMessage = (aggSamples.length > genolinkSearchIdsLimit) ? 'Maximum 100 IDs' : '',
+    /** Same comment as in selectedSamplesGetPassport() above, 
+     * .filter(s => s.match(/^AGG/))
+     */
+    aggSamples = g.selectedSamples,
+    truncatedMessage = (aggSamples.length > genolinkSearchIdsLimit) ?
+      'Maximum ' + genolinkSearchIdsLimit + ' IDs' : '',
     gIdsTruncated = truncatedMessage ? aggSamples.slice(0, genolinkSearchIdsLimit) : aggSamples,
     /** Sample / Accession names are system data not user data, and do not require quoting ATM. */
     genotypeIds = gIdsTruncated.join(','),
@@ -170,7 +229,24 @@ export default class PanelGenotypeSamplesComponent extends Component {
     return url;
   }
 
+  //----------------------------------------------------------------------------
 
- 
+  @action
+  /** event from Panel::SelectPassportFields indicating that user has selected
+   * Passport fields for display in <PassportTable>
+   */
+  selectedFieldsChanged(values, c, add) {
+    if (! add) {
+      return Promise.resolve();
+    }
+    const
+    /** not clear yet how best to connect to emberMulti2Table */
+    emt = window.PretzelFrontend.emberMulti2Table,
+    promise = emt.requestMissing(emt.tableData);
+
+    return promise;
+  }
+
+  //----------------------------------------------------------------------------
 
 }
