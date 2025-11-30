@@ -36,6 +36,7 @@ const /*import */{
 // } from 'vcf-genotype-brapi';
 
 import {
+  refAltNullHeadings,
   featureBlockColourValue, columnNameAppendDatasetId, columnName2SampleName, valueIsCopies,
 
 } from '../utils/data/vcf-feature';
@@ -439,6 +440,17 @@ export default Component.extend({
     TH.classList.add('done');
 
     TH.title = TH.innerText;
+    if (this.urlOptions.matchesHover) {
+      const
+      mg = window.PretzelFrontend?.manageGenotype,
+      matches = mg?.matchesSummary[TH.innerText];
+      if (matches) {
+        const
+        matchesText = Object.entries(matches).map(e => e.join(':')).join(', ');
+        TH.title = TH.title + '.\n  ' + matchesText;
+      }
+    }
+
   },
   afterGetColHeader(col, TH) {
     afterGetColHeaderResizer.apply(this.table, [this.userSettings, col, TH]);
@@ -1004,7 +1016,8 @@ export default Component.extend({
     } else if (
       (row >= 0) &&
         (! sampleFilterTypeNameModal || (sampleFilterTypeName === 'feature')) && 
-        (columnName.startsWith('Ref') || columnName.startsWith('Alt'))) {
+        (columnName.startsWith('Ref') || columnName.startsWith('Alt')
+         || columnName.startsWith('Null'))) {
       const feature = this.featureToggleRC(row, col, columnName);
       if (feature) {
         later(() => this.table.render(), 1000);
@@ -1201,12 +1214,12 @@ export default Component.extend({
     }
     return colour;
   },
-  /** map prop : Ref / Alt -> copiesColourClass( 0 / 2)
+  /** map prop : Ref / Alt / Null -> copiesColourClass( 0 / 2 / 3)
    * @param typeof prop === 'string'
    */
   refAltCopyColour(prop) {
     const
-    copyNum = (prop === 'Ref') ? '0' : '2',
+    copyNum = (prop === 'Null') ? '3' : (prop === 'Ref') ? '0' : '2',
     colour = copiesColourClass(copyNum);
     return colour;
   },
@@ -1232,7 +1245,7 @@ export default Component.extend({
             this.userSettings.sampleFilterTypeName === 'feature';
       /** Use this for 'LD Block' */
       const matchRefAlt = this.userSettings.haplotypeFilterRef ? 'Ref' : 'Alt';
-      if (selectFeatures && refAltHeadings.includes(prop_string))
+      if (selectFeatures && refAltNullHeadings.includes(prop_string))
       {
         const
         dataset = prop[Symbol.for('dataset')],
@@ -1252,7 +1265,9 @@ export default Component.extend({
     featureFilters = block?.[sampleFiltersSymbol]?.feature,
     matchRef = feature[Symbol.for('matchRef')],
     featureIsFilter = featureFilters?.includes(feature),
-    isFilter = featureIsFilter && (matchRef === (prop === 'Ref'));
+    isFilter = featureIsFilter && (
+      (prop === 'Null') ? (matchRef === null) :
+        (matchRef === (prop === 'Ref')));
     if (isFilter && trace > 1) {
       dLog('featureIsFilter', feature.value, feature.name, matchRef, prop);
     }

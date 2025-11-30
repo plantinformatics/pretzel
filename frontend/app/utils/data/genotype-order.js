@@ -334,29 +334,46 @@ function distancesTo1d(blocks, referenceSamplesCount, userSettings) {
 
 //------------------------------------------------------------------------------
 
-/** match a (sample genotype call) value against the Ref/Alt value of the
+/** match a (sample genotype call) value against the Ref/Alt/Null value of the
  * feature / SNP.  a rough factorisation; currently there is just 1 flag
  * haplotypeFilterRef for all selected 'LD Blocks', and hence one instance
  * of MatchRef, but these requirements are likely to evolve.
  *
  * Origin : in cafd7623 MatchRef was factored from haplotypeFilterSamples()
  * (later renamed to filterSamples()).
+ * Update 2025Nov24 : add support for null genotype values.
  */
 export class MatchRef {
   constructor(matchRef) {
     this.matchRef = matchRef;
-    this.matchKey = matchRef ? 'ref' : 'alt';
-    this.matchNumber = matchRef ? '0' : '2';
+    this.matchKey = (matchRef === null) ? 'null' : matchRef ? 'ref' : 'alt';
+    this.matchNumber = (matchRef === null) ? 'N' : matchRef ? '0' : '2';
+  }
+  /** Extract from feature the value to compare against for this MatchRef.
+   * i.e. feature.values.ref, feature.values.alt, or null
+   */
+  matchValue(feature) {
+    return (this.matchRef === null) ? null : feature.values[this.matchKey];
+  }
+  static columnNameToMatchRef = {
+    Ref : true,
+    Alt : false,
+    Null : null,
   }
   /** to match homozygous could use .startsWith(); that will also match 1/2 of heterozygous.
    * Will check on (value === '1') : should it match depending on matchRef ?
    * @param value sample/individual value at feature / SNP
    * This function is not called if valueIsMissing(value).
    * @param matchValue  ref/alt value at feature / SNP (depends on matchRef)
+   * @desc added in 2a0962e0, replaced in 557d1c30 by distanceFn().
    */
   matchFn(value, matchValue) { return (value === this.matchNumber) || (value === '1') || value.includes(matchValue); }
-  /**
-   * Param comments of matchFn() apply here also.
+  /** Calculate the distance between a sample genotype value and matchValue.
+   * Used in featuresCountMatches() (manage-genotype.js).
+   * 
+   * @param value sample/individual value at feature / SNP
+   * This function is not called if valueIsMissing(value).
+   * @param matchValue  ref/alt/null value at feature / SNP (depends on matchRef)
    * @return undefined if value is invalid
    * missing data, i.e. './.', is counted in .missing if using Counts
    */
@@ -371,15 +388,23 @@ export class MatchRef {
     } else {
       switch (value.length) {
       case 3 :
-        if (numeric) { matchValue = this.matchRef ? '1' : '0'; }
-        distance = 2 - stringCountString(value, matchValue);
+        if (this.matchRef === null) {
+          /** value is not 'N' or missing, so it is Alt / Ref / het, so distance = 2 */
+          distance = 2;
+        } else {
+          if (numeric) { matchValue = this.matchRef ? '1' : '0'; }
+          distance = /*2 -*/ stringCountString(value, matchValue);
+        }
         break;
       case 1:
-        if (numeric) {
-          distance = this.matchRef ? +value : 2 - value;
-        } else {
-          distance = value === this.matchNumber;
-        }
+        if (numeric || (value === 'N')) {
+            distance = (this.matchRef === null) ? 2 * +(value !== 'N') :
+            (value === 'N') ? 2 :
+            this.matchRef ? +value : 2 - value;
+          } else {
+            // was .matchNumber, but that is numeric.
+            distance = 2 - 2 * (value === matchValue);
+          }
         break;
       default : dLog(fnName, 'invalid genotype value', value);
         break;
@@ -438,7 +463,10 @@ class MatchRefSample {
      */
     let distance = 0, missing = 0, differences = 0;
     // const values = [value, matchValue];
+    // matchValue.length is 1
+    // this assumes value.length === 1
     if (gtValueIsNumeric(value) && gtValueIsNumeric(matchValue)) {
+      // probably Math.abs()
       distance = matchValue - value; // value[1] - value[0];
       differences = distance ? 1 : 0;
     } else {

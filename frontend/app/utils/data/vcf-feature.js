@@ -58,11 +58,13 @@ const callRateSymbol = Symbol.for('callRate');
 
 const refAlt = ['ref', 'alt'];
 const refAltHeadings = refAlt.map(toTitleCase);
+const refAltNull = refAlt.concat('null');
+export const refAltNullHeadings = refAltHeadings.concat('Null');
 
 //------------------------------------------------------------------------------
 
 const
-columnOrder = [ 'MAF', 'LD Block', 'Ref', 'Alt' ],
+columnOrder = [ 'MAF', 'LD Block', 'Ref', 'Alt', 'Null' ],
 columnOrderIndex = columnOrder.reduce(
   (result, name, index) => {
     result[name] = index;
@@ -187,10 +189,12 @@ function featurePosition(feature, i) {
   return featureNameValue(feature, value);
 }
 /**
- * @param fieldName select .values[fieldName], e.g. 'ref', 'alt'
+ * @param fieldName select .values[fieldName], e.g. 'ref', 'alt', 'Null'
  */
 function featureValues(feature, fieldName) {
-  const value = featureValuesField(feature, fieldName);
+  const
+  value = (fieldName === 'Null') ? 'N' :
+    featureValuesField(feature, fieldName);
   return featureNameValue(feature, value);
 }
 /** When in the 012 view, colour the ref/alt with the 2 colours used for the
@@ -343,8 +347,8 @@ function copySymbols(source, destination) {
 
 function columnNameAppendDatasetId(columnName, datasetId) {
   /** Assume the SNPs are bi-allelic, so only display 1 Ref/Alt
-   * regardless of multiple datasets. */
-  if (! refAltHeadings.includes(columnName)) {
+   * regardless of multiple datasets. Similarly, just 1 Null column. */
+  if (! refAltNullHeadings.includes(columnName)) {
     const previous = columnName;
     columnName = columnName + '\t' + datasetId;
     /* Copy symbols if param is a String, (e.g. dataset, passport, passport
@@ -575,6 +579,7 @@ function vcfFeatures2MatrixView(requestFormat, added, featureFilter, sampleFilte
       features : sortedFeatures.map((f) => featureValuesRefAlt(requestFormat, f, ra)),
       datasetId : {id : ''},
       name : refAltHeadings[i]}));
+  // TODO: if genotypeHasNull, add Null column to leftColumns after refAltColumns.
 
   const leftColumns = blockColourColumns.concat(valueColumns, mafColumn, haplotypeColourColumn, refAltColumns);
 
@@ -607,9 +612,10 @@ function vcfFeatures2MatrixView(requestFormat, added, featureFilter, sampleFilte
         .map((f) => {
         let
           sampleValue = Ember_get(f, 'values.' + sampleName),
-          refAltValues = refAlt
-            .map((ra, i) => f.values[refAlt[i]]),
-          valueInFormat = valueToFormat(requestFormat, refAltValues, sampleValue),
+          refAltNullValues = refAlt
+            .map((ra, i) => f.values[refAlt[i]])
+            .concat('N'),
+          valueInFormat = valueToFormat(requestFormat, refAltNullValues, sampleValue),
           fx = featureForMatrixColumn(f, sampleName, valueInFormat, {requestFormat, singleBlock});
         if ((f.get('blockId.id') === block.get('id')) && (sampleValue !== undefined)) {
           featuresMatchSample++;
@@ -783,9 +789,14 @@ function vcfFeatures2MatrixViewRowsResult(
   /** this is currently a Proxy; could use contentFor(). */
   dataset = block?.get('datasetId'),
   datasetId = dataset?.get('id'),
-  enableFeatureFilters = dataset.get('enableFeatureFilters');
+  enableFeatureFilters = dataset.get('enableFeatureFilters'),
+  genotypeHasNull = dataset.get('_meta.genotypeHasNull');
   const selectFields = userSettings.passportFields; // useSelectMultiple : .mapBy('id');
 
+  /* sampleNamesSet will contain sampleNames and column names which are not
+   * sampleNames, i.e. alt, ref, and Null if required.
+   * sampleNamesSet is used just for columnNames{Sorted,}
+   */
   let sampleNamesSet = new Set();
 
   // result =
@@ -830,6 +841,16 @@ function vcfFeatures2MatrixViewRowsResult(
             (sampleName !== 'INFO') &&
             caseRefAlt(sampleName);
 
+        // If genotypeHasNull, add Null after Alt.
+        if (genotypeHasNull) {
+          /** To position the Null column on the right side of the Alt column,
+           * add Null before featureSampleNames() adds the sampleNames columns,
+           * because Null compares 0 against those, so the sort does not change
+           * order.
+           * Ref/Alt/Null are sorted by : columnNamesCmp() : columnOrderIndex
+           */
+          sampleNamesSet.add('Null');
+        }
         // can instead collate columnNames in following .reduce(), plus caseRefAlt().
         /* unchanged */ /* sampleNamesSet = */
         featureSampleNames(sampleNamesSet, feature, filterFn);
@@ -881,6 +902,9 @@ function vcfFeatures2MatrixViewRowsResult(
               sampleName = augmentSampleName(sampleName, selectFields, datasetId, options.visibleBlocks);
               row[sampleName] = fx;
             }
+            if (genotypeHasNull && (sampleName == 'Alt')) {
+              row['Null'] = stringSetFeature('N', feature);
+            }
             return res2;
           }, res);
       }
@@ -910,12 +934,12 @@ function vcfFeatures2MatrixViewRowsResult(
   }
 
   //----------------------------------------------------------------------------
-  
+
   const
   /** construct column names from the samples names accumulated from feature values.
    *
-   * Omit Ref/Alt if datasetIndex > 0, i.e. assume SNPs are bi-allelic so Ref / Alt
-   * from each dataset will be the same.
+   * Omit Ref/Alt/Null if datasetIndex > 0, i.e. assume SNPs are bi-allelic so Ref / Alt
+   * from each dataset will be the same, and there is only 1 Null column.
    * map 'tSNP' to 'LD Block' in columnNames, not in the row data. related : Haplotype.
    *
    * Annotate the column name with dataset; this could be block; handling
@@ -923,8 +947,8 @@ function vcfFeatures2MatrixViewRowsResult(
    * whether they should be separate columns, which would favour annotating with
    * block here.  This value is used in matrix-view : colHeaders().
    */
-  columnNamesSorted = Array.from(sampleNamesSet.keys())
-    .filter(name => (datasetIndex === 0) || ! refAltHeadings.includes(name))
+  columnNamesSorted = Array.from(sampleNamesSet.keys()
+    .filter(name => (datasetIndex === 0) || ! refAltNullHeadings.includes(name))
     .map(sampleName2ColumnName)
     /** passportSymbol is used by : columnNamesCmp() -> sampleNamesCmpField() -> findPassportFields()
      */
@@ -932,6 +956,7 @@ function vcfFeatures2MatrixViewRowsResult(
        const fieldValues = Ember_get(dataset, 'samplesPassport.genotypeID')?.[name];
        if (fieldValues) { name = stringSetSymbol(passportSymbol, name, fieldValues); }
        return name; })
+    )
     .sort(columnNamesCmp),
   /* for re-adding passportSymbol, if required.
   fieldValues = columnNamesSorted
@@ -1091,11 +1116,11 @@ function featuresValuesFields(features) {
 
 
 /** Collate "sample names" i.e. keys(feature.values), adding them to sampleNamesSet.
- * Omit ref and alt, i.e. names which are in refAlt.
  * @param sampleNamesSet new Set() to accumulate sampleNames
  * @param feature
  * @param filterFn  if defined, process names, and if result is not undefined, add it to set.
  * i.e. filterFn can play the role of both a map function and a filter function
+ * In the (only) use case, filterFn uses caseRefAlt() to map ref,alt to Ref,Alt.
  * @return sampleNamesSet, for use in .reduce().
  */
 function featureSampleNames(sampleNamesSet, feature, filterFn) {

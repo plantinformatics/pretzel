@@ -1380,8 +1380,8 @@ export default class PanelManageGenotypeComponent extends Component {
     filterTypeName = 'feature',
     filters = this.blockSampleFilters(block, filterTypeName),
     matchRef = feature[matchRefSymbol],
-    // use == because columnName is currently String.
-    matchRefNew = columnName == 'Ref';
+    // columnName is currently String, so use == for comparison.
+    matchRefNew = MatchRef.columnNameToMatchRef[columnName];
     /** Toggle feature when the current key Ref/Alt is clicked again.
      * If a different key is clicked for a feature, just change the key.
      */
@@ -4183,9 +4183,16 @@ export default class PanelManageGenotypeComponent extends Component {
             // if (this.currentFeaturesValuesFields) Object.assign(this.currentFeaturesValuesFields, currentFeaturesValuesFields);
 
             sn = sampleGenotypes.sampleNames,
-            // use == because .sampleNames are String
+            /** Split sn into non-sample and sample columns.
+             * The right-most non-sample column is currently 'Alt',
+             * or 'Null' if Null is present (if one of the datasets has
+             * ._meta.genotypeHasNull).
+             * Compare using == because .sampleNames are String.
+             */
             altColumnIndex = sn.findIndex(s => s == 'Alt'),
-            firstSampleIndex = altColumnIndex === -1 ? 0 : altColumnIndex + 1,
+            nullColumnIndex = sn.findIndex(s => s == 'Null'),
+            altOrNull = (nullColumnIndex === -1) ? altColumnIndex : nullColumnIndex,
+            firstSampleIndex = altOrNull === -1 ? 0 : altOrNull + 1,
             /** altColumnIndex and firstSampleIndex can be replaced by keeping
              * the left/fixed columns separated earlier in the pipeline, in
              * vcfFeatures2MatrixViewRowsResult() */
@@ -4657,7 +4664,7 @@ export default class PanelManageGenotypeComponent extends Component {
           const
           matchRefs = matchRefFn ? matchRefFn(feature) : [new MatchRef(feature[matchRefSymbol])];
           matchRefs.forEach((matchRef, i) => {
-            const matchValue = feature.values[matchRef.matchKey];
+            const matchValue = matchRef.matchValue(feature);
             Object.entries(feature.values).forEach(([key, value]) => {
               if (! valueNameIsNotSample(key) /*&& matchValue*/ /*&& ! valueIsMissing(value)*/) {
                 const sampleName = key;
