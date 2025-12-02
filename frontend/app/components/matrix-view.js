@@ -446,7 +446,11 @@ export default Component.extend({
       matches = mg?.matchesSummary[TH.innerText];
       if (matches) {
         const
-        matchesText = Object.entries(matches).map(e => e.join(':')).join(', ');
+        matchesText = Object.entries(matches).map(e =>
+          /* handle matches.values which is an object (genotype value -> count). */
+          (typeof e[1] === 'object') ?
+            Object.entries(e[1]).map(e => e.join(':')).join(', ') :
+            e.join(':')).join(', ');
         TH.title = TH.title + '.\n  ' + matchesText;
       }
     }
