@@ -2522,7 +2522,8 @@ export default class PanelManageGenotypeComponent extends Component {
   selectedSNPsToKey(features, matchHet) {
     const
     featuresDescription = features.map(
-      h => '' + h.position + ':' + (h.matchRef ? 'Ref' : 'Alt')).join(' '),
+      h => '' + h.position + ':' + MatchRef.matchRef2Text[h.matchRef])
+      .join(' '),
     filterDescription = 'matchHet:' + matchHet + ' ' + featuresDescription;
     return filterDescription;
   }
@@ -2582,7 +2583,9 @@ export default class PanelManageGenotypeComponent extends Component {
        // This matches selectedSNPsToKeyWithSortAndMap().
        // sort enables filterDescription to be cache key
        .sortBy('value_0')
-       .map(f => ({position : f.value_0,  matchRef : f[Symbol.for('matchRef')]})),
+       .map(f => ({
+         position : f.value_0,
+         matchRef : MatchRef.matchRef2Json[f[Symbol.for('matchRef')]]})),
        matchHet
       },
     filterDescription = filterByHaplotype ?

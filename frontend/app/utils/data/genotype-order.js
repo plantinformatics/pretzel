@@ -394,6 +394,15 @@ export class MatchRef {
     Alt : false,
     Null : null,
   }
+  static matchRef2Text = {
+    true : 'Ref',
+    false : 'Alt',
+    null : 'Null',
+  }
+  /** For use in API requests : query params and POST body. */
+  static matchRef2Json = Object.fromEntries(
+    [true, false, null].map(mr => [mr, JSON.stringify(mr)]));
+
   /** to match homozygous could use .startsWith(); that will also match 1/2 of heterozygous.
    * Will check on (value === '1') : should it match depending on matchRef ?
    * @param value sample/individual value at feature / SNP

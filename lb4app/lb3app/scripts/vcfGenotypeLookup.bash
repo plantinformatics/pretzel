@@ -448,8 +448,9 @@ function bcftoolsCommand() {
     fi
   elif [ "$command" = filter_samples ]
     then
+      requestNull=$(echo "$gtMatch" | grep -q ':[01]' && echo ':%NU')
       2>&$F_ERR "$bcftools" query "$vcfGz" "${regionParams[@]}" "${preArgs[@]}" "${paramsForQuery[@]}" "${snpNamesInclude[@]}" \
-                -f '[%SAMPLE\t%GT\n]' \
+                -f '[%SAMPLE\t%GT'"$requestNull"'\n]' \
         | (grep $'\t'"$gtMatch"'$' || true)
       # grep returns status 1 if there are no matches.  Ignore that and return 0 (true).
   elif [ "$command" = haplotypes_samples ]

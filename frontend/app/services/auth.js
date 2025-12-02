@@ -796,7 +796,7 @@ export default Service.extend({
           error.statusText + ' : ' + error.state?.() + ', ' + error.status
           + ', ' + message,
         apiErrorShownInDialog = this.apiErrorShownInDialog;
-        dLog(fnName, responseError.statusCode, responseError.message, apiErrorShownInDialog);
+        dLog(fnName, responseError?.statusCode, responseError?.message, apiErrorShownInDialog, text);
         if (! apiErrorShownInDialog) {
           this.set('headsUp.tipText', text);
         }
