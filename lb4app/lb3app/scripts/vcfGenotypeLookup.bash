@@ -35,6 +35,12 @@
 #  args to bcftools other than command vcfGz; named preArgs because they could
 #  be inserted between command and vcfGz arguments to bcftools.
 
+# GT=   Pattern which %GT is matched against in filter_samples.
+# The pattern is wrapped with tab and end-of line : grep $'\t'"$gtMatch"'$'
+#
+# genotypeHasNull       Indicates the requested VCF dataset contains null genotype data, which should be requested using %NU.
+
+
 # stdin : not read
 # stdout : echo $vcfGz to stdout - see dbName2Vcf().
 # stderr : set -x is used, which outputs to stderr, and appears in the node.js server stderr log
@@ -203,6 +209,11 @@ fi
       GT=*)
         gtMatch=$(echo "$argVal" | sed s/GT=//)
         ;;
+
+      genotypeHasNull)
+        requestNull=':%NU'
+        ;;
+
       *)
         if [ -n "$inQuery" ] ;
         then paramsForQuery+=("$argVal");
@@ -220,6 +231,7 @@ fi
        snpNames="${snpNames[@]}",	\
        regionParams="${regionParams[@]}",	\
        gtMatch="$argVal",      \
+       requestNull="$requestNull",	\
        preArgs="${preArgs[@]}"  >> $logFile
 
 set -x
@@ -448,7 +460,6 @@ function bcftoolsCommand() {
     fi
   elif [ "$command" = filter_samples ]
     then
-      requestNull=$(echo "$gtMatch" | grep -q ':[01]' && echo ':%NU')
       2>&$F_ERR "$bcftools" query "$vcfGz" "${regionParams[@]}" "${preArgs[@]}" "${paramsForQuery[@]}" "${snpNamesInclude[@]}" \
                 -f '[%SAMPLE\t%GT'"$requestNull"'\n]' \
         | (grep $'\t'"$gtMatch"'$' || true)

@@ -598,7 +598,9 @@ export default Component.extend({
       manualColumnMove: true,
 
       outsideClickDeselects: true,
-      afterOnCellMouseDown: bind(this, this.afterOnCellMouseDown),
+      afterOnCellMouseDown:
+      (event, coords, td) =>
+      later(() => this.afterOnCellMouseDown(event, coords, td)),
       afterOnCellMouseOver,
       // Column header height resizer
       afterGetColHeader : bind(this, this.afterGetColHeader),

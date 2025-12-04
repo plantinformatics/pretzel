@@ -2591,6 +2591,9 @@ export default class PanelManageGenotypeComponent extends Component {
     filterDescription = filterByHaplotype ?
       this.selectedSNPsToKey(filterByHaplotype.features, matchHet) : '',
     requestDescription = "Fetching accessions for " + vcfBlock.brushName + ' ' + filterDescription;
+    if (filterByHaplotype) {
+      filterByHaplotype.genotypeHasNull = vcfDataset.get('_meta.genotypeHasNull');
+    }
     dLog(fnName, filterDescription, vcfBlock.brushName, 'FilteredSamples');
     /** There may be multiple concurrent samples requests, so this could be an
      * array, but the requirement is simply to show to the user when there is a
