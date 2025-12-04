@@ -1393,7 +1393,15 @@ export default class PanelManageGenotypeComponent extends Component {
     }
 
     // this.blockSetup(block.content);
-    block.set('selectedSNPCount.' + filterTypeName, filters.length);
+    /* Using Number() means that each featureToggle() will cause the dependency
+     * to compare not-equal for the CP genotypeSamplesFilteredByHaplotypes.
+     * This is desirable because changing a SNP from Ref <-> Alt <-> Null will
+     * not change the numeric value of selectedSNPCount, but it will change the
+     * result of the CP.
+     * See comment re. block.selectedSNPCount and this.sampleFiltersCount in
+     * blockSetup().
+     */
+    block.set('selectedSNPCount.' + filterTypeName, new Number(filters.length));
     this.ensureSamplesThenRender(filterTypeName);
   }
 
@@ -2932,6 +2940,17 @@ export default class PanelManageGenotypeComponent extends Component {
     const fnName = 'blockSetup';
     if (! vcfBlock.hasOwnProperty('genotypeSamplesFilteredByHaplotypes')) {
       dLog(fnName, vcfBlock.brushName);
+
+      /** Counts of selected SNPs. indexed by filterTypeName, i.e. contents are
+       * {variantInterval, haplotype, feature}
+       *
+       * vcfBlock.selectedSNPCount counts the selected features of just vcfBlock,
+       * whereas this.sampleFiltersCount contains the selected features of
+       * brushed axes which have VCF datasets displayed.
+       */
+      vcfBlock.set('selectedSNPCount', {});
+      /* Adding the dependency before the CP seems good practice;
+       * it worked when added afterwards. */
       const
       /** This can also depend on the other 2 filterTypeName-s : variantInterval, haplotype. */
       cp = computed(
@@ -2940,10 +2959,6 @@ export default class PanelManageGenotypeComponent extends Component {
         'controls.userSettings.genotype.matchHet',
         () => this.genotypeSamplesFilteredByHaplotypes(vcfBlock));
       defineProperty(vcfBlock, 'genotypeSamplesFilteredByHaplotypes', cp);
-
-      /** Counts of selected SNPs. indexed by filterTypeName, i.e. contents are
-       * {variantInterval, haplotype, feature} */
-      vcfBlock.set('selectedSNPCount', {});
     }
 
   }
