@@ -1170,8 +1170,8 @@ function featureSampleMAF(feature, options) {
       .reduce((sum, [sampleName, value]) => {
         if (! valueNameIsNotSample(sampleName) &&
             (requestSamplesAll || selectedSamples.includes(sampleName))) {
-          // skip missing data : './.' or '.|.'
-          if (value[0] !== '.' ) {
+          // skip missing data : './.' or '.|.', and null
+          if ((value[0] !== '.' ) && (value !== 'N')) {
             // assumes diploid values
             sum.count += 2;
             sum.copies += copiesOfAlt(value, alt);

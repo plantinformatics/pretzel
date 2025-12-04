@@ -4484,6 +4484,11 @@ export default class PanelManageGenotypeComponent extends Component {
    * Features / SNPs in the brushed interval.
    * Genotype calls are e.g. 0, 1, 2; misses are './.'
    *
+   * 'N' are not counted as a Call.
+   * From the point of view of the VCF having REF/ALT called, if it has null
+   * it's outside that so we can just count it as not called.  This would be
+   * consistent with the numbers you'd get from vcftools etc.
+   *
    * Also collate SNP / Feature call rate of the loaded sample calls of each feature.
    * This could be done by vcfGenotypeReceiveResult() as for featuresSampleMAF().
    * @param featuresArrays  array of arrays of features, 1 array per block
@@ -4510,7 +4515,7 @@ export default class PanelManageGenotypeComponent extends Component {
                   /** equivalent : this.columnNames[columnIndex] when gtMergeRows */
                   const
                   sampleName = key,
-                  call = value !== './.',
+                  call = value !== './.' && value !== 'N',
                   sampleCount = map[key] || (map[key] = {calls:0, misses:0});
                   sampleCount[callKey[+call]]++;
                   featureSamplesCount[callKey[+call]]++;

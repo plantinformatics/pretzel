@@ -1938,6 +1938,10 @@ div.ht_clone_top_left_corner span.colHeader.cornerHeader {
 #observational-table td.copyNum_2 {
   background-color : var(--gt-background-color-Alt, #ffc8ae); /* pale orange, was #337ab7 blue*/
 }
+/* nucleotide_N : Null */
+#observational-table td.nucleotide_N {
+  background-color : var(--gt-background-color-Null, #ff8a7d); /* colour is just a placeholder, for discussion */
+}
 
 #observational-table td.relativeColour_equal {
   background-color : #5cb85c; /*green*/
@@ -2015,10 +2019,10 @@ div.ht_clone_top_left_corner span.colHeader.cornerHeader {
 {
   background-image : linear-gradient(130deg, #fff0 40%, #337ab7 0%) !important;  /*blue*/
 }
-/* copyNum_3 : Null */
-.diagonal-triangle.allele2-.copyNum_3
+/* nucleotide_N : Null */
+.diagonal-triangle.allele2-.nucleotide_N
 {
-  background-image : linear-gradient(130deg, #fff0 40%, #d9edf7 0%) !important;  /*near-white*/
+  background-image : linear-gradient(130deg, #fff0 40%, #ff8a7d 0%) !important;   /* just a placeholder, for discussion */
 }
 
 //------------------------------------------------------------------------------

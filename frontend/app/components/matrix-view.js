@@ -80,6 +80,11 @@ const coloursEqualsRef = ['red', 'green'];
 /** true means ABRenderer show 'A' or 'B' instead of C A T G */
 const ABRendererShowAB = false;
 
+/** Maybe include this in baseColour{} below.
+ * Copied from colour-theme-selector.js.
+ */
+const baseColour_Null = '#ff8a7d';
+
 /** copied from vcf-feature.js */
 const refAlt = ['ref', 'alt'];
 const refAltHeadings = refAlt.map(toTitleCase);
@@ -1200,6 +1205,7 @@ export default Component.extend({
     G : 'red',
     B : 'red',
     T : 'black',
+    // N : baseColour_Null, // maybe
   },
   /** Map from base letter to colour class.
    */
@@ -1291,6 +1297,8 @@ export default Component.extend({
      // ./. should show as white, not diagonal.
     if (value === './.') {
       td.style.background = 'white';
+    } else if (value === 'N') {
+      td.style.background = baseColour_Null;
     } else {
       let diagonal;
       /** value has been reduced : x/x -> x, so if value contains | or /
