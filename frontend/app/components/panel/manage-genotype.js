@@ -25,7 +25,7 @@ import { thenOrNow, contentOf, pollCondition, promiseThrottle } from '../../util
 import { responseTextParseHtml } from '../../utils/domElements';
 import { fileDownloadBlob, fileDownloadAsCSV, text2Gzip } from '../../utils/dom/file-download';
 import { clipboard_writeText } from '../../utils/common/html';
-import { arrayChoose, arraySortNestedComparator } from  '../../utils/common/arrays';
+import { arrayChoose, arraySortNestedComparator, arraysSameReferences } from  '../../utils/common/arrays';
 import { intervalSize } from '../../utils/interval-calcs';
 import { inRange, overlapInterval } from '../../utils/draw/zoomPanCalcs';
 import { featuresIntervalsForTree } from '../../utils/data/features';
@@ -1065,16 +1065,23 @@ export default class PanelManageGenotypeComponent extends Component {
   // maybe : , 'userSettings.resultCounts.blocks', gtBlocks.@each.block.selectedSNPCount.feature sampleFiltersCountSelected (sampleFiltersCount)
   @computed('gtBlocks')
   get sampleFiltersCopyEffect() {
+    const
+    previous_gtBlocks = this. previous_gtBlocks,
+    changed = ! arraysSameReferences(previous_gtBlocks, this.gtBlocks);
+    if (changed) {
+      this.previous_gtBlocks = this.gtBlocks,
     /** allow time for brushed features to be loaded.
      * Later, we can update after additional features are loaded, and also
      * sampleFiltersCopyType() is intended to map the selected features to the
      * added block when called again subsequently.
      */
     later(() => ! this.isDestroying && this.sampleFiltersCopy(), 3000);
+    }
   }
-  /** If a new VCF block is viewed, and it does not have [sampleFiltersSymbol]
-   * copy this from another block.
-   * Copy each of the attributes, whose keys are sampleFilterKeys.
+  /** When there are changes to VCF blocks viewed, merge selected SNPs of blocks
+   * sharing a reference block, using sampleFiltersMergeType().
+   * (previously sampleFiltersCopy() -> sampleFiltersCopyType() )
+   * Merge each of the attributes, whose keys are sampleFilterKeys.
    */
   sampleFiltersCopy() {
     const fnName = 'sampleFiltersCopy';
@@ -2459,7 +2466,7 @@ export default class PanelManageGenotypeComponent extends Component {
     if (! vcfBlock[featurePositionsSymbol]) {
       const
       referenceBlock = vcfBlock.referenceBlock,
-      sampleFilterTypeName = 'feature',
+      sampleFilterTypeName = this.sampleFilterTypeName, // e.g. 'feature'
       sampleFiltersRef = this.blockSampleFilters(referenceBlock, sampleFilterTypeName);
       features = sampleFiltersRef;
     } else {
@@ -2536,8 +2543,9 @@ export default class PanelManageGenotypeComponent extends Component {
     return filterDescription;
   }
 
-  @computed('lookupBlock.brushedDomain', 'featureFiltersCount')
+  @computed('lookupBlock.brushedDomain', 'featureFiltersCount', 'sampleFilterTypeName')
   get snpsInBrushedDomain() {
+    /** selectedSNPsInBrushedDomain() uses .sampleFilterTypeName */
     const features = this.selectedSNPsInBrushedDomain(this.lookupBlock);
     return features;
   }
@@ -2548,6 +2556,7 @@ export default class PanelManageGenotypeComponent extends Component {
   genotypeSamplesFilteredByHaplotypes(vcfBlock) {
     const
     fnName = 'genotypeSamplesFilteredByHaplotypes',
+    /** selectedSNPsInBrushedDomain() uses .sampleFilterTypeName */
     filterByHaplotype = ! this.args.userSettings.filterSamplesByHaplotype ? undefined :
       this.selectedSNPsInBrushedDomain(vcfBlock);
     dLog(fnName, vcfBlock.name, filterByHaplotype, 'FilteredSamples');
@@ -2585,6 +2594,7 @@ export default class PanelManageGenotypeComponent extends Component {
      *  - .blocksFeatureFilters .sampleFilters .feature []
      * the latter is the current focus and is handled here.
      * The other 2 also select SNPs so those features can be utilised here.
+     * selectedSNPsInBrushedDomain() uses .sampleFilterTypeName
      */
     filterByHaplotype = ! this.args.userSettings.filterSamplesByHaplotype ? undefined :
       {features : this.selectedSNPsInBrushedDomain(vcfBlock)
@@ -2881,13 +2891,17 @@ export default class PanelManageGenotypeComponent extends Component {
    *
    * Related : snpsInBrushedDomain().
    */
-  @computed('lookupDatasetId', 'block.brushedDomain', 'featureFiltersCount')
+  @computed(
+    'lookupDatasetId', 'block.brushedDomain', 'featureFiltersCount',
+    'sampleFilterTypeName'
+  )
   get featureFiltersCountOfDatasetInBrushedDomain() {
     const
     fnName = 'featureFiltersCountOfDatasetInBrushedDomain',
     // copied from haplotypesSamples().
     aBlocks = this.brushedVCFBlocks.filter(
       ab => ab.block.datasetId.id == this.lookupDatasetId),
+    /** selectedSNPsInBrushedDomain() uses .sampleFilterTypeName */
     features = aBlocks.reduce((accum, aBlock) =>
       accum.concat(this.selectedSNPsInBrushedDomain(aBlock.block)), []);
     return features;
@@ -4613,7 +4627,12 @@ export default class PanelManageGenotypeComponent extends Component {
        * variantInterval; the 3 filterTypeNames are equivalent in that they
        * are means for the user to select features. */
       referenceSamples = block[referenceSamplesSymbol] || [],
-      filterArray = this.blockSampleFilters(block, filterTypeName);
+      /* .selectedSNPsInBrushedDomain(block) uses this.sampleFilterTypeName
+       * (i.e. filterTypeName), so it is equivalent to
+       * .blockSampleFilters(block, filterTypeName) plus filtering by
+       * block.brushedDomain
+       */
+      filterArray = this.selectedSNPsInBrushedDomain(block);
       switch (filterTypeName) {
       case 'haplotype': {
         const

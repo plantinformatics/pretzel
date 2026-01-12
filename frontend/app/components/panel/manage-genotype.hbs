@@ -1049,6 +1049,7 @@ While scrolling through the Genotype Table this updates to show where the curren
       {{/if}}	{{!-- this.urlOptions.advanced --}}
 
       <div>
+      <div>
         <EmberTooltip @side="bottom-start" @delay=500>
           {{#if this.vcfGenotypeLookupButtonDisabled}}
             Enable this button by : {{this.vcfGenotypeLookupButtonDisabled}}
@@ -1071,6 +1072,19 @@ While scrolling through the Genotype Table this updates to show where the curren
           VCF Download
         </button>
       </div>
+
+      <div>
+        {{log this.featureFiltersCountOfDatasetInBrushedDomain 'this.featureFiltersCountOfDatasetInBrushedDomain' this.featureFiltersCount @userSettings.showSelectPassportFields}}
+
+        {{#if (and this.featureFiltersCountOfDatasetInBrushedDomain.length (not @userSettings.showSelectPassportFields)) }}
+         <Panel::GenotypeFeatureList
+          @featureFiltersCountOfDatasetInBrushedDomain={{this.featureFiltersCountOfDatasetInBrushedDomain}}
+          @featureFiltersCount={{this.featureFiltersCount}} />
+        {{/if}}
+
+      </div>
+
+      </div>    {{!-- encloses VCF Lookup, VCF Download, GenotypeFeatureList  --}}
 
       {{#unless this.genolinkSearchURL}}
         {{!-- genolinkSearchURL is nullish if there are no samples selected

@@ -203,7 +203,7 @@ Counts.cmp = function(counts1, counts2) {
    * i.e. if distance is equal, compare the counts of genotype values, with
    * 0,2 (homozygous) being most significant.
    */
-  if (cmp === 0) {
+  if ((cmp === 0) && counts1 && counts2) {
     const
     /** cell value, which is the key of .values[] */
     value = ['0', '2', '1', 'N', './.']
@@ -399,7 +399,14 @@ export class MatchRef {
     false : 'Alt',
     null : 'Null',
   }
-  /** For use in API requests : query params and POST body. */
+  static matchRef2Numeric = {
+    true : '0',
+    false : '2',
+    null : 'Null',
+  }
+  /** For use in API requests : query params and POST body.
+   * value : { true: "true", false: "false", null: "null" }
+   */
   static matchRef2Json = Object.fromEntries(
     [true, false, null].map(mr => [mr, JSON.stringify(mr)]));
 

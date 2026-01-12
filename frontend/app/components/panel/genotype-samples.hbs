@@ -47,6 +47,12 @@
         {{#unless (eq @the.featureFiltersCountOfDatasetInBrushedDomain.length @the.featureFiltersCount) }} 
           in scope, out of {{@the.featureFiltersCount}}
         {{/unless}}
+        {{!-- copied from manage-genotype.hbs : .snpsInBrushedDomain, with minor changes. --}}
+        {{#ember-tooltip side="bottom" delay=1500}}
+          {{#each @the.featureFiltersCountOfDatasetInBrushedDomain as |feature|}}
+            <div>{{feature.value_0}} &nbsp; : &nbsp; {{feature.matchRefNumeric}}</div>
+          {{/each}}
+        {{/ember-tooltip}}
       SNPs ) </span>
 
       <span>

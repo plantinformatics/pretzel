@@ -165,3 +165,14 @@ export function arraySortNestedComparator(compareFunctions) {
 
 
 //------------------------------------------------------------------------------
+
+/** Compare two arrays to determine if they contain the same references,
+ * possibly in a different order.
+ * @return true if the arrays contain the same references
+ */
+export function arraysSameReferences(a, b) {
+  const
+  different = (!a || !b) || (a.length !== b.length) ||
+    a.find((elt, i) => elt !== b[i]);
+  return ! different;
+}
