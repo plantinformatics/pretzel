@@ -632,6 +632,8 @@
                       </EmberTooltip>
                     </button>
 
+                    {{#if this.urlOptions.advanced}}
+
                     <input type="checkbox"
                       style="margin-left: 2em;"
                       checked={{@userSettings.haplotypeFilterRef}}
@@ -644,6 +646,7 @@
                       </EmberTooltip>
                     </label>
 
+                    {{!-- haplotypeFiltersEnable could be applicable to tabTypeName==='feature', but Counts.hide() does not seem applicable  --}}
                     <input type="checkbox"
                       style="margin-left: 2em;"
                       checked={{@userSettings.haplotypeFiltersEnable}}
@@ -653,6 +656,20 @@
                     <label>Filter
                       <EmberTooltip @side="top" @delay=500>
                         <span>Show only columns which match the sample filter based on SNP or LD Block. Otherwise, sort by closeness of match.</span>
+                      </EmberTooltip>
+                    </label>
+
+                    {{/if}}
+
+                    <input type="checkbox"
+                      style="margin-left: 2em;"
+                      checked={{@userSettings.selectedSNPsInBrush}}
+                      oninput={{action (pipe 
+                      (action (mut @userSettings.selectedSNPsInBrush) value="target.checked")
+                      this.haplotypeFiltersApply) }}  >
+                    <label>Exclude SNPs not displayed
+                      <EmberTooltip @side="top" @delay=500>
+                        <span>Sort and filter by only those selected SNPs within the selected axis region.</span>
                       </EmberTooltip>
                     </label>
 

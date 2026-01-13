@@ -279,9 +279,14 @@ function featureHasSamplesLoaded(feature) {
  * .cellSizeFactor default : 1
  *
  * .haplotypeFiltersEnable default : false
- * true means apply haplotypeFilters to filter out non-matchng sample columns;
+ * true means apply haplotypeFilters to filter out non-matching sample columns;
  * otherwise show the non-Ref Samples at the right of the matching samples - use
  * .sort(sampleNamesCmp), instead of sampleIsFilteredOut().
+
+ * .selectedSNPsInBrush default : true
+ * true means apply only selected SNPs within their respective axis
+ * brushedDomain, to sort & filter sample columns
+
  *
  * The user can choose how to determine the samples to request from bcftools.
  * .requestSamplesAll boolean, default : false
@@ -637,6 +642,9 @@ export default class PanelManageGenotypeComponent extends Component {
     }
     if (userSettings.haplotypeFiltersEnable === undefined) {
       userSettings.haplotypeFiltersEnable = false;
+    }
+    if (userSettings.selectedSNPsInBrush === undefined) {
+      userSettings.selectedSNPsInBrush = true;
     }
 
     if (userSettings.requestSamplesAll === undefined) {
@@ -1814,6 +1822,8 @@ export default class PanelManageGenotypeComponent extends Component {
   /** If the current brushed domain does not include selected SNPs, return null,
    * otherwise lookup the cached samples filtered for those SNPs.
    * If that value is not cached the result is `undefined`.
+   * selectedSNPsInBrush enables .selectedSNPsInBrushedDomain() to filter by
+   * brushedDomain.
    */
   blockFilteredSamplesGet(vcfBlock) {
     const
@@ -2453,7 +2463,9 @@ export default class PanelManageGenotypeComponent extends Component {
     return domainInteger;
   }
 
-  /** @return array of features in .blocksFeatureFilters which are in .brushedDomain
+  /** Return the selected SNPs in the referenceBlock of vcfBlock.
+   * If selectedSNPsInBrush then filter them by brushedDomain.
+   * @return array of features in .blocksFeatureFilters which are in .brushedDomain
    */
   selectedSNPsInBrushedDomain(vcfBlock) {
     if (! vcfBlock.brushedDomain) {
@@ -2472,8 +2484,10 @@ export default class PanelManageGenotypeComponent extends Component {
     } else {
       features = this.blocksFeatureFilters.findBy('block', vcfBlock)?.sampleFilters.feature;
     }
-    features = features
-      .filter(f => inRange(f.value_0, vcfBlock.brushedDomain));
+    if (this.args.userSettings.selectedSNPsInBrush) {
+      features = features
+        .filter(f => inRange(f.value_0, vcfBlock.brushedDomain));
+    }
     return features;
   }
 
@@ -2543,7 +2557,9 @@ export default class PanelManageGenotypeComponent extends Component {
     return filterDescription;
   }
 
-  @computed('lookupBlock.brushedDomain', 'featureFiltersCount', 'sampleFilterTypeName')
+  @computed(
+    'lookupBlock.brushedDomain', 'featureFiltersCount', 'sampleFilterTypeName',
+    'args.userSettings.selectedSNPsInBrush')
   get snpsInBrushedDomain() {
     /** selectedSNPsInBrushedDomain() uses .sampleFilterTypeName */
     const features = this.selectedSNPsInBrushedDomain(this.lookupBlock);
@@ -2893,7 +2909,7 @@ export default class PanelManageGenotypeComponent extends Component {
    */
   @computed(
     'lookupDatasetId', 'block.brushedDomain', 'featureFiltersCount',
-    'sampleFilterTypeName'
+    'sampleFilterTypeName', 'args.userSettings.selectedSNPsInBrush'
   )
   get featureFiltersCountOfDatasetInBrushedDomain() {
     const
