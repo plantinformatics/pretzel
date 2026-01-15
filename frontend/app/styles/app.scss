@@ -2655,6 +2655,13 @@ div.genotype label
   justify-content: flex-end;
 }
 
+.GenotypeFeatureList
+{
+  padding : 1em;
+  border-radius : 1em;
+  background-color : white;
+}
+
 /*----------------------------------------------------------------------------*/
 
 .haplotypes-samples.genotype-controls > select[multiple]

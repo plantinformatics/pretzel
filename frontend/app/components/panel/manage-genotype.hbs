@@ -1066,7 +1066,6 @@ While scrolling through the Genotype Table this updates to show where the curren
       {{/if}}	{{!-- this.urlOptions.advanced --}}
 
       <div>
-      <div>
         <EmberTooltip @side="bottom-start" @delay=500>
           {{#if this.vcfGenotypeLookupButtonDisabled}}
             Enable this button by : {{this.vcfGenotypeLookupButtonDisabled}}
@@ -1090,18 +1089,6 @@ While scrolling through the Genotype Table this updates to show where the curren
         </button>
       </div>
 
-      <div>
-        {{log this.featureFiltersCountOfDatasetInBrushedDomain 'this.featureFiltersCountOfDatasetInBrushedDomain' this.featureFiltersCount @userSettings.showSelectPassportFields}}
-
-        {{#if (and this.featureFiltersCountOfDatasetInBrushedDomain.length (not @userSettings.showSelectPassportFields)) }}
-         <Panel::GenotypeFeatureList
-          @featureFiltersCountOfDatasetInBrushedDomain={{this.featureFiltersCountOfDatasetInBrushedDomain}}
-          @featureFiltersCount={{this.featureFiltersCount}} />
-        {{/if}}
-
-      </div>
-
-      </div>    {{!-- encloses VCF Lookup, VCF Download, GenotypeFeatureList  --}}
 
       {{#unless this.genolinkSearchURL}}
         {{!-- genolinkSearchURL is nullish if there are no samples selected
@@ -1301,6 +1288,25 @@ While scrolling through the Genotype Table this updates to show where the curren
 {{#if @userSettings.showColourThemeModal}}
   <ColourThemeSelector @userSettings={{@userSettings}} >
   </ColourThemeSelector>
+{{/if}}
+
+{{!---------------------------------------------------------------------------}}
+{{!-- display the list of selectedSNPs in .brushedDomain in a hover tooltip. --}}
+
+{{#if (and this.selectedSNPHover this.featureFiltersCountOfDatasetInBrushedDomain.length (not @userSettings.showSelectPassportFields)) }}
+
+  <EmberTether
+    @target={{this.selectedSNPHover}}
+    @targetAttachment='top right'
+    @attachment='top left'
+  >
+
+    <Panel::GenotypeFeatureList
+      @featureFiltersCountOfDatasetInBrushedDomain={{this.featureFiltersCountOfDatasetInBrushedDomain}}
+      @featureFiltersCount={{this.featureFiltersCount}} />
+
+  </EmberTether>
+
 {{/if}}
 
 {{!---------------------------------------------------------------------------}}

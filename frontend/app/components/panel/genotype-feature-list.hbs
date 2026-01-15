@@ -5,7 +5,7 @@
 --}}
 {{log @featureFiltersCountOfDatasetInBrushedDomain.length 'featureFiltersCountOfDatasetInBrushedDomain' @featureFiltersCount}}
 {{!-- based on extracts from genotype-samples.hbs and manage-genotype.hbs --}}
-  <span class="sample-count"> (
+  <span class="GenotypeFeatureList sample-count">
     Sort by
     {{@featureFiltersCountOfDatasetInBrushedDomain.length}} SNPs
     {{#unless (eq @featureFiltersCountOfDatasetInBrushedDomain.length @featureFiltersCount) }} 
@@ -15,4 +15,4 @@
     {{#each @featureFiltersCountOfDatasetInBrushedDomain as |feature|}}
       <div>{{feature.value_0}} &nbsp; : &nbsp; {{feature.matchRefNumeric}}</div>
     {{/each}}
-  ) </span>
+  </span>

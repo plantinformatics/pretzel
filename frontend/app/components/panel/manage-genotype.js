@@ -491,6 +491,7 @@ export default class PanelManageGenotypeComponent extends Component {
     dataClipboard : null,
     // @tracked
     topLeftDialog : null,
+    genotypeTable : this,
   };
 
 
