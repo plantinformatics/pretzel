@@ -667,9 +667,9 @@
                       oninput={{action (pipe 
                       (action (mut @userSettings.selectedSNPsInBrush) value="target.checked")
                       this.haplotypeFiltersApply) }}  >
-                    <label>Exclude SNPs not displayed
+                    <label>Only use SNPs in current view
                       <EmberTooltip @side="top" @delay=500>
-                        <span>Sort and filter by only those selected SNPs within the selected axis region.</span>
+                        <span>Sort and filter by only those selected SNPs within the selected axis region, i.e. exclude SNPs not displayed in the Genotype Table.</span>
                       </EmberTooltip>
                     </label>
 
@@ -1302,6 +1302,7 @@ While scrolling through the Genotype Table this updates to show where the curren
   >
 
     <Panel::GenotypeFeatureList
+      @userSettings={{@userSettings}}
       @featureFiltersCountOfDatasetInBrushedDomain={{this.featureFiltersCountOfDatasetInBrushedDomain}}
       @featureFiltersCount={{this.featureFiltersCount}} />
 

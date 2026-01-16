@@ -3,10 +3,13 @@
   @param @featureFiltersCount
   Both params are from manage-genotype
 --}}
-{{log @featureFiltersCountOfDatasetInBrushedDomain.length 'featureFiltersCountOfDatasetInBrushedDomain' @featureFiltersCount}}
+{{log 'GenotypeFeatureList args' @featureFiltersCountOfDatasetInBrushedDomain.length 'featureFiltersCountOfDatasetInBrushedDomain' @featureFiltersCount}}
 {{!-- based on extracts from genotype-samples.hbs and manage-genotype.hbs --}}
-  <span class="GenotypeFeatureList sample-count">
-    Sort by
+<span class="GenotypeFeatureList sample-count">
+  Sort by
+  {{#if @userSettings.sortByPassportFields}}
+    Passport fields
+  {{else}}
     {{@featureFiltersCountOfDatasetInBrushedDomain.length}} SNPs
     {{#unless (eq @featureFiltersCountOfDatasetInBrushedDomain.length @featureFiltersCount) }} 
       in scope, out of {{@featureFiltersCount}}
@@ -15,4 +18,5 @@
     {{#each @featureFiltersCountOfDatasetInBrushedDomain as |feature|}}
       <div>{{feature.value_0}} &nbsp; : &nbsp; {{feature.matchRefNumeric}}</div>
     {{/each}}
-  </span>
+  {{/if}}
+</span>
