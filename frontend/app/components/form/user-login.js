@@ -1,4 +1,5 @@
 import { computed, set as Ember_set } from '@ember/object';
+import { alias } from '@ember/object/computed';
 
 //----------------------------------------
 
@@ -113,19 +114,28 @@ export default BaseForm.extend({
 
   /** map the input .password to a measure of its complexity
    */
-  passwordStrengthScore : computed('password', function () {
+  passwordStrength : computed('password', function () {
     let score;
     if (this?.password) {
-      const result = zxcvbn(this.password);
-      score = result.crack_times_display.offline_fast_hashing_1e10_per_second;
-      /* This CP could return result; that includes .password so there is a
-       * hesitation to return all of result.
-       * Instead it could return {passwordStrengthScore,guesses_log10} */
-      Ember_set(this, 'guesses_log10', result.guesses_log10);
+      score = zxcvbn(this.password);
     }
-
     return score;
   }),
+
+  passwordStrengthScore : alias('passwordStrength.crack_times_display.offline_fast_hashing_1e10_per_second'),
+  guesses_log10 : alias('passwordStrength.guesses_log10'),
+  passwordStrengthText : computed('passwordStrength', function () {
+    const log10 = this.guesses_log10;
+
+    let text;
+    if (log10 < 7) { text = 'low'; }
+    else if (log10 < 15) { text = 'medium'; }
+    else if (log10 < 22) { text = 'good'; }
+    else { text = 'very good'; }
+
+    return text;
+  }),
+
 
   //----------------------------------------------------------------------------
 
