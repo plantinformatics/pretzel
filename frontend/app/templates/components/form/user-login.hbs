@@ -31,13 +31,14 @@
     </div>
 
     {{#if this.passwordStrengthScore}}
-      <div>
-        <span style="margin-left: 3em;">
-          <label>Password strength (time to crack) :</label>
-          {{this.passwordStrengthScore}}
+      <div style="margin-left: 3em;">
+        <label>Password strength (time to crack) :</label>
+        <span >
+          <span>{{this.passwordStrengthScore}}</span>
           {{#ember-tooltip side="right" delay=500}}
             A measure of the complexity of the input password.
           {{/ember-tooltip}}
+          <Elem::ValueMeter @value={{this.guesses_log10}} @max=25 />
         </span>
       </div>
     {{/if}}

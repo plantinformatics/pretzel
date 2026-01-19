@@ -1,10 +1,14 @@
-import { computed } from '@ember/object';
+import { computed, set as Ember_set } from '@ember/object';
+
+//----------------------------------------
+
+import zxcvbn from 'zxcvbn';
+
+//----------------------------------------
 
 import BaseForm from './base';
 
 import { htmlErrorParse } from '../../utils/common/html';
-
-import zxcvbn from 'zxcvbn';
 
 //------------------------------------------------------------------------------
 
@@ -114,6 +118,10 @@ export default BaseForm.extend({
     if (this?.password) {
       const result = zxcvbn(this.password);
       score = result.crack_times_display.offline_fast_hashing_1e10_per_second;
+      /* This CP could return result; that includes .password so there is a
+       * hesitation to return all of result.
+       * Instead it could return {passwordStrengthScore,guesses_log10} */
+      Ember_set(this, 'guesses_log10', result.guesses_log10);
     }
 
     return score;

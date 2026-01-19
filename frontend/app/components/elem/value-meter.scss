@@ -1,0 +1,15 @@
+.value-meter-container {
+  width: 100%;
+  background-color: #f1f1f1;
+  border-radius: 5px;
+  overflow: hidden; /* Ensures the inner bar stays rounded at edges */
+  height: 25px; /* Adjust height as needed */
+}
+
+.value-meter-bar {
+  height: 100%;
+  text-align: center;
+  line-height: 25px; /* Center the text vertically */
+  color: white;
+  transition: width 0.4s ease-in-out, background-color 0.4s ease-in-out; /* Smooth transitions */
+}
