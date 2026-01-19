@@ -4,6 +4,8 @@ import BaseForm from './base';
 
 import { htmlErrorParse } from '../../utils/common/html';
 
+import zxcvbn from 'zxcvbn';
+
 //------------------------------------------------------------------------------
 
 const dLog = console.debug;
@@ -102,5 +104,21 @@ export default BaseForm.extend({
   passwordInputType : computed('revealPassword', function() {
     return this.revealPassword ? 'text' : 'password';
   }),
+
+  //----------------------------------------------------------------------------
+
+  /** map the input .password to a measure of its complexity
+   */
+  passwordStrengthScore : computed('password', function () {
+    let score;
+    if (this?.password) {
+      const result = zxcvbn(this.password);
+      score = result.crack_times_display.offline_fast_hashing_1e10_per_second;
+    }
+
+    return score;
+  }),
+
+  //----------------------------------------------------------------------------
 
 });

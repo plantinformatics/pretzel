@@ -91,7 +91,8 @@
     "stylelint-config-standard": "^36.0.0",
     "stylelint-prettier": "^5.0.0",
     "tracked-built-ins": "^3.3.0",
-    "webpack": "^5.90.1"
+    "webpack": "^5.90.1",
+    "zxcvbn": "^4.4.2"
   },
   "engines": {
     "node": "14.* || 16.* || >= 18"

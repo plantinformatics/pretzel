@@ -30,6 +30,19 @@
       </span>
     </div>
 
+    {{#if this.passwordStrengthScore}}
+      <div>
+        <span style="margin-left: 3em;">
+          <label>Password strength (time to crack) :</label>
+          {{this.passwordStrengthScore}}
+          {{#ember-tooltip side="right" delay=500}}
+            A measure of the complexity of the input password.
+          {{/ember-tooltip}}
+        </span>
+      </div>
+    {{/if}}
+
+
     {{suggest-link
       suggest-text="Forgotten your password?"
       link-name="reset-request"
