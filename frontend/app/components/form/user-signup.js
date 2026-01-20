@@ -4,7 +4,7 @@ export default BaseForm.extend({
   authMethod: 'signupRequest',
   requirements: {
     'email': "Please enter an email.",
-    'password': "Please enter a password.",
+    'password': "Please enter a password with strength : good or very good.",
     'name' : 'Please enter your name.',
     'institution' : 'Please enter the name of your institution.',
     // 'project' : 'Please enter your project code, if applicable.'

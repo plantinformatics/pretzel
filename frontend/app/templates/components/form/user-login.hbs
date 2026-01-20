@@ -12,37 +12,12 @@
       autocomplete="username"
       placeholder='Email Address'}}
 
-    {{auth-input
-      type=this.passwordInputType
-      value=this.password
-      autocomplete="current-password"
-      placeholder='Password'}}
-
-    <div>
-      <span style="margin-left: 3em;">
-        {{input type="checkbox" checked=this.revealPassword
-          id="checkbox-revealPassword" }}
-        <label for="checkbox-revealPassword" title="Show Password">
-          <i class="glyphicon glyphicon-eye-open"></i></label>
-        {{#ember-tooltip side="right" delay=500}}
-          Show password input
-        {{/ember-tooltip}}
-      </span>
-    </div>
-
-    {{#if this.passwordStrengthScore}}
-      <div style="margin-left: 3em;">
-        <label>Password strength :</label>
-        <span >
-          <span>{{this.passwordStrengthText}}</span>
-          {{#ember-tooltip side="right" delay=500}}
-            A measure of the complexity of the input password.
-          {{/ember-tooltip}}
-          <Elem::ValueMeter @value={{this.guesses_log10}} @max=25 />
-        </span>
-      </div>
-    {{/if}}
-
+    <Form::PasswordInput
+      @requireGood={{false}}
+      @autocomplete="current-password"
+      @placeholder='Password'
+      @passwordChanged={{action (mut this.password)}}
+      />
 
     {{suggest-link
       suggest-text="Forgotten your password?"

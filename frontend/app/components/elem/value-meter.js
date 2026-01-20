@@ -63,6 +63,20 @@ export default class ElemValueMeterComponent extends Component {
     return htmlSafe(`background-color: hsl(${hue}, 100%, 50%);`);
   }
 
+  /** Combine .meterWidth and .meterColor into a single value,
+   * because element can have just 1 style=
+   * and this provided style value needs to be a result of htmlSafe().
+   * using catenation in .hbs gets this warning:
+   *  Binding style attributes may introduce cross-site scripting
+   *  vulnerabilities; please ensure that values being bound are properly
+   *  escaped. For more information, including how to disable this warning, see
+   *  https://deprecations.emberjs.com/v1.x/#toc_binding-style-attributes.
+   */
+  @computed('meterWidth', 'meterColor')
+  get barStyle() {
+    return htmlSafe(this.meterWidth + this.meterColor);
+  }
+
   //----------------------------------------------------------------------------
 
 }

@@ -3,10 +3,6 @@ import { alias } from '@ember/object/computed';
 
 //----------------------------------------
 
-import zxcvbn from 'zxcvbn';
-
-//----------------------------------------
-
 import BaseForm from './base';
 
 import { htmlErrorParse } from '../../utils/common/html';
@@ -104,38 +100,6 @@ export default BaseForm.extend({
     //   );
     // }
   },
-
-  revealPassword : false,
-  passwordInputType : computed('revealPassword', function() {
-    return this.revealPassword ? 'text' : 'password';
-  }),
-
-  //----------------------------------------------------------------------------
-
-  /** map the input .password to a measure of its complexity
-   */
-  passwordStrength : computed('password', function () {
-    let score;
-    if (this?.password) {
-      score = zxcvbn(this.password);
-    }
-    return score;
-  }),
-
-  passwordStrengthScore : alias('passwordStrength.crack_times_display.offline_fast_hashing_1e10_per_second'),
-  guesses_log10 : alias('passwordStrength.guesses_log10'),
-  passwordStrengthText : computed('passwordStrength', function () {
-    const log10 = this.guesses_log10;
-
-    let text;
-    if (log10 < 7) { text = 'low'; }
-    else if (log10 < 15) { text = 'medium'; }
-    else if (log10 < 22) { text = 'good'; }
-    else { text = 'very good'; }
-
-    return text;
-  }),
-
 
   //----------------------------------------------------------------------------
 
