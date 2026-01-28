@@ -67,6 +67,17 @@ export default class FormPasswordInputComponent extends Component {
     return text;
   }
 
+  @computed('passwordStrength')
+  get passwordStrengthMessage () {
+    const
+    log10 = this.guesses_log10,
+    ok = log10 >= guesses_log10_good,
+    text = ok ? null : "A stronger password is required.";
+
+    return text;
+  }
+
+
   //----------------------------------------------------------------------------
 
 }
