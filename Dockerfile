@@ -7,7 +7,7 @@
 ARG NODE_ALPINE_VERSION=18
 
 # ${NODE_ALPINE_VERSION}
-FROM node:18-alpine as node-alpine-build-samtools
+FROM node:18-alpine AS node-alpine-build-samtools
 
 ARG NODE_ALPINE_VERSION=18
 ARG SAMTOOLS_VERSION=1.15.1
@@ -68,13 +68,13 @@ RUN wget https://github.com/samtools/bcftools/releases/download/${bcftoolsVer}/b
 
 # ------------------------------------------------------------------------------
 
-FROM stephenturner/bgzip as bgzip
+FROM stephenturner/bgzip AS bgzip
 WORKDIR / 
 
 #-------------------------------------------------------------------------------
 
 # ${NODE_ALPINE_VERSION}
-FROM node:18-alpine as node-alpine-pretzel
+FROM node:18-alpine AS node-alpine-pretzel
 
 ARG PRETZEL_VERSION 2.17.8
 ARG NODE_ALPINE_VERSION 18
@@ -133,7 +133,7 @@ COPY --from=bgzip /usr/local/bin/tabix /usr/local/bin/tabix
 # to compile node.js from source, apk add linux-headers
 # for debugging binaries : add strace
 
-ENV scriptsDir /app/lb3app/scripts
+ENV scriptsDir=/app/lb3app/scripts
 
 # add backend to image
 COPY ./lb4app /app
@@ -144,7 +144,7 @@ COPY ./frontend /frontend
 COPY ./resources/tools/dev/snps2Dataset.pl $scriptsDir/.
 
 # additional node version for lb4app (backend)
-ENV NODE_BE /usr/local/node22
+ENV NODE_BE=/usr/local/node22
 RUN mkdir $NODE_BE $NODE_BE/bin $NODE_BE/lib
 
 # To copy these symbolic links successfully, copy the whole directory, not individual files :
@@ -188,6 +188,7 @@ RUN ( [ ! -L /app/client ] || rm /app/client ) && \
   && rm -rf /frontend \
   && npm cache clean --force
 
+# This gets a docker build warning SecretsUsedInArgOrEnv, although the content is not sensitive data.
 ENV EMAIL_VERIFY=NONE AUTH=ALL
 
 # $NODE_BE/bin/node
