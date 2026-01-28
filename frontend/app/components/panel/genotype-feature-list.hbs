@@ -10,9 +10,11 @@
   {{#if @userSettings.sortByPassportFields}}
     Passport fields
   {{else}}
+    {{!-- This part could be used in genotype-samples.hbs : span.sample-count,
+      in place of the equivalent code which was a basis for this --}}
     {{@featureFiltersCountOfDatasetInBrushedDomain.length}} SNPs
     {{#unless (eq @featureFiltersCountOfDatasetInBrushedDomain.length @featureFiltersCount) }} 
-      in scope, out of {{@featureFiltersCount}}
+      in scope, out of {{@featureFiltersCount}} selected.
     {{/unless}}
     {{!-- copied from manage-genotype.hbs : .snpsInBrushedDomain, with minor changes. --}}
     {{#each @featureFiltersCountOfDatasetInBrushedDomain as |feature|}}

@@ -45,7 +45,7 @@
       <span class="sample-count"> (
         {{@the.featureFiltersCountOfDatasetInBrushedDomain.length}}
         {{#unless (eq @the.featureFiltersCountOfDatasetInBrushedDomain.length @the.featureFiltersCount) }} 
-          in scope, out of {{@the.featureFiltersCount}}
+          in scope, out of {{@the.featureFiltersCount}} selected
         {{/unless}}
         {{!-- copied from manage-genotype.hbs : .snpsInBrushedDomain, with minor changes. --}}
         {{#ember-tooltip side="bottom" delay=1500}}
