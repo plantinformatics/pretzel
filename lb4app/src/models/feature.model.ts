@@ -1,4 +1,5 @@
-import {Entity, model, property} from '@loopback/repository';
+import {Entity, model, property, belongsTo} from '@loopback/repository';
+import {Block} from './block.model';
 
 @model({
   settings: {
@@ -30,19 +31,14 @@ export class Feature extends Entity {
     required: true,
   })
   value: any;
-
-  @property({
-    type: 'string',
-    mongodb: {dataType: 'ObjectID'},
-  })
-  blockId?: string;
-
   @property({
     type: 'string',
     mongodb: {dataType: 'ObjectID'},
   })
   parentId?: string;
 
+  @belongsTo(() => Block)
+  blockId: string;
   // Define well-known properties here
 
   // Indexer property to allow additional data

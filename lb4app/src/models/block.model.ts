@@ -1,5 +1,6 @@
 import {Entity, model, property, hasMany} from '@loopback/repository';
 import {Annotation} from './annotation.model';
+import {Feature} from './feature.model';
 
 @model({
   settings: {
@@ -52,6 +53,9 @@ export class Block extends Entity {
 
   @hasMany(() => Annotation, {keyTo: 'blockId'})
   annotations: Annotation[];
+
+  @hasMany(() => Feature)
+  features: Feature[];
   // Define well-known properties here
 
   // Indexer property to allow additional data

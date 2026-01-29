@@ -5,3 +5,5 @@ export * from './client.controller';
 export * from './block.controller';
 export * from './block-annotation.controller';
 export * from './annotation-block.controller';
+export * from './block-feature.controller';
+export * from './feature-block.controller';
