@@ -1,16 +1,16 @@
 import {inject} from '@loopback/core';
 import {DefaultCrudRepository} from '@loopback/repository';
 import {MongoDsDataSource} from '../datasources';
-import {Client, ClientRelations} from '../models';
+import {Acl, AclRelations} from '../models';
 
-export class ClientRepository extends DefaultCrudRepository<
-  Client,
-  typeof Client.prototype.id,
-  ClientRelations
+export class AclRepository extends DefaultCrudRepository<
+  Acl,
+  typeof Acl.prototype.id,
+  AclRelations
 > {
   constructor(
     @inject('datasources.mongoDs') dataSource: MongoDsDataSource,
   ) {
-    super(Client, dataSource);
+    super(Acl, dataSource);
   }
 }

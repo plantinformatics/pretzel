@@ -1,16 +1,16 @@
 import {inject} from '@loopback/core';
 import {DefaultCrudRepository} from '@loopback/repository';
 import {MongoDsDataSource} from '../datasources';
-import {Client, ClientRelations} from '../models';
+import {Ontology, OntologyRelations} from '../models';
 
-export class ClientRepository extends DefaultCrudRepository<
-  Client,
-  typeof Client.prototype.id,
-  ClientRelations
+export class OntologyRepository extends DefaultCrudRepository<
+  Ontology,
+  typeof Ontology.prototype.id,
+  OntologyRelations
 > {
   constructor(
     @inject('datasources.mongoDs') dataSource: MongoDsDataSource,
   ) {
-    super(Client, dataSource);
+    super(Ontology, dataSource);
   }
 }

@@ -19,6 +19,12 @@ export class Group extends Entity {
   id?: string;
 
   @property({
+    type: 'boolean',
+    default: false,
+  })
+  writable?: boolean;
+
+  @property({
     type: 'string',
     mongodb: {dataType: 'ObjectID'},
   })

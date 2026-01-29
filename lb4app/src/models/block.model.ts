@@ -1,4 +1,5 @@
-import {Entity, model, property} from '@loopback/repository';
+import {Entity, model, property, hasMany} from '@loopback/repository';
+import {Annotation} from './annotation.model';
 
 @model({
   settings: {
@@ -49,6 +50,8 @@ export class Block extends Entity {
   })
   clientId?: string;
 
+  @hasMany(() => Annotation, {keyTo: 'blockId'})
+  annotations: Annotation[];
   // Define well-known properties here
 
   // Indexer property to allow additional data
@@ -62,6 +65,7 @@ export class Block extends Entity {
 
 export interface BlockRelations {
   // describe navigational properties here
+  annotations?: Annotation[]; // Optional: add to interface for type safety
 }
 
 export type BlockWithRelations = Block & BlockRelations;

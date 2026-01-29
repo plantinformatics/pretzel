@@ -8,7 +8,8 @@ import {ClientGroup} from './client-group.model';
     strict: false,
     validateUpsert: true,
     description: 'User management services',
-    idInjection: true
+    idInjection: true,
+    emailVerificationRequired: true
   }
 })
 export class Client extends User {

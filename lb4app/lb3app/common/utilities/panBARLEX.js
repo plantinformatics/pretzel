@@ -1,4 +1,3 @@
-
 //------------------------------------------------------------------------------
 
 //import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
@@ -30,7 +29,9 @@ const baseUrl = 'https://panbarlex.ipk-gatersleben.de';
  * @param {string}  referenceAssemblyName	will be used in ID Liftover
  * @return {Promise<Object>}
  */
-export function panBARLEXLoadKnownGenes(referenceAssemblyName) {
+
+/* global exports */
+exports.panBARLEXLoadKnownGenes = function panBARLEXLoadKnownGenes(referenceAssemblyName) {
   const
   fnName = 'panBARLEXLoadKnownGenes',
   promise = 
