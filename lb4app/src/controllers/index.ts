@@ -9,3 +9,4 @@ export * from './block-feature.controller';
 export * from './feature-block.controller';
 export * from './block-interval.controller';
 export * from './interval-block.controller';
+export * from './dataset.controller';
