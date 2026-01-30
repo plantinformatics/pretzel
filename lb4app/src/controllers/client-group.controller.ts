@@ -26,7 +26,7 @@ export class ClientGroupController {
     public clientGroupRepository : ClientGroupRepository,
   ) {}
 
-  @post('/api/client-groups')
+  @post('/client-groups')
   @response(200, {
     description: 'ClientGroup model instance',
     content: {'application/json': {schema: getModelSchemaRef(ClientGroup)}},

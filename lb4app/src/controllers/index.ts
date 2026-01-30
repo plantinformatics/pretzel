@@ -10,3 +10,5 @@ export * from './feature-block.controller';
 export * from './block-interval.controller';
 export * from './interval-block.controller';
 export * from './dataset.controller';
+export * from './annotation.controller';
+export * from './alias.controller';
