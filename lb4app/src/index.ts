@@ -18,8 +18,10 @@ if (require.main === module) {
   // Run the application
   const config = {
     rest: {
-      // default basePath seems to be '', also some doc indicated '/api',
-      // basePath : '/api',
+      /* default basePath seems to be '', also some doc indicated '/api',
+       * Update : changing models etc from LB3 to LB4 seems to have changed the default from /api to ''
+       */
+      basePath : '/api',
       port: +(process.env.PORT ?? 3000),
       host: process.env.HOST,
       // The `gracePeriodForClose` provides a graceful close for http/https
