@@ -1,6 +1,7 @@
 import {Entity, model, property, hasMany} from '@loopback/repository';
 import {Annotation} from './annotation.model';
 import {Feature} from './feature.model';
+import {Interval} from './interval.model';
 
 @model({
   settings: {
@@ -56,6 +57,9 @@ export class Block extends Entity {
 
   @hasMany(() => Feature)
   features: Feature[];
+
+  @hasMany(() => Interval)
+  intervals: Interval[];
   // Define well-known properties here
 
   // Indexer property to allow additional data

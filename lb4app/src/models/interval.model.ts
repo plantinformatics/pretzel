@@ -1,5 +1,6 @@
-import {model, property} from '@loopback/repository';
+import {model, property, belongsTo} from '@loopback/repository';
 import {Record} from '.';
+import {Block} from './block.model';
 
 @model({settings: {strict: false, description: 'Commentary on Feature range'}})
 export class Interval extends Record {
@@ -44,12 +45,8 @@ export class Interval extends Record {
   })
   groupId?: string;
 
-  @property({
-    type: 'string',
-    mongodb: {dataType: 'ObjectID'},
-  })
-  blockId?: string;
-
+  @belongsTo(() => Block)
+  blockId: string;
   // Define well-known properties here
 
   // Indexer property to allow additional data

@@ -1,9 +1,10 @@
 import {inject, Getter} from '@loopback/core';
 import {DefaultCrudRepository, repository, HasManyRepositoryFactory} from '@loopback/repository';
 import {MongoDsDataSource} from '../datasources';
-import {Block, BlockRelations, Annotation, Feature} from '../models';
+import {Block, BlockRelations, Annotation, Feature, Interval} from '../models';
 import {AnnotationRepository} from './annotation.repository';
 import {FeatureRepository} from './feature.repository';
+import {IntervalRepository} from './interval.repository';
 
 export class BlockRepository extends DefaultCrudRepository<
   Block,
@@ -15,10 +16,13 @@ export class BlockRepository extends DefaultCrudRepository<
 
   public readonly features: HasManyRepositoryFactory<Feature, typeof Block.prototype.id>;
 
+  public readonly intervals: HasManyRepositoryFactory<Interval, typeof Block.prototype.id>;
+
   constructor(
-    @inject('datasources.mongoDs') dataSource: MongoDsDataSource, @repository.getter('AnnotationRepository') protected annotationRepositoryGetter: Getter<AnnotationRepository>, @repository.getter('FeatureRepository') protected featureRepositoryGetter: Getter<FeatureRepository>,
+    @inject('datasources.mongoDs') dataSource: MongoDsDataSource, @repository.getter('AnnotationRepository') protected annotationRepositoryGetter: Getter<AnnotationRepository>, @repository.getter('FeatureRepository') protected featureRepositoryGetter: Getter<FeatureRepository>, @repository.getter('IntervalRepository') protected intervalRepositoryGetter: Getter<IntervalRepository>,
   ) {
     super(Block, dataSource);
+    this.intervals = this.createHasManyRepositoryFactoryFor('intervals', intervalRepositoryGetter,);
     this.features = this.createHasManyRepositoryFactoryFor('features', featureRepositoryGetter,);
     this.registerInclusionResolver('features', this.features.inclusionResolver);
 
