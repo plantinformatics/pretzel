@@ -74,6 +74,8 @@ export class Block extends Entity {
 export interface BlockRelations {
   // describe navigational properties here
   annotations?: Annotation[]; // Optional: add to interface for type safety
+  features?: Feature[];
+  intervals?: Interval[];
 }
 
 export type BlockWithRelations = Block & BlockRelations;

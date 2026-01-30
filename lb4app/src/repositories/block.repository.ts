@@ -23,6 +23,8 @@ export class BlockRepository extends DefaultCrudRepository<
   ) {
     super(Block, dataSource);
     this.intervals = this.createHasManyRepositoryFactoryFor('intervals', intervalRepositoryGetter,);
+    this.registerInclusionResolver('intervals', this.intervals.inclusionResolver);
+
     this.features = this.createHasManyRepositoryFactoryFor('features', featureRepositoryGetter,);
     this.registerInclusionResolver('features', this.features.inclusionResolver);
 
