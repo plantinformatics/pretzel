@@ -14,3 +14,5 @@ export * from './annotation.controller';
 export * from './alias.controller';
 export * from './feature.controller';
 export * from './interval.controller';
+export * from './configuration.controller';
+export * from './ontology.controller';
