@@ -7,7 +7,11 @@ import {Interval} from './interval.model';
   settings: {
     strict: false,
     description: 'Data block that contains features',
-    scope: {include: ['annotations', 'intervals']}
+    /* Comment-out scope to disable auto-include because
+     *  "include is being resolved before the inclusion resolver is registered or before the relation metadata is fully loaded."
+     * More detail comment in commit message.
+     */
+    // scope: {include: ['annotations', 'intervals']}
   }
 })
 export class Block extends Entity {
