@@ -1,4 +1,5 @@
-import {Entity, model, property} from '@loopback/repository';
+import {Entity, model, property, belongsTo} from '@loopback/repository';
+import {Client} from './client.model';
 
 @model({
   settings: {
@@ -42,6 +43,8 @@ export class Record extends Entity {
   })
   updatedAt?: string;
 
+  @belongsTo(() => Client)
+  clientId?: string;
   // Define well-known properties here
 
   // Indexer property to allow additional data

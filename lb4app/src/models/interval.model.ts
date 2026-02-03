@@ -37,16 +37,15 @@ export class Interval extends Record {
     type: 'string',
     mongodb: {dataType: 'ObjectID'},
   })
-  clientId?: string;
-
-  @property({
-    type: 'string',
-    mongodb: {dataType: 'ObjectID'},
-  })
   groupId?: string;
 
   @belongsTo(() => Block)
   blockId: string;
+
+  @property({
+    type: 'string',
+  })
+  clientId?: string;
   // Define well-known properties here
 
   // Indexer property to allow additional data

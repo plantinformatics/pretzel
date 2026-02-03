@@ -2,6 +2,10 @@ import {model, property, hasMany} from '@loopback/repository';
 import {User} from '.';
 import {Group} from './group.model';
 import {ClientGroup} from './client-group.model';
+import {Dataset} from './dataset.model';
+import {Block} from './block.model';
+import {Annotation} from './annotation.model';
+import {Interval} from './interval.model';
 
 @model({
   settings: {
@@ -21,6 +25,21 @@ export class Client extends User {
 
   @hasMany(() => Group, {through: {model: () => ClientGroup}})
   groups: Group[];
+
+  @hasMany(() => ClientGroup)
+  clientGroups: ClientGroup[];
+
+  @hasMany(() => Dataset)
+  datasets: Dataset[];
+
+  @hasMany(() => Block)
+  blocks: Block[];
+
+  @hasMany(() => Annotation)
+  annotations: Annotation[];
+
+  @hasMany(() => Interval)
+  intervals: Interval[];
   // Define well-known properties here
 
   // Indexer property to allow additional data

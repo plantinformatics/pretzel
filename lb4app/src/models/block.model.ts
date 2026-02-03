@@ -1,7 +1,8 @@
-import {Entity, model, property, hasMany} from '@loopback/repository';
+import {Entity, model, property, hasMany, belongsTo} from '@loopback/repository';
 import {Annotation} from './annotation.model';
 import {Feature} from './feature.model';
 import {Interval} from './interval.model';
+import {Dataset} from './dataset.model';
 
 @model({
   settings: {
@@ -44,12 +45,6 @@ export class Block extends Entity {
     type: 'string',
   })
   namespace?: string;
-
-  @property({
-    type: 'string',
-  })
-  datasetId?: string;
-
   @property({
     type: 'string',
     mongodb: {dataType: 'ObjectID'},
@@ -64,6 +59,9 @@ export class Block extends Entity {
 
   @hasMany(() => Interval)
   intervals: Interval[];
+
+  @belongsTo(() => Dataset)
+  datasetId: string;
   // Define well-known properties here
 
   // Indexer property to allow additional data

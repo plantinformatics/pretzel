@@ -1,4 +1,6 @@
-import {Entity, model, property} from '@loopback/repository';
+import {Entity, model, property, belongsTo} from '@loopback/repository';
+import {Client} from './client.model';
+import {Group} from './group.model';
 
 @model({settings: {strict: false}})
 export class ClientGroup extends Entity {
@@ -8,19 +10,11 @@ export class ClientGroup extends Entity {
     generated: true,
   })
   id?: string;
-
-  @property({
-    type: 'string',
-    required: true,
-  })
+  @belongsTo(() => Client)
   clientId: string;
 
-  @property({
-    type: 'string',
-    required: true,
-  })
+  @belongsTo(() => Group)
   groupId: string;
-
   // Define well-known properties here
 
   // Indexer property to allow additional data

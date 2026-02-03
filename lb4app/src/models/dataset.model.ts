@@ -1,5 +1,7 @@
-import {model, property} from '@loopback/repository';
+import {model, property, hasMany, belongsTo} from '@loopback/repository';
 import {Record} from '.';
+import {Block} from './block.model';
+import {Group} from './group.model';
 
 @model({
   settings: {
@@ -36,29 +38,26 @@ export class Dataset extends Record {
     type: 'object',
   })
   meta?: object;
-
-  @property({
-    type: 'string',
-    mongodb: {dataType: 'ObjectID'},
-  })
-  clientId?: string;
-
-  @property({
-    type: 'string',
-    mongodb: {dataType: 'ObjectID'},
-  })
-  groupId?: string;
-
   @property({
     type: 'string',
   })
   parentId?: string;
+  @hasMany(() => Block)
+  blocks: Block[];
 
   @property({
     type: 'string',
   })
-  parent?: string;
+  clientId?: string;
 
+  @belongsTo(() => Group)
+  groupId: string;
+
+  @belongsTo(() => Dataset, {name: 'parentId'})
+  parent: string;
+
+  @hasMany(() => Dataset, {keyTo: 'parent'})
+  children: Dataset[];
   // Define well-known properties here
 
   // Indexer property to allow additional data

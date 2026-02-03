@@ -1,6 +1,7 @@
 import {model, property, belongsTo} from '@loopback/repository';
 import {Record} from '.';
 import {Block} from './block.model';
+import {Feature} from './feature.model';
 
 @model({settings: {strict: false, description: 'Data commentary and insights'}})
 export class Annotation extends Record {
@@ -23,21 +24,17 @@ export class Annotation extends Record {
     type: 'string',
     mongodb: {dataType: 'ObjectID'},
   })
-  clientId?: string;
-
-  @property({
-    type: 'string',
-    mongodb: {dataType: 'ObjectID'},
-  })
   groupId?: string;
-  @property({
-    type: 'string',
-    mongodb: {dataType: 'ObjectID'},
-  })
-  featureId?: string;
-
   @belongsTo(() => Block, {}, {mongodb: {dataType: 'ObjectID'}})
   blockId: string;
+
+  @belongsTo(() => Feature)
+  featureId: string;
+
+  @property({
+    type: 'string',
+  })
+  clientId?: string;
   // Define well-known properties here
 
   // Indexer property to allow additional data
