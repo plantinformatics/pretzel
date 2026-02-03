@@ -20,6 +20,8 @@ export class AnnotationRepository extends DefaultCrudRepository<
   ) {
     super(Annotation, dataSource);
     this.feature = this.createBelongsToAccessorFor('feature', featureRepositoryGetter,);
+    this.registerInclusionResolver('feature', this.feature.inclusionResolver);
+
     this.registerInclusionResolver('block', this.block.inclusionResolver);
     this.block = this.createBelongsToAccessorFor('block', blockRepositoryGetter,);
   }

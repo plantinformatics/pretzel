@@ -45,9 +45,6 @@ export class Dataset extends Record {
   @hasMany(() => Block)
   blocks: Block[];
 
-  @belongsTo(() => Group)
-  groupId: string;
-
   @belongsTo(() => Dataset, {name: 'parentId'})
   parent: string;
 

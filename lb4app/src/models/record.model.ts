@@ -1,5 +1,6 @@
 import {Entity, model, property, belongsTo} from '@loopback/repository';
 import {Client} from './client.model';
+import {Group} from './group.model';
 
 @model({
   settings: {
@@ -43,8 +44,11 @@ export class Record extends Entity {
   })
   updatedAt?: string;
 
-  @belongsTo(() => Client)
+  @belongsTo(() => Client, {}, {mongodb: {dataType: 'ObjectID'}})
   clientId?: string;
+
+  @belongsTo(() => Group)
+  groupId: string;
   // Define well-known properties here
 
   // Indexer property to allow additional data
@@ -58,6 +62,8 @@ export class Record extends Entity {
 
 export interface RecordRelations {
   // describe navigational properties here
+  client?: Client;
+  group?: Group;
 }
 
 export type RecordWithRelations = Record & RecordRelations;

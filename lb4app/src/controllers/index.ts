@@ -32,3 +32,4 @@ export * from './dataset-dataset.controller';
 export * from './feature-feature.controller';
 export * from './group-client.controller';
 export * from './group-client-group.controller';
+export * from './record-group.controller';

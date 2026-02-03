@@ -20,11 +20,6 @@ export class Annotation extends Record {
   })
   name: string;
 
-  @property({
-    type: 'string',
-    mongodb: {dataType: 'ObjectID'},
-  })
-  groupId?: string;
   @belongsTo(() => Block, {}, {mongodb: {dataType: 'ObjectID'}})
   blockId: string;
 

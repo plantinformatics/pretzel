@@ -33,12 +33,6 @@ export class Interval extends Record {
   })
   positions?: string[];
 
-  @property({
-    type: 'string',
-    mongodb: {dataType: 'ObjectID'},
-  })
-  groupId?: string;
-
   @belongsTo(() => Block)
   blockId: string;
 
