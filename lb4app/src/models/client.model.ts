@@ -1,5 +1,5 @@
 import {model, property, hasMany} from '@loopback/repository';
-import {User} from '.';
+import {User} from './user.model';
 import {Group} from './group.model';
 import {ClientGroup} from './client-group.model';
 import {Dataset} from './dataset.model';

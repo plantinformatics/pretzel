@@ -1,5 +1,5 @@
 import {model, property, belongsTo} from '@loopback/repository';
-import {Record} from '.';
+import {Record} from './record.model';
 import {Block} from './block.model';
 
 @model({settings: {strict: false, description: 'Commentary on Feature range'}})
@@ -42,10 +42,6 @@ export class Interval extends Record {
   @belongsTo(() => Block)
   blockId: string;
 
-  @property({
-    type: 'string',
-  })
-  clientId?: string;
   // Define well-known properties here
 
   // Indexer property to allow additional data

@@ -1,5 +1,5 @@
 import {model, property, hasMany, belongsTo} from '@loopback/repository';
-import {Record} from '.';
+import {Record} from './record.model';
 import {Block} from './block.model';
 import {Group} from './group.model';
 
@@ -44,11 +44,6 @@ export class Dataset extends Record {
   parentId?: string;
   @hasMany(() => Block)
   blocks: Block[];
-
-  @property({
-    type: 'string',
-  })
-  clientId?: string;
 
   @belongsTo(() => Group)
   groupId: string;

@@ -1,5 +1,5 @@
 import {model, property, belongsTo} from '@loopback/repository';
-import {Record} from '.';
+import {Record} from './record.model';
 import {Block} from './block.model';
 import {Feature} from './feature.model';
 
@@ -31,10 +31,6 @@ export class Annotation extends Record {
   @belongsTo(() => Feature)
   featureId: string;
 
-  @property({
-    type: 'string',
-  })
-  clientId?: string;
   // Define well-known properties here
 
   // Indexer property to allow additional data
