@@ -1,4 +1,4 @@
-import {Entity, model, property, belongsTo} from '@loopback/repository';
+import {Entity, model, property, belongsTo, hasMany} from '@loopback/repository';
 import {Block} from './block.model';
 
 @model({
@@ -31,14 +31,14 @@ export class Feature extends Entity {
     required: true,
   })
   value: any;
-  @property({
-    type: 'string',
-    mongodb: {dataType: 'ObjectID'},
-  })
-  parentId?: string;
-
   @belongsTo(() => Block)
   blockId: string;
+
+  @belongsTo(() => Feature)
+  parentId: string;
+
+  @hasMany(() => Feature, {keyTo: 'parentId'})
+  features: Feature[];
   // Define well-known properties here
 
   // Indexer property to allow additional data
