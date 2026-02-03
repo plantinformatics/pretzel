@@ -30,3 +30,5 @@ export * from './client-interval.controller';
 export * from './dataset-group.controller';
 export * from './dataset-dataset.controller';
 export * from './feature-feature.controller';
+export * from './group-client.controller';
+export * from './group-client-group.controller';

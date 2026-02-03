@@ -1,4 +1,6 @@
-import {Entity, model, property} from '@loopback/repository';
+import {Entity, model, property, belongsTo, hasMany} from '@loopback/repository';
+import {Client} from './client.model';
+import {ClientGroup} from './client-group.model';
 
 @model({
   settings: {
@@ -24,12 +26,11 @@ export class Group extends Entity {
   })
   writable?: boolean;
 
-  @property({
-    type: 'string',
-    mongodb: {dataType: 'ObjectID'},
-  })
-  clientId?: string;
+  @belongsTo(() => Client, {name: 'owner'})
+  clientId: string;
 
+  @hasMany(() => ClientGroup)
+  clientGroups: ClientGroup[];
   // Define well-known properties here
 
   // Indexer property to allow additional data
@@ -43,6 +44,8 @@ export class Group extends Entity {
 
 export interface GroupRelations {
   // describe navigational properties here
+  owner?: Client;
+  clientGroups?: ClientGroup[];
 }
 
 export type GroupWithRelations = Group & GroupRelations;
