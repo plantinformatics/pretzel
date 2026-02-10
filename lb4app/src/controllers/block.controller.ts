@@ -16,12 +16,29 @@ import {
   del,
   requestBody,
   response,
+  RequestContext, Response, RestBindings,
 } from '@loopback/rest';
+import {inject} from '@loopback/core';
+import {MongoDsDataSource} from '../datasources';
+
+
 import {Block} from '../models';
 import {BlockRepository} from '../repositories';
+// @ts-ignore
+const BlockModule = require('../../lb3app/common/models/block')
+class BlockClass {
+  static remoteMethod() {}
+  static observe() {}
+  static afterRemote() {}
+  static dataSource = {connector : null};
+}
+BlockModule(BlockClass);
 
 export class BlockController {
   constructor(
+    @inject(RestBindings.Http.CONTEXT) private ctx: RequestContext,
+    @inject('datasources.mongoDs') private mongoDs: MongoDsDataSource,
+
     @repository(BlockRepository)
     public blockRepository : BlockRepository,
   ) {}
@@ -147,4 +164,46 @@ export class BlockController {
   async deleteById(@param.path.string('id') id: string): Promise<void> {
     await this.blockRepository.deleteById(id);
   }
+
+  //----------------------------------------------------------------------------
+
+  @get('/Blocks/blockFeaturesInterval', {
+    responses: {
+      '200': {
+	description: 'Returns Features of the block, within the interval optionally given in parameters, and filtering also for range / resolution',
+        content: {'application/json': {schema: {type: 'array', items: {type: 'object'}}}},
+      },
+    },
+  })
+  async blockFeaturesInterval(
+    @inject(RestBindings.Http.RESPONSE) res: Response,
+
+    @param.query.string('id') id: string,
+    @param.query.object('intervals') intervals: object,
+  ): Promise<object[]> {
+
+    const req = this.ctx.request;
+
+    const connector = this.mongoDs.connector as any;
+    BlockClass.dataSource.connector = connector.db;
+    const fnName = 'blockFeaturesInterval';
+    // console.log(fnName, connector, connector.db, BlockClass.dataSource.connector);
+    const options = null;
+    const resultP = new Promise<object[]>((resolve, reject) => {
+      function cb(error : any, result : object[]) {
+	if (error)
+	  reject(error)
+	else
+	  resolve(result);
+      }
+      // @ts-ignore
+      BlockClass.blockFeaturesInterval(id, intervals, options, res, cb);
+
+    });
+    return resultP;
+  }
+
+
+
+  //----------------------------------------------------------------------------
 }

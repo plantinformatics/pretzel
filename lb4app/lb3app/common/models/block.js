@@ -1687,9 +1687,10 @@ The output includes the count and list of samples which have each haplotype valu
 
   //----------------------------------------------------------------------------
 
-
+/*
   acl.assignRulesRecord(Block)
   acl.limitRemoteMethods(Block)
   acl.limitRemoteMethodsSubrecord(Block)
   acl.limitRemoteMethodsRelated(Block)
+*/
 };
