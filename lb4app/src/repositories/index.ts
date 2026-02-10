@@ -8,4 +8,4 @@ export * from './dataset.repository';
 export * from './feature.repository';
 export * from './interval.repository';
 export * from './record.repository.base';
-export { RecordRepository } from './record.via_base.repository';
+export * from './record.repository';
