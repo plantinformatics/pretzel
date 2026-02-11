@@ -43,6 +43,24 @@ export class BlockController {
     public blockRepository : BlockRepository,
   ) {}
 
+  private bindLb3DataSource() {
+    const connector = this.mongoDs.connector as any;
+    BlockClass.dataSource.connector = connector.db ?? connector;
+  }
+
+  private lb3Call<T>(invoke: (cb: (error: unknown, result: T) => void) => void): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      function cb(error: unknown, result: T) {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(result);
+        }
+      }
+      invoke(cb);
+    });
+  }
+
   @post('/blocks')
   @response(200, {
     description: 'Block model instance',
@@ -184,23 +202,94 @@ export class BlockController {
 
     const req = this.ctx.request;
 
-    const connector = this.mongoDs.connector as any;
-    BlockClass.dataSource.connector = connector.db;
+    this.bindLb3DataSource();
     const fnName = 'blockFeaturesInterval';
-    // console.log(fnName, connector, connector.db, BlockClass.dataSource.connector);
+    // console.log(fnName, BlockClass.dataSource.connector);
     const options = null;
-    const resultP = new Promise<object[]>((resolve, reject) => {
-      function cb(error : any, result : object[]) {
-	if (error)
-	  reject(error)
-	else
-	  resolve(result);
-      }
+    return this.lb3Call<object[]>(cb => {
       // @ts-ignore
       BlockClass.blockFeaturesInterval(id, intervals, options, res, cb);
-
     });
-    return resultP;
+  }
+
+  @post('/Blocks/blockFeaturesAdd', {
+    responses: {
+      '200': {
+        description: 'Append the features in data to the given block',
+        content: {'application/json': {schema: {type: 'string'}}},
+      },
+    },
+  })
+  async blockFeaturesAdd(
+    @requestBody() data: object,
+  ): Promise<string> {
+    this.bindLb3DataSource();
+    const options = null;
+    return this.lb3Call<string>(cb => {
+      // @ts-ignore
+      BlockClass.blockFeaturesAdd(data, options, cb);
+    });
+  }
+
+  @get('/Blocks/blockFeaturesCount', {
+    responses: {
+      '200': {
+        description: 'Return a count of the Features in each block',
+        content: {'application/json': {schema: {type: 'array', items: {type: 'object'}}}},
+      },
+    },
+  })
+  async blockFeaturesCount(
+    @inject(RestBindings.Http.RESPONSE) res: Response,
+    @param.array('blocks', 'query', {type: 'string'})
+    blocks: string[],
+  ): Promise<object[]> {
+    this.bindLb3DataSource();
+    const options = null;
+    return this.lb3Call<object[]>(cb => {
+      // @ts-ignore
+      BlockClass.blockFeaturesCount(blocks, options, res, cb);
+    });
+  }
+
+  @get('/Blocks/blockFeatureLimits', {
+    responses: {
+      '200': {
+        description: 'Returns an array of blocks with their min&max Feature values.',
+        content: {'application/json': {schema: {type: 'array', items: {type: 'object'}}}},
+      },
+    },
+  })
+  async blockFeatureLimits(
+    @inject(RestBindings.Http.RESPONSE) res: Response,
+    @param.query.string('id') id?: string,
+  ): Promise<object[]> {
+    this.bindLb3DataSource();
+    const options = null;
+    return this.lb3Call<object[]>(cb => {
+      // @ts-ignore
+      BlockClass.blockFeatureLimits(id, options, res, cb);
+    });
+  }
+
+  @get('/Blocks/blockValues', {
+    responses: {
+      '200': {
+        description: 'Returns an array of blocks of QTL datasets, with their Feature Trait values.',
+        content: {'application/json': {schema: {type: 'array', items: {type: 'object'}}}},
+      },
+    },
+  })
+  async blockValues(
+    @inject(RestBindings.Http.RESPONSE) res: Response,
+    @param.query.string('fieldName') fieldName: string,
+  ): Promise<object[]> {
+    this.bindLb3DataSource();
+    const options = null;
+    return this.lb3Call<object[]>(cb => {
+      // @ts-ignore
+      BlockClass.blockValues(fieldName, options, res, cb);
+    });
   }
 
 
