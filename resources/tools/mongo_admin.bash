@@ -3,10 +3,22 @@
 #-------------------------------------------------------------------------------
 
 # Usage :
-#  source ~/scripts/logDateTime.bash
-#  source ~/scripts/mongo_admin.bash
-
+#  source ~/scripts/logDateTime.bash ? not needed - definition of logDate is copied into this file.
+#  source mongo_admin.bash
+#
 #-------------------------------------------------------------------------------
+#
+# Required environment variables, example values :
+# export DIM=docker-compose-database-1
+# database_ip=$( docker inspect $DIM --format '{{ (index  .NetworkSettings.Networks "'docker-compose_pretzel'").IPAddress }}' )
+# db_connection=(--host $database_ip --port 28017 )
+# echo db_connection ${db_connection[@]}
+# export DB_NAME=pretzel   # or admin
+# mAuth=-u ... -p ...  --authenticationDatabase  ...
+# db_connection and mAuth may be undefined.
+#-------------------------------------------------------------------------------
+
+
 
 unused=${SERVER_NAME=main}
 # Using pretzel in place of admin in new instances.
@@ -17,6 +29,10 @@ unused=${DB_NAME=admin}
 unused=${dockerExec="docker exec $DIM"}
 # DIM is the ID of the docker mongo container,
 # defined by pretzel/resources/tools/functions_prod.bash : DIM=$(dockerContainer mongo)
+
+# Directory in bucket to write mongodump to
+unused=${S3_MONGO=s3://shared-data-4pretzel/mongodb}
+export S3_MONGO
 
 #-------------------------------------------------------------------------------
 
@@ -56,7 +72,8 @@ checkDIM()
 dbCollections()
 {
     checkDIM &&
-      docker exec -it $DIM mongo --quiet $DB_NAME --eval "db.getCollectionNames()" | tr -d '[\[\]",\t ]' | tr '\r' ' '
+      docker exec -it $DIM mongo --quiet ${db_connection[@]} ${mAuth[@]} $DB_NAME \
+      --eval "db.getCollectionNames()" | tr -d '[\[\]",\t ]' | tr '\r' ' '
 }
 
 
@@ -65,14 +82,16 @@ function mongodump2S3()
   logDate=`date +%Y%b%d`
   echo $logDate
   # 2018Sep26
-  export S3_MON="s3://shared-data-4pretzel/mongodb/$SERVER_NAME.$DB_NAME/$logDate"
+  export S3_MON="$S3_MONGO/$SERVER_NAME.$DB_NAME/$logDate"
   echo $S3_MON
   collections=$(dbCollections )
   echo $collections
   sleep 5
 
-  docker exec -i $DIM mongodump  --archive --gzip --db $DB_NAME  | aws s3 cp -  $S3_MON.gz	\
-  && aws s3 ls $S3_MON.tar.gz
+  docker exec -i $DIM mongodump ${db_connection[@]}  ${mAuth[@]} --db $DB_NAME  \
+   --archive --gzip  | aws s3 cp -  $S3_MON.gz	\
+  && aws s3 ls "$S3_MONGO/$SERVER_NAME.$DB_NAME" # $S3_MON.tar.gz
+  # or maybe aws s3api head-object --bucket bucket-name --key path-name
 }
 
 #-------------------------------------------------------------------------------
