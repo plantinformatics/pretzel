@@ -23,7 +23,7 @@
 unused=${SERVER_NAME=main}
 # Using pretzel in place of admin in new instances.
 unused=${DB_NAME=admin}
-# For mongo shell either by running a binary direcly, or via docker exec.
+# For mongo shell either by running a binary directly, or via docker exec.
 # copied from pretzel/resources/tools/dev/functions_data.bash
 # related : mongoShell()
 unused=${dockerExec="docker exec $DIM"}
@@ -77,12 +77,29 @@ dbCollections()
 }
 
 
+# mongodump the database to S3, for backup.
+#
+# @param environment variable $logDate, used in output file name,
+# if = Day, then use weekday name.
+# The default logDate is YYMMDD_HHMMSS.
 function mongodump2S3()
 {
-  logDate=`date +%Y%b%d`
+  # if 'Day' then use abbreviated weekday name (3-letter)
+  # so that logs wrap around weekly.
+  # (copied from mongo_backup.sh)
+  if [ "$logDate" = Day ]
+  then
+    logDate=$(date +%a)
+  elif [ -z "$logDate" ]
+  then
+    logDate=$(date +%Y%m%d_%H%M%S)
+    # or logDate=`date +%Y%b%d`
+  fi
   echo $logDate
   # 2018Sep26
-  export S3_MON="$S3_MONGO/$SERVER_NAME.$DB_NAME/$logDate"
+  # Within mongo directory in S3 bucket, a directory for this server.
+  export S3_MONGO_SERV=$S3_MONGO/$SERVER_NAME.$DB_NAME
+  export S3_MON="$S3_MONGO_SERV/$logDate"
   echo $S3_MON
   collections=$(dbCollections )
   echo $collections
@@ -90,7 +107,7 @@ function mongodump2S3()
 
   docker exec -i $DIM mongodump ${db_connection[@]}  ${mAuth[@]} --db $DB_NAME  \
    --archive --gzip  | aws s3 cp -  $S3_MON.gz	\
-  && aws s3 ls "$S3_MONGO/$SERVER_NAME.$DB_NAME" # $S3_MON.tar.gz
+  && aws s3 ls "$S3_MONGO_SERV/" # $S3_MON.tar.gz
   # or maybe aws s3api head-object --bucket bucket-name --key path-name
 }
 
