@@ -338,10 +338,9 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
   Block.blockGet = function(blockIds) {
     let models = this.app.models;
     let promise =  models.Block.find({where: {id: {inq: blockIds}}} /*,options*/).then(blocks => {
-      return  blocks.map(blockR => {
-        let block = blockR.__data;
+      return  blocks.map(block => {
         // this trace can cause warning about deprecated .inspect() in node 10.
-        // console.log('blockGet then map', block.id || block || blockR);
+        // console.log('blockGet then map', block.id || block);
         this.blockRecordsStore(block.id, block);
         return block;
       } );

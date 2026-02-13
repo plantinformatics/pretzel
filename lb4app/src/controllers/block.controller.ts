@@ -19,11 +19,19 @@ import {
   RequestContext, Response, RestBindings,
 } from '@loopback/rest';
 import {inject} from '@loopback/core';
+
 import {MongoDsDataSource} from '../datasources';
-
-
 import {Block} from '../models';
 import {BlockRepository} from '../repositories';
+import {ClientRepository} from '../repositories/client.repository';
+import {GroupRepository} from '../repositories/group.repository';
+import {FeatureRepository} from '../repositories/feature.repository';
+import {DatasetRepository} from '../repositories/dataset.repository';
+import {AliasRepository} from '../repositories/alias.repository';
+import {ClientGroupRepository} from '../repositories/client-group.repository';
+import {AnnotationRepository} from '../repositories/annotation.repository';
+import {IntervalRepository} from '../repositories/interval.repository';
+
 // @ts-ignore
 const BlockModule = require('../../lb3app/common/models/block')
 class BlockClass {
@@ -31,8 +39,10 @@ class BlockClass {
   static observe() {}
   static afterRemote() {}
   static dataSource = {connector : null};
+  static app : any = {};
 }
 BlockModule(BlockClass);
+
 
 export class BlockController {
   constructor(
@@ -41,7 +51,36 @@ export class BlockController {
 
     @repository(BlockRepository)
     public blockRepository : BlockRepository,
-  ) {}
+
+    @repository(ClientRepository)
+    public clientRepository: ClientRepository,
+    @repository(GroupRepository)
+    public groupRepository: GroupRepository,
+    @repository(FeatureRepository)
+    public featureRepository: FeatureRepository,
+    @repository(DatasetRepository)
+    public datasetRepository: DatasetRepository,
+    @repository(AliasRepository)
+    public aliasRepository: AliasRepository,
+    @repository(ClientGroupRepository)
+    public clientGroupRepository: ClientGroupRepository,
+    @repository(AnnotationRepository)
+    public annotationRepository: AnnotationRepository,
+    @repository(IntervalRepository)
+    public intervalRepository: IntervalRepository,
+  ) {
+    BlockClass.app.models = {
+      Block : blockRepository,
+      Client : clientRepository,
+      Group : groupRepository,
+      Feature : featureRepository,
+      Dataset : datasetRepository,
+      Alias : aliasRepository,
+      ClientGroup : clientGroupRepository,
+      Annotation : annotationRepository,
+      Interval : intervalRepository,
+    }
+}
 
   private bindLb3DataSource() {
     const connector = this.mongoDs.connector as any;
@@ -188,7 +227,7 @@ export class BlockController {
   @get('/Blocks/blockFeaturesInterval', {
     responses: {
       '200': {
-	description: 'Returns Features of the block, within the interval optionally given in parameters, and filtering also for range / resolution',
+        description: 'Returns Features of the block, within the interval optionally given in parameters, and filtering also for range / resolution',
         content: {'application/json': {schema: {type: 'array', items: {type: 'object'}}}},
       },
     },
@@ -251,6 +290,32 @@ export class BlockController {
       BlockClass.blockFeaturesCount(blocks, options, res, cb);
     });
   }
+
+  @get('/Blocks/blockFeaturesCounts', {
+    responses: {
+      '200': {
+        description: "Returns an array of N bins of counts of the Features in the block",
+        content: {'application/json': {schema: {type: 'array', items: {type: 'object'}}}},
+      },
+    },
+  })
+  async blockFeaturesCounts(
+    @inject(RestBindings.Http.RESPONSE) res: Response,
+    @param.query.string('id') id: string,
+    @param.array('interval', 'query', {type: 'number'}) interval?: number[],
+    @param.query.number('nBins') nBins?: number,
+    @param.query.boolean('isZoomed') isZoomed?: boolean, // = false,
+    @param.query.boolean('useBucketAuto') useBucketAuto?: boolean, // = false,
+    @param.query.object('userOptions') userOptions?: object,
+  ): Promise<object[]> {
+    this.bindLb3DataSource();
+    const options = null;
+    return this.lb3Call<object[]>(cb => {
+      // @ts-ignore
+      BlockClass.blockFeaturesCounts(id, interval, nBins, isZoomed, useBucketAuto, userOptions, options, res, cb);
+    });
+  }
+
 
   @get('/Blocks/blockFeatureLimits', {
     responses: {
