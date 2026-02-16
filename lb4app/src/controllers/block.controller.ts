@@ -31,6 +31,7 @@ import {AliasRepository} from '../repositories/alias.repository';
 import {ClientGroupRepository} from '../repositories/client-group.repository';
 import {AnnotationRepository} from '../repositories/annotation.repository';
 import {IntervalRepository} from '../repositories/interval.repository';
+import {AuthUtils} from '../utils/auth';
 
 // @ts-ignore
 const BlockModule = require('../../lb3app/common/models/block')
@@ -45,6 +46,8 @@ BlockModule(BlockClass);
 
 
 export class BlockController {
+  private authUtils: AuthUtils;
+
   constructor(
     @inject(RestBindings.Http.CONTEXT) private ctx: RequestContext,
     @inject('datasources.mongoDs') private mongoDs: MongoDsDataSource,
@@ -80,6 +83,14 @@ export class BlockController {
       Annotation : annotationRepository,
       Interval : intervalRepository,
     }
+    this.authUtils = new AuthUtils(
+      ctx,
+      mongoDs,
+      blockRepository,
+      datasetRepository,
+      clientGroupRepository,
+      groupRepository,
+    );
 }
 
   private bindLb3DataSource() {
@@ -100,6 +111,7 @@ export class BlockController {
     });
   }
 
+  
   @post('/blocks')
   @response(200, {
     description: 'Block model instance',
@@ -238,6 +250,7 @@ export class BlockController {
     @param.query.string('id') id: string,
     @param.query.object('intervals') intervals: object,
   ): Promise<object[]> {
+    await this.authUtils.authorizeBlocksRead([id]);
 
     const req = this.ctx.request;
 
@@ -262,6 +275,12 @@ export class BlockController {
   async blockFeaturesAdd(
     @requestBody() data: object,
   ): Promise<string> {
+    const blockId = (data as any)?.blockId;
+    if (blockId) {
+      await this.authUtils.authorizeBlocksRead([blockId]);
+    } else {
+      this.authUtils.enforceScopedBlockAccess();
+    }
     this.bindLb3DataSource();
     const options = null;
     return this.lb3Call<string>(cb => {
@@ -283,6 +302,7 @@ export class BlockController {
     @param.array('blocks', 'query', {type: 'string'})
     blocks: string[],
   ): Promise<object[]> {
+    await this.authUtils.authorizeBlocksRead(blocks ?? []);
     this.bindLb3DataSource();
     const options = null;
     return this.lb3Call<object[]>(cb => {
@@ -308,6 +328,7 @@ export class BlockController {
     @param.query.boolean('useBucketAuto') useBucketAuto?: boolean, // = false,
     @param.query.object('userOptions') userOptions?: object,
   ): Promise<object[]> {
+    await this.authUtils.authorizeBlocksRead([id]);
     this.bindLb3DataSource();
     const options = null;
     return this.lb3Call<object[]>(cb => {
@@ -329,6 +350,11 @@ export class BlockController {
     @inject(RestBindings.Http.RESPONSE) res: Response,
     @param.query.string('id') id?: string,
   ): Promise<object[]> {
+    if (id) {
+      await this.authUtils.authorizeBlocksRead([id]);
+    } else {
+      this.authUtils.enforceScopedBlockAccess();
+    }
     this.bindLb3DataSource();
     const options = null;
     return this.lb3Call<object[]>(cb => {
@@ -349,6 +375,7 @@ export class BlockController {
     @inject(RestBindings.Http.RESPONSE) res: Response,
     @param.query.string('fieldName') fieldName: string,
   ): Promise<object[]> {
+    this.authUtils.enforceScopedBlockAccess();
     this.bindLb3DataSource();
     const options = null;
     return this.lb3Call<object[]>(cb => {
