@@ -337,6 +337,51 @@ export class BlockController {
     });
   }
 
+  @get('/Blocks/blocksFeaturesCountsStatus', {
+    responses: {
+      '200': {
+        description: 'Returns an array of blocks with the status of their cached featuresCounts.',
+        content: {'application/json': {schema: {type: 'array', items: {type: 'object'}}}},
+      },
+    },
+  })
+  async blocksFeaturesCountsStatus(
+    @inject(RestBindings.Http.RESPONSE) res: Response,
+    @param.query.string('id') id?: string,
+    @param.query.number('nBins') nBins?: number,
+    @param.query.boolean('useBucketAuto') useBucketAuto?: boolean,
+  ): Promise<object[]> {
+    if (id) {
+      await this.authUtils.authorizeBlocksRead([id]);
+    } else {
+      this.authUtils.enforceScopedBlockAccess();
+    }
+    this.bindLb3DataSource();
+    const options = null;
+    return this.lb3Call<object[]>(cb => {
+      // @ts-ignore
+      BlockClass.blocksFeaturesCountsStatus(id, nBins, useBucketAuto, options, res, cb);
+    });
+  }
+
+  @get('/Blocks/blockFeaturesCountsStatus', {
+    responses: {
+      '200': {
+        description: 'Returns status for cached feature counts in a block.',
+        content: {'application/json': {schema: {type: 'array', items: {type: 'object'}}}},
+      },
+    },
+  })
+  async blockFeaturesCountsStatus(
+    @param.query.string('id') id: string,
+    @param.query.number('nBins') nBins?: number,
+    @param.query.boolean('useBucketAuto') useBucketAuto?: boolean,
+  ): Promise<unknown> {
+    await this.authUtils.authorizeBlocksRead([id]);
+    // @ts-ignore
+    return BlockClass.blockFeaturesCountsStatus(id, nBins, useBucketAuto);
+  }
+
 
   @get('/Blocks/blockFeatureLimits', {
     responses: {
@@ -381,6 +426,94 @@ export class BlockController {
     return this.lb3Call<object[]>(cb => {
       // @ts-ignore
       BlockClass.blockValues(fieldName, options, res, cb);
+    });
+  }
+
+  @get('/Blocks/paths', {
+    responses: {
+      '200': {
+        description: 'Returns paths between the two blocks',
+        content: {'application/json': {schema: {type: 'array', items: {type: 'object'}}}},
+      },
+    },
+  })
+  async paths(
+    @inject(RestBindings.Http.RESPONSE) res: Response,
+    @param.array('id', 'query', {type: 'string'}) id: string[],
+    @param.query.boolean('withDirect') withDirect?: boolean,
+  ): Promise<object[]> {
+    await this.authUtils.authorizeBlocksRead(id ?? []);
+    this.bindLb3DataSource();
+    const options = null;
+    return this.lb3Call<object[]>(cb => {
+      // @ts-ignore
+      BlockClass.paths(id, withDirect, options, res, cb);
+    });
+  }
+
+  @get('/Blocks/pathsProgressive', {
+    responses: {
+      '200': {
+        description: 'Returns paths between the two blocks, in progressive steps',
+        content: {'application/json': {schema: {type: 'array', items: {type: 'object'}}}},
+      },
+    },
+  })
+  async pathsProgressive(
+    @inject(RestBindings.Http.RESPONSE) res: Response,
+    @param.array('id', 'query', {type: 'string'}) id: string[],
+    @param.query.object('intervals') intervals: object,
+  ): Promise<object[]> {
+    await this.authUtils.authorizeBlocksRead(id ?? []);
+    this.bindLb3DataSource();
+    const options = null;
+    return this.lb3Call<object[]>(cb => {
+      // @ts-ignore
+      BlockClass.pathsProgressive(id, intervals, options, res, cb);
+    });
+  }
+
+  @get('/Blocks/pathsByReference', {
+    responses: {
+      '200': {
+        description: 'Returns paths between blockA and blockB via reference blocks',
+        content: {'application/json': {schema: {type: 'array', items: {type: 'object'}}}},
+      },
+    },
+  })
+  async pathsByReference(
+    @param.array('id', 'query', {type: 'string'}) id: string[],
+    @param.query.string('reference') reference: string,
+    @param.query.number('max_distance') maxDistance: number,
+  ): Promise<object[]> {
+    await this.authUtils.authorizeBlocksRead(id ?? []);
+    this.bindLb3DataSource();
+    const options = null;
+    return this.lb3Call<object[]>(cb => {
+      // @ts-ignore
+      BlockClass.pathsByReference(id, reference, maxDistance, options, cb);
+    });
+  }
+
+  @get('/Blocks/pathsAliasesProgressive', {
+    responses: {
+      '200': {
+        description: 'Returns paths from aliases between the two blocks, constrained by intervals',
+        content: {'application/json': {schema: {type: 'array', items: {type: 'object'}}}},
+      },
+    },
+  })
+  async pathsAliasesProgressive(
+    @inject(RestBindings.Http.RESPONSE) res: Response,
+    @param.array('id', 'query', {type: 'string'}) id: string[],
+    @param.query.object('intervals') intervals: object,
+  ): Promise<object[]> {
+    await this.authUtils.authorizeBlocksRead(id ?? []);
+    this.bindLb3DataSource();
+    const options = null;
+    return this.lb3Call<object[]>(cb => {
+      // @ts-ignore
+      BlockClass.pathsAliasesProgressive(id, intervals, options, res, cb);
     });
   }
 

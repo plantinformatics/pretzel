@@ -378,6 +378,10 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
    */
   Block.blockRecordLookup = function(blockId) {
     let block;
+    if (blockId._bsontype === 'ObjectID') {
+      /** Convert to string to select use of .blockRecordValue() in this case */
+      blockId = blockId.toHexString();
+    }
     if (typeof blockId === 'string') {
       block = this.blockRecordValue(blockId);
     } else {

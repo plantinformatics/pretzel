@@ -178,7 +178,8 @@ function splitBlockString(b) {
 function localiseBlock(models, b, interval)
 {
   // or remoteRefn = splitBlockString(b);
-  if (typeof b === 'string') {
+  // In LB4, b is ObjectID {_bsontype: 'ObjectID', id: Buffer(12)}.
+  if ((typeof b === 'string') || (b._bsontype === 'ObjectID')) {
     // block is already local
   }
   else {
