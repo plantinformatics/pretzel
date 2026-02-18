@@ -16,7 +16,7 @@ import {
   del,
   requestBody,
   response,
-  RequestContext, Response, RestBindings,
+  Request, RequestContext, Response, RestBindings,
 } from '@loopback/rest';
 import {inject} from '@loopback/core';
 
@@ -32,6 +32,7 @@ import {ClientGroupRepository} from '../repositories/client-group.repository';
 import {AnnotationRepository} from '../repositories/annotation.repository';
 import {IntervalRepository} from '../repositories/interval.repository';
 import {AuthUtils} from '../utils/auth';
+import {initSseResponse} from '../utils/sse';
 
 // @ts-ignore
 const BlockModule = require('../../lb3app/common/models/block')
@@ -515,6 +516,54 @@ export class BlockController {
       // @ts-ignore
       BlockClass.pathsAliasesProgressive(id, intervals, options, res, cb);
     });
+  }
+
+  @get('/Blocks/pathsViaStream', {
+    responses: {
+      '200': {
+        description: 'Streams paths between the two blocks',
+        content: {'text/event-stream': {}},
+      },
+    },
+  })
+  async pathsViaStream(
+    @inject(RestBindings.Http.REQUEST) req: Request,
+    @inject(RestBindings.Http.RESPONSE) res: Response,
+    @param.array('id', 'query', {type: 'string'}) id: string[],
+    @param.query.object('intervals') intervals: object,
+  ): Promise<Response> {
+    await this.authUtils.authorizeBlocksRead(id ?? []);
+    this.bindLb3DataSource();
+    // Don't flush headers in initSseResponse() because sse.init() will send headers.
+    initSseResponse(res);
+    const options = null;
+    console.log('headersSent before LB3:', res.headersSent);
+    // @ts-ignore
+    BlockClass.pathsViaStream(id, intervals, options, req, res, () => undefined);
+    return res;
+  }
+
+  @get('/Blocks/pathsAliasesViaStream', {
+    responses: {
+      '200': {
+        description: 'Streams paths from aliases between the two blocks',
+        content: {'text/event-stream': {}},
+      },
+    },
+  })
+  async pathsAliasesViaStream(
+    @inject(RestBindings.Http.REQUEST) req: Request,
+    @inject(RestBindings.Http.RESPONSE) res: Response,
+    @param.array('id', 'query', {type: 'string'}) id: string[],
+    @param.query.object('intervals') intervals: object,
+  ): Promise<Response> {
+    await this.authUtils.authorizeBlocksRead(id ?? []);
+    this.bindLb3DataSource();
+    initSseResponse(res);
+    const options = null;
+    // @ts-ignore
+    BlockClass.pathsAliasesViaStream(id, intervals, options, req, res, () => undefined);
+    return res;
   }
 
 
