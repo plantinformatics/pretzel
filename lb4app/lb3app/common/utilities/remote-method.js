@@ -5,10 +5,8 @@ exports.noCacheResult = noCacheResult;
  * Usage e.g.
  *   Dataset.afterRemote('vcfGenotypeFeaturesCountsStatus', noCacheResult);
  */
-function noCacheResult(context, remoteMethodOutput, next) {
-  const response = context.res;
+function noCacheResult(response) {
   response.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   response.setHeader('Pragma', 'no-cache');
   response.setHeader('Expires', '0');
-  next();
 }

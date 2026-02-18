@@ -33,6 +33,8 @@ import {AnnotationRepository} from '../repositories/annotation.repository';
 import {IntervalRepository} from '../repositories/interval.repository';
 import {AuthUtils} from '../utils/auth';
 import {initSseResponse} from '../utils/sse';
+// @ts-ignore
+const {noCacheResult} = require('../../lb3app/common/utilities/remote-method');
 
 // @ts-ignore
 const BlockModule = require('../../lb3app/common/models/block')
@@ -352,6 +354,7 @@ export class BlockController {
     @param.query.number('nBins') nBins?: number,
     @param.query.boolean('useBucketAuto') useBucketAuto?: boolean,
   ): Promise<object[]> {
+    noCacheResult(res);
     if (id) {
       await this.authUtils.authorizeBlocksRead([id]);
     } else {
