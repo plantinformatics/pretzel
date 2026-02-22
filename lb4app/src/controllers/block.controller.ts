@@ -569,6 +569,161 @@ export class BlockController {
     return res;
   }
 
+  @get('/Blocks/syntenies', {
+    responses: {
+      '200': {
+        description: 'Request syntenic blocks for left and right blocks',
+        content: {'application/json': {schema: {type: 'array', items: {type: 'object'}}}},
+      },
+    },
+  })
+  async syntenies(
+    @param.query.string('0') id0: string,
+    @param.query.string('1') id1: string,
+    @param.query.string('threshold-size') thresholdSize?: string,
+    @param.query.string('threshold-continuity') thresholdContinuity?: string,
+  ): Promise<object[]> {
+    await this.authUtils.authorizeBlocksRead([id0, id1]);
+    this.bindLb3DataSource();
+    return this.lb3Call<object[]>(cb => {
+      // @ts-ignore
+      BlockClass.syntenies(id0, id1, thresholdSize, thresholdContinuity, cb);
+    });
+  }
+
+  @get('/Blocks/dnaSequenceLookup', {
+    responses: {
+      '200': {
+        description: 'DNA Sequence Lookup',
+        content: {'application/json': {schema: {type: 'string'}}},
+      },
+    },
+  })
+  async dnaSequenceLookup(
+    @param.query.string('parent') parent: string,
+    @param.query.string('region') region: string,
+  ): Promise<string> {
+    await this.authUtils.authorizeDatasetRead(parent);
+    this.bindLb3DataSource();
+    return this.lb3Call<string>(cb => {
+      // @ts-ignore
+      BlockClass.dnaSequenceLookup(parent, region, cb);
+    });
+  }
+
+  @get('/Blocks/genotypeSamples', {
+    responses: {
+      '200': {
+        description: 'VCF genotype Samples',
+        content: {'application/json': {schema: {type: 'string'}}},
+      },
+    },
+  })
+  async genotypeSamples(
+    @param.query.string('id') id: string,
+    @param.query.string('datasetId') datasetId: string,
+    @param.query.string('scope') scope: string,
+    @param.query.object('filter') filter?: object,
+  ): Promise<string> {
+    await this.authUtils.authorizeBlocksRead([id]);
+    this.bindLb3DataSource();
+    const options = null;
+    return this.lb3Call<string>(cb => {
+      // @ts-ignore
+      BlockClass.genotypeSamples(id, datasetId, scope, filter, options, cb);
+    });
+  }
+
+  @get('/Blocks/genotypeHaplotypesSamples', {
+    responses: {
+      '200': {
+        description: 'VCF haplotype samples',
+        content: {'application/json': {schema: {type: 'string'}}},
+      },
+    },
+  })
+  async genotypeHaplotypesSamples(
+    @param.query.string('id') id: string,
+    @param.query.string('datasetId') datasetId: string,
+    @param.query.string('scope') scope: string,
+    @param.array('positions', 'query', {type: 'string'}) positions: string[],
+  ): Promise<string> {
+    await this.authUtils.authorizeBlocksRead([id]);
+    this.bindLb3DataSource();
+    const options = null;
+    return this.lb3Call<string>(cb => {
+      // @ts-ignore
+      BlockClass.genotypeHaplotypesSamples(id, datasetId, scope, positions, options, cb);
+    });
+  }
+
+  @get('/Blocks/vcfGenotypeLookup', {
+    responses: {
+      '200': {
+        description: 'VCF genotype Lookup',
+        content: {'application/json': {schema: {type: 'string'}}},
+      },
+    },
+  })
+  async vcfGenotypeLookup(
+    @param.query.string('datasetId') datasetId: string,
+    @param.query.string('scope') scope?: string,
+    @param.query.object('preArgs') preArgs?: object,
+    @param.query.number('nLines') nLines?: number,
+  ): Promise<string> {
+    await this.authUtils.authorizeDatasetRead(datasetId);
+    this.bindLb3DataSource();
+    const options = null;
+    return this.lb3Call<string>(cb => {
+      // @ts-ignore
+      BlockClass.vcfGenotypeLookup(datasetId, scope, preArgs, nLines, options, cb);
+    });
+  }
+
+  @post('/Blocks/vcfGenotypeLookupPost', {
+    responses: {
+      '200': {
+        description: 'VCF genotype Lookup (POST)',
+        content: {'application/json': {schema: {type: 'string'}}},
+      },
+    },
+  })
+  async vcfGenotypeLookupPost(
+    @requestBody() body: {
+      datasetId: string;
+      scope?: string;
+      preArgs?: object;
+      nLines?: number;
+    },
+  ): Promise<string> {
+    await this.authUtils.authorizeDatasetRead(body.datasetId);
+    this.bindLb3DataSource();
+    const options = null;
+    return this.lb3Call<string>(cb => {
+      // @ts-ignore
+      BlockClass.vcfGenotypeLookupPost(body.datasetId, body.scope, body.preArgs, body.nLines, options, cb);
+    });
+  }
+
+  @get('/Blocks/cacheClearKey', {
+    responses: {
+      '200': {
+        description: 'Clear cached result for given cacheId and return the removed result.',
+        content: {'application/json': {schema: {type: 'object'}}},
+      },
+    },
+  })
+  async cacheClearKey(
+    @param.query.string('cacheId') cacheId: string,
+  ): Promise<object> {
+    this.authUtils.enforceScopedBlockAccess();
+    this.bindLb3DataSource();
+    return this.lb3Call<object>(cb => {
+      // @ts-ignore
+      BlockClass.cacheClearKey(cacheId, cb);
+    });
+  }
+
 
 
   //----------------------------------------------------------------------------

@@ -66,7 +66,7 @@ export class AuthUtils {
     return ids;
   }
 
-  async authorizeDatasetRead(dataset: Dataset, clientId?: string, groupIds?: Set<string>): Promise<void> {
+  async authorizeDatasetClientGroupsRead(dataset: Dataset, clientId?: string, groupIds?: Set<string>): Promise<void> {
     if (dataset.public) return;
     if (!clientId) {
       throw new HttpErrors.Unauthorized('Access token required for private datasets');
@@ -77,6 +77,16 @@ export class AuthUtils {
       if (groups.has(dataset.groupId.toString())) return;
     }
     throw new HttpErrors.Forbidden('Not authorized for dataset access');
+  }
+
+  async authorizeDatasetRead(datasetId: string): Promise<void> {
+    /** Copied from authorizeBlocksRead(), which calls
+     * authorizeDatasetClientGroupsRead() for each block.dataset, so it separates out
+     * these 2 for efficiency. */
+    const dataset = await this.datasetRepository.findById(datasetId);
+    const clientId = await this.getClientIdFromToken();
+    const groupIds = clientId ? await this.getClientGroupIds(clientId) : undefined;
+    await this.authorizeDatasetClientGroupsRead(dataset, clientId, groupIds);
   }
 
   async authorizeBlocksRead(blockIds: Array<string | ObjectIdLike>): Promise<void> {
@@ -103,7 +113,7 @@ export class AuthUtils {
     const datasetIds = [...new Set(blocks.map(b => b.datasetId).filter(Boolean))] as string[];
     for (const datasetId of datasetIds) {
       const dataset = await this.datasetRepository.findById(datasetId);
-      await this.authorizeDatasetRead(dataset, clientId, groupIds);
+      await this.authorizeDatasetClientGroupsRead(dataset, clientId, groupIds);
     }
   }
 
