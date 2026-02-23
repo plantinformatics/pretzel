@@ -15,6 +15,9 @@ import {MySequence} from './sequence';
 import {initLb3Environment, initLb3ExceptionHandling, initLb3FrontendEnvironment} from './lb3-compat/boot';
 import {lb3RouteTimeMiddleware} from './middleware/lb3-route-time.middleware';
 import {lb3MemcacheMiddleware} from './middleware/lb3-memcache.middleware';
+import {clientGroups} from './utils/client-groups';
+
+const {serverShowEnvironment, appServerLb3Setup, appServerLb3Setup2} = require('../lb3app/server/server');
 
 /* global process */
 
@@ -28,6 +31,11 @@ export class PretzelApplication extends BootMixin(
 
     // LB3 environment validation (lb3app/server/environment.js)
     initLb3Environment();
+
+    const app = this.requestHandler;
+    serverShowEnvironment(app);
+    appServerLb3Setup(app);
+    appServerLb3Setup2(app);
 
     // Set up the custom sequence
     this.sequence(MySequence);

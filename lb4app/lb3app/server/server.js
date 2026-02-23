@@ -6,6 +6,20 @@
 /* global __dirname */
 
 // -----------------------------------------------------------------------------
+
+/** This file server.js creates the LB3 app server and contains server setup
+ * code, some of which is required in LB4.  The required sections are wrapped in
+ * exported functions (serverShowEnvironment(), appServerLb3Setup(),
+ * appServerLb3Setup2()) to enable use in LB4.
+ * The sections which are not required are wrapped in : if (lb3) { }.
+ * This approach makes it clear in the commit what the actual changes are for LB4.
+ *
+ * If the LB3 server is required (e.g. for test comparison) then we can simply
+ * check out that version, so there is unlikely to be a need to use this source in LB3,
+ * and the LB3 sections can be dropped.
+ */
+
+// -----------------------------------------------------------------------------
 /** Addition of dotenv for access to process.env (environment variables)
  * If path is configured in the environment :
  *   DOTENV_CONFIG_DEBUG=true DOTENV_CONFIG_PATH=lb3app/.env;
@@ -73,6 +87,11 @@ function maskValue(name, value)
 {
   return (name == 'DB_PASS') ? (value ? true : value) : value;
 }
+/** Show in the server log the values of environment variables which are used by
+ * the app server.  Also show process pid, ppid, version, cwd().
+ * This function was used in LB3 setup, and is also required in LB4.
+ */
+function serverShowEnvironment() {
 const env = process.env;
 console.log(
   __dirname, 'process.env',
@@ -83,6 +102,7 @@ console.log(
   '\n',
   new Date(),
 );
+}
 // heartbeat log message : process. _eventsCount, memoryUsage()
 
 
@@ -101,10 +121,18 @@ var bodyParser = require('body-parser');
 
 var clientGroups = require('../common/utilities/client-groups');
 
-var app = module.exports = loopback();
+// lb3 :
+// var app = module.exports = loopback();
 
+/** Used to disable code which is only applicable to Loopback version 3 */
+const lb3 = false;
+
+/** This function wraps the sections of LB3 setup which are also required in LB4.
+ */
+function appServerLb3Setup(app) {
 // app.use(bodyParser.json({limit: '200mb'}));
 
+if (lb3) {
 app.start = function() {
   // start the web server
   return app.listen(function() {
@@ -117,6 +145,7 @@ app.start = function() {
     }
   });
 };
+}
 
 app.use('/express-status', function (req, res, next) {
     res.json({ running: true });
@@ -126,6 +155,9 @@ if (process.env.NODE_ENV != 'test') {
   app.use(morgan('combined'))
 }
 
+}	// appServerLb3Setup()
+
+if (lb3) {
 //
 // - - - - - THIRD PARTY AUTH INIT - - - - - -
 //
@@ -179,6 +211,11 @@ boot(app, __dirname, function(err) {
 //   c.session = c.session !== false;
 //   passportConfigurator.configureProvider(s, c);
 // }
+}	// if (lb3)
+
+/** This function wraps the sections of LB3 setup which are also required in LB4.
+ */
+function appServerLb3Setup2(app) {
 
 //
 // - - - - - VIEW CONFIG - - - - - -
@@ -207,6 +244,13 @@ app.use(/^((?!api).)*$/, loopback.static(clientPath));
 /** Activate the service. */
 clientGroups.clientGroups.init(app);
 
+}	// appServerLb3Setup2()
+
 // -----------------------------------------------------------------------------
 
-module.exports = app; // for testing
+module.exports = { 
+  serverShowEnvironment,
+  appServerLb3Setup,
+  appServerLb3Setup2
+};
+ // app; // for testing
