@@ -12,13 +12,13 @@ module.exports = function({duration}) {
       res.send( cacheContent );
       return
     } else {
-      console.log("Cache miss");
+      console.log("Cache miss", key);
       res.sendResponse = res.send
       res.send = (body) => {
           memCache.put(key,body,duration*1000);
           res.sendResponse(body)
       }
-      next()
+      return next();
     }
   }
 }

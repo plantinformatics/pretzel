@@ -6,11 +6,15 @@ import {
 } from '@loopback/rest-explorer';
 import {RepositoryMixin} from '@loopback/repository';
 import {RestApplication} from '@loopback/rest';
+import {Middleware} from '@loopback/express';
 import {ServiceMixin} from '@loopback/service-proxy';
 import {Lb3AppBooterComponent} from '@loopback/booter-lb3app';
 
 import path from 'path';
 import {MySequence} from './sequence';
+import {initLb3Environment, initLb3ExceptionHandling, initLb3FrontendEnvironment} from './lb3-compat/boot';
+import {lb3RouteTimeMiddleware} from './middleware/lb3-route-time.middleware';
+import {lb3MemcacheMiddleware} from './middleware/lb3-memcache.middleware';
 
 /* global process */
 
@@ -22,8 +26,26 @@ export class PretzelApplication extends BootMixin(
   constructor(options: ApplicationConfig = {}) {
     super(options);
 
+    // LB3 environment validation (lb3app/server/environment.js)
+    initLb3Environment();
+
     // Set up the custom sequence
     this.sequence(MySequence);
+    const blocksPathPrefix = '/Blocks';
+    const routeTime = lb3RouteTimeMiddleware();
+    const memcache = lb3MemcacheMiddleware(3600);
+    this.middleware(({request, response}, next) => {
+      if (request.path?.startsWith(blocksPathPrefix)) {
+        return routeTime(request, response, next);
+      }
+      return next();
+    });
+    this.middleware(({request, response}, next) => {
+      if (request.path?.startsWith(blocksPathPrefix)) {
+        return memcache(request, response, next);
+      }
+      return next();
+    });
 
     if (process.env.API4_STATIC) {
       // Set up default home page
@@ -40,6 +62,11 @@ export class PretzelApplication extends BootMixin(
     }
 
     this.projectRoot = __dirname;
+    // LB3 exception handling and frontend environment setup
+    initLb3ExceptionHandling(this);
+    if (process.env.API4_STATIC) {
+      initLb3FrontendEnvironment(this);
+    }
     // Customize @loopback/boot Booter Conventions here
     this.bootOptions = {
       controllers: {
