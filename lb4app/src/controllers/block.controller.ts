@@ -16,102 +16,31 @@ import {
   del,
   requestBody,
   response,
-  Request, RequestContext, Response, RestBindings,
+  Request, Response, RestBindings,
 } from '@loopback/rest';
 import {inject} from '@loopback/core';
 
-import {MongoDsDataSource} from '../datasources';
 import {Block} from '../models';
 import {BlockRepository} from '../repositories';
-import {ClientRepository} from '../repositories/client.repository';
-import {GroupRepository} from '../repositories/group.repository';
-import {FeatureRepository} from '../repositories/feature.repository';
-import {DatasetRepository} from '../repositories/dataset.repository';
-import {AliasRepository} from '../repositories/alias.repository';
-import {ClientGroupRepository} from '../repositories/client-group.repository';
-import {AnnotationRepository} from '../repositories/annotation.repository';
-import {IntervalRepository} from '../repositories/interval.repository';
-import {AuthUtils} from '../utils/auth';
 import {initSseResponse} from '../utils/sse';
+import {Lb3ModelWrap} from '../utils/lb3-model-wrap';
+import {Lb3ModelWrapFactory} from '../utils/lb3-model-wrap.provider';
 // @ts-ignore
 const {noCacheResult} = require('../../lb3app/common/utilities/remote-method');
 
 // @ts-ignore
-const BlockModule = require('../../lb3app/common/models/block')
-class BlockClass {
-  static remoteMethod() {}
-  static observe() {}
-  static afterRemote() {}
-  static dataSource = {connector : null};
-  static app : any = {};
-}
-BlockModule(BlockClass);
+const BlockModule = require('../../lb3app/common/models/block');
 
 
 export class BlockController {
-  private authUtils: AuthUtils;
+  private lb3: Lb3ModelWrap;
 
   constructor(
-    @inject(RestBindings.Http.CONTEXT) private ctx: RequestContext,
-    @inject('datasources.mongoDs') private mongoDs: MongoDsDataSource,
-
     @repository(BlockRepository)
     public blockRepository : BlockRepository,
-
-    @repository(ClientRepository)
-    public clientRepository: ClientRepository,
-    @repository(GroupRepository)
-    public groupRepository: GroupRepository,
-    @repository(FeatureRepository)
-    public featureRepository: FeatureRepository,
-    @repository(DatasetRepository)
-    public datasetRepository: DatasetRepository,
-    @repository(AliasRepository)
-    public aliasRepository: AliasRepository,
-    @repository(ClientGroupRepository)
-    public clientGroupRepository: ClientGroupRepository,
-    @repository(AnnotationRepository)
-    public annotationRepository: AnnotationRepository,
-    @repository(IntervalRepository)
-    public intervalRepository: IntervalRepository,
+    @inject('utils.Lb3ModelWrap') private lb3WrapFactory: Lb3ModelWrapFactory,
   ) {
-    BlockClass.app.models = {
-      Block : blockRepository,
-      Client : clientRepository,
-      Group : groupRepository,
-      Feature : featureRepository,
-      Dataset : datasetRepository,
-      Alias : aliasRepository,
-      ClientGroup : clientGroupRepository,
-      Annotation : annotationRepository,
-      Interval : intervalRepository,
-    }
-    this.authUtils = new AuthUtils(
-      ctx,
-      mongoDs,
-      blockRepository,
-      datasetRepository,
-      clientGroupRepository,
-      groupRepository,
-    );
-}
-
-  private bindLb3DataSource() {
-    const connector = this.mongoDs.connector as any;
-    BlockClass.dataSource.connector = connector.db ?? connector;
-  }
-
-  private lb3Call<T>(invoke: (cb: (error: unknown, result: T) => void) => void): Promise<T> {
-    return new Promise<T>((resolve, reject) => {
-      function cb(error: unknown, result: T) {
-        if (error) {
-          reject(error);
-        } else {
-          resolve(result);
-        }
-      }
-      invoke(cb);
-    });
+    this.lb3 = this.lb3WrapFactory(BlockModule);
   }
 
   
@@ -253,17 +182,15 @@ export class BlockController {
     @param.query.string('id') id: string,
     @param.query.object('intervals') intervals: object,
   ): Promise<object[]> {
-    await this.authUtils.authorizeBlocksRead([id]);
+    await this.lb3.authUtils.authorizeBlocksRead([id]);
 
-    const req = this.ctx.request;
-
-    this.bindLb3DataSource();
+    this.lb3.bindLb3DataSource();
     const fnName = 'blockFeaturesInterval';
     // console.log(fnName, BlockClass.dataSource.connector);
     const options = null;
-    return this.lb3Call<object[]>(cb => {
+    return this.lb3.lb3Call<object[]>(cb => {
       // @ts-ignore
-      BlockClass.blockFeaturesInterval(id, intervals, options, res, cb);
+      this.lb3.model.blockFeaturesInterval(id, intervals, options, res, cb);
     });
   }
 
@@ -280,15 +207,15 @@ export class BlockController {
   ): Promise<string> {
     const blockId = (data as any)?.blockId;
     if (blockId) {
-      await this.authUtils.authorizeBlocksRead([blockId]);
+      await this.lb3.authUtils.authorizeBlocksRead([blockId]);
     } else {
-      this.authUtils.enforceScopedBlockAccess();
+      this.lb3.authUtils.enforceScopedBlockAccess();
     }
-    this.bindLb3DataSource();
+    this.lb3.bindLb3DataSource();
     const options = null;
-    return this.lb3Call<string>(cb => {
+    return this.lb3.lb3Call<string>(cb => {
       // @ts-ignore
-      BlockClass.blockFeaturesAdd(data, options, cb);
+      this.lb3.model.blockFeaturesAdd(data, options, cb);
     });
   }
 
@@ -305,12 +232,12 @@ export class BlockController {
     @param.array('blocks', 'query', {type: 'string'})
     blocks: string[],
   ): Promise<object[]> {
-    await this.authUtils.authorizeBlocksRead(blocks ?? []);
-    this.bindLb3DataSource();
+    await this.lb3.authUtils.authorizeBlocksRead(blocks ?? []);
+    this.lb3.bindLb3DataSource();
     const options = null;
-    return this.lb3Call<object[]>(cb => {
+    return this.lb3.lb3Call<object[]>(cb => {
       // @ts-ignore
-      BlockClass.blockFeaturesCount(blocks, options, res, cb);
+      this.lb3.model.blockFeaturesCount(blocks, options, res, cb);
     });
   }
 
@@ -331,12 +258,12 @@ export class BlockController {
     @param.query.boolean('useBucketAuto') useBucketAuto?: boolean, // = false,
     @param.query.object('userOptions') userOptions?: object,
   ): Promise<object[]> {
-    await this.authUtils.authorizeBlocksRead([id]);
-    this.bindLb3DataSource();
+    await this.lb3.authUtils.authorizeBlocksRead([id]);
+    this.lb3.bindLb3DataSource();
     const options = null;
-    return this.lb3Call<object[]>(cb => {
+    return this.lb3.lb3Call<object[]>(cb => {
       // @ts-ignore
-      BlockClass.blockFeaturesCounts(id, interval, nBins, isZoomed, useBucketAuto, userOptions, options, res, cb);
+      this.lb3.model.blockFeaturesCounts(id, interval, nBins, isZoomed, useBucketAuto, userOptions, options, res, cb);
     });
   }
 
@@ -356,15 +283,15 @@ export class BlockController {
   ): Promise<object[]> {
     noCacheResult(res);
     if (id) {
-      await this.authUtils.authorizeBlocksRead([id]);
+      await this.lb3.authUtils.authorizeBlocksRead([id]);
     } else {
-      this.authUtils.enforceScopedBlockAccess();
+      this.lb3.authUtils.enforceScopedBlockAccess();
     }
-    this.bindLb3DataSource();
+    this.lb3.bindLb3DataSource();
     const options = null;
-    return this.lb3Call<object[]>(cb => {
+    return this.lb3.lb3Call<object[]>(cb => {
       // @ts-ignore
-      BlockClass.blocksFeaturesCountsStatus(id, nBins, useBucketAuto, options, res, cb);
+      this.lb3.model.blocksFeaturesCountsStatus(id, nBins, useBucketAuto, options, res, cb);
     });
   }
 
@@ -381,9 +308,9 @@ export class BlockController {
     @param.query.number('nBins') nBins?: number,
     @param.query.boolean('useBucketAuto') useBucketAuto?: boolean,
   ): Promise<unknown> {
-    await this.authUtils.authorizeBlocksRead([id]);
+    await this.lb3.authUtils.authorizeBlocksRead([id]);
     // @ts-ignore
-    return BlockClass.blockFeaturesCountsStatus(id, nBins, useBucketAuto);
+    return this.lb3.model.blockFeaturesCountsStatus(id, nBins, useBucketAuto);
   }
 
 
@@ -400,15 +327,15 @@ export class BlockController {
     @param.query.string('id') id?: string,
   ): Promise<object[]> {
     if (id) {
-      await this.authUtils.authorizeBlocksRead([id]);
+      await this.lb3.authUtils.authorizeBlocksRead([id]);
     } else {
-      this.authUtils.enforceScopedBlockAccess();
+      this.lb3.authUtils.enforceScopedBlockAccess();
     }
-    this.bindLb3DataSource();
+    this.lb3.bindLb3DataSource();
     const options = null;
-    return this.lb3Call<object[]>(cb => {
+    return this.lb3.lb3Call<object[]>(cb => {
       // @ts-ignore
-      BlockClass.blockFeatureLimits(id, options, res, cb);
+      this.lb3.model.blockFeatureLimits(id, options, res, cb);
     });
   }
 
@@ -424,12 +351,12 @@ export class BlockController {
     @inject(RestBindings.Http.RESPONSE) res: Response,
     @param.query.string('fieldName') fieldName: string,
   ): Promise<object[]> {
-    this.authUtils.enforceScopedBlockAccess();
-    this.bindLb3DataSource();
+    this.lb3.authUtils.enforceScopedBlockAccess();
+    this.lb3.bindLb3DataSource();
     const options = null;
-    return this.lb3Call<object[]>(cb => {
+    return this.lb3.lb3Call<object[]>(cb => {
       // @ts-ignore
-      BlockClass.blockValues(fieldName, options, res, cb);
+      this.lb3.model.blockValues(fieldName, options, res, cb);
     });
   }
 
@@ -446,12 +373,12 @@ export class BlockController {
     @param.array('id', 'query', {type: 'string'}) id: string[],
     @param.query.boolean('withDirect') withDirect?: boolean,
   ): Promise<object[]> {
-    await this.authUtils.authorizeBlocksRead(id ?? []);
-    this.bindLb3DataSource();
+    await this.lb3.authUtils.authorizeBlocksRead(id ?? []);
+    this.lb3.bindLb3DataSource();
     const options = null;
-    return this.lb3Call<object[]>(cb => {
+    return this.lb3.lb3Call<object[]>(cb => {
       // @ts-ignore
-      BlockClass.paths(id, withDirect, options, res, cb);
+      this.lb3.model.paths(id, withDirect, options, res, cb);
     });
   }
 
@@ -468,12 +395,12 @@ export class BlockController {
     @param.array('id', 'query', {type: 'string'}) id: string[],
     @param.query.object('intervals') intervals: object,
   ): Promise<object[]> {
-    await this.authUtils.authorizeBlocksRead(id ?? []);
-    this.bindLb3DataSource();
+    await this.lb3.authUtils.authorizeBlocksRead(id ?? []);
+    this.lb3.bindLb3DataSource();
     const options = null;
-    return this.lb3Call<object[]>(cb => {
+    return this.lb3.lb3Call<object[]>(cb => {
       // @ts-ignore
-      BlockClass.pathsProgressive(id, intervals, options, res, cb);
+      this.lb3.model.pathsProgressive(id, intervals, options, res, cb);
     });
   }
 
@@ -490,12 +417,12 @@ export class BlockController {
     @param.query.string('reference') reference: string,
     @param.query.number('max_distance') maxDistance: number,
   ): Promise<object[]> {
-    await this.authUtils.authorizeBlocksRead(id ?? []);
-    this.bindLb3DataSource();
+    await this.lb3.authUtils.authorizeBlocksRead(id ?? []);
+    this.lb3.bindLb3DataSource();
     const options = null;
-    return this.lb3Call<object[]>(cb => {
+    return this.lb3.lb3Call<object[]>(cb => {
       // @ts-ignore
-      BlockClass.pathsByReference(id, reference, maxDistance, options, cb);
+      this.lb3.model.pathsByReference(id, reference, maxDistance, options, cb);
     });
   }
 
@@ -512,12 +439,12 @@ export class BlockController {
     @param.array('id', 'query', {type: 'string'}) id: string[],
     @param.query.object('intervals') intervals: object,
   ): Promise<object[]> {
-    await this.authUtils.authorizeBlocksRead(id ?? []);
-    this.bindLb3DataSource();
+    await this.lb3.authUtils.authorizeBlocksRead(id ?? []);
+    this.lb3.bindLb3DataSource();
     const options = null;
-    return this.lb3Call<object[]>(cb => {
+    return this.lb3.lb3Call<object[]>(cb => {
       // @ts-ignore
-      BlockClass.pathsAliasesProgressive(id, intervals, options, res, cb);
+      this.lb3.model.pathsAliasesProgressive(id, intervals, options, res, cb);
     });
   }
 
@@ -535,14 +462,14 @@ export class BlockController {
     @param.array('id', 'query', {type: 'string'}) id: string[],
     @param.query.object('intervals') intervals: object,
   ): Promise<Response> {
-    await this.authUtils.authorizeBlocksRead(id ?? []);
-    this.bindLb3DataSource();
+    await this.lb3.authUtils.authorizeBlocksRead(id ?? []);
+    this.lb3.bindLb3DataSource();
     // Don't flush headers in initSseResponse() because sse.init() will send headers.
     initSseResponse(res);
     const options = null;
     console.log('headersSent before LB3:', res.headersSent);
     // @ts-ignore
-    BlockClass.pathsViaStream(id, intervals, options, req, res, () => undefined);
+    this.lb3.model.pathsViaStream(id, intervals, options, req, res, () => undefined);
     return res;
   }
 
@@ -560,12 +487,12 @@ export class BlockController {
     @param.array('id', 'query', {type: 'string'}) id: string[],
     @param.query.object('intervals') intervals: object,
   ): Promise<Response> {
-    await this.authUtils.authorizeBlocksRead(id ?? []);
-    this.bindLb3DataSource();
+    await this.lb3.authUtils.authorizeBlocksRead(id ?? []);
+    this.lb3.bindLb3DataSource();
     initSseResponse(res);
     const options = null;
     // @ts-ignore
-    BlockClass.pathsAliasesViaStream(id, intervals, options, req, res, () => undefined);
+    this.lb3.model.pathsAliasesViaStream(id, intervals, options, req, res, () => undefined);
     return res;
   }
 
@@ -583,11 +510,11 @@ export class BlockController {
     @param.query.string('threshold-size') thresholdSize?: string,
     @param.query.string('threshold-continuity') thresholdContinuity?: string,
   ): Promise<object[]> {
-    await this.authUtils.authorizeBlocksRead([id0, id1]);
-    this.bindLb3DataSource();
-    return this.lb3Call<object[]>(cb => {
+    await this.lb3.authUtils.authorizeBlocksRead([id0, id1]);
+    this.lb3.bindLb3DataSource();
+    return this.lb3.lb3Call<object[]>(cb => {
       // @ts-ignore
-      BlockClass.syntenies(id0, id1, thresholdSize, thresholdContinuity, cb);
+      this.lb3.model.syntenies(id0, id1, thresholdSize, thresholdContinuity, cb);
     });
   }
 
@@ -603,11 +530,11 @@ export class BlockController {
     @param.query.string('parent') parent: string,
     @param.query.string('region') region: string,
   ): Promise<string> {
-    await this.authUtils.authorizeDatasetRead(parent);
-    this.bindLb3DataSource();
-    return this.lb3Call<string>(cb => {
+    await this.lb3.authUtils.authorizeDatasetRead(parent);
+    this.lb3.bindLb3DataSource();
+    return this.lb3.lb3Call<string>(cb => {
       // @ts-ignore
-      BlockClass.dnaSequenceLookup(parent, region, cb);
+      this.lb3.model.dnaSequenceLookup(parent, region, cb);
     });
   }
 
@@ -625,12 +552,12 @@ export class BlockController {
     @param.query.string('scope') scope: string,
     @param.query.object('filter') filter?: object,
   ): Promise<string> {
-    await this.authUtils.authorizeBlocksRead([id]);
-    this.bindLb3DataSource();
+    await this.lb3.authUtils.authorizeBlocksRead([id]);
+    this.lb3.bindLb3DataSource();
     const options = null;
-    return this.lb3Call<string>(cb => {
+    return this.lb3.lb3Call<string>(cb => {
       // @ts-ignore
-      BlockClass.genotypeSamples(id, datasetId, scope, filter, options, cb);
+      this.lb3.model.genotypeSamples(id, datasetId, scope, filter, options, cb);
     });
   }
 
@@ -648,12 +575,12 @@ export class BlockController {
     @param.query.string('scope') scope: string,
     @param.array('positions', 'query', {type: 'string'}) positions: string[],
   ): Promise<string> {
-    await this.authUtils.authorizeBlocksRead([id]);
-    this.bindLb3DataSource();
+    await this.lb3.authUtils.authorizeBlocksRead([id]);
+    this.lb3.bindLb3DataSource();
     const options = null;
-    return this.lb3Call<string>(cb => {
+    return this.lb3.lb3Call<string>(cb => {
       // @ts-ignore
-      BlockClass.genotypeHaplotypesSamples(id, datasetId, scope, positions, options, cb);
+      this.lb3.model.genotypeHaplotypesSamples(id, datasetId, scope, positions, options, cb);
     });
   }
 
@@ -671,12 +598,12 @@ export class BlockController {
     @param.query.object('preArgs') preArgs?: object,
     @param.query.number('nLines') nLines?: number,
   ): Promise<string> {
-    await this.authUtils.authorizeDatasetRead(datasetId);
-    this.bindLb3DataSource();
+    await this.lb3.authUtils.authorizeDatasetRead(datasetId);
+    this.lb3.bindLb3DataSource();
     const options = null;
-    return this.lb3Call<string>(cb => {
+    return this.lb3.lb3Call<string>(cb => {
       // @ts-ignore
-      BlockClass.vcfGenotypeLookup(datasetId, scope, preArgs, nLines, options, cb);
+      this.lb3.model.vcfGenotypeLookup(datasetId, scope, preArgs, nLines, options, cb);
     });
   }
 
@@ -696,12 +623,12 @@ export class BlockController {
       nLines?: number;
     },
   ): Promise<string> {
-    await this.authUtils.authorizeDatasetRead(body.datasetId);
-    this.bindLb3DataSource();
+    await this.lb3.authUtils.authorizeDatasetRead(body.datasetId);
+    this.lb3.bindLb3DataSource();
     const options = null;
-    return this.lb3Call<string>(cb => {
+    return this.lb3.lb3Call<string>(cb => {
       // @ts-ignore
-      BlockClass.vcfGenotypeLookupPost(body.datasetId, body.scope, body.preArgs, body.nLines, options, cb);
+      this.lb3.model.vcfGenotypeLookupPost(body.datasetId, body.scope, body.preArgs, body.nLines, options, cb);
     });
   }
 
@@ -716,11 +643,11 @@ export class BlockController {
   async cacheClearKey(
     @param.query.string('cacheId') cacheId: string,
   ): Promise<object> {
-    this.authUtils.enforceScopedBlockAccess();
-    this.bindLb3DataSource();
-    return this.lb3Call<object>(cb => {
+    this.lb3.authUtils.enforceScopedBlockAccess();
+    this.lb3.bindLb3DataSource();
+    return this.lb3.lb3Call<object>(cb => {
       // @ts-ignore
-      BlockClass.cacheClearKey(cacheId, cb);
+      this.lb3.model.cacheClearKey(cacheId, cb);
     });
   }
 

@@ -16,6 +16,7 @@ import {initLb3Environment, initLb3ExceptionHandling, initLb3FrontendEnvironment
 import {lb3RouteTimeMiddleware} from './middleware/lb3-route-time.middleware';
 import {lb3MemcacheMiddleware} from './middleware/lb3-memcache.middleware';
 import {clientGroups} from './utils/client-groups';
+import {Lb3ModelWrapProvider} from './utils/lb3-model-wrap.provider';
 import {MongoDsDataSource} from './datasources';
 
 const {serverShowEnvironment, appServerLb3Setup, appServerLb3Setup2} = require('../lb3app/server/server');
@@ -86,6 +87,7 @@ export class PretzelApplication extends BootMixin(
         console.error('clientGroups init failed', err);
       }
     });
+    this.bind('utils.Lb3ModelWrap').toProvider(Lb3ModelWrapProvider);
     // Customize @loopback/boot Booter Conventions here
     this.bootOptions = {
       controllers: {
