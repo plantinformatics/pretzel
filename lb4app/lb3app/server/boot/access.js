@@ -2,7 +2,6 @@
 /* global module */
 /* global require */
 
-var clientGroups = require('../../common/utilities/client-groups');
 var { clientIsInGroup, clientOwnsGroup } = require('../../common/utilities/identity');
 var { ObjectId_equals } = require('../../common/utilities/mongoDB-driver-lib');
 var ObjectId = require('mongodb').ObjectID;

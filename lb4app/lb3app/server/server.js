@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 
 /* global process */
 /* global require */
@@ -119,7 +119,9 @@ var loopbackPassport = require('loopback-component-passport');
 var morgan = require('morgan');
 var bodyParser = require('body-parser');
 
+if (false /*lb3*/) {
 var clientGroups = require('../common/utilities/client-groups');
+}
 
 // lb3 :
 // var app = module.exports = loopback();
@@ -239,12 +241,14 @@ app.use('/', loopback.static(clientPath));
 // instead of hitting the API as desired.
 app.use(/^((?!api).)*$/, loopback.static(clientPath));
 
+}	// appServerLb3Setup2()
+
 // -----------------------------------------------------------------------------
 
+if (lb3) {
 /** Activate the service. */
 clientGroups.clientGroups.init(app);
-
-}	// appServerLb3Setup2()
+}
 
 // -----------------------------------------------------------------------------
 

@@ -3,7 +3,7 @@
 /* global exports */
 /* global require */
 
-var clientGroups = require('./client-groups');
+var clientGroups = require('../../../dist/utils/client-groups');
 var { cirquePush } = require('../../common/utilities/cirque');
 
 /**
