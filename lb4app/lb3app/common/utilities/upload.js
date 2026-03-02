@@ -104,25 +104,29 @@ function createChunked (data, model, len) {
 exports.uploadDataset = (data, models, options, cb) => {
   const fnName = 'uploadDataset';
   let dataset_id
+  /** The variable name json_blocks and json_block relates to the Block objects
+   * having been parsed from json - they are no longer JSON text, they are Object-s.
+   */
   let json_blocks = []
   let source_blocks = []
 
-  // extract nested blocks before create (LB4 repositories reject navigational props)
+  /** In LB3 child objects were present in the parent data object in
+   * .__cachedRelations e.g. data?.__cachedRelations?.blocks[].
+   * In LB4 dataset.repository.ts : constructor() defines .blocks, so
+   * data.blocks is rejected by Repository .create() with this message :
+   * "Navigational properties are not allowed in model data (model "Dataset" property "blocks"), ..."
+   * The solution is to extract nested blocks before create.
+   */
   if (data?.blocks) {
     source_blocks = data.blocks;
     delete data.blocks;
-  } else if (data?.__cachedRelations?.blocks) {
-    source_blocks = data.__cachedRelations.blocks;
-  }
-  if (data?.__cachedRelations) {
-    delete data.__cachedRelations;
   }
 
   // create dataset
   models.Dataset.create(data, options)
   .then(function(dataset) {
     dataset_id = dataset.name
-    const blocks = source_blocks.length ? source_blocks : (dataset.__cachedRelations?.blocks || []);
+    const blocks = source_blocks;
     if (blocks.length) {
       blocks.forEach(function(json_block) {
         json_block.datasetId = dataset.id
@@ -132,9 +136,11 @@ exports.uploadDataset = (data, models, options, cb) => {
         json_blocks.push(json_block)
       })
     }
-    // strip nested relations before Block.create for LB4 repos
+    /** As commented above for dataset.blocks[], strip nested relations before
+    * Block.create because LB4 repositories reject navigational props.
+    */
     const blocks_create = json_blocks.map(b => {
-      const {annotations, intervals, features, __cachedRelations, ...rest} = b;
+      const {annotations, intervals, features, ...rest} = b;
       return rest;
     });
     // create blocks
@@ -149,6 +155,13 @@ exports.uploadDataset = (data, models, options, cb) => {
     });
 };
 /**
+ * @param dataset_id
+ * @param blocks	db objects created
+ * @param models
+ * @param options
+ * @param cb
+ * @param source_blocks parallel to blocks[]. Contains the block relations which
+ * were extracted from blocks[] : annotations, intervals, features
  * @return promise
  */
 function uploadDatasetContent(dataset_id, blocks, models, options, cb, source_blocks) {
@@ -159,7 +172,7 @@ function uploadDatasetContent(dataset_id, blocks, models, options, cb, source_bl
 
   console.log(fnName, dataset_id, blocks.length);
     blocks.forEach(function(block) {
-      const source = block.__cachedRelations || (source_blocks && source_blocks.shift()) || {};
+      const source = (source_blocks && source_blocks.shift()) || {};
       if (source.annotations) {
         source.annotations.forEach(function(json_annotation) {
           json_annotation.blockId = block.id
