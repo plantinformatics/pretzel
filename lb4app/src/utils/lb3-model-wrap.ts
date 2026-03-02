@@ -10,6 +10,14 @@ import {
 
 type Lb3Module = (modelClass: any) => void;
 
+export class Lb3ModelClass {
+  static remoteMethod() {}
+  static observe() {}
+  static afterRemote() {}
+  static dataSource = {connector: null};
+  static app: any = {};
+}
+
 export class Lb3ModelWrap {
   private mongoDs: MongoDsDataSource;
   public authUtils: AuthUtils;
@@ -35,13 +43,6 @@ export class Lb3ModelWrap {
       options.groupRepository,
     );
 
-    class Lb3ModelClass {
-      static remoteMethod() {}
-      static observe() {}
-      static afterRemote() {}
-      static dataSource = {connector: null};
-      static app: any = {};
-    }
 
     options.lb3Module(Lb3ModelClass);
     Lb3ModelClass.app.models = options.appModels;

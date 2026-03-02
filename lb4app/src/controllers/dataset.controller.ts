@@ -16,14 +16,28 @@ import {
   del,
   requestBody,
   response,
+  Request,
+  Response,
+  RestBindings,
 } from '@loopback/rest';
+import {inject} from '@loopback/core';
 import {Dataset} from '../models';
 import {DatasetRepository} from '../repositories';
+import {Lb3ModelWrap} from '../utils/lb3-model-wrap';
+import {Lb3ModelWrapFactory} from '../utils/lb3-model-wrap.provider';
+
+// @ts-ignore
+const DatasetModule = require('../../lb3app/common/models/dataset');
+// @ts-ignore
+const {noCacheResult} = require('../../lb3app/common/utilities/remote-method');
 
 export class DatasetController {
+  private lb3: Lb3ModelWrap;
+
   constructor(
     @repository(DatasetRepository)
     public datasetRepository : DatasetRepository,
+    @inject('utils.Lb3ModelWrap') private lb3WrapFactory: Lb3ModelWrapFactory,
   ) {}
 
   @post('/datasets')
@@ -146,5 +160,217 @@ export class DatasetController {
   })
   async deleteById(@param.path.string('id') id: string): Promise<void> {
     await this.datasetRepository.deleteById(id);
+  }
+
+  //----------------------------------------------------------------------------
+
+  @post('/Datasets/loadFromURL', {
+    responses: {
+      '200': {
+        description: 'Get features in referenceAssemblyName for PanBARLEX Known Genes.',
+        content: {'application/json': {schema: {type: 'object'}}},
+      },
+    },
+  })
+  async loadFromURL(
+    @requestBody() dataDescription?: object,
+  ): Promise<object> {
+    this.ensureLb3();
+    this.lb3.bindLb3DataSource();
+    const options = null;
+    return this.lb3.lb3Call<object>(cb => {
+      // @ts-ignore
+      this.lb3.model.loadFromURL(dataDescription, options, cb);
+    });
+  }
+
+  @get('/Datasets/vcfGenotypeFeaturesCountsStatus', {
+    responses: {
+      '200': {
+        description: 'Get the status of .vcf.gz files for this dataset.',
+        content: {'application/json': {schema: {type: 'string'}}},
+      },
+    },
+  })
+  async vcfGenotypeFeaturesCountsStatus(
+    @inject(RestBindings.Http.RESPONSE) res: Response,
+    @param.query.string('id') datasetId: string,
+  ): Promise<string> {
+    this.ensureLb3();
+    await this.lb3.authUtils.authorizeDatasetRead(datasetId);
+    noCacheResult(res);
+    this.lb3.bindLb3DataSource();
+    const options = null;
+    return this.lb3.lb3Call<string>(cb => {
+      // @ts-ignore
+      this.lb3.model.vcfGenotypeFeaturesCountsStatus(datasetId, options, cb);
+    });
+  }
+
+  @post('/Datasets/upload', {
+    responses: {
+      '200': {
+        description: 'Perform a bulk upload of a dataset with associated blocks and features',
+        content: {'application/json': {schema: {type: 'object'}}},
+      },
+    },
+  })
+  async upload(
+    @inject(RestBindings.Http.REQUEST) req: Request,
+    @requestBody() msg: object,
+  ): Promise<object> {
+    this.ensureLb3();
+    this.lb3.bindLb3DataSource();
+    const options = null;
+    return this.lb3.lb3Call<object>(cb => {
+      // @ts-ignore
+      this.lb3.model.upload(msg, options, req, cb);
+    });
+  }
+
+  @post('/Datasets/tableUpload', {
+    responses: {
+      '200': {
+        description: 'Perform a bulk upload of a features from tabular form',
+        content: {'application/json': {schema: {type: 'string'}}},
+      },
+    },
+  })
+  async tableUpload(
+    @requestBody() data: object,
+  ): Promise<string> {
+    this.ensureLb3();
+    this.lb3.bindLb3DataSource();
+    const options = null;
+    return this.lb3.lb3Call<string>(cb => {
+      // @ts-ignore
+      this.lb3.model.tableUpload(data, options, cb);
+    });
+  }
+
+  @post('/Datasets/createComplete', {
+    responses: {
+      '200': {
+        description: 'Creates a dataset and all of its children',
+        content: {'application/json': {schema: {type: 'string'}}},
+      },
+    },
+  })
+  async createComplete(
+    @inject(RestBindings.Http.REQUEST) req: Request,
+    @requestBody() data: object,
+  ): Promise<string> {
+    this.ensureLb3();
+    this.lb3.bindLb3DataSource();
+    const options = null;
+    return this.lb3.lb3Call<string>(cb => {
+      // @ts-ignore
+      this.lb3.model.createComplete(data, options, req, cb);
+    });
+  }
+
+  @get('/Datasets/cacheClear', {
+    responses: {
+      '200': {
+        description: 'Clear cached copies of datasets / blocks / features from a secondary Pretzel API server.',
+        content: {'application/json': {schema: {type: 'array', items: {type: 'object'}}}},
+      },
+    },
+  })
+  async cacheClear(
+    @param.query.number('time') time: number,
+  ): Promise<object[]> {
+    this.ensureLb3();
+    this.lb3.bindLb3DataSource();
+    const options = null;
+    return this.lb3.lb3Call<object[]>(cb => {
+      // @ts-ignore
+      this.lb3.model.cacheClear(time, options, cb);
+    });
+  }
+
+  @post('/Datasets/cacheblocksFeaturesCounts', {
+    responses: {
+      '200': {
+        description: 'Pre-warm the cache of blockFeaturesCounts for each block of this dataset.',
+        content: {'application/json': {schema: {type: 'number'}}},
+      },
+    },
+  })
+  async cacheblocksFeaturesCounts(
+    @param.query.string('id') id: string,
+    @requestBody() userOptions?: object,
+  ): Promise<number> {
+    this.ensureLb3();
+    this.lb3.bindLb3DataSource();
+    const options = null;
+    return this.lb3.lb3Call<number>(cb => {
+      // @ts-ignore
+      this.lb3.model.cacheblocksFeaturesCounts(id, userOptions, options, cb);
+    });
+  }
+
+  @get('/Datasets/naturalSearch', {
+    responses: {
+      '200': {
+        description: 'Use OpenAI to convert search_text to an vector embedding and search for matching datasets using Vectra.',
+        content: {'application/json': {schema: {type: 'array', items: {type: 'object'}}}},
+      },
+    },
+  })
+  async naturalSearch(
+    @param.query.string('search_text') searchText: string,
+  ): Promise<object[]> {
+    this.ensureLb3();
+    this.lb3.bindLb3DataSource();
+    const options = null;
+    return this.lb3.lb3Call<object[]>(cb => {
+      // @ts-ignore
+      this.lb3.model.naturalSearch(searchText, options, cb);
+    });
+  }
+
+  @get('/Datasets/text2Commands', {
+    responses: {
+      '200': {
+        description: 'Use OpenAI to convert commands_text to text commands for viewing datasets.',
+        content: {'application/json': {schema: {type: 'array', items: {type: 'object'}}}},
+      },
+    },
+  })
+  async text2Commands(
+    @param.query.string('commands_text') commandsText: string,
+  ): Promise<object[]> {
+    this.ensureLb3();
+    this.lb3.bindLb3DataSource();
+    const options = null;
+    return this.lb3.lb3Call<object[]>(cb => {
+      // @ts-ignore
+      this.lb3.model.text2Commands(commandsText, options, cb);
+    });
+  }
+
+  @get('/Datasets/getEmbeddings', {
+    responses: {
+      '200': {
+        description: 'Get vector embeddings of metadata of all datasets.',
+        content: {'application/json': {schema: {type: 'array', items: {type: 'object'}}}},
+      },
+    },
+  })
+  async getEmbeddings(): Promise<object[]> {
+    this.ensureLb3();
+    this.lb3.bindLb3DataSource();
+    const options = null;
+    return this.lb3.lb3Call<object[]>(cb => {
+      // @ts-ignore
+      this.lb3.model.getEmbeddings(options, cb);
+    });
+  }
+
+  private ensureLb3() {
+    if (!this.lb3) {
+      this.lb3 = this.lb3WrapFactory(DatasetModule);
+    }
   }
 }

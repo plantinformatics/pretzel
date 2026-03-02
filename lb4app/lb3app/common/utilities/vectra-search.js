@@ -73,10 +73,12 @@ async function addItem(id, text /*: string*/) {
 }
 
 exports.ensureItem = ensureItem;
-async function ensureItem(id, text /*: string*/) {
+async function ensureItem(id, text /*: string*/, trace) {
   const index = await indexP;
   const idInIndex = await index.getItem(id);
-  console.log('ensureItem', id, !!idInIndex);
+  if (trace) {
+    console.log('ensureItem', id, !!idInIndex);
+  }
   if (! idInIndex) {
     await addItem(id, text);
   }

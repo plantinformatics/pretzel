@@ -106,7 +106,9 @@ module.exports = function(Dataset) {
     } else
     // Parse as either .json or .gz
     // factored as handleJson()
-    if (msg.fileName.endsWith('.json')) {
+    if (typeof msg.dataset === 'object') {
+      uploadParsed(msg.dataset);
+    } else if (msg.fileName.endsWith('.json')) {
       uploadParsedTry(msg.data);
     } else if (msg.fileName.endsWith('.gz')) {
       var buffer = new Buffer(msg.data, 'binary');
@@ -748,6 +750,9 @@ module.exports = function(Dataset) {
 
   Dataset.naturalSearch = function naturalSearch(search_text, options, cb) {
     console.log('naturalSearch', search_text);
+    /** When wrapped in LB4, Dataset is derived from Lb3ModelClass,
+     * not LB3 Model, so use this.app.models.Dataset */
+    const Dataset = this.app.models.Dataset;
     /** embedDatasets() -> datasetForEmbed() -> ensureItem(), adding to index
      * which is used by query() */
     embedDatasets(Dataset, options).then(() => {
@@ -766,6 +771,7 @@ module.exports = function(Dataset) {
 
 
   Dataset.getEmbeddings = function getEmbeddingsEndpoint(options, cb) {
+    const Dataset = this.app.models.Dataset;
     getEmbeddings(Dataset, options)
       .then((results) => cb(null, results))
       .catch((err) => cb(err));
@@ -795,7 +801,7 @@ module.exports = function(Dataset) {
   Dataset.vcfGenotypeFeaturesCountsStatus = function(datasetId, options, cb) {
     const
     fnName = 'vcfGenotypeLookup';
-    objectLookup(Dataset, 'Dataset', fnName, datasetId, options)
+    objectLookup(this.app.models.Dataset, 'Dataset', fnName, datasetId, options)
       .then(genotypeStatus.bind(this));
 
     function genotypeStatus(dataset) {
@@ -985,10 +991,11 @@ module.exports = function(Dataset) {
 
 
 
-
+/*
   acl.assignRulesRecord(Dataset);
   acl.limitRemoteMethods(Dataset);
   acl.limitRemoteMethodsRelated(Dataset);
+*/
 };
 
 //------------------------------------------------------------------------------
@@ -1107,26 +1114,29 @@ function getEmbeddingsNoCache(Dataset, options) {
 }
 
 /**
+ * @param dataset	record object 
+ * @param i	index within array of datasets
  * @return promise yielding undefined
  */
-function datasetForEmbed(dataset) {
+function datasetForEmbed(dataset, i) {
   const
   fnName = 'datasetForEmbed',
-  /** _id is not present in dataset.__data
-   * .__data does contain .name, which is equal.
+  /** _id is not present in dataset document Object.
+   * It does contain .name, which is equal to id.
+   * Document data was in dataset.__data in LB3, now simply dataset.
    */
   id = dataset.getId(),
   /** Reformat the tags array into a text list.
    * Omit clientId, groupId because they are hexadecimal DB ids and not
    * semantically informative.
    */
-  {tags, clientId, groupId, ...datasetSansTags} = dataset.__data,
+  {tags, clientId, groupId, ...datasetSansTags} = dataset,
   tagsText = Array.isArray(tags) ? ' ' + tags.join(' ') : '',
 
   /** Initially used selected fields to minimise context size, but now
    * requesting embedding of each dataset separately, and only once at
    * startup, so size and cost is not a concern.
-   * description = pick(dataset.__data, ['_id', 'meta.type', 'meta.shortName', 'tags', 'meta.commonName', 'namespace' ]);
+   * description = pick(dataset, ['_id', 'meta.type', 'meta.shortName', 'tags', 'meta.commonName', 'namespace' ]);
    * description.id = id;
    */
   description = Object.assign({/*id*/}, datasetSansTags),
@@ -1138,8 +1148,12 @@ function datasetForEmbed(dataset) {
     return flattenJSON(description).join(', ');
   }
 
-  console.log(fnName, readable);
-  const embedP = ensureItem(id, readable);
+  // limit the trace to datasets[0].
+  const trace = i === 0;
+  if (trace) {
+    console.log(fnName, readable);
+  }
+  const embedP = ensureItem(id, readable, trace);
   return embedP;
 }
 

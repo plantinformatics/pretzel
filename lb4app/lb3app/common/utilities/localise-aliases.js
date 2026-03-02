@@ -1,7 +1,11 @@
 var _ = require('lodash');
 
 const bent = require('bent');
-const param = require('jquery-param');
+/* jquery-param/package.json now has :  "type": "module",
+ * so this is no longer supported : const param = require('jquery-param');
+ * This form of dynamic import is suggested by https://stackoverflow.com/a/75281896 Itzik
+ */
+const param = (...args) => import('jquery-param').then(({default: param}) => param(...args));
 
 const { ApiServer, apiServers, blockServer } = require('./api-server');
 

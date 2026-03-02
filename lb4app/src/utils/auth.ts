@@ -1,5 +1,26 @@
 import {HttpErrors, RequestContext} from '@loopback/rest';
-import { ObjectId } from 'mongodb'; 
+/* This should import from @types/mongodb : import { ObjectId } from 'mongodb'; 
+ * but that is not succeeding at the moment :
+ *   error TS7016: Could not find a declaration file for module 'mongodb'.
+ *  (retry this with a later version, if any)
+ * (from LLM) "Since the mongodb package includes its own TypeScript types, you
+ * do not need @types/mongodb."  That seems to be supported by :
+ * https://www.mongodb.com/docs/manual/reference/bson-types/#objectid
+ *
+ * @types/mongodb is now empty - it does not define types. 
+ * From https://www.npmjs.com/package/@types/mongodb :
+ * Author message: mongodb provides its own types. @types/mongodb is no longer needed.
+ * This is a stub types definition for @types/mongodb (https://github.com/mongodb/node-mongodb-native).
+ * mongodb provides its own type definitions, so you don't need @types/mongodb installed!
+ *
+ *  node_modules/bson/index.js :  ObjectId = require('./lib/bson/objectid'),
+ *  node_modules/bson/lib/bson/objectid.js : module.exports.ObjectId = ObjectID;
+ */
+// import {ObjectID} from 'mongodb'
+// import { ObjectId } from 'mongodb'; 
+// const { ObjectID /*ObjectId*/ } = require('mongodb');
+// const ObjectId = require('bson').ObjectID;
+type ObjectId = any;
 
 import {MongoDsDataSource} from '../datasources';
 import {Block, Dataset} from '../models';

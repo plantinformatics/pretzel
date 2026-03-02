@@ -6,6 +6,11 @@ const { binEvenLengthRound, binBoundaries } = require('interval-bins');
 
 const { blockFilterValue0 } = require('./paths-aggr');
 
+const BlockModule = require('../models/block');
+const { Lb3ModelClass } = require('../../../dist/utils/lb3-model-wrap');
+/** Copy Lb3ModelClass to avoid modifying it in BlockModule. */
+class BlockClass extends Lb3ModelClass { };
+BlockModule(BlockClass);
 
 var ObjectID = require('mongodb').ObjectID;
 
@@ -408,7 +413,8 @@ exports.cacheblocksFeaturesCounts = cacheblocksFeaturesCounts;
 function cacheblocksFeaturesCounts(db, models, datasetId, userOptions, options) {
   const fnName = 'cacheblocksFeaturesCounts';
 
-  const blockFeaturesCountsP = util.promisify(models.Block.blockFeaturesCounts);
+  const Block = BlockClass;
+  const blockFeaturesCountsP = util.promisify(Block.blockFeaturesCounts);
 
   const
   /** This endpoint requests the zoomed-out features counts, for each block.
@@ -417,7 +423,7 @@ function cacheblocksFeaturesCounts(db, models, datasetId, userOptions, options) 
   isZoomed = false,
   /// datasetId -> dataset -> parent -> parent blocks
   blocksP = datasetBlocks(models, datasetId),
-  parentBlocksP = models.Block.datasetLookup(datasetId, options)
+  parentBlocksP = Block.datasetLookup(datasetId, options)
     .then(datasets => datasetBlocks(models, datasets[0].parent)),
   resultP = blocksP
     .then(blocks => parentBlocksP.then(parentBlocks =>
@@ -453,7 +459,7 @@ function cacheblocksFeaturesCounts(db, models, datasetId, userOptions, options) 
            * ! useBucketAuto.
            */
           countsP = blockFeaturesCountsP.apply(
-            models.Block,
+            Block,
             [blockId, interval, /*nBins*/100, isZoomed,
              /*useBucketAuto*/undefined, userOptions,
              options, /*res*/undefined /*,cb*/])

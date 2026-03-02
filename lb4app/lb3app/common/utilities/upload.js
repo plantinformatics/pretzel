@@ -105,13 +105,26 @@ exports.uploadDataset = (data, models, options, cb) => {
   const fnName = 'uploadDataset';
   let dataset_id
   let json_blocks = []
+  let source_blocks = []
 
-  //create dataset
+  // extract nested blocks before create (LB4 repositories reject navigational props)
+  if (data?.blocks) {
+    source_blocks = data.blocks;
+    delete data.blocks;
+  } else if (data?.__cachedRelations?.blocks) {
+    source_blocks = data.__cachedRelations.blocks;
+  }
+  if (data?.__cachedRelations) {
+    delete data.__cachedRelations;
+  }
+
+  // create dataset
   models.Dataset.create(data, options)
   .then(function(dataset) {
     dataset_id = dataset.name
-    if (dataset.__cachedRelations.blocks) {
-      dataset.__cachedRelations.blocks.forEach(function(json_block) {
+    const blocks = source_blocks.length ? source_blocks : (dataset.__cachedRelations?.blocks || []);
+    if (blocks.length) {
+      blocks.forEach(function(json_block) {
         json_block.datasetId = dataset.id
         if (json_block.namespace == null && data.namespace != null) {
           json_block.namespace = data.namespace;
@@ -119,11 +132,16 @@ exports.uploadDataset = (data, models, options, cb) => {
         json_blocks.push(json_block)
       })
     }
-    //create blocks
-    return models.Block.create(json_blocks, options)
+    // strip nested relations before Block.create for LB4 repos
+    const blocks_create = json_blocks.map(b => {
+      const {annotations, intervals, features, __cachedRelations, ...rest} = b;
+      return rest;
+    });
+    // create blocks
+    return models.Block.createAll(blocks_create, options);
   })
     .then(function(blocks) {
-      uploadDatasetContent(dataset_id, blocks, models, options, cb);
+      uploadDatasetContent(dataset_id, blocks, models, options, cb, json_blocks);
     })
     .catch((error) => {
       console.log(fnName, dataset_id, error);
@@ -133,7 +151,7 @@ exports.uploadDataset = (data, models, options, cb) => {
 /**
  * @return promise
  */
-function uploadDatasetContent(dataset_id, blocks, models, options, cb) {
+function uploadDatasetContent(dataset_id, blocks, models, options, cb, source_blocks) {
   const fnName = 'uploadDatasetContent';
   let json_annotations = [];
   let json_intervals = [];
@@ -141,20 +159,21 @@ function uploadDatasetContent(dataset_id, blocks, models, options, cb) {
 
   console.log(fnName, dataset_id, blocks.length);
     blocks.forEach(function(block) {
-      if (block.__cachedRelations.annotations) {
-        block.__cachedRelations.annotations.forEach(function(json_annotation) {
+      const source = block.__cachedRelations || (source_blocks && source_blocks.shift()) || {};
+      if (source.annotations) {
+        source.annotations.forEach(function(json_annotation) {
           json_annotation.blockId = block.id
           json_annotations.push(json_annotation)
         })
       }
-      if (block.__cachedRelations.intervals) {
-        block.__cachedRelations.intervals.forEach(function(json_interval) {
+      if (source.intervals) {
+        source.intervals.forEach(function(json_interval) {
           json_interval.blockId = block.id
           json_intervals.push(json_interval)
         })
       }
-      if (block.__cachedRelations.features) {
-        block.__cachedRelations.features.forEach(function(json_feature) {
+      if (source.features) {
+        source.features.forEach(function(json_feature) {
           json_feature.blockId = block.id;
           json_feature.parentId = null;
           json_features.push(json_feature);
@@ -164,10 +183,10 @@ function uploadDatasetContent(dataset_id, blocks, models, options, cb) {
 
   let promise =
     //create annotations
-  models.Annotation.create(json_annotations, options)
+  models.Annotation.createAll(json_annotations, options)
   .then(function(annotations) {
     //create intervals
-    return models.Interval.create(json_intervals, options)
+    return models.Interval.createAll(json_intervals, options)
   }).then(function(intervals) {
     //create features using connector for performance
     models.Feature.dataSource.connector.connect(function(err, db) {
