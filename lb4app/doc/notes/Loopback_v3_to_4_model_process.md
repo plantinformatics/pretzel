@@ -164,8 +164,8 @@ Pattern identical to Block controller.
 ```mermaid
 flowchart LR
   subgraph LB4_Container[LB4 IoC Container]
-    Provider[Lb3ModelWrapProvider\n(src/utils/lb3-model-wrap.provider.ts)]
-    Factory[Lb3ModelWrapFactory\n(function)]
+    Provider[Lb3ModelWrapProvider\n src/utils/lb3-model-wrap.provider.ts ]
+    Factory[Lb3ModelWrapFactory\n function ]
     Provider --> Factory
   end
 
@@ -177,13 +177,13 @@ flowchart LR
   end
 
   subgraph Wrapper[Wrapper]
-    Wrap[Lb3ModelWrap\n(src/utils/lb3-model-wrap.ts)]
-    Lb3Class[Lb3ModelClass\n(dynamic class)]
+    Wrap[Lb3ModelWrap\n src/utils/lb3-model-wrap.ts]
+    Lb3Class[Lb3ModelClass\n dynamic class]
     Auth[AuthUtils]
   end
 
   subgraph LB3[LB3 model module]
-    Lb3Module[Lb3Module\n(lb3app/common/models/*.js)]
+    Lb3Module[Lb3Module\n lb3app/common/models/*.js ]
   end
 
   Factory -->|create| Wrap
