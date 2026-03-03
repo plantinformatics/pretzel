@@ -19,6 +19,7 @@ import {
   Request,
   Response,
   RestBindings,
+  HttpErrors,
 } from '@loopback/rest';
 import {inject} from '@loopback/core';
 import {Dataset} from '../models';
@@ -219,9 +220,77 @@ export class DatasetController {
     @inject(RestBindings.Http.REQUEST) req: Request,
     @requestBody() msg: object,
   ): Promise<object> {
+    const contentType = req.headers['content-type'];
+    if (
+      !msg ||
+      Buffer.isBuffer(msg) ||
+      (contentType && !contentType.includes('application/json'))
+    ) {
+      throw new HttpErrors.UnsupportedMediaType(
+        'Binary uploads must use POST /Datasets/uploadFile with fileName query param or X-File-Name header',
+      );
+    }
     this.ensureLb3();
     this.lb3.bindLb3DataSource();
     const options = null;
+    return this.lb3.lb3Call<object>(cb => {
+      // @ts-ignore
+      this.lb3.model.upload(msg, options, req, cb);
+    });
+  }
+
+  @post('/Datasets/uploadFile', {
+    responses: {
+      '200': {
+        description: 'Upload a dataset from a binary file payload',
+        content: {'application/json': {schema: {type: 'object'}}},
+      },
+    },
+  })
+  async uploadFile(
+    @inject(RestBindings.Http.REQUEST) req: Request,
+    @requestBody({
+      description: 'Binary file content for dataset upload.',
+      required: true,
+      content: {
+        'application/octet-stream': {
+          schema: {type: 'string', format: 'binary'},
+        },
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': {
+          schema: {type: 'string', format: 'binary'},
+        },
+        'application/vnd.ms-excel': {
+          schema: {type: 'string', format: 'binary'},
+        },
+        'application/vnd.oasis.opendocument.spreadsheet': {
+          schema: {type: 'string', format: 'binary'},
+        },
+        'text/gff3': {
+          schema: {type: 'string', format: 'binary'},
+        },
+      },
+    })
+    body: string,
+    @param.query.string('fileName') fileName?: string,
+    @param.query.boolean('replaceDataset') replaceDataset?: boolean,
+  ): Promise<object> {
+    this.ensureLb3();
+    this.lb3.bindLb3DataSource();
+    const accessToken = this.lb3.authUtils.getAccessToken();
+    const options = { accessToken };
+    const headerFileName = req.headers['x-file-name'];
+    const resolvedFileName =
+      fileName || (Array.isArray(headerFileName) ? headerFileName[0] : headerFileName);
+    if (!resolvedFileName) {
+      throw new HttpErrors.BadRequest(
+        'fileName query param or X-File-Name header is required',
+      );
+    }
+    const msg = {
+      fileName: resolvedFileName,
+      data: body,
+      replaceDataset,
+    };
     return this.lb3.lb3Call<object>(cb => {
       // @ts-ignore
       this.lb3.model.upload(msg, options, req, cb);

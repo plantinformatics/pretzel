@@ -14,6 +14,7 @@ import {MySequence} from './sequence';
 import {initLb3Environment, initLb3ExceptionHandling, initLb3FrontendEnvironment} from './lb3-compat/boot';
 import {lb3RouteTimeMiddleware} from './middleware/lb3-route-time.middleware';
 import {lb3MemcacheMiddleware} from './middleware/lb3-memcache.middleware';
+import {registerDatasetUploadFileBodyParser} from './middleware/dataset-upload-file-body-parser';
 import {clientGroups} from './utils/client-groups';
 import {Lb3ModelWrapProvider} from './utils/lb3-model-wrap.provider';
 import {MongoDsDataSource} from './datasources';
@@ -40,6 +41,7 @@ export class PretzelApplication extends BootMixin(
 
     // Set up the custom sequence
     this.sequence(MySequence);
+    registerDatasetUploadFileBodyParser(this);
     const blocksPathPrefix = '/Blocks';
     const routeTime = lb3RouteTimeMiddleware();
     const memcache = lb3MemcacheMiddleware(3600);
