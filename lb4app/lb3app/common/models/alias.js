@@ -161,8 +161,10 @@ module.exports = function(Alias) {
   /*--------------------------------------------------------------------------*/
 
 
+  /*
   acl.assignRulesRecord(Alias)
   acl.limitRemoteMethods(Alias)
   acl.limitRemoteMethodsSubrecord(Alias)
   acl.limitRemoteMethodsRelated(Alias)
+  */
 };

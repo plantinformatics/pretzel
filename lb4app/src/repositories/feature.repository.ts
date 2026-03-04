@@ -17,11 +17,15 @@ export class FeatureRepository extends DefaultCrudRepository<
   public readonly features: HasManyRepositoryFactory<Feature, typeof Feature.prototype.id>;
 
   constructor(
-    @inject('datasources.mongoDs') dataSource: MongoDsDataSource, @repository.getter('BlockRepository') protected blockRepositoryGetter: Getter<BlockRepository>, @repository.getter('FeatureRepository') protected featureRepositoryGetter: Getter<FeatureRepository>,
+    @inject('datasources.mongoDs') dataSource: MongoDsDataSource,
+    @repository.getter('BlockRepository') protected blockRepositoryGetter: Getter<BlockRepository>,
+    @repository.getter('FeatureRepository') protected featureRepositoryGetter: Getter<FeatureRepository>,
   ) {
     super(Feature, dataSource);
     this.features = this.createHasManyRepositoryFactoryFor('features', featureRepositoryGetter,);
     this.parent = this.createBelongsToAccessorFor('parent', featureRepositoryGetter,);
     this.block = this.createBelongsToAccessorFor('block', blockRepositoryGetter,);
+    // This is used by Feature.search() { ... .find ... include ... relation : "block"
+    this.registerInclusionResolver('block', this.block.inclusionResolver);
   }
 }

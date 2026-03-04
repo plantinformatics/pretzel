@@ -11,6 +11,15 @@ const Queue = require('promise-queue');
 /* global require */
 /* global process */
 
+/* This could be passed in via Lb3ModelWrap as this.app.models.LB3.Alias instead.
+ * related : ../utilities/block-features.js : BlockModule, BlockClass .blockFeaturesCounts
+ */
+const AliasModule = require('../models/alias');
+const { Lb3ModelClass } = require('../../../dist/utils/lb3-model-wrap');
+/** Copy Lb3ModelClass to avoid modifying it in AliasModule. */
+class AliasClass extends Lb3ModelClass { };
+AliasModule(AliasClass);
+
 var acl = require('../utilities/acl')
 const { childProcess } = require('../utilities/child-process');
 var upload = require('../utilities/upload');
@@ -104,7 +113,6 @@ module.exports = function(Feature) {
       orFilters = filter.map(k => ({
         name: { regexp: new RegExp(deletePunctuation(k), 'i') }
       }));
-      let nameFilter;
       if (filter.length === 1) {
         where = orFilters[0];
       } else {
@@ -112,8 +120,8 @@ module.exports = function(Feature) {
           or: orFilters
         };
       }
-      console.log(fnName, blockId, filter, matchRegExp, 'nameFilter');
-      console.dir(nameFilter);
+      console.log(fnName, blockId, filter, matchRegExp, 'where');
+      console.dir(where);
       /* const filter = { where : nameFilter }; */
     } else {
       where = {
@@ -127,16 +135,17 @@ module.exports = function(Feature) {
     if (blockId) {
       where.blockId = blockId;
     }
+    const Feature = this.app.models.Feature;
     Feature.find({
         "include": 
-        {
-          "block": "dataset"
-        },
+        [{
+          relation : "block"	// : "dataset"
+        }],
         where
     }, options).then(function(features) {
       // filter out the features for which the user doesn't have access to the dataset
       features = features.filter(function(feature) {
-        return feature.__data.block.__data.dataset
+        return feature.block.datasetId
       })
       return process.nextTick(() => cb(null, features))
     })
@@ -152,7 +161,7 @@ module.exports = function(Feature) {
    */
   Feature.aliasSearch = function(featureNames, options, cb) {
     const fnName = 'aliasSearch';
-    let aliasesP = Feature.app.models.Alias.stringSearch(featureNames);
+    let aliasesP = AliasClass.stringSearch(featureNames);
     aliasesP
       .toArray()
       .then((aliases) => {
@@ -162,6 +171,7 @@ module.exports = function(Feature) {
         return result;
       }, []);
       let aliasAndFeatureNames = featureNames.concat(aliasNames);
+
         let featuresP = Feature.search(/*blockId*/undefined, aliasAndFeatureNames, /*matchRegExp*/false, options, searchCb);
         function searchCb(err, features) {
           if (err) {
@@ -185,6 +195,7 @@ module.exports = function(Feature) {
       return include_n_level_features({'features': includes}, n-1);
     }
 
+    const Feature = this.app.models.Feature;
     Feature.find({
       "where": {
         "blockId": blockId,
@@ -386,10 +397,12 @@ module.exports = function(Feature) {
     description: "DNA Sequence Search e.g. Blast, returns TSV output as text array"
   });
  
+/*
   acl.assignRulesRecord(Feature)
   acl.limitRemoteMethods(Feature)
   acl.limitRemoteMethodsSubrecord(Feature)
   acl.limitRemoteMethodsRelated(Feature)
+*/
 };
 
 /*----------------------------------------------------------------------------*/
