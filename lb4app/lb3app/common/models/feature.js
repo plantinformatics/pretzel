@@ -80,6 +80,7 @@ module.exports = function(Feature) {
       }
     });
 
+  Feature.featureAfterSave =
   /** identical to blockAfterSave()
    */
   function featureAfterSave(blockId) {
@@ -93,7 +94,7 @@ module.exports = function(Feature) {
       }
 
     blockFeatures.blockFeaturesCacheClear(cache);
-  }
+  };
 
   /*--------------------------------------------------------------------------*/
 
