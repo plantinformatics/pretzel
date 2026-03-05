@@ -7,6 +7,11 @@ import {Group} from './group.model';
   settings: {
     strict: false,
     forceId: false,
+    /* refn : https://github.com/loopbackio/loopback-connector-mongodb#strictobjectidcoercion-flag
+     * Don't coerce id to ObjectID because it is text.
+     * This applies to all properties - OK because none will be ObjectID.
+     */
+    strictObjectIDCoercion: false,
     description: 'High level data structure containing blocks'
   }
 })
@@ -14,7 +19,20 @@ export class Dataset extends Record {
   @property({
     type: 'string',
     required: true,
-    id: true,
+    id: true,	// This marks it as the primary key
+    generated: false, // Prevents automatic ObjectID generation
+    /* If mongodb is not present, for property id it defaults to dataType : 'ObjectID'.
+     * This is used in : node_modules/loopback-connector-mongodb/lib/mongodb.js
+     * MongoDB.create() -> MongoDB.coerceId() -> coerceToObjectId() -> isObjectIDProperty()
+     * ObjectIdTypeRegex is /objectid/i
+     */
+    mongodb: {dataType: 'string'},
+  })
+  id: string;
+
+  @property({
+    type: 'string',
+    required: true,
   })
   name: string;
 

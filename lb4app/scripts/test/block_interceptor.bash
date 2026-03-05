@@ -75,6 +75,7 @@ CLIENT_ID="60db102e162b5e27516170a2"
 # given parameter 'name' becomes 'id'
 function Create_dataset() {
 curlPostA "datasets" '{
+  "id": "'"$DATASET_ID"'",
   "name": "'"$DATASET_ID"'",
   "public": false,
   "readOnly": true,
@@ -121,7 +122,10 @@ curlGetA "blocks/$BLOCK_ID/features"
 curlGetA "features/$FEATURE_ID"
 
 # 5) Delete block (interceptor should delete features, annotations, intervals)
-curlDelA "blocks/$BLOCK_ID"
+# curlDelA "blocks/$BLOCK_ID"
+#   OR
+# 5b) Delete dataset (interceptor should delete blocks, features, annotations, intervals)
+curlDelA "datasets/$DATASET_ID"
 
 # 6) Confirm feature was deleted by hook
 curlGetA "features/$FEATURE_ID"
