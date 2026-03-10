@@ -1,5 +1,6 @@
 import {model, property, hasMany} from '@loopback/repository';
-import {User} from './user.model';
+// import {User} from './user.model';
+import {User} from '@loopback/authentication-jwt';
 import {Group} from './group.model';
 import {ClientGroup} from './client-group.model';
 import {Dataset} from './dataset.model';

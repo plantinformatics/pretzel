@@ -7,14 +7,31 @@
 
 
 var path = require('path');
+const {promisify} = require('util');
 
 var loopback = require('loopback'); // for rendering template in custom methods
 
 var acl = require('../utilities/acl')
 
-module.exports = function(Client) {
+// module.exports = function(Client) {
+exports.Lb3ModelClient = class {
+  constructor(Client, Email) {
+    if (!Client || !Email) {
+      throw new Error('Lb3ModelClient requires Client and Email');
+    }
+    this.Client = Client;
+    this.Email = Email;
+
+    this.afterRemoteCreateP = promisify(this.afterRemote_create).bind(this);
+    this.beforeRemoteConfirmP = promisify(this.beforeRemote_confirm).bind(this);
+    this.afterRemoteConfirmP = promisify(this.afterRemote_confirm).bind(this);
+    this.onResetPasswordRequestP = async (info) => {
+      this.on_resetPasswordRequest(info);
+    };
+  }
+
   //send verification email after registration
-  Client.afterRemote('create', function(context, userInstance, next) {
+  /*Client.*/afterRemote_create (context, userInstance, next) {
     // console.log('> user.afterRemote triggered');
     // console.log('process.env.EMAIL_ADMIN => ', process.env.EMAIL_ADMIN);
     // console.log(process.env.EMAIL_VERIFY)
@@ -24,6 +41,12 @@ module.exports = function(Client) {
         context.result.code = 'EMAIL_NO_VERIFY';
         next();
     } else if (process.env.EMAIL_ACTIVE == 'true') {
+      if (!userInstance || typeof userInstance.verify !== 'function') {
+        console.log('afterRemote_create: userInstance.verify is not available');
+        context.result.code = 'EMAIL_NO_VERIFY';
+        next();
+        return;
+      }
       var options = {
         type: 'email',
         to: userInstance.email,
@@ -58,15 +81,21 @@ module.exports = function(Client) {
     } else {
       next(new Error('Email could not be sent, missing configuration'));
     }
-  });
+  }
   
-  Client.beforeRemote('confirm', function(context, result, next) {
+  /*Client.*/beforeRemote_confirm(context, result, next) {
+    const Client = this.Client;
     // Check whether admin also has to verify the user
     if (process.env.EMAIL_ACTIVE == 'true' && process.env.EMAIL_VERIFY == 'ADMIN' && context.args.redirect == '/verified') {
       if (process.env.EMAIL_ADMIN && process.env.EMAIL_ADMIN.length > 0) {
 
         //Send access request email to admin
         Client.findById(context.args.uid).then(function(userInstance) {
+          if (!userInstance || typeof userInstance.verify !== 'function') {
+            console.log('beforeRemote_confirm: userInstance.verify is not available');
+            next();
+            return;
+          }
           var options = {
             type: 'email',
             to: process.env.EMAIL_ADMIN,
@@ -110,9 +139,11 @@ module.exports = function(Client) {
     } else {
       next();
     }
-  });
+  }
 
-  Client.afterRemote('confirm', function(context, result, next) {
+  /*Client.*/afterRemote_confirm(context, result, next) {
+    const Client = this.Client;
+    const Email = this.Email;
     if (process.env.EMAIL_VERIFY == 'ADMIN' && context.args.redirect == '/admin-verified') {
       // Notify user that admin has accepted their access request
       if (process.env.EMAIL_ACTIVE == 'true') {
@@ -143,7 +174,7 @@ module.exports = function(Client) {
             login_url
           });
 
-          Client.app.models.Email.send({
+          Email.send({
             to: userInstance.email,
             from: process.env.EMAIL_FROM,
             subject: 'Welcome to Pretzel',
@@ -160,9 +191,10 @@ module.exports = function(Client) {
       }
     }
     next();
-  });
+  }
 
-  Client.on('resetPasswordRequest', function (info) {
+  /*Client.*/on_resetPasswordRequest(info) {
+    const Email = this.Email;
     if (process.env.EMAIL_ACTIVE == 'true'){
       var url = 'http://' + process.env.API_HOST +
         (process.env.API_PORT_PROXY ? '' : ':' + process.env.API_PORT_EXT)
@@ -184,7 +216,7 @@ module.exports = function(Client) {
       //   console.log(user); // the actual user
       // });
 
-      Client.app.models.Email.send({
+      Email.send({
         to: info.email,
         from: process.env.EMAIL_FROM,
         subject: 'Pretzel Password Reset Request',
@@ -201,8 +233,9 @@ module.exports = function(Client) {
       // TODO should a 404 response be sent for this request?
       console.log('reset password request, no email sent')
     }
-  });
+  }
 
+/*
   acl.assignRulesRecord(Client);
   // acl.limitRemoteMethodsRelated(Client)
 
@@ -224,4 +257,5 @@ module.exports = function(Client) {
   Client.disableRemoteMethodByName("exists");
   // Client.disableRemoteMethodByName("resetPassword");
   Client.disableRemoteMethodByName("upsertWithWhere");
+*/
 };

@@ -1,5 +1,7 @@
+import path from 'path';
+
 import {BootMixin} from '@loopback/boot';
-import {ApplicationConfig} from '@loopback/core';
+import {ApplicationConfig, Constructor} from '@loopback/core';
 import {
   RestExplorerBindings,
   RestExplorerComponent,
@@ -9,8 +11,19 @@ import {RestApplication} from '@loopback/rest';
 import {Middleware} from '@loopback/express';
 import {ServiceMixin} from '@loopback/service-proxy';
 
-import path from 'path';
+import {AuthenticationComponent, UserService} from '@loopback/authentication';
+import {
+  JWTAuthenticationComponent,
+  RefreshTokenServiceBindings,
+  SECURITY_SCHEME_SPEC,
+  UserServiceBindings,
+} from '@loopback/authentication-jwt';
+import {Credentials} from '@loopback/authentication-jwt'; // /services/user.service
+
+//------------------------------------------------------------------------------
+
 import {MySequence} from './sequence';
+import {EmailService} from './services/email.service';
 import {initLb3Environment, initLb3ExceptionHandling, initLb3FrontendEnvironment} from './lb3-compat/boot';
 import {lb3RouteTimeMiddleware} from './middleware/lb3-route-time.middleware';
 import {lb3MemcacheMiddleware} from './middleware/lb3-memcache.middleware';
@@ -18,8 +31,13 @@ import {registerDatasetUploadFileBodyParser} from './middleware/dataset-upload-f
 import {clientGroups} from './utils/client-groups';
 import {Lb3ModelWrapProvider} from './utils/lb3-model-wrap.provider';
 import {MongoDsDataSource} from './datasources';
+import {ClientRepository} from './repositories';
+import {ClientUserService} from './services/client-user.service';
+import {User} from '@loopback/authentication-jwt';	// ./models
 
 const {serverShowEnvironment, appServerLb3Setup, appServerLb3Setup2} = require('../lb3app/server/server');
+
+//------------------------------------------------------------------------------
 
 /* global process */
 
@@ -30,6 +48,33 @@ export class PretzelApplication extends BootMixin(
 ) {
   constructor(options: ApplicationConfig = {}) {
     super(options);
+
+    // From @loopback/authentication-jwt/README.md
+    // - enable jwt auth -
+    // Mount authentication system
+    this.component(AuthenticationComponent);
+    // Mount jwt component
+    this.component(JWTAuthenticationComponent);
+    /* These bindings override the defaults in JWTAuthenticationComponent which
+     * is instantiated above.
+     * ClientUserService is based on (the default) MyUserService, and has the
+     * same properties.  The need for customisation is simply that it uses a
+     * different repository: clientRepository instead of userRepository.
+     * Use ClientRepository for auth service lookups (Clients collection).
+     */
+    this.bind(UserServiceBindings.USER_SERVICE).toClass(
+      ClientUserService as unknown as Constructor<UserService<User, Credentials> & object>,
+    );
+
+    /* Override default repository binding
+     * This configures the parameter userRepository passed to the constructor of
+     * MyUserService (@loopback/authentication-jwt/src/services/user.service.ts).
+     *
+     * That class is created by the IoC container when
+     * UserServiceBindings.USER_SERVICE is injected (in ClientController).
+     * The default binding comes from the authentication‑jwt component.
+     */
+    this.bind(UserServiceBindings.USER_REPOSITORY).toClass(ClientRepository);
 
     // LB3 environment validation (lb3app/server/environment.js)
     initLb3Environment();
@@ -89,6 +134,7 @@ export class PretzelApplication extends BootMixin(
       }
     });
     this.bind('utils.Lb3ModelWrap').toProvider(Lb3ModelWrapProvider);
+    this.bind('services.Email').toClass(EmailService);
     // Customize @loopback/boot Booter Conventions here
     this.bootOptions = {
       controllers: {
