@@ -56,6 +56,7 @@ export class FeatureController {
     })
     feature: Omit<Feature, 'id'>,
   ): Promise<Feature> {
+    await this.requireAuth();
     return this.featureRepository.create(feature);
   }
 
@@ -67,7 +68,9 @@ export class FeatureController {
   async count(
     @param.where(Feature) where?: Where<Feature>,
   ): Promise<Count> {
-    return this.featureRepository.count(where);
+    throw new HttpErrors.NotFound('Endpoint disabled');
+    // implementation is disabled by throw :
+    // return this.featureRepository.count(where);
   }
 
   @get('/features')
@@ -85,6 +88,7 @@ export class FeatureController {
   async find(
     @param.filter(Feature) filter?: Filter<Feature>,
   ): Promise<Feature[]> {
+    await this.requireAuth();
     return this.featureRepository.find(filter);
   }
 
@@ -104,7 +108,9 @@ export class FeatureController {
     feature: Feature,
     @param.where(Feature) where?: Where<Feature>,
   ): Promise<Count> {
-    return this.featureRepository.updateAll(feature, where);
+    throw new HttpErrors.NotFound('Endpoint disabled');
+    // implementation is disabled by throw :
+    // return this.featureRepository.updateAll(feature, where);
   }
 
   @get('/features/{id}')
@@ -120,6 +126,8 @@ export class FeatureController {
     @param.path.string('id') id: string,
     @param.filter(Feature, {exclude: 'where'}) filter?: FilterExcludingWhere<Feature>
   ): Promise<Feature> {
+    this.ensureLb3();
+    await this.lb3.authUtils.authorizeFeatureRead(id, this.featureRepository);
     return this.featureRepository.findById(id, filter);
   }
 
@@ -138,6 +146,8 @@ export class FeatureController {
     })
     feature: Feature,
   ): Promise<void> {
+    this.ensureLb3();
+    await this.lb3.authUtils.authorizeFeatureWrite(id, this.featureRepository);
     await this.featureRepository.updateById(id, feature);
   }
 
@@ -149,7 +159,9 @@ export class FeatureController {
     @param.path.string('id') id: string,
     @requestBody() feature: Feature,
   ): Promise<void> {
-    await this.featureRepository.replaceById(id, feature);
+    throw new HttpErrors.NotFound('Endpoint disabled');
+    // implementation is disabled by throw :
+    // await this.featureRepository.replaceById(id, feature);
   }
 
   @del('/features/{id}')
@@ -157,6 +169,8 @@ export class FeatureController {
     description: 'Feature DELETE success',
   })
   async deleteById(@param.path.string('id') id: string): Promise<void> {
+    this.ensureLb3();
+    await this.lb3.authUtils.authorizeFeatureWrite(id, this.featureRepository);
     await this.featureRepository.deleteById(id);
   }
 
@@ -175,6 +189,7 @@ export class FeatureController {
     @param.query.string('blockId') blockId?: string,
     @param.query.boolean('matchRegExp') matchRegExp?: boolean,
   ): Promise<object[]> {
+    await this.requireAuth();
     this.ensureLb3();
     this.lb3.bindLb3DataSource();
     const filter = this.normalizeStringArray((req.query as any).filter);
@@ -200,6 +215,7 @@ export class FeatureController {
   async searchPost(
     @requestBody() data: object,
   ): Promise<object[]> {
+    await this.requireAuth();
     this.ensureLb3();
     this.lb3.bindLb3DataSource();
     const {blockId, filter, matchRegExp} = data as {
@@ -230,6 +246,7 @@ export class FeatureController {
   async aliasSearch(
     @inject(RestBindings.Http.REQUEST) req: Request,
   ): Promise<object> {
+    await this.requireAuth();
     this.ensureLb3();
     this.lb3.bindLb3DataSource();
     const featureNames = this.normalizeStringArray((req.query as any).featureNames);
@@ -256,6 +273,7 @@ export class FeatureController {
     @param.query.string('blockId') blockId: string,
     @param.query.number('depth') depth: number,
   ): Promise<object[]> {
+    await this.requireAuth();
     this.ensureLb3();
     this.lb3.bindLb3DataSource();
     if (!blockId) {
@@ -283,6 +301,7 @@ export class FeatureController {
   async dnaSequenceSearch(
     @requestBody() data: object,
   ): Promise<string[]> {
+    await this.requireAuth();
     this.ensureLb3();
     this.lb3.bindLb3DataSource();
     const accessToken = this.lb3.authUtils.getAccessToken();
@@ -297,6 +316,11 @@ export class FeatureController {
     if (!this.lb3) {
       this.lb3 = this.lb3WrapFactory(FeatureModule);
     }
+  }
+
+  private async requireAuth(): Promise<void> {
+    this.ensureLb3();
+    await this.lb3.authUtils.requireClientId();
   }
 
   /** Accept 2 simpler formats for string array params filter and featureNames.

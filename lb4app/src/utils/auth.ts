@@ -23,7 +23,8 @@ import {HttpErrors, RequestContext} from '@loopback/rest';
 type ObjectId = any;
 
 import {MongoDsDataSource} from '../datasources';
-import {Block, Dataset} from '../models';
+import {Dataset} from '../models';
+import {clientGroups} from './client-groups';
 import {
   BlockRepository,
   ClientGroupRepository,
@@ -74,6 +75,19 @@ export class AuthUtils {
     return userId.toString();
   }
 
+  private authDisabled(): boolean {
+    return process.env.AUTH === 'NONE';
+  }
+
+  async requireClientId(): Promise<string | undefined> {
+    if (this.authDisabled()) return undefined;
+    const clientId = await this.getClientIdFromToken();
+    if (!clientId) {
+      throw new HttpErrors.Unauthorized('Access token required');
+    }
+    return clientId;
+  }
+
   async getClientGroupIds(clientId: string): Promise<Set<string>> {
     const [clientGroups, ownedGroups] = await Promise.all([
       this.clientGroupRepository.find({where: {clientId}}),
@@ -88,10 +102,11 @@ export class AuthUtils {
   }
 
   async authorizeDatasetClientGroupsRead(dataset: Dataset, clientId?: string, groupIds?: Set<string>): Promise<void> {
-    if (dataset.public) return;
+    if (this.authDisabled()) return;
     if (!clientId) {
-      throw new HttpErrors.Unauthorized('Access token required for private datasets');
+      throw new HttpErrors.Unauthorized('Access token required');
     }
+    if (dataset.public) return;
     if (dataset.clientId && dataset.clientId.toString() === clientId) return;
     if (dataset.groupId) {
       const groups = groupIds ?? await this.getClientGroupIds(clientId);
@@ -101,20 +116,22 @@ export class AuthUtils {
   }
 
   async authorizeDatasetRead(datasetId: string): Promise<void> {
+    if (this.authDisabled()) return;
     /** Copied from authorizeBlocksRead(), which calls
      * authorizeDatasetClientGroupsRead() for each block.dataset, so it separates out
      * these 2 for efficiency. */
     const dataset = await this.datasetRepository.findById(datasetId);
-    const clientId = await this.getClientIdFromToken();
+    const clientId = await this.requireClientId();
     const groupIds = clientId ? await this.getClientGroupIds(clientId) : undefined;
     await this.authorizeDatasetClientGroupsRead(dataset, clientId, groupIds);
   }
 
   async authorizeBlocksRead(blockIds: Array<string | ObjectIdLike>): Promise<void> {
+    if (this.authDisabled()) return;
     if (!blockIds.length) {
       throw new HttpErrors.BadRequest('blockIds must be provided for authorization');
     }
-    const clientId = await this.getClientIdFromToken();
+    const clientId = await this.requireClientId();
     const blocks = await this.blockRepository.find({where: {id: {inq: blockIds}}});
     /** .find( { where { inq }} ) converts the parameter blockIds from string
      * to ObjectId, so cast it and rename it to blockObjectIds.
@@ -125,8 +142,7 @@ export class AuthUtils {
      * That approach can be used if blocks[].id or blockIds may be strings,
      * which is currently not the case.
      */
-    const blockObjectIds : ObjectId[] = blockIds as unknown as ObjectId[];
-    const missing = blockObjectIds.filter(id => !blocks.find(b => id.equals(b.id as unknown as ObjectId)));
+    const missing = blockIds.filter(id => !blocks.find(b => String(b.id) === String(id)));
     if (missing.length) {
       throw new HttpErrors.NotFound(`Blocks not found: ${missing.join(', ')}`);
     }
@@ -141,5 +157,109 @@ export class AuthUtils {
   enforceScopedBlockAccess(): void {
     if (process.env.AUTHZ_ALLOW_UNSCOPED_BLOCKS === 'true') return;
     throw new HttpErrors.BadRequest('This endpoint requires block/dataset scope for authorization');
+  }
+
+  private isOwner(data: {clientId?: unknown} | null | undefined, clientId: string): boolean {
+    if (!data || !data.clientId) return false;
+    return data.clientId.toString() === clientId;
+  }
+
+  private isPublic(data: {public?: boolean} | null | undefined): boolean {
+    return !!data?.public;
+  }
+
+  private isReadOnly(data: {readOnly?: boolean} | null | undefined): boolean {
+    return !!data?.readOnly;
+  }
+
+  private clientIsInGroup(clientId: string, groupId: string): boolean {
+    const groups = clientGroups.clientGroups?.[clientId] ?? [];
+    return groups.includes(groupId);
+  }
+
+  private clientOwnsGroup(clientId: string, groupId: string): boolean {
+    const group = clientGroups.groups?.[groupId];
+    if (!group?.clientId) return false;
+    return group.clientId.toString() === clientId;
+  }
+
+  private canReadDataset(dataset: Dataset, clientId: string, groupIds?: Set<string>): boolean {
+    if (this.isOwner(dataset, clientId)) return true;
+    if (this.isPublic(dataset)) return true;
+    const groupId = dataset.groupId?.toString();
+    if (!groupId) return false;
+    if (groupIds && groupIds.has(groupId)) return true;
+    return this.clientIsInGroup(clientId, groupId) || this.clientOwnsGroup(clientId, groupId);
+  }
+
+  private canWriteDataset(dataset: Dataset, clientId: string): boolean {
+    if (this.isOwner(dataset, clientId)) return true;
+    if (this.isPublic(dataset) && !this.isReadOnly(dataset)) return true;
+    return false;
+  }
+
+  async authorizeDatasetWrite(datasetId: string): Promise<void> {
+    if (this.authDisabled()) return;
+    const clientId = await this.requireClientId();
+    if (!clientId) return;
+    const dataset = await this.datasetRepository.findById(datasetId);
+    if (!this.canWriteDataset(dataset, clientId)) {
+      throw new HttpErrors.Forbidden('Not authorized for dataset write');
+    }
+  }
+
+  async authorizeBlockWrite(blockId: string): Promise<void> {
+    if (this.authDisabled()) return;
+    const clientId = await this.requireClientId();
+    if (!clientId) return;
+    const block = await this.blockRepository.findById(blockId);
+    const dataset = await this.datasetRepository.findById(block.datasetId);
+    if (!this.canWriteDataset(dataset, clientId)) {
+      throw new HttpErrors.Forbidden('Not authorized for block write');
+    }
+  }
+
+  async authorizeFeatureRead(featureId: string, featureRepository: {findById(id: string): Promise<{blockId: string}>}): Promise<void> {
+    if (this.authDisabled()) return;
+    const clientId = await this.requireClientId();
+    if (!clientId) return;
+    const feature = await featureRepository.findById(featureId);
+    const block = await this.blockRepository.findById(feature.blockId);
+    const dataset = await this.datasetRepository.findById(block.datasetId);
+    const groupIds = await this.getClientGroupIds(clientId);
+    if (!this.canReadDataset(dataset, clientId, groupIds)) {
+      throw new HttpErrors.Forbidden('Not authorized for feature read');
+    }
+  }
+
+  async authorizeFeatureWrite(featureId: string, featureRepository: {findById(id: string): Promise<{blockId: string}>}): Promise<void> {
+    if (this.authDisabled()) return;
+    const clientId = await this.requireClientId();
+    if (!clientId) return;
+    const feature = await featureRepository.findById(featureId);
+    const block = await this.blockRepository.findById(feature.blockId);
+    const dataset = await this.datasetRepository.findById(block.datasetId);
+    if (!this.canWriteDataset(dataset, clientId)) {
+      throw new HttpErrors.Forbidden('Not authorized for feature write');
+    }
+  }
+
+  async buildDatasetAccessWhere(where?: Record<string, unknown>): Promise<Record<string, unknown>> {
+    if (this.authDisabled()) return where ?? {};
+    const clientId = await this.requireClientId();
+    if (!clientId) return where ?? {};
+    const groupIds = await this.getClientGroupIds(clientId);
+    const or: Record<string, unknown>[] = [
+      {clientId},
+      {public: true},
+    ];
+    if (groupIds.size) {
+      or.push({groupId: {inq: [...groupIds]}});
+    }
+    const accessWhere = {or};
+    if (where && Object.keys(where).length) {
+      return {and: [accessWhere, where]};
+    }
+    return accessWhere;
   }
 }

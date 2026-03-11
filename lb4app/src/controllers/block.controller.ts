@@ -16,7 +16,7 @@ import {
   del,
   requestBody,
   response,
-  Request, Response, RestBindings,
+  Request, Response, RestBindings, HttpErrors,
 } from '@loopback/rest';
 import {inject} from '@loopback/core';
 
@@ -62,6 +62,7 @@ export class BlockController {
     })
     block: Omit<Block, 'id'>,
   ): Promise<Block> {
+    await this.requireAuth();
     return this.blockRepository.create(block);
   }
 
@@ -73,7 +74,9 @@ export class BlockController {
   async count(
     @param.where(Block) where?: Where<Block>,
   ): Promise<Count> {
-    return this.blockRepository.count(where);
+    throw new HttpErrors.NotFound('Endpoint disabled');
+    // implementation is disabled by throw :
+    // return this.blockRepository.count(where);
   }
 
   @get('/blocks')
@@ -91,6 +94,7 @@ export class BlockController {
   async find(
     @param.filter(Block) filter?: Filter<Block>,
   ): Promise<Block[]> {
+    await this.requireAuth();
     return this.blockRepository.find(filter);
   }
 
@@ -110,7 +114,9 @@ export class BlockController {
     block: Block,
     @param.where(Block) where?: Where<Block>,
   ): Promise<Count> {
-    return this.blockRepository.updateAll(block, where);
+    throw new HttpErrors.NotFound('Endpoint disabled');
+    // implementation is disabled by throw :
+    // return this.blockRepository.updateAll(block, where);
   }
 
   @get('/blocks/{id}')
@@ -126,6 +132,7 @@ export class BlockController {
     @param.path.string('id') id: string,
     @param.filter(Block, {exclude: 'where'}) filter?: FilterExcludingWhere<Block>
   ): Promise<Block> {
+    await this.lb3.authUtils.authorizeBlocksRead([id]);
     return this.blockRepository.findById(id, filter);
   }
 
@@ -144,6 +151,7 @@ export class BlockController {
     })
     block: Block,
   ): Promise<void> {
+    await this.lb3.authUtils.authorizeBlockWrite(id);
     await this.blockRepository.updateById(id, block);
   }
 
@@ -155,7 +163,9 @@ export class BlockController {
     @param.path.string('id') id: string,
     @requestBody() block: Block,
   ): Promise<void> {
-    await this.blockRepository.replaceById(id, block);
+    throw new HttpErrors.NotFound('Endpoint disabled');
+    // implementation is disabled by throw :
+    // await this.blockRepository.replaceById(id, block);
   }
 
   @del('/blocks/{id}')
@@ -163,6 +173,7 @@ export class BlockController {
     description: 'Block DELETE success',
   })
   async deleteById(@param.path.string('id') id: string): Promise<void> {
+    await this.lb3.authUtils.authorizeBlockWrite(id);
     await this.blockRepository.deleteById(id);
   }
 
@@ -205,6 +216,7 @@ export class BlockController {
   async blockFeaturesAdd(
     @requestBody() data: object,
   ): Promise<string> {
+    await this.requireAuth();
     const blockId = (data as any)?.blockId;
     if (blockId) {
       await this.lb3.authUtils.authorizeBlocksRead([blockId]);
@@ -281,6 +293,7 @@ export class BlockController {
     @param.query.number('nBins') nBins?: number,
     @param.query.boolean('useBucketAuto') useBucketAuto?: boolean,
   ): Promise<object[]> {
+    await this.requireAuth();
     noCacheResult(res);
     if (id) {
       await this.lb3.authUtils.authorizeBlocksRead([id]);
@@ -326,6 +339,7 @@ export class BlockController {
     @inject(RestBindings.Http.RESPONSE) res: Response,
     @param.query.string('id') id?: string,
   ): Promise<object[]> {
+    await this.requireAuth();
     if (id) {
       await this.lb3.authUtils.authorizeBlocksRead([id]);
     } else {
@@ -351,6 +365,7 @@ export class BlockController {
     @inject(RestBindings.Http.RESPONSE) res: Response,
     @param.query.string('fieldName') fieldName: string,
   ): Promise<object[]> {
+    await this.requireAuth();
     this.lb3.authUtils.enforceScopedBlockAccess();
     this.lb3.bindLb3DataSource();
     const options = null;
@@ -643,6 +658,7 @@ export class BlockController {
   async cacheClearKey(
     @param.query.string('cacheId') cacheId: string,
   ): Promise<object> {
+    await this.requireAuth();
     this.lb3.authUtils.enforceScopedBlockAccess();
     this.lb3.bindLb3DataSource();
     return this.lb3.lb3Call<object>(cb => {
@@ -651,7 +667,9 @@ export class BlockController {
     });
   }
 
-
+  private async requireAuth(): Promise<void> {
+    await this.lb3.authUtils.requireClientId();
+  }
 
   //----------------------------------------------------------------------------
 }

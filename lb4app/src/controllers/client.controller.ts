@@ -36,6 +36,7 @@ import {
 
 import {Client} from '../models';
 import {ClientRepository} from '../repositories';
+import {MongoDsDataSource} from '../datasources';
 const {Lb3ModelClient} = require('../../lb3app/common/models/client');
 
 //------------------------------------------------------------------------------
@@ -83,6 +84,8 @@ export class ClientController {
     public userService: UserService<Client, Credentials>,
     @inject('services.Email')
     public emailService: any,
+    @inject('datasources.mongoDs')
+    public mongoDs: MongoDsDataSource,
     @repository(ClientRepository)
     public clientRepository : ClientRepository,
   ) {
@@ -98,6 +101,7 @@ export class ClientController {
     content: {'application/json': {schema: getModelSchemaRef(Client)}},
   })
   async create(
+    @inject(RestBindings.Http.REQUEST) req: Request,
     @requestBody({
       content: {
         'application/json': {
@@ -110,6 +114,7 @@ export class ClientController {
     })
     client: Omit<Client, 'id'>,
   ): Promise<Client> {
+    await this.requireAccessToken(req);
     return this.clientRepository.create(client);
   }
 
@@ -121,7 +126,9 @@ export class ClientController {
   async count(
     @param.where(Client) where?: Where<Client>,
   ): Promise<Count> {
-    return this.clientRepository.count(where);
+    throw new HttpErrors.NotFound('Endpoint disabled');
+    // implementation is disabled by throw :
+    // return this.clientRepository.count(where);
   }
 
   @get('/clients')
@@ -139,7 +146,9 @@ export class ClientController {
   async find(
     @param.filter(Client) filter?: Filter<Client>,
   ): Promise<Client[]> {
-    return this.clientRepository.find(filter);
+    throw new HttpErrors.NotFound('Endpoint disabled');
+    // implementation is disabled by throw :
+    // return this.clientRepository.find(filter);
   }
 
   @patch('/clients')
@@ -158,7 +167,9 @@ export class ClientController {
     client: Client,
     @param.where(Client) where?: Where<Client>,
   ): Promise<Count> {
-    return this.clientRepository.updateAll(client, where);
+    throw new HttpErrors.NotFound('Endpoint disabled');
+    // implementation is disabled by throw :
+    // return this.clientRepository.updateAll(client, where);
   }
 
   @get('/clients/{id}')
@@ -171,9 +182,11 @@ export class ClientController {
     },
   })
   async findById(
+    @inject(RestBindings.Http.REQUEST) req: Request,
     @param.path.string('id') id: string,
     @param.filter(Client, {exclude: 'where'}) filter?: FilterExcludingWhere<Client>
   ): Promise<Client> {
+    await this.requireAccessToken(req);
     return this.clientRepository.findById(id, filter);
   }
 
@@ -192,7 +205,9 @@ export class ClientController {
     })
     client: Client,
   ): Promise<void> {
-    await this.clientRepository.updateById(id, client);
+    throw new HttpErrors.NotFound('Endpoint disabled');
+    // implementation is disabled by throw :
+    // await this.clientRepository.updateById(id, client);
   }
 
   @put('/clients/{id}')
@@ -200,9 +215,11 @@ export class ClientController {
     description: 'Client PUT success',
   })
   async replaceById(
+    @inject(RestBindings.Http.REQUEST) req: Request,
     @param.path.string('id') id: string,
     @requestBody() client: Client,
   ): Promise<void> {
+    await this.requireAccessToken(req);
     await this.clientRepository.replaceById(id, client);
   }
 
@@ -211,7 +228,9 @@ export class ClientController {
     description: 'Client DELETE success',
   })
   async deleteById(@param.path.string('id') id: string): Promise<void> {
-    await this.clientRepository.deleteById(id);
+    throw new HttpErrors.NotFound('Endpoint disabled');
+    // implementation is disabled by throw :
+    // await this.clientRepository.deleteById(id);
   }
 
   //----------------------------------------------------------------------------
@@ -427,5 +446,27 @@ export class ClientController {
       throw new HttpErrors.Unauthorized('Access token is invalid');
     }
     return String(id);
+  }
+
+  private async requireAccessToken(req: Request): Promise<string | undefined> {
+    if (process.env.AUTH === 'NONE') return undefined;
+    const headerToken = req.headers?.authorization;
+    const queryToken = (req.query as any)?.access_token;
+    const rawToken = Array.isArray(headerToken) ? headerToken[0] : headerToken || queryToken;
+    if (!rawToken || typeof rawToken !== 'string') {
+      throw new HttpErrors.Unauthorized('Access token is required');
+    }
+    const token = rawToken.startsWith('Bearer ') ? rawToken.slice(7) : rawToken;
+    const connector = this.mongoDs.connector as any;
+    const db = connector?.db ?? connector;
+    if (!db?.collection) {
+      throw new HttpErrors.Unauthorized('Access token is invalid');
+    }
+    const accessToken = await db.collection('AccessToken').findOne({_id: token});
+    const userId = accessToken?.userId;
+    if (!userId) {
+      throw new HttpErrors.Unauthorized('Access token is invalid');
+    }
+    return userId.toString();
   }
 }

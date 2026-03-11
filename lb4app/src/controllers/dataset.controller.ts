@@ -59,6 +59,7 @@ export class DatasetController {
     })
     dataset: Dataset,
   ): Promise<Dataset> {
+    await this.requireAuth();
     return this.datasetRepository.create(dataset);
   }
 
@@ -70,7 +71,9 @@ export class DatasetController {
   async count(
     @param.where(Dataset) where?: Where<Dataset>,
   ): Promise<Count> {
-    return this.datasetRepository.count(where);
+    throw new HttpErrors.NotFound('Endpoint disabled');
+    // implementation is disabled by throw :
+    // return this.datasetRepository.count(where);
   }
 
   @get('/datasets')
@@ -88,7 +91,12 @@ export class DatasetController {
   async find(
     @param.filter(Dataset) filter?: Filter<Dataset>,
   ): Promise<Dataset[]> {
-    return this.datasetRepository.find(filter);
+    await this.requireAuth();
+    const scopedWhere = await this.lb3.authUtils.buildDatasetAccessWhere(
+      (filter as any)?.where,
+    ) as Where<Dataset>;
+    const scopedFilter = {...(filter ?? {}), where: scopedWhere} as Filter<Dataset>;
+    return this.datasetRepository.find(scopedFilter);
   }
 
   @patch('/datasets')
@@ -107,7 +115,9 @@ export class DatasetController {
     dataset: Dataset,
     @param.where(Dataset) where?: Where<Dataset>,
   ): Promise<Count> {
-    return this.datasetRepository.updateAll(dataset, where);
+    throw new HttpErrors.NotFound('Endpoint disabled');
+    // implementation is disabled by throw :
+    // return this.datasetRepository.updateAll(dataset, where);
   }
 
   @get('/datasets/{id}')
@@ -123,6 +133,8 @@ export class DatasetController {
     @param.path.string('id') id: string,
     @param.filter(Dataset, {exclude: 'where'}) filter?: FilterExcludingWhere<Dataset>
   ): Promise<Dataset> {
+    this.ensureLb3();
+    await this.lb3.authUtils.authorizeDatasetRead(id);
     return this.datasetRepository.findById(id, filter);
   }
 
@@ -141,6 +153,8 @@ export class DatasetController {
     })
     dataset: Dataset,
   ): Promise<void> {
+    this.ensureLb3();
+    await this.lb3.authUtils.authorizeDatasetWrite(id);
     await this.datasetRepository.updateById(id, dataset);
   }
 
@@ -152,7 +166,9 @@ export class DatasetController {
     @param.path.string('id') id: string,
     @requestBody() dataset: Dataset,
   ): Promise<void> {
-    await this.datasetRepository.replaceById(id, dataset);
+    throw new HttpErrors.NotFound('Endpoint disabled');
+    // implementation is disabled by throw :
+    // await this.datasetRepository.replaceById(id, dataset);
   }
 
   @del('/datasets/{id}')
@@ -160,6 +176,8 @@ export class DatasetController {
     description: 'Dataset DELETE success',
   })
   async deleteById(@param.path.string('id') id: string): Promise<void> {
+    this.ensureLb3();
+    await this.lb3.authUtils.authorizeDatasetWrite(id);
     await this.datasetRepository.deleteById(id);
   }
 
@@ -176,6 +194,7 @@ export class DatasetController {
   async loadFromURL(
     @requestBody() dataDescription?: object,
   ): Promise<object> {
+    await this.requireAuth();
     this.ensureLb3();
     this.lb3.bindLb3DataSource();
     const options = null;
@@ -220,6 +239,7 @@ export class DatasetController {
     @inject(RestBindings.Http.REQUEST) req: Request,
     @requestBody() msg: object,
   ): Promise<object> {
+    await this.requireAuth();
     const contentType = req.headers['content-type'];
     if (
       !msg ||
@@ -274,6 +294,7 @@ export class DatasetController {
     @param.query.string('fileName') fileName?: string,
     @param.query.boolean('replaceDataset') replaceDataset?: boolean,
   ): Promise<object> {
+    await this.requireAuth();
     this.ensureLb3();
     this.lb3.bindLb3DataSource();
     const accessToken = this.lb3.authUtils.getAccessToken();
@@ -308,6 +329,7 @@ export class DatasetController {
   async tableUpload(
     @requestBody() data: object,
   ): Promise<string> {
+    await this.requireAuth();
     this.ensureLb3();
     this.lb3.bindLb3DataSource();
     const options = null;
@@ -329,6 +351,7 @@ export class DatasetController {
     @inject(RestBindings.Http.REQUEST) req: Request,
     @requestBody() data: object,
   ): Promise<string> {
+    await this.requireAuth();
     this.ensureLb3();
     this.lb3.bindLb3DataSource();
     const options = null;
@@ -349,6 +372,7 @@ export class DatasetController {
   async cacheClear(
     @param.query.number('time') time: number,
   ): Promise<object[]> {
+    await this.requireAuth();
     this.ensureLb3();
     this.lb3.bindLb3DataSource();
     const options = null;
@@ -370,6 +394,7 @@ export class DatasetController {
     @param.query.string('id') id: string,
     @requestBody() userOptions?: object,
   ): Promise<number> {
+    await this.requireAuth();
     this.ensureLb3();
     this.lb3.bindLb3DataSource();
     const options = null;
@@ -390,6 +415,7 @@ export class DatasetController {
   async naturalSearch(
     @param.query.string('search_text') searchText: string,
   ): Promise<object[]> {
+    await this.requireAuth();
     this.ensureLb3();
     this.lb3.bindLb3DataSource();
     const options = null;
@@ -410,6 +436,7 @@ export class DatasetController {
   async text2Commands(
     @param.query.string('commands_text') commandsText: string,
   ): Promise<object[]> {
+    await this.requireAuth();
     this.ensureLb3();
     this.lb3.bindLb3DataSource();
     const options = null;
@@ -428,6 +455,7 @@ export class DatasetController {
     },
   })
   async getEmbeddings(): Promise<object[]> {
+    await this.requireAuth();
     this.ensureLb3();
     this.lb3.bindLb3DataSource();
     const options = null;
@@ -441,5 +469,10 @@ export class DatasetController {
     if (!this.lb3) {
       this.lb3 = this.lb3WrapFactory(DatasetModule);
     }
+  }
+
+  private async requireAuth(): Promise<void> {
+    this.ensureLb3();
+    await this.lb3.authUtils.requireClientId();
   }
 }
