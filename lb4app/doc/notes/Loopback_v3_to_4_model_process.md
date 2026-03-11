@@ -54,10 +54,74 @@ This summarizes the working pattern used to migrate LB3 models (Block, Dataset) 
   - `authorizeDatasetRead(...)`
   - `authorizeDatasetClientGroupsRead(...)` (internal)
   - `enforceScopedBlockAccess()`
+- Also provides:
+  - `requireClientId()` (AccessToken DB lookup; honors `AUTH=NONE`)
+  - `authorizeDatasetWrite(...)`, `authorizeBlockWrite(...)`, `authorizeFeatureRead(...)`, `authorizeFeatureWrite(...)`
+  - `buildDatasetAccessWhere(...)` (applies LB3 record access filtering for dataset queries)
 
 ### Applied in controllers
 - Block endpoints: use `authorizeBlocksRead` or `enforceScopedBlockAccess`.
 - Dataset endpoints: use `authorizeDatasetRead(datasetId)` when datasetId is the auth boundary.
+- CRUD endpoints in Block/Dataset/Feature:
+  - `create/find` require token (`requireClientId()`).
+  - `findById` uses read checks.
+  - `updateById/deleteById` use write checks.
+  - `count/updateAll/replaceById` are disabled to mirror LB3 `limitRemoteMethods`.
+
+---
+
+## 2.1) Porting LB3 ACL + access.js behavior into LB4 controllers
+
+LB3 sources:
+- `lb3app/common/utilities/acl.js` (assignRulesRecord + disable remote methods)
+- `lb3app/server/boot/access.js` (Role resolvers `viewer`/`editor`, per-request access checks)
+- `lb3app/server/boot/authentication.js` (enableAuth unless `AUTH=NONE`)
+- `lb3app/common/utilities/identity.js` (AccessToken parsing, group ownership, access filtering)
+
+LB4 mapping:
+
+1) **LB3 ACL rules (`assignRulesRecord`) → controller guards**
+- LB3 denies `$everyone`, allows `viewer` read, allows `editor` write.
+- LB4 applies equivalent checks in controllers via `AuthUtils`:
+  - Read: `authorizeDatasetRead`, `authorizeBlocksRead`, `authorizeFeatureRead`
+  - Write: `authorizeDatasetWrite`, `authorizeBlockWrite`, `authorizeFeatureWrite`
+  - All use AccessToken DB lookup and group membership/ownership (via `clientGroups` cache).
+
+2) **LB3 `limitRemoteMethods` / `limitRemoteMethodsRelated` → disable LB4 endpoints**
+- LB3 disables `count`, `updateAll`, `replace`, `replaceById`, `upsert`, etc.
+- LB4 mirrors this by returning 404 in the corresponding controller methods.
+  - Examples: `count`, `updateAll`, `replaceById` are disabled in Block/Dataset/Feature/Client controllers.
+  - Endpoints not present in LB4 (`upsert`, `findOne`, `exists`, `createChangeStream`) require no action.
+
+3) **LB3 access.js Role resolvers → per-endpoint checks in controllers**
+- LB3 `genericResolver` checks:
+  - authenticated (`accessToken.userId`)
+  - method allowlist (certain methods are always allowed)
+  - per-model ownership/group/public/readOnly checks, including special handling for `paths*`
+- LB4 reproduces this as explicit controller checks:
+  - `requireClientId()` enforces login unless `AUTH=NONE`.
+  - `authorizeBlocksRead` covers `paths*` endpoints requiring both block IDs.
+  - `enforceScopedBlockAccess()` rejects endpoints lacking block/dataset scope (matching LB3 deny paths).
+  - Dataset/block/feature CRUD uses the same ownership/group/public/readOnly rules.
+
+4) **LB3 identity.js access filtering (`queryFilterAccessible`) → dataset find scoping**
+- LB3 `Record.observe('access')` injects a `where` filter limiting results to:
+  - owned records, public records, or records in client’s groups.
+- LB4 mirrors this using:
+  - `AuthUtils.buildDatasetAccessWhere(...)`
+  - Applied in `DatasetController.find(...)` to scope dataset queries.
+
+5) **LB3 authentication.js (`enableAuth`) → LB4 token presence check**
+- LB3 enables auth unless `AUTH=NONE`.
+- LB4 respects the same env via:
+  - `AuthUtils.requireClientId()` and controller `requireAuth()` helpers.
+  - `AUTH=NONE` bypasses checks in `AuthUtils`.
+
+Use this mapping for remaining LB3 models:
+1. Identify ACL calls (`assignRulesRecord` + `limitRemoteMethods*`).
+2. Disable LB4 endpoints that LB3 disables.
+3. Add controller checks for read/write based on owner/group/public/readOnly.
+4. For list endpoints, apply access scoping similar to `queryFilterAccessible`.
 
 ---
 
