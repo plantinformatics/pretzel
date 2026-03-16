@@ -90,7 +90,9 @@ export class GroupController {
   async count(
     @param.where(Group) where?: Where<Group>,
   ): Promise<Count> {
-    return this.groupRepository.count(where);
+    throw new HttpErrors.NotFound('Endpoint disabled');
+    // implementation is disabled by throw :
+    // return this.groupRepository.count(where);
   }
 
   @get('/groups')
@@ -108,6 +110,7 @@ export class GroupController {
   async find(
     @param.filter(Group) filter?: Filter<Group>,
   ): Promise<Group[]> {
+    await this.requireAuth();
     return this.groupRepository.find(filter);
   }
 
@@ -127,7 +130,9 @@ export class GroupController {
     group: Group,
     @param.where(Group) where?: Where<Group>,
   ): Promise<Count> {
-    return this.groupRepository.updateAll(group, where);
+    throw new HttpErrors.NotFound('Endpoint disabled');
+    // implementation is disabled by throw :
+    // return this.groupRepository.updateAll(group, where);
   }
 
   @get('/groups/{id}')
@@ -143,6 +148,7 @@ export class GroupController {
     @param.path.string('id') id: string,
     @param.filter(Group, {exclude: 'where'}) filter?: FilterExcludingWhere<Group>
   ): Promise<Group> {
+    await this.authorizeGroupRead(id);
     return this.groupRepository.findById(id, filter);
   }
 
@@ -161,6 +167,7 @@ export class GroupController {
     })
     group: Group,
   ): Promise<void> {
+    await this.authorizeGroupWrite(id);
     await this.groupRepository.updateById(id, group);
   }
 
@@ -172,7 +179,9 @@ export class GroupController {
     @param.path.string('id') id: string,
     @requestBody() group: Group,
   ): Promise<void> {
-    await this.groupRepository.replaceById(id, group);
+    throw new HttpErrors.NotFound('Endpoint disabled');
+    // implementation is disabled by throw :
+    // await this.groupRepository.replaceById(id, group);
   }
 
   @del('/groups/{id}')
@@ -180,6 +189,7 @@ export class GroupController {
     description: 'Group DELETE success',
   })
   async deleteById(@param.path.string('id') id: string): Promise<void> {
+    await this.authorizeGroupWrite(id);
     const accessToken = await this.buildLb3AccessToken();
     await this.invokeLb3Observe('before delete', {where: {id}, accessToken});
     await this.groupRepository.deleteById(id);
@@ -241,6 +251,7 @@ export class GroupController {
     if (!id || !addId) {
       throw new HttpErrors.BadRequest('id and addId are required');
     }
+    await this.authorizeGroupWrite(id);
     const options = await this.buildLb3Options();
     this.lb3.bindLb3DataSource();
     return this.lb3.lb3Call<object>(cb => {
@@ -278,6 +289,7 @@ export class GroupController {
     if (!id || !addEmail) {
       throw new HttpErrors.BadRequest('id and addEmail are required');
     }
+    await this.requireAuth();
     const options = await this.buildLb3Options();
     this.lb3.bindLb3DataSource();
     return this.lb3.lb3Call<object>(cb => {
@@ -315,7 +327,7 @@ export class GroupController {
 
   private async buildLb3AccessToken(): Promise<Lb3AccessToken> {
     this.ensureLb3();
-    const clientId = await this.lb3.authUtils.requireClientId();
+    const clientId = await this.requireAuth();
     if (!clientId) {
       throw new HttpErrors.Unauthorized('Access token required');
     }
@@ -337,6 +349,40 @@ export class GroupController {
       // @ts-ignore
       return this.lb3.model[own ? 'own' : 'in'](options);
     });
+  }
+
+  private async requireAuth(): Promise<string> {
+    this.ensureLb3();
+    const clientId = await this.lb3.authUtils.requireClientId();
+    if (!clientId) {
+      throw new HttpErrors.Unauthorized('Access token required');
+    }
+    return clientId;
+  }
+
+  private async authorizeGroupRead(groupId: string): Promise<void> {
+    const clientId = await this.requireAuth();
+    const group = await this.groupRepository.findById(groupId);
+    if (group.clientId?.toString() === clientId) {
+      return;
+    }
+    const groupIds = await this.lb3.authUtils.getClientGroupIds(clientId);
+    if (groupIds.has(groupId)) {
+      return;
+    }
+    if ((group as any).public) {
+      return;
+    }
+    throw new HttpErrors.Forbidden('Not authorized for group read');
+  }
+
+  private async authorizeGroupWrite(groupId: string): Promise<void> {
+    const clientId = await this.requireAuth();
+    const group = await this.groupRepository.findById(groupId);
+    if (group.clientId?.toString() === clientId) {
+      return;
+    }
+    throw new HttpErrors.Forbidden('Not authorized for group write');
   }
 
   private async invokeLb3BeforeRemoteCreate(
