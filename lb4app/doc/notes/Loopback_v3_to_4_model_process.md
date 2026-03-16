@@ -258,6 +258,16 @@ flowchart LR
   BlockCtrl -->|uses| Wrap
   DatasetCtrl -->|uses| Wrap
 
+## 11) LB3 -> LB4 query/include and promise-returning methods
+
+- LB3 `find()` include syntax can require conversion for LB4 repositories.
+  - Example: LB3 `include: 'group'` -> LB4 `include: [{relation: 'group'}]`.
+- For repository relations loaded via `include`, register the inclusion resolver in the repository constructor.
+  - Example: in `ClientGroupRepository` add `this.registerInclusionResolver('group', this.group.inclusionResolver);`.
+- Some LB3 model functions return a Promise directly and do not use Node callback style.
+  - Add and use `lb3CallNoCb()` in `src/utils/lb3-model-wrap.ts`.
+  - Use `lb3CallNoCb()` from controllers for those methods (example: `Group.own()` / `Group.in()` in `GroupController.lb3Groups()`).
+
   Lb3Class -->|app.models mapped to| Repos[LB4 Repositories]
   Wrap -->|bindLb3DataSource| MongoDs[MongoDsDataSource]
 ```

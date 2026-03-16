@@ -31,6 +31,9 @@ export class Group extends Entity {
 
   @hasMany(() => ClientGroup)
   clientGroups: ClientGroup[];
+
+  @hasMany(() => Client, {through: {model: () => ClientGroup}})
+  clients: Client[];
   // Define well-known properties here
 
   // Indexer property to allow additional data

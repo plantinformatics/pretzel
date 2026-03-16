@@ -21,7 +21,12 @@ export class ClientGroupRepository extends DefaultCrudRepository<
   ) {
     super(ClientGroup, dataSource);
     this.group = this.createBelongsToAccessorFor('group', groupRepositoryGetter,);
+    /* This is used in Group.in() (lb4app/lb3app/common/models/group.js) which
+     * includes group in the result of ClientGroup.find().  */
+    this.registerInclusionResolver('group', this.group.inclusionResolver);
     this.client = this.createBelongsToAccessorFor('client', clientRepositoryGetter,);
+    // may not be required.
+    this.registerInclusionResolver('client', this.client.inclusionResolver);
   }
 
   /** id is omitted, and provided by the database. */

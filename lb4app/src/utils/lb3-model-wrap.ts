@@ -12,8 +12,15 @@ type Lb3Module = (modelClass: any) => void;
 
 export class Lb3ModelClass {
   static remoteMethod() {}
-  static observe() {}
-  static afterRemote() {}
+  static observe(eventName: string, eventHandlerFunction: Function) {
+    (this as any)[`observe_${eventName}`] = eventHandlerFunction;
+  }
+  static beforeRemote(methodName: string, eventHandlerFunction: Function) {
+    (this as any)[`beforeRemote_${methodName}`] = eventHandlerFunction;
+  }
+  static afterRemote(methodName: string, eventHandlerFunction: Function) {
+    (this as any)[`afterRemote_${methodName}`] = eventHandlerFunction;
+  }
   static dataSource = {connector: null};
   static app: any = {};
 }
@@ -65,5 +72,9 @@ export class Lb3ModelWrap {
       }
       invoke(cb);
     });
+  }
+
+  lb3CallNoCb<T>(invoke: () => Promise<T>): Promise<T> {
+    return invoke();
   }
 }

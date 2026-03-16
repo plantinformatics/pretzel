@@ -16,14 +16,47 @@ import {
   del,
   requestBody,
   response,
+  HttpErrors,
 } from '@loopback/rest';
+import {inject} from '@loopback/core';
 import {Group} from '../models';
 import {GroupRepository} from '../repositories';
+import {Lb3ModelWrap} from '../utils/lb3-model-wrap';
+import {Lb3ModelWrapFactory} from '../utils/lb3-model-wrap.provider';
+
+// @ts-ignore
+const GroupModule = require('../../lb3app/common/models/group');
+
+type GroupAddMemberBody = {
+  id: string;
+  addId: string;
+};
+
+type GroupAddMemberEmailBody = {
+  id: string;
+  addEmail: string;
+};
+
+type Lb3UserId = {
+  toHexString(): string;
+  toString(): string;
+};
+
+type Lb3AccessToken = {
+  userId: Lb3UserId;
+};
+
+type Lb3Options = {
+  accessToken: Lb3AccessToken;
+};
 
 export class GroupController {
+  private lb3: Lb3ModelWrap;
+
   constructor(
     @repository(GroupRepository)
     public groupRepository : GroupRepository,
+    @inject('utils.Lb3ModelWrap') private lb3WrapFactory: Lb3ModelWrapFactory,
   ) {}
 
   @post('/groups')
@@ -44,6 +77,8 @@ export class GroupController {
     })
     group: Omit<Group, 'id'>,
   ): Promise<Group> {
+    const accessToken = await this.buildLb3AccessToken();
+    await this.invokeLb3BeforeRemoteCreate(group, accessToken);
     return this.groupRepository.create(group);
   }
 
@@ -145,10 +180,111 @@ export class GroupController {
     description: 'Group DELETE success',
   })
   async deleteById(@param.path.string('id') id: string): Promise<void> {
+    const accessToken = await this.buildLb3AccessToken();
+    await this.invokeLb3Observe('before delete', {where: {id}, accessToken});
     await this.groupRepository.deleteById(id);
+    await this.invokeLb3Observe('after delete', {where: {id}, accessToken});
   }
 
   // -----------------------------------------------------------------------------
+
+  @get('/Groups/own', {
+    responses: {
+      '200': {
+        description: 'List groups which this user has created / owns',
+        content: {'application/json': {schema: {type: 'array', items: {type: 'object'}}}},
+      },
+    },
+  })
+  async groupsOwn(): Promise<object[]> {
+    return this.lb3Groups(true);
+  }
+
+  @get('/Groups/in', {
+    responses: {
+      '200': {
+        description: 'List groups which this user is in',
+        content: {'application/json': {schema: {type: 'array', items: {type: 'object'}}}},
+      },
+    },
+  })
+  async groupsIn(): Promise<object[]> {
+    return this.lb3Groups(false);
+  }
+
+  @post('/Groups/addMember', {
+    responses: {
+      '200': {
+        description: 'Add user to group, i.e. create a ClientGroup',
+        content: {'application/json': {schema: {type: 'object'}}},
+      },
+    },
+  })
+  async addMember(
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            required: ['id', 'addId'],
+            properties: {
+              id: {type: 'string'},
+              addId: {type: 'string'},
+            },
+          },
+        },
+      },
+    })
+    body: GroupAddMemberBody,
+  ): Promise<object> {
+    const {id, addId} = body ?? {};
+    if (!id || !addId) {
+      throw new HttpErrors.BadRequest('id and addId are required');
+    }
+    const options = await this.buildLb3Options();
+    this.lb3.bindLb3DataSource();
+    return this.lb3.lb3Call<object>(cb => {
+      // @ts-ignore
+      this.lb3.model.addMember(id, addId, options, cb);
+    });
+  }
+
+  @post('/Groups/addMemberEmail', {
+    responses: {
+      '200': {
+        description: 'Add user email to group, i.e. create a ClientGroup',
+        content: {'application/json': {schema: {type: 'object'}}},
+      },
+    },
+  })
+  async addMemberEmail(
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            required: ['id', 'addEmail'],
+            properties: {
+              id: {type: 'string'},
+              addEmail: {type: 'string'},
+            },
+          },
+        },
+      },
+    })
+    body: GroupAddMemberEmailBody,
+  ): Promise<object> {
+    const {id, addEmail} = body ?? {};
+    if (!id || !addEmail) {
+      throw new HttpErrors.BadRequest('id and addEmail are required');
+    }
+    const options = await this.buildLb3Options();
+    this.lb3.bindLb3DataSource();
+    return this.lb3.lb3Call<object>(cb => {
+      // @ts-ignore
+      this.lb3.model.addMemberEmail(id, addEmail, options, cb);
+    });
+  }
 
   @get('/api/groups/own')
   @response(200, {
@@ -166,9 +302,87 @@ export class GroupController {
     @param.filter(Group) filter?: Filter<Group>,
   ): Promise<Group[]> {
     console.log('/api/groups/own', filter);
-    return this.groupRepository.find(filter);
+    return this.lb3Groups(true) as Promise<Group[]>;
   }
 
   // -----------------------------------------------------------------------------
+
+  private ensureLb3() {
+    if (!this.lb3) {
+      this.lb3 = this.lb3WrapFactory(GroupModule);
+    }
+  }
+
+  private async buildLb3AccessToken(): Promise<Lb3AccessToken> {
+    this.ensureLb3();
+    const clientId = await this.lb3.authUtils.requireClientId();
+    if (!clientId) {
+      throw new HttpErrors.Unauthorized('Access token required');
+    }
+    const userId: Lb3UserId = {
+      toHexString: () => clientId,
+      toString: () => clientId,
+    };
+    return {userId};
+  }
+
+  private async buildLb3Options(): Promise<Lb3Options> {
+    return {accessToken: await this.buildLb3AccessToken()};
+  }
+
+  private async lb3Groups(own: boolean): Promise<object[]> {
+    const options = await this.buildLb3Options();
+    this.lb3.bindLb3DataSource();
+    return this.lb3.lb3CallNoCb<object[]>(() => {
+      // @ts-ignore
+      return this.lb3.model[own ? 'own' : 'in'](options);
+    });
+  }
+
+  private async invokeLb3BeforeRemoteCreate(
+    data: Omit<Group, 'id'>,
+    accessToken: Lb3AccessToken,
+  ): Promise<void> {
+    this.ensureLb3();
+    const handler = this.lb3.model['beforeRemote_create'];
+    if (typeof handler !== 'function') {
+      return;
+    }
+    const context = {accessToken, args: {data}};
+    await new Promise<void>((resolve, reject) => {
+      handler(context, undefined, (error?: unknown) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve();
+        }
+      });
+    });
+  }
+
+  private async invokeLb3Observe(
+    eventName: string,
+    args: {where: {id: string}; accessToken: Lb3AccessToken},
+  ): Promise<void> {
+    this.ensureLb3();
+    const handler = this.lb3.model[`observe_${eventName}`];
+    if (typeof handler !== 'function') {
+      return;
+    }
+    const ctx = {
+      Model: this.lb3.model,
+      where: args.where,
+      options: {accessToken: args.accessToken},
+    };
+    await new Promise<void>((resolve, reject) => {
+      handler(ctx, (error?: unknown) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve();
+        }
+      });
+    });
+  }
 
 }

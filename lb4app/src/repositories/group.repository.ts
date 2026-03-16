@@ -1,5 +1,5 @@
 import {inject, Getter} from '@loopback/core';
-import {DefaultCrudRepository, repository, BelongsToAccessor, HasManyRepositoryFactory, Options} from '@loopback/repository';
+import {DefaultCrudRepository, repository, BelongsToAccessor, HasManyRepositoryFactory, Options, HasManyThroughRepositoryFactory} from '@loopback/repository';
 import {MongoDsDataSource} from '../datasources';
 import {Group, GroupRelations, Client, ClientGroup} from '../models';
 import {ClientRepository} from './client.repository';
@@ -16,10 +16,17 @@ export class GroupRepository extends DefaultCrudRepository<
 
   public readonly clientGroups: HasManyRepositoryFactory<ClientGroup, typeof Group.prototype.id>;
 
+  public readonly clients: HasManyThroughRepositoryFactory<Client, typeof Client.prototype.id,
+          ClientGroup,
+          typeof Group.prototype.id
+        >;
+
   constructor(
     @inject('datasources.mongoDs') dataSource: MongoDsDataSource, @repository.getter('ClientRepository') protected clientRepositoryGetter: Getter<ClientRepository>, @repository.getter('ClientGroupRepository') protected clientGroupRepositoryGetter: Getter<ClientGroupRepository>,
   ) {
     super(Group, dataSource);
+    this.clients = this.createHasManyThroughRepositoryFactoryFor('clients', clientRepositoryGetter, clientGroupRepositoryGetter,);
+    this.registerInclusionResolver('clients', this.clients.inclusionResolver);
     this.clientGroups = this.createHasManyRepositoryFactoryFor('clientGroups', clientGroupRepositoryGetter,);
     this.registerInclusionResolver(
       'clientGroups',

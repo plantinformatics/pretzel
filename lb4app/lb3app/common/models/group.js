@@ -80,9 +80,10 @@ module.exports = function(Group) {
       where: {
         clientId: ObjectId(clientIdString)
       },
-      include : 'clients'
+      // for change from LB3 to LB4 : wrapped 'clients' with [{ relation : } ]
+      include : [{ relation: 'clients' }]
     },
-    listP = Group.find(query, options);
+    listP = this.app.models.Group.find(query, options);
     listP.then((list) => console.log(fnName, clientIdString, list.length || JSON.stringify([query, options]) ));
 
     return listP;
@@ -112,20 +113,26 @@ module.exports = function(Group) {
       where: {
         clientId: ObjectId(clientIdString)
       },
-      include : 'group'
+      /* for change from LB3 to LB4 : wrapped 'group' with [{ relation : } ]
+       * This form also works : include: [{ relation: 'group', scope: { where: { ... } } }]
+       */
+      include : [{ relation: 'group' }]
     },
     listP = this.app.models.ClientGroup.find(query, options)
       .then(function(clientGroups) {
         let
+        // testing in LB4 : all of clientGroups[] have a defined .group, as expected.
         filtered = clientGroups
           .filter((clientGroup) => {
-            /** .group() accesses (equivalent) clientGroup.__cachedRelations?.group */
-            let ok = !!clientGroup.group(); 
+            /** in LB3 this was '.group()', with the comment :
+             * .group() accesses (equivalent) clientGroup.__cachedRelations?.group */
+            let ok = !!clientGroup.group;
             if (! ok) {
               console.log('Group.in', ok, clientGroup);
             }
             return ok;
           });
+        // console.dir(filtered);
         return filtered;
       });
     listP.then((list) => console.log(fnName, clientIdString, list.length || JSON.stringify([query, options]) ));
@@ -295,7 +302,7 @@ module.exports = function(Group) {
    *
    * The frontend client disables the 'Delete Group' button when there are
    * Datasets in the Group (deleteGroupDisabled() in controllers/group/edit.js).
-   * Potentially another user could add a datset to the Group after that page is
+   * Potentially another user could add a dataset to the Group after that page is
    * displayed, and also this guard prevents API calls not from the frontend
    * from creating inconsistent data relationships.
    */
@@ -362,9 +369,11 @@ module.exports = function(Group) {
   // ---------------------------------------------------------------------------
 
 
+/*
   acl.assignRulesRecord(Group);
   acl.limitRemoteMethods(Group);
   acl.limitRemoteMethodsRelated(Group);
+*/
 
   // Group.disableRemoteMethodByName("create");
 /*
