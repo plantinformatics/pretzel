@@ -111,9 +111,11 @@ module.exports = function(Ontology) {
 
   /*--------------------------------------------------------------------------*/
 
+  /*
   acl.assignRulesRecord(Ontology);
 
   Ontology.disableRemoteMethodByName("findById");
+  */
 
 };
 

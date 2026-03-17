@@ -1,7 +1,9 @@
 'use strict';
 
 const bent = require('bent');
-const param = require('jquery-param');
+// as commented in localise-aliases.js
+const param = (...args) => import('jquery-param').then(({default: param}) => param(...args));
+
 
 /*----------------------------------------------------------------------------*/
 
