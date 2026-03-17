@@ -5,6 +5,7 @@ import {
   param,
   get,
   getModelSchemaRef,
+  HttpErrors,
 } from '@loopback/rest';
 import {
   Interval,
@@ -33,6 +34,8 @@ export class IntervalBlockController {
   async getBlock(
     @param.path.string('id') id: typeof Interval.prototype.id,
   ): Promise<Block> {
-    return this.intervalRepository.block(id);
+    throw new HttpErrors.NotFound('Endpoint disabled');
+    // implementation is disabled by throw :
+    // return this.intervalRepository.block(id);
   }
 }

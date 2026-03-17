@@ -16,15 +16,26 @@ import {
   del,
   requestBody,
   response,
+  HttpErrors,
 } from '@loopback/rest';
+import {inject} from '@loopback/core';
 import {Annotation} from '../models';
 import {AnnotationRepository} from '../repositories';
+import {Lb3ModelWrap} from '../utils/lb3-model-wrap';
+import {Lb3ModelWrapFactory} from '../utils/lb3-model-wrap.provider';
+
+const NoopLb3Module = (_modelClass: any) => {};
 
 export class AnnotationController {
+  private lb3: Lb3ModelWrap;
+
   constructor(
     @repository(AnnotationRepository)
     public annotationRepository : AnnotationRepository,
-  ) {}
+    @inject('utils.Lb3ModelWrap') private lb3WrapFactory: Lb3ModelWrapFactory,
+  ) {
+    this.lb3 = this.lb3WrapFactory(NoopLb3Module);
+  }
 
   @post('/annotations')
   @response(200, {
@@ -44,6 +55,7 @@ export class AnnotationController {
     })
     annotation: Omit<Annotation, 'id'>,
   ): Promise<Annotation> {
+    await this.requireAuth();
     return this.annotationRepository.create(annotation);
   }
 
@@ -55,7 +67,9 @@ export class AnnotationController {
   async count(
     @param.where(Annotation) where?: Where<Annotation>,
   ): Promise<Count> {
-    return this.annotationRepository.count(where);
+    throw new HttpErrors.NotFound('Endpoint disabled');
+    // implementation is disabled by throw :
+    // return this.annotationRepository.count(where);
   }
 
   @get('/annotations')
@@ -73,6 +87,7 @@ export class AnnotationController {
   async find(
     @param.filter(Annotation) filter?: Filter<Annotation>,
   ): Promise<Annotation[]> {
+    await this.requireAuth();
     return this.annotationRepository.find(filter);
   }
 
@@ -92,7 +107,9 @@ export class AnnotationController {
     annotation: Annotation,
     @param.where(Annotation) where?: Where<Annotation>,
   ): Promise<Count> {
-    return this.annotationRepository.updateAll(annotation, where);
+    throw new HttpErrors.NotFound('Endpoint disabled');
+    // implementation is disabled by throw :
+    // return this.annotationRepository.updateAll(annotation, where);
   }
 
   @get('/annotations/{id}')
@@ -108,6 +125,7 @@ export class AnnotationController {
     @param.path.string('id') id: string,
     @param.filter(Annotation, {exclude: 'where'}) filter?: FilterExcludingWhere<Annotation>
   ): Promise<Annotation> {
+    await this.requireAuth();
     return this.annotationRepository.findById(id, filter);
   }
 
@@ -126,6 +144,7 @@ export class AnnotationController {
     })
     annotation: Annotation,
   ): Promise<void> {
+    await this.requireAuth();
     await this.annotationRepository.updateById(id, annotation);
   }
 
@@ -137,7 +156,9 @@ export class AnnotationController {
     @param.path.string('id') id: string,
     @requestBody() annotation: Annotation,
   ): Promise<void> {
-    await this.annotationRepository.replaceById(id, annotation);
+    throw new HttpErrors.NotFound('Endpoint disabled');
+    // implementation is disabled by throw :
+    // await this.annotationRepository.replaceById(id, annotation);
   }
 
   @del('/annotations/{id}')
@@ -145,6 +166,11 @@ export class AnnotationController {
     description: 'Annotation DELETE success',
   })
   async deleteById(@param.path.string('id') id: string): Promise<void> {
+    await this.requireAuth();
     await this.annotationRepository.deleteById(id);
+  }
+
+  private async requireAuth(): Promise<void> {
+    await this.lb3.authUtils.requireClientId();
   }
 }

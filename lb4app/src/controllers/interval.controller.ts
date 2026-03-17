@@ -16,15 +16,26 @@ import {
   del,
   requestBody,
   response,
+  HttpErrors,
 } from '@loopback/rest';
+import {inject} from '@loopback/core';
 import {Interval} from '../models';
 import {IntervalRepository} from '../repositories';
+import {Lb3ModelWrap} from '../utils/lb3-model-wrap';
+import {Lb3ModelWrapFactory} from '../utils/lb3-model-wrap.provider';
+
+const NoopLb3Module = (_modelClass: any) => {};
 
 export class IntervalController {
+  private lb3: Lb3ModelWrap;
+
   constructor(
     @repository(IntervalRepository)
     public intervalRepository : IntervalRepository,
-  ) {}
+    @inject('utils.Lb3ModelWrap') private lb3WrapFactory: Lb3ModelWrapFactory,
+  ) {
+    this.lb3 = this.lb3WrapFactory(NoopLb3Module);
+  }
 
   @post('/intervals')
   @response(200, {
@@ -44,6 +55,7 @@ export class IntervalController {
     })
     interval: Omit<Interval, 'id'>,
   ): Promise<Interval> {
+    await this.requireAuth();
     return this.intervalRepository.create(interval);
   }
 
@@ -55,7 +67,9 @@ export class IntervalController {
   async count(
     @param.where(Interval) where?: Where<Interval>,
   ): Promise<Count> {
-    return this.intervalRepository.count(where);
+    throw new HttpErrors.NotFound('Endpoint disabled');
+    // implementation is disabled by throw :
+    // return this.intervalRepository.count(where);
   }
 
   @get('/intervals')
@@ -73,6 +87,7 @@ export class IntervalController {
   async find(
     @param.filter(Interval) filter?: Filter<Interval>,
   ): Promise<Interval[]> {
+    await this.requireAuth();
     return this.intervalRepository.find(filter);
   }
 
@@ -92,7 +107,9 @@ export class IntervalController {
     interval: Interval,
     @param.where(Interval) where?: Where<Interval>,
   ): Promise<Count> {
-    return this.intervalRepository.updateAll(interval, where);
+    throw new HttpErrors.NotFound('Endpoint disabled');
+    // implementation is disabled by throw :
+    // return this.intervalRepository.updateAll(interval, where);
   }
 
   @get('/intervals/{id}')
@@ -108,6 +125,7 @@ export class IntervalController {
     @param.path.string('id') id: string,
     @param.filter(Interval, {exclude: 'where'}) filter?: FilterExcludingWhere<Interval>
   ): Promise<Interval> {
+    await this.requireAuth();
     return this.intervalRepository.findById(id, filter);
   }
 
@@ -126,6 +144,7 @@ export class IntervalController {
     })
     interval: Interval,
   ): Promise<void> {
+    await this.requireAuth();
     await this.intervalRepository.updateById(id, interval);
   }
 
@@ -137,7 +156,9 @@ export class IntervalController {
     @param.path.string('id') id: string,
     @requestBody() interval: Interval,
   ): Promise<void> {
-    await this.intervalRepository.replaceById(id, interval);
+    throw new HttpErrors.NotFound('Endpoint disabled');
+    // implementation is disabled by throw :
+    // await this.intervalRepository.replaceById(id, interval);
   }
 
   @del('/intervals/{id}')
@@ -145,6 +166,11 @@ export class IntervalController {
     description: 'Interval DELETE success',
   })
   async deleteById(@param.path.string('id') id: string): Promise<void> {
+    await this.requireAuth();
     await this.intervalRepository.deleteById(id);
+  }
+
+  private async requireAuth(): Promise<void> {
+    await this.lb3.authUtils.requireClientId();
   }
 }

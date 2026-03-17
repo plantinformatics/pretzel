@@ -5,6 +5,7 @@ import {
   param,
   get,
   getModelSchemaRef,
+  HttpErrors,
 } from '@loopback/rest';
 import {
   Annotation,
@@ -33,6 +34,8 @@ export class AnnotationFeatureController {
   async getFeature(
     @param.path.string('id') id: typeof Annotation.prototype.id,
   ): Promise<Feature> {
-    return this.annotationRepository.feature(id);
+    throw new HttpErrors.NotFound('Endpoint disabled');
+    // implementation is disabled by throw :
+    // return this.annotationRepository.feature(id);
   }
 }
