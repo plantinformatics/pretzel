@@ -47,8 +47,10 @@ module.exports = function(Configuration) {
 
   // ---------------------------------------------------------------------------
 
+/*
   acl.assignRulesRecord(Configuration);
 
   Configuration.disableRemoteMethodByName("findById");
+*/
 
 };
