@@ -14,6 +14,16 @@ var loopback = require('loopback'); // for rendering template in custom methods
 var acl = require('../utilities/acl');
 const { gatherClientId } = require('../utilities/identity');
 
+/* This could be passed in via Lb3ModelWrap as this.app.models.LB3.ClientGroup instead.
+ * related : ../utilities/block-features.js : BlockModule, BlockClass .blockFeaturesCounts
+ */
+const ClientGroupModule = require('../models/clientGroup');
+const { Lb3ModelClass } = require('../../../dist/utils/lb3-model-wrap');
+/** Copy Lb3ModelClass to avoid modifying it in ClientGroupModule. */
+class ClientGroupClass extends Lb3ModelClass { };
+ClientGroupModule(ClientGroupClass);
+
+
 // -----------------------------------------------------------------------------
 
 /** If false then datasets with .public===false have .groupId === null
@@ -164,7 +174,7 @@ module.exports = function(Group) {
     fnName = 'addMember',
     clientId = addId,
     models = this.app.models,
-    ClientGroup = models.ClientGroup;
+    ClientGroup = ClientGroupClass;
     // based on ClientGroup.addEmail()
 
     /** log the error message and call cb(error) */
@@ -175,7 +185,7 @@ module.exports = function(Group) {
       cb(error);
     }
 
-    ClientGroup.groupAddMember(groupId, clientId, options, cbL, cb);
+    ClientGroup.groupAddMember(models, groupId, clientId, options, cbL, cb);
 
     // result is via cb().  All cases call cb().
   };
@@ -260,7 +270,7 @@ module.exports = function(Group) {
     fnName = 'addMemberEmail',
     clientId = addEmail,
     models = this.app.models,
-    ClientGroup = models.ClientGroup;
+    ClientGroup = ClientGroupClass;
     // based on ClientGroup.addEmail()
 
     /** log the error message and call cb(error) */
@@ -273,7 +283,7 @@ module.exports = function(Group) {
 
     this.retrieveEmailOrCreate(models.Client, addEmail, groupId, options, cb)
       .then((client) => {
-        ClientGroup.groupAddMember(groupId, client.id, options, cbL, cb); })
+        ClientGroup.groupAddMember(models, groupId, client.id, options, cbL, cb); })
       .catch((err) => cb(err));
 
     // result is via cb().  All cases call cb().

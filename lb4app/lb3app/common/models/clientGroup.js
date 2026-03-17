@@ -8,6 +8,7 @@ var ObjectId = require('mongodb').ObjectID;
 var acl = require('../utilities/acl');
 
 const { gatherClientId } = require('../utilities/identity');
+const { promiseToCb } = require('../utilities/promise');
 
 /** The addition of the Leave column (removeGroupMember) in templates/groups.hbs
  * implies that a group member can leave the group (originally the group owner
@@ -58,7 +59,9 @@ module.exports = function(ClientGroup) {
               if (clientGroups.length) {
                 cbL(409, 'Email ' + clientEmail + ' already in group.');
               } else {
-                ClientGroup.create({groupId, clientId}, options, cb);
+                promiseToCb(
+                  ClientGroup.create({groupId, clientId}, options),
+                  cb);
               }
             })
             .catch((err) => cb(err));
@@ -69,18 +72,20 @@ module.exports = function(ClientGroup) {
 
   /** Add a ClientGroup to represent clientId being added to groupId.
    * Call cbL() to log 409 : User already in group, otherwise cb().
+   * @param {Object} models - Loopback database repositories (models in LB3).
+   * models.ClientGroup is used
    * @param groupId string
    * @param clientId string or ObjectID
    * @param options from 
    * @param cbL wraps cb. signature : (statusCode, errorText) => { ... }
    * @param cb
    */
-  ClientGroup.groupAddMember = function(groupId, clientId, options, cbL, cb) {
+  ClientGroup.groupAddMember = function(models, groupId, clientId, options, cbL, cb) {
     const
     fnName = 'groupAddMember',
     /** ObjectID() works OK on either string or ObjectID. */
     promise = 
-    ClientGroup.find({where : {groupId : ObjectId(groupId), clientId : ObjectId(clientId)}})
+    models.ClientGroup.find({where : {groupId : ObjectId(groupId), clientId : ObjectId(clientId)}})
       .then((clientGroups) => {
         if (clientGroups?.length) {
           console.log(fnName, 'found', clientGroups, clientId);
@@ -88,7 +93,9 @@ module.exports = function(ClientGroup) {
         if (clientGroups.length) {
           cbL(409, 'User ' + clientId + ' already in group.');
         } else {
-          ClientGroup.create({groupId, clientId}, options, cb);
+          promiseToCb(
+            models.ClientGroup.create({groupId, clientId}, options),
+            cb);
         }
       })
       .catch((err) => cb(err));
@@ -167,8 +174,10 @@ module.exports = function(ClientGroup) {
 
   // ---------------------------------------------------------------------------
 
+/*
   acl.assignRulesRecord(ClientGroup);
   acl.limitRemoteMethods(ClientGroup);
   acl.limitRemoteMethodsRelated(ClientGroup);
+*/
 
 };
