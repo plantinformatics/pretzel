@@ -58,7 +58,16 @@ export class Lb3ModelWrap {
 
   bindLb3DataSource() {
     const connector = this.mongoDs.connector as any;
-    this.model.dataSource.connector = connector.db ?? connector;
+    const db = connector?.db ?? connector;
+    if (!db) {
+      this.model.dataSource.connector = connector;
+      return;
+    }
+    const compatibleConnector = Object.create(db);
+    compatibleConnector.db = db;
+    compatibleConnector.collection = (name: string) => db.collection(name);
+    compatibleConnector.connect = (cb: (err: unknown, result?: unknown) => void) => cb(null, db);
+    this.model.dataSource.connector = compatibleConnector;
   }
 
   lb3Call<T>(invoke: (cb: (error: unknown, result: T) => void) => void): Promise<T> {
