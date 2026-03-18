@@ -17,12 +17,15 @@ import {
   requestBody,
   response,
   HttpErrors,
+  Request,
+  RestBindings,
 } from '@loopback/rest';
 import {inject} from '@loopback/core';
 import {Group} from '../models';
 import {GroupRepository} from '../repositories';
 import {Lb3ModelWrap} from '../utils/lb3-model-wrap';
 import {Lb3ModelWrapFactory} from '../utils/lb3-model-wrap.provider';
+import {parseLegacyQueryFilter} from '../utils/legacy-query-filter';
 
 // @ts-ignore
 const GroupModule = require('../../lb3app/common/models/group');
@@ -108,9 +111,10 @@ export class GroupController {
     },
   })
   async find(
-    @param.filter(Group) filter?: Filter<Group>,
+    @inject(RestBindings.Http.REQUEST) req: Request,
   ): Promise<Group[]> {
     await this.requireAuth();
+    const filter = parseLegacyQueryFilter<Group>((req.query as any).filter);
     return this.groupRepository.find(filter);
   }
 

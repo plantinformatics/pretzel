@@ -26,6 +26,7 @@ import {Dataset} from '../models';
 import {DatasetRepository} from '../repositories';
 import {Lb3ModelWrap} from '../utils/lb3-model-wrap';
 import {Lb3ModelWrapFactory} from '../utils/lb3-model-wrap.provider';
+import {parseLegacyQueryFilter} from '../utils/legacy-query-filter';
 
 // @ts-ignore
 const DatasetModule = require('../../lb3app/common/models/dataset');
@@ -89,9 +90,10 @@ export class DatasetController {
     },
   })
   async find(
-    @param.filter(Dataset) filter?: Filter<Dataset>,
+    @inject(RestBindings.Http.REQUEST) req: Request,
   ): Promise<Dataset[]> {
     await this.requireAuth();
+    const filter = parseLegacyQueryFilter<Dataset>((req.query as any).filter);
     const scopedWhere = await this.lb3.authUtils.buildDatasetAccessWhere(
       (filter as any)?.where,
     ) as Where<Dataset>;

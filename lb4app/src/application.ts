@@ -87,17 +87,39 @@ export class PretzelApplication extends BootMixin(
     // Set up the custom sequence
     this.sequence(MySequence);
     registerDatasetUploadFileBodyParser(this);
-    const blocksPathPrefix = '/Blocks';
     const routeTime = lb3RouteTimeMiddleware();
     const memcache = lb3MemcacheMiddleware(3600);
     this.middleware(({request, response}, next) => {
-      if (request.path?.startsWith(blocksPathPrefix)) {
-        return routeTime(request, response, next);
-      }
-      return next();
+      /** lb3app/server/middleware.json did not restrict middleware/route_time
+       * by endpoint path.
+       */
+      return routeTime(request, response, next);
+      // return next();
     });
     this.middleware(({request, response}, next) => {
-      if (request.path?.startsWith(blocksPathPrefix)) {
+      /** lb3app/server/middleware.json enabled middleware/memcache for just
+       * /api/Blocks/pathsViaStream
+       */
+      let useCache = false;
+      const
+      /** matches e.g. /api/Blocks/pathsViaStream */
+      isBlocks = request.path?.startsWith('/Blocks'),
+      isBlocksPath = request.path?.startsWith('/Blocks/paths');
+      if (isBlocks) {
+        const
+        // older : request.params('intervals')
+        intervals = isBlocksPath && request.query.intervals as any,
+        zoomed = intervals ?
+          // e.g. pathsViaStream
+          // could test simply  == 'true'
+          intervals.axes.find((axis : any) => axis.zoomed && JSON.parse(axis.zoomed)) :
+          // e.g. blockFeaturesCounts
+          request.query.isZoomed;
+        if (! zoomed) {
+          useCache = true;
+        }
+      }
+      if (useCache) {
         return memcache(request, response, next);
       }
       return next();

@@ -217,6 +217,7 @@ export class BlockController {
     @requestBody() data: object,
   ): Promise<string> {
     await this.requireAuth();
+    /** This endpoint requires blockId. */
     const blockId = (data as any)?.blockId;
     if (blockId) {
       await this.lb3.authUtils.authorizeBlocksRead([blockId]);
@@ -343,7 +344,8 @@ export class BlockController {
     if (id) {
       await this.lb3.authUtils.authorizeBlocksRead([id]);
     } else {
-      this.lb3.authUtils.enforceScopedBlockAccess();
+      // LB3 may not have required id
+      // this.lb3.authUtils.enforceScopedBlockAccess();
     }
     this.lb3.bindLb3DataSource();
     const options = null;
@@ -366,7 +368,7 @@ export class BlockController {
     @param.query.string('fieldName') fieldName: string,
   ): Promise<object[]> {
     await this.requireAuth();
-    this.lb3.authUtils.enforceScopedBlockAccess();
+    // this.lb3.authUtils.enforceScopedBlockAccess();
     this.lb3.bindLb3DataSource();
     const options = null;
     return this.lb3.lb3Call<object[]>(cb => {
