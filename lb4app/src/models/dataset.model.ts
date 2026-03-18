@@ -77,6 +77,26 @@ export class Dataset extends Record {
   constructor(data?: Partial<Dataset>) {
     super(data);
   }
+
+  toJSON(): object {
+    const json = super.toJSON() as {[key: string]: unknown};
+    /* LB3 /api/datasets response contained just .name, whereas LB4 was
+     * outputting both .id and .datasetId until the above change;
+     *
+     * When parsing the response to api-server.js:getDatasets(),
+     * Ember data parses id as null (probably because it is not a ObjectID),
+     * and gives this error : "You must include an 'id' for the resource data
+     * dataset"
+     * The solution implemented is to replace .datasetId and .id with .name.
+     */
+    const name = json.datasetId || json.id;
+    if (name) {
+      json.name = name;
+      delete json.datasetId;
+      delete json.id;
+    }
+    return json;
+  }
 }
 
 export interface DatasetRelations {
