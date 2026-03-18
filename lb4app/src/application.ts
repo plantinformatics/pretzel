@@ -1,4 +1,5 @@
 import path from 'path';
+import cors from 'cors';
 
 import {BootMixin} from '@loopback/boot';
 import {ApplicationConfig, Constructor} from '@loopback/core';
@@ -79,9 +80,16 @@ export class PretzelApplication extends BootMixin(
     // LB3 environment validation (lb3app/server/environment.js)
     initLb3Environment();
 
-    const app = this.requestHandler;
+    const app = this.requestHandler as any;
     serverShowEnvironment(app);
     appServerLb3Setup(app);
+    const corsOptions = {
+      origin: true,
+      credentials: true,
+      maxAge: 86400,
+    };
+    app.use(cors(corsOptions));
+    app.options('*', cors(corsOptions));
     appServerLb3Setup2(app);
 
     // Set up the custom sequence

@@ -297,6 +297,21 @@ export class ClientController {
     const userProfile = this.userService.convertToUserProfile(user);
     // create a JSON Web Token based on the user profile
     const token = await this.jwtService.generateToken(userProfile);
+    const connector = this.mongoDs.connector as any;
+    const db = connector?.db ?? connector;
+    if (db?.collection) {
+      const ttl = this.getTokenTtl();
+      await db.collection('AccessToken').replaceOne(
+        {_id: token},
+        {
+          _id: token,
+          userId: (user as any).id,
+          ttl,
+          created: new Date(),
+        },
+        {upsert: true},
+      );
+    }
     return {
       id: token,
       token,
