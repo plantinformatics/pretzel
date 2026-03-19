@@ -48,7 +48,20 @@ export class PretzelApplication extends BootMixin(
   ServiceMixin(RepositoryMixin(RestApplication)),
 ) {
   constructor(options: ApplicationConfig = {}) {
-    super(options);
+    const defaultCorsOptions = {
+      origin: true,
+      credentials: true,
+      maxAge: 86400,
+    };
+    const appOptions: ApplicationConfig = {
+      ...options,
+      rest: {
+        ...options.rest,
+        cors: options.rest?.cors ?? defaultCorsOptions,
+      },
+    };
+
+    super(appOptions);
 
     // From @loopback/authentication-jwt/README.md
     // - enable jwt auth -
@@ -83,11 +96,7 @@ export class PretzelApplication extends BootMixin(
     const app = this.requestHandler as any;
     serverShowEnvironment(app);
     appServerLb3Setup(app);
-    const corsOptions = {
-      origin: true,
-      credentials: true,
-      maxAge: 86400,
-    };
+    const corsOptions = appOptions.rest?.cors ?? defaultCorsOptions;
     app.use(cors(corsOptions));
     app.options('*', cors(corsOptions));
     appServerLb3Setup2(app);

@@ -484,7 +484,7 @@ export class BlockController {
     // Don't flush headers in initSseResponse() because sse.init() will send headers.
     initSseResponse(res);
     const options = null;
-    console.log('headersSent before LB3:', res.headersSent);
+    // console.log('headersSent before LB3:', res.headersSent);
     // @ts-ignore
     this.lb3.model.pathsViaStream(id, intervals, options, req, res, () => undefined);
     return res;
