@@ -190,8 +190,12 @@ RUN ( [ ! -L /app/client ] || rm /app/client ) && \
 
 ENV EMAIL_VERIFY=NONE AUTH=ALL
 
-# $NODE_BE/bin/node
-ENTRYPOINT ["/usr/local/node22/bin/node", "/app/lb3app/server/server.js"]
+WORKDIR /app
+
+# Start the LB4 application by default once the image has been built.
+# The path of node is $NODE_BE/bin/node; this likely works without path, just "node".
+# In LB3 the 2nd arg "."  was /app/lb3app/server/server.js
+ENTRYPOINT ["/usr/local/node22/bin/node", "."]
 
 # ------------------------------------------------------------------------------
 

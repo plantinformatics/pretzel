@@ -7,8 +7,8 @@ import {PretzelApplication} from './application';
 async function exportOpenApiSpec(): Promise<void> {
   const config: ApplicationConfig = {
     rest: {
-      port: +(process.env.PORT ?? 3000),
-      host: process.env.HOST ?? 'localhost',
+      port: +(process.env.PORT ?? process.env.API_PORT_EXT ?? 3000),
+      host: process.env.HOST ?? '0.0.0.0',
     },
   };
   const outFile = process.argv[2] ?? '';

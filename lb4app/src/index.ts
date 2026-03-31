@@ -16,14 +16,17 @@ export async function main(options: ApplicationConfig = {}) {
 
 if (require.main === module) {
   // Run the application
+  const port = +(process.env.PORT ?? process.env.API_PORT_EXT ?? 3000);
   const config = {
     rest: {
       /* default basePath seems to be '', also some doc indicated '/api',
        * Update : changing models etc from LB3 to LB4 seems to have changed the default from /api to ''
-       */
+      */
       basePath : '/api',
-      port: +(process.env.PORT ?? 3000),
-      host: process.env.HOST,
+      // Support existing container env wiring while the deploy config is moved
+      // from the LB3 server to the LB4 app.
+      port,
+      host: process.env.HOST ?? '0.0.0.0',
       // The `gracePeriodForClose` provides a graceful close for http/https
       // servers with keep-alive clients. The default value is `Infinity`
       // (don't force-close). If you want to immediately destroy all sockets
