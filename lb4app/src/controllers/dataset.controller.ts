@@ -33,6 +33,19 @@ const DatasetModule = require('../../lb3app/common/models/dataset');
 // @ts-ignore
 const {noCacheResult} = require('../../lb3app/common/utilities/remote-method');
 
+type Lb3UserId = {
+  toHexString(): string;
+  toString(): string;
+};
+
+type Lb3AccessToken = {
+  userId: Lb3UserId;
+};
+
+type Lb3Options = {
+  accessToken: Lb3AccessToken;
+};
+
 export class DatasetController {
   private lb3: Lb3ModelWrap;
 
@@ -61,7 +74,7 @@ export class DatasetController {
     dataset: Dataset,
   ): Promise<Dataset> {
     await this.requireAuth();
-    return this.datasetRepository.create(dataset);
+    return this.datasetRepository.create(dataset, await this.buildLb3Options());
   }
 
   @get('/datasets/count')
@@ -157,7 +170,7 @@ export class DatasetController {
   ): Promise<void> {
     this.ensureLb3();
     await this.lb3.authUtils.authorizeDatasetWrite(id);
-    await this.datasetRepository.updateById(id, dataset);
+    await this.datasetRepository.updateById(id, dataset, await this.buildLb3Options());
   }
 
   @put('/datasets/{id}')
@@ -180,7 +193,7 @@ export class DatasetController {
   async deleteById(@param.path.string('id') id: string): Promise<void> {
     this.ensureLb3();
     await this.lb3.authUtils.authorizeDatasetWrite(id);
-    await this.datasetRepository.deleteById(id);
+    await this.datasetRepository.deleteById(id, await this.buildLb3Options());
   }
 
   //----------------------------------------------------------------------------
@@ -254,7 +267,7 @@ export class DatasetController {
     }
     this.ensureLb3();
     this.lb3.bindLb3DataSource();
-    const options = null;
+    const options = await this.buildLb3Options();
     return this.lb3.lb3Call<object>(cb => {
       // @ts-ignore
       this.lb3.model.upload(msg, options, req, cb);
@@ -299,8 +312,7 @@ export class DatasetController {
     await this.requireAuth();
     this.ensureLb3();
     this.lb3.bindLb3DataSource();
-    const accessToken = this.lb3.authUtils.getAccessToken();
-    const options = { accessToken };
+    const options = await this.buildLb3Options();
     const headerFileName = req.headers['x-file-name'];
     const resolvedFileName =
       fileName || (Array.isArray(headerFileName) ? headerFileName[0] : headerFileName);
@@ -334,7 +346,7 @@ export class DatasetController {
     await this.requireAuth();
     this.ensureLb3();
     this.lb3.bindLb3DataSource();
-    const options = null;
+    const options = await this.buildLb3Options();
     return this.lb3.lb3Call<string>(cb => {
       // @ts-ignore
       this.lb3.model.tableUpload(data, options, cb);
@@ -356,7 +368,7 @@ export class DatasetController {
     await this.requireAuth();
     this.ensureLb3();
     this.lb3.bindLb3DataSource();
-    const options = null;
+    const options = await this.buildLb3Options();
     return this.lb3.lb3Call<string>(cb => {
       // @ts-ignore
       this.lb3.model.createComplete(data, options, req, cb);
@@ -471,6 +483,23 @@ export class DatasetController {
     if (!this.lb3) {
       this.lb3 = this.lb3WrapFactory(DatasetModule);
     }
+  }
+
+  private async buildLb3AccessToken(): Promise<Lb3AccessToken> {
+    this.ensureLb3();
+    const clientId = await this.lb3.authUtils.requireClientId();
+    if (!clientId) {
+      throw new HttpErrors.Unauthorized('Access token required');
+    }
+    const userId: Lb3UserId = {
+      toHexString: () => clientId,
+      toString: () => clientId,
+    };
+    return {userId};
+  }
+
+  private async buildLb3Options(): Promise<Lb3Options> {
+    return {accessToken: await this.buildLb3AccessToken()};
   }
 
   private async requireAuth(): Promise<void> {
