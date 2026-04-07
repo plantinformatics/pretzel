@@ -53,10 +53,17 @@ export class BlockRepository extends DefaultCrudRepository<
   }
 
   async create(entity: Partial<Block>, options?: Options): Promise<Block> {
-    this.applyNameDefaults(entity);
+    await this.beforeSave(entity, options);
     const result = await super.create(entity, options);
     this.afterSave(result.id?.toString());
     return result;
+  }
+
+  async createAll(entities: Partial<Block>[], options?: Options): Promise<Block[]> {
+    await Promise.all(entities.map(entity => this.beforeSave(entity, options)));
+    const results = await super.createAll(entities, options);
+    results.forEach(result => this.afterSave(result.id?.toString()));
+    return results;
   }
 
   async updateById(id: typeof Block.prototype.id, data: Partial<Block>, options?: Options): Promise<void> {
@@ -65,7 +72,7 @@ export class BlockRepository extends DefaultCrudRepository<
   }
 
   async replaceById(id: typeof Block.prototype.id, data: Block, options?: Options): Promise<void> {
-    this.applyNameDefaults(data);
+    await this.beforeSave(data, options);
     await super.replaceById(id, data, options);
     if (id) this.afterSave(id.toString());
   }
@@ -80,7 +87,9 @@ export class BlockRepository extends DefaultCrudRepository<
     return super.deleteAll(where, options);
   }
 
-  private applyNameDefaults(instance: Partial<Block> | undefined) {
+  /** translated from LB3 : Block.observe('before save', ) in lb4app/lb3app/common/models/block.js */
+  private async beforeSave(instance: Partial<Block> | undefined, options?: Options) {
+    void options;
     if (!instance || typeof instance !== 'object') return;
     if (!instance.name) {
       if (instance.scope) {
