@@ -912,10 +912,28 @@ export default Component.extend({
   },
 
   cells(row, col, prop) {
+    const fnName = 'cell';
     let cellProperties = {};
+
+    /** It can happen that cells() is called after Reset Zoom which clears the
+     * axis brush and hence there is no data passed to matrix-view from
+     * manage-genotype, but data has not been cleared from the HandsOnTable.
+     * Recognise if : displayData{,Rows} are empty or columns arrays are all [].
+     */
+    const
+    noData = (! this.displayData?.length && ! this.displayDataRows?.length) ||
+     (! this.gtDatasetColumns?.length &&
+      ! this.datasetColumns?.length &&
+      ! this.extraDatasetColumns?.length);
+    if (noData) {
+      // dLog(fnName, 'noData', row, col, prop);
+      return cellProperties;
+    }
+
     let selectedBlock = this.get('selectedBlock');
     let numericalData = ! this.blockSamples && this.get('numericalData');
     const sampleName = prop && columnName2SampleName(prop);
+
     /** much of this would be better handled using table options.columns,
      * as is done in table-brushed.js : createTable().
      */
@@ -924,6 +942,11 @@ export default Component.extend({
       cellProperties.type = 'numeric';
       cellProperties.renderer = Handsontable.renderers.NumericRenderer;
     } else if (prop === 'Block') {
+      /* for non-genotype datasets at least prop is the datasetId;
+       * (prop may still be 'Block' in some cases).
+       * table.getCellMeta?.(row, col)?.className is " col-Dataset-Name", but 
+       * getCellMeta() can't be called in cells() because of recursion.
+       */
       cellProperties.renderer = 'blockColourRenderer';
     } else if (sampleName === 'LD Block') {
       cellProperties.renderer = 'haplotypeColourRenderer';
@@ -1238,7 +1261,17 @@ export default Component.extend({
 
   CATGRenderer(instance, td, row, col, prop, value, cellProperties) {
     Handsontable.renderers.TextRenderer.apply(this, arguments);
-    if (value) {
+    /* The guard added in cells() will likely prevent this function being called
+     * when ! td.parentElement, which has been seen in the debugger at an exception.
+     *
+     * See comment in cells() - this may be called for col-Dataset-Name when
+     * blockColourRenderer would be correct.  In that case, for gtDatasetColumns
+     * value is a String, which does not cause an exception in valueDiagonal(),
+     * but for datasetColumns, value will be an array of String, so detect this
+     * and skip it - it only occurs briefly when table is being cleared by Zoom
+     * Reset.
+     */
+    if (td.parentElement && value && ! Array.isArray(value)) {
       const
       /** prop may be String(), and string [].includes(String) does not match, so use .toString()
 . */
