@@ -199,8 +199,8 @@ export class ClientGroupController {
     description: 'ClientGroup DELETE success',
   })
   async deleteById(@param.path.string('id') id: string): Promise<void> {
-    await this.authorizeClientGroupWrite(id);
-    await this.clientGroupRepository.deleteById(id);
+    await this.requireAuth();
+    await this.clientGroupRepository.deleteById(id, await this.buildLb3Options());
   }
 
   //-----------------------------------------------------------------------------

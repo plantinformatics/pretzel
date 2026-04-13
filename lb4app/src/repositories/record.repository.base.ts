@@ -43,6 +43,11 @@ export class RecordBaseRepository<
     return super.create(entity, options);
   }
 
+  async createAll(entities: DataObject<T>[], options?: Options): Promise<T[]> {
+    entities.forEach(entity => this.applyRecordBeforeSave(entity, options, true));
+    return super.createAll(entities, options);
+  }
+
   async updateById(id: ID, data: DataObject<T>, options?: Options): Promise<void> {
     this.applyRecordBeforeSave(data, options, false);
     await super.updateById(id, data, options);

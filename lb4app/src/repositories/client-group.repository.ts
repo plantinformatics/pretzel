@@ -1,5 +1,6 @@
 import {inject, Getter} from '@loopback/core';
 import {DefaultCrudRepository, repository, BelongsToAccessor, Options} from '@loopback/repository';
+import {HttpErrors} from '@loopback/rest';
 import {MongoDsDataSource} from '../datasources';
 import {ClientGroup, ClientGroupRelations, Client, Group} from '../models';
 import {ClientRepository} from './client.repository';
@@ -47,7 +48,36 @@ export class ClientGroupRepository extends DefaultCrudRepository<
   }
 
   async deleteById(id: typeof ClientGroup.prototype.id, options?: Options): Promise<void> {
+    await this.beforeDelete(id, options);
     await super.deleteById(id, options);
     await clientGroups.update();
+  }
+
+  private async beforeDelete(id: typeof ClientGroup.prototype.id, options?: Options): Promise<void> {
+    const clientId = this.getClientIdFromOptions(options);
+    if (!clientId || id == null) return;
+
+    const clientGroup = await this.findById(id);
+    const groupId = clientGroup.groupId?.toString();
+    if (!groupId) {
+      throw new HttpErrors.Conflict(`Given ClientGroup id ${id} does not refer to an existing Group`);
+    }
+
+    const group = await this.groupRepositoryGetter().then(repo => repo.findById(groupId));
+    const groupOwnerId = group.clientId?.toString();
+    if (groupOwnerId !== clientId) {
+      throw new HttpErrors.Forbidden(
+        'Group is not owned by logged-in user; rejecting deletion request',
+      );
+    }
+  }
+
+  private getClientIdFromOptions(options?: Options): string | undefined {
+    const accessToken = (options as any)?.accessToken;
+    const userId = accessToken && typeof accessToken === 'object'
+      ? accessToken.userId
+      : undefined;
+    if (userId == null) return undefined;
+    return String(userId);
   }
 }
