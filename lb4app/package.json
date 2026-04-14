@@ -74,7 +74,7 @@
     "interval-bins": "github:plantinformatics/interval-bins",
     "interval-tree-1d": "^1.0.4",
     "jquery-param": "^1.1.8",
-    "lodash": "^4.17.21",
+    "lodash": "^4.18.1",
     "loopback": "^3.28.0",
     "loopback-boot": "^3.3.1",
     "loopback-component-explorer": "^6.5.1",
