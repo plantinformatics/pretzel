@@ -62,6 +62,7 @@ unused=${API_URL_BASE=$API_PROTO://$API_HOST:$API_PORT_EXT/api}
 # @param
 function curlA(){ cg_method="$1"; shift; cg_endpoint="$1"; shift; cg_url="$API_URL_BASE/$cg_endpoint"; curl -s -X "$cg_method" "${H_json[@]}" -H "$Authorization" --url "$cg_url" "$@" ; }
 function curlPostA(){ cg_endpoint="$1"; shift; curlA POST "$cg_endpoint" -d "$@"; }
+function curlPatchA(){ cg_endpoint="$1"; shift; curlA PATCH "$cg_endpoint" -d "$@"; }
 function curlDelA(){ cg_endpoint="$1"; shift; curlA DELETE "$cg_endpoint" ; }
 function curlGetA(){ cg_endpoint="$1"; shift; curlA GET "$cg_endpoint" ; }
 

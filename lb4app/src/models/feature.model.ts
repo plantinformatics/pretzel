@@ -34,8 +34,12 @@ export class Feature extends Entity {
   @belongsTo(() => Block)
   blockId: string;
 
-  @belongsTo(() => Feature)
-  parentId: string;
+  @belongsTo(() => Feature, {}, {
+    jsonSchema: {
+      nullable: true,
+    },
+  })
+  parentId?: string;
 
   @hasMany(() => Feature, {keyTo: 'parentId'})
   features: Feature[];
