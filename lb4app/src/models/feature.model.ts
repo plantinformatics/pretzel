@@ -31,6 +31,12 @@ export class Feature extends Entity {
     required: true,
   })
   value: any;
+
+  @property({
+    type: 'object',
+  })
+  values?: object;
+
   @belongsTo(() => Block)
   blockId: string;
 
