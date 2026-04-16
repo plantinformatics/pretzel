@@ -1,6 +1,6 @@
 {
   "name": "pretzel-frontend",
-  "version": "3.11.0alpha",
+  "version": "3.11.0alpha2",
   "description": "Frontend code for Pretzel",
   "repository": "",
   "license": "MIT",
@@ -106,7 +106,7 @@
   },
   "dependencies": {
     "@ember/test-helpers": "^3.3.0",
-    "@plantinformatics/vcf-genotype-brapi": "^1.0.46",
+    "@plantinformatics/vcf-genotype-brapi": "^1.0.47",
     "@solgenomics/brapijs": "https://github.com/solgenomics/BrAPI-js.git",
     "@voll/ember-parachute": "^2.0.0",
     "bluebird": "^3.7.2",
