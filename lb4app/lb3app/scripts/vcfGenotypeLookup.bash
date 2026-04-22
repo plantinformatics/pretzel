@@ -92,7 +92,8 @@ unused_var=${blastDir:=/mnt/data_blast}
 # blastDir=tmp/blast
 set -x
 # vcfDir=tmp/vcf
-vcfDir=${mntData=/mnt/data}/vcf
+# >> $serverDir/$logFile echo mntData=$mntData, vcfDir=$vcfDir; pwd
+unused_var=${vcfDir=${mntData=/mnt/data}/vcf}
 if [ ! -e "$vcfDir" -a -e "$blastDir/vcf" ]
 then
   vcfDir="$blastDir/vcf"
@@ -364,8 +365,23 @@ function snpNames2Include() {
 
 #-------------------------------------------------------------------------------
 
+# cd to $vcfDir.
+# If $vcfDir is absolute, cd $vcfDir.
+# Otherwise, $vcfDir is relative to $serverDir/
+function cd_vcfDir()
+{
+  case $vcfDir in
+    /*) cd "$vcfDir"  ;;
+    *)  cd $serverDir/"$vcfDir" ;;
+  esac
+}
+
+#-------------------------------------------------------------------------------
+
 commonSNPsDir=region_common_SNPs
-(cd $serverDir/"$vcfDir"; [ -d $commonSNPsDir ] || mkdir $commonSNPsDir )
+(cd_vcfDir && [ -d $commonSNPsDir ] || mkdir $commonSNPsDir )
+
+#-------------------------------------------------------------------------------
 
 # Use bcftools isec to prepare a list of common SNPs between $isecDatasetIds ($vcfGzs).
 # Uses $vcfGzs, $isecFlags, $chr.
@@ -511,8 +527,14 @@ ensureSNPList() {
   vcfGzSNPList=$(echo "$vcfGzSamples" | sed s/.vcf.gz/.SNPList.vcf.gz/g )
   if [ ! -e "$vcfGzSNPList" ]
   then
+    # -G ( --drop-genotypes) does not preserve ##FORMAT=<ID=... GT and NU, so
+    # save the header and re-add it with reheader.
+    bcftools view -h "$vcfGzSamples" > original_header.txt
     # only require information from cols 1-5, but VCF requires 1-9, i.e. including : QUAL FILTER INFO FORMAT
-    bcftools view --drop-genotypes --threads $(nproc) --output-type z  --output  "$vcfGzSNPList" "$vcfGzSamples"
+    bcftools view --drop-genotypes --threads $(nproc) --output-type z  --output  "$vcfGzSNPList".tmp "$vcfGzSamples"
+    # -h is --header-lines.   -o is --output
+    bcftools reheader -h original_header.txt  "$vcfGzSNPList".tmp -o "$vcfGzSNPList" && \
+      rm "$vcfGzSNPList".tmp
   fi
   if [ ! -e "$vcfGzSNPList".csi ]
   then
@@ -579,7 +601,7 @@ else
   # later versions of bash : dbName2Vcf $di || break ... | readarray -t vcfGzs
   echo >> $logFile vcfGz="$vcfGz" vcfGzs="${vcfGzs[@]}"
   # vcfGzs[] includes datasetId/ for each dataset
-  cd $serverDir/"$vcfDir"
+  cd_vcfDir
 
   # if $vcfGz is empty then dbName2Vcf() has output an error.
     if [ $status -eq 0 -a -n "$vcfGz" ]
