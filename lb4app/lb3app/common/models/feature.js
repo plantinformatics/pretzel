@@ -339,9 +339,11 @@ module.exports = function(Feature) {
   });
 
   Feature.remoteMethod('searchPost', {
+    /** 'searchPost' args are identical to 'search' */
     accepts: [
       {arg: 'blockId', type: 'string', required: false},
       {arg: 'filter', type: 'array', required: true},
+      {arg: 'matchRegExp', type: 'Boolean', required: false, default : 'false'},
       {arg: "options", type: "object", http: "optionsFromRequest"}
     ],
     http: {verb: 'post'},
