@@ -25,6 +25,9 @@ Handsontable does not natively provide a built-in feature for resizing column he
 This method should allow users to resize the column headers interactively.
 
 */
+
+import { set as Ember_set } from '@ember/object';
+
 /*
 document.addEventListener("DOMContentLoaded", function () {
   const hot = new Handsontable(document.getElementById("hot"), {
@@ -117,14 +120,16 @@ function afterGetColHeader(userSettings, col, TH) {
     columnHeaderHeights[fieldName] = newHeight;
     if (rowIsSampleName) {
       // this.setColumnHeaderHeight(newHeight);
-      userSettings.columnHeaderHeight = newHeight;
+      /** use set() because draw/graph-annotations.js : zoomEffect() is dependent on columnHeaderHeight,
+       * i.e. it is tracked.  (previously : selectedSampleEffect() */
+      Ember_set(userSettings, 'columnHeaderHeight', newHeight);
     }
 
     /** settings.columnHeaderHeight is an array when useNestedHeaders
      */
     const
     settings = table.getSettings(),
-    columnHeaderHeight = settings.columnHeaderHeight;
+    columnHeaderHeight = rowIsSampleName ? newHeight : settings.columnHeaderHeight;
     if (Array.isArray(columnHeaderHeight)) {
       columnHeaderHeight[row-1] = newHeight;
       table.updateSettings({columnHeaderHeight});

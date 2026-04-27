@@ -2535,8 +2535,8 @@ div#observational-table \
     /* In the case of manage-genotype (i.e. ! fullPage), matrix-view does not
      * use this, instead .height = tableHeightFromParent(), enabled by calculateTableHeight.
      *
-     * Use Ember_set() because selectedSampleEffect() is dependent on
-     * columnHeaderHeight
+     * Use Ember_set() because draw/graph-annotations.js : zoomEffect() is dependent on
+     * columnHeaderHeight. (and selectedSampleEffect() ?)
      */
     Ember_set(this.userSettings, 'columnHeaderHeight', columnHeaderHeight);
 
