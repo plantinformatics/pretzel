@@ -55,7 +55,7 @@ export default class ElemValueMeterComponent extends Component {
   @computed('args.value')
   get meterColor() {
     /* Number is displayed relative to 0-100% of [min,max] range,
-     * but for this calculation /100 to conver percentage back to ratio.
+     * but for this calculation /100 to convert percentage back to ratio.
      */
     const normalized = this.percentage / 100;
     // Calculate hue: red (0) for 0%, green (120) for 100%
