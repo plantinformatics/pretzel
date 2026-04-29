@@ -46,6 +46,7 @@
 # stderr : set -x is used, which outputs to stderr, and appears in the node.js server stderr log
 
 
+logFile=vcfGenotypeLookup.log
 serverDir=$PWD
 # $inContainer is true (0) if running in a container.
 [ "$PWD" = / ]; inContainer=$?
@@ -92,8 +93,10 @@ unused_var=${blastDir:=/mnt/data_blast}
 # blastDir=tmp/blast
 set -x
 # vcfDir=tmp/vcf
-# >> $serverDir/$logFile echo mntData=$mntData, vcfDir=$vcfDir; pwd
-unused_var=${vcfDir=${mntData=/mnt/data}/vcf}
+>> $serverDir/$logFile echo mntData=$mntData, vcfDir=$vcfDir; serverDir=$serverDir; pwd
+# docker compose defaults to empty string for undefined vars, so use :=
+unused_var=${vcfDir:=${mntData:=/mnt/data}/vcf}
+>> $serverDir/$logFile echo mntData=$mntData, vcfDir=$vcfDir
 if [ ! -e "$vcfDir" -a -e "$blastDir/vcf" ]
 then
   vcfDir="$blastDir/vcf"
@@ -119,7 +122,6 @@ else
 fi
 
 
-logFile=vcfGenotypeLookup.log
 (pwd; date; ) >> $logFile
 echo $* >> $logFile
 
