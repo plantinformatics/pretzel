@@ -93,7 +93,7 @@ unused_var=${blastDir:=/mnt/data_blast}
 # blastDir=tmp/blast
 set -x
 # vcfDir=tmp/vcf
->> $serverDir/$logFile echo mntData=$mntData, vcfDir=$vcfDir; serverDir=$serverDir; pwd
+>> $serverDir/$logFile echo mntData=$mntData, vcfDir=$vcfDir, serverDir=$serverDir
 # docker compose defaults to empty string for undefined vars, so use :=
 unused_var=${vcfDir:=${mntData:=/mnt/data}/vcf}
 >> $serverDir/$logFile echo mntData=$mntData, vcfDir=$vcfDir
