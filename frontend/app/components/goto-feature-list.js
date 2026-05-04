@@ -27,7 +27,7 @@ export default Component.extend({
    * This is implemented via /key/i, so the key can be a RegExp, but some
    * punctuation is removed to sanitise the expression.
    */
-  matchRegExp : true,
+  matchRegExp : false,
 
   /** Cleared by clearResults(), set by getBlocksOfFeatures(). */
   showResult : true,
