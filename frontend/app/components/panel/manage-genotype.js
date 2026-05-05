@@ -5175,6 +5175,14 @@ export default class PanelManageGenotypeComponent extends Component {
     this.activeDatasetId = datasetId;
     this.activeIdDatasets = this.tabName2IdDatasets(datasetId);
     this.activeDataset = this.gtDatasets.findBy('id', this.activeDatasetId);
+
+    /** We are not currently seeing the .active class of the <li> in <BsTab
+     * .activeIdDatasets > ... .gtDatasetTabs update when .activeIdDatasets is
+     * set, so use datasetTabActiveClass() to update the class in the DOM element.
+     * Hopefully updating Bootstrap etc will make this unnecessary.
+     * See related comment in gtDatasetTabs().
+     */
+    this.datasetTabsActiveClass();
   }
 
   /** factored from selectDataset() - this would be passed to elem/tab-names
@@ -5195,13 +5203,47 @@ export default class PanelManageGenotypeComponent extends Component {
    */
   datasetTabActiveClass() {
     const
+    fnName = 'datasetTabActiveClass',
     /** "a[href$='#tab-view-Datasets-<datasetId>']" */
     selector = "a[href$='#" + this.activeIdDatasets + "']",
     /** <a href="#tab-view-Datasets-<datasetId>" role="tab"> */
     a0 = $(selector)[0],
     /** <li class="nav-item active-detail"> */
     li = a0?.parentElement;
+    dLog(fnName, this.activeIdDatasets, li);
     li?.classList.add('active');
+  }
+
+  /** Update .active class of all <li>-s in the Datasets panel <ul>.
+   * This is based on datasetTabActiveClass(), which is similar, but only sets 1
+   * <li> .active; this function also clears the .active of the other <li>-s in
+   * the <ul>.
+   */
+  datasetTabsActiveClass() {
+    const
+    fnName = 'datasetTabsActiveClass',
+    activeId = this.activeIdDatasets,
+    /** If called before the <a>-s are assigned their ids, a0 and ul are
+     * undefined, and the d3 selections are empty, and no DOM change is made.
+     * Could call this with later(, 0.5sec), with a debounce; the call pattern
+     * seems to be that there is a later call which gets a defined a0, so it
+     * works OK.
+     */
+    selector = "a[href$='#" + activeId + "']",
+    a0 = $(selector)[0],
+    /** <ul class="nav nav-tabs li-active-extra counts"> */
+    ul = a0?.parentElement?.parentElement,
+    ulS = d3.select(ul);
+    // Remove existing active classes
+    ulS.selectAll("li").classed("active", false);
+    // Add active class to the specific <li>
+    ulS.select(`li a[href="#${activeId}"]`)
+      .each(function() {
+        d3.select(this.parentNode).classed("active", true);
+      });
+    /* As commented in setSelectedDataset(), this function will hopefully become
+     * unnecessary, and this log will keep it visible. */
+    dLog(fnName, activeId, ul);
   }
 
   //----------------------------------------------------------------------------
