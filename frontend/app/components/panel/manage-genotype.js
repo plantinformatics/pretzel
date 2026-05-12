@@ -3301,6 +3301,16 @@ export default class PanelManageGenotypeComponent extends Component {
       dataset = vcfDatasetId;
       vcfDatasetId = dataset.id;
     }
+    /** true if the VCF file has null genotype values (encoded as :1).
+     * genotype-search.js : vcfGenotypeSearchP() passes blockV:undefined vcfDatasetId:.selectedDataset
+     * In that case use dataset, but if that is undefined, fall back to .lookupBlock,
+     * noting that vcfGenotypeLookupAllDatasets() : vcfGenotypeLookupGroup()
+     * can request multiple datasets which have different genotypeHasNull.
+     */
+    let
+    genotypeHasNull = dataset ? dataset.get('_meta.genotypeHasNull') :
+      (blockV || this.lookupBlock).get('datasetId._meta.genotypeHasNull');
+
     let resultP;
     /*if (scope)*/ {
       const
@@ -3313,8 +3323,6 @@ export default class PanelManageGenotypeComponent extends Component {
       mafThreshold = userSettings.mafThreshold,
       mafUpper = userSettings.mafUpper,
       featureCallRateThreshold = userSettings.featureCallRateThreshold,
-      /** true if the VCF file has null genotype values (encoded as :1). */
-      genotypeHasNull = this.lookupBlock.get('datasetId._meta.genotypeHasNull'),
       /** related : genotypeSNPFilters() */
       requestOptions = {
         requestFormat, requestSamplesAll, snpPolymorphismFilter,
