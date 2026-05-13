@@ -2576,7 +2576,7 @@ export default class PanelManageGenotypeComponent extends Component {
     /** selectedSNPsInBrushedDomain() uses .sampleFilterTypeName */
     filterByHaplotype = ! this.args.userSettings.filterSamplesByHaplotype ? undefined :
       this.selectedSNPsInBrushedDomain(vcfBlock);
-    dLog(fnName, vcfBlock.name, filterByHaplotype, 'FilteredSamples');
+    dLog(fnName, vcfBlock.brushName, filterByHaplotype, 'FilteredSamples');
     if (filterByHaplotype?.length && ! this.blockFilteredSamplesGet(vcfBlock)) {
       later(() => this.vcfGenotypeSamplesDataset(vcfBlock));
     } else if (this.args.userSettings.filterSamplesByHaplotype) {
@@ -2757,10 +2757,19 @@ export default class PanelManageGenotypeComponent extends Component {
     vcfBlock = this.lookupBlock,
     dataset = contentOf(vcfBlock.get('datasetId')),
     textPFn = () => this.vcfGenotypeSamplesDataset(vcfBlock),
-    /** The addition of .filterSamplesByHaplotype means result can change,
-     * so throttle is not applicable. */
+    /** The addition of .filterSamplesByHaplotype means result can change;
+     * to make throttle applicable we key the promises by filterDescription.
+     * blockFilteredSamplesGet() uses filterDescription to cache filtered
+     * lookups; this is copied from there. */
+    filterSamplesByHaplotype = this.args.userSettings.filterSamplesByHaplotype,
+    selectedSNPs = filterSamplesByHaplotype && this.selectedSNPsInBrushedDomain(vcfBlock),
+    /** In this use of promiseThrottle(), dataset[symbol] will be an object, i.e.
+     * filterDescription is a non-empty string not undefined if there is no filter applied. */
+    filterDescription = ! selectedSNPs?.length ? 'false' :
+      this.selectedSNPsToKeyWithSortAndMap(selectedSNPs),
     delaySecs = this.args.userSettings.filterSamplesByHaplotype ? 5 : 2 * 60,
-    textP = promiseThrottle(dataset, Symbol.for('samplesP'), delaySecs * 1000, textPFn);
+    textP = promiseThrottle(dataset, Symbol.for('samplesP'), filterDescription, delaySecs * 1000, textPFn);
+    dLog(fnName, dataset.id, filterDescription);
     /* vcfGenotypeSamplesDataset() initialises .vcfGenotypeSamplesSelected in
      * this case; could move to here. */
 
@@ -2837,7 +2846,7 @@ export default class PanelManageGenotypeComponent extends Component {
      * related : .ensureSamples();
      */
     if (! this.vcfGenotypeSamplesText || this.args.userSettings.filterSamplesByHaplotype) {
-      dLog(fnName, new Date().toISOString(), this.lookupBlock?.brushName);
+      dLog(fnName, new Date().toISOString(), this.lookupBlock?.brushName, this.args.userSettings.filterSamplesByHaplotype);
       this.vcfGenotypeSamples();
     }
 

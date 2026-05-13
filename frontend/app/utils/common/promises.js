@@ -84,21 +84,34 @@ export { promiseThrottle }
 /** If there is not a recent promise object[symbol] then perform fnP and record
  * the returned promise in object[symbol], along with the current time.  The
  * param delay is used to measure whether a previous promise is recent.
+ * Optionally, each object[symbol] may contain multiple promises, keyed by
+ * param key.
  *
  * @param object
  * @param symbol
+ * @param key optional text key within each object[symbol]
+ * if key is '' or undefined or null then object[symbol] is the promise.
+ * otherwise object[symbol][key] is the promise.
  * @param delay
  * @param fnP	returns a promise
  * @return the cached promise object[symbol].promise, or the result of fnP()
  */
-function promiseThrottle(object, symbol, delay, fnP) {
+function promiseThrottle(object, symbol, key, delay, fnP) {
   const fnName = 'promiseThrottle';
   let promise;
-  const previous = object[symbol], time = Date.now();
+  const
+  promises = object[symbol] || (key && (object[symbol] = {})),
+  previous = (key ?? false) ? promises[key] : promises,
+  time = Date.now();
   if (!previous || (previous.time + delay < time)) {
     dLog(fnName,  previous && (previous.time - time), object.id);
     promise = fnP();
-    object[symbol] = {time, promise};
+    const promiseTime = {time, promise};
+    if (key) {
+      promises[key] = promiseTime;
+    } else {
+      object[symbol] = promiseTime;
+    }
   } else {
     promise = previous.promise;
   }
