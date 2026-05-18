@@ -4,11 +4,59 @@
 
 //------------------------------------------------------------------------------
 
+import config from '../../config/environment';
+
+//------------------------------------------------------------------------------
+
 const dLog = console.debug;
 
 const trace = 0;
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const graphSVGStylesheetURL = `${config.rootURL}assets/graph-svg.css`;
 
 //------------------------------------------------------------------------------
+
+/** Cache the result of graphSVGStylesheetText(), and don't repeat the request. */
+let graphSVGStylesheetPromise;
+
+//------------------------------------------------------------------------------
+
+async function graphSVGStylesheetText() {
+  if (! graphSVGStylesheetPromise) {
+    graphSVGStylesheetPromise = fetch(graphSVGStylesheetURL)
+      .then((response) => {
+        if (! response.ok) {
+          dLog('graphSVGStylesheetText', graphSVGStylesheetURL, response.status);
+          return '';
+        }
+        return response.text();
+      })
+      .catch((err) => {
+        console.warn('Unable to load graph SVG stylesheet: ', err);
+        return '';
+      });
+  }
+
+  return graphSVGStylesheetPromise;
+}
+
+function svgElementWithEmbeddedStyles(svgElement, cssText) {
+  const svgClone = svgElement.cloneNode(true);
+
+  // if ! cssText cloneNode() could perhaps be omitted.
+  if (cssText) {
+    const
+    defs = svgClone.querySelector('defs') ||
+      svgClone.insertBefore(document.createElementNS(SVG_NS, 'defs'), svgClone.firstChild),
+    style = document.createElementNS(SVG_NS, 'style');
+
+    style.setAttribute('type', 'text/css');
+    style.textContent = `\n${cssText}\n`;
+    defs.insertBefore(style, defs.firstChild);
+  }
+
+  return svgClone;
+}
 
 
 /** Use the Clipboard_API to copy an SVG element to the clipboard
@@ -24,7 +72,11 @@ export async function copySVGToClipboard(svgElement) {
   try {
     // 1. Get the SVG element and its markup
     // const svgElement = document.getElementById(svgElementId);
-    const svgData = new XMLSerializer().serializeToString(svgElement);
+    const
+    cssText = await graphSVGStylesheetText(),
+    svgData = new XMLSerializer().serializeToString(
+      svgElementWithEmbeddedStyles(svgElement, cssText)
+    );
     
     // 2. Check if the browser supports 'image/svg+xml' on the clipboard
     const canCopySVG = window.ClipboardItem && 
