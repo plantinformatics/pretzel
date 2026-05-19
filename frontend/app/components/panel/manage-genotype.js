@@ -47,6 +47,7 @@ const /*import */{
 
 const /*import */{
   getPassportData,
+  genolinkSearchURL,
 } = vcfGenotypeBrapi.genolinkPassport; /*from 'vcf-genotype-brapi'; */
 /* Importing this directly instead of via the module package during development
  * enables incremental builds, for a rapid development cycle. */
@@ -2058,6 +2059,47 @@ export default class PanelManageGenotypeComponent extends Component {
       this.selectedSamplesTextLines = lines;
       this.sampleNameListInput(value);
     }
+  }
+
+  //------------------------------------------------------------------------------
+
+
+  /** Copy selected samples to a query URL to open in a Genolink tab.
+   *
+   * Only AGG samples are included in the URL, because Genolink has only AGG samples.
+   * To test this without an AGG dataset, it is sufficient to paste AGG sample
+   * names into the <Textarea selectedSamplesText >.
+   *
+   * The result is displayed in the tool banner above the Genotype Table.
+   * This calculation is based on this.selectedSamples which is set via user
+   * input in genotype-samples, where it was originally displayed, and also
+   * reduced by this.vcfGenotypeSamplesDataset() : filterSelectedSamples.
+   */
+  @computed('selectedSamples.length')
+  get genolinkSearchURL() { 
+    const
+    fnName = 'genolinkSearchURL',
+    g = this;
+    /** related : enablePassportData() */
+    if (! g.selectedSamples ||
+        ! (/*this.args.enablePassportData &&*/ this.activeDataset.isGenolink)) {
+      return undefined;
+    }
+    const
+    /** Same comment as in genotype-samples.js : selectedSamplesGetPassport(), 
+     * .filter(s => s.match(/^AGG/))
+     * Related : sampleNameIsAGG()
+     */
+    aggSamples = g.selectedSamples,
+    {truncatedMessage, url} =  genolinkSearchURL(genolinkBaseUrl, aggSamples);
+
+    if (aggSamples.length < g.selectedSamples.length) {
+      dLog(fnName, g.selectedSamples.length - aggSamples.length,
+           "selectedSamples not matching /^AGG/ are filtered out");
+    }
+
+    Ember_set(this, 'searchIdsTruncatedMessage', truncatedMessage);
+    return url;
   }
 
   //------------------------------------------------------------------------------
