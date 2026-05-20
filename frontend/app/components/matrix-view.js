@@ -863,8 +863,12 @@ export default Component.extend({
     let feature;
     const
     fnName = 'getRowAttribute',
-    physicalRow = table.toPhysicalRow(visualRowIndex);
-    feature = this.data[physicalRow]?.[featureSymbol];
+    physicalRow = table.toPhysicalRow(visualRowIndex),
+    /** Ignore this currently because if there are multiple features, it is returning only 1,
+     * i.e. this.data[visualRowIndex][*][featureSymbol] are all the same feature.
+     */
+    featureData = undefined; // Object.values(this.data[visualRowIndex]).find(r => r?.[featureSymbol]);
+    feature = featureData?.[featureSymbol];
 
     const gtPlainRender = this.urlOptions.gtPlainRender;
     if (! feature && table /*&& (gtPlainRender & 0b10000000)*/) {

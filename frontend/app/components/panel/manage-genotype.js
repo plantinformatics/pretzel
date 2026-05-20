@@ -1243,6 +1243,67 @@ export default class PanelManageGenotypeComponent extends Component {
       });
     });
   }
+  /** Propagate a clicked SNP filter to other viewed VCF blocks that share the
+   * same reference block.
+   *
+   * This is the single-feature equivalent of sampleFiltersMergeType('feature'):
+   * update the reference block's feature filter for feature.value_0, then copy
+   * the selected/deselected state down to matching positions in sibling blocks.
+   */
+  sampleFiltersFeatureToggle(feature, columnName) {
+    const
+    fnName = 'sampleFiltersFeatureToggle',
+    filterTypeName = 'feature',
+    sourceBlock = contentOf(feature.get('blockId')),
+    referenceBlock = sourceBlock.referenceBlock,
+    sourceFilters = this.blockSampleFilters(sourceBlock, filterTypeName),
+    sourceSelected = sourceFilters.includes(feature),
+    sampleFiltersRef = this.blockSampleFilters(referenceBlock, filterTypeName),
+    matchRefNew = MatchRef.columnNameToMatchRef[columnName],
+    refFeature = sampleFiltersRef.findBy('value_0', feature.value_0),
+    blocks = this.gtBlocks;
+
+    if (sourceSelected) {
+      if (refFeature) {
+        refFeature[matchRefSymbol] = matchRefNew;
+      } else {
+        sampleFiltersRef.addObject(feature);
+      }
+    } else if (refFeature) {
+      sampleFiltersRef.removeObject(refFeature);
+    }
+
+    blocks.forEach(block => {
+      if ((block !== sourceBlock) && (block.referenceBlock === referenceBlock)) {
+        const
+        sampleFilters = this.blockSampleFilters(block, filterTypeName),
+        selectedFeature = sampleFilters.findBy('value_0', feature.value_0);
+
+        if (sourceSelected) {
+          const
+          blockFeature = block[featurePositionsSymbol] &&
+            this.positionIsInBlock(block, feature) &&
+            block.features.findBy('value_0', feature.value_0);
+          if (blockFeature) {
+            blockFeature[matchRefSymbol] = matchRefNew;
+            if (selectedFeature && (selectedFeature !== blockFeature)) {
+              sampleFilters.removeObject(selectedFeature);
+            }
+            if (! sampleFilters.includes(blockFeature)) {
+              sampleFilters.addObject(blockFeature);
+            }
+          } else if (selectedFeature) {
+            selectedFeature[matchRefSymbol] = matchRefNew;
+          }
+        } else if (selectedFeature) {
+          sampleFilters.removeObject(selectedFeature);
+        }
+
+        block.set('selectedSNPCount.' + filterTypeName, new Number(sampleFilters.length));
+        dLog(fnName, feature.value_0, sourceSelected, block.brushName, sampleFilters.length, 'FilteredSamples');
+      }
+    });
+  }
   /** Refresh display to show result of sampleFiltersCopy().
    */
   selectedSampleRefreshDisplay(sampleFilterTypeName) {
@@ -1395,6 +1456,7 @@ export default class PanelManageGenotypeComponent extends Component {
      */
     block = feature.get('blockId'),
     filterTypeName = 'feature',
+    /** .blockSampleFilters() -> objectSymbolNameArray() handles block.content */
     filters = this.blockSampleFilters(block, filterTypeName),
     matchRef = feature[matchRefSymbol],
     // columnName is currently String, so use == for comparison.
@@ -1408,6 +1470,13 @@ export default class PanelManageGenotypeComponent extends Component {
     if (matchRef !== matchRefNew) {
       feature[matchRefSymbol] = matchRefNew;
     }
+    dLog
+    (fnName, block.get('brushName'), matchRef, matchRefNew,
+     JSON.stringify(filters.map(f => [f.value_0, f[matchRefSymbol]])));
+    /** featureToggleRC() calls featureToggle() for each of the VCF datasets with a feature at the
+     * clicked position, so this is not required :
+     *   this.sampleFiltersFeatureToggle(feature, columnName);
+     */
 
     // this.blockSetup(block.content);
     /* Using Number() means that each featureToggle() will cause the dependency
@@ -2082,7 +2151,7 @@ export default class PanelManageGenotypeComponent extends Component {
     g = this;
     /** related : enablePassportData() */
     if (! g.selectedSamples ||
-        ! (/*this.args.enablePassportData &&*/ this.activeDataset.isGenolink)) {
+        ! (/*this.args.enablePassportData &&*/ this.activeDataset?.isGenolink)) {
       return undefined;
     }
     const
@@ -2139,6 +2208,7 @@ export default class PanelManageGenotypeComponent extends Component {
         .filter(
           (b) => b.get('isVCF')),
       ab1 = vcfBlocks.map((block) => ({axisBrush : ab, block}));
+      this.ensureBlocksHaveFeatures(ab, vcfBlocks);
       return ab1;
     })
       .flat();
@@ -3689,6 +3759,32 @@ export default class PanelManageGenotypeComponent extends Component {
     /** Use Ember.set() because .brushedDomain is used in a tracking context. */
     Ember_set(axis1d.axisBrushObj, 'brushedDomain', featuresDomain);
     this.axisBrushService.incrementProperty('brushCount');
+  }
+
+  //----------------------------------------------------------------------------
+
+  /** VCF blocks viewed after the user created the axis brush will not yet have
+   * features requested for the brushed domain.
+   * Apply the brush to the block.
+   * If a VCF has no features in the brush, then its column in the GT will be empty,
+   * and featureToggle() will not propagate to the block's features.
+   */
+  ensureBlocksHaveFeatures(axisBrush, vcfBlocks) {
+    const
+    fnName = 'ensureBlocksHaveFeatures',
+    brushedDomain = axisBrush.brushedDomain,
+    pathsPro = this.blockService.pathsPro,
+    vcfBlocksNoFeatures = vcfBlocks.filter((block) => ! block.features?.length);
+    /** as in utils/draw/axis-brush.js : features() */
+    if (vcfBlocksNoFeatures.length) {
+    later(() => {
+      const
+      featuresArraysP = vcfBlocksNoFeatures
+        .filter((block) => ! block.features?.length)
+        .map(block => pathsPro.getBlockFeaturesInterval(block.id)
+             .then(features => dLog(fnName, brushedDomain, block.brushName, features?.length)));
+    });
+    }
   }
 
   //----------------------------------------------------------------------------
