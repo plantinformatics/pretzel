@@ -28,6 +28,7 @@ import { clipboard_writeText } from '../../utils/common/html';
 import { arrayChoose, arraySortNestedComparator, arraysSameReferences } from  '../../utils/common/arrays';
 import { intervalSize } from '../../utils/interval-calcs';
 import { inRange, overlapInterval } from '../../utils/draw/zoomPanCalcs';
+import { BrushedBlock } from '../../utils/draw/axis-brush';
 import { featuresIntervalsForTree } from '../../utils/data/features';
 // let vcfGenotypeBrapi = window["vcf-genotype-brapi"];
 import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
@@ -2207,7 +2208,7 @@ export default class PanelManageGenotypeComponent extends Component {
       vcfBlocks = ! axis1d ? [] : axis1d.brushedBlocks
         .filter(
           (b) => b.get('isVCF')),
-      ab1 = vcfBlocks.map((block) => ({axisBrush : ab, block}));
+      ab1 = vcfBlocks.map((block) => new BrushedBlock({axisBrush : ab, block}));
       this.ensureBlocksHaveFeatures(ab, vcfBlocks);
       return ab1;
     })
@@ -4485,10 +4486,13 @@ export default class PanelManageGenotypeComponent extends Component {
              */
           }
         } else {  // ! featuresArrays.length
-          setProperties(this, {
-            columnNames : emptyTableColumns,
-            gtDatasetColumns : [],  // used by e.g. positionFilterClass().
-          });
+          /* Previously just columnNames and gtDatasetColumns were cleared.  Using
+           * emptyTable() also clears displayData{,Rows}, so the table displays
+           * empty. Otherwise existing rows remain, without the correct Renderer
+           * (CATGRenderer) for Alt & Ref.
+           * gtDatasetColumns is used by e.g. positionFilterClass().
+           */
+          this.emptyTable();
         }
       }
     }
@@ -4565,6 +4569,7 @@ export default class PanelManageGenotypeComponent extends Component {
      */
 
     'blockService.viewedVisible',
+    'brushedVCFBlocks.@each.blockFeaturesLength',
     'requestFormat', 'rowLimit',
     'args.userSettings.filterBySelectedSamples',
     /** showSamplesWithinBrush() uses gtMergeRows */
