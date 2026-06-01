@@ -5341,8 +5341,8 @@ export default class PanelManageGenotypeComponent extends Component {
      * set, so use datasetTabActiveClass() to update the class in the DOM element.
      * Hopefully updating Bootstrap etc will make this unnecessary.
      * See related comment in gtDatasetTabs().
-     */
     this.datasetTabsActiveClass();
+     */
   }
 
   /** factored from selectDataset() - this would be passed to elem/tab-names

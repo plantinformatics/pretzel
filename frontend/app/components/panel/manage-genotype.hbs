@@ -8,6 +8,13 @@
 {{!-- --------------------------------------------------------------------- --}}
 
 {{#if this.showInputDialog}}
+{{log 'this.showInputDialog' this.showInputDialog 
+'this.activeId' this.activeId 
+'tabName2Id' (compute (action this.tabName2Id 'Datasets'))
+'this.activeIdDatasets' this.activeIdDatasets
+'this.activeDatasetId' this.activeDatasetId
+'this.tabName2IdDatasets' (and this.activeDatasetId (compute (action this.tabName2IdDatasets this.activeDatasetId))) }}
+
 {{!--     clickOutsideToClose=true --}}
   {{#ember-modal-dialog
     containerClassNames="genotype"
@@ -37,9 +44,12 @@
 
           {{#let 'Datasets' as |tabTypeName|}}
             {{#let (compute (action this.tabName2Id 'Datasets')) as |tabId|}}
+              {{!-- for <BsTab @customTabs={{true}}, <nav.item @active > is probably not applicable; instead
+                -- each <a> in <nav.item> has : class={{concat "nav-link " (if (bs-eq tab.activeId tabId) "active")}}
+                -- After updating to the current version, these uses of @active can be removed if not supported in this case.  --}}
               <nav.item class="active-detail"
-                @active={{and (eq this.activeDatasetId tabTypeName) (bs-eq tab.activeId tabId) }}>
-                <a href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
+                @active={{bs-eq tab.activeId tabId}}>
+                <a class={{concat "nav-link " (if (bs-eq tab.activeId tabId) "active")}} href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
                 <div>{{this.selectedCount}}</div>
               </nav.item>
             {{/let}}
@@ -47,7 +57,7 @@
 
           {{#let 'Lookup' as |tabTypeName|}}
             {{#let (compute (action this.tabName2Id tabTypeName)) as |tabId|}}
-              <nav.item class="active-detail" @active={{bs-eq tab.activeId tabId}}><a href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
+              <nav.item class="active-detail" @active={{bs-eq tab.activeId tabId}}><a class={{concat "nav-link " (if (bs-eq tab.activeId tabId) "active")}} href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
                 <div>{{this.brushedDomainLength}}</div>
               </nav.item>
             {{/let}}
@@ -55,7 +65,7 @@
 
           {{#let 'Result' as |tabTypeName|}}
             {{#let (compute (action this.tabName2Id tabTypeName)) as |tabId|}}
-              <nav.item class="active-detail" @active={{bs-eq tab.activeId tabId}}><a href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
+              <nav.item class="active-detail" @active={{bs-eq tab.activeId tabId}}><a class={{concat "nav-link " (if (bs-eq tab.activeId tabId) "active")}} href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
                 <div>
                   {{this.vcfGenotypeTextSizeDescription}}
                   , {{this.vcfGenotypeLookupCount}} current requests.
@@ -67,7 +77,7 @@
 
           {{#let 'Controls' as |tabTypeName|}}
             {{#let (compute (action this.tabName2Id tabTypeName)) as |tabId|}}
-              <nav.item class="active-detail" @active={{bs-eq tab.activeId tabId}}><a href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
+              <nav.item class="active-detail" @active={{bs-eq tab.activeId tabId}}><a class={{concat "nav-link " (if (bs-eq tab.activeId tabId) "active")}} href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
                 <div>{{!-- this.blocksHaplotypeFilters.mapBy('filters').flat() --}}</div>
               </nav.item>
             {{/let}}
@@ -87,15 +97,25 @@
 
               {{!-- --------------------------------------------------------- --}}
 
-              <BsTab @customTabs={{true}} @fade={{false}} @onChange={{action this.selectDataset}} @activeId={{this.activeIdDatasets}} as |tab|>
+              <BsTab @customTabs={{true}} @fade={{false}} @onChange={{action this.selectDataset}} @activeId={{this.activeIdDatasets}} as |tabDatasets|>
                 <BsNav @type="tabs" as |nav|>
                   <ul class="nav nav-tabs li-active-extra counts">
 
-                    {{#each this.gtDatasetTabs as |tabTypeName|}}
-                      {{#let (compute (action this.tabName2IdDatasets tabTypeName)) as |tabId|}}
-                        <nav.item class="active-detail"
-                          @active={{bs-eq this.activeDatasetId tabTypeName }}>
-                          <a href={{concat "#" tabId}} role="tab" onclick={{action (pipe (action tab.select tabId) (action this.selectDataset tabTypeName) ) }}>{{tabTypeName}}</a>
+                    {{#each this.gtDatasetTabs as |datasetId|}}
+                      {{#let (compute (action this.tabName2IdDatasets datasetId)) as |tabIdDataset|}}
+                        <nav.item
+                          class={{concat
+                          "active-detail "
+                          (if (bs-eq this.activeDatasetId datasetId) "active")
+                          }}
+                          >
+                          {{!--  class="active-detail" ... @active={{bs-eq this.activeDatasetId datasetId}} --}}
+                          {{log 'tabDatasets.activeId' tabDatasets.activeId 'tabIdDataset' tabIdDataset
+                          'this.activeDatasetId' this.activeDatasetId 'datasetId' datasetId }}
+                          {{!-- .active is placed on both <li> and <a> except that tabDatasets.activeId is undefined after the settings modal dialog is re-opened (.showInputDialog), so then <a> does not have .active.  
+                            .active on either element gives the required styling (_nav.scss : .nav-link.active, vendor.css : .nav-tabs > li.active > a )
+                            --}}
+                          <a class={{concat "nav-link " (if (bs-eq tabDatasets.activeId tabIdDataset) "active")}} href={{concat "#" tabId}} role="tab" onclick={{action (pipe (action tabDatasets.select tabIdDataset) (action this.selectDataset datasetId) ) }}>{{datasetId}}</a>
                           <div>{{this.selectedCount}}</div>
                         </nav.item>
                       {{/let}}
@@ -435,9 +455,9 @@
         {{!-- ------------------------------------------------------------- --}}
 
         {{#let 'Controls' as |tabTypeName|}}
-          {{#let (compute (action this.tabName2Id tabTypeName)) as |tabId|}}
+          {{#let (compute (action this.tabName2Id tabTypeName)) as |tabIdControls|}}
 
-            {{#tab.pane id=tabId title=tabTypeName}}
+            {{#tab.pane id=tabIdControls title=tabTypeName}}
               <div class="genotype">
 
                 <span style="margin:1em; width: 20%;">
@@ -461,19 +481,19 @@
                   setSelected=this.setSelectedSampleFilter
                   as |tn|}}
 
-                  <BsTab @customTabs={{true}} @fade={{false}} @onChange={{action tn.onChangeTab}} @activeId={{tn.activeId}} as |tab|>
+                  <BsTab @customTabs={{true}} @fade={{false}} @onChange={{action tn.onChangeTab}} @activeId={{tn.activeId}} as |tabControls|>
                     <BsNav @type="tabs" as |nav|>
                       <ul class="nav nav-tabs li-active-extra counts">
 
                         {{#each this.sampleFilterTypesArray as |tabType|}}
                           {{#let (compute (action tn.tabName2Id tabType.name)) as |tabId|}}
-                          {{log 'activeTabId' tab.activeId tabId (bs-eq tab.activeId tabId) }}
-                          {{!-- tab.activeId === tn.activeId --}}
+                          {{log 'activeTabId' tabControls.activeId tabId (bs-eq tabControls.activeId tabId) }}
+                          {{!-- tabControls.activeId === tn.activeId --}}
                             <nav.item class="active-detail"
-                              @active={{bs-eq tab.activeId tabId }}>
-                              <a href={{concat "#" tabId}} role="tab"
-                                onclick={{action (pipe (action tab.select tabId)
-                                (action tn.selectTabName tabType.name tab) ) }}>{{tabType.text}}</a>
+                              @active={{bs-eq tabControls.activeId tabId }}>
+                              <a class={{concat "nav-link " (if (bs-eq tabControls.activeId tabId) "active")}} href={{concat "#" tabId}} role="tab"
+                                onclick={{action (pipe (action tabControls.select tabId)
+                                (action tn.selectTabName tabType.name tabControls) ) }}>{{tabType.text}}</a>
                               <div>{{this.selectedCount}}</div>
                             </nav.item>
                           {{/let}}
