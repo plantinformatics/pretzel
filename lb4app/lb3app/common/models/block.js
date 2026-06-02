@@ -1478,6 +1478,31 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
   Block.genotypeSamples = function(id, datasetId, scope, filter, options, cb) {
     const fnName = 'genotypeSamples';
     {
+      /** This error was seen : vcfGenotypeSamplesFiltered filter.features is not given {
+          features: {
+            '0': { position: '240244382', matchRef: 'false' },
+            '1': { position: '258683290', matchRef: 'true' },
+            ...
+            '22': { position: '304794457', matchRef: 'false' }
+          },
+          matchHet: 'true',
+          genotypeHasNull: 'true'
+        }
+        *
+       * This suggests the array index is sometimes seen as a string instead of
+       * a number, and is parsed as an object instead of an array.
+       * This is handled here by converting an object of this type to an array.
+       * Adding POST support will avoid this issue.
+       * If this does not recur, then this conversion can be dropped.
+       */
+      if (filter?.features && ! Array.isArray(filter.features) && filter.features['0']) {
+        const
+        ff = Object.entries(filter.features)
+          .reduce((F, [k, v]) => {F[+k] = v; return F; }, []);
+        console.log(fnName, filter, 'convert .features to array', ff);
+        filter.features = ff;
+      }
+
       this.blockDatasetLookup(id, options)
         .then(samples.bind(this));
 
