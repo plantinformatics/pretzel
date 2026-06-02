@@ -60,6 +60,7 @@ const { Writable, pipeline, Readable } = require('stream');
  */
 
 /* global process */
+/* global structuredClone */
 
 // -----------------------------------------------------------------------------
 
@@ -1517,6 +1518,9 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       }
     }
   };
+  /** POST version of Block.genotypeSamples, which is addressed by verb GET.
+   */
+  Block.genotypeSamplesPost = Block.genotypeSamples;
 
   Block.vcfGenotypeSamples = function(datasetId, scope, filter, cb) {
     const fnName = 'vcfGenotypeSamples';
@@ -1542,7 +1546,10 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     germinateGenotypeSamples(datasetId, scope, cb);
   };
 
-  Block.remoteMethod('genotypeSamples', {
+  /** Config for remoteMethod genotypeSamples.
+   *  Also used for genotypeSamplesPost with change of http.verb : 'get' -> 'post'
+   */
+  const genotypeSamplesRMConfig = {
     accepts: [
       {arg: 'id', type: 'string', required: true},
       {arg: 'datasetId', type: 'string', required: true},
@@ -1553,7 +1560,15 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     http: {verb: 'get'},
     returns: {arg: 'text', type: 'string'},
     description: "VCF genotype Samples e.g. samtools bcftools, returns list of samples defined in .vcf TSV table as text string"
-  });
+  };
+  Block.remoteMethod('genotypeSamples', genotypeSamplesRMConfig);
+  /** 'genotypeSamplesPost' args are identical to 'genotypeSamples'
+   * apart from .http.verb.  This does not contain any function references,
+   * so lodash/cloneDeep is not required.
+   */
+  const genotypeSamplesPostRMConfig = structuredClone(genotypeSamplesRMConfig);
+  genotypeSamplesPostRMConfig.http.verb = 'post';
+  Block.remoteMethod('genotypeSamplesPost', genotypeSamplesPostRMConfig);
 
   //----------------------------------------------------------------------------
 
