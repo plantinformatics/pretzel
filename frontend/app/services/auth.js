@@ -474,13 +474,19 @@ export default Service.extend({
     let paramLimit = 5;	// 10
     const post = filter?.features?.length > paramLimit;
     const params = {id : block.id, datasetId, scope, filter};
-    //const data = {blockId, filter : featureNames, matchRegExp, options};
+    // based on similar in vcfGenotypeLookup().
+    // if (post) _server() won't be able to access data.datasetId, so pass apiServer
+    const
+    id2Server = this.get('apiServers.id2Server'),
+    apiServer = id2Server[datasetId] || id2Server[block.id];
+
     dLog(fnName, post, filter?.features?.length);
     return this._ajax(
       'Blocks/genotypeSamples' + (post ? 'Post' : ''),
       post ? 'POST' : 'GET',
       post ? JSON.stringify(params) : params,
-      true);
+      true,
+      /*onProgress*/ null, apiServer);
   },
 
 

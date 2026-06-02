@@ -211,6 +211,7 @@ module.exports = function(app) {
       context.property == 'dnaSequenceSearch' ||
       context.property == 'dnaSequenceLookup' ||
       context.property == 'genotypeSamples' ||
+      context.property == 'genotypeSamplesPost' ||
       context.property == 'vcfGenotypeLookup' ||
       context.property == 'vcfGenotypeLookupPost' ||
         // Alias
