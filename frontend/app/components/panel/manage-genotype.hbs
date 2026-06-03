@@ -454,10 +454,10 @@
 
         {{!-- ------------------------------------------------------------- --}}
 
-        {{#let 'Controls' as |tabTypeName|}}
-          {{#let (compute (action this.tabName2Id tabTypeName)) as |tabIdControls|}}
+        {{#let 'Controls' as |tabTypeNameControls|}}
+          {{#let (compute (action this.tabName2Id tabTypeNameControls)) as |tabIdControls|}}
 
-            {{#tab.pane id=tabIdControls title=tabTypeName}}
+            {{#tab.pane id=tabIdControls title=tabTypeNameControls}}
               <div class="genotype">
 
                 <span style="margin:1em; width: 20%;">
@@ -514,7 +514,7 @@
                           {{!-- pane title is not apparent in the generated DOM.
                             It appears in ember-bootstrap/addon/components/base/bs-tab/pane.js
                           --}}
-                          {{#tab.pane id=tabId title=tabTypeName}}
+                          {{#tabControls.pane id=tabId title=tabTypeName}}
 
                             <div style="margin-left: 1em; margin-top: 1em">
                               <span>{{this.haplotypeFiltersCount}}</span>
@@ -542,14 +542,14 @@
                               {{/each}}
                             </ul>
 
-                          {{/tab.pane}}
+                          {{/tabControls.pane}}
                         {{/let}}
                       {{/let}}
                       {{!-- ----------------------------------------------- --}}
                       {{#let 'variantInterval' as |tabTypeName|}}
                         {{#let (compute (action tn.tabName2Id tabTypeName)) as |tabId|}}
 
-                          {{#tab.pane id=tabId title=tabTypeName}}
+                          {{#tabControls.pane id=tabId title=tabTypeName}}
 
                             <div style="margin-left: 1em; margin-top: 1em">
                               <span>{{this.variantIntervalFiltersCount}}</span>
@@ -584,7 +584,7 @@
                               {{/each}}
                             </ul>
 
-                          {{/tab.pane}}
+                          {{/tabControls.pane}}
                         {{/let}}
                       {{/let}}
 
@@ -594,7 +594,7 @@
                       {{#let 'feature' as |tabTypeName|}}
                         {{#let (compute (action tn.tabName2Id tabTypeName)) as |tabId|}}
 
-                          {{#tab.pane id=tabId title=tabTypeName}}
+                          {{#tabControls.pane id=tabId title=tabTypeName}}
 
                             <div style="margin-left: 1em; margin-top: 1em">
                               <span>{{this.featureFiltersCount}}</span>
@@ -620,7 +620,7 @@
                               {{/each}}
                             </ul>
 
-                          {{/tab.pane}}
+                          {{/tabControls.pane}}
                         {{/let}}
                       {{/let}}
                       {{!-- ----------------------------------------------- --}}
