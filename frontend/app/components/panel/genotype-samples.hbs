@@ -267,12 +267,12 @@
     </a>
     {{#if (and @the.selectedCount this.genolinkSearchURL)}}
       <EmberTooltip @side="bottom-start" @delay=500>
-        {{this.searchIdsTruncatedMessage}}
+        {{@the.searchIdsTruncatedMessage}}
         Open AGG Genolink, showing the passport data of the selected samples.
       </EmberTooltip>
     {{else}}
       <EmberTooltip @side="bottom-start" @delay=500>
-        {{this.searchIdsTruncatedMessage}}
+        {{@the.searchIdsTruncatedMessage}}
         No samples selected, please select some samples first.
       </EmberTooltip>
     {{/if}}

@@ -45,7 +45,7 @@ export default class PanelGenotypeSamplesComponent extends Component {
   get enablePassportData() {
     const
     enable = this.args.enablePassportData &&
-      (this.activeDataset.isGenolink &&
+      (this.activeDataset?.isGenolink &&
        (this.urlOptions.tableRow || this.urlOptions.multiSelect));
     return enable;
   }
@@ -80,16 +80,22 @@ export default class PanelGenotypeSamplesComponent extends Component {
 
   //----------------------------------------------------------------------------
 
-  get activeDataset() {
+  /** Testing without this, using alias instead which is the same but lacks the
+   * fallback value (.lookupBlock.datasetId) - seems OK.  Not decided.
+   */
+  get activeDataset_Disabled() {
     const
     mg = this.args.the,
     /** activeDataset is derived from brushedOrViewedVCFBlocksVisible,
      * but depends on setSelectedDataset() which is called in later(),
      * so provide a direct fallback.
+     * Related : axisBrushBlock(), lookupBlockWithinBlocks(), selectDataset(),
+     * mut_axisBrushBlockIndex().
      */
     dataset = mg.activeDataset || mg.lookupBlock?.datasetId.content;
     return dataset;
   }
+  @alias('args.the.activeDataset') activeDataset;
 
   //----------------------------------------------------------------------------
 

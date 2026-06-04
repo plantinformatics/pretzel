@@ -5332,13 +5332,17 @@ export default class PanelManageGenotypeComponent extends Component {
    * - activeDataset  Ember Data store Dataset record for .activeDatasetId
    */
   setSelectedDataset(datasetId) {
+    const fnName = 'setSelectedDataset';
     /* These properties are related, so use setProperties() to ensure their
      * value change is synchronised */
     setProperties(this, {
       activeDatasetId : datasetId,
       activeIdDatasets : this.tabName2IdDatasets(datasetId),
-      activeDataset : this.gtDatasets.findBy('id', this.activeDatasetId),
+      activeDataset : this.gtDatasets.findBy('id', datasetId),
     });
+    if (datasetId && ! this.activeDataset) {
+      console.warn(fnName, datasetId, 'not found in', this.gtDatasets.mapBy('id').join(','));
+    }
 
     /** We are not currently seeing the .active class of the <li> in <BsTab
      * .activeIdDatasets > ... .gtDatasetTabs update when .activeIdDatasets is
