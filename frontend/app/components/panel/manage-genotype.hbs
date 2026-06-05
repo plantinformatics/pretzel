@@ -115,7 +115,9 @@
                           {{!-- .active is placed on both <li> and <a> except that tabDatasets.activeId is undefined after the settings modal dialog is re-opened (.showInputDialog), so then <a> does not have .active.  
                             .active on either element gives the required styling (_nav.scss : .nav-link.active, vendor.css : .nav-tabs > li.active > a )
                             --}}
-                          <a class={{concat "nav-link " (if (bs-eq tabDatasets.activeId tabIdDataset) "active")}} href={{concat "#" tabId}} role="tab" onclick={{action (pipe (action tabDatasets.select tabIdDataset) (action this.selectDataset datasetId) ) }}>{{datasetId}}</a>
+                            {{!-- This was onclick=, no longer required - tabDatasets.select is calling @onChange OK
+                            (pipe (action tabDatasets.select tabIdDataset) (action this.selectDataset datasetId) ) --}}
+                          <a class={{concat "nav-link " (if (bs-eq tabDatasets.activeId tabIdDataset) "active")}} href={{concat "#" tabId}} role="tab" onclick={{action tabDatasets.select tabIdDataset }}>{{datasetId}}</a>
                           <div>{{this.selectedCount}}</div>
                         </nav.item>
                       {{/let}}

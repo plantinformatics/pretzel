@@ -5310,12 +5310,23 @@ export default class PanelManageGenotypeComponent extends Component {
 
   /** Receive user selection of VCF / genotype dataset via tab selection change
    * of Datasets Samples tabs.
-   * @param datasetId
+   * @param datasetId or tabName2IdDatasets(datasetId)
    */
   @action
   selectDataset(datasetId) {
     const fnName = 'selectDataset';
     dLog(fnName, this, datasetId, arguments);
+    /** This function is currently called via @onChange={{action this.selectDataset}},
+     * which passes tabName2IdDatasets(datasetId).
+     * Until db24aabd this was (also?) called via <a onclick= >
+     *   (pipe (action tabDatasets.select tabIdDataset) (action this.selectDataset datasetId) ) 
+     * i.e. datasetId was not prefixed with tab_view_prefix_Datasets.
+     * tabDatasets.select is calling @onChange OK, so param datasetId will have
+     * the prefix tab_view_prefix_Datasets, and can be renamed tabIdDataset.
+     */
+    if (datasetId.startsWith(tab_view_prefix_Datasets)) {
+      datasetId = datasetId.split(tab_view_prefix_Datasets)[1];
+    }
 
     const
     gtDatasetIds = this.gtDatasetTabs,
