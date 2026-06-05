@@ -1981,6 +1981,9 @@ export default class PanelManageGenotypeComponent extends Component {
     /** update when new results in sampleCache.filteredByGenotype */
     'sampleCache.filteredByGenotypeCount',
     'lookupBlock',
+    /** The samples are displayed in the selected dataset tab, so
+     * activeDatasetId is a better dependency than lookupBlock. */
+    'activeDatasetId',
     'receivedNamesCount',
   )
   get samples() {
