@@ -1714,6 +1714,9 @@ export default class PanelManageGenotypeComponent extends Component {
     return datasetIds;
   }
 
+  /** This is just .gtDatasetIds, not the corresponding tab names
+   * (i.e. tabIdDataset), which can be achieved via tabName2IdDatasets().
+   */
   @computed('gtDatasets')
   get gtDatasetTabs() {
     const
@@ -1722,14 +1725,17 @@ export default class PanelManageGenotypeComponent extends Component {
     if (! this.activeDatasetId && datasetIds.length) {
       dLog(fnName, 'initial activeDatasetId', datasetIds[0], this.activeDatasetId);
       later(() => {
-        this.setSelectedDataset(datasetIds[0]);
-        /** The above sets @active of the <nav.item > i.e. <li>, but the class
-         * active is not added, perhaps because it has already rendered.  So use
-         * datasetTabActiveClass() for the initial render; after that the user
-         * clicks on the tab which sets active class OK. There is hopefully a
-         * more elegant way to do this.
-         */
-        this.datasetTabActiveClass();
+        // potentially .activeDatasetId could have been set during later()
+        if (! this.activeDatasetId) {
+          this.setSelectedDataset(datasetIds[0]);
+          /** The above sets @active of the <nav.item > i.e. <li>, but the class
+           * active is not added, perhaps because it has already rendered.  So use
+           * datasetTabActiveClass() for the initial render; after that the user
+           * clicks on the tab which sets active class OK. There is hopefully a
+           * more elegant way to do this.
+           */
+          this.datasetTabActiveClass();
+        }
       });
     }
     dLog(fnName, datasetIds, this.gtDatasets);
@@ -1802,11 +1808,15 @@ export default class PanelManageGenotypeComponent extends Component {
   /** axisBrushBlock -> lookupBlock is selected from a list which satisfies dataset .hasTag('view').
    * May later pass lookupDatasetId .meta.vcfFilename
    * See comments in vcfGenotypeLookup() re. vcfDatasetId / parent.
+   *
+   * User axis brush drives .lookupBlock; user selection of dataset tab drives
+   * .activeDataset. Here the latter is interposed via selectedDatasetId, which
+   * enables samples() to reflect dataset tab panel selection.
    */
-  @computed('lookupBlock', 'args.userSettings.selectedDataset')
+  @computed('lookupBlock', 'args.userSettings.selectedDatasetId')
   get lookupDatasetId() {
     const b = this.lookupBlock;
-    const datasetId = this.args.userSettings.selectedDataset?.id || b?.get('datasetId.id');
+    const datasetId = this.args.userSettings.selectedDatasetId || b?.get('datasetId.id');
     return datasetId;
   }
   /** Scope of lookupBlock, which used to identify the (reference) chromosome in
@@ -1982,7 +1992,16 @@ export default class PanelManageGenotypeComponent extends Component {
     'sampleCache.filteredByGenotypeCount',
     'lookupBlock',
     /** The samples are displayed in the selected dataset tab, so
-     * activeDatasetId is a better dependency than lookupBlock. */
+     * activeDatasetId is a better dependency than lookupBlock,
+     * and could be used instead of .lookupDatasetId, which is equivalent (see
+     * comment in lookupDatasetId()) but .activeDatasetId more clearly
+     * indicates the dataset tab selected by the user.
+     * Originally the Genotype Table displayed just one dataset, selected by user
+     * axis brush, and .lookupBlock / .lookupDatasetId reflects that history;
+     * with multiple datasets on the axis, some affordances could be added to
+     * the axis to re-enable axis selection as the driver, but otherwise the
+     * lookup connection can be dropped.
+     */
     'activeDatasetId',
     'receivedNamesCount',
   )
@@ -5353,6 +5372,7 @@ export default class PanelManageGenotypeComponent extends Component {
       activeDatasetId : datasetId,
       activeIdDatasets : this.tabName2IdDatasets(datasetId),
       activeDataset : this.gtDatasets.findBy('id', datasetId),
+      'args.userSettings.selectedDatasetId' : datasetId,
     });
     if (datasetId && ! this.activeDataset) {
       console.warn(fnName, datasetId, 'not found in', this.gtDatasets.mapBy('id').join(','));
