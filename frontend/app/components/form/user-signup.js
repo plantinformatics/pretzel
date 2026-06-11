@@ -17,6 +17,15 @@ export default BaseForm.extend({
     "EMAIL_ADMIN_VERIFY": "Thank you for registering. Your sign up request has been sent to an administrator for approval",
     "EMAIL_NO_VERIFY": "Thank you for registering. Please log in."
   },
+
+  /** To enable content (terms-of-use.hbs) to be displayed after auth-base,
+   * prevent auth-base <div class=row> from applying display: flex;
+   * The same is done in ./user-login.js
+   */
+  classNames : ['content-after-auth-base'],
+
+  //----------------------------------------------------------------------------
+
   handleSuccess(res) {
     let codes = this.get('successMap')
     if (res.code) {
