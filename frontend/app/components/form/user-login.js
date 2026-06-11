@@ -32,6 +32,13 @@ export default BaseForm.extend({
     "LOGIN_FAILED": "Bad username / password. Please try again.",
     "LOGIN_FAILED_EMAIL_NOT_VERIFIED": "The email has not been verified."
   },
+
+  /** To enable content (terms-of-use.hbs) to be displayed after auth-base,
+   * prevent auth-base <div class=row> from applying display: flex;
+   */
+  classNames : ['content-after-auth-base'],
+
+  //----------------------------------------------------------------------------
   sendRequest(data) {
     const fnName = 'sendRequest';
     this.setProperties({isProcessing: true})

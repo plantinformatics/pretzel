@@ -36,6 +36,37 @@ body.mapview div#Page-Body
   bottom: 0;
 }
 
+//------------------------------------------------------------------------------
+
+/** To enable content (e.g. terms-of-use.hbs) to be displayed after auth-base,
+* prevent auth-base <div class=row> from applying display: flex;
+*/
+div.content-after-auth-base > div.row
+{
+  display: inherit;
+}
+.text-content-block
+{
+  margin : 12em;
+
+  // the following are based on the default styling of <pre>
+  display: block;
+  font-size: 87.5%;
+  color: #212529;
+
+  padding: 9.5px;
+
+  background-color: #f5f5f5;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+.text-content-block li
+{
+  font-family:Calibri;
+  font-size:10pt;
+ }
+
+//------------------------------------------------------------------------------
 
 /** show bottom border for non-active tabs
  */
