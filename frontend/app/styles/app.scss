@@ -45,9 +45,35 @@ div.content-after-auth-base > div.row
 {
   display: inherit;
 }
+.auth-terms-page
+{
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 69px);
+  overflow: hidden;
+}
+.auth-terms-page > .content-after-auth-base
+{
+  flex: 0 0 auto;
+}
+.auth-terms-page > .content-after-auth-base > div.row
+{
+  margin: 0 25vw;
+  width: auto;
+}
+.auth-terms-page > .content-after-auth-base > div.row > div[class*="col-"]
+{
+  float: none;
+  margin-left: 0;
+  padding-left: 9.5px;
+  padding-right: 9.5px;
+  width: 100%;
+  // ignore .col-sm-4 in this case, so that the form is full-width
+  max-width: inherit;
+}
 .text-content-block
 {
-  margin : 12em;
+  margin : 25vw;
 
   // the following are based on the default styling of <pre>
   display: block;
@@ -59,6 +85,14 @@ div.content-after-auth-base > div.row
   background-color: #f5f5f5;
   border: 1px solid #ccc;
   border-radius: 4px;
+}
+// .text-content-block identifies terms-of-use.hbs content
+.auth-terms-page > .text-content-block
+{
+  flex: 1 1 auto;
+  margin: 10ex 25vw 2ex;
+  min-height: 0;
+  overflow-y: auto;
 }
 .text-content-block li
 {

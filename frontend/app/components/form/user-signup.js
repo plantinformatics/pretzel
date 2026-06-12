@@ -21,6 +21,8 @@ export default BaseForm.extend({
   /** To enable content (terms-of-use.hbs) to be displayed after auth-base,
    * prevent auth-base <div class=row> from applying display: flex;
    * The same is done in ./user-login.js
+   * There is some duplicate use of content-after-auth-base :
+   * templates/signup.hbs: <div class="content-after-auth-base auth-terms-page">
    */
   classNames : ['content-after-auth-base'],
 
