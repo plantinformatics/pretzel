@@ -1,7 +1,7 @@
 {
   "name": "pretzel",
   "private": true,
-  "version": "3.11.0alpha12",
+  "version": "3.11.0",
   "dependencies": {
   },
   "repository" :
