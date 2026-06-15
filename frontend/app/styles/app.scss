@@ -58,7 +58,7 @@ div.content-after-auth-base > div.row
 }
 .auth-terms-page > .content-after-auth-base > div.row
 {
-  margin: 0 25vw;
+  margin: 0 29vw;
   width: auto;
 }
 .auth-terms-page > .content-after-auth-base > div.row > div[class*="col-"]
@@ -73,7 +73,7 @@ div.content-after-auth-base > div.row
 }
 .text-content-block
 {
-  margin : 25vw;
+  margin : 29vw;
 
   // the following are based on the default styling of <pre>
   display: block;
@@ -90,9 +90,10 @@ div.content-after-auth-base > div.row
 .auth-terms-page > .text-content-block
 {
   flex: 1 1 auto;
-  margin: 10ex 25vw 2ex;
+  margin: 10ex 29vw 2ex;
   min-height: 0;
   overflow-y: auto;
+  max-height: 50ex;
 }
 .text-content-block li
 {
