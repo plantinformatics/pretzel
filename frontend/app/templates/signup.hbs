@@ -1,7 +1,9 @@
-{{#elem/embed-html path="signupPageContent" as |embedHtml|}}
-    {{{await embedHtml.promise}}}
-{{/elem/embed-html}}
+<div class="content-after-auth-base auth-terms-page">
+  {{#elem/embed-html path="signupPageContent" as |embedHtml|}}
+      {{{await embedHtml.promise}}}
+  {{/elem/embed-html}}
 
+  {{form/user-signup}}
 
-<br>
-{{form/user-signup}}
+  {{form/terms-of-use}}
+</div>

@@ -31,8 +31,19 @@ https://cran.r-project.org/web/packages/colorBlindness/vignettes/colorBlindness.
 https://github.com/IBM-Design/colors
 https://github.com/IBM-Design/colors/blob/master/source/colors.js
 
+https://jfly.uni-koeln.de/color/
+Color Universal Design (CUD)
+- How to make figures and presentations that are friendly to Colorblind people -
+Masataka Okabe,  Jikei Medial School (Japan)
+Kei Ito, University of Tokyo, Institute for Molecular and Cellular Biosciences (Japan)
+
+
+https://siegal.bio.nyu.edu/color-palette/
+
  */
 
+const
+baseColour_Null = '#ff8a7d';
 
 const themes = [
   {
@@ -41,6 +52,7 @@ const themes = [
       '--gt-background-color-Ref': '#b1c1e8',
       '--gt-background-color-Het': '#d9edf7',
       '--gt-background-color-Alt': '#ffc8ae',
+      '--gt-background-color-Null': baseColour_Null,
       '--gt-background-color-Missing': '#ffffff',
       '--gt-background-color-selected-snp': 'springgreen'
     }
@@ -51,6 +63,7 @@ const themes = [
       '--gt-background-color-Ref': 'rgb(53, 57, 59)',
       '--gt-background-color-Het': 'rgb(14, 48, 65)',
       '--gt-background-color-Alt': 'rgb(100, 32, 0)',
+      '--gt-background-color-Null': baseColour_Null,
       '--gt-background-color-Missing': 'rgb(24, 26, 27)',
       '--gt-background-color-selected-snp': 'rgb(0, 204, 127)'
     }
@@ -65,12 +78,13 @@ rgb(000, 114, 178)
 
 
 
-rgb(204, 121, 167)
+
     */
     variables: {
       '--gt-background-color-Ref': 'rgb( 86, 180, 233)',
       '--gt-background-color-Het': 'rgb(213, 094, 000)',
       '--gt-background-color-Alt': 'rgb(230, 159, 000)',
+      '--gt-background-color-Null': 'rgb(204, 121, 167)', // baseColour_Null
       '--gt-background-color-Missing': 'rgb(240, 228,  66)',
       '--gt-background-color-selected-snp': 'rgb(000, 158, 115)'
     }
@@ -81,6 +95,7 @@ rgb(204, 121, 167)
       '--gt-background-color-Ref': 'rgb(91, 142, 253)',
       '--gt-background-color-Het': 'rgb( 46,  37, 133)',
       '--gt-background-color-Alt': 'rgb( 93, 168, 153)',
+      '--gt-background-color-Null': baseColour_Null,
       '--gt-background-color-Missing': 'rgb(148, 203, 236)',
       '--gt-background-color-selected-snp': 'rgb( 51, 117,  56)'
     }

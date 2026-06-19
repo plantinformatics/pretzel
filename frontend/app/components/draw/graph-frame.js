@@ -626,9 +626,15 @@ export default Component.extend({
     'controls.window.tablesPanelRight',
     function() {
       console.log("resize", this, arguments);
+      /** calls from resizeEffect are within the ember loop, so `this` is valid,
+       * but in calls from .on(resize ) this may be .isDestroying.
+       */
+      if (this.isDestroying) { return; }
+
       /** resize() may called via .observes(), or
        * via :  window .on('resize' ... resizeThisWithTransition() ... resizeThis()
        * ... Ember.run.debounce(this, this.resize, )
+       * also : resizeEffect ... debounce ... this.resize
        */
       const 
       calledFromObserve = (arguments.length === 2),

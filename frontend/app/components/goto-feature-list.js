@@ -27,7 +27,7 @@ export default Component.extend({
    * This is implemented via /key/i, so the key can be a RegExp, but some
    * punctuation is removed to sanitise the expression.
    */
-  matchRegExp : true,
+  matchRegExp : false,
 
   /** Cleared by clearResults(), set by getBlocksOfFeatures(). */
   showResult : true,
@@ -99,7 +99,7 @@ export default Component.extend({
    */
   blocksUnique : function (selectedFeatureNames) {
       const fnName = 'blocksUnique';
-      const maxResultFeatures = 100;
+      const maxResultFeatures = 500;
       let blockService = this.get('blockService');
       function peekBlock(block) {
         return blockService.peekBlock(block.id); };
@@ -113,6 +113,7 @@ export default Component.extend({
         .then((result) => {
           /** result is : matchAliases ? {features, aliases} : [feature, ...] */
           let features = matchAliases ? result.features : result;
+          this.set('featuresResultLength', features.length);
           /** matchRegExp===true may produce a large result array. */
           const
           truncated = (features.length > maxResultFeatures),

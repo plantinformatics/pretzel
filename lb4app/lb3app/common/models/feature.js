@@ -136,8 +136,21 @@ module.exports = function(Feature) {
     }, options).then(function(features) {
       // filter out the features for which the user doesn't have access to the dataset
       features = features.filter(function(feature) {
-        return feature.__data.block.__data.dataset
-      })
+        const
+        /** features are created with a valid .blockId reference, and normally
+         * when a block is deleted, the features which reference it (i.e. the
+         * features it contains) are removed; otherwise a feature .blockId may
+         * refer to a block which has been deleted, which causes ! block here.
+         */
+        block = feature.__data.block,
+        dataset = block?.__data.dataset,
+        // dataset may now be a function ?
+        datasetOK = (typeof dataset == 'function') ? dataset() : dataset;
+        if (! block) {
+          console.log(fnName, feature.name, feature.id.toString(), feature.value_0, '.block undefined');
+        }
+        return datasetOK;
+      });
       return process.nextTick(() => cb(null, features))
     })
   };
@@ -339,9 +352,11 @@ module.exports = function(Feature) {
   });
 
   Feature.remoteMethod('searchPost', {
+    /** 'searchPost' args are identical to 'search' */
     accepts: [
       {arg: 'blockId', type: 'string', required: false},
       {arg: 'filter', type: 'array', required: true},
+      {arg: 'matchRegExp', type: 'Boolean', required: false, default : 'false'},
       {arg: "options", type: "object", http: "optionsFromRequest"}
     ],
     http: {verb: 'post'},

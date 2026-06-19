@@ -126,8 +126,9 @@ exports.uploadDataset = (data, models, options, cb) => {
       uploadDatasetContent(dataset_id, blocks, models, options, cb);
     })
     .catch((error) => {
-      console.log(fnName, dataset_id, error);
-      cb(error);
+      console.log(fnName, dataset_id, error.code, error);
+      const message = error.toString ? error.toString() : error.message || error.name || error.code;
+      cb(new ErrorStatus(400, message));
     });
 };
 /**

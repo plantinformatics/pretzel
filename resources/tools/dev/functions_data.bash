@@ -47,7 +47,7 @@ unused_var=${DB_NAME=pretzel}
 # dockerExec=
 # DB_NAME=admin
 
-# mongoShell runs mongo shell, either using docker if $DIM, otherwise directly.
+# mongoShell runs mongo shell (originally named mongo, now mongosh), either using docker if $DIM, otherwise directly.
 # @param 1 execArgs args to docker exec
 # @param 2 splitArgs  args to mongo; these are split
 # @param 3* remaining args are wrapped in "", not split
@@ -60,7 +60,7 @@ if [ -n "$DIM" ] ;
 then
   function mongoShell() { execArgs=$1; shift; splitArgs=$1; shift; docker exec $execArgs -i $DIM mongo ${splitArgs[@]} "${@}"; }
 else
-  function mongoShell() { execArgs=$1; shift; splitArgs=$1; shift; mongo ${splitArgs[@]} "$*"; }
+  function mongoShell() { execArgs=$1; shift; splitArgs=$1; shift; mongosh ${splitArgs[@]} "$*"; }
 fi
 
 
@@ -150,15 +150,24 @@ function loadChr()
 
 tmpDir=/tmp
 # Export a dataset / block complete with features, in Pretzel JSON format, ready for upload.
+# @param  datasetId=$1
+# @param  blockId=$2	optional; match all blocks if blockId is not given
 # Uses : $DIM, mongoShell
 # Usage eg.  blockExport Triticum_aestivum_IWGSC_RefSeq_v1.0_90k_markers 1B >  90k_markers_1B.json
 function blockExport()
 {
-  [ $# -eq 2 ] || (echo "Usage : blockExport datasetId blockId" 1>&2 ; exit 1)
+  [ $# -eq 1 -o $# -eq 2 ] || (echo "Usage : blockExport datasetId blockId" 1>&2 ; exit 1)
   datasetId=$1
   blockId=$2
+  injectParams="s/__datasetId__/$datasetId/"
+  if [ -n "$blockId" ]
+  then
+    injectParams="${injectParams};s/__blockId__/$blockId/"
+  else
+    injectParams="${injectParams};/__blockId__/d"
+  fi
   # use sed to inject variable values because mongo script has many $.
-  sed "s/__datasetId__/$datasetId/;s/__blockId__/$blockId/"  >  $tmpDir/blockExport.js <<\EOF
+  sed "$injectParams"  >  $tmpDir/blockExport.js <<\EOF
 db.Dataset.aggregate ( [
  { $match : { "_id" : /__datasetId__/ } },
  {$lookup: { from: 'Block', localField: '_id', foreignField: 'datasetId', as: 'blocks' }},

@@ -60,6 +60,7 @@ const { Writable, pipeline, Readable } = require('stream');
  */
 
 /* global process */
+/* global structuredClone */
 
 // -----------------------------------------------------------------------------
 
@@ -1478,6 +1479,31 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
   Block.genotypeSamples = function(id, datasetId, scope, filter, options, cb) {
     const fnName = 'genotypeSamples';
     {
+      /** This error was seen : vcfGenotypeSamplesFiltered filter.features is not given {
+          features: {
+            '0': { position: '240244382', matchRef: 'false' },
+            '1': { position: '258683290', matchRef: 'true' },
+            ...
+            '22': { position: '304794457', matchRef: 'false' }
+          },
+          matchHet: 'true',
+          genotypeHasNull: 'true'
+        }
+        *
+       * This suggests the array index is sometimes seen as a string instead of
+       * a number, and is parsed as an object instead of an array.
+       * This is handled here by converting an object of this type to an array.
+       * Adding POST support will avoid this issue.
+       * If this does not recur, then this conversion can be dropped.
+       */
+      if (filter?.features && ! Array.isArray(filter.features) && filter.features['0']) {
+        const
+        ff = Object.entries(filter.features)
+          .reduce((F, [k, v]) => {F[+k] = v; return F; }, []);
+        console.log(fnName, filter, 'convert .features to array', ff);
+        filter.features = ff;
+      }
+
       this.blockDatasetLookup(id, options)
         .then(samples.bind(this));
 
@@ -1492,6 +1518,9 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       }
     }
   };
+  /** POST version of Block.genotypeSamples, which is addressed by verb GET.
+   */
+  Block.genotypeSamplesPost = Block.genotypeSamples;
 
   Block.vcfGenotypeSamples = function(datasetId, scope, filter, cb) {
     const fnName = 'vcfGenotypeSamples';
@@ -1517,7 +1546,10 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     germinateGenotypeSamples(datasetId, scope, cb);
   };
 
-  Block.remoteMethod('genotypeSamples', {
+  /** Config for remoteMethod genotypeSamples.
+   *  Also used for genotypeSamplesPost with change of http.verb : 'get' -> 'post'
+   */
+  const genotypeSamplesRMConfig = {
     accepts: [
       {arg: 'id', type: 'string', required: true},
       {arg: 'datasetId', type: 'string', required: true},
@@ -1528,7 +1560,15 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     http: {verb: 'get'},
     returns: {arg: 'text', type: 'string'},
     description: "VCF genotype Samples e.g. samtools bcftools, returns list of samples defined in .vcf TSV table as text string"
-  });
+  };
+  Block.remoteMethod('genotypeSamples', genotypeSamplesRMConfig);
+  /** 'genotypeSamplesPost' args are identical to 'genotypeSamples'
+   * apart from .http.verb.  This does not contain any function references,
+   * so lodash/cloneDeep is not required.
+   */
+  const genotypeSamplesPostRMConfig = structuredClone(genotypeSamplesRMConfig);
+  genotypeSamplesPostRMConfig.http.verb = 'post';
+  Block.remoteMethod('genotypeSamplesPost', genotypeSamplesPostRMConfig);
 
   //----------------------------------------------------------------------------
 

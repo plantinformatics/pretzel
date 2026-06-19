@@ -1,0 +1,24 @@
+{{!--
+  @param @featureFiltersCountOfDatasetInBrushedDomain
+  @param @featureFiltersCount
+  Both params are from manage-genotype
+--}}
+{{log 'GenotypeFeatureList args' @featureFiltersCountOfDatasetInBrushedDomain.length 'featureFiltersCountOfDatasetInBrushedDomain' @featureFiltersCount}}
+{{!-- based on extracts from genotype-samples.hbs and manage-genotype.hbs --}}
+<span class="GenotypeFeatureList sample-count">
+  Sort by
+  {{#if @userSettings.sortByPassportFields}}
+    Passport fields
+  {{else}}
+    {{!-- This part could be used in genotype-samples.hbs : span.sample-count,
+      in place of the equivalent code which was a basis for this --}}
+    {{@featureFiltersCountOfDatasetInBrushedDomain.length}} SNPs
+    {{#unless (eq @featureFiltersCountOfDatasetInBrushedDomain.length @featureFiltersCount) }} 
+      in scope, out of {{@featureFiltersCount}} selected.
+    {{/unless}}
+    {{!-- copied from manage-genotype.hbs : .snpsInBrushedDomain, with minor changes. --}}
+    {{#each @featureFiltersCountOfDatasetInBrushedDomain as |feature|}}
+      <div>{{feature.value_0}} &nbsp; : &nbsp; {{feature.matchRefNumeric}}</div>
+    {{/each}}
+  {{/if}}
+</span>

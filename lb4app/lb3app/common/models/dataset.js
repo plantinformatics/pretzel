@@ -954,6 +954,10 @@ module.exports = function(Dataset) {
    description: "Pre-warm the cache of blockFeaturesCounts for each block of this dataset."
   });
 
+  //----------------------------------------------------------------------------
+  /* Use this env var as a way to switch off these endpoints, which are
+   * currently unused in production. */
+  if (process.env.OPENAI_API_KEY) {
   Dataset.remoteMethod('naturalSearch', {
     accepts: [
       {arg: 'search_text', type: 'string', required: true},
@@ -982,8 +986,9 @@ module.exports = function(Dataset) {
     returns: {type: 'array', root: true},
    description: "Get vector embeddings of metadata of all datasets."
   });
+  }
 
-
+  //----------------------------------------------------------------------------
 
 
   acl.assignRulesRecord(Dataset);

@@ -1,10 +1,14 @@
 import EmberObject, { computed } from '@ember/object';
 import { inject as service } from '@ember/service';
+import { alias } from '@ember/object/computed';
+
 import Model, { attr, belongsTo } from '@ember-data/model';
 
 const ObjName = 'axis-brush';
 
 const dLog = console.debug;
+
+//------------------------------------------------------------------------------
 
 export default EmberObject.extend({
 
@@ -97,3 +101,15 @@ export default EmberObject.extend({
   //----------------------------------------------------------------------------
 
 });
+
+//------------------------------------------------------------------------------
+
+export class BrushedBlock {
+  constructor({axisBrush, block}) {
+    this.axisBrush = axisBrush;
+    this.block = block;
+  }
+  @alias('block.features.length') blockFeaturesLength;
+}
+
+//------------------------------------------------------------------------------

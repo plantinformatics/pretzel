@@ -36,6 +36,19 @@ module.exports = function (defaults) {
       ],
     },
 
+    outputPaths: {
+      app: {
+        css: {
+          app: '/assets/pretzel-frontend.css',
+          'graph-svg': '/assets/graph-svg.css',
+        },
+      },
+    },
+
+    fingerprint: {
+      exclude: ['graph-svg.css'],
+    },
+
     'ember-bootstrap': {
       'bootstrapVersion': 4,
       'importBootstrapFont': false,

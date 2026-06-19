@@ -20,6 +20,14 @@ import { findResult } from '../../utils/common/arrays';
 
 //------------------------------------------------------------------------------
 
+import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
+const /*import */{
+  vcfGenotypeHeader,
+} = vcfGenotypeBrapi.vcfFeature; /*from 'vcf-genotype-brapi'; */
+
+
+//------------------------------------------------------------------------------
+
 let trace_block = 1;
 const dLog = console.debug;
 /** trace the (array) value or just the length depending on trace level. */
@@ -549,6 +557,18 @@ export default Service.extend(Evented, {
         .map(
           (blockAndId) => {
           let [blockId, block] = blockAndId;
+
+            if (block.isVCF) {
+              /** Get dataset summary information : a flag from the VCF header
+               * which indicates if the VCF files of the dataset contain Null
+               * Genotype values.
+               * This is requested now so that when the Genotype Table is
+               * viewed, a Null column can be displayed, and vcfGenotypeLookup()
+               * can request the Null data.
+               */
+              vcfGenotypeHeader(this.auth, block);
+            }
+
           /** densityFactor requires axis yRange, so for that case this will (in future) lookup axis from blockId. */
           const nBins = this.get('featuresCountsNBins'); // this.nBinsFromPathParams(blockId);
           let

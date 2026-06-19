@@ -2340,9 +2340,15 @@ Stacked.prototype.getY = function ()
   let axisName = this.axisName;
   /* y and ys will be referenced in the same call, since they are created at the same time.
    * this.axisName will not change.  If it did in future, this function could become a CF.
-   */
+   *
+   * Commit e1683595 merged the "stacks" axis (Stacked) into axis-1d, with axisS
+   * renamed to axisS_orig, so `if (! this.y)` is not applicable - y scale is
+   * moved from oa.y[axisID] to become CP axis1d.y, so it is not applicable or
+   * possible to assign to this.y.
+   * this.ys should be defined, but as a fall-back oa.ys[axisName] is ok, for now.
   if (! this.y)
     this.y = oa.y[axisName];
+   */
   if (! this.ys)
     this.ys = oa.ys[axisName];
   return this.y;

@@ -119,6 +119,7 @@ import AxisDraw from '../utils/draw/axis-draw';
 import { PathClasses } from '../utils/draw/path-classes';
 import { PathDataUtils } from '../utils/draw/path-data';
 import { PathInfo } from '../utils/draw/path-info';
+import { copySVGToClipboard } from '../utils/draw/svg-copy';
 
 import { selectedBlocksFeaturesToArray } from '../services/data/selected';
 
@@ -1072,7 +1073,9 @@ export default Component.extend(Evented, {
     //- moved to ../utils/draw/collate-paths.js : countPaths(), countPathsWithData()
 
     //User shortcut from the keybroad to manipulate the Axes
-    d3.select("#holder").on("keydown", function holderOnKeyDown(event) {
+    d3.select("#holder")
+      .attr("tabindex", 0) // Makes it focusable
+      .on("keydown", function holderOnKeyDown(event) {
       if ((String.fromCharCode(event.keyCode)) == "D") {
         console.log("Delete axis (not implemented)");
         // deleteAxis();
@@ -1091,6 +1094,19 @@ export default Component.extend(Evented, {
       }
       else if ((String.fromCharCode(event.keyCode)) == " ") {
         console.log("space");
+      } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'c') {
+        /* condition : 'C' is pressed while Control (Windows/Linux) or Command (Mac) is held
+         * Alternative : document.querySelector('#holder').addEventListener('copy', ... )
+         */
+        dLog('keydown', 'copy');
+        const 
+        holder = event.target,
+        /** these are alternatives for svgElement : oa.svgContainer.node().?parentElement,
+         * holder.children[2]; */
+        svgElement = document.querySelector('#holder > .FeatureMapViewer');
+        copySVGToClipboard(svgElement);
+        // Optional: to prevent the default copy behavior
+        // event.preventDefault();
       } else {
         dLog('holderOnKeyDown', event.keyCode);
       }

@@ -1,5 +1,8 @@
 import { axisFeatureCircles_selectOneInAxis } from '../draw/axis';
 
+import { set as Ember_set } from '@ember/object';
+import { later } from '@ember/runloop';
+
 /* global d3 */
 
 //------------------------------------------------------------------------------
@@ -239,6 +242,36 @@ function afterOnCellMouseOverClosure(hasTable) {
     }
     /** clears any previous highlights if feature is undefined */
     highlightFeature(feature);
+
+    const
+    classList=TD.classList,
+    cellIsSelectedFeature =
+      feature && (feature[Symbol.for('matchRef')] !== undefined) &&
+      classList.contains('featureIsFilter');
+    /* It is not required to check classList.contains('copyNum_0'), or _2 or _3
+     * - only the selected Alt/Ref/Null cell, which is shown with green background, has .featureIsFilter
+     */
+    /** If user hovers on a selected SNPs Alt/Ref/Null, show the list of
+     * selected SNPs which are not excluded by brushedDomain.
+     */
+    if (cellIsSelectedFeature) {
+      /* later() is often required in DOM callbacks which impact Ember state or
+       * actions. */
+      later(() => {
+        const genotypeTable = hasTable?.tableApi?.genotypeTable;
+        if (genotypeTable && ! genotypeTable.isDestroying) {
+          Ember_set(genotypeTable, 'selectedSNPHover', TD);
+        }
+      });
+    } else {
+      later(() => {
+        const genotypeTable = hasTable?.tableApi?.genotypeTable;
+        if (genotypeTable?.selectedSNPHover && ! genotypeTable.isDestroying) {
+          Ember_set(genotypeTable, 'selectedSNPHover', null);
+        }
+      });
+    }
+
   }
   return afterOnCellMouseOver;
 }

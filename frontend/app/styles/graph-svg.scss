@@ -1,0 +1,548 @@
+// S/CSS rules for the SVG graph display (axes, tracks, alignment paths).
+//------------------------------------------------------------------------------
+
+// Styles in this file are compiled into assets/graph-svg.css so they can be
+// embedded in copied/exported graph SVG markup.
+// See utils/draw/svg-copy.js : graphSVGStylesheetText(), svgElementWithEmbeddedStyles(), copySVGToClipboard().
+
+//------------------------------------------------------------------------------
+// Moved here from app.scss
+
+
+svg {
+  font-size: 14px;
+  /* this targets an intermittent issue whereby axes in a certain position are not drawn;
+   * dragging another stack to that position causes it to dissappear and the other axis to draw ok;
+   * slight changes to width cause other stacks to be not drawn.
+  */
+  width: 99%;
+}
+
+
+/** for axis being dragged : dragstarted(). SVG. */
+.active {
+  stroke: #f93;
+  /*stroke-width: 2px;*/
+}
+
+.map.selected g.axis text {
+  font-weight: bold;
+}
+
+.map.zoomed g.axis {
+    cursor: move;
+}
+
+/* ---------------------------------- */
+
+g.axis-use > rect {
+  fill: none;
+  /* stroke: blue; */
+}
+/* could prefix this with svg:not(.applyChange); and similarly for path.horizTick:hover */
+rect.track:hover {
+  /** single-pixel-high <rect>s are difficult to click (to toggle selected.features), so increase width when hover.  */
+  stroke-width: 3;
+}
+g.axis-use > g.tracks > g > rect.track {
+  /* fill: lightblue; */
+  /* stroke: lightblue; */
+}
+path.track.element.utr {
+  stroke-width : 10;
+  stroke-dasharray : 25;
+  stroke : blue;
+}
+path.track.element.match_part {
+  stroke-width : 6;
+  stroke : purple;
+}
+path.track.element.intron {
+  fill : none;
+}
+rect.track.element.CDS {
+  fill: yellow;
+}
+rect.track.element.exon {
+  fill: green;
+}
+.pasteData {
+  overflow: hidden;
+  word-wrap: inherit;
+}
+
+/* ---------------------------------- */
+
+/* context is :
+g.axis-use 
+> g.chart
+> g (clip-path)
+> g (transform)
+> rect.chartRow
+*/
+rect.chartRow {
+  opacity : 0.5;
+}
+g:not(.featureCountData) > g.chart-line > rect.chartRow {
+  stroke: blue;
+}
+/* .featureCountData colour is heatmap **/
+.blockData rect.chartRow {
+  fill: aqua;
+}
+
+/* ---------------------------------- */
+
+path.chartRow.line
+{
+      fill : none;
+      /* stroke : magenta; */
+      stroke-linejoin : round;
+      stroke-linecap : round;
+      stroke-width : 1.5;
+}
+
+circle.radio.toggle.chartType
+{
+      fill : orchid;
+      fill-opacity : 0.2;
+      stroke : magenta;
+      stroke-width : 2;
+      cursor: pointer;
+}
+circle.radio.toggle.chartType.pushed
+{
+      fill-opacity : 1;
+}
+
+/* ---------------------------------- */
+
+
+/* overflow:scroll within foreignObject works in firefox, not chrome;  see
+ * https://stackoverflow.com/questions/34206459/scroll-is-not-working-inside-svg-foreign-object-in-chrome
+ *  http://jsfiddle.net/ranr/ncry8Lmx/
+ * code.google.com/p/chromium/issues/detail?id=568614
+ */
+.foreignObject body.axis-table {
+    overflow: hidden;
+    /* overflow: scroll; */
+}
+.foreignObject body.axis-table:not(:-moz-handler-blocked) {
+    overflow: scroll;
+}
+
+body:not(.axis2dResizer)
+g.axis-use.hasChart > g.axis-html > .foreignObject {
+    display : none;
+}
+
+
+
+/* ---------------------------------- */
+
+/* These selectors are for HTML and SVG respectively; they are bundled so that
+ * the user can easily edit them at the same time, keeping colours in sync.
+ * the start of this selector is the same as flowButtonsSel (in utils/draw/flow-controls.js)
+ * later will make the palettes user-editable, e.g. https://github.com/bugsnag/chromatic-sass,
+ *  https://blog.bugsnag.com/sass-color-palettes
+ */
+div.drawing-controls.flowButtons .flowButton.alias,
+.foreground > g.alias > g > path,
+.foreground > g.progress > g.alias > g.blockAdj > g > path {
+  /* HTML  */
+  border-color : #955;
+  background-color: #955;
+  /* SVG  */
+  stroke: #955;
+}
+div.drawing-controls.flowButtons .flowButton.U_alias,
+.foreground > g.U_alias > g > path,
+.foreground > g.progress > g.U_alias > g.blockAdj > g > path {
+  border-color : #545;
+  background-color: #545;
+  stroke: #545;
+}
+div.drawing-controls.flowButtons .flowButton.direct,
+.foreground > g.direct > g > path,
+.foreground > g.progress > g.direct > g.blockAdj > g > path
+{
+  border-color : #484;
+  background-color: #484;
+  stroke: #484;
+}
+body.devel .foreground > g > g > path {
+  stroke-dasharray: 30 50 calc(var(--path-stroke-width)*10);
+  stroke: rgb(50,50,100);
+  transform: translate(0px, 5px);
+}
+body.devel .foreground > g.progress > g > g.blockAdj > g > path {
+  stroke-dasharray: 10 40;
+  stroke: rgb(100,50,50);
+}
+
+.foreground path {
+  fill: none;
+  stroke: #808;
+}
+:root {
+  --path-stroke-opacity : 1;//.125;
+  --path-stroke-width: 0.75px;
+  /* this may not update - uses the initial value of var() */
+  --manyPaths-stroke-opacity: calc(var(--path-stroke-opacity)*0.8); //.125;
+  --manyPaths-stroke-width: calc(var(--path-stroke-width)*0.8); // 0.75px;
+}
+.foreground path {
+  stroke-opacity: var(--path-stroke-opacity); //.125;
+  stroke-width: var(--path-stroke-width); // 0.75px;
+}
+.manyPaths .foreground path {
+    /* Works for Chrome, haven't found a working configuration for Firefox.
+  stroke-opacity: var(--manyPaths-stroke-opacity);
+  stroke-width: var(--manyPaths-stroke-width);
+   */
+}
+
+/* or :hover if transition is not required. */
+.devel .foreground path.hovered {
+    /* was d3:easeElastic */
+    transition:
+    stroke		800ms ease-in-out,
+    stroke-width	800ms ease-in-out,
+    stroke-opacity	800ms ease-in-out,
+    fill		800ms ease-in-out;
+
+    /* element stroke is set by pathColourUpdate(); override that via !important.  */
+    stroke : #880044	!important;
+    stroke-width : 6px;
+    stroke-opacity : 1;
+    fill : none;
+}
+:root
+{
+  --faded-stroke-opacity: calc(var(--path-stroke-opacity)*0.7);
+}
+.foreground .faded path {
+  fill: none;
+  stroke: #000;
+  stroke-width: var(--path-stroke-width);
+  stroke-opacity: var(--faded-stroke-opacity);
+}
+
+.devel .foreground path {
+  stroke-opacity: 1;
+  stroke-width: 2px;
+}
+.foreground path.reSelected
+{
+    stroke : red;
+}
+/* this rule targets the legend (html) and the path (svg); different css
+ * attributes apply to each; the purpose of combining the rule is to enable a user
+ * to easily navigate from the legend to the css rule. */
+div#scaffoldLegend > ul > li.scaffoldA,
+.foreground path.scaffoldA
+{
+    /* stroke : red; */
+    color : red;
+    stroke-dasharray : 1 2 3 4 5;
+}
+div#scaffoldLegend
+{
+  float: left;
+  margin-right: 1em;
+}
+div#scaffoldLegend > ul
+{
+  list-style-type: none;
+}
+.foreground path.strong
+{
+    stroke-width : 2px;
+    stroke-opacity: 1;
+}
+
+/* this is partly a duplicate of a rule below (comment - Brush css style).  Both were added in b637845 (2016 Sep 23)  */
+/*.brush .extent {
+  fill-opacity: .3;
+  stroke: #fff;
+  shape-rendering: crispEdges;
+}*/
+
+/* If loading all block feature initially, and also pathsProgressive, then
+ * differentiate the latter paths with colour and dashes.
+ * .devel is also sufficient to engage this functionality because it is
+ *  helpful to see the comparison of paths calculated on back- and front- end.
+ *
+ */
+body.devel
+ path.blockAdj,
+body.allInitially
+ path.blockAdj {
+  /* emphasise the new (progressive) paths during devel. */
+  stroke: red;
+  /* stroke-width: 2px; */
+  stroke-dasharray: 10 20;
+  /* stroke-opacity: 1; */
+}
+
+
+.axis line, .axis path:not(.horizTick),
+.axis-use > path:not(.horizTick)
+{
+  fill: none;
+  shape-rendering: crispEdges;
+}
+.axis line, .axis path:not(.horizTick),
+.axis-use > path
+{
+  stroke: #000; /* black */
+  stroke-width : var(--axisWidth);
+}
+
+.axis text {
+  text-shadow: 0 1px 0 #fff;
+  // text-anchor: middle;
+}
+body.ctrl-modifier .axis text,
+body.ctrl-modifier .axis-all > g.brush > g > rect
+{
+  cursor: move;
+}
+/* axis menu remains enabled regardless of .applyChange */
+.axis-all > text {
+  cursor: text;
+}
+/* since split axis, now have (g.axis-outer (g.axis-all ( g.axis  (g.tick ...))) (text) ... ) */
+.axis-outer:not(.not_top) > .axis-all > text,
+/* This provides a default text-anchor:middle for axis titles which don't have
+ * class .leftmost or .rightmost,
+ * but it should not apply to axis ticks, which match g.tick > text */
+.axis-outer .axis g:not(.tick) > text {
+  text-anchor: middle;
+}
+/* for .extended, centre the axis title if top. */
+.axis-outer.extended:not(.not_top) > .axis-all > text {
+  text-anchor: middle;
+}
+/* extended : place the ticks on the left
+ * axisSide() defaults to left;  
+ * text-anchor : browser default is start;  use start for right and end for left and default.
+ * So .extended is omitted from the selector.
+ */
+.axis-outer .axis {
+  text-anchor: end;
+}
+.axis-outer.rightmost:not(.extended).not_top > .axis-all > text,
+.axis-outer.rightmost:not(.extended) .axis {
+  text-anchor: start;
+}
+.axis-outer.leftmost.not_top > .axis-all > text,
+.axis-outer.leftmost .axis {
+  text-anchor: end;
+}
+
+body:not(.multipleServers) tspan.blockServer {
+    display : none;
+}
+tspan.blockServer {
+    font-size : 2em;
+}
+
+
+
+/* -------------------------------------------------------------------------- */
+
+/* Brush css style */
+.brush .extent {
+  stroke: #000;
+  fill-opacity: .125;
+  shape-rendering: crispEdges;
+}
+/* the middle g is g[clip-path] */
+g.brush:hover > g > rect.handle {
+  stroke: blue;
+}
+g.brush:hover > g > rect.overlay {
+    outline: 1px dashed purple; 
+    -webkit-tap-highlight-color: rgba(70, 30, 50, 0);
+}
+g.tick:hover {
+  /* indicate that g.axis > g.tick > text can be dragged with ctrl-click. */
+  outline: 1px dashed orange; 
+}
+/* feedback : no need to increase font size on hover.
+g.axis > g.tick > text:hover {
+  font-size: larger;
+  font-weight: bolder;
+}
+*/
+
+/* This (stroke colour) was applied for selector .horizTick until 655bfe3
+ * introduced axisTitleColour().
+ * Alternative to a constant in css, showTickLocations() could use axisName to
+ * lookup block index, as in featurePathStroke(), but that may not be more
+ * useful, instead perhaps classify in groups, e.g. give each group of added
+ * ticks a new id for an ordinal colour scale.
+ */
+path.horizTick.fromInput
+{
+    stroke: green;
+}
+.horizTick
+{
+  /* stroke (colour) is now provided by axisTitleColour(). */
+  stroke-width : 2px;
+}
+g.foundFeatures > path.horizTick
+{
+  stroke-width : 1px;
+}
+g.foundFeatures.horizTick > path.horizTick:hover {
+  /* indicate this element is clickable, and make it easier to click.  */
+  stroke-width: 5px;
+}
+
+
+g.horizTick.labelledFeatures > text.horizTick {
+    stroke-width: initial;
+    text-anchor: end;
+    // or alignment-baseline: middle, mathematical;
+    dominant-baseline : central;
+    text-shadow: initial
+}
+
+path.genotypeEdge
+{
+  fill : none;
+  stroke: black;
+  stroke-dasharray: 15 15;
+}
+
+path.syntenyEdge
+{
+  fill-opacity: calc(var(--path-stroke-opacity)*0.33);
+  fill: magenta;
+  stroke: purple;
+  stroke-dasharray: 8 4 8 20;
+  stroke-opacity: var(--path-stroke-opacity);
+  stroke-width : var(--path-stroke-width)
+}
+path.syntenyEdge.inverted
+{
+  fill: orangered;
+  stroke: orangered;
+  stroke-dasharray: 16 8 16 40;
+}
+svg.applyChange {
+  /* when .applyChange, within graph area (<svg>), cursor is bucketFill only within path.syntenyEdge. */
+  cursor: not-allowed;
+}
+/* the g.brush > g[clip-path] contains 4 <rect>-s, each with element attribute :
+ *   .overlay   cursor=crosshair
+ *   .handle    cursor=ns-resize
+ *   .selection cursor=move
+ * Override these when .applyChange.
+ */
+svg.applyChange g.brush > g > rect {
+  cursor: not-allowed;
+}
+
+svg.applyChange path.syntenyEdge {
+  /* centre on the tip of the paint drip x=1, y=22 px (from top-left origin). */
+  cursor: url('/assets/images/bucketFill.png') 1 22, auto;
+}
+
+
+/*----------------------------------------------------------------------------*/
+/* Button */
+.btn { cursor: pointer; }
+
+.btn > rect
+{
+  width: 60px;
+  height: 30px;
+  rx: 3px;
+  ry: 3px;
+  fill: #eee;
+  stroke: #ddd;
+}
+.btn > text
+{
+  text-anchor: middle;
+}
+g.axis-outer > g.btn > rect.Zoom {
+    x: -30px;
+}
+g.axis-outer > g.btn > rect.Reset {
+    x: 25px;
+}
+
+
+svg.FeatureMapViewer > g.hideAxisText   g.axis-all > text {
+  display: none;
+}
+svg.FeatureMapViewer > g.hideAxisText   g.axis > g.tick {
+  display: none;
+}
+
+
+svg > g.publishMode .graph-btn,
+{
+  display: none;
+}
+
+
+g.axis-outer > .btn.brushed > rect,
+g.axis-outer > .btn.zoomed > rect {
+    fill : "grey";
+}
+/* colours matching bootstrap .btn-info, .btn-info:focus */
+g.axis-outer > .btn.brushed > rect.Zoom,
+g.axis-outer > .btn.zoomed > rect.Reset {
+    fill : #5bc0de;	/* blue */
+}
+g.axis-outer > .btn.brushed > rect.Zoom:focus,
+g.axis-outer > .btn.brushed > rect.Zoom:hover,
+g.axis-outer > .btn.zoomed > rect.Reset:focus,
+g.axis-outer > .btn.zoomed > rect.Reset:hover
+{
+    fill : #31b0d5;	/* blue */
+}
+
+
+
+/* -------------------------------------------------------------------------- */
+/* target zone for axis stacking drag&drop
+ */
+/** When dragging, change cursor for all elts other than .current. */
+.axisDrag {
+    cursor: no-drop;
+}
+.axisDrag .stackDropTarget.current {
+    display : inherit;
+}
+.dragTransition .stackDropTarget {
+    pointer-events: none !important;
+}
+.stackDropTarget {
+    display : none;
+    pointer-events: none;
+    cursor: copy;
+
+    /* These values are overridden when .current and .dragHover */
+    fill: rgba(80, 80, 255, 0.1);
+    stroke: rgba(255, 80, 80, 0.4);
+    // stroke-width:1px;
+    stroke-dasharray: 3,8;
+}
+.stackDropTarget.current {
+    pointer-events: inherit;
+    cursor: copy;
+}
+.stackDropTarget.current.dragHover {
+    fill: rgba(80, 80, 255, 0.2);
+    stroke: rgba(255, 80, 80, 0.6);
+    stroke-dasharray: 2,6;
+}
+
+//------------------------------------------------------------------------------

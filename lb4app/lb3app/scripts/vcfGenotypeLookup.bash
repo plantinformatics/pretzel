@@ -35,11 +35,18 @@
 #  args to bcftools other than command vcfGz; named preArgs because they could
 #  be inserted between command and vcfGz arguments to bcftools.
 
+# GT=   Pattern which %GT is matched against in filter_samples.
+# The pattern is wrapped with tab and end-of line : grep $'\t'"$gtMatch"'$'
+#
+# genotypeHasNull       Indicates the requested VCF dataset contains null genotype data, which should be requested using %NU.
+
+
 # stdin : not read
 # stdout : echo $vcfGz to stdout - see dbName2Vcf().
 # stderr : set -x is used, which outputs to stderr, and appears in the node.js server stderr log
 
 
+logFile=vcfGenotypeLookup.log
 serverDir=$PWD
 # $inContainer is true (0) if running in a container.
 [ "$PWD" = / ]; inContainer=$?
@@ -86,7 +93,10 @@ unused_var=${blastDir:=/mnt/data_blast}
 # blastDir=tmp/blast
 set -x
 # vcfDir=tmp/vcf
-vcfDir=${mntData=/mnt/data}/vcf
+>> $serverDir/$logFile echo mntData=$mntData, vcfDir=$vcfDir, serverDir=$serverDir
+# docker compose defaults to empty string for undefined vars, so use :=
+unused_var=${vcfDir:=${mntData:=/mnt/data}/vcf}
+>> $serverDir/$logFile echo mntData=$mntData, vcfDir=$vcfDir
 if [ ! -e "$vcfDir" -a -e "$blastDir/vcf" ]
 then
   vcfDir="$blastDir/vcf"
@@ -112,7 +122,6 @@ else
 fi
 
 
-logFile=vcfGenotypeLookup.log
 (pwd; date; ) >> $logFile
 echo $* >> $logFile
 
@@ -203,6 +212,11 @@ fi
       GT=*)
         gtMatch=$(echo "$argVal" | sed s/GT=//)
         ;;
+
+      genotypeHasNull)
+        requestNull=':%NU'
+        ;;
+
       *)
         if [ -n "$inQuery" ] ;
         then paramsForQuery+=("$argVal");
@@ -220,6 +234,7 @@ fi
        snpNames="${snpNames[@]}",	\
        regionParams="${regionParams[@]}",	\
        gtMatch="$argVal",      \
+       requestNull="$requestNull",	\
        preArgs="${preArgs[@]}"  >> $logFile
 
 set -x
@@ -352,8 +367,23 @@ function snpNames2Include() {
 
 #-------------------------------------------------------------------------------
 
+# cd to $vcfDir.
+# If $vcfDir is absolute, cd $vcfDir.
+# Otherwise, $vcfDir is relative to $serverDir/
+function cd_vcfDir()
+{
+  case $vcfDir in
+    /*) cd "$vcfDir"  ;;
+    *)  cd $serverDir/"$vcfDir" ;;
+  esac
+}
+
+#-------------------------------------------------------------------------------
+
 commonSNPsDir=region_common_SNPs
-(cd $serverDir/"$vcfDir"; [ -d $commonSNPsDir ] || mkdir $commonSNPsDir )
+(cd_vcfDir && [ -d $commonSNPsDir ] || mkdir $commonSNPsDir )
+
+#-------------------------------------------------------------------------------
 
 # Use bcftools isec to prepare a list of common SNPs between $isecDatasetIds ($vcfGzs).
 # Uses $vcfGzs, $isecFlags, $chr.
@@ -449,7 +479,7 @@ function bcftoolsCommand() {
   elif [ "$command" = filter_samples ]
     then
       2>&$F_ERR "$bcftools" query "$vcfGz" "${regionParams[@]}" "${preArgs[@]}" "${paramsForQuery[@]}" "${snpNamesInclude[@]}" \
-                -f '[%SAMPLE\t%GT\n]' \
+                -f '[%SAMPLE\t%GT'"$requestNull"'\n]' \
         | (grep $'\t'"$gtMatch"'$' || true)
       # grep returns status 1 if there are no matches.  Ignore that and return 0 (true).
   elif [ "$command" = haplotypes_samples ]
@@ -499,8 +529,14 @@ ensureSNPList() {
   vcfGzSNPList=$(echo "$vcfGzSamples" | sed s/.vcf.gz/.SNPList.vcf.gz/g )
   if [ ! -e "$vcfGzSNPList" ]
   then
+    # -G ( --drop-genotypes) does not preserve ##FORMAT=<ID=... GT and NU, so
+    # save the header and re-add it with reheader.
+    bcftools view -h "$vcfGzSamples" > original_header.txt
     # only require information from cols 1-5, but VCF requires 1-9, i.e. including : QUAL FILTER INFO FORMAT
-    bcftools view --drop-genotypes --threads $(nproc) --output-type z  --output  "$vcfGzSNPList" "$vcfGzSamples"
+    bcftools view --drop-genotypes --threads $(nproc) --output-type z  --output  "$vcfGzSNPList".tmp "$vcfGzSamples"
+    # -h is --header-lines.   -o is --output
+    bcftools reheader -h original_header.txt  "$vcfGzSNPList".tmp -o "$vcfGzSNPList" && \
+      rm "$vcfGzSNPList".tmp
   fi
   if [ ! -e "$vcfGzSNPList".csi ]
   then
@@ -567,7 +603,7 @@ else
   # later versions of bash : dbName2Vcf $di || break ... | readarray -t vcfGzs
   echo >> $logFile vcfGz="$vcfGz" vcfGzs="${vcfGzs[@]}"
   # vcfGzs[] includes datasetId/ for each dataset
-  cd $serverDir/"$vcfDir"
+  cd_vcfDir
 
   # if $vcfGz is empty then dbName2Vcf() has output an error.
     if [ $status -eq 0 -a -n "$vcfGz" ]
