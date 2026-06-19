@@ -62,7 +62,14 @@ export default class DrawGraphAnnotationsComponent extends Component {
     // .renderOnce() will get cancelled so use .render().
     this.render();
     window.PretzelFrontend.graphAnnotations = null;
-    this._super(...arguments);
+    /* Calling super().willDestroy() is not required here - 
+     * "The base Glimmer Component implementation of willDestroy() is typically
+     * a "no-op" (it does nothing). You only need to call super.willDestroy() if
+     * you are extending another custom component class that you know has its
+     * own cleanup logic in willDestroy()."
+     * https://share.google/aimode/kJfJySqOkzhKl4XwN
+     */
+    super.willDestroy();
   }
 
   //----------------------------------------------------------------------------
@@ -85,7 +92,8 @@ export default class DrawGraphAnnotationsComponent extends Component {
             dLog(fnName, 'taskInstance.catch', error);
             throw error;
           } else {
-            dLog(fnName, 'taskInstance.catch', 'TaskCancelation', error);
+            /* error.name == 'TaskCancelation' */
+            dLog(fnName, 'taskInstance.catch', error.name, error.message);
           }
         });
     }

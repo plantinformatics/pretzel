@@ -464,9 +464,29 @@ export default Service.extend({
    *  { features : [{position, matchRef}, ... ], matchHet}
    */
   genotypeSamples(block, datasetId, scope, filter) {
+    const fnName = 'genotypeSamples';
     dLog('services/auth genotypeSamples', datasetId, scope, filter);
+    /** Use POST instead of GET if the filter.features array is long enough to
+     * likely exceed some of the nominated maximum URL lengths,
+     * e.g. 2000chars.
+     * This is modelled on similar in featureSearch() above.
+     */
+    let paramLimit = 5;	// 10
+    const post = filter?.features?.length > paramLimit;
     const params = {id : block.id, datasetId, scope, filter};
-    return this._ajax('Blocks/genotypeSamples', 'GET', params, true);
+    // based on similar in vcfGenotypeLookup().
+    // if (post) _server() won't be able to access data.datasetId, so pass apiServer
+    const
+    id2Server = this.get('apiServers.id2Server'),
+    apiServer = id2Server[datasetId] || id2Server[block.id];
+
+    dLog(fnName, post, filter?.features?.length);
+    return this._ajax(
+      'Blocks/genotypeSamples' + (post ? 'Post' : ''),
+      post ? 'POST' : 'GET',
+      post ? JSON.stringify(params) : params,
+      true,
+      /*onProgress*/ null, apiServer);
   },
 
 
@@ -796,7 +816,7 @@ export default Service.extend({
           error.statusText + ' : ' + error.state?.() + ', ' + error.status
           + ', ' + message,
         apiErrorShownInDialog = this.apiErrorShownInDialog;
-        dLog(fnName, responseError.statusCode, responseError.message, apiErrorShownInDialog);
+        dLog(fnName, responseError?.statusCode, responseError?.message, apiErrorShownInDialog, text);
         if (! apiErrorShownInDialog) {
           this.set('headsUp.tipText', text);
         }

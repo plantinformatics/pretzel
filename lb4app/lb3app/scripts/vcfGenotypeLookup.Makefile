@@ -1,4 +1,7 @@
 #-------------------------------------------------------------------------------
+# bash is used in the allChr for loop
+SHELL := /bin/bash
+#-------------------------------------------------------------------------------
 
 # Using make options -rR (-r, --no-builtin-rules; -R, --no-builtin-variables)
 # is preferable because all the standard suffixes and rules are not applicable.
@@ -9,7 +12,15 @@
 #.NOTINTERMEDIATE
 #.SECONDARY
 # .PRECIOUS prevents .csi from being removed as an intermediate file.
-.PRECIOUS: %.vcf.gz.csi
+# In testing, it appears that .PRECIOUS % is limited to matching basenames, i.e. %.vcf.gz does not match %.MAF.vcf.gz etc
+# Either .PRECIOUS or .NOTINTERMEDIATE should suffice for this purpose.
+# Alternative : $(allVcfGz) is used.
+# refn : https://www.gnu.org/software/make/manual/html_node/Special-Targets.html
+.PRECIOUS: %.vcf.gz %.vcf.gz.csi %.MAF.vcf.gz %.MAF.SNPList.vcf.gz %.MAF.vcf.gz.csi %.MAF.SNPList.vcf.gz.csi
+
+allChr:=all_chromosomes
+allVcfGz != [ -f $(allChr).vcf.gz ] && bcftools query -f '%CHROM\n' $(allChr).vcf.gz | uniq | sed "s/$$/.vcf.gz/"
+.NOTINTERMEDIATE: $(allVcfGz)
 
 #-------------------------------------------------------------------------------
 
@@ -52,6 +63,12 @@
 	@bcftools index "$<";
 # pgrep -lf bcftools | fgrep 'bcftools index' > /tmp/$USER/pgrep_bcftools_index; 
 
+# Without .PRECIOUS, the above rule will cause the .vcf.gz file dependency to be
+# considered an intermediate file and automatically removed after making the
+# output, as the rules to make .vcf.gz and .vcf.gz.csi are considered "chained
+# rules".  Also : make ... chr3H.MAF.SNPList.vcf.gz{,.csi} establishes that both
+# the .vcf.gz and .vcf.gz.csi are required, and so the .vcf.gz is not removed.
+
 
 #-------------------------------------------------------------------------------
 
@@ -60,11 +77,30 @@
 	echo $*.MAF.vcf.gz
 %.vcf.gz.SNPListName : %.vcf.gz
 	echo $*.SNPList.vcf.gz
+
+# -G ( --drop-genotypes) does not preserve ##FORMAT=<ID=... GT and NU, so
+# save the header and re-add it with reheader.
+#
+# only require information from cols 1-5, but VCF requires 1-9, i.e. including : QUAL FILTER INFO FORMAT
+# Seems that 1 sample column is required, so request 1-10
+# (option abbreviations : -G = --drop-genotypes, -O = --output-type, -o = --output)
+# Using Bourne-shell notation `` instead of bash $() for nproc to avoid clash with make variable expansion syntax.
 %.SNPList.vcf.gz : %.vcf.gz
-	# only require information from cols 1-5, but VCF requires 1-9, i.e. including : QUAL FILTER INFO FORMAT
-	# Seems that 1 sample column is required, so request 1-10
-	# (option abbreviations : -G = --drop-genotypes, -O = --output-type, -o = --output)
-	# Using Bourne-shell notation `` instead of bash $() for nproc to avoid clash with make variable expansion syntax.
-	bcftools view --drop-genotypes --threads `nproc` --output-type z $<  --output $@
+	@bcftools view -h $< > original_header.txt && \
+	bcftools view --drop-genotypes --threads `nproc` --output-type z $<  --output $@.tmp; \
+	bcftools reheader -h original_header.txt  $@.tmp -o $@ && \
+	rm $@.tmp
+
+
+#-------------------------------------------------------------------------------
+
+# $(chromosomes) can be defined using !=, as for allVcfGz
+$(allVcfGz) : $(allChr).vcf.gz $(allChr).vcf.gz.csi
+	@chromosomes=( $$(bcftools query -f '%CHROM\n' $(allChr).vcf.gz | uniq) ); \
+	for chr in "$${chromosomes[@]}" ; do bcftools view -r $$chr $(allChr).vcf.gz -Oz -o $$chr.vcf.gz; done
+
+$(allChr).vcf.gz.csi : $(allChr).vcf.gz
+	@bcftools index $(allChr).vcf.gz
+
 
 #-------------------------------------------------------------------------------

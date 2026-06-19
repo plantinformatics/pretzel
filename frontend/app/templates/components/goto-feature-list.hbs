@@ -107,7 +107,8 @@
       {{#unless this.loading }}
         <label>Received :</label>
         <ul style="list-style-type: none;">
-          <li>{{this.blocksOfFeatures.length}} Features</li>
+          <li>{{this.blocksOfFeatures.length}} Chromosomes :
+            {{this.featuresResultLength}} Features</li>
           {{!-- if this.matchAliases the result shape is Features [],
              otherwise { aliases: [...], features: [...] }
              Using this.matchAliases in this if expression does not currently update,

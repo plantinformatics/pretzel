@@ -5,6 +5,8 @@ import { inject as service } from '@ember/service';
 
 
 import { traitColour } from '../utils/draw/axis';
+import { MatchRef } from '../utils/data/genotype-order';
+
 
 /* global d3 */
 
@@ -160,10 +162,12 @@ export default Model.extend({
 
   //----------------------------------------------------------------------------
 
-  /** @return  [matchRefSymbol] in numeric form, i.e. 0 for Ref and 2 for Alt, '' for undefined.  */
+  /** @return  [matchRefSymbol] in numeric form,
+   * i.e. 0 for Ref and 2 for Alt, 'Null' for null, '' for undefined.
+   */
   get matchRefNumeric() {
-    const numeric = (this[matchRefSymbol] === undefined) ? '' :
-          this[matchRefSymbol] ? '0' : '2';
+    const
+    numeric = MatchRef.matchRef2Numeric[this[matchRefSymbol]] || '';
     return numeric;
   }
 

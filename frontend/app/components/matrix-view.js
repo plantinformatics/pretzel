@@ -36,6 +36,7 @@ const /*import */{
 // } from 'vcf-genotype-brapi';
 
 import {
+  refAltNullHeadings,
   featureBlockColourValue, columnNameAppendDatasetId, columnName2SampleName, valueIsCopies,
 
 } from '../utils/data/vcf-feature';
@@ -78,6 +79,11 @@ const copiesColours = [ /*0*/ 'orange', /*1*/ 'white', /*2*/ 'blue'];
 const coloursEqualsRef = ['red', 'green'];
 /** true means ABRenderer show 'A' or 'B' instead of C A T G */
 const ABRendererShowAB = false;
+
+/** Maybe include this in baseColour{} below.
+ * Copied from colour-theme-selector.js.
+ */
+const baseColour_Null = '#ff8a7d';
 
 /** copied from vcf-feature.js */
 const refAlt = ['ref', 'alt'];
@@ -439,6 +445,21 @@ export default Component.extend({
     TH.classList.add('done');
 
     TH.title = TH.innerText;
+    if (this.urlOptions.matchesHover) {
+      const
+      mg = window.PretzelFrontend?.manageGenotype,
+      matches = mg?.matchesSummary[TH.innerText];
+      if (matches) {
+        const
+        matchesText = Object.entries(matches).map(e =>
+          /* handle matches.values which is an object (genotype value -> count). */
+          (typeof e[1] === 'object') ?
+            Object.entries(e[1]).map(e => e.join(':')).join(', ') :
+            e.join(':')).join(', ');
+        TH.title = TH.title + '.\n  ' + matchesText;
+      }
+    }
+
   },
   afterGetColHeader(col, TH) {
     afterGetColHeaderResizer.apply(this.table, [this.userSettings, col, TH]);
@@ -582,7 +603,9 @@ export default Component.extend({
       manualColumnMove: true,
 
       outsideClickDeselects: true,
-      afterOnCellMouseDown: bind(this, this.afterOnCellMouseDown),
+      afterOnCellMouseDown:
+      (event, coords, td) =>
+      later(() => this.afterOnCellMouseDown(event, coords, td)),
       afterOnCellMouseOver,
       // Column header height resizer
       afterGetColHeader : bind(this, this.afterGetColHeader),
@@ -840,8 +863,12 @@ export default Component.extend({
     let feature;
     const
     fnName = 'getRowAttribute',
-    physicalRow = table.toPhysicalRow(visualRowIndex);
-    feature = this.data[physicalRow]?.[featureSymbol];
+    physicalRow = table.toPhysicalRow(visualRowIndex),
+    /** Ignore this currently because if there are multiple features, it is returning only 1,
+     * i.e. this.data[visualRowIndex][*][featureSymbol] are all the same feature.
+     */
+    featureData = undefined; // Object.values(this.data[visualRowIndex]).find(r => r?.[featureSymbol]);
+    feature = featureData?.[featureSymbol];
 
     const gtPlainRender = this.urlOptions.gtPlainRender;
     if (! feature && table /*&& (gtPlainRender & 0b10000000)*/) {
@@ -889,10 +916,28 @@ export default Component.extend({
   },
 
   cells(row, col, prop) {
+    const fnName = 'cell';
     let cellProperties = {};
+
+    /** It can happen that cells() is called after Reset Zoom which clears the
+     * axis brush and hence there is no data passed to matrix-view from
+     * manage-genotype, but data has not been cleared from the HandsOnTable.
+     * Recognise if : displayData{,Rows} are empty or columns arrays are all [].
+     */
+    const
+    noData = (! this.displayData?.length && ! this.displayDataRows?.length) ||
+     (! this.gtDatasetColumns?.length &&
+      ! this.datasetColumns?.length &&
+      ! this.extraDatasetColumns?.length);
+    if (noData) {
+      // dLog(fnName, 'noData', row, col, prop);
+      return cellProperties;
+    }
+
     let selectedBlock = this.get('selectedBlock');
     let numericalData = ! this.blockSamples && this.get('numericalData');
     const sampleName = prop && columnName2SampleName(prop);
+
     /** much of this would be better handled using table options.columns,
      * as is done in table-brushed.js : createTable().
      */
@@ -901,6 +946,11 @@ export default Component.extend({
       cellProperties.type = 'numeric';
       cellProperties.renderer = Handsontable.renderers.NumericRenderer;
     } else if (prop === 'Block') {
+      /* for non-genotype datasets at least prop is the datasetId;
+       * (prop may still be 'Block' in some cases).
+       * table.getCellMeta?.(row, col)?.className is " col-Dataset-Name", but 
+       * getCellMeta() can't be called in cells() because of recursion.
+       */
       cellProperties.renderer = 'blockColourRenderer';
     } else if (sampleName === 'LD Block') {
       cellProperties.renderer = 'haplotypeColourRenderer';
@@ -1004,7 +1054,8 @@ export default Component.extend({
     } else if (
       (row >= 0) &&
         (! sampleFilterTypeNameModal || (sampleFilterTypeName === 'feature')) && 
-        (columnName.startsWith('Ref') || columnName.startsWith('Alt'))) {
+        (columnName.startsWith('Ref') || columnName.startsWith('Alt')
+         || columnName.startsWith('Null'))) {
       const feature = this.featureToggleRC(row, col, columnName);
       if (feature) {
         later(() => this.table.render(), 1000);
@@ -1181,6 +1232,7 @@ export default Component.extend({
     G : 'red',
     B : 'red',
     T : 'black',
+    // N : baseColour_Null, // maybe
   },
   /** Map from base letter to colour class.
    */
@@ -1201,19 +1253,29 @@ export default Component.extend({
     }
     return colour;
   },
-  /** map prop : Ref / Alt -> copiesColourClass( 0 / 2)
+  /** map prop : Ref / Alt / Null -> copiesColourClass( 0 / 2 / 3)
    * @param typeof prop === 'string'
    */
   refAltCopyColour(prop) {
     const
-    copyNum = (prop === 'Ref') ? '0' : '2',
+    copyNum = (prop === 'Null') ? '3' : (prop === 'Ref') ? '0' : '2',
     colour = copiesColourClass(copyNum);
     return colour;
   },
 
   CATGRenderer(instance, td, row, col, prop, value, cellProperties) {
     Handsontable.renderers.TextRenderer.apply(this, arguments);
-    if (value) {
+    /* The guard added in cells() will likely prevent this function being called
+     * when ! td.parentElement, which has been seen in the debugger at an exception.
+     *
+     * See comment in cells() - this may be called for col-Dataset-Name when
+     * blockColourRenderer would be correct.  In that case, for gtDatasetColumns
+     * value is a String, which does not cause an exception in valueDiagonal(),
+     * but for datasetColumns, value will be an array of String, so detect this
+     * and skip it - it only occurs briefly when table is being cleared by Zoom
+     * Reset.
+     */
+    if (td.parentElement && value && ! Array.isArray(value)) {
       const
       /** prop may be String(), and string [].includes(String) does not match, so use .toString()
 . */
@@ -1232,7 +1294,7 @@ export default Component.extend({
             this.userSettings.sampleFilterTypeName === 'feature';
       /** Use this for 'LD Block' */
       const matchRefAlt = this.userSettings.haplotypeFilterRef ? 'Ref' : 'Alt';
-      if (selectFeatures && refAltHeadings.includes(prop_string))
+      if (selectFeatures && refAltNullHeadings.includes(prop_string))
       {
         const
         dataset = prop[Symbol.for('dataset')],
@@ -1252,7 +1314,9 @@ export default Component.extend({
     featureFilters = block?.[sampleFiltersSymbol]?.feature,
     matchRef = feature[Symbol.for('matchRef')],
     featureIsFilter = featureFilters?.includes(feature),
-    isFilter = featureIsFilter && (matchRef === (prop === 'Ref'));
+    isFilter = featureIsFilter && (
+      (prop === 'Null') ? (matchRef === null) :
+        (matchRef === (prop === 'Ref')));
     if (isFilter && trace > 1) {
       dLog('featureIsFilter', feature.value, feature.name, matchRef, prop);
     }
@@ -1270,6 +1334,8 @@ export default Component.extend({
      // ./. should show as white, not diagonal.
     if (value === './.') {
       td.style.background = 'white';
+    } else if (value === 'N') {
+      td.style.background = baseColour_Null;
     } else {
       let diagonal;
       /** value has been reduced : x/x -> x, so if value contains | or /
@@ -2473,8 +2539,8 @@ div#observational-table \
     /* In the case of manage-genotype (i.e. ! fullPage), matrix-view does not
      * use this, instead .height = tableHeightFromParent(), enabled by calculateTableHeight.
      *
-     * Use Ember_set() because selectedSampleEffect() is dependent on
-     * columnHeaderHeight
+     * Use Ember_set() because draw/graph-annotations.js : zoomEffect() is dependent on
+     * columnHeaderHeight. (and selectedSampleEffect() ?)
      */
     Ember_set(this.userSettings, 'columnHeaderHeight', columnHeaderHeight);
 

@@ -12,11 +12,14 @@
         value=this.email
         autocomplete="email"
         placeholder='Your Email Address'}}
-      {{auth-input
-        type='password'
-        value=this.password
-        autocomplete="new-password"
-        placeholder='Enter a New Password'}}
+
+        <Form::PasswordInput
+          @requireGood={{true}}
+          @autocomplete="new-password"
+          @placeholder='Enter a New Password'
+          @passwordChanged={{action (mut this.password)}}
+          />
+
       {{auth-input
         type='text'
         value=this.name
@@ -34,7 +37,8 @@
         suggest-text="Already have an account?"
         link-name="login"
         link-pretty="Log In"}}
-      {{elem/button-submit loading=this.isProcessing}}
+      {{!-- loading sets disabled. disable until .password strength is good. --}}
+      {{elem/button-submit loading=(or this.isProcessing (not this.password))}}
     </form>
   {{/if}}
 {{/form/auth-base}}

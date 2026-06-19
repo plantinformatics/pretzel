@@ -1,10 +1,8 @@
 
-<img src="https://plantinformatics.io/landingPageContent/pretzel-logo.png">
+<img src="https://pretzel-images-public.s3.ap-southeast-2.amazonaws.com/pretzel.svg" width=100 height=100>
 
 [![Docker pulls](https://img.shields.io/docker/pulls/plantinformaticscollaboration/pretzel.svg?logo=docker&style=for-the-badge)](https://hub.docker.com/r/plantinformaticscollaboration/pretzel)
 [![Docker Image Version  (latest semver)](https://img.shields.io/docker/v/plantinformaticscollaboration/pretzel.svg?logo=docker&style=for-the-badge)](https://hub.docker.com/r/plantinformaticscollaboration/pretzel)
-
-This README gives a high level overview of what Pretzel can do. More detailed documentation is being developed at https://docs.plantinformatics.io/.
 
 ## What is Pretzel
 
@@ -12,15 +10,17 @@ Pretzel is a web-based online framework for the real-time interactive display in
 
 ## Get started now
 
-Agriculture Victoria hosts the following Pretzel instances for the following species for public datasets:
+The Australian Grains Genebank Strategic Partnership hosts the publicly accessible AGG Pretzel at:
 
-| Species | URL |
-|--|--|
-| Wheat | [https://plantinformatics.io/](https://plantinformatics.io/) |
-| Pulses | [https://pulses.plantinformatics.io/](https://pulses.plantinformatics.io/) |
-| Barley | https://barley.plantinformatics.io/  |
+### [https://agg.plantinformatics.io/](https://agg.plantinformatics.io/)
+
+This includes the [genotype datasets released by the Partnership](https://dataverse.harvard.edu/dataverse/australiangrainsgenebank-genotypedata) together with curated datasets that enable users to connect research and breeding knowledge to the AGG.
 
 Users can sign up for an account by following the Sign Up links in the top right of the page.
+
+Documentation is available at:
+
+### [https://docs.plantinformatics.io/](https://docs.plantinformatics.io/)
 
 ## Pretzel features
 

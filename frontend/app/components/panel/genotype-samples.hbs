@@ -45,8 +45,14 @@
       <span class="sample-count"> (
         {{@the.featureFiltersCountOfDatasetInBrushedDomain.length}}
         {{#unless (eq @the.featureFiltersCountOfDatasetInBrushedDomain.length @the.featureFiltersCount) }} 
-          in scope, out of {{@the.featureFiltersCount}}
+          in scope, out of {{@the.featureFiltersCount}} selected
         {{/unless}}
+        {{!-- copied from manage-genotype.hbs : .snpsInBrushedDomain, with minor changes. --}}
+        {{#ember-tooltip side="bottom" delay=1500}}
+          {{#each @the.featureFiltersCountOfDatasetInBrushedDomain as |feature|}}
+            <div>{{feature.value_0}} &nbsp; : &nbsp; {{feature.matchRefNumeric}}</div>
+          {{/each}}
+        {{/ember-tooltip}}
       SNPs ) </span>
 
       <span>
@@ -261,12 +267,12 @@
     </a>
     {{#if (and @the.selectedCount this.genolinkSearchURL)}}
       <EmberTooltip @side="bottom-start" @delay=500>
-        {{this.searchIdsTruncatedMessage}}
+        {{@the.searchIdsTruncatedMessage}}
         Open AGG Genolink, showing the passport data of the selected samples.
       </EmberTooltip>
     {{else}}
       <EmberTooltip @side="bottom-start" @delay=500>
-        {{this.searchIdsTruncatedMessage}}
+        {{@the.searchIdsTruncatedMessage}}
         No samples selected, please select some samples first.
       </EmberTooltip>
     {{/if}}

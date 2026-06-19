@@ -133,12 +133,14 @@ Distance.average = function(ms, distanceCount) {
 };
 
 
-/** {distance, missing, notMissing, differences}
+/** {distance, missing, notMissing, differences, values}
  * Counts of Hamming distance and missing / notMissing data.
  *
  * distance, missing, and notMissing are counted in alleles (currently assumed
  * diploid, i.e. count each SNP as 2), whereas differences counts the SNPs which
  * are different.
+ *
+ * values counts instances of each value ('0', '1', '2', 'N', './.')
  */
 export class Counts { }
 Counts.add = function(sum, counts) {
@@ -148,11 +150,24 @@ Counts.add = function(sum, counts) {
   sum.missing += m.missing;
   sum.notMissing += m.notMissing;
   sum.differences += m.differences;
+
+  /* The keys of sum.values may differ from that of m.values.
+   * This ensures that all of m.values is added to sum.values,
+   * creating new elements where necessary.
+   */
+  Object.entries(m.values).forEach(([value, count]) => {
+    if (! sum.values[value]) {
+      sum.values[value] = count;
+    } else {
+      sum.values[value] += count;
+    }
+  });
+
   return sum;
 };
 Counts.create = function() {
  return {
-   distance: 0, missing : 0, notMissing : 0, differences : 0};
+   distance: 0, missing : 0, notMissing : 0, differences : 0, values : {} };
 };
 Counts.haveData = function(counts) {
  return counts &&
@@ -171,7 +186,8 @@ Counts.order = function(counts) {
   return value;
 };
 Counts.cmp = function(counts1, counts2) {
-  const
+  const fnName = 'cmp';
+  let
   /** the sign of the result sorts in ascending order by : distance, differences, missing;
    * i.e. larger missing to the right, and smaller distances to the left.
    * This does not handle undefined or null field values.
@@ -183,6 +199,21 @@ Counts.cmp = function(counts1, counts2) {
     (counts1.differences - counts2.differences) ||
     (counts1.missing - counts2.missing);
 */
+  /* Within each group of samples with equal distance, sort by : hom, het, N, missing.
+   * i.e. if distance is equal, compare the counts of genotype values, with
+   * 0,2 (homozygous) being most significant.
+   */
+  if ((cmp === 0) && counts1 && counts2) {
+    const
+    /** cell value, which is the key of .values[] */
+    value = ['0', '2', '1', 'N', './.']
+      .find(value => counts1.values[value] !== counts2.values[value]);
+    if (value) {
+      /** larger counts to the left, so here : counts2 - counts1 */
+      cmp = (counts2.values[value] || 0) - (counts1.values[value] || 0);
+    }
+    dLog(fnName, value, cmp);
+  }
   if (trace) {
     dLog('cmp', cmp, counts1, counts2);
   }
@@ -195,11 +226,14 @@ Counts.count = function(sampleMatch, match) {
 };
 Counts.average = function(ms, distanceCount) {
   /* ! distanceCount implies ms is null.
+   * Handle ms.values which is an object (genotype value -> count);
+   * perhaps divide its counts also : / distanceCount.
    */
   const
   ratio = ! distanceCount ? undefined :
     Object.fromEntries(Object.entries(ms).map(
-      ([key, value]) => [key, value / distanceCount]));
+      ([key, value]) =>
+      [key, typeof value === 'object' ? value : value / distanceCount]));
   return ratio;
 };
 
@@ -334,29 +368,61 @@ function distancesTo1d(blocks, referenceSamplesCount, userSettings) {
 
 //------------------------------------------------------------------------------
 
-/** match a (sample genotype call) value against the Ref/Alt value of the
+/** match a (sample genotype call) value against the Ref/Alt/Null value of the
  * feature / SNP.  a rough factorisation; currently there is just 1 flag
  * haplotypeFilterRef for all selected 'LD Blocks', and hence one instance
  * of MatchRef, but these requirements are likely to evolve.
  *
  * Origin : in cafd7623 MatchRef was factored from haplotypeFilterSamples()
  * (later renamed to filterSamples()).
+ * Update 2025Nov24 : add support for null genotype values.
  */
 export class MatchRef {
   constructor(matchRef) {
     this.matchRef = matchRef;
-    this.matchKey = matchRef ? 'ref' : 'alt';
-    this.matchNumber = matchRef ? '0' : '2';
+    this.matchKey = (matchRef === null) ? 'null' : matchRef ? 'ref' : 'alt';
+    this.matchNumber = (matchRef === null) ? 'N' : matchRef ? '0' : '2';
   }
+  /** Extract from feature the value to compare against for this MatchRef.
+   * i.e. feature.values.ref, feature.values.alt, or null
+   */
+  matchValue(feature) {
+    return (this.matchRef === null) ? null : feature.values[this.matchKey];
+  }
+  static columnNameToMatchRef = {
+    Ref : true,
+    Alt : false,
+    Null : null,
+  }
+  static matchRef2Text = {
+    true : 'Ref',
+    false : 'Alt',
+    null : 'Null',
+  }
+  static matchRef2Numeric = {
+    true : '0',
+    false : '2',
+    null : 'Null',
+  }
+  /** For use in API requests : query params and POST body.
+   * value : { true: "true", false: "false", null: "null" }
+   */
+  static matchRef2Json = Object.fromEntries(
+    [true, false, null].map(mr => [mr, JSON.stringify(mr)]));
+
   /** to match homozygous could use .startsWith(); that will also match 1/2 of heterozygous.
    * Will check on (value === '1') : should it match depending on matchRef ?
    * @param value sample/individual value at feature / SNP
    * This function is not called if valueIsMissing(value).
    * @param matchValue  ref/alt value at feature / SNP (depends on matchRef)
+   * @desc added in 2a0962e0, replaced in 557d1c30 by distanceFn().
    */
   matchFn(value, matchValue) { return (value === this.matchNumber) || (value === '1') || value.includes(matchValue); }
-  /**
-   * Param comments of matchFn() apply here also.
+  /** Calculate the distance between a sample genotype value and matchValue.
+   * Used in featuresCountMatches() (manage-genotype.js).
+   * 
+   * @param value sample/individual value at feature / SNP
+   * @param matchValue  ref/alt/null value at feature / SNP (depends on matchRef)
    * @return undefined if value is invalid
    * missing data, i.e. './.', is counted in .missing if using Counts
    */
@@ -367,19 +433,27 @@ export class MatchRef {
     const numeric = gtValueIsNumeric(value);
     if (value === './.') {
       missing += 2;
-      distance = this.matchRef ? 0 : 2;
+      distance = 3; // (this.matchRef === null) ? 2 : this.matchRef ? 0 : 2;
     } else {
       switch (value.length) {
       case 3 :
-        if (numeric) { matchValue = this.matchRef ? '1' : '0'; }
-        distance = 2 - stringCountString(value, matchValue);
+        if (this.matchRef === null) {
+          /** value is not 'N' or missing, so it is Alt / Ref / het, so distance = 2 */
+          distance = 2;
+        } else {
+          if (numeric) { matchValue = this.matchRef ? '1' : '0'; }
+          distance = /*2 -*/ stringCountString(value, matchValue);
+        }
         break;
       case 1:
-        if (numeric) {
-          distance = this.matchRef ? +value : 2 - value;
-        } else {
-          distance = value === this.matchNumber;
-        }
+        if (numeric || (value === 'N')) {
+            distance = (this.matchRef === null) ? 2 * +(value !== 'N') :
+            (value === 'N') ? 2 :
+            this.matchRef ? +value : 2 - value;
+          } else {
+            // was .matchNumber, but that is numeric.
+            distance = 2 - 2 * (value === matchValue);
+          }
         break;
       default : dLog(fnName, 'invalid genotype value', value);
         break;
@@ -390,11 +464,17 @@ export class MatchRef {
       // similar to Counts.count(), except that increments by only 1.
       if (missing) {
         counts.missing = missing;
+        counts.distance = distance;
       } else {
         counts.notMissing = 2;
         counts.distance = distance;
         counts.differences = distance ? 1 : 0;
       }
+      // count the cell genotype value
+      if (! counts.values[value]) {
+        counts.values[value] = 0;
+      }
+      counts.values[value]++;
       distance = counts;
     }
 
@@ -438,7 +518,10 @@ class MatchRefSample {
      */
     let distance = 0, missing = 0, differences = 0;
     // const values = [value, matchValue];
+    // matchValue.length is 1
+    // this assumes value.length === 1
     if (gtValueIsNumeric(value) && gtValueIsNumeric(matchValue)) {
+      // probably Math.abs()
       distance = matchValue - value; // value[1] - value[0];
       differences = distance ? 1 : 0;
     } else {

@@ -617,18 +617,19 @@ export default Service.extend({
     const
     fnName = 'ensureAxisBrush',
     objs = this.axisBrushObjects,
-    axisBrushId = block.id;
-    if (! block.isViewed) {
+    axisBrushId = block.id,
+    axis1d = block.axis1d;
+    if (! block.isViewed || ! axis1d) {
       dLog(
         fnName, block.id, block.brushName, block.axis1d, this.blockService.viewed,
         Ember_get(this, 'flowsService.oa.eventBus.model.params.mapsToView'));
-      return;
+      return undefined;
     }
     let r = objs.findBy('block.id', block.id);
     if (r) {
-      if (block.axis1d.axisBrushObj !== r) {
-        dLog(fnName, block.axis1d.axisBrushObj, r);
-        block.axis1d.axisBrushObj = r;
+      if (axis1d.axisBrushObj !== r) {
+        dLog(fnName, axis1d.axisBrushObj, r);
+        axis1d.axisBrushObj = r;
       }
     }
     else {
