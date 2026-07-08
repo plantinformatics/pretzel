@@ -10,7 +10,7 @@ ARG NODE_ALPINE_VERSION=18
 FROM node:18-alpine AS node-alpine-build-samtools
 
 ARG NODE_ALPINE_VERSION=18
-ARG SAMTOOLS_VERSION=1.15.1
+ARG SAMTOOLS_VERSION=1.23.1
 ARG BUILD_NCPU=1
 
 RUN apk update && apk add build-base wget zlib-dev tar bzip2-dev xz-dev \
@@ -27,7 +27,7 @@ RUN strip samtools
 
 #---------------------------------------
 
-ARG bcftoolsVer=1.15.1
+ARG bcftoolsVer=1.23.1
 
 
 # based on https://hub.docker.com/r/staphb/bcftools/dockerfile :
@@ -110,7 +110,7 @@ openssh
 
 # ------------------------------------------------------------------------------
 
-ARG SAMTOOLS_VERSION=1.15.1
+ARG SAMTOOLS_VERSION=1.23.1
 
 # RUN apk add --no-cache bash
 RUN apk add --no-cache libbz2 zlib libcurl xz-libs
@@ -197,8 +197,8 @@ ENTRYPOINT ["/usr/local/node22/bin/node", "/app/lb3app/server/server.js"]
 # ------------------------------------------------------------------------------
 
 ARG NODE_ALPINE_VERSION=18
-ARG SAMTOOLS_VERSION=1.15.1
-ARG bcftoolsVer=1.15.1
+ARG SAMTOOLS_VERSION=1.23.1
+ARG bcftoolsVer=1.23.1
 ARG PRETZEL_VERSION=2.17.8
 
 
