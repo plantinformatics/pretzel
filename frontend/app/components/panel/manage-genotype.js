@@ -2119,12 +2119,22 @@ export default class PanelManageGenotypeComponent extends Component {
     return selected;
   }
   /** parse the contents of the textarea -> selectedSamples
+   * <Textarea class="selectedSamplesInput" ... selectedSamplesText >
+   * @param value	text resulting from user edit of the <Textarea >
    */
   @action
   sampleNameListInput(value) {
     const
-    selected = this.sampleNameListInputParse(value);
-    this.selectedSamples = selected;
+    fnName = 'sampleNameListInput';
+    /* Possibly .selectedSamples is being cleared by calls to this function with
+     * an empty value. */
+    if (! (value ?? value.length)) {
+      console.log(fnName, value, this.selectedSamples.length);
+    } else {
+      const
+      selected = this.sampleNameListInputParse(value);
+      this.selectedSamples = selected;
+    }
   }
   /** Number of newlines in .selectedSamplesText when sampleNameListInputKey()
    * was last called.
