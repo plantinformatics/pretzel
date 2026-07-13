@@ -1815,8 +1815,21 @@ export default class PanelManageGenotypeComponent extends Component {
    */
   @computed('lookupBlock', 'args.userSettings.selectedDatasetId')
   get lookupDatasetId() {
-    const b = this.lookupBlock;
-    const datasetId = this.args.userSettings.selectedDatasetId || b?.get('datasetId.id');
+    const
+    fnName = 'lookupDatasetId',
+    b = this.lookupBlock,
+    selectedDatasetId = this.args.userSettings.selectedDatasetId,
+    selectedDatasetIdIsCurrent =
+      this.brushedOrViewedVCFBlocksVisible.find(
+        b => b.datasetId.id == selectedDatasetId);
+    if (! selectedDatasetIdIsCurrent) {
+      dLog(fnName, b?.brushName, selectedDatasetId, 'is no longer viewed');
+      this.args.userSettings.selectedDatasetId = undefined;
+    }
+
+    const
+    datasetId = selectedDatasetIdIsCurrent ?
+      selectedDatasetId : b?.get('datasetId.id');
     return datasetId;
   }
   /** Scope of lookupBlock, which used to identify the (reference) chromosome in
@@ -2714,6 +2727,8 @@ export default class PanelManageGenotypeComponent extends Component {
 
   /** Get samples for dataset for this chromosome / VCF Block, filtered by
    * selected SNPs + genotype values, i.e. haplotypes.
+   * genotypeSamplesFilteredByHaplotypes() is currently only used within
+   * .urlOptions.advanced and .devel-visible
    */
   genotypeSamplesFilteredByHaplotypes(vcfBlock) {
     const
@@ -2768,7 +2783,9 @@ export default class PanelManageGenotypeComponent extends Component {
          matchRef : MatchRef.matchRef2Json[f[Symbol.for('matchRef')]]})),
        matchHet
       },
-    filterDescription = filterByHaplotype ?
+    /** falsey if filterByHaplotype?.features is undefined or empty */
+    filterByHaplotypeN = filterByHaplotype?.features.length,
+    filterDescription = filterByHaplotypeN ?
       this.selectedSNPsToKey(filterByHaplotype.features, matchHet) : '',
     requestDescription = "Fetching accessions for " + vcfBlock.brushName + ' ' + filterDescription;
     if (filterByHaplotype) {
@@ -2787,7 +2804,8 @@ export default class PanelManageGenotypeComponent extends Component {
       this.lookupMessage = null;
 
       textP = this.auth.genotypeSamples(
-        vcfBlock, vcfDatasetIdAPI, scope, filterByHaplotype,
+        vcfBlock, vcfDatasetIdAPI, scope,
+        filterByHaplotypeN ? filterByHaplotype : undefined,
         {} );
       textP.then(
         (text) => {
@@ -2834,7 +2852,7 @@ export default class PanelManageGenotypeComponent extends Component {
             dLog(fnName, 'limit sampleNames to', sampleNames.length);
           }
 
-          if (! filterByHaplotype) {
+          if (! filterByHaplotypeN) {
             this.sampleCache.sampleNames[vcfDatasetId] = sampleNamesText;
             this.datasetStoreSampleNames(vcfBlock, sampleNames);
           } else {
@@ -2883,6 +2901,18 @@ export default class PanelManageGenotypeComponent extends Component {
           if ((vcfDatasetId === this.lookupDatasetId) &&
               (this.vcfGenotypeSamplesSelected === undefined)) {
             this.vcfGenotypeSamplesSelected = [];
+            /** Having initialised .selectedSamples, it makes sense to clear
+             * .selectedSamplesText.
+             * For example, when a new dataset is displayed, the previous
+             * .selectedSamplesText should be cleared (we could re-instate the previous selection for
+             * that dataset, as is done when switching between dataset tabs).
+             * .selectedSamples changes are driven by user selections & edits to
+             * .selectedSamplesText.  These 2 are not connected by a computed /
+             * dependency;
+             */
+            if (this.selectedSamplesText) {
+              this.selectedSamplesText = '';
+            }
           }
           this.receivedNamesCount++;
         })
@@ -2994,6 +3024,12 @@ export default class PanelManageGenotypeComponent extends Component {
       dLog(fnName, new Date().toISOString(), this.lookupBlock?.brushName, this.args.userSettings.filterSamplesByHaplotype);
       this.vcfGenotypeSamples();
     }
+
+    // Propagate from previous .selectedSamples of lookupDatasetId, if any.
+    later(() => {
+      const selectedSamples = this.vcfGenotypeSamplesSelectedAll[this.lookupDatasetId];
+      this.selectedSamplesText = selectedSamples ? selectedSamples.join('\n') : '';
+    });
 
   }
 

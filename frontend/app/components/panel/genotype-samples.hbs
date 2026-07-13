@@ -22,9 +22,10 @@
   <div>
    
     <span>
+    {{!-- disabled if no SNPs selected, but enabled if true, so user can clear it. --}}
     <input type="checkbox"
       checked={{@userSettings.filterSamplesByHaplotype}}
-      disabled={{not @the.featureFiltersCountOfDatasetInBrushedDomain.length}}
+      disabled={{and (not @the.featureFiltersCountOfDatasetInBrushedDomain.length) (not @userSettings.filterSamplesByHaplotype)}}
       oninput={{pipe (action (mut @userSettings.filterSamplesByHaplotype) value="target.checked")
         @the.ensureSamples }}  >
     <label class={{if (not @the.featureFiltersCountOfDatasetInBrushedDomain.length) "disabled"}}>

@@ -194,6 +194,10 @@ export default class PanelGenotypeSearchComponent extends Component {
      * specifically : brushedVCFBlocks evaluates
      * block.genotypeSamplesFilteredByHaplotypes() ->
      * vcfGenotypeSamplesDataset().
+     *
+     * Also : if ! vcfBlock.genotypeSamplesFilteredByHaplotypes.length then
+     * filterSamplesByHaplotype is disregarded, so that case could also return
+     * here.
      */
     if (filterSamplesByHaplotype) {
       return;
@@ -202,6 +206,8 @@ export default class PanelGenotypeSearchComponent extends Component {
       /** A block of .selectedDataset, choosing either the first viewed block or
        * the first block. */
       vcfBlock = this.selectedDataset.get('aBlock');
+    } else if ((vcfBlock = manageGenotype?.lookupBlock)) {
+      datasetId = vcfBlock.get('datasetId.id');
     }
     /** If filterSamplesByHaplotype, the result sampleNames also depends on the
      * filtering haplotypes (i.e. SNPs + genotype values) :
