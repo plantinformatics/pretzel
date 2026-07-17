@@ -243,6 +243,24 @@ const featureValuesWidths = {
 };
 
 
+//------------------------------------------------------------------------------
+
+/** f is selectedFeatures, so rest already contains these fields :
+ *   [ "Chromosome", "Position", "Feature" ],
+ * so avoid clashing with them by appending '_' to the field name if it clashes.
+ * @param usedKeys  keys already used in rest
+ * @param valueName a key from feature values
+ * @return valueName, possibly with '_' appended.
+ */
+function valueNameModify(usedKeys, valueName) {
+  if (usedKeys.includes(valueName)) {
+    valueName = valueName + '_';
+    dLog('valueNameModify', 'appending _ to ', valueName);
+  }
+  return valueName;
+}
+
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -419,11 +437,17 @@ export default Component.extend({
     /** Collate names of Feature attributes in .values and .values.INFO */
     nameSet = data.reduce(
       (result, datum) => {
+        /** At this point Object.keys(datum) is [ "Chromosome", "Position", "feature", "Feature" ],
+         * i.e. 'feature' is added since valueNameModify() was used in dataForHoTable().
+         * So remove "feature" for consistency, since that is not a column name anyway.
+         */
+        const usedKeys = Object.keys(datum).removeObject("feature");
         let feature = datum.feature;
         ['values', 'values.INFO'].forEach(fieldName => {
           const values = feature.get(fieldName);
           if (values) {
             Object.keys(values).forEach(n => {
+              n = valueNameModify(usedKeys, n);
               if (! ((fieldName === 'values') && (n === 'INFO'))) {
                 result.add(n);
                 const names = subFieldNames[fieldName] || (subFieldNames[fieldName] = new Set());
@@ -614,7 +638,10 @@ export default Component.extend({
       let {feature, ...rest} = f,
           values = feature.values;
       if (values) {
-        Object.keys(values).forEach((valueName) => rest[valueName] = values[valueName]);
+        /** i.e. [ "Chromosome", "Position", "Feature" ] */
+        const usedKeys = Object.keys(rest);
+        Object.keys(values).forEach(
+          (valueName) => rest[valueNameModify(usedKeys, valueName)] = values[valueName]);
         /** Show fields from vcf INFO column as columns. */
         if (typeof rest.INFO === 'object') {
           const INFO = rest.INFO;
