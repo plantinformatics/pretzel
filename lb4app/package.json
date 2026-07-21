@@ -69,8 +69,6 @@
     "compression": "^1.7.4",
     "cors": "^2.8.5",
     "dotenv": "^16.0.0",
-    "express-rate-limit": "^6.11.2",
-    "express-slow-down": "^1.6.0",
     "express-sse": "^0.5.3",
     "helmet": "^5.0.2",
     "interval-bins": "github:plantinformatics/interval-bins",

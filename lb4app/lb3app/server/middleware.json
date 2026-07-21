@@ -4,19 +4,6 @@
   },
   "initial": {
     "./middleware/route_time": {},
-    "./middleware/failed-request-throttle": {
-      "params": {
-        "windowMs": 900000,
-        "slowDown": {
-          "delayAfter": 5,
-          "delayMs": 1000,
-          "maxDelayMs": 10000
-        },
-        "rateLimit": {
-          "max": 60
-        }
-      }
-    },
     "compression": {},
     "cors": {
       "params": {
