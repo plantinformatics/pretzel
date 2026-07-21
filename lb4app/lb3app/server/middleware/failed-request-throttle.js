@@ -1,5 +1,28 @@
 'use strict';
 
+//------------------------------------------------------------------------------
+/** This file was added in f22e578a and is not required when Cloudflare is in use.
+ * Also to use this nginx configuration would need to be configured so that API
+ * requests don't all appear to be from a single IP (localhost)
+ *
+ * To enable this : add the following to lb4app/lb3app/server/middleware.json :
+    "./middleware/failed-request-throttle": {
+      "params": {
+        "windowMs": 900000,
+        "slowDown": {
+          "delayAfter": 5,
+          "delayMs": 1000,
+          "maxDelayMs": 10000
+        },
+        "rateLimit": {
+          "max": 60
+        }
+      }
+    },
+*/
+//------------------------------------------------------------------------------
+/* global require */
+
 var rateLimitModule = require('express-rate-limit');
 var slowDownModule = require('express-slow-down');
 var SlowDownMemoryStore = require('express-slow-down/lib/memory-store');
