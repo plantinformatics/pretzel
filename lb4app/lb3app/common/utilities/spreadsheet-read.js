@@ -197,6 +197,7 @@ Dataset worksheets :
     SNP|
     Alignment|
     QTL|
+    Haplotype|
     Genome|
 
 
@@ -268,7 +269,7 @@ function sheetToDataset(
   } else {
     tags = [];
   }
-  if (['QTL', 'VCF'].includes(sheetType)) {
+  if (['QTL', 'VCF', 'Haplotype'].includes(sheetType)) {
     // QTL tag is required. ditto VCF.
     tags.push(sheetType);
     if (sheetType === 'VCF') {
@@ -1151,7 +1152,7 @@ function flankingMarkerValue(feature) {
 function requiredFields(feature, sheetType, warnings) {
   const f = feature;
 /*
-  # for QTL : allow blank Start/End fields, if flanking marker field is defined
+  # for QTL and Haplotype : allow blank Start/End fields, if flanking marker field is defined
   if (($#value == -1) && ! $hasFlankingMarkers)
     {
       print STDERR "In Dataset $datasetName, Feature $name has no Start/End, and no Flanking Markers\n";

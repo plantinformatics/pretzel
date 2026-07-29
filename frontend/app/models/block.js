@@ -435,6 +435,28 @@ export default Model.extend({
     let isQTL =  this.hasTag('QTL') || this.get('datasetId._meta.type') === 'QTL';
     return isQTL;
   }),
+  isHaplotype : computed('datasetId.tags', function () {
+    let isHaplotype =  this.hasTag('Haplotype');
+    return isHaplotype;
+  }),
+  /** For QTL and Haplotype, feature.value is copied from a feature with
+   * matching name in the parent referenceBlock.
+   * i.e. the feature value is inherited from the parent.  Other types of
+   * feature value calculations may be added later.
+   *
+   * So far, the value is inherited from the parent; other computation types
+   * will likely also require parent data, which is retrieved by
+   * loadRequiredData() -> referencedFeaturesOf().
+   *
+   * @return true if a feature value is not used directly as a position within the parent reference assembly
+   * but is calculated from feature data.
+   */
+  valueComputed : computed('isQTL', 'isHaplotype', function () {
+    const isInherited =  this.isQTL || this.isHaplotype;
+    return isInherited;
+  }),
+
+
   /** In the frontend VCF and Germinate are treated equally, so wherever isVCF
    * is currently used can be changed to isGenotype.
    * The tags define sets : view contains-subset Genotype contains-subset {VCF, Germinate},
@@ -796,10 +818,10 @@ export default Model.extend({
         /** blocks[0] may be undefined, e.g. when the reference is on another server which is not connected. */
         blocks = scopes && scopes.get(scope);
         /** Expect the referenceBlock to not have data, except for the parent of
-         * a QTL, which may be a physical reference (no data), or a GM, which is
+         * a QTL or Haplotype (see valueComputed), which may be a physical reference (no data), or a GM, which is
          * expected to have data.
          */
-        let isQTL = this.get('isQTL');
+        let isQTL = this.get('valueComputed');
         /** b.isData uses .referenceBlock, which may recurse to here, so use
          * direct attributes of block to indicate whether it is reference / data
          * block.
@@ -1702,8 +1724,7 @@ export default Model.extend({
   loadRequiredData : computed(function () {
     const fnName = 'loadRequiredData';
     /* No dependency - will compute once.  */
-    // possibly generalise the tag from 'QTL' to : 'valueComputed'
-    if (this.get('isQTL')) {
+    if (this.get('valueComputed')) {
       let
       /** make the 2 requests in serial because of .drop() on getBlockFeaturesIntervalTask()
        */

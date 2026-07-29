@@ -206,6 +206,21 @@ const passportFields = [
 
 //------------------------------------------------------------------------------
 
+/** Map to the columnName used in matrix-view and passed to featureToggle(),
+ * from the allele value configured in Haplotype Feature .values.Allele and also returned by
+ * haplotypes_samples_collate.awk : gt_to_dosage(gt); also accept A / R as input.
+ */
+const allele2ColumnName = {
+  '0' : 'Ref',
+  '2' : 'Alt',
+  'N' : 'Null',
+  // also support these, in case ...
+  'R' : 'Ref',
+  'A' : 'Alt',
+};
+
+//------------------------------------------------------------------------------
+
 /**
  * @return true if feature.values contains only non-sample values, as listed in
  * valueNameIsNotSample().
@@ -1445,7 +1460,7 @@ export default class PanelManageGenotypeComponent extends Component {
    * so the downstream filtering / sorting pipeline can recompute column order.
    *
    * @param {FeatureModel} feature  SNP that owns the clicked cell.
-   * @param {'Ref'|'Alt'} columnName  Indicates which allele was clicked.
+   * @param {'Ref'|'Alt'|'Null'} columnName  Indicates which allele was clicked.
    */
   @action
   featureToggle(feature, columnName) {
@@ -1472,7 +1487,7 @@ export default class PanelManageGenotypeComponent extends Component {
       feature[matchRefSymbol] = matchRefNew;
     }
     dLog
-    (fnName, block.get('brushName'), matchRef, matchRefNew,
+    (fnName, block.get('brushName'), columnName, matchRef, matchRefNew,
      JSON.stringify(filters.map(f => [f.value_0, f[matchRefSymbol]])));
     /** featureToggleRC() calls featureToggle() for each of the VCF datasets with a feature at the
      * clicked position, so this is not required :
@@ -1492,6 +1507,60 @@ export default class PanelManageGenotypeComponent extends Component {
     this.ensureSamplesThenRender(filterTypeName);
   }
 
+  //----------------------------------------------------------------------------
+  /** Use featureToggle(), after searching for the given featureName in .gtBlocks
+   *
+   * @param {FeatureModel} feature  SNP that owns the clicked cell.
+   * @param {'Ref'|'Alt'|'Null'} allele  Indicates which allele was clicked.
+   * Also accept : {'A', 'C', 'T', 'G'}, which is likely what users will have
+   * for the SNPs selected via GWAS.
+   */
+  featureToggleByName(featureName, allele) {
+    function blockFindFeatureByName(block)
+    {
+      return block.features.findBy('name', featureName);
+    }
+    const
+    fnName = 'featureToggleByName',
+    block = this.gtBlocks.find(blockFindFeatureByName),
+    /** repeat the last findBy() to get the feature reference. */
+    feature = blockFindFeatureByName(block);
+    dLog(fnName, featureName, allele, feature);
+    if (! feature) {
+      dLog(fnName, featureName, 'not found in', this.gtBlocks.mapBy('brushName').join(', '));
+    } else {
+      const
+      ref = feature.values.ref,
+      alt = feature.values.alt,
+      columnName =
+        (allele === ref) ? '0' : (allele == alt) ? '2' : allele2ColumnName[allele];
+      this.featureToggle(feature, columnName);
+    }
+  }
+
+  /** Toggle each of the SNPs listed as .flankingMarkers in the given Haplotype Feature.
+   * Use the .Allele to provide the columnName for each SNP.
+   */
+  haplotypeToggle(haplotypeFeature) {
+    const
+    fnName = 'haplotypeToggle',
+    values = haplotypeFeature.values,
+    /** expect that .Allele is nucleotides, not numeric */
+    alleles = [... values.Allele],
+    featureNames = values.flankingMarkers;
+    featureNames.forEach((featureName, i) => {
+      const a = alleles[i];
+      if (! a) {
+        dLog(fnName, i, a, alleles, values.Allele, values.flankingMarkers);
+      } else {
+        dLog(fnName, i, a, alleles, values.Allele, values.flankingMarkers);        
+        this.featureToggleByName(featureName, a);
+      }
+    });
+    this.haplotypeFiltersApply();
+  }
+
+  //----------------------------------------------------------------------------
 
   /* haplotypeFiltersApply() -> filterSamplesBySelectedHaplotypes() -> filterSamples()
    * also applies featureFilters, so there is no need for a separate
