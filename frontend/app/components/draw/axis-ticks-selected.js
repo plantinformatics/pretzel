@@ -348,7 +348,7 @@ export default Component.extend(AxisEvents, {
     if (! event.shiftKey) {
       if (feature.get('blockId.isHaplotype')) {
         dLog(fnName, 'haplotypeToggle', feature.name );
-        this.manageGenotype.haplotypeToggle(feature);
+        this.manageGenotype?.haplotypeToggle(feature);
       }
       this.selected.clickLabel(feature);
       features = this.selected.labelledFeatures;

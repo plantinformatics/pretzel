@@ -1530,11 +1530,19 @@ export default class PanelManageGenotypeComponent extends Component {
       dLog(fnName, featureName, 'not found in', this.gtBlocks.mapBy('brushName').join(', '));
     } else {
       const
-      ref = feature.values.ref,
-      alt = feature.values.alt,
+      values = feature.values,
+      /** will probably standardise on Ref / Alt capitalisation, now that is is
+       * a recognised input field. */
+      ref = values.Ref || values.ref || values.REF,
+      alt = values.Alt || values.alt || values.ALT,
+      /** value is {'Ref'|'Alt'|'Null'}  */
       columnName =
-        (allele === ref) ? '0' : (allele == alt) ? '2' : allele2ColumnName[allele];
-      this.featureToggle(feature, columnName);
+        (allele === ref) ? 'Ref' : (allele == alt) ? 'Alt' : allele2ColumnName[allele];
+      if (! columnName) {
+        console.log(fnName, featureName, allele, 'not matched', ref, alt, columnName);
+      } else {
+        this.featureToggle(feature, columnName);
+      }
     }
   }
 
