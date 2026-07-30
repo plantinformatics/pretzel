@@ -1558,10 +1558,18 @@ export default class PanelManageGenotypeComponent extends Component {
     featureNames = values.flankingMarkers;
     featureNames.forEach((featureName, i) => {
       const a = alleles[i];
+      function logMsg(msg) {
+        dLog(fnName, msg, i, a, alleles, values.Allele, values.flankingMarkers);
+      }
       if (! a) {
-        dLog(fnName, i, a, alleles, values.Allele, values.flankingMarkers);
+        logMsg('no char at');
+      } else if (a == '.') {
+        /* It is easy at this point to accept '.', indicating the feature
+         * genotype value is not constrained.
+         * (this is for trial - suggested by a user) */
+        logMsg('skip');
       } else {
-        dLog(fnName, i, a, alleles, values.Allele, values.flankingMarkers);        
+        logMsg('toggle');
         this.featureToggleByName(featureName, a);
       }
     });
