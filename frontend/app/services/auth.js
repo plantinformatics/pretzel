@@ -498,10 +498,13 @@ export default Service.extend({
    * @param datasetId of parent / reference of the blast db which is to be searched
    * @param scope chromosome
    * @param positions	array of feature / SNP positions
+   * @param genotypeHasNull	true means the dataset genotype VCF file header
+   * has ID=NU, i.e. it contains Null genotype data, and it should be requested,
+   * via :%NU.
    */
-  genotypeHaplotypesSamples(block, datasetId, scope, positions) {
-    dLog('services/auth genotypeHaplotypesSamples', datasetId, scope, positions);
-    const params = {id : block.id, datasetId, scope, positions};
+  genotypeHaplotypesSamples(block, datasetId, scope, positions, genotypeHasNull) {
+    dLog('services/auth genotypeHaplotypesSamples', datasetId, scope, positions, genotypeHasNull);
+    const params = {id : block.id, datasetId, scope, positions, genotypeHasNull};
     return this._ajax('Blocks/genotypeHaplotypesSamples', 'GET', params, true);
   },
 

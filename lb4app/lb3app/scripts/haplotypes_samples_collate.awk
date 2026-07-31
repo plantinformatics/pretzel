@@ -7,10 +7,19 @@
 # | 0/1 | 1 |
 # | 1/0 | 1 |
 # | 1/1 | 2 |
+# | %GT:%NU | Dosage |
+# | ./.:1 | N |
+# | ./.:0 | . |
 # The %GT value may be phased or unphased, i.e. the separator may be | or /.
 # Unknown values, e.g. ./. are mapped to '.'.
+# The interpretation of the %NU digit is noted in this commit 0cd9dc6 vcf-genotype.js : vcfGenotypeSamplesFiltered() : refToGenotype() : digitMeansNull.
 function gt_to_dosage(gt) {
   if (gt == "." || gt == "./." || gt == ".|.") return "."
+  if (gt == "./.:1") return "N"
+  if (gt == "./.:0") return "."
+  # The value of %NU is used only if gt starts with ./.: and is ignored in the other cases.
+  # if there is trailing :0 or :1 then remove it.
+  sub(/:[01]$/, "", gt)
   split(gt, a, /[\/|]/)
   return a[1] + a[2]
 }

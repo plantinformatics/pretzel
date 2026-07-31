@@ -1578,8 +1578,9 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
    * @param datasetId  name of parent or view dataset, or vcf directory name
    * @param scope e.g. '1A'; identifies the vcf file, i.e. datasetId/scope.vcf.gz
    * @param positions optional filter e.g. haplotype
+   * @param genotypeHasNull	true means dataset VCF file has ID=NU, and :%NU should be requested
    */
-  Block.genotypeHaplotypesSamples = function(id, datasetId, scope, positions, options, cb) {
+  Block.genotypeHaplotypesSamples = function(id, datasetId, scope, positions, genotypeHasNull, options, cb) {
     const fnName = 'genotypeHaplotypesSamples';
     {
       this.blockDatasetLookup(id, options)
@@ -1587,7 +1588,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
 
       function samples([block, dataset]) {
         if (dataset.tags?.includes('VCF')) {
-          const promise = vcfGenotypeHaplotypesSamples(datasetId, scope, positions);
+          const promise = vcfGenotypeHaplotypesSamples(datasetId, scope, positions, genotypeHasNull);
           promise.then(value => cb(null, value)).catch(cb);
 
         } else {
@@ -1604,6 +1605,8 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       {arg: 'datasetId', type: 'string', required: true},
       {arg: 'scope', type: 'string', required: true},
       {arg: 'positions', type: 'array', required: true},
+      {arg: 'genotypeHasNull', type: 'Boolean', required: false, default : 'false'},
+
       {arg: 'options', type: 'object', http: 'optionsFromRequest'},
     ],
     http: {verb: 'get'},
