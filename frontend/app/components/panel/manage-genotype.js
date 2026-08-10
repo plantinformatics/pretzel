@@ -517,6 +517,7 @@ export default class PanelManageGenotypeComponent extends Component {
   // @action  // called via (action to pass target.value)
   nameFilterChanged(value) {
     this.namesFilters.nameFilterChanged(value);
+    later(() => Ember_set(this, 'sampleNameFilter',  value));
   }
 
   // ---------------------------------------------------------------------------

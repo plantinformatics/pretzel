@@ -209,6 +209,9 @@ export default class PanelGenotypeSearchComponent extends Component {
     } else if ((vcfBlock = manageGenotype?.lookupBlock)) {
       datasetId = vcfBlock.get('datasetId.id');
     }
+    if (! datasetId) {
+      dLog(fnName, 'datasetId', datasetId);
+    } else {
     /** If filterSamplesByHaplotype, the result sampleNames also depends on the
      * filtering haplotypes (i.e. SNPs + genotype values) :
      * selectedSNPsInBrushedDomain().
@@ -223,6 +226,7 @@ export default class PanelGenotypeSearchComponent extends Component {
       if (vcfBlock) {
         const textP = this.manageGenotype.vcfGenotypeSamplesDataset(vcfBlock);
       }
+    }
     }
   }
 
