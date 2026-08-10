@@ -258,7 +258,16 @@ div.app-logo {
 }
 #headsUp > div {
   margin-left: 1em;
+  /* Ideally this would use the width of the graph area; parent is position : absolute.
+   * child textarea fills this.
+   */
+  width : 40%;
+  > textarea
+  {
+    width : 100%;
+  }
 }
+
 
 /* -------------------------------------------------------------------------- */
 /* Handle to resize a panel width. 
