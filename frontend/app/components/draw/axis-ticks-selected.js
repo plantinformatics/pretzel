@@ -324,17 +324,32 @@ export default Component.extend(AxisEvents, {
     return features;
   },
 
+  //----------------------------------------------------------------------------
+
+  manageGenotype : computed(
+    'controls.registrationsByName.component:panel/manage-genotype',
+    function manageGenotype() {
+      return this.controls.registrationsByName['component:panel/manage-genotype'];
+    }),
+
+  //----------------------------------------------------------------------------
+
   /**
    * @param event d3 event,
    * @param feature
    * @param this component:draw/axis-ticks-selected
    */
   clickTriangle(event, feature) {
+    const fnName = 'clickTriangle';
     //  feature === event.target.__data__
     dLog('clickTriangle', feature, this);
     if (this.controls.noGuiModeFilter()) {
     let features, listName;
     if (! event.shiftKey) {
+      if (feature.get('blockId.isHaplotype')) {
+        dLog(fnName, 'haplotypeToggle', feature.name );
+        this.manageGenotype?.haplotypeToggle(feature);
+      }
       this.selected.clickLabel(feature);
       features = this.selected.labelledFeatures;
       listName = 'labelled';

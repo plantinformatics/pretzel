@@ -485,7 +485,7 @@ function bcftoolsCommand() {
   elif [ "$command" = haplotypes_samples ]
   then
     2>&$F_ERR "$bcftools" query "$vcfGz" "${regionParams[@]}" "${preArgs[@]}" "${paramsForQuery[@]}" "${snpNamesInclude[@]}" \
-              -f '%CHROM\t%POS[\t%GT]\n' \
+              -f '%CHROM\t%POS[\t%GT'"$requestNull"']\n' \
       | awk -f $scriptsDir/haplotypes_samples_collate.awk \
       | awk -f $scriptsDir/haplotypes_samples_count.awk
   else

@@ -65,6 +65,7 @@ export default class PanelBlockGtViewComponent extends Component {
     vcfDatasetIdAPI = vcfBlock?.get('datasetId.genotypeId'),
     /** Same comment as in .lookupScope */
     scope = vcfBlock.get('name'),
+    genotypeHasNull = vcfDataset._meta.genotypeHasNull,
 
     /** See comment in vcfGenotypeSamplesDataset() */
     positions = mg.selectedSNPsInBrushedDomain(vcfBlock)
@@ -79,7 +80,7 @@ export default class PanelBlockGtViewComponent extends Component {
       mg.lookupMessage = null;
 
       textP = this.auth.genotypeHaplotypesSamples(
-        vcfBlock, vcfDatasetIdAPI, scope, positions,
+        vcfBlock, vcfDatasetIdAPI, scope, positions, genotypeHasNull,
         {} )
         .then(text => {
           return text?.text;

@@ -12,7 +12,7 @@
   <div id="headsUp">
     {{#if this.headsUp.tipText}}
         <button type="button" onclick={{action (mut this.headsUp.tipText) null}} >X</button>
-      <div>{{this.headsUp.tipText}}</div>
+      <div><textarea>{{this.headsUp.tipText}}</textarea></div>
     {{/if}}
   </div>
 

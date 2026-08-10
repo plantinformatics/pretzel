@@ -178,8 +178,8 @@ export default class PassportTable extends Component {
     /** reference to signalChange() if required. */
     let postSignal;
     const
-    /** mg.sampleNameFilter is not updated. */
-    sampleNameFilter = this.args.mg .namesFilters.nameFilterDebounced,
+    /** namesFilters.nameFilterDebounced was used while mg.sampleNameFilter was not updated. */
+    sampleNameFilter = this.args.mg.sampleNameFilter,
     /** do .signalChange() after storeSearch(). */
     signalChange = search => { postSignal = () => this.signalChange(search); },
     /** Use .currentSearch from column headers, or fall back to sampleNameFilter,
@@ -429,7 +429,14 @@ export default class PassportTable extends Component {
     let promise;
     const datasetSamplesTask = this.args.dataset[Symbol.for('samplesP')];
     if (! this.args.samples.length && datasetSamplesTask) {
-      promise = datasetSamplesTask.promise.then(() => this.getNextPageNoSearch());
+      /* may need filterDescription, as in vcfGenotypeSamples() : selectedSNPs
+       * .false. is the value of filterDescription if ! selectedSNPs.length,
+       * i.e. the common case of datasetSamplesTask[filterDescription].promise
+       */
+      const currentPromise = datasetSamplesTask.promise || datasetSamplesTask.false.promise;
+      if (currentPromise) {
+        promise = currentPromise.then(() => this.getNextPageNoSearch());
+      }
     } else if (
       /** .samples.length is limited to 2000 in development */
       (this.lastPassport > this.args.samples.length) &&
