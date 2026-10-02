@@ -30,3 +30,6 @@ TAGS
 .vscodeignore
 .aider*
 .gitnexus
+
+# Python
+__pycache__
