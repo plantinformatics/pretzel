@@ -23,6 +23,9 @@ bower_components
 /builds
 /logs
 
+# Local Docker Compose configuration; commit .env.template instead.
+/.env
+
 # emacs backup files
 *~
 # etags file

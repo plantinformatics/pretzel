@@ -24,12 +24,46 @@ Documentation is available at:
 
 ## Install and run Pretzel
 
-The supported deployment uses Docker Engine with the Docker Compose v2 plugin
-(`docker compose`, not the legacy `docker-compose` command). Git is also
-required when building the images locally.
+Before starting, install:
 
-1. Clone this repository and enter its directory.
-2. Open [`.env`](.env) and replace every `CHANGE_ME` value. In particular:
+- [Git](https://git-scm.com/downloads), using the installer for your operating
+  system;
+- [Docker](https://docs.docker.com/get-started/get-docker/), including Docker
+  Compose v2. Docker Desktop includes Compose on Windows and macOS. On Linux,
+  follow Docker's instructions for Docker Engine and the Compose plugin.
+
+Verify that both commands are available:
+
+```sh
+git --version
+docker compose version
+```
+
+Use `docker compose`, not the legacy `docker-compose` command.
+
+1. Clone this repository and enter its directory:
+
+   ```sh
+   git clone https://github.com/plantinformatics/pretzel.git
+   cd pretzel
+   ```
+
+2. Create a local `.env` from the committed [`.env.template`](.env.template).
+   On Linux or macOS, run:
+
+   ```sh
+   cp .env.template .env
+   ```
+
+   In Windows PowerShell, run:
+
+   ```powershell
+   Copy-Item .env.template .env
+   ```
+
+   Open `.env` in a text editor and replace every `CHANGE_ME` value. In
+   particular:
+
    - set `DB_PASS` to a long, unique password;
    - replace `/CHANGE_ME/pretzel/...` with absolute directories on the Docker
      host, and create those directories before starting the application;
@@ -41,8 +75,9 @@ required when building the images locally.
    - replace `handsOnTableLicenseKey` if your use requires a commercial
      Handsontable licence.
 
-   The committed file contains examples only. Never commit real passwords,
-   licence keys, email addresses, hostnames, or organisation-specific paths.
+   The template contains examples only. Never commit the generated `.env`, real
+   passwords, licence keys, email addresses, hostnames, or
+   organisation-specific paths.
    For production, restrict `.env` permissions (for example, `chmod 600 .env`)
    or supply a separately managed file with `docker compose --env-file`.
 
