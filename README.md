@@ -22,6 +22,61 @@ Documentation is available at:
 
 ### [https://docs.plantinformatics.io/](https://docs.plantinformatics.io/)
 
+## Install and run Pretzel
+
+The supported deployment uses Docker Engine with the Docker Compose v2 plugin
+(`docker compose`, not the legacy `docker-compose` command). Git is also
+required when building the images locally.
+
+1. Clone this repository and enter its directory.
+2. Open [`.env`](.env) and replace every `CHANGE_ME` value. In particular:
+   - set `DB_PASS` to a long, unique password;
+   - replace `/CHANGE_ME/pretzel/...` with absolute directories on the Docker
+     host, and create those directories before starting the application;
+   - set `API_HOST` to the public DNS name for a deployed instance, or leave it
+     as `localhost` for local use; leave `API_PORT_PROXY` empty unless requests
+     reach Pretzel through a reverse proxy;
+   - configure the `EMAIL_*` values for the site's SMTP service. With
+     `EMAIL_VERIFY=NONE`, email verification is disabled for a local trial;
+   - replace `handsOnTableLicenseKey` if your use requires a commercial
+     Handsontable licence.
+
+   The committed file contains examples only. Never commit real passwords,
+   licence keys, email addresses, hostnames, or organisation-specific paths.
+   For production, restrict `.env` permissions (for example, `chmod 600 .env`)
+   or supply a separately managed file with `docker compose --env-file`.
+
+3. Create the configured host directories, then pull the published images and
+   start the services:
+
+   ```sh
+   docker compose pull
+   docker compose up -d --no-build
+   ```
+
+4. Check startup and open `http://localhost:3010` (or the host and port selected
+   in `.env`):
+
+   ```sh
+   docker compose ps
+   docker compose logs -f api
+   ```
+
+Stop Pretzel with `docker compose down`. This preserves MongoDB and application
+data in the configured host directories. To build the application image from
+source, use the repository Dockerfile directly:
+
+```sh
+docker build -t plantinformaticscollaboration/pretzel:local .
+PRETZEL_SERVER_IMAGE=plantinformaticscollaboration/pretzel:local \
+  docker compose up -d --no-build
+```
+
+Sequence search additionally uses the `blastserver` service. Its databases must
+be installed below the configured `mntData/blast` directory; see the
+[BLAST administration guide](doc/adminGuides/data/blast.md). The Compose file
+mounts the Docker socket into this service, so only run it on a trusted host.
+
 ## Pretzel features
 
 - Integration of a diverse range of genetic and genomic information

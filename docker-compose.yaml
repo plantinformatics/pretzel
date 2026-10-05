@@ -1,15 +1,27 @@
-version: "2"
+# version is no longer required, and best practice is to omit it
+# https://github.com/docker-archive-public/docker.docker.github.io-1/blob/master/compose/compose-file/index.md#version-top-level-element
+# version: "2"
+
 # NOTE refer to the accompanying '.env' file in this folder to access
 # environment variables which are passed through to docker-compose.yaml
 # at run time
 
+# NOTE this has been updated to the docker compose V2 format, this will not work with docker-compose
+
 networks:
   pretzel:
     driver: bridge
+    # Makes the network internal. Does not prevent access from the host, outside Docker.
+    # internal: true
 
 services:
   database: # mongo database
     image: 9b5c4a4fdcb5 # 4.2.24.  library/mongo-4.2.24 # base image off dockerhub
+    # set bindIp to listen on the IP address of this service within the docker
+    # compose network.
+    # The default is 0.0.0.0, which binds on the public IP address of the
+    # host instance, and hence accept connections from all IP addresses.
+    command: --bind_ip database
     environment:
       - "MONGO_INITDB_ROOT_USERNAME=${DB_USER}"
       - "MONGO_INITDB_ROOT_PASSWORD=${DB_PASS}"
@@ -27,13 +39,15 @@ services:
     build:
       context: .
       dockerfile: ./scripts/Dockerfile
-    image: plantinformaticscollaboration/pretzel:latest # specifying name for built container
+    image: ${PRETZEL_SERVER_IMAGE:-plantinformaticscollaboration/pretzel:latest}
     command: node /app/lb3app/server/server.js
     environment:
       - "API_HOST=${API_HOST}"
       - "API_PORT_EXT=${API_PORT_EXT}"
       - "API_PORT_PROXY=${API_PORT_PROXY}"
       - "hostIp=${hostIp}"
+      # Flask port is now internal to the compose network, so use fixed (default) 4000; 
+      # no need to configure via FLASK_PORT / BLASTSERVER_PORT.
       - "FLASK_PORT=4000"       # ${BLASTSERVER_PORT}"
       - "DB_HOST=database"
       - "DB_PORT=${MONGO_DEFAULT_PORT}"
@@ -48,15 +62,19 @@ services:
       - "EMAIL_VERIFY=${EMAIL_VERIFY}"
       - "EMAIL_ADMIN=${EMAIL_ADMIN}"
       - "mntData=${mntData}"
+      # $blastDir is logged in server/server.js via envNames[] and used in blastServer.py.
       - "blastDir=$blastDir"
       # - "scriptsDir=/app/lb3app/scripts"
       - "handsOnTableLicenseKey=${handsOnTableLicenseKey}"
     volumes:
-      # landingPageVolume=(--volume /home/$USER/pretzel-static-pages/$landingPageDirName:/app/client/landingPageContent)
+      # landingPage
+      - $landingPage:/app/client/landingPageContent
       # blastVolume
       - $mntData/blast:$mntData/blast
       # vcfVolume
       - $mntData/vcf:$mntData/vcf
+      - ${resultsCacheDir}:/Cache
+
     ports:
       # match ext / int ports for loopback
       - "${API_PORT_EXT}:${API_PORT_EXT}"
@@ -64,7 +82,8 @@ services:
       - pretzel
 
   blastserver: # Python Flask blastn server, used for DNA Sequence Search
-    image: blastserver # based on python
+    # image is based on python, with extracts copied from ncbi/blast
+    image: plantinformaticscollaboration/blastserver:latest
     environment:
       - "FLASK_PORT=4000"       # ${BLASTSERVER_PORT}"
       # scriptsDir is hard-wired in the image
@@ -78,8 +97,11 @@ services:
     volumes:
       # mntData=/mnt/data_blast
       - $mntData/blast:$mntData/blast
+      # Enables scripts/blastn_cont.bash to run blastn via docker
+      - /usr/bin/docker:/usr/bin/docker
+      - /var/run/docker.sock:/var/run/docker.sock
     # Don't expose the BLASTSERVER_ / FLASK_PORT (e.g.4000) - not required
-    ports:
+    expose:
       # name this ${BLASTSERVER_PORT}
       - ":4000"
     networks:
