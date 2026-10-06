@@ -79,6 +79,11 @@ Use `docker compose`, not the legacy `docker-compose` command.
    convenient example. Run `pwd` from the parent `pretzelDir` if you need its
    absolute path when configuring `.env`.
 
+   Until this branch is merged, checkout the branch :
+   ```bash
+   git checkout feature/composeReadme
+   ```
+
 2. Create a local `.env` from the committed [`.env.template`](.env.template).
    On Linux or macOS, run:
 
