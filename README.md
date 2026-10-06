@@ -41,12 +41,43 @@ docker compose version
 
 Use `docker compose`, not the legacy `docker-compose` command.
 
-1. Clone this repository and enter its directory:
+1. Create a parent directory for Pretzel's working copy and persistent data,
+   then clone the repository. A simple layout places everything below a
+   directory named `pretzelDir`:
 
-   ```sh
+   ```bash
+   mkdir pretzelDir
+   cd pretzelDir
+   mkdir -p mongodb landing-page data/blast cache
    git clone https://github.com/plantinformatics/pretzel.git
    cd pretzel
    ```
+
+   In Windows PowerShell, the equivalent is:
+
+   ```powershell
+   New-Item -ItemType Directory -Path pretzelDir
+   Set-Location pretzelDir
+   New-Item -ItemType Directory -Force `
+     -Path "mongodb", "landing-page", "data/blast", "cache"
+   git clone https://github.com/plantinformatics/pretzel.git
+   Set-Location pretzel
+   ```
+
+   Or, in Windows Command Prompt (`cmd.exe`):
+
+   ```bat
+   mkdir pretzelDir
+   cd pretzelDir
+   mkdir mongodb landing-page data data\blast cache
+   git clone https://github.com/plantinformatics/pretzel.git
+   cd pretzel
+   ```
+
+   This creates the Git working directory at `pretzelDir/pretzel`. The data
+   directories do not have to share a parent directory; this layout is only a
+   convenient example. Run `pwd` from the parent `pretzelDir` if you need its
+   absolute path when configuring `.env`.
 
 2. Create a local `.env` from the committed [`.env.template`](.env.template).
    On Linux or macOS, run:
@@ -61,12 +92,19 @@ Use `docker compose`, not the legacy `docker-compose` command.
    Copy-Item .env.template .env
    ```
 
+   In Windows Command Prompt, run:
+
+   ```bat
+   copy .env.template .env
+   ```
+
    Open `.env` in a text editor and replace every `CHANGE_ME` value. In
    particular:
 
    - set `DB_PASS` to a long, unique password;
-   - replace `/CHANGE_ME/pretzel/...` with absolute directories on the Docker
-     host, and create those directories before starting the application;
+   - set `pretzelDir` to the absolute path of the parent directory created in
+     step 1. The other directory settings in the template are derived from it;
+     alternatively, replace them with unrelated absolute paths;
    - set `API_HOST` to the public DNS name for a deployed instance, or leave it
      as `localhost` for local use; leave `API_PORT_PROXY` empty unless requests
      reach Pretzel through a reverse proxy;
@@ -81,8 +119,7 @@ Use `docker compose`, not the legacy `docker-compose` command.
    For production, restrict `.env` permissions (for example, `chmod 600 .env`)
    or supply a separately managed file with `docker compose --env-file`.
 
-3. Create the configured host directories, then pull the published images and
-   start the services:
+3. Pull the published images and start the services:
 
    ```sh
    docker compose pull
