@@ -16,17 +16,35 @@ networks:
 
 services:
   database: # mongo database
-    image: 9b5c4a4fdcb5 # 4.2.24.  library/mongo-4.2.24 # base image off dockerhub
+    image: mongo:4.4   # 9b5c4a4fdcb5 # 4.2.24.  library/mongo-4.2.24 # base image off dockerhub
     # set bindIp to listen on the IP address of this service within the docker
     # compose network.
     # The default is 0.0.0.0, which binds on the public IP address of the
     # host instance, and hence accept connections from all IP addresses.
     command: --bind_ip database
-    environment:
-      - "MONGO_INITDB_ROOT_USERNAME=${DB_USER}"
-      - "MONGO_INITDB_ROOT_PASSWORD=${DB_PASS}"
+    # Uncommment this if DB_USER and DB_PASS are non-empty strings.
+    #environment:
+    #  - "MONGO_INITDB_ROOT_USERNAME=${DB_USER}"
+    #  - "MONGO_INITDB_ROOT_PASSWORD=${DB_PASS}"
+
+    # MS Win-11 Docker for Desktop will translate the / to \ in a path,
+    # (i.e. forward slash to backslash if the path is recognisable via device
+    # prefix e.g. 'C:', and/or the long form of the volume bind definition is
+    # used.
+    # The long form is :
+    # - type: bind
+    #   source: source_dir
+    #   target: target_dir
+    # So all the following are changed to use the long form.
+    # It seems to be also required that target be a path string not a variable.
+    # The short form is retained in a comment - that works in Linux / Unix,
+    # and possibly we'll be able to transition back to that in a future version
+    # of Docker.
     volumes:
-      - ${DATA_DIR}:/data/db
+      # - ${DATA_DIR}:/data/db
+      - type: bind
+        source: ${DATA_DIR}
+        target: /data/db
     expose:
       - "${MONGO_DEFAULT_PORT}"
     networks:
@@ -38,7 +56,7 @@ services:
       # Could have depends_on: blastserver, but it is not a critical dependency
     build:
       context: .
-      dockerfile: ./scripts/Dockerfile
+      dockerfile: Dockerfile
     image: ${PRETZEL_SERVER_IMAGE:-plantinformaticscollaboration/pretzel:latest}
     command: node /app/lb3app/server/server.js
     environment:
@@ -68,12 +86,24 @@ services:
       - "handsOnTableLicenseKey=${handsOnTableLicenseKey}"
     volumes:
       # landingPage
-      - $landingPage:/app/client/landingPageContent
+      # - $landingPage:/app/client/landingPageContent
+      - type: bind
+        source: ${landingPage}
+        target: /app/client/landingPageContent
       # blastVolume
-      - $mntData/blast:$mntData/blast
+      # - $mntData/blast:$mntData/blast
+      - type: bind
+        source: ${mntData}/blast
+        target: /mnt/data/blast
       # vcfVolume
-      - $mntData/vcf:$mntData/vcf
-      - ${resultsCacheDir}:/Cache
+      # - $mntData/vcf:$mntData/vcf
+      - type: bind
+        source: ${mntData}/vcf
+        target: /mnt/data/vcf
+      # - ${resultsCacheDir}:/Cache
+      - type: bind
+        source: ${resultsCacheDir}
+        target: /Cache
 
     ports:
       # match ext / int ports for loopback
@@ -84,6 +114,8 @@ services:
   blastserver: # Python Flask blastn server, used for DNA Sequence Search
     # image is based on python, with extracts copied from ncbi/blast
     image: plantinformaticscollaboration/blastserver:latest
+    # build:
+    # dockerfile: lb4app/lb3app/scripts/docker-compose/blastServer.Dockerfile
     environment:
       - "FLASK_PORT=4000"       # ${BLASTSERVER_PORT}"
       # scriptsDir is hard-wired in the image
@@ -96,13 +128,16 @@ services:
       - "blastDir=$blastDir"
     volumes:
       # mntData=/mnt/data_blast
-      - $mntData/blast:$mntData/blast
+      # - $mntData/blast:$mntData/blast
+      - type: bind
+        source: ${mntData}/blast
+        target: /mnt/data/blast
       # Enables scripts/blastn_cont.bash to run blastn via docker
       - /usr/bin/docker:/usr/bin/docker
       - /var/run/docker.sock:/var/run/docker.sock
     # Don't expose the BLASTSERVER_ / FLASK_PORT (e.g.4000) - not required
     expose:
       # name this ${BLASTSERVER_PORT}
-      - ":4000"
+      - "4000"
     networks:
       - pretzel
