@@ -43,6 +43,31 @@ export default class PanelSelectPassportFieldsComponent extends Component {
 
   //----------------------------------------------------------------------------
 
+  /** Attach the left edge of this <EmberModalDialog> to the left edge of #holder
+   * if it is close to the left edge of the screen, to avoid the left side of
+   * the dialog being off the screen on the left side.
+   * @return true if @targetAttachment and @attachment should be used to align
+   * the left edges.
+   */
+  get attachLeft() {
+    const
+    fnName = 'attachLeft',
+    holder$ = $('#holder'),
+    holder = holder$[0],
+    /** width of .ember-modal-dialog  (pixels : .getBoundingClientRect().width) */
+    dialogWidth = 747,
+    /** By default the middle is aligned with the dialog tether target middle,
+     * The left width not sufficient if :
+     * holder left +  middle < dialog width / 2
+     */
+    attachLeft = holder && 
+      (holder.getBoundingClientRect().left + holder.clientWidth/2) < dialogWidth / 2;
+    dLog(fnName, holder, attachLeft, holder.getBoundingClientRect(), holder.clientWidth);
+    return attachLeft;
+  }
+
+  //----------------------------------------------------------------------------
+
   /** Called via user selection change in select-multiple
    * The parameters added and deleted indicate changes to the selection.
    * They are arrays of :

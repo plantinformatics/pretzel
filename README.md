@@ -22,6 +22,149 @@ Documentation is available at:
 
 ### [https://docs.plantinformatics.io/](https://docs.plantinformatics.io/)
 
+## Install and run Pretzel
+
+Before starting, install:
+
+- [Git](https://git-scm.com/downloads), using the installer for your operating
+  system;
+- [Docker](https://docs.docker.com/get-started/get-docker/), including Docker
+  Compose v2. Docker Desktop includes Compose on Windows and macOS. On Linux,
+  follow Docker's instructions for Docker Engine and the Compose plugin.
+
+Verify that both commands are available:
+
+```sh
+git --version
+docker compose version
+```
+
+Use `docker compose`, not the legacy `docker-compose` command.
+
+1. Create a parent directory for Pretzel's working copy and persistent data,
+   then clone the repository. A simple layout places everything below a
+   directory named `pretzelDir`.
+   The following describes how to do this using MS Windows CMD Shell, PowerShell, or Linux/Unix Bash :
+
+   In Windows Command Prompt (`cmd.exe`):
+
+   ```bat
+   mkdir pretzelDir
+   cd pretzelDir
+   dir
+   mkdir mongodb landing-page data data\blast cache
+   git clone https://github.com/plantinformatics/pretzel.git
+   cd pretzel
+   ```
+
+   In Windows PowerShell, the equivalent is:
+
+   ```powershell
+   New-Item -ItemType Directory -Path pretzelDir
+   Set-Location pretzelDir
+   pwd
+   New-Item -ItemType Directory -Force `
+     -Path "mongodb", "landing-page", "data/blast", "cache"
+   git clone https://github.com/plantinformatics/pretzel.git
+   Set-Location pretzel
+   ```
+
+   Or, in Linux / Unix Bash :
+   ```bash
+   mkdir pretzelDir
+   cd pretzelDir
+   pwd
+   mkdir mongodb landing-page data data/blast cache
+   git clone https://github.com/plantinformatics/pretzel.git
+   cd pretzel
+   ```
+ 
+
+   This creates the Git working directory at `pretzelDir/pretzel`. The data
+   directories do not have to share a parent directory; this layout is only a
+   convenient example.
+   In the following step (configuring `.env`) you will need to know the absolute
+   path of the parent directory `pretzelDir`.  In the above commands this is
+   displayed using `dir` in MS Windows CMD Shell (it is also displayed in the
+   command prompt), or in PowerShell / Linux/Unix Bash using `pwd`.
+
+2. Create a local `.env` from the committed [`.env.template`](.env.template).
+
+
+   In Windows Command Prompt, run:
+
+   ```bat
+   copy .env.template .env
+   ```
+
+   In Windows PowerShell, run:
+
+   ```powershell
+   Copy-Item .env.template .env
+   ```
+
+   On Linux or macOS, run:
+
+   ```sh
+   cp .env.template .env
+   ```
+
+
+
+   Open `.env` in a text editor and replace every `CHANGE_ME` value. In
+   particular:
+
+   - if you are using a database password, which is not required if your database is local and will not be exposed to a LAN / WAN / internet, set `DB_PASS` to a long, unique password, and uncomment the DB_PASS line.
+   - set `pretzelDir` to the absolute path of the parent directory created in
+     step 1. The other directory settings in the template are derived from it;
+     alternatively, replace them with unrelated absolute paths;
+   - set `API_HOST` to the public DNS name for a deployed instance, or leave it
+     as `localhost` for local use; leave `API_PORT_PROXY` empty unless requests
+     reach Pretzel through a reverse proxy;
+   - if you wish to use administrator moderation of sign-ups, configure the `EMAIL_*` values for the site's SMTP service. Otherwise, no edit is required - the default value configured in .env.template is `EMAIL_VERIFY=NONE`, which disables email verification, and is suitable for a local trial;
+   - replace `handsOnTableLicenseKey` if your use requires a commercial
+     Handsontable licence.
+
+   The template contains examples only. Never commit the generated `.env`, real
+   passwords, licence keys, email addresses, hostnames, or
+   organisation-specific paths.
+   For production, restrict `.env` permissions (for example, `chmod 600 .env`)
+   or supply a separately managed file with `docker compose --env-file`.
+
+3. Pull the published images and start the services.
+   On MS Windows, this requires that 'Docker Desktop' has been started, so start that before this step.
+   (As an alternative to `docker compose pull`, see the section below 'Building the Docker image from source').
+
+   ```sh
+   docker compose pull
+   docker compose up -d --no-build
+   ```
+
+4. Check startup and open [http://localhost:3010](http://localhost:3010) (or the host and port selected
+   in `.env`):
+
+   ```sh
+   docker compose ps
+   docker compose logs -f api
+   ```
+
+Stop Pretzel with a single Ctrl-C in the terminal where you did `docker compose up`, or in another terminal do `docker compose down`. This preserves MongoDB and application
+data in the configured host directories.
+
+### Building the Docker image from source
+To build the application image from source, use the repository Dockerfile directly:
+
+```sh
+docker build -t plantinformaticscollaboration/pretzel:local .
+PRETZEL_SERVER_IMAGE=plantinformaticscollaboration/pretzel:local \
+  docker compose up -d --no-build
+```
+
+Sequence search additionally uses the `blastserver` service. Its databases must
+be installed below the configured `mntData/blast` directory; see the
+[BLAST administration guide](doc/adminGuides/data/blast.md). The Compose file
+mounts the Docker socket into this service, so only run it on a trusted host.
+
 ## Pretzel features
 
 - Integration of a diverse range of genetic and genomic information

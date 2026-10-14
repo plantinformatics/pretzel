@@ -2,6 +2,8 @@
 <EmberModalDialog
   @onClose={{action (mut this.userSettings.showSelectPassportFields) false}}
   @tetherTarget="#holder"
+  @targetAttachment={{if this.attachLeft 'middle left' }}
+  @attachment={{if this.attachLeft 'middle left' }}
   @translucentOverlay=true
   @title="Select Passport Fields"
   @header-icon='search'

@@ -1,20 +1,50 @@
-version: "2"
+# version is no longer required, and best practice is to omit it
+# https://github.com/docker-archive-public/docker.docker.github.io-1/blob/master/compose/compose-file/index.md#version-top-level-element
+# version: "2"
+
 # NOTE refer to the accompanying '.env' file in this folder to access
 # environment variables which are passed through to docker-compose.yaml
 # at run time
 
+# NOTE this has been updated to the docker compose V2 format, this will not work with docker-compose
+
 networks:
   pretzel:
     driver: bridge
+    # Makes the network internal. Does not prevent access from the host, outside Docker.
+    # internal: true
 
 services:
   database: # mongo database
-    image: library/mongo # base image off dockerhub
-    environment:
-      - "MONGO_INITDB_ROOT_USERNAME=${DB_USER}"
-      - "MONGO_INITDB_ROOT_PASSWORD=${DB_PASS}"
-#    volumes:
-#      - ${DATA_DIR}:/data/db
+    image: mongo:4.4   # 9b5c4a4fdcb5 # 4.2.24.  library/mongo-4.2.24 # base image off dockerhub
+    # set bindIp to listen on the IP address of this service within the docker
+    # compose network.
+    # The default is 0.0.0.0, which binds on the public IP address of the
+    # host instance, and hence accept connections from all IP addresses.
+    command: --bind_ip database
+    # Uncommment this if DB_USER and DB_PASS are non-empty strings.
+    #environment:
+    #  - "MONGO_INITDB_ROOT_USERNAME=${DB_USER}"
+    #  - "MONGO_INITDB_ROOT_PASSWORD=${DB_PASS}"
+
+    # MS Win-11 Docker for Desktop will translate the / to \ in a path,
+    # (i.e. forward slash to backslash if the path is recognisable via device
+    # prefix e.g. 'C:', and/or the long form of the volume bind definition is
+    # used.
+    # The long form is :
+    # - type: bind
+    #   source: source_dir
+    #   target: target_dir
+    # So all the following are changed to use the long form.
+    # It seems to be also required that target be a path string not a variable.
+    # The short form is retained in a comment - that works in Linux / Unix,
+    # and possibly we'll be able to transition back to that in a future version
+    # of Docker.
+    volumes:
+      # - ${DATA_DIR}:/data/db
+      - type: bind
+        source: ${DATA_DIR}
+        target: /data/db
     expose:
       - "${MONGO_DEFAULT_PORT}"
     networks:
@@ -23,14 +53,20 @@ services:
   api: # node environment
     depends_on:
       - database
+      # Could have depends_on: blastserver, but it is not a critical dependency
     build:
       context: .
-      dockerfile: ./scripts/Dockerfile
-    image: plantinformaticscollaboration/pretzel:latest # specifying name for built container
+      dockerfile: Dockerfile
+    image: ${PRETZEL_SERVER_IMAGE:-plantinformaticscollaboration/pretzel:latest}
     command: node /app/lb3app/server/server.js
     environment:
       - "API_HOST=${API_HOST}"
       - "API_PORT_EXT=${API_PORT_EXT}"
+      - "API_PORT_PROXY=${API_PORT_PROXY}"
+      - "hostIp=${hostIp}"
+      # Flask port is now internal to the compose network, so use fixed (default) 4000; 
+      # no need to configure via FLASK_PORT / BLASTSERVER_PORT.
+      - "FLASK_PORT=4000"       # ${BLASTSERVER_PORT}"
       - "DB_HOST=database"
       - "DB_PORT=${MONGO_DEFAULT_PORT}"
       - "DB_NAME=${DB_NAME}"
@@ -38,11 +74,70 @@ services:
       - "DB_PASS=${DB_PASS}"
       - "EMAIL_HOST=${EMAIL_HOST}"
       - "EMAIL_PORT=${EMAIL_PORT}"
+      - "EMAIL_USER=${EMAIL_USER}"
+      - "EMAIL_PASS=${EMAIL_PASS}"
       - "EMAIL_FROM=${EMAIL_FROM}"
       - "EMAIL_VERIFY=${EMAIL_VERIFY}"
       - "EMAIL_ADMIN=${EMAIL_ADMIN}"
+      - "mntData=${mntData}"
+      # $blastDir is logged in server/server.js via envNames[] and used in blastServer.py.
+      - "blastDir=$blastDir"
+      # - "scriptsDir=/app/lb3app/scripts"
+      - "handsOnTableLicenseKey=${handsOnTableLicenseKey}"
+    volumes:
+      # landingPage
+      # - $landingPage:/app/client/landingPageContent
+      - type: bind
+        source: ${landingPage}
+        target: /app/client/landingPageContent
+      # blastVolume
+      # - $mntData/blast:$mntData/blast
+      - type: bind
+        source: ${mntData}/blast
+        target: /mnt/data/blast
+      # vcfVolume
+      # - $mntData/vcf:$mntData/vcf
+      - type: bind
+        source: ${mntData}/vcf
+        target: /mnt/data/vcf
+      # - ${resultsCacheDir}:/Cache
+      - type: bind
+        source: ${resultsCacheDir}
+        target: /Cache
+
     ports:
       # match ext / int ports for loopback
       - "${API_PORT_EXT}:${API_PORT_EXT}"
+    networks:
+      - pretzel
+
+  blastserver: # Python Flask blastn server, used for DNA Sequence Search
+    # image is based on python, with extracts copied from ncbi/blast
+    image: plantinformaticscollaboration/blastserver:latest
+    # build:
+    # dockerfile: lb4app/lb3app/scripts/docker-compose/blastServer.Dockerfile
+    environment:
+      - "FLASK_PORT=4000"       # ${BLASTSERVER_PORT}"
+      # scriptsDir is hard-wired in the image
+      # - "scriptsDir=/usr/src/app"
+      # pretzelDir may be undefined
+      # - "pretzelDir=$pretzelDir"
+      # blastn_cont.bash defines mntData to /mnt/data
+      # Perhaps use - "mntData=${mntData:-/mnt/data}
+      - "mntData=$mntData"
+      - "blastDir=$blastDir"
+    volumes:
+      # mntData=/mnt/data_blast
+      # - $mntData/blast:$mntData/blast
+      - type: bind
+        source: ${mntData}/blast
+        target: /mnt/data/blast
+      # Enables scripts/blastn_cont.bash to run blastn via docker
+      - /usr/bin/docker:/usr/bin/docker
+      - /var/run/docker.sock:/var/run/docker.sock
+    # Don't expose the BLASTSERVER_ / FLASK_PORT (e.g.4000) - not required
+    expose:
+      # name this ${BLASTSERVER_PORT}
+      - "4000"
     networks:
       - pretzel

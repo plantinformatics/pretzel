@@ -625,6 +625,7 @@ export default Component.extend({
     'componentGeometry.sizes.0',
     'controls.window.tablesPanelRight',
     function() {
+      const fnName = 'resize';
       console.log("resize", this, arguments);
       /** calls from resizeEffect are within the ember loop, so `this` is valid,
        * but in calls from .on(resize ) this may be .isDestroying.
@@ -643,8 +644,12 @@ export default Component.extend({
        * when ! calledFromObserve.
        */
       windowResize = ! calledFromObserve,
-      oa = this.oa;
-      let redrawAxes = arguments[1] === 'controls.view.axisTicksOutside';
+      oa = this.oa,
+      redrawAxes = arguments[1] && [
+        'controls.view.axisTicksOutside',
+        'controls.view.extraOutsideMargin']
+        .includes(arguments[1]);
+      dLog(fnName, 'redrawAxes', redrawAxes, arguments[1]);
       // logWindowDimensions('', oa.vc.w);  // defined in utils/domElements.js
       function resizeDrawing() {
         const vc = oa.vc;

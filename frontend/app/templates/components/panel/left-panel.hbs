@@ -1,3 +1,7 @@
+    <button type="button" class={{concat "btn btn-default panel-collapse-button " (if this.shown '' 'hidden') }}  {{action 'toggleLeftPanel' false}}>
+      {{elem/icon-base name="chevron-left"}}
+    </button>
+
 <div id="left-panel" class="left-panel-shown" style="height:100%; border-right:1px solid #ddd; display: flex; flex-direction: column">
 
   <BsTab @customTabs={{true}} @fade={{false}} @activeId="left-panel-explorer" as |tab|>
@@ -94,9 +98,6 @@
     </div>
   </BsTab>
 
-    <button type="button" class="btn btn-default panel-collapse-button" {{action 'toggleLeftPanel' false}} style="top:0; left:374px; position: absolute;">
-      {{elem/icon-base name="chevron-left"}}
-    </button>
 </div>
 <button type="button" class="left-panel-hidden btn btn-default panel-collapse-button" style="display:none" {{action 'toggleLeftPanel' true}}>
     {{elem/icon-base name="chevron-right"}}
