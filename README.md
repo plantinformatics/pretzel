@@ -89,10 +89,12 @@ Use `docker compose`, not the legacy `docker-compose` command.
    command prompt), or in PowerShell / Linux/Unix Bash using `pwd`.
 
 2. Create a local `.env` from the committed [`.env.template`](.env.template).
-   On Linux or macOS, run:
 
-   ```sh
-   cp .env.template .env
+
+   In Windows Command Prompt, run:
+
+   ```bat
+   copy .env.template .env
    ```
 
    In Windows PowerShell, run:
@@ -101,11 +103,13 @@ Use `docker compose`, not the legacy `docker-compose` command.
    Copy-Item .env.template .env
    ```
 
-   In Windows Command Prompt, run:
+   On Linux or macOS, run:
 
-   ```bat
-   copy .env.template .env
+   ```sh
+   cp .env.template .env
    ```
+
+
 
    Open `.env` in a text editor and replace every `CHANGE_ME` value. In
    particular:
@@ -136,7 +140,7 @@ Use `docker compose`, not the legacy `docker-compose` command.
    docker compose up -d --no-build
    ```
 
-4. Check startup and open `[http://localhost:3010](http://localhost:3010)` (or the host and port selected
+4. Check startup and open [http://localhost:3010](http://localhost:3010) (or the host and port selected
    in `.env`):
 
    ```sh
