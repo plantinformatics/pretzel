@@ -43,12 +43,16 @@ Use `docker compose`, not the legacy `docker-compose` command.
 
 1. Create a parent directory for Pretzel's working copy and persistent data,
    then clone the repository. A simple layout places everything below a
-   directory named `pretzelDir`:
+   directory named `pretzelDir`.
+   The following describes how to do this using MS Windows CMD Shell, PowerShell, or Linux/Unix Bash :
 
-   ```bash
+   In Windows Command Prompt (`cmd.exe`):
+
+   ```bat
    mkdir pretzelDir
    cd pretzelDir
-   mkdir -p mongodb landing-page data/blast cache
+   dir
+   mkdir mongodb landing-page data data\blast cache
    git clone https://github.com/plantinformatics/pretzel.git
    cd pretzel
    ```
@@ -58,31 +62,31 @@ Use `docker compose`, not the legacy `docker-compose` command.
    ```powershell
    New-Item -ItemType Directory -Path pretzelDir
    Set-Location pretzelDir
+   pwd
    New-Item -ItemType Directory -Force `
      -Path "mongodb", "landing-page", "data/blast", "cache"
    git clone https://github.com/plantinformatics/pretzel.git
    Set-Location pretzel
    ```
 
-   Or, in Windows Command Prompt (`cmd.exe`):
-
-   ```bat
+   Or, in Linux / Unix Bash :
+   ```bash
    mkdir pretzelDir
    cd pretzelDir
-   mkdir mongodb landing-page data data\blast cache
+   pwd
+   mkdir mongodb landing-page data data/blast cache
    git clone https://github.com/plantinformatics/pretzel.git
    cd pretzel
    ```
+ 
 
    This creates the Git working directory at `pretzelDir/pretzel`. The data
    directories do not have to share a parent directory; this layout is only a
-   convenient example. Run `pwd` from the parent `pretzelDir` if you need its
-   absolute path when configuring `.env`.
-
-   Until this branch is merged, checkout the branch :
-   ```bash
-   git checkout feature/composeReadme
-   ```
+   convenient example.
+   In the following step (configuring `.env`) you will need to know the absolute
+   path of the parent directory `pretzelDir`.  In the above commands this is
+   displayed using `dir` in MS Windows CMD Shell (it is also displayed in the
+   command prompt), or in PowerShell / Linux/Unix Bash using `pwd`.
 
 2. Create a local `.env` from the committed [`.env.template`](.env.template).
    On Linux or macOS, run:
@@ -106,15 +110,14 @@ Use `docker compose`, not the legacy `docker-compose` command.
    Open `.env` in a text editor and replace every `CHANGE_ME` value. In
    particular:
 
-   - set `DB_PASS` to a long, unique password;
+   - if you are using a database password, which is not required if your database is local and will not be exposed to a LAN / WAN / internet, set `DB_PASS` to a long, unique password, and uncomment the DB_PASS line.
    - set `pretzelDir` to the absolute path of the parent directory created in
      step 1. The other directory settings in the template are derived from it;
      alternatively, replace them with unrelated absolute paths;
    - set `API_HOST` to the public DNS name for a deployed instance, or leave it
      as `localhost` for local use; leave `API_PORT_PROXY` empty unless requests
      reach Pretzel through a reverse proxy;
-   - configure the `EMAIL_*` values for the site's SMTP service. With
-     `EMAIL_VERIFY=NONE`, email verification is disabled for a local trial;
+   - if you wish to use administrator moderation of sign-ups, configure the `EMAIL_*` values for the site's SMTP service. Otherwise, no edit is required - the default value configured in .env.template is `EMAIL_VERIFY=NONE`, which disables email verification, and is suitable for a local trial;
    - replace `handsOnTableLicenseKey` if your use requires a commercial
      Handsontable licence.
 
@@ -124,14 +127,16 @@ Use `docker compose`, not the legacy `docker-compose` command.
    For production, restrict `.env` permissions (for example, `chmod 600 .env`)
    or supply a separately managed file with `docker compose --env-file`.
 
-3. Pull the published images and start the services:
+3. Pull the published images and start the services.
+   On MS Windows, this requires that 'Docker Desktop' has been started, so start that before this step.
+   (As an alternative to `docker compose pull`, see the section below 'Building the Docker image from source').
 
    ```sh
    docker compose pull
    docker compose up -d --no-build
    ```
 
-4. Check startup and open `http://localhost:3010` (or the host and port selected
+4. Check startup and open `[http://localhost:3010](http://localhost:3010)` (or the host and port selected
    in `.env`):
 
    ```sh
@@ -139,9 +144,11 @@ Use `docker compose`, not the legacy `docker-compose` command.
    docker compose logs -f api
    ```
 
-Stop Pretzel with `docker compose down`. This preserves MongoDB and application
-data in the configured host directories. To build the application image from
-source, use the repository Dockerfile directly:
+Stop Pretzel with a single Ctrl-C in the terminal where you did `docker compose up`, or in another terminal do `docker compose down`. This preserves MongoDB and application
+data in the configured host directories.
+
+### Building the Docker image from source
+To build the application image from source, use the repository Dockerfile directly:
 
 ```sh
 docker build -t plantinformaticscollaboration/pretzel:local .
