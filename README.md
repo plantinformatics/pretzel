@@ -92,20 +92,21 @@ Use `docker compose`, not the legacy `docker-compose` command.
    This should be done before starting the database below using `docker compose up`, i.e. while the MongoDB server is not running.
    You can copy files from another MongoDB data directory while that MongoDB server is not running.
    The files you copy into `pretzelDir/mongodb/` will look like this :
-```
-.dbshell
-.mongorc.js
-WiredTiger
-...
-collection-0-197248881868610081.wt
-...
-diagnostic.data/
-index-1-197248881868610081.wt
-...
-journal/
-mongod.lock
-...
-```
+
+   ```text
+   .dbshell
+   .mongorc.js
+   WiredTiger
+   ...
+   collection-0-197248881868610081.wt
+   ...
+   diagnostic.data/
+   index-1-197248881868610081.wt
+   ...
+   journal/
+   mongod.lock
+   ...
+   ```
 
   You can replace the database after the MongoDB server is stopped (see `docker compose down` below) - remove the files in `pretzelDir/mongodb/` and copy in the MongoDB data files you wish to use.  You can restart the MongoDB server after the files are copied in, using `docker compose up` as noted below.
 
