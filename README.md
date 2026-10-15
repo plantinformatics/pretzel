@@ -88,7 +88,29 @@ Use `docker compose`, not the legacy `docker-compose` command.
    displayed using `dir` in MS Windows CMD Shell (it is also displayed in the
    command prompt), or in PowerShell / Linux/Unix Bash using `pwd`.
 
-2. Create a local `.env` from the committed [`.env.template`](.env.template).
+2. (Optional) You can load a previous Pretzel database by copying the MongoDB data directory into the directory created above : `pretzelDir/mongodb/`.
+   This should be done before starting the database below using `docker compose up`, i.e. while the MongoDB server is not running.
+   You can copy files from another MongoDB data directory while that MongoDB server is not running.
+   The files you copy into `pretzelDir/mongodb/` will look like this :
+> ```
+.dbshell
+.mongorc.js
+WiredTiger
+...
+collection-0-197248881868610081.wt
+...
+diagnostic.data/
+index-1-197248881868610081.wt
+...
+journal/
+mongod.lock
+...
+> ```
+
+  You can replace the database after the MongoDB server is stopped (see `docker compose down` below) - remove the files in `pretzelDir/mongodb/` and copy in the MongoDB data files you wish to use.  You can restart the MongoDB server after the files are copied in, using `docker compose up` as noted below.
+
+
+3. Create a local `.env` from the committed [`.env.template`](.env.template).
 
 
    In Windows Command Prompt, run:
@@ -131,7 +153,7 @@ Use `docker compose`, not the legacy `docker-compose` command.
    For production, restrict `.env` permissions (for example, `chmod 600 .env`)
    or supply a separately managed file with `docker compose --env-file`.
 
-3. Pull the published images and start the services.
+4. Pull the published images and start the services.
    On MS Windows, this requires that 'Docker Desktop' has been started, so start that before this step.
    (As an alternative to `docker compose pull`, see the section below 'Building the Docker image from source').
 
@@ -140,7 +162,7 @@ Use `docker compose`, not the legacy `docker-compose` command.
    docker compose up -d --no-build
    ```
 
-4. Check startup and open [http://localhost:3010](http://localhost:3010) (or the host and port selected
+5. Check startup and open [http://localhost:3010](http://localhost:3010) (or the host and port selected
    in `.env`):
 
    ```sh
