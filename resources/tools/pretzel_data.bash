@@ -289,3 +289,50 @@ function joinBlastFileList()
 
 
 #-------------------------------------------------------------------------------
+
+# List the chromosomes in #CHROM column of the given .vcf.gz file
+# Usage : cd $mntData/vcf/$datasetId; vcfChrs Chr1A.vcf.gz
+# @param vcfGz path / filename of .vcf.gz file
+function vcfChrs()
+{
+    datasetId=$(basename $PWD)
+    docker exec -i $composeName-api-1 bash <<EOF
+      cd \$mntData/vcf
+      cd $datasetId
+      vcfGz=$1
+      echo \$vcfGz
+      bcftools query -f '%CHROM\n' "\$vcfGz" | uniq
+EOF
+
+  
+}
+# Apply vcfChrs() to each of the given .vcf.gz files
+# Usage : cd $mntData/vcf/$datasetId; vcfChrs Chr??.vcf.gz
+# @param vcfGz path / filename of .vcf.gz file
+function vcfsChrs()
+{
+  for vcfGz in $*
+  do
+    vcfChrs $vcfGz
+  done
+}
+# List the chromosomes of the .vcf.gz file names in .
+# Usage : cd $mntData/vcf/$datasetId; fileChrs
+function fileChrs()
+{
+  ls -A | fgrep .vcf.gz | sed '/MAF/d;/\.csi/d;s/.vcf.gz//'
+}
+# Compare the output from vcfsChrs and fileChrs.
+# This checks that the chromosome names given by file names (which are
+# determined by the Pretzel chromosome names) match the chromosome names in the
+# .vcf.gz file(s).
+function vcfsFileChrsCompare()
+{
+  vcfsChrs $* > /tmp/$$.vcfsChrs
+  fileChrs  > /tmp/$$.fileChrs
+  echo $datasetId
+  diff /tmp/$$.vcfsChrs /tmp/$$.fileChrs
+  rm /tmp/$$.vcfsChrs /tmp/$$.fileChrs
+}
+
+#-------------------------------------------------------------------------------
