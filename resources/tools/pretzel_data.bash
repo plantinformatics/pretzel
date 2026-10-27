@@ -289,3 +289,132 @@ function joinBlastFileList()
 
 
 #-------------------------------------------------------------------------------
+
+# List the chromosomes in #CHROM column of the given .vcf.gz file
+# Usage : cd $mntData/vcf/$datasetId; vcfChrs Chr1A.vcf.gz
+# @param vcfGz path / filename of .vcf.gz file
+function vcfChrs()
+{
+    datasetId=$(basename $PWD)
+    docker exec -i $composeName-api-1 bash <<EOF
+      cd \$mntData/vcf
+      cd $datasetId
+      vcfGz=$1
+      # echo \$vcfGz
+      bcftools query -f '%CHROM\n' "\$vcfGz" | uniq
+EOF
+
+  
+}
+# Apply vcfChrs() to each of the given .vcf.gz files
+# Usage : cd $mntData/vcf/$datasetId; vcfChrs Chr??.vcf.gz
+# @param vcfGz path / filename of .vcf.gz file
+function vcfsChrs()
+{
+  for vcfGz in $*
+  do
+    vcfChrs $vcfGz
+  done
+}
+# List the chromosomes of the .vcf.gz file names in .
+# Usage : cd $mntData/vcf/$datasetId; fileChrs
+function fileChrs()
+{
+  ls -A | fgrep .vcf.gz | sed '/MAF/d;/\.csi/d;s/.vcf.gz//'
+}
+# Compare the output from vcfsChrs and fileChrs.
+# This checks that the chromosome names given by file names (which are
+# determined by the Pretzel chromosome names) match the chromosome names in the
+# .vcf.gz file(s).
+function vcfsFileChrsCompare()
+{
+  vcfsChrs $* > /tmp/$$.vcfsChrs
+  fileChrs  > /tmp/$$.fileChrs
+  echo $datasetId
+  diff /tmp/$$.vcfsChrs /tmp/$$.fileChrs
+  rm /tmp/$$.vcfsChrs /tmp/$$.fileChrs
+}
+
+#-------------------------------------------------------------------------------
+
+# Create per-chromosome file links for the given .vcf.gz and chromosome names.
+# @param vcfGz
+# @param chrs
+# Usage :
+#   cd $pp/data/vcf/$datasetId
+#   createChrLinks $vcfGz chrs
+# Remove any pre-existing links before use.
+function createChrLinks()
+{
+  if [ "$#" -lt 2 ]
+  then
+    echo "Usage : createChrLinks vcfGz chrs ..."
+  else
+    vcfGz=$1;  shift
+    ls -ld "$vcfGz" || return 2
+
+    pd_chrs=($*)
+    for pd_chr in "${pd_chrs[@]}"
+    do
+      [ ! -e "$pd_chr.vcf.gz" ] || ( echo "Already exists :";  ls -ld "$pd_chr.vcf.gz";  return 1; )
+      ln -s "$vcfGz" "$pd_chr.vcf.gz" ;
+      ls -ldF "$pd_chr.vcf.gz"
+    done
+  fi
+}
+
+# Create per-chromosome file links for the given .vcf.gz and the chromosome
+# names used within the .vcf.gz.
+# Use this if you have a single .vcf.gz and it is small enough to link each
+# per-chromosome .vcf.gz file to the whole .vcf.gz.
+#
+# The .MAF and .MAF.SNPList .vcf.gz files and .csi file are generated from these
+# files by createHistograms() below.  They are split into individual chromosomes,
+# and are used during operation of Pretzel, so the original .vcf.gz files are
+# not used so if they are the whole genome it does not impact performance.
+#
+# @param vcfGz
+# Usage :
+#   cd $pp/data/vcf/$datasetId
+#   createLinks $vcfGz
+function createLinks()
+{
+  if [ "$#" -ne 1 ]
+  then
+    echo "Usage : createLinks vcfGz"
+  else
+    cl_vcfGz=$1
+    ls -ld "$cl_vcfGz" || return 2
+
+    cl_chrs=( $(vcfChrs $cl_vcfGz) )
+    createChrLinks $cl_vcfGz "${cl_chrs[@]}"
+  fi
+}
+
+#-------------------------------------------------------------------------------
+
+source $pp/plantinformatics/pretzel/resources/tools/functions_prod.bash
+
+export APIHOST=localhost:$API_PORT_EXT
+
+curlOpts=--silent
+
+# Use API request cacheblocksFeaturesCounts to request
+# binned features counts for each chromosome of the given datasetId.
+#
+# Usage :
+#   setToken ...
+#   createHistograms $datasetId
+function createHistograms()
+{
+  if [ "$#" -ne 1 ]
+  then
+    echo "Usage : createHistograms datasetId"
+  else
+    datasetId=$1
+
+    curl $curlOpts -X POST "${H_json[@]}" -H "$Authorization" --url "$APIHOST/api/Datasets/cacheblocksFeaturesCounts?id=$datasetId"
+  fi
+}
+
+#-------------------------------------------------------------------------------

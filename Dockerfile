@@ -4,12 +4,12 @@
 
 # samtools build layer is based on https://hub.docker.com/r/bschiffthaler/samtools/dockerfile
 
-ARG NODE_ALPINE_VERSION=18
+ARG NODE_ALPINE_VERSION=22
 
 # ${NODE_ALPINE_VERSION}
-FROM node:18-alpine AS node-alpine-build-samtools
+FROM node:22-alpine AS node-alpine-build-samtools
 
-ARG NODE_ALPINE_VERSION=18
+ARG NODE_ALPINE_VERSION=22
 ARG SAMTOOLS_VERSION=1.23.1
 ARG BUILD_NCPU=1
 
@@ -74,10 +74,10 @@ WORKDIR /
 #-------------------------------------------------------------------------------
 
 # ${NODE_ALPINE_VERSION}
-FROM node:18-alpine AS node-alpine-pretzel
+FROM node:22-alpine AS node-alpine-pretzel
 
 ARG PRETZEL_VERSION 2.17.8
-ARG NODE_ALPINE_VERSION 18
+ARG NODE_ALPINE_VERSION 22
 
 # node-sass version is selected so that the binary can be downloaded;
 # otherwise, node-gyp will be built, and hence the following dependencies on python, make, c++.
@@ -196,7 +196,7 @@ ENTRYPOINT ["/usr/local/node22/bin/node", "/app/lb3app/server/server.js"]
 
 # ------------------------------------------------------------------------------
 
-ARG NODE_ALPINE_VERSION=18
+ARG NODE_ALPINE_VERSION=22
 ARG SAMTOOLS_VERSION=1.23.1
 ARG bcftoolsVer=1.23.1
 ARG PRETZEL_VERSION=2.17.8
