@@ -1480,8 +1480,10 @@ export default class PanelManageGenotypeComponent extends Component {
     matchRefNew = MatchRef.columnNameToMatchRef[columnName];
     /** Toggle feature when the current key Ref/Alt is clicked again.
      * If a different key is clicked for a feature, just change the key.
+     * A deselected feature can retain its allele flag, so check membership
+     * independently when deciding whether to add it.
      */
-    if ((matchRef === undefined) || (matchRef === matchRefNew)) {
+    if (! filters.includes(feature) || (matchRef === matchRefNew)) {
       this.arrayToggleObject(filters, feature);
     }
     if (matchRef !== matchRefNew) {
