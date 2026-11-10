@@ -3,7 +3,7 @@
 GitNexus may be available as an optional code-intelligence tool.
 
 If available, the GitNexus MCP server is configured as:
-- MCP name: `my-mcp-server-3ec275b9`
+- MCP name: `gitnexus`
 - URL: `http://localhost:4747/api/mcp`
 
 Use GitNexus only when it seems beneficial for the task at hand, such as understanding architecture, tracing call chains, exploring execution flows, or assessing the impact of source changes.
@@ -14,4 +14,5 @@ For GitNexus-specific guidance, see:
 
 - `.agents/GitNexus.md`
 
-That guide may reference `.claude/skills/gitnexus/gitnexus-*/SKILL.md`.
+That guide may reference `.claude/skills/gitnexus/gitnexus-*/SKILL.md`;
+those files are replaced by newer versions in `~/.agents/skills/`.
