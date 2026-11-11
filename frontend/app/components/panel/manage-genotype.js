@@ -30,6 +30,7 @@ import { intervalSize } from '../../utils/interval-calcs';
 import { inRange, overlapInterval } from '../../utils/draw/zoomPanCalcs';
 import { BrushedBlock } from '../../utils/draw/axis-brush';
 import { featuresIntervalsForTree } from '../../utils/data/features';
+import { mapAndFilter } from '../../utils/log-selection';
 // let vcfGenotypeBrapi = window["vcf-genotype-brapi"];
 import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
 console.log('vcfGenotypeBrapi', vcfGenotypeBrapi, window["@plantinformatics/vcf-genotype-brapi@npm:pretzel.A8b"]);
@@ -415,17 +416,24 @@ export default class PanelManageGenotypeComponent extends Component {
   // @computed('lookupBlockSamples.selected')
   @computed('lookupDatasetId', 'receivedNamesCount')
   get vcfGenotypeSamplesSelected() {
+    let selected;
     if (! this.lookupDatasetId) {
-      dLog('get vcfGenotypeSamplesSelected', this.lookupDatasetId);
+      console.warn('get vcfGenotypeSamplesSelected', this.lookupDatasetId);
     }
-    let selected = this.vcfGenotypeSamplesSelectedAll?.[this.lookupDatasetId];
+    else
+    {
+      selected = this.vcfGenotypeSamplesSelectedAll?.[this.lookupDatasetId];
+    }
     return selected;
   }
   set vcfGenotypeSamplesSelected(selected) {
     if (! this.lookupDatasetId) {
-      dLog('set vcfGenotypeSamplesSelected', this.lookupDatasetId);
+      console.warn('set vcfGenotypeSamplesSelected', this.lookupDatasetId, selected?.length);
     }
-    (this.vcfGenotypeSamplesSelectedAll || this.args.userSettings.vcfGenotypeSamplesSelected)[this.lookupDatasetId] = selected;
+    else
+    {
+      (this.vcfGenotypeSamplesSelectedAll || this.args.userSettings.vcfGenotypeSamplesSelected)[this.lookupDatasetId] = selected;
+    }
   }
 
   @tracked
@@ -1164,25 +1172,34 @@ export default class PanelManageGenotypeComponent extends Component {
           /** Only match SNPs on the same reference block.
            * There could be multiple haveFilters on the same .referenceBlock;
            * just using the first. */
-          copyThis = haveFilters?.find(b => b.referenceBlock === block.referenceBlock),
+          copyThis = haveFilters?.find(b =>
+            (b.referenceBlock === block.referenceBlock) && b[sampleFiltersSymbol]),
           copyThisFilter = copyThis?.[sampleFiltersSymbol];
           if (copyThisFilter) {
             const
+            /** copy by value of the arrays within each typeName  */
             copy =
               Object.entries(copyThisFilter).reduce((O, [k,v]) => {O[k] = v.slice(0); return O;}, {});
             dLog(fnName, 'copyThisFilter', copyThisFilter, copyThis.brushName, copy);
 
-            /** map from copyThis features to block.features, matching SNP position, i.e. .value_0 */
-            copy.feature?.forEach((f, i) => {
-              const f2 = block.get('features').findBy('value_0', f.value_0);
-              dLog(fnName, i, f, f2);
-              if (f2) {
-                f2[matchRefSymbol] = f[matchRefSymbol];
-                copy.feature[i] = f2;
+            /** map from copyThis features to block.features, matching SNP position, i.e. .value_0
+             * omit features which don't have a matching position in block.
+             */
+            if (copy.feature) {
+              const blockFeatures = block.get('features');
+              /* mapAndFilter() does not (yet) pass the array index i */
+              function matchFeature(f /*, i*/) {
+                const f2 = blockFeatures.findBy('value_0', f.value_0);
+                dLog(fnName, /*i,*/ f, f2);
+                if (f2) {
+                  f2[matchRefSymbol] = f[matchRefSymbol];
+                }
+                /* else copy.feature[i] is omitted.  Another possibility: search again later after
+                 * more features are loaded.  Could use API to request those features. */
+                return f2;
               }
-              /* else could remove copy.features[i], or search again later after
-               * more features are loaded.  Could use API to request those features. */
-            });
+              copy.feature = mapAndFilter(copy.feature, matchFeature);
+            }
             block[sampleFiltersSymbol] = copy;
           } // if (copyThisFilter)
           dLog(fnName, block);
