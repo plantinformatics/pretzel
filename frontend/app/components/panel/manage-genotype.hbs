@@ -220,7 +220,7 @@
                           oninput={{pipe (action (mut @userSettings.requestSamplesFiltered) value="target.checked")
                             this.ensureSamples }}  >
                         <label>Use Filtered Samples</label>
-                        {{#ember-tooltip side="right" delay=500}}
+                        {{#ember-tooltip side="bottom-end" delay=500}}
                           Request genotype of samples selected by LD Block / tSNP filters in loaded data
                         {{/ember-tooltip}}
                       </span>
