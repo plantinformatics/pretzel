@@ -2843,7 +2843,7 @@ export default class PanelManageGenotypeComponent extends Component {
       this.selectedSNPsInBrushedDomain(vcfBlock);
     dLog(fnName, vcfBlock.brushName, filterByHaplotype, 'FilteredSamples');
     if (filterByHaplotype?.length && ! this.blockFilteredSamplesGet(vcfBlock)) {
-      later(() => this.vcfGenotypeSamplesDataset(vcfBlock));
+      later(() => this.vcfGenotypeSamplesBlock(vcfBlock));
     } else if (this.args.userSettings.filterSamplesByHaplotype) {
       // trigger update of samples(); the unfiltered samples are already in cache
       this.sampleCache.incrementProperty('filteredByGenotypeCount');
@@ -3027,14 +3027,26 @@ export default class PanelManageGenotypeComponent extends Component {
   }
 
   /** Request the list of samples of the vcf of the brushed block.
+   * implemented via this.vcfGenotypeSamplesBlock(this.lookupBlock);
+   * See that function for further comments.
    * @return undefined if scope or vcfDatasetId are not defined,
    * or a promise yielding received text
    */
   vcfGenotypeSamples() {
+    return this.vcfGenotypeSamplesBlock(this.lookupBlock);
+  }
+  /** Request the list of samples of the vcf of the given brushed block.
+   * @return undefined if scope or vcfDatasetId are not defined,
+   * or a promise yielding received text
+   *
+   * @desc
+   * promiseThrottle() is used to handle repeated calls before a previous call
+   * has resolved.
+   */
+  vcfGenotypeSamplesBlock(vcfBlock) {
     /** implemented by common/models/block.js : Block.vcfGenotypeSamples().  */
     const
     fnName = 'vcfGenotypeSamples',
-    vcfBlock = this.lookupBlock,
     dataset = contentOf(vcfBlock.get('datasetId')),
     textPFn = () => this.vcfGenotypeSamplesDataset(vcfBlock),
     /** The addition of .filterSamplesByHaplotype means result can change;
