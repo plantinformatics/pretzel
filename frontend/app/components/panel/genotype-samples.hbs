@@ -66,6 +66,20 @@
         {{/ember-tooltip}}
       </span>
 
+      <span>
+        <input id="haplotype-allow-missing" type="checkbox"
+          checked={{@userSettings.allowMissing}}
+          disabled={{not @userSettings.filterSamplesByHaplotype}}
+          oninput={{pipe
+            (action (mut @userSettings.allowMissing) value="target.checked")
+            @the.ensureSamples }} >
+        <label for="haplotype-allow-missing">Allow missing alleles</label>
+        {{#ember-tooltip side="bottom-end" delay=1500}}
+          Accept fully missing calls at any selected SNP. Called genotypes must still match;
+          Null genotypes remain distinct from missing data. Samples missing every selected SNP are included.
+        {{/ember-tooltip}}
+      </span>
+
     {{/if}}
   </div>
 

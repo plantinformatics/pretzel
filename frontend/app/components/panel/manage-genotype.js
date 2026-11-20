@@ -315,6 +315,8 @@ function featureHasSamplesLoaded(feature) {
  *   Show samples selected by SNP filters
  * .matchHet  boolean, default : true
  *   Match for samples which have a heterozygous genotype value at a selected SNP.
+ * .allowMissing boolean, default : false
+ *   Accept fully missing calls at selected SNPs when filtering samples.
  * .showHaplotypes  boolean, default : false
  *   Show unique haplotypes of the selected SMPs, and their samples
  * .showHaplotypesSamples  boolean, default : false
@@ -688,6 +690,10 @@ export default class PanelManageGenotypeComponent extends Component {
 
     if (userSettings.matchHet === undefined) {
       userSettings.matchHet = true;
+    }
+
+    if (userSettings.allowMissing === undefined) {
+      userSettings.allowMissing = false;
     }
 
     if (userSettings.showHaplotypes === undefined) {
@@ -2101,10 +2107,11 @@ export default class PanelManageGenotypeComponent extends Component {
     'vcfGenotypeSamplesText',
     'args.userSettings.samplesIntersection',
     'sampleNameFilter',
-    /** These 5 dependencies relate to filterSamplesByHaplotype;
+    /** These dependencies relate to filterSamplesByHaplotype;
      * possibly split this out as a separate CP samplesFilteredByHaplotype */
     'args.userSettings.filterSamplesByHaplotype',
     'args.userSettings.matchHet',
+    'args.userSettings.allowMissing',
     'snpsInBrushedDomain.length',
     /** update when new results in sampleCache.filteredByGenotype */
     'sampleCache.filteredByGenotypeCount',
@@ -2783,7 +2790,8 @@ export default class PanelManageGenotypeComponent extends Component {
       .sortBy('value_0')
       .map(f => ({position : f.value_0,  matchRef : f[Symbol.for('matchRef')]})),
     matchHet = this.args.userSettings.matchHet,
-    filterDescription = this.selectedSNPsToKey(features, matchHet);
+    allowMissing = this.args.userSettings.allowMissing,
+    filterDescription = this.selectedSNPsToKey(features, matchHet, allowMissing);
     return filterDescription;
   }
   /** Construct the string cache key for a sorted selection of SNPs.
@@ -2804,20 +2812,21 @@ export default class PanelManageGenotypeComponent extends Component {
    * @param {Boolean} matchHet  Current value of `userSettings.matchHet` that defines
    *   whether heterozygous calls are treated as matches.  Because the backend applies
    *   this flag when streaming samples, it must be encoded into the cache key.
+   * @param {Boolean} allowMissing Accept fully missing calls at selected SNPs.
    * @return {String} filterDescription suitable for the dataset ➜ samples cache.
    *
    * Usage:
    *   • vcfGenotypeSamplesDataset() keys the async sample request cache so that a new
-   *     API call is issued only when either the SNP set or matchHet flag changes.
+   *     API call is issued only when the SNP set, matchHet or allowMissing changes.
    *   • blockFilteredSamplesGet() / datasetFilteredSamplesGet() lookups reuse the same
    *     identifier to retrieve previously computed sample lists.
    */
-  selectedSNPsToKey(features, matchHet) {
+  selectedSNPsToKey(features, matchHet, allowMissing) {
     const
     featuresDescription = features.map(
       h => '' + h.position + ':' + MatchRef.matchRef2Text[h.matchRef])
       .join(' '),
-    filterDescription = 'matchHet:' + matchHet + ' ' + featuresDescription;
+    filterDescription = 'matchHet:' + matchHet + ' allowMissing:' + !!allowMissing + ' ' + featuresDescription;
     return filterDescription;
   }
 
@@ -2867,9 +2876,8 @@ export default class PanelManageGenotypeComponent extends Component {
     vcfDatasetIdAPI = vcfBlock?.get('datasetId.genotypeId'),
     /** Same comment as in .lookupScope */
     scope = vcfBlock.get('name'),
-    /** original discussions mentioned allowMissing; that might be a flag or
-     * number; it can be added to filterByHaplotype */
     matchHet = this.args.userSettings.matchHet,
+    allowMissing = !!this.args.userSettings.allowMissing,
     /** Of the 3 ways to select SNPs for sample sorting / filtering :
      *  - .blocksHaplotypeFilters sampleFilters.haplotype
      *  - .blocksVariantIntervalFilters sampleFilters.variantInterval
@@ -2886,12 +2894,13 @@ export default class PanelManageGenotypeComponent extends Component {
        .map(f => ({
          position : f.value_0,
          matchRef : MatchRef.matchRef2Json[f[Symbol.for('matchRef')]]})),
-       matchHet
+       matchHet,
+       allowMissing
       },
     /** falsey if filterByHaplotype?.features is undefined or empty */
     filterByHaplotypeN = filterByHaplotype?.features.length,
     filterDescription = filterByHaplotypeN ?
-      this.selectedSNPsToKey(filterByHaplotype.features, matchHet) : '',
+      this.selectedSNPsToKey(filterByHaplotype.features, matchHet, allowMissing) : '',
     requestDescription = "Fetching accessions for " + vcfBlock.brushName + ' ' + filterDescription;
     if (filterByHaplotype) {
       filterByHaplotype.genotypeHasNull = vcfDataset.get('_meta.genotypeHasNull');
@@ -3295,6 +3304,7 @@ export default class PanelManageGenotypeComponent extends Component {
         'selectedSNPCount.feature',
         'controls.userSettings.genotype.filterSamplesByHaplotype',
         'controls.userSettings.genotype.matchHet',
+        'controls.userSettings.genotype.allowMissing',
         () => this.genotypeSamplesFilteredByHaplotypes(vcfBlock));
       defineProperty(vcfBlock, 'genotypeSamplesFilteredByHaplotypes', cp);
     }
