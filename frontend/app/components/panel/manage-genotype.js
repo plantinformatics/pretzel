@@ -2734,6 +2734,51 @@ export default class PanelManageGenotypeComponent extends Component {
     return domainInteger;
   }
 
+  /** Copy to clipboard the selected SNPs and genotype patterns, for each of
+   * .blocksFeatureFilters.
+   * The format matches the Pretzel spreadsheet 'Haplotype|' worksheet, enabling
+   * the user to easily create a Haplotype dataset based on selected SNPs.
+   */
+  @action
+  copyHaplotypesToClipboard() {
+    const
+    fnName = 'copyHaplotypesToClipboard',
+    blocksF = this.blocksFeatureFilters,
+    blocksHaplotypes = blocksF.map(blockFF => this.blockHaplotypeForClipboard(blockFF)),
+    text = blocksHaplotypes.join('\n');
+    dLog(fnName, blocksF.length, blocksHaplotypes, text);
+    clipboard_writeText(text);
+  }
+  /** Copy to clipboard the blockFF's selected SNPs and genotype pattern.
+   */
+  @action
+  copyHaplotypeToClipboard(blockFF) {
+    const fnName = 'copyHaplotypeToClipboard';
+    const text = this.blockHaplotypeForClipboard(blockFF);
+    dLog(fnName, blockFF.block.brushName, text);
+    clipboard_writeText(text);
+  }
+  /** Express blockFF's selected SNPs and genotype patterns in
+   * the format matches the Pretzel spreadsheet 'Haplotype|' worksheet, 
+   */
+  blockHaplotypeForClipboard(blockFF) {
+    const
+    /** related : allele2ColumnName */
+    altRef = {true: 'ref', false : 'alt'},
+    features = blockFF.sampleFilters.feature.sortBy('value_0'),
+    allele = features.map(feature => {
+      const
+      matchRef = feature[Symbol.for('matchRef')],
+      n = (matchRef === null) ? 'N' : feature.values[altRef[matchRef]] || ' ';
+      return n;
+    }).join(''),
+    snpNames = features.mapBy('name').join(' ');
+    return [allele, snpNames].join('\t');
+  }
+
+
+
+
   /** Return the selected SNPs in the referenceBlock of vcfBlock.
    * If selectedSNPsInBrush then filter them by brushedDomain.
    * @return array of features in .blocksFeatureFilters which are in .brushedDomain

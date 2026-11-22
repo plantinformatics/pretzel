@@ -605,7 +605,17 @@
                             <ul class="list-group borderless featureFilters">
                               {{#each this.blocksFeatureFilters as |blockFF|}}
                                 <li class="list-group-item">
-                                  <div>{{blockFF.block.datasetId.id}} : {{blockFF.block.name}}</div>
+                                  <div>{{blockFF.block.datasetId.id}} : {{blockFF.block.name}}
+
+                                    <button type="button" class="btn btn-info btn-xs"
+                                      onclick={{action this.copyHaplotypeToClipboard blockFF}} >
+                                      Copy Haplotype
+                                      <EmberTooltip @side="top-start" @delay=500>
+                                        <span>Copy the selected SNPs and genotype pattern to the clipboard, in the format of the Haplotype spreadsheet.</span>
+                                      </EmberTooltip>
+                                    </button>
+
+                                  </div>
                                   <ul class="list-group">
                                     {{#each blockFF.sampleFilters.feature as |feature|}}
                                       <li class="list-group-item">
