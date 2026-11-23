@@ -143,8 +143,8 @@ const featurePositionsSymbol = Symbol.for('featurePositions');
 /** Counts for calculating Call Rate of a sample.
  * sampleCount = block[callRateSymbol][sampleName] : {calls:0, misses:0}  */
 const callRateSymbol = Symbol.for('callRate');
-/** Indicate whether Alt or Ref value should be matched at this Feature / SNP.
- * feature[matchRefSymbol] true/false.  */
+/** Indicate whether Alt / Ref / Null value should be matched at this Feature / SNP.
+ * feature[matchRefSymbol] false/true/null.  */
 const matchRefSymbol = Symbol.for('matchRef');
 /** Cache of Passport data for the sampleName, i.e. dataset.samplesPassport.genotypeID[sampleName]
  * This attribute is assigned to a String sampleName. 
@@ -968,6 +968,23 @@ export default class PanelManageGenotypeComponent extends Component {
     return objectSymbolNameArray(block, sampleFiltersSymbol, filterTypeName);
   }
 
+  /** For use in .hbs, return the list of selected features of this block.
+   * @param block
+   * @param filterTypeName)
+   * @desc
+   * Example usage (manage-genotype.hbs) :
+   * <Panel::GenotypeFeatureListAll
+   * @features={{call (fn this.blockSampleFeatures blockFF.block.referenceBlock 'feature') }} />
+   */
+  @action
+  blockSampleFeatures(block, filterTypeName) {
+    const
+    fnName = 'blockSampleFeatures',
+    sampleFilters = this.blockSampleFilters(block, filterTypeName);
+    dLog(fnName, block.brushName, sampleFilters);
+    return sampleFilters;
+  }
+
   @computed('args.userSettings.sampleFilterTypeName')
   get selectedFilters() {
     // not used yet.
@@ -1235,6 +1252,14 @@ export default class PanelManageGenotypeComponent extends Component {
 
     const
     blocks = this.gtBlocks;
+
+    /** Originally the sampleFilters stored in the referenceBlocks were allowed
+     * to persist, but they are only updated here, and are collated in full
+     * below, so clear to ensure that a selection which has been toggled off is
+     * not revived here.  (Changed after fb34e424.)
+     */
+    this.sampleFiltersClearReferenceBlocks(blocks);
+
     /** collate feature filters up to brush reference block */
     blocks.forEach(block => {
       const
@@ -1283,6 +1308,23 @@ export default class PanelManageGenotypeComponent extends Component {
       });
     });
   }
+  /** sampleFiltersMergeType() uses the reference block to propogate and
+   * translate selected SNPs between VCF Genotype datasets on an axis.
+   * The currently-used toggle function does not toggle off the referenceBlock's
+   * sampleFilters (sampleFiltersFeatureToggle() does), so this function is used
+   * at the start of sampleFiltersMergeType() to clear them before collating them
+   * anew.
+   */
+  sampleFiltersClearReferenceBlocks(sampleFilterTypeName) {
+    const
+    referenceBlocks = this.gtBlocks.mapBy('referenceBlock').uniq();
+    referenceBlocks.forEach(referenceBlock => {
+      const
+      sampleFiltersRef = this.blockSampleFilters(referenceBlock, sampleFilterTypeName);
+      arrayClear(sampleFiltersRef);
+    });
+  }
+
   /** Propagate a clicked SNP filter to other viewed VCF blocks that share the
    * same reference block.
    *

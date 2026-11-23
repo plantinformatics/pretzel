@@ -627,6 +627,9 @@
                                       </li>
                                     {{/each}}
                                   </ul>
+                                  <Panel::GenotypeFeatureListAll
+                                    @features={{call (fn this.blockSampleFeatures blockFF.block.referenceBlock 'feature') }}
+                                  />
 
                                 </li>
                               {{/each}}
