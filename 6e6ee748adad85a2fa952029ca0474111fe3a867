@@ -1,0 +1,3 @@
+... re. splitting the functions (cells(), afterOnCellMouseDown(), {CATG,AB,numericalData}Renderer()) out of createTable() : settings and wrap them with runloop bind() : this is recommended in :
+  https://guides.emberjs.com/release/applications/run-loop/#toc_what-happens-if-i-forget-to-start-a-run-loop-in-an-async-handler :
+' ... wrap any non-Ember async callbacks in Ember.run. If you don't, Ember will try to approximate a beginning and end for you.'

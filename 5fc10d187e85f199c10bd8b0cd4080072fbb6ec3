@@ -1,0 +1,8 @@
+minor changes to emacs editor config for project source files
+
+emacs_config.el :
+mmv_Dav127 : map ~/ to env HOME as dir-locals-set-directory-class expects an absolute path.
+apply class project-root-directory to all of MMv, not just the current work-tree within it (mmv_Dav127).
+define variable MMv, same as env MMv.
+declare safe values for : js2-basic-offset js2-pretty-multiline-declarations
+ a31d012  4869 Feb 22 19:30 resources/emacs_config.el

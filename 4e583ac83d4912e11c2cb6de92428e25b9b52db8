@@ -1,0 +1,1 @@
+This commit enables paths to display after un-view and re-add, by waiting for next render so that drawCurrent() has <g> to render into. (as commented in 3c8512d)

@@ -1,0 +1,3 @@
+included in this commit : limit the width of text values in new-datasource-modal datasetsForSelect()
+
+new-datasource-modal.js : add optionWidth = 50, truncateOptionText(), used in datasetsForSelect() to limit the text value of <option> in <select>

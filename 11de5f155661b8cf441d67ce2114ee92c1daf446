@@ -1,0 +1,12 @@
+The commit message was swapped with the vcf-genotype-brapi library commit 77bef245.  Following is the correct commit message :
+
+also handle filter as search
+
+passport-table.js :
+  wrap assignment to .possibleValuesForFilters in later(), because of warning : attempted to update ... but it had already been used previously in the same computation.
+  currentData() : fix type confusion : rename search to pagedData; .currentSearch is PassportSearch which is a property of PagedData.
+
+  storeSearch() : warn if temporary searchKV has .filterCode and stored search.searchKV doesn't
+  getNextPage() : use currentSearch.isSearch in place of .value, to treat filter in the same way as _text search.
+
+package.json : update dependency @plantinformatics/vcf-genotype-brapi to ^1.0.38
