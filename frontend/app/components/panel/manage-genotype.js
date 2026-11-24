@@ -1406,16 +1406,27 @@ export default class PanelManageGenotypeComponent extends Component {
     dLog('sampleFiltersSet');
     let filterCount = 0;
     const
-    abBlocks = this.blocksSampleFilters(filterTypeName);
-    abBlocks.forEach((abBlock) => {
+    abBlocks = this.blocksSampleFilters(filterTypeName),
+    filterCounts =
+    abBlocks.map((abBlock) => {
       const
       block = abBlock.block,
       filters = abBlock.sampleFilters[filterTypeName];
       // Value unchanged - notify update.
       Ember_set(abBlock, 'sampleFilters.' + filterTypeName, filters);
       filterCount += filters.length;
+      return filters.length;
     });
+    /** alternative: const filterCount = filters.reduce((sum, value) => sum += value, 0)
+     */
     Ember_set(this, 'sampleFiltersCount.' + filterTypeName, filterCount);
+    Ember_set(this, 'sampleFiltersCounts.' + filterTypeName, filterCounts);
+  }
+  /** For display in hbs, show the per-block # of sampleFilters / selected SNPs */
+  get featureFiltersCountText() {
+    /** For generality, this can use .args.userSettings.sampleFilterTypeName,
+     * or .sampleFilterTypeName if sampleFilterTypeNameModal */
+    return this.sampleFiltersCounts['feature']?.join(',');
   }
   /** Counts of the 3 types of Sample Filters.
    * index is sample filter type name, defined in sampleFilterKeys.
@@ -1423,6 +1434,13 @@ export default class PanelManageGenotypeComponent extends Component {
    */
   @tracked
   sampleFiltersCount = {}; // new SampleFiltersCount();
+  /** Per-block counts of the 3 types of Sample Filters.
+   * This structure is the same as sampleFiltersCount;
+   * the content is the # of filters in each block, whereas sampleFiltersCount
+   * is the sum of that.
+   */
+  @tracked
+  sampleFiltersCounts = {};
 
   @alias('sampleFiltersCount.haplotype') haplotypeFiltersCount;
   @alias('sampleFiltersCount.feature') featureFiltersCount;
