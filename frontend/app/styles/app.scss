@@ -2169,6 +2169,11 @@ div.genotype label
 {
   margin-top : 2em;
 }
+/** subsequent row of a row of related checkboxes */
+.subsequent-row > span > label {
+  margin-top: 0px;
+}
+
 
 /* change default color of <a> to match the nearby buttons.   */
 .genotype > button > a {

@@ -56,12 +56,14 @@
         {{/ember-tooltip}}
       SNPs ) </span>
 
+      {{!-- This 2nd row of checkboxes is vertically close to the above because they are related --}}
+      <div class="subsequent-row">
       <span>
         <input type="checkbox"
           checked={{this.matchExactAlleles}}
           oninput={{action (mut this.matchExactAlleles) value="target.checked" }}  >
         <label>Match exact alleles</label>
-        {{#ember-tooltip side="bottom-end" delay=1500}}
+        {{#ember-tooltip side="bottom-start" delay=1500}}
           Match only for samples which have a homozygous genotype value at a selected SNP.
         {{/ember-tooltip}}
       </span>
@@ -74,11 +76,12 @@
             (action (mut @userSettings.allowMissing) value="target.checked")
             @the.ensureSamples }} >
         <label for="haplotype-allow-missing">Allow missing alleles</label>
-        {{#ember-tooltip side="bottom-end" delay=1500}}
+        {{#ember-tooltip side="bottom" delay=1500}}
           Accept fully missing calls at any selected SNP. Called genotypes must still match;
           Null genotypes remain distinct from missing data. Samples missing every selected SNP are included.
         {{/ember-tooltip}}
       </span>
+      </div>
 
     {{/if}}
   </div>
