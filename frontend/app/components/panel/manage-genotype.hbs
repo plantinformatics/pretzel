@@ -1126,6 +1126,15 @@ While scrolling through the Genotype Table this updates to show where the curren
         </button>
       </div>
 
+      {{#if (and @userSettings.filterSamplesByHaplotype this.vcfGenotypeSamplesCount ) }}
+        <div>
+          <EmberTooltip @side="bottom" @delay=500>
+            <span>Count of VCF Genotype Samples filtered By Haplotype in {{this.lookupDatasetId}} {{this.lookupBlock.datasetId._meta.displayName}}</span>
+          </EmberTooltip>
+          <span class="sample-count">{{this.vcfGenotypeSamplesCount}}</span>
+        </div>
+      {{/if}}
+
 
       {{#unless this.genolinkSearchURL}}
         {{!-- genolinkSearchURL is nullish if there are no samples selected
