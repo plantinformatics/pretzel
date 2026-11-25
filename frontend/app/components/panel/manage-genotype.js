@@ -1421,6 +1421,9 @@ export default class PanelManageGenotypeComponent extends Component {
      */
     Ember_set(this, 'sampleFiltersCount.' + filterTypeName, filterCount);
     Ember_set(this, 'sampleFiltersCounts.' + filterTypeName, filterCounts);
+    /* featureFiltersCountText() is not evaluating in hbs, so make a copy. */
+    Ember_set(this, 'featureFiltersCountTextCopy', this.featureFiltersCountText);
+
   }
   /** For display in hbs, show the per-block # of sampleFilters / selected SNPs */
   get featureFiltersCountText() {
@@ -1608,16 +1611,21 @@ export default class PanelManageGenotypeComponent extends Component {
     }
     const
     fnName = 'featureToggleByName',
-    block = this.gtBlocks.find(blockFindFeatureByName),
-    /** repeat the last findBy() to get the feature reference. */
-    feature = blockFindFeatureByName(block);
-    dLog(fnName, featureName, allele, feature);
-    if (! feature) {
+    /** find the first feature in each of .gtBlocks which matches featureName.
+     * It is possible for feature name to be duplicated within a block,
+     * but it is not expected or useful in VCF datasets.
+     */
+    features = this.gtBlocks.map(blockFindFeatureByName).filter(f => f);
+    dLog(fnName, featureName, allele, features);
+
+    if (! features.length) {
       dLog(fnName, featureName, 'not found in', this.gtBlocks.mapBy('brushName').join(', '));
-    } else {
+    }
+
+    const featureToggle = (feature) => {
       const
       values = feature.values,
-      /** will probably standardise on Ref / Alt capitalisation, now that is is
+      /** will probably standardise on Ref / Alt capitalisation, now that it is
        * a recognised input field. */
       ref = values.Ref || values.ref || values.REF,
       alt = values.Alt || values.alt || values.ALT,
@@ -1629,7 +1637,9 @@ export default class PanelManageGenotypeComponent extends Component {
       } else {
         this.featureToggle(feature, columnName);
       }
-    }
+    };
+
+    features.forEach(featureToggle);
   }
 
   /** Toggle each of the SNPs listed as .flankingMarkers in the given Haplotype Feature.

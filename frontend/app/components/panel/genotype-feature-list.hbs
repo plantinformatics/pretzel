@@ -1,10 +1,10 @@
 {{!--
   @param @featureFiltersCountOfDatasetInBrushedDomain
   @param @featureFiltersCount
-  @param @featureFiltersCountText
+  @param @genotypeTable
   These params are from manage-genotype
 --}}
-{{log 'GenotypeFeatureList args' @featureFiltersCountOfDatasetInBrushedDomain.length 'featureFiltersCountOfDatasetInBrushedDomain' @featureFiltersCount}}
+{{log 'GenotypeFeatureList args' @featureFiltersCountOfDatasetInBrushedDomain.length 'featureFiltersCountOfDatasetInBrushedDomain' @featureFiltersCount @genotypeTable.featureFiltersCountText}}
 {{!-- based on extracts from genotype-samples.hbs and manage-genotype.hbs --}}
 <span class="GenotypeFeatureList sample-count">
   Sort by
@@ -15,7 +15,7 @@
       in place of the equivalent code which was a basis for this --}}
     {{@featureFiltersCountOfDatasetInBrushedDomain.length}} SNPs
     {{#unless (eq @featureFiltersCountOfDatasetInBrushedDomain.length @featureFiltersCount) }} 
-      in scope, out of {{@featureFiltersCountText}} selected.
+      in scope, out of {{@genotypeTable.featureFiltersCountTextCopy}} selected.
     {{/unless}}
     {{!-- copied from manage-genotype.hbs : .snpsInBrushedDomain, with minor changes. --}}
     {{#each @featureFiltersCountOfDatasetInBrushedDomain as |feature|}}
