@@ -13,7 +13,7 @@
  * @param f map / filter function : falsey return values will be filtered out.
  * @return undefined if a.forEach and a.reduce are not defined.
  */
-function mapAndFilter(a, f) {
+export function mapAndFilter(a, f) {
   let out;
   // .reduce is not defined on NodeList, use .forEach()
   if (a.forEach)

@@ -1,0 +1,18 @@
+
+<ul class="list-group">
+  {{#if @features.length}}
+    <li class="list-group-item">
+      Reference
+    </li>
+  {{/if}}
+
+  {{#each @features as |feature|}}
+    <li class="list-group-item">
+      <div>
+        {{feature.value_0}}
+        &nbsp; {{feature.values.ref}}/{{feature.values.alt}}
+        &nbsp; : &nbsp; {{feature.matchRefNumeric}}
+      </div>
+    </li>
+  {{/each}}
+</ul>

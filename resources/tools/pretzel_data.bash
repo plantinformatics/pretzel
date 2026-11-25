@@ -13,6 +13,82 @@ export pretzelUser; : ${pretzelUser:=pretzelUser}
 
 #-------------------------------------------------------------------------------
 
+# Rename chromosomes in the given .vcf.gz file
+function renameChromosomes()
+{
+  if [ $# -ne 4 ]
+  then
+    echo Usage : renameChromosomes vcfGz renameSed 1>&2;
+    return 1
+  else
+    local vcfGz="$1"
+    # local renameSed="$2"
+    local fromPrefix="$2"
+    local toPrefix="$3"
+    local toVcfGz="$4"
+
+    # will probably use docker for bcftools in production, but for this development version
+    # it is simpler to use a locally-installed bcftools
+    #  --rename-chrs : with "old_name new_name\n" pairs separated by whitespaces, each on a separate line.
+    # line format e.g. '1 Chr1A'
+    bcftools index --stats "$vcfGz" | awk '{ printf "%s%s %s%s\n", "'"$fromPrefix"'", $1 , "'"$toPrefix"'", $1 ; }'  > chr.rename.map
+    bcftools annotate --rename-chrs chr.rename.map -Oz "$vcfGz" -o "$toVcfGz"
+  fi
+}
+
+#-------------------------------------------------------------------------------
+
+# Split a single .vcf.gz which contains data for multiple chromosomes into
+# multiple .vcf.gz files, which each contain data for a single chromosome
+#
+# @param vcfGz	a .vcf.gz which contains data for multiple chromosomes
+#
+# $PWD (cwd) should be a datasetId directory in $pp/data/vcf/
+function splitIntoChromosomes()
+{
+  [ $# -eq 1 ] || (echo Usage : splitIntoChromosomes vcfGz 1>&2; return 1)
+
+  # set -e
+  set -uo pipefail
+
+  local input="$1"
+  local outdir="."	# "per_chromosome"
+  [ -d "$outdir" ] || mkdir "$outdir"
+
+  local datasetId=$(basename $PWD)
+
+  docker exec -i $composeName-api-1 bash <<EOF
+    cd \$mntData/vcf/$datasetId
+
+    if [ ! -f "$input".csi ]
+    then
+      # Create a CSI index; input must be sorted and BGZF-compressed.
+      bcftools index --csi "$input" \
+        || (set -x; mkdir unsorted.$$; mv "$input" unsorted.$$/. && bcftools sort unsorted.$$/"$input" -Oz -o "$input") || return \$?
+    fi
+
+    # Get chromosome names from the index, then extract each chromosome.
+    bcftools index --stats "$input" |
+        cut -f1 |
+        while IFS= read -r chr; do
+            output="$outdir/\${chr}.vcf.gz"
+            printf 'Extracting %s -> %s\n' "\$chr" "\$output"
+
+            bcftools view \
+                --regions "\$chr" \
+                --output-type z \
+                --output "\$output" \
+                "$input"
+
+            bcftools index --csi "\$output"
+        done
+EOF
+
+}
+
+#-------------------------------------------------------------------------------
+
+
 # Check that all of $pp/data/ sub-directories and files are owned by
 # $pretzelUser:$pretzelUser, not e.g. $systemUser:$systemUser
 function dataOwnerCheck()
@@ -50,6 +126,15 @@ function topVcf()
 {
   top -bn1 -p $(pgrep -d, 'bcftools|vcfGenotypeLook')
 }
+
+# Show the currently running processes using vcfGenotypeLook, bcftools or bgzip.
+# Use this before using createHistograms(), to avoid having multiple requests in parallel.
+function showVcfProcesses()
+{
+  pstree -pl | egrep -C2 'vcfGenotypeLook|bcftools|bgzip'
+  ps axww | egrep 'bcftools|bgzip'
+}
+
 
 #-------------------------------------------------------------------------------
 

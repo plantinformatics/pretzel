@@ -1635,6 +1635,11 @@ export default InAxis.extend({
          */
         let t0 = selection.node();
         if (t0) {
+          function setOpacity(elements, value) {
+            elements
+              .attr('stroke-opacity', value)
+              .attr('fill-opacity', value);
+          }
           /** may not be blockId, e.g subElements, so default to false. */
           let blockId = thisAt.trackElt2BlockId(subElements, t0),
               block = blockId && thisAt.lookupBlockView(blockId),
@@ -1651,6 +1656,18 @@ export default InAxis.extend({
             selection
               .attr('stroke-opacity', 0)
               .attr('fill-opacity', 0);
+          } else {
+            /** If an element has opacity 0, revert to 1.
+             * This was seen once; perhaps it was caused by a block becoming
+             * zoomed-out, but the <rect>s not deleted.
+             * This acts immediately, disregarding whether selection is a
+             * transition, which is probably reasonable. This case may not recur
+             * - only seen once, in devel.
+             */
+            let elements = selection.selection ? selection.selection() : selection;
+            setOpacity(elements.filter(function() {
+              return this.getAttribute('stroke-opacity') === '0';
+            }), 1);
           }
         }
       }

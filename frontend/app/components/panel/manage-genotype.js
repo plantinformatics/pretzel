@@ -30,6 +30,7 @@ import { intervalSize } from '../../utils/interval-calcs';
 import { inRange, overlapInterval } from '../../utils/draw/zoomPanCalcs';
 import { BrushedBlock } from '../../utils/draw/axis-brush';
 import { featuresIntervalsForTree } from '../../utils/data/features';
+import { mapAndFilter } from '../../utils/log-selection';
 // let vcfGenotypeBrapi = window["vcf-genotype-brapi"];
 import vcfGenotypeBrapi from '@plantinformatics/vcf-genotype-brapi';
 console.log('vcfGenotypeBrapi', vcfGenotypeBrapi, window["@plantinformatics/vcf-genotype-brapi@npm:pretzel.A8b"]);
@@ -142,8 +143,8 @@ const featurePositionsSymbol = Symbol.for('featurePositions');
 /** Counts for calculating Call Rate of a sample.
  * sampleCount = block[callRateSymbol][sampleName] : {calls:0, misses:0}  */
 const callRateSymbol = Symbol.for('callRate');
-/** Indicate whether Alt or Ref value should be matched at this Feature / SNP.
- * feature[matchRefSymbol] true/false.  */
+/** Indicate whether Alt / Ref / Null value should be matched at this Feature / SNP.
+ * feature[matchRefSymbol] false/true/null.  */
 const matchRefSymbol = Symbol.for('matchRef');
 /** Cache of Passport data for the sampleName, i.e. dataset.samplesPassport.genotypeID[sampleName]
  * This attribute is assigned to a String sampleName. 
@@ -314,6 +315,8 @@ function featureHasSamplesLoaded(feature) {
  *   Show samples selected by SNP filters
  * .matchHet  boolean, default : true
  *   Match for samples which have a heterozygous genotype value at a selected SNP.
+ * .allowMissing boolean, default : false
+ *   Accept fully missing calls at selected SNPs when filtering samples.
  * .showHaplotypes  boolean, default : false
  *   Show unique haplotypes of the selected SMPs, and their samples
  * .showHaplotypesSamples  boolean, default : false
@@ -415,17 +418,24 @@ export default class PanelManageGenotypeComponent extends Component {
   // @computed('lookupBlockSamples.selected')
   @computed('lookupDatasetId', 'receivedNamesCount')
   get vcfGenotypeSamplesSelected() {
+    let selected;
     if (! this.lookupDatasetId) {
-      dLog('get vcfGenotypeSamplesSelected', this.lookupDatasetId);
+      console.warn('get vcfGenotypeSamplesSelected', this.lookupDatasetId);
     }
-    let selected = this.vcfGenotypeSamplesSelectedAll?.[this.lookupDatasetId];
+    else
+    {
+      selected = this.vcfGenotypeSamplesSelectedAll?.[this.lookupDatasetId];
+    }
     return selected;
   }
   set vcfGenotypeSamplesSelected(selected) {
     if (! this.lookupDatasetId) {
-      dLog('set vcfGenotypeSamplesSelected', this.lookupDatasetId);
+      console.warn('set vcfGenotypeSamplesSelected', this.lookupDatasetId, selected?.length);
     }
-    (this.vcfGenotypeSamplesSelectedAll || this.args.userSettings.vcfGenotypeSamplesSelected)[this.lookupDatasetId] = selected;
+    else
+    {
+      (this.vcfGenotypeSamplesSelectedAll || this.args.userSettings.vcfGenotypeSamplesSelected)[this.lookupDatasetId] = selected;
+    }
   }
 
   @tracked
@@ -680,6 +690,10 @@ export default class PanelManageGenotypeComponent extends Component {
 
     if (userSettings.matchHet === undefined) {
       userSettings.matchHet = true;
+    }
+
+    if (userSettings.allowMissing === undefined) {
+      userSettings.allowMissing = false;
     }
 
     if (userSettings.showHaplotypes === undefined) {
@@ -954,6 +968,23 @@ export default class PanelManageGenotypeComponent extends Component {
     return objectSymbolNameArray(block, sampleFiltersSymbol, filterTypeName);
   }
 
+  /** For use in .hbs, return the list of selected features of this block.
+   * @param block
+   * @param filterTypeName)
+   * @desc
+   * Example usage (manage-genotype.hbs) :
+   * <Panel::GenotypeFeatureListAll
+   * @features={{call (fn this.blockSampleFeatures blockFF.block.referenceBlock 'feature') }} />
+   */
+  @action
+  blockSampleFeatures(block, filterTypeName) {
+    const
+    fnName = 'blockSampleFeatures',
+    sampleFilters = this.blockSampleFilters(block, filterTypeName);
+    dLog(fnName, block.brushName, sampleFilters);
+    return sampleFilters;
+  }
+
   @computed('args.userSettings.sampleFilterTypeName')
   get selectedFilters() {
     // not used yet.
@@ -1164,25 +1195,34 @@ export default class PanelManageGenotypeComponent extends Component {
           /** Only match SNPs on the same reference block.
            * There could be multiple haveFilters on the same .referenceBlock;
            * just using the first. */
-          copyThis = haveFilters?.find(b => b.referenceBlock === block.referenceBlock),
+          copyThis = haveFilters?.find(b =>
+            (b.referenceBlock === block.referenceBlock) && b[sampleFiltersSymbol]),
           copyThisFilter = copyThis?.[sampleFiltersSymbol];
           if (copyThisFilter) {
             const
+            /** copy by value of the arrays within each typeName  */
             copy =
               Object.entries(copyThisFilter).reduce((O, [k,v]) => {O[k] = v.slice(0); return O;}, {});
             dLog(fnName, 'copyThisFilter', copyThisFilter, copyThis.brushName, copy);
 
-            /** map from copyThis features to block.features, matching SNP position, i.e. .value_0 */
-            copy.feature?.forEach((f, i) => {
-              const f2 = block.get('features').findBy('value_0', f.value_0);
-              dLog(fnName, i, f, f2);
-              if (f2) {
-                f2[matchRefSymbol] = f[matchRefSymbol];
-                copy.feature[i] = f2;
+            /** map from copyThis features to block.features, matching SNP position, i.e. .value_0
+             * omit features which don't have a matching position in block.
+             */
+            if (copy.feature) {
+              const blockFeatures = block.get('features');
+              /* mapAndFilter() does not (yet) pass the array index i */
+              function matchFeature(f /*, i*/) {
+                const f2 = blockFeatures.findBy('value_0', f.value_0);
+                dLog(fnName, /*i,*/ f, f2);
+                if (f2) {
+                  f2[matchRefSymbol] = f[matchRefSymbol];
+                }
+                /* else copy.feature[i] is omitted.  Another possibility: search again later after
+                 * more features are loaded.  Could use API to request those features. */
+                return f2;
               }
-              /* else could remove copy.features[i], or search again later after
-               * more features are loaded.  Could use API to request those features. */
-            });
+              copy.feature = mapAndFilter(copy.feature, matchFeature);
+            }
             block[sampleFiltersSymbol] = copy;
           } // if (copyThisFilter)
           dLog(fnName, block);
@@ -1212,6 +1252,14 @@ export default class PanelManageGenotypeComponent extends Component {
 
     const
     blocks = this.gtBlocks;
+
+    /** Originally the sampleFilters stored in the referenceBlocks were allowed
+     * to persist, but they are only updated here, and are collated in full
+     * below, so clear to ensure that a selection which has been toggled off is
+     * not revived here.  (Changed after fb34e424.)
+     */
+    this.sampleFiltersClearReferenceBlocks(blocks);
+
     /** collate feature filters up to brush reference block */
     blocks.forEach(block => {
       const
@@ -1260,6 +1308,23 @@ export default class PanelManageGenotypeComponent extends Component {
       });
     });
   }
+  /** sampleFiltersMergeType() uses the reference block to propogate and
+   * translate selected SNPs between VCF Genotype datasets on an axis.
+   * The currently-used toggle function does not toggle off the referenceBlock's
+   * sampleFilters (sampleFiltersFeatureToggle() does), so this function is used
+   * at the start of sampleFiltersMergeType() to clear them before collating them
+   * anew.
+   */
+  sampleFiltersClearReferenceBlocks(sampleFilterTypeName) {
+    const
+    referenceBlocks = this.gtBlocks.mapBy('referenceBlock').uniq();
+    referenceBlocks.forEach(referenceBlock => {
+      const
+      sampleFiltersRef = this.blockSampleFilters(referenceBlock, sampleFilterTypeName);
+      arrayClear(sampleFiltersRef);
+    });
+  }
+
   /** Propagate a clicked SNP filter to other viewed VCF blocks that share the
    * same reference block.
    *
@@ -1341,16 +1406,30 @@ export default class PanelManageGenotypeComponent extends Component {
     dLog('sampleFiltersSet');
     let filterCount = 0;
     const
-    abBlocks = this.blocksSampleFilters(filterTypeName);
-    abBlocks.forEach((abBlock) => {
+    abBlocks = this.blocksSampleFilters(filterTypeName),
+    filterCounts =
+    abBlocks.map((abBlock) => {
       const
       block = abBlock.block,
       filters = abBlock.sampleFilters[filterTypeName];
       // Value unchanged - notify update.
       Ember_set(abBlock, 'sampleFilters.' + filterTypeName, filters);
       filterCount += filters.length;
+      return filters.length;
     });
+    /** alternative: const filterCount = filters.reduce((sum, value) => sum += value, 0)
+     */
     Ember_set(this, 'sampleFiltersCount.' + filterTypeName, filterCount);
+    Ember_set(this, 'sampleFiltersCounts.' + filterTypeName, filterCounts);
+    /* featureFiltersCountText() is not evaluating in hbs, so make a copy. */
+    Ember_set(this, 'featureFiltersCountTextCopy', this.featureFiltersCountText);
+
+  }
+  /** For display in hbs, show the per-block # of sampleFilters / selected SNPs */
+  get featureFiltersCountText() {
+    /** For generality, this can use .args.userSettings.sampleFilterTypeName,
+     * or .sampleFilterTypeName if sampleFilterTypeNameModal */
+    return this.sampleFiltersCounts['feature']?.join(',');
   }
   /** Counts of the 3 types of Sample Filters.
    * index is sample filter type name, defined in sampleFilterKeys.
@@ -1358,6 +1437,13 @@ export default class PanelManageGenotypeComponent extends Component {
    */
   @tracked
   sampleFiltersCount = {}; // new SampleFiltersCount();
+  /** Per-block counts of the 3 types of Sample Filters.
+   * This structure is the same as sampleFiltersCount;
+   * the content is the # of filters in each block, whereas sampleFiltersCount
+   * is the sum of that.
+   */
+  @tracked
+  sampleFiltersCounts = {};
 
   @alias('sampleFiltersCount.haplotype') haplotypeFiltersCount;
   @alias('sampleFiltersCount.feature') featureFiltersCount;
@@ -1525,16 +1611,21 @@ export default class PanelManageGenotypeComponent extends Component {
     }
     const
     fnName = 'featureToggleByName',
-    block = this.gtBlocks.find(blockFindFeatureByName),
-    /** repeat the last findBy() to get the feature reference. */
-    feature = blockFindFeatureByName(block);
-    dLog(fnName, featureName, allele, feature);
-    if (! feature) {
+    /** find the first feature in each of .gtBlocks which matches featureName.
+     * It is possible for feature name to be duplicated within a block,
+     * but it is not expected or useful in VCF datasets.
+     */
+    features = this.gtBlocks.map(blockFindFeatureByName).filter(f => f);
+    dLog(fnName, featureName, allele, features);
+
+    if (! features.length) {
       dLog(fnName, featureName, 'not found in', this.gtBlocks.mapBy('brushName').join(', '));
-    } else {
+    }
+
+    const featureToggle = (feature) => {
       const
       values = feature.values,
-      /** will probably standardise on Ref / Alt capitalisation, now that is is
+      /** will probably standardise on Ref / Alt capitalisation, now that it is
        * a recognised input field. */
       ref = values.Ref || values.ref || values.REF,
       alt = values.Alt || values.alt || values.ALT,
@@ -1546,7 +1637,9 @@ export default class PanelManageGenotypeComponent extends Component {
       } else {
         this.featureToggle(feature, columnName);
       }
-    }
+    };
+
+    features.forEach(featureToggle);
   }
 
   /** Toggle each of the SNPs listed as .flankingMarkers in the given Haplotype Feature.
@@ -2084,10 +2177,11 @@ export default class PanelManageGenotypeComponent extends Component {
     'vcfGenotypeSamplesText',
     'args.userSettings.samplesIntersection',
     'sampleNameFilter',
-    /** These 5 dependencies relate to filterSamplesByHaplotype;
+    /** These dependencies relate to filterSamplesByHaplotype;
      * possibly split this out as a separate CP samplesFilteredByHaplotype */
     'args.userSettings.filterSamplesByHaplotype',
     'args.userSettings.matchHet',
+    'args.userSettings.allowMissing',
     'snpsInBrushedDomain.length',
     /** update when new results in sampleCache.filteredByGenotype */
     'sampleCache.filteredByGenotypeCount',
@@ -2710,6 +2804,51 @@ export default class PanelManageGenotypeComponent extends Component {
     return domainInteger;
   }
 
+  /** Copy to clipboard the selected SNPs and genotype patterns, for each of
+   * .blocksFeatureFilters.
+   * The format matches the Pretzel spreadsheet 'Haplotype|' worksheet, enabling
+   * the user to easily create a Haplotype dataset based on selected SNPs.
+   */
+  @action
+  copyHaplotypesToClipboard() {
+    const
+    fnName = 'copyHaplotypesToClipboard',
+    blocksF = this.blocksFeatureFilters,
+    blocksHaplotypes = blocksF.map(blockFF => this.blockHaplotypeForClipboard(blockFF)),
+    text = blocksHaplotypes.join('\n');
+    dLog(fnName, blocksF.length, blocksHaplotypes, text);
+    clipboard_writeText(text);
+  }
+  /** Copy to clipboard the blockFF's selected SNPs and genotype pattern.
+   */
+  @action
+  copyHaplotypeToClipboard(blockFF) {
+    const fnName = 'copyHaplotypeToClipboard';
+    const text = this.blockHaplotypeForClipboard(blockFF);
+    dLog(fnName, blockFF.block.brushName, text);
+    clipboard_writeText(text);
+  }
+  /** Express blockFF's selected SNPs and genotype patterns in
+   * the format matches the Pretzel spreadsheet 'Haplotype|' worksheet, 
+   */
+  blockHaplotypeForClipboard(blockFF) {
+    const
+    /** related : allele2ColumnName */
+    altRef = {true: 'ref', false : 'alt'},
+    features = blockFF.sampleFilters.feature.sortBy('value_0'),
+    allele = features.map(feature => {
+      const
+      matchRef = feature[Symbol.for('matchRef')],
+      n = (matchRef === null) ? 'N' : feature.values[altRef[matchRef]] || ' ';
+      return n;
+    }).join(''),
+    snpNames = features.mapBy('name').join(' ');
+    return [allele, snpNames].join('\t');
+  }
+
+
+
+
   /** Return the selected SNPs in the referenceBlock of vcfBlock.
    * If selectedSNPsInBrush then filter them by brushedDomain.
    * @return array of features in .blocksFeatureFilters which are in .brushedDomain
@@ -2766,7 +2905,8 @@ export default class PanelManageGenotypeComponent extends Component {
       .sortBy('value_0')
       .map(f => ({position : f.value_0,  matchRef : f[Symbol.for('matchRef')]})),
     matchHet = this.args.userSettings.matchHet,
-    filterDescription = this.selectedSNPsToKey(features, matchHet);
+    allowMissing = this.args.userSettings.allowMissing,
+    filterDescription = this.selectedSNPsToKey(features, matchHet, allowMissing);
     return filterDescription;
   }
   /** Construct the string cache key for a sorted selection of SNPs.
@@ -2787,20 +2927,21 @@ export default class PanelManageGenotypeComponent extends Component {
    * @param {Boolean} matchHet  Current value of `userSettings.matchHet` that defines
    *   whether heterozygous calls are treated as matches.  Because the backend applies
    *   this flag when streaming samples, it must be encoded into the cache key.
+   * @param {Boolean} allowMissing Accept fully missing calls at selected SNPs.
    * @return {String} filterDescription suitable for the dataset ➜ samples cache.
    *
    * Usage:
    *   • vcfGenotypeSamplesDataset() keys the async sample request cache so that a new
-   *     API call is issued only when either the SNP set or matchHet flag changes.
+   *     API call is issued only when the SNP set, matchHet or allowMissing changes.
    *   • blockFilteredSamplesGet() / datasetFilteredSamplesGet() lookups reuse the same
    *     identifier to retrieve previously computed sample lists.
    */
-  selectedSNPsToKey(features, matchHet) {
+  selectedSNPsToKey(features, matchHet, allowMissing) {
     const
     featuresDescription = features.map(
       h => '' + h.position + ':' + MatchRef.matchRef2Text[h.matchRef])
       .join(' '),
-    filterDescription = 'matchHet:' + matchHet + ' ' + featuresDescription;
+    filterDescription = 'matchHet:' + matchHet + ' allowMissing:' + !!allowMissing + ' ' + featuresDescription;
     return filterDescription;
   }
 
@@ -2826,7 +2967,7 @@ export default class PanelManageGenotypeComponent extends Component {
       this.selectedSNPsInBrushedDomain(vcfBlock);
     dLog(fnName, vcfBlock.brushName, filterByHaplotype, 'FilteredSamples');
     if (filterByHaplotype?.length && ! this.blockFilteredSamplesGet(vcfBlock)) {
-      later(() => this.vcfGenotypeSamplesDataset(vcfBlock));
+      later(() => this.vcfGenotypeSamplesBlock(vcfBlock));
     } else if (this.args.userSettings.filterSamplesByHaplotype) {
       // trigger update of samples(); the unfiltered samples are already in cache
       this.sampleCache.incrementProperty('filteredByGenotypeCount');
@@ -2850,9 +2991,8 @@ export default class PanelManageGenotypeComponent extends Component {
     vcfDatasetIdAPI = vcfBlock?.get('datasetId.genotypeId'),
     /** Same comment as in .lookupScope */
     scope = vcfBlock.get('name'),
-    /** original discussions mentioned allowMissing; that might be a flag or
-     * number; it can be added to filterByHaplotype */
     matchHet = this.args.userSettings.matchHet,
+    allowMissing = !!this.args.userSettings.allowMissing,
     /** Of the 3 ways to select SNPs for sample sorting / filtering :
      *  - .blocksHaplotypeFilters sampleFilters.haplotype
      *  - .blocksVariantIntervalFilters sampleFilters.variantInterval
@@ -2869,12 +3009,13 @@ export default class PanelManageGenotypeComponent extends Component {
        .map(f => ({
          position : f.value_0,
          matchRef : MatchRef.matchRef2Json[f[Symbol.for('matchRef')]]})),
-       matchHet
+       matchHet,
+       allowMissing
       },
     /** falsey if filterByHaplotype?.features is undefined or empty */
     filterByHaplotypeN = filterByHaplotype?.features.length,
     filterDescription = filterByHaplotypeN ?
-      this.selectedSNPsToKey(filterByHaplotype.features, matchHet) : '',
+      this.selectedSNPsToKey(filterByHaplotype.features, matchHet, allowMissing) : '',
     requestDescription = "Fetching accessions for " + vcfBlock.brushName + ' ' + filterDescription;
     if (filterByHaplotype) {
       filterByHaplotype.genotypeHasNull = vcfDataset.get('_meta.genotypeHasNull');
@@ -3010,14 +3151,26 @@ export default class PanelManageGenotypeComponent extends Component {
   }
 
   /** Request the list of samples of the vcf of the brushed block.
+   * implemented via this.vcfGenotypeSamplesBlock(this.lookupBlock);
+   * See that function for further comments.
    * @return undefined if scope or vcfDatasetId are not defined,
    * or a promise yielding received text
    */
   vcfGenotypeSamples() {
+    return this.vcfGenotypeSamplesBlock(this.lookupBlock);
+  }
+  /** Request the list of samples of the vcf of the given brushed block.
+   * @return undefined if scope or vcfDatasetId are not defined,
+   * or a promise yielding received text
+   *
+   * @desc
+   * promiseThrottle() is used to handle repeated calls before a previous call
+   * has resolved.
+   */
+  vcfGenotypeSamplesBlock(vcfBlock) {
     /** implemented by common/models/block.js : Block.vcfGenotypeSamples().  */
     const
     fnName = 'vcfGenotypeSamples',
-    vcfBlock = this.lookupBlock,
     dataset = contentOf(vcfBlock.get('datasetId')),
     textPFn = () => this.vcfGenotypeSamplesDataset(vcfBlock),
     /** The addition of .filterSamplesByHaplotype means result can change;
@@ -3266,6 +3419,7 @@ export default class PanelManageGenotypeComponent extends Component {
         'selectedSNPCount.feature',
         'controls.userSettings.genotype.filterSamplesByHaplotype',
         'controls.userSettings.genotype.matchHet',
+        'controls.userSettings.genotype.allowMissing',
         () => this.genotypeSamplesFilteredByHaplotypes(vcfBlock));
       defineProperty(vcfBlock, 'genotypeSamplesFilteredByHaplotypes', cp);
     }
